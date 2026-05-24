@@ -1,0 +1,55 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Alphonso",
+  "version": "0.1.0",
+  "identifier": "com.shayan.alphonso",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Alphonso",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.ico",
+      "tooltip": "Alphonso Local Companion",
+      "id": "main",
+      "showMenuOnLeftClick": false
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI4OUM3MEFFMjBBMTM1NgpSV1JXRXdyaUNzZUpDOVpBVnBENXcwaUV3NVkwSGVCNVFBc3JtRUh0SG9jWHhNNGNuczIxSFUyOQo=",
+      "endpoints": [
+        "https://github.com/Thatisshayan/Alphonso/releases/download/v0.1.0/latest.json"
+      ]
+    }
+  }
+}

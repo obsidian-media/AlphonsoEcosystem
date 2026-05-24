@@ -1,0 +1,273 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: #09090b;
+}
+
+@keyframes alphonso-breathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  50% {
+    transform: scale(1.01);
+    filter: saturate(1.04);
+  }
+}
+
+@keyframes alphonso-listening {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.25);
+  }
+  50% {
+    transform: scale(1.01);
+    box-shadow: 0 0 0 6px rgba(248, 113, 113, 0);
+  }
+}
+
+@keyframes alphonso-warning {
+  0%, 100% {
+    filter: saturate(1);
+  }
+  50% {
+    filter: saturate(1.08) brightness(1.02);
+  }
+}
+
+@keyframes alphonso-code {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes alphonso-approval {
+  0%, 100% {
+    box-shadow: inset 0 0 0 1px rgba(217, 70, 239, 0.2);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px rgba(217, 70, 239, 0.28);
+  }
+}
+
+@keyframes alphonso-dot {
+  0%, 80%, 100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.alphonso-breathe {
+  animation: alphonso-breathe 4s ease-in-out infinite;
+}
+
+.alphonso-listening {
+  animation: alphonso-listening 1.8s ease-in-out infinite;
+}
+
+.alphonso-warning {
+  animation: alphonso-warning 2.2s ease-in-out infinite;
+}
+
+.alphonso-code {
+  animation: alphonso-code 1.6s ease-in-out infinite;
+}
+
+.alphonso-approval {
+  animation: alphonso-approval 1.8s ease-in-out infinite;
+}
+
+.alphonso-dot {
+  animation: alphonso-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes miya-breathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  50% {
+    transform: scale(1.01);
+    filter: saturate(1.05);
+  }
+}
+
+@keyframes miya-rendering {
+  0%, 100% {
+    transform: translateY(0);
+    filter: saturate(1);
+  }
+  50% {
+    transform: translateY(-1px);
+    filter: saturate(1.08);
+  }
+}
+
+@keyframes miya-warning {
+  0%, 100% {
+    filter: saturate(1);
+  }
+  50% {
+    filter: saturate(1.08) brightness(1.02);
+  }
+}
+
+@keyframes miya-dot {
+  0%, 80%, 100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.miya-breathe {
+  animation: miya-breathe 3.4s ease-in-out infinite;
+}
+
+.miya-rendering,
+.miya-creating {
+  animation: miya-rendering 1.8s ease-in-out infinite;
+}
+
+.miya-warning {
+  animation: miya-warning 2s ease-in-out infinite;
+}
+
+.miya-dot {
+  animation: miya-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes jose-breathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  50% {
+    transform: scale(1.01);
+    filter: saturate(1.04) brightness(1.01);
+  }
+}
+
+@keyframes jose-directing {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes jose-warning {
+  0%, 100% {
+    filter: saturate(1);
+  }
+  50% {
+    filter: saturate(1.08) brightness(1.02);
+  }
+}
+
+@keyframes jose-approval {
+  0%, 100% {
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.18);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.26);
+  }
+}
+
+.jose-breathe {
+  animation: jose-breathe 4s ease-in-out infinite;
+}
+
+.jose-directing {
+  animation: jose-directing 1.8s ease-in-out infinite;
+}
+
+.jose-warning {
+  animation: jose-warning 2.2s ease-in-out infinite;
+}
+
+.jose-approval {
+  animation: jose-approval 2s ease-in-out infinite;
+}
+
+.jose-dot {
+  animation: miya-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes hector-breathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  50% {
+    transform: scale(1.01);
+    filter: saturate(1.05);
+  }
+}
+
+@keyframes hector-researching {
+  0%, 100% {
+    transform: translateY(0);
+    filter: saturate(1);
+  }
+  50% {
+    transform: translateY(-1px);
+    filter: saturate(1.08);
+  }
+}
+
+@keyframes hector-warning {
+  0%, 100% {
+    filter: saturate(1);
+  }
+  50% {
+    filter: saturate(1.08) brightness(1.02);
+  }
+}
+
+.hector-breathe {
+  animation: hector-breathe 4s ease-in-out infinite;
+}
+
+.hector-researching {
+  animation: hector-researching 1.8s ease-in-out infinite;
+}
+
+.hector-warning {
+  animation: hector-warning 2.2s ease-in-out infinite;
+}
+
+.hector-dot {
+  animation: miya-dot 1.2s ease-in-out infinite;
+}
+
+.theme-orchestrator-gold main {
+  background:
+    radial-gradient(circle at 70% 0%, rgba(251, 191, 36, 0.03), transparent 30%),
+    rgba(9, 9, 11, 0.72);
+}
+
+.theme-neon-studio main {
+  background:
+    radial-gradient(circle at 65% 0%, rgba(217, 70, 239, 0.02), transparent 28%),
+    rgba(9, 9, 11, 0.72);
+}
+
+.theme-minimal-runtime main {
+  background: rgba(9, 9, 11, 0.9);
+}

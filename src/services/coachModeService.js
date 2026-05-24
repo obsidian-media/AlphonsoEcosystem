@@ -1,0 +1,63 @@
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+
+const COACH_LABEL = 'coach';
+
+function coachUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.set('coach', '1');
+  const stored = localStorage.getItem('alphonso_settings');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed?.coachAgent) {
+        url.searchParams.set('coachAgent', String(parsed.coachAgent));
+      }
+    } catch {
+      // Ignore parse errors and fall back to defaults.
+    }
+  }
+  return url.toString();
+}
+
+export async function openCoachWindow(alwaysOnTop, coachAgent = 'alphonso') {
+  try {
+    const stored = localStorage.getItem('alphonso_settings');
+    const parsed = stored ? JSON.parse(stored) : {};
+    localStorage.setItem('alphonso_settings', JSON.stringify({
+      ...parsed,
+      coachAgent
+    }));
+  } catch {
+    // Ignore storage failures in restricted runtimes.
+  }
+
+  const existing = await WebviewWindow.getByLabel(COACH_LABEL);
+  if (existing) {
+    await existing.show();
+    await existing.setFocus();
+    await existing.setAlwaysOnTop(Boolean(alwaysOnTop));
+    return existing;
+  }
+
+  const coach = new WebviewWindow(COACH_LABEL, {
+    title: 'Alphonso Coach',
+    url: coachUrl(),
+    width: 340,
+    height: 430,
+    minWidth: 280,
+    minHeight: 360,
+    resizable: true,
+    decorations: true,
+    alwaysOnTop: Boolean(alwaysOnTop),
+    skipTaskbar: false
+  });
+
+  return coach;
+}
+
+export async function closeCoachWindow() {
+  const existing = await WebviewWindow.getByLabel(COACH_LABEL);
+  if (existing) {
+    await existing.close();
+  }
+}

@@ -1,0 +1,93 @@
+const AGENTS = {
+  ALPHONSO: 'alphonso',
+  MIYA: 'miya',
+  JOSE: 'jose',
+  HECTOR: 'hector',
+  MARIA: 'maria',
+  MARCUS: 'marcus',
+  ECHO: 'echo',
+  SENTINEL: 'sentinel',
+  NOVA: 'nova'
+};
+
+export const AGENT_EXECUTION_CONTRACTS = {
+  [AGENTS.JOSE]: {
+    role: 'orchestrator',
+    allowedActionPrefixes: ['orchestration_', 'agent_report', 'research_review', 'remote_message_route', 'creative_package_review'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'purchase']
+  },
+  [AGENTS.ALPHONSO]: {
+    role: 'operator',
+    allowedActionPrefixes: ['local_operation', 'verification_', 'runtime_', 'orchestration_', 'agent_report'],
+    blockedActionPrefixes: ['purchase']
+  },
+  [AGENTS.MIYA]: {
+    role: 'creator',
+    allowedActionPrefixes: ['creative_', 'orchestration_', 'agent_report'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'purchase']
+  },
+  [AGENTS.HECTOR]: {
+    role: 'research',
+    allowedActionPrefixes: ['research', 'research_', 'source_', 'citation_', 'agent_report', 'remote_message_route'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
+  },
+  [AGENTS.MARIA]: {
+    role: 'governance_audit',
+    allowedActionPrefixes: ['governance_', 'audit_', 'approval_', 'policy_', 'agent_report'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
+  },
+  [AGENTS.MARCUS]: {
+    role: 'distribution_execution',
+    allowedActionPrefixes: ['approved_', 'distribution_', 'engagement_', 'performance_', 'agent_report'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'purchase']
+  },
+  [AGENTS.ECHO]: {
+    role: 'memory_historian',
+    allowedActionPrefixes: ['memory_', 'retention_', 'knowledge_', 'timeline_', 'agent_report'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
+  },
+  [AGENTS.SENTINEL]: {
+    role: 'security_monitoring',
+    allowedActionPrefixes: ['security_', 'risk_', 'permission_', 'audit_', 'agent_report'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
+  },
+  [AGENTS.NOVA]: {
+    role: 'opportunity_intelligence',
+    allowedActionPrefixes: ['opportunity_', 'analysis_', 'prioritization_', 'strategy_', 'agent_report'],
+    blockedActionPrefixes: ['execute_command', 'filesystem_write', 'external_publish', 'upload', 'post', 'purchase']
+  }
+};
+
+function startsWithAny(value, prefixes = []) {
+  return prefixes.some((prefix) => value.startsWith(prefix));
+}
+
+export function validateAgentExecutionContract(packet) {
+  const toAgent = packet?.toAgent;
+  const action = String(packet?.actionType || '').toLowerCase();
+  const preview = String(packet?.commandPreview || '').toLowerCase();
+  const contract = AGENT_EXECUTION_CONTRACTS[toAgent];
+
+  if (!contract) {
+    return { ok: true, reason: null };
+  }
+
+  const blockedByPrefix = startsWithAny(action, contract.blockedActionPrefixes);
+  const blockedByPreview = /execute|delete|remove|format|publish|upload|buy|purchase|post/.test(preview)
+    && toAgent !== AGENTS.ALPHONSO;
+  if (blockedByPrefix || blockedByPreview) {
+    return {
+      ok: false,
+      reason: `${toAgent} contract blocked action "${packet?.actionType || 'unknown'}".`
+    };
+  }
+
+  const allowed = startsWithAny(action, contract.allowedActionPrefixes);
+  if (!allowed && action) {
+    return {
+      ok: false,
+      reason: `${toAgent} contract does not allow action "${packet.actionType}".`
+    };
+  }
+  return { ok: true, reason: null };
+}

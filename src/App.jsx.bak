@@ -1,0 +1,3269 @@
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Activity,
+  AlertCircle,
+  Bot,
+  ChevronDown,
+  Clapperboard,
+  Cloud,
+  Crown,
+  Cpu,
+  Database,
+  FileText,
+  FolderOpen,
+  Globe,
+  History,
+  Layers,
+  MessageSquare,
+  Mic,
+  Monitor,
+  Paperclip,
+  Plus,
+  RefreshCw,
+  Send,
+  Settings,
+  Shield,
+  Sparkles,
+  Terminal,
+  Trash2,
+  User,
+  Zap
+} from 'lucide-react';
+import { getName, getVersion } from '@tauri-apps/api/app';
+import { invoke } from '@tauri-apps/api/core';
+import { emit, listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { useVoiceInput } from './hooks/useVoiceInput';
+import { openCoachWindow, closeCoachWindow } from './services/coachModeService';
+import { checkAppUpdate, notifyUpdateAvailable } from './services/appUpdateService';
+import { hydrateMemoryFromDurable, listMemoryItems, pushMemoryItem } from './services/memoryService';
+import { appendPluginAuditEntry, discoverDiskPluginManifests, executePluginToolRun, listPluginAudit, listPlugins, togglePlugin, validatePluginManifestDisk } from './services/pluginRegistryService';
+import { listSnapshots, createSnapshot, restoreSnapshotById, backupMemoryLedger } from './services/recoveryService';
+import { VOICE_STATES } from './services/voiceService';
+import { TRUST_STATES, timestampMs } from './services/trustModel';
+import { appendVerificationLog, getVerificationLogs, readDurableAuditLog, verifyCommandExecution, verifyDurableAuditChain, verifyOllamaRuntimeProof, verifyPathProof, verifyProcessProof } from './services/verificationService';
+import { buildWorkspaceSymbolIndex, checkOcrCapability, collectWorkspaceProof, getWorkspaceFoundation, runOcrAdapter, updateWorkspaceFoundation } from './services/workspaceIntelligenceService';
+import { evaluatePluginExecutionPolicy, getPluginSandboxPolicy, updatePluginSandboxPolicy } from './services/pluginSandboxService';
+import {
+  getScreenObserverLogs,
+  getScreenObserverState,
+  requestScreenNotificationPermission,
+  startScreenObserver,
+  stopScreenObserver,
+  updateScreenObserverState
+} from './services/screenIntelligenceService';
+import { appendSessionEvent } from './services/sessionIntelligenceService';
+import { bootstrapRuntimeLedgerHydration } from './services/runtimeLedgerService';
+import { PACKET_SCOPE } from './services/agentBusService';
+import { JOSE_COMMAND_SCOPE } from './services/joseCommandRouterService';
+import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from './services/joseExecutionEngineService';
+import { SESSION_EVENT_SCOPE } from './services/sessionIntelligenceService';
+import { GOVERNANCE_SCOPE } from './services/orchestrationGovernanceService';
+import { ORCHESTRATION_RECEIPT_SCOPE } from './services/orchestrationReceiptService';
+import { ORCHESTRATION_QUEUE_SCOPE } from './services/orchestrationQueueService';
+import { VERIFICATION_SCOPE } from './services/verificationService';
+import { CONNECTOR_SCOPE, CONNECTOR_AUDIT_SCOPE, CONNECTOR_AUTH_SCOPE } from './services/connectorRegistryService';
+import { MIYA_MEMORY_SCOPE } from './services/miyaMemoryService';
+import { PLUGINS_SCOPE, PLUGIN_AUDIT_SCOPE } from './services/pluginRegistryService';
+import { PRODUCTION_READINESS_SCOPE } from './services/productionReadinessService';
+import { REPO_AUDIT_SCOPE } from './services/repoAuditService';
+import { SELF_DEVELOPMENT_SCOPE } from './services/selfDevelopmentService';
+import { DEV_PACKET_SCOPE } from './services/devPacketService';
+import { runSelfDevelopmentCycle } from './services/selfDevelopmentService';
+import { PROOF_AUTHORITY } from './services/nativeRc0ProofService';
+import { TOOL_CONNECTION_SCOPE, TOOL_CONNECTION_AUDIT_SCOPE } from './services/toolConnectionService';
+import { WORKFLOW_OPS_SCOPE } from './services/workflowOperationsRegistryService';
+import { WORKFLOW_RUN_SCOPE } from './services/workflowExecutionService';
+import { WORKFLOW_RECEIPT_SCOPE } from './services/workflowReceiptService';
+import { WORKFLOW_TELEMETRY_SCOPE } from './services/workflowTelemetryService';
+import { getDefaultWorkspaceRoot } from './services/workspaceRootService';
+import {
+  DEFAULT_OLLAMA_ENDPOINT,
+  OLLAMA_TROUBLESHOOTING_COMMAND,
+  checkOllama,
+  chooseDefaultModel,
+  classifyOllamaError,
+  formatModelSize,
+  generateOllamaResponse,
+  normalizeEndpoint
+} from './lib/ollama';
+
+const EcosystemHub = lazy(() => import('./components/EcosystemHub').then((mod) => ({ default: mod.EcosystemHub })));
+const HectorResearchDesk = lazy(() => import('./components/dashboard/HectorResearchDesk').then((mod) => ({ default: mod.HectorResearchDesk })));
+const MiyaStudio = lazy(() => import('./components/MiyaStudio').then((mod) => ({ default: mod.MiyaStudio })));
+const OperatorDashboard = lazy(() => import('./components/OperatorDashboard').then((mod) => ({ default: mod.OperatorDashboard })));
+const OrchestratorView = lazy(() => import('./components/OrchestratorView').then((mod) => ({ default: mod.OrchestratorView })));
+const ProjectExecutionMode = lazy(() => import('./components/projectExecution/ProjectExecutionMode').then((mod) => ({ default: mod.ProjectExecutionMode })));
+const CommandRib = lazy(() => import('./components/CommandRib').then((mod) => ({ default: mod.CommandRib })));
+const CompanionWidget = lazy(() => import('./components/CompanionWidget').then((mod) => ({ default: mod.CompanionWidget })));
+const HectorCompanionWidget = lazy(() => import('./components/HectorCompanionWidget').then((mod) => ({ default: mod.HectorCompanionWidget })));
+const JoseCompanionWidget = lazy(() => import('./components/JoseCompanionWidget').then((mod) => ({ default: mod.JoseCompanionWidget })));
+const MiyaCompanionWidget = lazy(() => import('./components/MiyaCompanionWidget').then((mod) => ({ default: mod.MiyaCompanionWidget })));
+const RuntimeNotice = lazy(() => import('./components/RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
+const MicrophoneStatus = lazy(() => import('./components/MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
+const VoiceInputButton = lazy(() => import('./components/VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
+const SettingsView = lazy(() => import('./components/SettingsView').then((mod) => ({ default: mod.SettingsView })));
+
+const INITIAL_CONVERSATION_ID = 'default-session';
+const COACH_LAYOUT_KEY = 'alphonso_coach_layout_v1';
+const COACH_CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
+
+const getStorage = (key, fallback) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const setStorage = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
+const themeClassFromSettings = (settings) => {
+  if (settings.environmentTheme === 'orchestrator_gold') return 'theme-orchestrator-gold';
+  if (settings.environmentTheme === 'neon_studio') return 'theme-neon-studio';
+  if (settings.environmentTheme === 'minimal_runtime') return 'theme-minimal-runtime';
+  return 'theme-deep-space';
+};
+
+const statusColors = {
+  connected: 'green',
+  connecting: 'blue',
+  model_missing: 'amber',
+  no_models: 'amber',
+  timeout: 'amber',
+  cors: 'red',
+  not_running: 'red',
+  disconnected: 'red',
+  idle: 'zinc',
+  stopped: 'zinc',
+  requesting: 'blue',
+  requesting_permission: 'blue',
+  permission_granted: 'green',
+  listening: 'green',
+  permission_denied: 'red',
+  no_microphone: 'amber',
+  unsupported: 'amber',
+  error: 'red',
+  warning: 'amber',
+  observing: 'green'
+};
+
+const Badge = ({ children, color = 'zinc' }) => {
+  const colors = {
+    zinc: 'bg-zinc-800/60 text-zinc-300 border-zinc-600/30',
+    green: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
+    blue: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
+    amber: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
+    red: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
+    indigo: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30'
+  };
+
+  return (
+    <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>
+      {children}
+    </span>
+  );
+};
+
+const StatusDot = ({ state }) => {
+  const color = {
+    connected: 'bg-emerald-400',
+    listening: 'bg-emerald-400',
+    connecting: 'bg-blue-400',
+    requesting: 'bg-blue-400',
+    requesting_permission: 'bg-blue-400',
+    permission_granted: 'bg-emerald-400',
+    model_missing: 'bg-amber-400',
+    no_models: 'bg-amber-400',
+    no_microphone: 'bg-amber-400',
+    unsupported: 'bg-amber-400',
+    timeout: 'bg-amber-400',
+    warning: 'bg-amber-400',
+    cors: 'bg-red-400',
+    not_running: 'bg-red-400',
+    disconnected: 'bg-red-400',
+    permission_denied: 'bg-red-400',
+    error: 'bg-red-400',
+    observing: 'bg-emerald-400'
+  }[state] || 'bg-zinc-500';
+
+  return <span className={`h-2 w-2 rounded-full ${color}`} />;
+};
+
+function getCompanionState({
+  ollamaStatus,
+  voiceStatus,
+  isGeneratingResponse,
+  lastTaskCompletedAt,
+  selectedModelMissing,
+  privacyModeActive,
+  approvalModeActive,
+  approvalRequiredNotice
+}) {
+  if (approvalModeActive && approvalRequiredNotice) {
+    return { state: 'approval_required', message: 'Approval required before action.' };
+  }
+
+  if (voiceStatus.state === VOICE_STATES.LISTENING) {
+    return { state: 'listening', message: 'Listening...' };
+  }
+
+  if ([
+    VOICE_STATES.PERMISSION_DENIED,
+    VOICE_STATES.NO_MICROPHONE,
+    VOICE_STATES.UNSUPPORTED,
+    VOICE_STATES.ERROR
+  ].includes(voiceStatus.state)) {
+    return { state: 'warning', message: voiceStatus.message };
+  }
+
+  if (voiceStatus.state === VOICE_STATES.REQUESTING_PERMISSION) {
+    return { state: 'thinking', message: 'Checking microphone permission.' };
+  }
+
+  if (selectedModelMissing) {
+    return { state: 'warning', message: 'Selected model is missing.' };
+  }
+
+  if (['not_running', 'cors', 'timeout', 'disconnected'].includes(ollamaStatus.state)) {
+    return { state: 'warning', message: 'Ollama is disconnected.' };
+  }
+
+  if (ollamaStatus.state === 'connecting') {
+    return { state: 'thinking', message: 'Checking Ollama.' };
+  }
+
+  if (isGeneratingResponse) {
+    return { state: 'thinking', message: 'Thinking...' };
+  }
+
+  if (lastTaskCompletedAt && Date.now() - lastTaskCompletedAt < 5000) {
+    return { state: 'task_complete', message: 'Task complete.' };
+  }
+
+  if (privacyModeActive) {
+    return { state: 'privacy_shield_active', message: 'Privacy shield active.' };
+  }
+
+  if (ollamaStatus.state === 'connected') {
+    return { state: 'idle', message: 'Ollama connected. Alphonso is idle.' };
+  }
+
+  return { state: 'sleeping', message: 'Mic is off.' };
+}
+
+function companionStateFromVoice(voiceStatus) {
+  if (voiceStatus.state === VOICE_STATES.LISTENING) return 'listening';
+  if (voiceStatus.state === VOICE_STATES.REQUESTING_PERMISSION) return 'thinking';
+  if ([VOICE_STATES.PERMISSION_DENIED, VOICE_STATES.NO_MICROPHONE, VOICE_STATES.UNSUPPORTED, VOICE_STATES.ERROR].includes(voiceStatus.state)) return 'warning';
+  return 'idle';
+}
+
+function coachMessageFromVoice(voiceStatus) {
+  if (voiceStatus.state === VOICE_STATES.LISTENING) return 'Listening...';
+  if (voiceStatus.state === VOICE_STATES.REQUESTING_PERMISSION) return 'Checking microphone permission.';
+  if ([VOICE_STATES.PERMISSION_DENIED, VOICE_STATES.NO_MICROPHONE, VOICE_STATES.UNSUPPORTED, VOICE_STATES.ERROR].includes(voiceStatus.state)) return voiceStatus.message;
+  return 'Mic is off.';
+}
+
+function nextCoachCorner(current) {
+  const index = COACH_CORNERS.indexOf(current);
+  if (index < 0) return COACH_CORNERS[0];
+  return COACH_CORNERS[(index + 1) % COACH_CORNERS.length];
+}
+
+function CoachMissionBadge({ agent, state, message }) {
+  const label = agent === 'miya' ? 'Miya' : agent === 'jose' ? 'Jose' : agent === 'hector' ? 'Hector' : 'Alphonso';
+  const tone = state === 'warning' || state === 'approval_required'
+    ? 'text-amber-100 border-amber-300/20 bg-amber-500/10'
+    : state === 'task_complete'
+      ? 'text-emerald-100 border-emerald-300/20 bg-emerald-500/10'
+      : state === 'listening'
+        ? 'text-red-100 border-red-300/20 bg-red-500/10'
+        : 'text-cyan-100 border-cyan-300/20 bg-cyan-500/10';
+
+  return (
+    <div className={`rounded-xl border px-3 py-2 ${tone}`}>
+      <div className="text-[10px] font-bold uppercase tracking-widest">{label} mission</div>
+      <div className="mt-1 text-xs font-semibold">{state || 'idle'}</div>
+      <div className="mt-1 text-[11px] text-zinc-200/85 truncate">{message || 'Standing by'}</div>
+    </div>
+  );
+}
+
+export default function App() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const isCoachWindow = searchParams.get('coach') === '1';
+  const coachAgentFromQuery = searchParams.get('coachAgent');
+  const [activeTab, setActiveTab] = useState('chat');
+  const [isSidebarOpen] = useState(true);
+  const [settings, setSettings] = useState(() => getStorage('alphonso_settings', {
+    endpoint: DEFAULT_OLLAMA_ENDPOINT,
+    selectedModel: '',
+    workspaceRoot: getDefaultWorkspaceRoot(),
+    ocrEnginePath: '',
+    miyaCompanionPinned: true,
+    joseCompanionPinned: true,
+    hectorCompanionPinned: true,
+    focusMode: 'mission_control',
+    environmentTheme: 'minimal_runtime',
+    desktopMode: true,
+    localOnlyMode: true,
+    zeroCostMode: true,
+    approvalMode: true,
+    safeMode: true,
+    privacyShieldActive: false,
+    autoScroll: true,
+    coachAgent: 'alphonso',
+    autoUpdateEnabled: true,
+    updaterEndpoint: '',
+    updaterPubkey: '',
+    updaterTarget: ''
+  }));
+  const [conversations, setConversations] = useState(() => getStorage('alphonso_conversations', [
+    { id: INITIAL_CONVERSATION_ID, title: 'New Chat Session', timestamp: Date.now() }
+  ]));
+  const [activeChatId, setActiveChatId] = useState(conversations[0]?.id || INITIAL_CONVERSATION_ID);
+  const [ollamaStatus, setOllamaStatus] = useState({
+    state: 'connecting',
+    label: 'Connecting',
+    message: 'Checking Ollama...',
+    models: [],
+    trust: TRUST_STATES.TEMPORARY
+  });
+  const [desktopBridge, setDesktopBridge] = useState({
+    state: 'checking',
+    label: 'Checking',
+    message: 'Checking Tauri runtime bridge...'
+  });
+  const [lastCheckedAt, setLastCheckedAt] = useState(null);
+  const [copyState, setCopyState] = useState('idle');
+  const [updateCheckState, setUpdateCheckState] = useState({
+    checking: false,
+    configured: false,
+    available: false,
+    latestVersion: null,
+    currentVersion: '',
+    notes: null,
+    pubDate: null,
+    downloadUrl: null,
+    checkedAtMs: null,
+    trust: TRUST_STATES.UNVERIFIED,
+    error: null,
+    notificationSent: false
+  });
+  const [nativeSelfDevProof, setNativeSelfDevProof] = useState(() => {
+    const stored = getStorage('alphonso_native_selfdev_proof', null);
+    return stored && typeof stored === 'object' ? stored : null;
+  });
+  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
+  const [lastTaskCompletedAt, setLastTaskCompletedAt] = useState(null);
+  const [operatorMode, setOperatorMode] = useState(false);
+  const [verificationLogs, setVerificationLogs] = useState(() => getVerificationLogs());
+  const [durableAuditLogs, setDurableAuditLogs] = useState([]);
+  const [auditChainProof, setAuditChainProof] = useState(null);
+  const [pluginSandboxPolicy, setPluginSandboxPolicy] = useState(() => getPluginSandboxPolicy());
+  const [memoryItems, setMemoryItems] = useState(() => listMemoryItems());
+  const [plugins, setPlugins] = useState(() => listPlugins());
+  const [pluginAudit, setPluginAudit] = useState(() => listPluginAudit());
+  const [diskPluginManifests, setDiskPluginManifests] = useState([]);
+  const [workspaceFoundation, setWorkspaceFoundation] = useState(() => getWorkspaceFoundation());
+  const [workspaceProof, setWorkspaceProof] = useState(null);
+  const [ocrCapability, setOcrCapability] = useState(null);
+  const [workspaceSymbolIndex, setWorkspaceSymbolIndex] = useState(null);
+  const [screenObserverState, setScreenObserverState] = useState(() => getScreenObserverState());
+  const [screenObserverLogs, setScreenObserverLogs] = useState(() => getScreenObserverLogs());
+  const [lastPluginToolRun, setLastPluginToolRun] = useState(null);
+  const [lastManifestValidation, setLastManifestValidation] = useState(null);
+  const [lastOcrAdapterRun, setLastOcrAdapterRun] = useState(null);
+  const [miyaCompanionState, setMiyaCompanionState] = useState({
+    state: 'idle',
+    message: 'Miya is ready.'
+  });
+  const [joseCompanionState, setJoseCompanionState] = useState({
+    state: 'idle',
+    message: 'Jose is coordinating quietly.'
+  });
+  const [hectorCompanionState, setHectorCompanionState] = useState({
+    state: 'idle',
+    message: 'Hector is standing by.',
+    currentSourceUrl: null,
+    lastRunSummary: ''
+  });
+  const [snapshots, setSnapshots] = useState(() => listSnapshots());
+  const [coachMode, setCoachMode] = useState(false);
+  const [coachAlwaysOnTop, setCoachAlwaysOnTop] = useState(true);
+  const [coachMiniMode, setCoachMiniMode] = useState(() => {
+    const layout = getStorage(COACH_LAYOUT_KEY, { mini: false, corner: 'bottom-right' });
+    return Boolean(layout?.mini);
+  });
+  const [coachSnapCorner, setCoachSnapCorner] = useState(() => {
+    const layout = getStorage(COACH_LAYOUT_KEY, { mini: false, corner: 'bottom-right' });
+    return COACH_CORNERS.includes(layout?.corner) ? layout.corner : 'bottom-right';
+  });
+  const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
+  const ollamaCheckRunRef = useRef(0);
+  const screenObserverRunRef = useRef(false);
+  const workspaceRootBootstrapRef = useRef(false);
+  const nativeSelfDevAutorunRef = useRef(false);
+  const voice = useVoiceInput();
+
+  const writeNativeProofStage = useCallback(async (stageFileName, payload = {}) => {
+    const proofWorkspaceRoot = String(payload.workspaceRoot || settings.workspaceRoot || getDefaultWorkspaceRoot() || '').trim();
+    if (!proofWorkspaceRoot) return null;
+
+    const stage = String(stageFileName || '').replace(/\.json$/i, '');
+    const content = {
+      timestamp: new Date().toISOString(),
+      stage,
+      status: payload.status || 'recorded',
+      processId: payload.processId ?? null,
+      workspaceRoot: proofWorkspaceRoot,
+      error: payload.error ?? null,
+      durationMs: payload.durationMs ?? null,
+      ...payload
+    };
+
+    try {
+      void emit('alphonso-native-proof-stage', {
+        fileName: stageFileName,
+        ...content
+      }).catch(() => {});
+      void invoke('write_workspace_text_file', {
+        workspaceRoot: proofWorkspaceRoot,
+        relativePath: `release/rc0/proof/${stageFileName}`,
+        content: JSON.stringify(content, null, 2)
+      }).catch(() => {});
+      return content;
+    } catch {
+      return null;
+    }
+  }, [settings.workspaceRoot]);
+
+  const nativeProofHooks = useMemo(() => ({
+    writeStage: writeNativeProofStage
+  }), [writeNativeProofStage]);
+
+  useEffect(() => setStorage('alphonso_settings', settings), [settings]);
+  useEffect(() => setStorage('alphonso_conversations', conversations), [conversations]);
+  useEffect(() => setStorage('alphonso_native_selfdev_proof', nativeSelfDevProof), [nativeSelfDevProof]);
+  useEffect(() => setStorage(COACH_LAYOUT_KEY, { mini: coachMiniMode, corner: coachSnapCorner }), [coachMiniMode, coachSnapCorner]);
+
+  useEffect(() => {
+    if (workspaceRootBootstrapRef.current) return;
+    workspaceRootBootstrapRef.current = true;
+    if (!settings.workspaceRoot) {
+      setSettings((current) => (
+        current.workspaceRoot
+          ? current
+          : { ...current, workspaceRoot: getDefaultWorkspaceRoot() }
+      ));
+    }
+  }, [settings.workspaceRoot, setSettings]);
+
+  useEffect(() => {
+    if (typeof settings.zeroCostMode !== 'boolean') {
+      setSettings((current) => ({ ...current, zeroCostMode: true }));
+    }
+  }, [settings.zeroCostMode]);
+
+  useEffect(() => {
+    if (settings.environmentTheme === 'neon_studio') {
+      setSettings((current) => ({
+        ...current,
+        environmentTheme: 'minimal_runtime'
+      }));
+    }
+  }, [settings.environmentTheme]);
+
+  useEffect(() => {
+    void writeNativeProofStage('04_frontend_loaded.json', {
+      status: 'running',
+      processId: null,
+      workspaceRoot: settings.workspaceRoot || getDefaultWorkspaceRoot(),
+      note: 'React frontend mounted in the native runtime.'
+    });
+  }, [settings.workspaceRoot, writeNativeProofStage]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (window.__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    async function runNativeSelfDevelopmentProof() {
+      if (nativeSelfDevAutorunRef.current) return;
+
+      const proofWorkspaceRoot = settings.workspaceRoot || getDefaultWorkspaceRoot();
+      let rc0ProofValue = null;
+      try {
+        const rc0Proof = await invoke('read_runtime_env_value', { name: 'ALPHONSO_RC0_PROOF' });
+        rc0ProofValue = String(rc0Proof?.value || '').trim();
+      } catch {
+        rc0ProofValue = null;
+      }
+      if (rc0ProofValue === '1') {
+        nativeSelfDevAutorunRef.current = true;
+        window.__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__ = true;
+        if (!cancelled) {
+          setNativeSelfDevProof({
+            runtime: 'native_tauri',
+            proofAuthority: PROOF_AUTHORITY.RUST_ENGINE,
+            proofMode: 'native_rc0_rust',
+            autorun: false,
+            state: 'partial',
+            workspaceRoot: proofWorkspaceRoot,
+            workspaceRootValid: null,
+            filesScanned: 0,
+            p0Count: 0,
+            p1Count: 0,
+            p2Count: 0,
+            exportPath: null,
+            proofReceiptsWritten: false,
+            timestampMs: timestampMs(),
+            note: 'Rust RC0 engine is proof authority. Verify release/rc0/proof/*.json on disk; React display is not proof.'
+          });
+        }
+        return;
+      }
+
+      nativeSelfDevAutorunRef.current = true;
+      window.__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__ = true;
+      await writeNativeProofStage('05_autorun_observer_started.json', {
+        status: 'running',
+        workspaceRoot: proofWorkspaceRoot,
+        note: 'Native autorun observer entered before env reads; React is not proof authority.'
+      });
+
+      let autorunValue = null;
+      let exitValue = null;
+      try {
+        const autorunProof = await invoke('read_runtime_env_value', { name: 'ALPHONSO_SELFDEV_AUTORUN' });
+        autorunValue = String(autorunProof?.value || '').trim();
+      } catch {
+        autorunValue = null;
+      }
+      try {
+        const exitProof = await invoke('read_runtime_env_value', { name: 'ALPHONSO_SELFDEV_EXIT_ON_COMPLETE' });
+        exitValue = String(exitProof?.value || '').trim();
+      } catch {
+        exitValue = null;
+      }
+      await writeNativeProofStage('05_autorun_observer_env_checked.json', {
+        status: autorunValue === '1' ? 'ready' : 'setup_required',
+        workspaceRoot: proofWorkspaceRoot,
+        note: autorunValue === '1'
+          ? 'Autorun env detected by the native proof observer.'
+          : 'Autorun env not enabled or not readable in the native proof observer.',
+        autorunValue: autorunValue === '1',
+        exitValue: exitValue === '1'
+      });
+
+      if (autorunValue !== '1') {
+        if (!cancelled) {
+          setNativeSelfDevProof({
+            runtime: 'native_tauri',
+            proofMode: 'automated_native',
+            autorun: false,
+            state: 'setup_required',
+            workspaceRoot: proofWorkspaceRoot,
+            workspaceRootValid: null,
+            filesScanned: 0,
+            p0Count: 0,
+            p1Count: 0,
+            p2Count: 0,
+            exportPath: null,
+            proofReceiptsWritten: false,
+            timestampMs: timestampMs(),
+            note: 'ALPHONSO_SELFDEV_AUTORUN is not enabled in this native runtime.'
+          });
+          await invoke('write_workspace_text_file', {
+            workspaceRoot: proofWorkspaceRoot,
+            relativePath: 'release/rc0/native-selfdev-skipped.json',
+            content: JSON.stringify({
+              runtime: 'native_tauri',
+              proofMode: 'automated_native',
+              state: 'setup_required',
+              autorun: false,
+              workspaceRoot: proofWorkspaceRoot,
+              timestampMs: timestampMs(),
+              note: 'ALPHONSO_SELFDEV_AUTORUN is not enabled in this native runtime.'
+            }, null, 2)
+          }).catch(() => {});
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setNativeSelfDevProof({
+          runtime: 'native_tauri',
+          proofMode: 'automated_native',
+          autorun: true,
+          state: 'running',
+          workspaceRoot: settings.workspaceRoot || getDefaultWorkspaceRoot(),
+          workspaceRootValid: null,
+          filesScanned: 0,
+          p0Count: 0,
+          p1Count: 0,
+          p2Count: 0,
+          exportPath: null,
+          proofReceiptsWritten: false,
+          timestampMs: timestampMs(),
+          note: exitValue === '1' ? 'Native proof will exit after completion if safe.' : 'Native proof will leave the app open after completion.'
+        });
+        await invoke('write_workspace_text_file', {
+          workspaceRoot: proofWorkspaceRoot,
+          relativePath: 'release/rc0/native-selfdev-started.json',
+          content: JSON.stringify({
+            runtime: 'native_tauri',
+            state: 'running',
+            autorun: true,
+            workspaceRoot: proofWorkspaceRoot,
+            timestampMs: timestampMs(),
+            exitOnComplete: exitValue === '1'
+          }, null, 2)
+        }).catch(() => {});
+      }
+
+      try {
+        await writeNativeProofStage('05_autorun_observer_triggered.json', {
+          status: 'running',
+          workspaceRoot: proofWorkspaceRoot,
+          note: 'Native autorun observer branch reached before workspace validation.'
+        });
+        const cycle = await runSelfDevelopmentCycle({
+          root: proofWorkspaceRoot,
+          settings,
+          updateCheckState,
+          verificationLogs,
+          workspaceFoundation,
+          proofHooks: nativeProofHooks
+        });
+        if (cancelled) return;
+        const nextProof = {
+          runtime: 'native_tauri',
+          proofAuthority: PROOF_AUTHORITY.JS_BRIDGE,
+          proofMode: 'automated_native',
+          autorun: true,
+          state: 'partial',
+          workspaceRoot: cycle?.root || settings.workspaceRoot || getDefaultWorkspaceRoot(),
+          workspaceRootValid: Boolean(cycle?.validation?.ok),
+          filesScanned: Number(cycle?.auditSummary?.filesScanned || 0),
+          p0Count: Number(cycle?.auditSummary?.blockerCount || 0),
+          p1Count: Number(cycle?.readinessSummary?.partialCount || 0),
+          p2Count: Number(cycle?.readinessSummary?.needsSetupCount || 0),
+          topPackets: Array.isArray(cycle?.packets) ? cycle.packets.slice(0, 10).map((packet) => ({
+            id: packet.id,
+            title: packet.title,
+            priority: packet.priority,
+            riskLevel: packet.riskLevel
+          })) : [],
+          exportPath: cycle?.exportProof?.file_path || cycle?.exportProof?.filePath || null,
+          proofReceiptsWritten: false,
+          rc0Proof: cycle?.rc0Proof || null,
+          timestampMs: cycle?.generatedAtMs || timestampMs(),
+          note: cycle?.rc0Error
+            ? `JS bridge RC0 export error: ${cycle.rc0Error}`
+            : 'JS bridge scan recorded. Rust RC0 engine and release/rc0/proof/*.json remain proof authority.'
+        };
+        setNativeSelfDevProof(nextProof);
+        await invoke('write_workspace_text_file', {
+          workspaceRoot: proofWorkspaceRoot,
+          relativePath: 'release/rc0/native-selfdev-complete.json',
+          content: JSON.stringify(nextProof, null, 2)
+        }).catch(() => {});
+      } catch (error) {
+        if (!cancelled) {
+          const failedProof = {
+            runtime: 'native_tauri',
+            proofMode: 'automated_native',
+            autorun: true,
+            state: 'failed',
+            workspaceRoot: proofWorkspaceRoot,
+            workspaceRootValid: false,
+            filesScanned: 0,
+            p0Count: 0,
+            p1Count: 0,
+            p2Count: 0,
+            exportPath: null,
+            proofReceiptsWritten: false,
+            timestampMs: timestampMs(),
+            error: String(error)
+          };
+          setNativeSelfDevProof(failedProof);
+          await invoke('write_workspace_text_file', {
+            workspaceRoot: proofWorkspaceRoot,
+            relativePath: 'release/rc0/native-selfdev-error.json',
+            content: JSON.stringify(failedProof, null, 2)
+          }).catch(() => {});
+        }
+      }
+    }
+
+    void runNativeSelfDevelopmentProof();
+    return () => {
+      cancelled = true;
+    };
+  }, [desktopBridge.state, nativeProofHooks, settings.workspaceRoot, updateCheckState, verificationLogs, workspaceFoundation]);
+
+  useEffect(() => {
+    appendSessionEvent({
+      category: 'app_lifecycle',
+      title: 'Alphonso app session started',
+      details: { runtime: isCoachWindow ? 'coach_window' : 'main_window' },
+      agent: 'alphonso',
+      confidence: TRUST_STATES.TEMPORARY,
+      verificationState: TRUST_STATES.UNVERIFIED
+    });
+
+    const onBeforeUnload = () => {
+      appendSessionEvent({
+        category: 'app_lifecycle',
+        title: 'Alphonso app window closing',
+        details: { runtime: isCoachWindow ? 'coach_window' : 'main_window' },
+        agent: 'alphonso',
+        confidence: TRUST_STATES.TEMPORARY,
+        verificationState: TRUST_STATES.UNVERIFIED
+      });
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isCoachWindow]);
+
+  useEffect(() => {
+    appendSessionEvent({
+      category: 'agent_switch',
+      title: `Active workspace switched to ${activeTab}`,
+      details: { activeTab },
+      agent: activeTab === 'miya' ? 'miya' : activeTab === 'orchestrator' ? 'jose' : activeTab === 'hector' ? 'hector' : 'alphonso',
+      confidence: TRUST_STATES.TEMPORARY,
+      verificationState: TRUST_STATES.UNVERIFIED
+    });
+  }, [activeTab]);
+
+  useEffect(() => {
+    appendSessionEvent({
+      category: 'runtime',
+      title: `Ollama runtime state: ${ollamaStatus.state}`,
+      details: { state: ollamaStatus.state, label: ollamaStatus.label },
+      agent: 'alphonso',
+      confidence: ollamaStatus.trust || TRUST_STATES.TEMPORARY,
+      verificationState: ollamaStatus.trust || TRUST_STATES.UNVERIFIED
+    });
+  }, [ollamaStatus.state]);
+
+  useEffect(() => {
+    if (ollamaStatus.state !== 'connected' && ollamaStatus.state !== 'connecting') {
+      setJoseCompanionState({ state: 'warning', message: 'Runtime attention required.' });
+      return;
+    }
+    if (approvalRequiredNotice) {
+      setJoseCompanionState({ state: 'approving', message: 'Approval queue needs review.' });
+      return;
+    }
+    if (activeTab === 'orchestrator') {
+      setJoseCompanionState({ state: 'thinking', message: 'Jose is reviewing the ecosystem.' });
+      return;
+    }
+    setJoseCompanionState({ state: 'idle', message: 'Jose is coordinating quietly.' });
+  }, [activeTab, approvalRequiredNotice, ollamaStatus.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function inspectDesktopBridge() {
+      try {
+        const [name, version] = await Promise.all([getName(), getVersion()]);
+        if (!cancelled) {
+          setDesktopBridge({
+            state: 'connected',
+            label: 'Connected',
+            message: `${name || 'Alphonso'} ${version || ''}`.trim()
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDesktopBridge({
+            state: 'disconnected',
+            label: 'Browser preview',
+            message: 'Tauri app APIs are not available in this runtime.'
+          });
+        }
+      }
+    }
+
+    inspectDesktopBridge();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSupervisedState = async () => {
+      const [audit, manifests] = await Promise.all([
+        readDurableAuditLog(200),
+        discoverDiskPluginManifests(settings.workspaceRoot)
+      ]);
+
+      if (cancelled) return;
+      setDurableAuditLogs(Array.isArray(audit) ? audit : []);
+      setDiskPluginManifests(Array.isArray(manifests) ? manifests : []);
+    };
+
+    loadSupervisedState();
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.workspaceRoot]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (isCoachWindow) return undefined;
+
+    const hydrate = async () => {
+      const durableRows = await hydrateMemoryFromDurable();
+      if (!cancelled && Array.isArray(durableRows) && durableRows.length) {
+        setMemoryItems(durableRows);
+      }
+    };
+
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [desktopBridge.state, isCoachWindow]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (isCoachWindow) return undefined;
+
+    const hydrateRuntimeLedgers = async () => {
+      const proof = await bootstrapRuntimeLedgerHydration([
+        { scope: PACKET_SCOPE, storageKey: 'alphonso_agent_bus_packets_v1' },
+        { scope: JOSE_COMMAND_SCOPE, storageKey: 'alphonso_jose_command_routes_v2' },
+        { scope: SESSION_EVENT_SCOPE, storageKey: 'alphonso_session_events_v1' },
+        { scope: GOVERNANCE_SCOPE, storageKey: 'alphonso_jose_governance_decisions_v1' },
+        { scope: ORCHESTRATION_RECEIPT_SCOPE, storageKey: 'alphonso_orchestration_receipts_v1' },
+        { scope: ORCHESTRATION_QUEUE_SCOPE, storageKey: 'alphonso_orchestration_queue_transitions_v1' },
+        { scope: VERIFICATION_SCOPE, storageKey: 'alphonso_verification_logs_v1' },
+        { scope: CONNECTOR_SCOPE, storageKey: 'alphonso_connector_registry_v2' },
+        { scope: CONNECTOR_AUDIT_SCOPE, storageKey: 'alphonso_connector_audit_v2' },
+        { scope: CONNECTOR_AUTH_SCOPE, storageKey: 'alphonso_connector_auth_profiles_v1' },
+        { scope: TOOL_CONNECTION_SCOPE, storageKey: 'alphonso_tool_connections_v1' },
+        { scope: TOOL_CONNECTION_AUDIT_SCOPE, storageKey: 'alphonso_tool_connection_audit_v1' },
+        { scope: MIYA_MEMORY_SCOPE, storageKey: 'alphonso_miya_memory_v1' },
+        { scope: PLUGINS_SCOPE, storageKey: 'alphonso_plugins_v1' },
+        { scope: PLUGIN_AUDIT_SCOPE, storageKey: 'alphonso_plugin_audit_v1' },
+        { scope: REPO_AUDIT_SCOPE, storageKey: 'alphonso_repo_audits_v1' },
+        { scope: PRODUCTION_READINESS_SCOPE, storageKey: 'alphonso_production_readiness_v1' },
+        { scope: DEV_PACKET_SCOPE, storageKey: 'alphonso_dev_packets_v1' },
+        { scope: SELF_DEVELOPMENT_SCOPE, storageKey: 'alphonso_self_development_cycles_v1' },
+        { scope: WORKFLOW_OPS_SCOPE, storageKey: 'alphonso_workflow_operations_registry_v1' },
+        { scope: WORKFLOW_RUN_SCOPE, storageKey: 'alphonso_workflow_runs_v1' },
+        { scope: WORKFLOW_RECEIPT_SCOPE, storageKey: 'alphonso_workflow_receipts_v1' },
+        { scope: WORKFLOW_TELEMETRY_SCOPE, storageKey: 'alphonso_workflow_telemetry_v1' }
+      ]);
+      if (cancelled || !proof?.available) return;
+      setVerificationLogs(getVerificationLogs());
+      setPlugins(listPlugins());
+      setPluginAudit(listPluginAudit());
+      setMemoryItems(listMemoryItems());
+    };
+
+    hydrateRuntimeLedgers();
+    return () => {
+      cancelled = true;
+    };
+  }, [desktopBridge.state, isCoachWindow]);
+
+  const runOllamaCheck = useCallback(async () => {
+    const runId = ollamaCheckRunRef.current + 1;
+    ollamaCheckRunRef.current = runId;
+
+    setOllamaStatus((current) => ({
+      ...current,
+      state: 'connecting',
+      label: 'Connecting',
+      message: 'Checking Ollama /api/tags...'
+    }));
+
+    let result = await checkOllama(settings.endpoint, settings.selectedModel);
+    let trust = result.state === 'connected' ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED;
+
+    if (
+      desktopBridge.state === 'connected' &&
+      ['not_running', 'disconnected', 'timeout', 'cors'].includes(result.state)
+    ) {
+      const proof = await verifyOllamaRuntimeProof(settings.endpoint);
+      setVerificationLogs((current) => [...current, proof].slice(-250));
+
+      const runtimeProof = proof?.payload || {};
+      const proofModels = Array.isArray(runtimeProof.models)
+        ? runtimeProof.models
+            .filter((name) => typeof name === 'string' && name.trim())
+            .map((name) => ({ name }))
+        : [];
+
+      if (runtimeProof.reachable) {
+        const selectedFromProof = chooseDefaultModel(proofModels, settings.selectedModel);
+        const mergedModels = proofModels.length > 0 ? proofModels : result.models;
+        const hasModels = Array.isArray(mergedModels) && mergedModels.length > 0;
+        result = {
+          state: hasModels ? 'connected' : 'no_models',
+          label: hasModels ? 'Connected (Desktop Bridge)' : 'No model available',
+          message: hasModels
+            ? 'Ollama is reachable from the desktop runtime bridge. Frontend CORS path is bypassed safely.'
+            : 'Ollama is reachable from the desktop runtime bridge, but no local model was returned.',
+          models: mergedModels,
+          selectedModel: selectedFromProof || result.selectedModel,
+          transport: 'desktop_bridge'
+        };
+        trust = TRUST_STATES.VERIFIED;
+      } else if (runtimeProof.reason) {
+        const normalizedReason = String(runtimeProof.reason).toLowerCase();
+        if (normalizedReason.includes('timeout')) {
+          result = {
+            ...result,
+            state: 'timeout',
+            label: 'Request timeout',
+            message: 'Ollama did not respond before timeout from desktop runtime proof.'
+          };
+        } else if (normalizedReason.includes('connection') || normalizedReason.includes('refused')) {
+          result = {
+            ...result,
+            state: 'not_running',
+            label: 'Ollama not running',
+            message: 'Ollama is not reachable from frontend or desktop runtime proof.'
+          };
+        }
+      }
+    }
+
+    if (ollamaCheckRunRef.current !== runId) return;
+
+    setOllamaStatus({ ...result, trust });
+    setLastCheckedAt(new Date());
+
+    const log = appendVerificationLog({
+      type: 'ollama_health_check',
+      source: 'frontend-fetch',
+      trust,
+      payload: {
+        endpoint: settings.endpoint,
+        state: result.state,
+        label: result.label,
+        modelCount: result.models?.length || 0
+      }
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+
+    const memory = pushMemoryItem({
+      category: 'runtime_memory',
+      confidence: trust,
+      source: 'ollama-health-check',
+      verificationState: trust,
+      expiresAt: timestampMs() + 5 * 60 * 1000,
+      content: `Ollama check: ${result.label} (${result.state})`
+    });
+    setMemoryItems((current) => [...current, memory].slice(-500));
+
+    if ((!settings.selectedModel || result.state === 'model_missing') && result.selectedModel) {
+      setSettings((current) => ({
+        ...current,
+        selectedModel: result.selectedModel
+      }));
+    }
+  }, [desktopBridge.state, settings.endpoint, settings.selectedModel]);
+
+  useEffect(() => {
+    runOllamaCheck();
+  }, [runOllamaCheck]);
+
+  const runUpdateCheck = useCallback(async ({ manual = false } = {}) => {
+    if (!settings.autoUpdateEnabled && !manual) return;
+    if (isCoachWindow) return;
+    if (desktopBridge.state !== 'connected') return;
+
+    setUpdateCheckState((current) => ({
+      ...current,
+      checking: true
+    }));
+
+    const proof = await checkAppUpdate({
+      endpoint: settings.updaterEndpoint,
+      pubkey: settings.updaterPubkey,
+      target: settings.updaterTarget
+    });
+
+    const notificationSent = proof.available ? await notifyUpdateAvailable(proof) : false;
+    setUpdateCheckState({
+      checking: false,
+      configured: Boolean(proof.configured),
+      available: Boolean(proof.available),
+      latestVersion: proof.latestVersion || null,
+      currentVersion: proof.currentVersion || '',
+      notes: proof.notes || null,
+      pubDate: proof.pubDate || null,
+      downloadUrl: proof.downloadUrl || null,
+      checkedAtMs: proof.checkedAtMs || Date.now(),
+      trust: proof.trust || TRUST_STATES.UNVERIFIED,
+      error: proof.error || null,
+      notificationSent
+    });
+
+    const trust = proof.available ? TRUST_STATES.VERIFIED : (proof.configured ? TRUST_STATES.INFERRED : TRUST_STATES.UNVERIFIED);
+    const log = appendVerificationLog({
+      type: 'app_update_check',
+      source: 'tauri-updater-runtime',
+      trust,
+      payload: {
+        configured: Boolean(proof.configured),
+        available: Boolean(proof.available),
+        latestVersion: proof.latestVersion || null,
+        error: proof.error || null
+      }
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+  }, [desktopBridge.state, isCoachWindow, settings.autoUpdateEnabled, settings.updaterEndpoint, settings.updaterPubkey, settings.updaterTarget]);
+
+  useEffect(() => {
+    if (!settings.autoUpdateEnabled || isCoachWindow || desktopBridge.state !== 'connected') return undefined;
+    runUpdateCheck({ manual: false });
+    const intervalMs = 1000 * 60 * 30;
+    const timer = window.setInterval(() => runUpdateCheck({ manual: false }), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [desktopBridge.state, isCoachWindow, runUpdateCheck, settings.autoUpdateEnabled]);
+
+  useEffect(() => () => {
+    if (screenObserverRunRef.current) {
+      stopScreenObserver();
+    }
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      runOllamaCheck();
+    }, 20000);
+    return () => window.clearInterval(intervalId);
+  }, [runOllamaCheck]);
+
+  useEffect(() => {
+    if (!operatorMode) return undefined;
+    let cancelled = false;
+
+    const refreshAudit = async () => {
+      const logs = await readDurableAuditLog(200);
+      if (!cancelled) {
+        setDurableAuditLogs(Array.isArray(logs) ? logs : []);
+      }
+    };
+
+    refreshAudit();
+    const timer = window.setInterval(refreshAudit, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [operatorMode]);
+
+  const installedModels = ollamaStatus.models || [];
+  const selectedModelMissing = Boolean(
+    settings.selectedModel &&
+    installedModels.length > 0 &&
+    !installedModels.some((model) => model.name === settings.selectedModel)
+  );
+  const companion = getCompanionState({
+    ollamaStatus,
+    voiceStatus: voice.voiceStatus,
+    isGeneratingResponse,
+    lastTaskCompletedAt,
+    selectedModelMissing,
+    privacyModeActive: settings.privacyShieldActive,
+    approvalModeActive: settings.approvalMode,
+    approvalRequiredNotice
+  });
+
+  useEffect(() => {
+    if (!lastTaskCompletedAt) return undefined;
+    const timeoutId = window.setTimeout(() => setLastTaskCompletedAt(null), 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [lastTaskCompletedAt]);
+
+  useEffect(() => {
+    if (!approvalRequiredNotice) return undefined;
+    const timeoutId = window.setTimeout(() => setApprovalRequiredNotice(false), 6000);
+    return () => window.clearTimeout(timeoutId);
+  }, [approvalRequiredNotice]);
+
+  const requestApproval = (actionLabel) => {
+    if (!settings.approvalMode) return true;
+    const accepted = window.confirm(`Approval required: ${actionLabel}`);
+    if (!accepted) {
+      setApprovalRequiredNotice(true);
+    }
+    return accepted;
+  };
+
+  const createNewChat = () => {
+    const newId = `chat-${Date.now()}`;
+    const newChat = { id: newId, title: 'Unsaved Chat', timestamp: Date.now() };
+    setConversations((current) => [newChat, ...current]);
+    setActiveChatId(newId);
+    setActiveTab('chat');
+  };
+
+  const deleteChat = (id, event) => {
+    event.stopPropagation();
+    const filtered = conversations.filter((conversation) => conversation.id !== id);
+
+    if (filtered.length === 0) {
+      const resetId = INITIAL_CONVERSATION_ID;
+      setConversations([{ id: resetId, title: 'New Chat Session', timestamp: Date.now() }]);
+      setActiveChatId(resetId);
+    } else {
+      setConversations(filtered);
+      if (activeChatId === id) setActiveChatId(filtered[0].id);
+    }
+
+    localStorage.removeItem(`alphonso_messages_${id}`);
+  };
+
+  const copyTroubleshootingCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(OLLAMA_TROUBLESHOOTING_COMMAND);
+      setCopyState('copied');
+      window.setTimeout(() => setCopyState('idle'), 1600);
+    } catch {
+      setCopyState('failed');
+      window.setTimeout(() => setCopyState('idle'), 1600);
+    }
+  };
+
+  const verifyOllamaWithProof = async () => {
+    if (!requestApproval('Run Ollama runtime verification')) return;
+    await runOllamaCheck();
+    const proof = await verifyOllamaRuntimeProof(settings.endpoint);
+    setVerificationLogs((current) => [...current, proof].slice(-250));
+  };
+
+  const verifyProcesses = async (names) => {
+    if (!requestApproval(`Check process state: ${names.join(', ')}`)) return;
+    const proof = await verifyProcessProof(names);
+    setVerificationLogs((current) => [...current, proof].slice(-250));
+  };
+
+  const verifyPaths = async (paths) => {
+    if (!requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
+    const proof = await verifyPathProof(paths);
+    setVerificationLogs((current) => [...current, proof].slice(-250));
+  };
+
+  const verifyAuditChain = async () => {
+    if (!requestApproval('Verify durable audit chain integrity')) return;
+    const proof = await verifyDurableAuditChain();
+    setAuditChainProof(proof?.payload || null);
+    setVerificationLogs((current) => [...current, proof].slice(-250));
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const verifyCommand = async (program, args) => {
+    if (!program) return;
+    if (settings.safeMode) {
+      const safePrograms = ['ollama', 'where', 'where.exe', 'tasklist', 'npm', 'npm.cmd'];
+      if (!safePrograms.includes(program.toLowerCase())) {
+        const log = appendVerificationLog({
+          type: 'command_blocked_safe_mode',
+          source: 'frontend-policy',
+          trust: TRUST_STATES.VERIFIED,
+          payload: {
+            program,
+            reason: 'Blocked by safe mode policy'
+          }
+        });
+        setVerificationLogs((current) => [...current, log].slice(-250));
+        setApprovalRequiredNotice(true);
+        return;
+      }
+    }
+    if (!requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
+    const proof = await verifyCommandExecution(program, args, null);
+    setVerificationLogs((current) => [...current, proof].slice(-250));
+  };
+
+  const handleTogglePlugin = (pluginId, enabled) => {
+    if (!requestApproval(`${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}`)) return;
+    setPlugins(togglePlugin(pluginId, enabled));
+    setPluginAudit(listPluginAudit());
+  };
+
+  const handleToggleWorkspaceFeature = (featureKey, enabled) => {
+    const feature = workspaceFoundation[featureKey] || {};
+    setWorkspaceFoundation(updateWorkspaceFoundation({
+      [featureKey]: {
+        ...feature,
+        enabled,
+        verificationState: enabled ? TRUST_STATES.TEMPORARY : TRUST_STATES.UNVERIFIED
+      }
+    }));
+  };
+
+  const handleDiscoverPlugins = async () => {
+    if (!requestApproval('Discover plugin manifests from disk')) return;
+    const manifests = await discoverDiskPluginManifests(settings.workspaceRoot);
+    setDiskPluginManifests(manifests);
+    const log = appendVerificationLog({
+      type: 'plugin_manifest_scan',
+      source: 'tauri-command',
+      trust: TRUST_STATES.VERIFIED,
+      payload: {
+        workspaceRoot: settings.workspaceRoot || null,
+        count: manifests.length
+      }
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const handleRunWorkspaceProof = async () => {
+    if (!settings.workspaceRoot) {
+      const log = appendVerificationLog({
+        type: 'workspace_proof',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: 'Workspace root is not set.'
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      return;
+    }
+    if (!requestApproval(`Collect workspace proof for ${settings.workspaceRoot}`)) return;
+    try {
+      const proof = await collectWorkspaceProof(settings.workspaceRoot, 1200);
+      setWorkspaceProof(proof);
+      const log = appendVerificationLog({
+        type: 'workspace_proof',
+        source: 'tauri-command',
+        trust: proof?.trust || TRUST_STATES.TEMPORARY,
+        payload: proof
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      setWorkspaceFoundation(updateWorkspaceFoundation({
+        workspaceProof: {
+          lastRunAt: Date.now(),
+          trust: proof?.trust || TRUST_STATES.UNVERIFIED
+        }
+      }));
+    } catch (error) {
+      const log = appendVerificationLog({
+        type: 'workspace_proof',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: String(error)
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+    }
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const handleCheckOcrCapability = async () => {
+    if (!requestApproval('Check OCR engine capability')) return;
+    try {
+      const proof = await checkOcrCapability(settings.ocrEnginePath);
+      setOcrCapability(proof);
+      const log = appendVerificationLog({
+        type: 'ocr_capability_check',
+        source: 'tauri-command',
+        trust: proof?.trust || TRUST_STATES.UNVERIFIED,
+        payload: proof
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      setWorkspaceFoundation(updateWorkspaceFoundation({
+        ocrCapability: {
+          available: Boolean(proof?.available),
+          engine: proof?.engine || 'unconfigured',
+          message: proof?.message || '',
+          checkedAtMs: proof?.checked_at_ms || Date.now(),
+          verificationState: proof?.trust || TRUST_STATES.UNVERIFIED
+        }
+      }));
+    } catch (error) {
+      const log = appendVerificationLog({
+        type: 'ocr_capability_check',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: String(error)
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+    }
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const handleBuildSymbolIndex = async () => {
+    if (!settings.workspaceRoot) {
+      const log = appendVerificationLog({
+        type: 'symbol_index_build',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: 'Workspace root is not set.'
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      return;
+    }
+    if (!requestApproval(`Build workspace symbol index for ${settings.workspaceRoot}`)) return;
+    try {
+      const index = await buildWorkspaceSymbolIndex(settings.workspaceRoot, 500);
+      setWorkspaceSymbolIndex(index);
+      const log = appendVerificationLog({
+        type: 'symbol_index_build',
+        source: 'tauri-command',
+        trust: index?.trust || TRUST_STATES.TEMPORARY,
+        payload: {
+          root: index?.root,
+          filesIndexed: index?.files_indexed,
+          totals: index?.totals
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+    } catch (error) {
+      const log = appendVerificationLog({
+        type: 'symbol_index_build',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: String(error)
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+    }
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const handleExecutePluginTool = async ({ manifestPath, pluginId, toolId, extraArgs }) => {
+    const policyCheck = evaluatePluginExecutionPolicy({
+      manifestPath,
+      pluginId,
+      toolId,
+      extraArgs
+    });
+    if (!policyCheck.allowed) {
+      const log = appendVerificationLog({
+        type: 'plugin_tool_execution_blocked',
+        source: 'plugin-sandbox-policy',
+        trust: TRUST_STATES.FAILED,
+        payload: policyCheck
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      appendPluginAuditEntry({
+        pluginId: pluginId || 'unknown',
+        action: 'tool_execution_blocked_local_policy',
+        trust: TRUST_STATES.FAILED,
+        details: {
+          toolId: toolId || '',
+          violations: policyCheck?.violations || []
+        }
+      });
+      setPluginAudit(listPluginAudit());
+      setApprovalRequiredNotice(true);
+      return;
+    }
+
+    if (pluginSandboxPolicy.requireManifestValidation) {
+      try {
+        const validation = await validatePluginManifestDisk(manifestPath);
+        setLastManifestValidation(validation);
+        if (!validation.valid) {
+          const log = appendVerificationLog({
+            type: 'plugin_manifest_validation_blocked',
+            source: 'plugin-sandbox-policy',
+            trust: TRUST_STATES.FAILED,
+            payload: validation
+          });
+          setVerificationLogs((current) => [...current, log].slice(-250));
+          appendPluginAuditEntry({
+            pluginId: pluginId || 'unknown',
+            action: 'manifest_validation_blocked',
+            trust: TRUST_STATES.FAILED,
+            details: {
+              toolId: toolId || '',
+              errors: validation?.errors || [],
+              warnings: validation?.warnings || []
+            }
+          });
+          setPluginAudit(listPluginAudit());
+          setApprovalRequiredNotice(true);
+          return;
+        }
+      } catch (error) {
+        const log = appendVerificationLog({
+          type: 'plugin_manifest_validation_blocked',
+          source: 'plugin-sandbox-policy',
+          trust: TRUST_STATES.FAILED,
+          payload: { error: String(error) }
+        });
+        setVerificationLogs((current) => [...current, log].slice(-250));
+        appendPluginAuditEntry({
+          pluginId: pluginId || 'unknown',
+          action: 'manifest_validation_failed',
+          trust: TRUST_STATES.FAILED,
+          details: {
+            toolId: toolId || '',
+            error: String(error)
+          }
+        });
+        setPluginAudit(listPluginAudit());
+        setApprovalRequiredNotice(true);
+        return;
+      }
+    }
+
+    if (!requestApproval(`Execute plugin tool ${pluginId}:${toolId}`)) return;
+    try {
+      const proof = await executePluginToolRun({
+        manifestPath,
+        pluginId,
+        toolId,
+        extraArgs,
+        workspaceRoot: settings.workspaceRoot
+      });
+      setLastPluginToolRun(proof);
+      const log = appendVerificationLog({
+        type: 'plugin_tool_execution',
+        source: 'tauri-command',
+        trust: proof?.trust || TRUST_STATES.TEMPORARY,
+        payload: {
+          pluginId: proof?.plugin_id,
+          toolId: proof?.tool_id,
+          success: proof?.success,
+          exitCode: proof?.exit_code
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      appendPluginAuditEntry({
+        pluginId: proof?.plugin_id || pluginId || 'unknown',
+        action: proof?.success ? 'tool_execution_success' : 'tool_execution_failed',
+        trust: proof?.trust || TRUST_STATES.TEMPORARY,
+        details: {
+          toolId: proof?.tool_id || toolId || '',
+          exitCode: proof?.exit_code ?? null
+        }
+      });
+      setPluginAudit(listPluginAudit());
+    } catch (error) {
+      const log = appendVerificationLog({
+        type: 'plugin_tool_execution',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: String(error)
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      appendPluginAuditEntry({
+        pluginId: pluginId || 'unknown',
+        action: 'tool_execution_error',
+        trust: TRUST_STATES.FAILED,
+        details: {
+          toolId: toolId || '',
+          error: String(error)
+        }
+      });
+      setPluginAudit(listPluginAudit());
+    }
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const handleUpdatePluginSandboxPolicy = (patch) => {
+    const next = updatePluginSandboxPolicy(patch);
+    setPluginSandboxPolicy(next);
+    const log = appendVerificationLog({
+      type: 'plugin_sandbox_policy_update',
+      source: 'operator-dashboard',
+      trust: TRUST_STATES.VERIFIED,
+      payload: next
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+  };
+
+  const handleValidatePluginManifest = async (manifestPath) => {
+    if (!manifestPath) return;
+    if (!requestApproval(`Validate plugin manifest ${manifestPath}`)) return;
+    try {
+      const validation = await validatePluginManifestDisk(manifestPath);
+      setLastManifestValidation(validation);
+      const log = appendVerificationLog({
+        type: 'plugin_manifest_validation',
+        source: 'tauri-command',
+        trust: validation?.trust || TRUST_STATES.TEMPORARY,
+        payload: validation
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      appendPluginAuditEntry({
+        pluginId: 'manifest_validation',
+        action: validation?.valid ? 'manifest_valid' : 'manifest_invalid',
+        trust: validation?.trust || TRUST_STATES.TEMPORARY,
+        details: {
+          manifestPath,
+          errors: validation?.errors || [],
+          warnings: validation?.warnings || []
+        }
+      });
+      setPluginAudit(listPluginAudit());
+    } catch (error) {
+      const log = appendVerificationLog({
+        type: 'plugin_manifest_validation',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: String(error)
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      appendPluginAuditEntry({
+        pluginId: 'manifest_validation',
+        action: 'manifest_validation_error',
+        trust: TRUST_STATES.FAILED,
+        details: {
+          manifestPath,
+          error: String(error)
+        }
+      });
+      setPluginAudit(listPluginAudit());
+    }
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const handleRunOcrAdapter = async ({ adapter, imagePath, extraArgs }) => {
+    if (!settings.ocrEnginePath) {
+      const log = appendVerificationLog({
+        type: 'ocr_adapter_run',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: 'OCR engine path is not set.'
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+      return;
+    }
+    if (!requestApproval(`Run OCR adapter ${adapter}`)) return;
+    try {
+      const proof = await runOcrAdapter({
+        adapter,
+        enginePath: settings.ocrEnginePath,
+        imagePath: imagePath || null,
+        extraArgs
+      });
+      setLastOcrAdapterRun(proof);
+      const log = appendVerificationLog({
+        type: 'ocr_adapter_run',
+        source: 'tauri-command',
+        trust: proof?.trust || TRUST_STATES.TEMPORARY,
+        payload: {
+          adapter: proof?.adapter,
+          success: proof?.success,
+          exitCode: proof?.exit_code
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+    } catch (error) {
+      const log = appendVerificationLog({
+        type: 'ocr_adapter_run',
+        source: 'tauri-command',
+        trust: TRUST_STATES.FAILED,
+        payload: {
+          error: String(error)
+        }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-250));
+    }
+    setDurableAuditLogs(await readDurableAuditLog(200));
+  };
+
+  const handleCreateSnapshot = async () => {
+    if (!requestApproval('Create restore point snapshot')) return;
+    const snapshot = await createSnapshot({
+      settings,
+      ollamaStatus,
+      activeChatId,
+      verificationLogCount: verificationLogs.length,
+      memoryCount: memoryItems.length
+    });
+    setSnapshots((current) => [...current, snapshot].slice(-40));
+  };
+
+  const handleRestoreSnapshot = async (snapshotId) => {
+    if (!requestApproval(`Restore snapshot: ${snapshotId}`)) return;
+    const payload = restoreSnapshotById(snapshotId);
+    if (!payload) return;
+
+    if (payload.settings) {
+      setSettings(payload.settings);
+    }
+    if (payload.activeChatId) {
+      setActiveChatId(payload.activeChatId);
+    }
+    if (payload.ollamaStatus) {
+      setOllamaStatus(payload.ollamaStatus);
+    }
+
+    const log = appendVerificationLog({
+      type: 'restore_snapshot',
+      source: 'local-recovery',
+      trust: TRUST_STATES.VERIFIED,
+      payload: { snapshotId }
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+    setLastTaskCompletedAt(Date.now());
+  };
+
+  const handleBackupMemory = () => {
+    if (!requestApproval('Create memory backup')) return;
+    const backup = backupMemoryLedger(memoryItems);
+    const log = appendVerificationLog({
+      type: 'memory_backup',
+      source: 'local-recovery',
+      trust: TRUST_STATES.VERIFIED,
+      payload: { backupId: backup.id, count: backup.items.length }
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+  };
+
+  const handleRunReleasePreflight = async () => {
+    if (!requestApproval('Run release preflight: test + build + tauri build')) return;
+    await verifyCommand('npm.cmd', ['run', 'verify:desktop']);
+  };
+
+  const handleRequestScreenObserverPermission = async () => {
+    if (!requestApproval('Request desktop notification permission for screen alerts')) return;
+    const permission = await requestScreenNotificationPermission();
+    const next = updateScreenObserverState({
+      currentSummary: permission === 'granted'
+        ? 'Notification permission granted.'
+        : permission === 'unsupported'
+          ? 'Notifications are unsupported in this runtime.'
+          : 'Notification permission not granted.'
+    });
+    setScreenObserverState(next);
+  };
+
+  const handleStartScreenObserver = async () => {
+    if (!requestApproval('Start visible screen observer (manual permission prompt)')) return;
+    const current = getScreenObserverState();
+    const result = await startScreenObserver({
+      sampleEveryMs: current.sampleEveryMs || 5000,
+      notificationsEnabled: current.notificationsEnabled !== false,
+      audioAlertEnabled: current.audioAlertEnabled === true,
+      onUpdate: (nextState, event) => {
+        setScreenObserverState(nextState);
+        if (event) {
+          setScreenObserverLogs(getScreenObserverLogs());
+          pushMemoryItem({
+            title: `Screen observer: ${event.status}`,
+            category: 'workspace_memory',
+            content: `${event.summary} (change ${event.changeLevel})`,
+            source: 'screen-observer',
+            sourceAgent: 'alphonso',
+            confidence: TRUST_STATES.INFERRED,
+            verificationState: TRUST_STATES.INFERRED,
+            expiresAt: timestampMs() + 7 * 24 * 60 * 60 * 1000,
+            expiryRule: 'visual_pattern_7d'
+          });
+          if (event.status === 'high_change_detected' || event.status === 'pattern_repeated') {
+            setHectorCompanionState({
+              state: 'warning',
+              message: event.summary,
+              currentSourceUrl: null,
+              lastRunSummary: event.summary
+            });
+          }
+        }
+      }
+    });
+    screenObserverRunRef.current = Boolean(result?.ok);
+    if (result?.ok) {
+      setWorkspaceFoundation(updateWorkspaceFoundation({
+        screenCapture: {
+          ...(workspaceFoundation.screenCapture || {}),
+          enabled: true,
+          verificationState: TRUST_STATES.INFERRED
+        }
+      }));
+    }
+    setScreenObserverLogs(getScreenObserverLogs());
+  };
+
+  const handleStopScreenObserver = () => {
+    const next = stopScreenObserver();
+    screenObserverRunRef.current = false;
+    setWorkspaceFoundation(updateWorkspaceFoundation({
+      screenCapture: {
+        ...(workspaceFoundation.screenCapture || {}),
+        enabled: false,
+        verificationState: TRUST_STATES.TEMPORARY
+      }
+    }));
+    setScreenObserverState(next);
+    setScreenObserverLogs(getScreenObserverLogs());
+  };
+
+  const handleUpdateScreenObserverSettings = (patch) => {
+    const next = updateScreenObserverState(patch);
+    setScreenObserverState(next);
+  };
+
+  const handleExportDiagnostics = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      modes: {
+        operatorMode,
+        localOnlyMode: settings.localOnlyMode,
+        zeroCostMode: settings.zeroCostMode,
+        approvalMode: settings.approvalMode,
+        safeMode: settings.safeMode,
+        privacyShieldActive: settings.privacyShieldActive
+      },
+      runtime: {
+        ollamaStatus,
+        desktopBridge,
+        selectedModel: settings.selectedModel,
+        endpoint: settings.endpoint,
+        lastCheckedAt: lastCheckedAt ? new Date(lastCheckedAt).toISOString() : null
+      },
+      counts: {
+        verificationLogs: verificationLogs.length,
+        memoryItems: memoryItems.length,
+        plugins: plugins.length,
+        snapshots: snapshots.length
+      },
+      verificationLogs,
+      durableAuditLogs,
+      memoryItems,
+      plugins,
+      diskPluginManifests,
+      pluginAudit,
+      snapshots,
+      workspaceFoundation,
+      workspaceProof,
+      ocrCapability,
+      workspaceSymbolIndex,
+      lastPluginToolRun,
+      lastManifestValidation,
+      lastOcrAdapterRun,
+      auditChainProof,
+      pluginSandboxPolicy
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `alphonso-diagnostics-${Date.now()}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+
+    const log = appendVerificationLog({
+      type: 'diagnostics_export',
+      source: 'operator-dashboard',
+      trust: TRUST_STATES.VERIFIED,
+      payload: { bytes: blob.size }
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+  };
+
+  const handleRuntimeRepair = async () => {
+    if (!requestApproval('Run supervised runtime repair checks')) return;
+    await runOllamaCheck();
+    await verifyProcesses(['ollama']);
+    const log = appendVerificationLog({
+      type: 'runtime_repair',
+      source: 'supervised-repair',
+      trust: TRUST_STATES.TEMPORARY,
+      payload: { status: 'repair checks completed' }
+    });
+    setVerificationLogs((current) => [...current, log].slice(-250));
+  };
+
+  const handleToggleCoachMode = async () => {
+    if (!requestApproval(`${coachMode ? 'Close' : 'Open'} coach mode window`)) return;
+    if (coachMode) {
+      await closeCoachWindow();
+      setCoachMode(false);
+      return;
+    }
+    await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
+    setCoachMode(true);
+  };
+
+  const handleToggleCoachTop = async () => {
+    const next = !coachAlwaysOnTop;
+    setCoachAlwaysOnTop(next);
+    if (coachMode) {
+      await openCoachWindow(next, settings.coachAgent || 'alphonso');
+    }
+  };
+
+  const minimizeToCoach = async () => {
+    if (!requestApproval('Minimize to coach mode')) return;
+    try {
+      await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
+      setCoachMode(true);
+      await getCurrentWindow().minimize();
+    } catch {
+      // Ignore when not in Tauri runtime.
+    }
+  };
+
+  const openAlphonsoDesktopCard = async () => {
+    if (!requestApproval('Open Alphonso desktop card')) return;
+    try {
+      await openCoachWindow(coachAlwaysOnTop, 'alphonso');
+      setCoachMode(true);
+    } catch {
+      // Ignore when not in Tauri runtime.
+    }
+  };
+
+  useEffect(() => {
+    let unlistenTrayMenu;
+    let unlistenCoachToggle;
+    let disposed = false;
+
+    const bindListeners = async () => {
+      try {
+        unlistenTrayMenu = await listen('alphonso://tray_menu', (event) => {
+          const action = String(event.payload || 'unknown');
+          const log = appendVerificationLog({
+            type: 'tray_menu_event',
+            source: 'tauri-tray',
+            trust: TRUST_STATES.VERIFIED,
+            payload: { action }
+          });
+          setVerificationLogs((current) => [...current, log].slice(-250));
+        });
+
+        unlistenCoachToggle = await listen('alphonso://coach_toggle', async () => {
+          if (disposed) return;
+          if (coachMode) {
+            await closeCoachWindow();
+            setCoachMode(false);
+            return;
+          }
+          await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
+          setCoachMode(true);
+        });
+      } catch {
+        // ignore outside Tauri runtime
+      }
+    };
+
+    bindListeners();
+
+    return () => {
+      disposed = true;
+      if (unlistenTrayMenu) unlistenTrayMenu();
+      if (unlistenCoachToggle) unlistenCoachToggle();
+    };
+  }, [coachMode, coachAlwaysOnTop, settings.coachAgent]);
+
+  if (isCoachWindow) {
+    const coachAgent = coachAgentFromQuery || settings.coachAgent || 'alphonso';
+    const coachState = coachAgent === 'miya'
+      ? miyaCompanionState
+      : coachAgent === 'jose'
+        ? joseCompanionState
+        : coachAgent === 'hector'
+          ? hectorCompanionState
+          : {
+            state: companionStateFromVoice(voice.voiceStatus),
+            message: coachMessageFromVoice(voice.voiceStatus)
+          };
+    const cornerClass = {
+      'bottom-right': 'items-end justify-end',
+      'bottom-left': 'items-end justify-start',
+      'top-right': 'items-start justify-end',
+      'top-left': 'items-start justify-start'
+    }[coachSnapCorner] || 'items-end justify-end';
+
+    return (
+      <div className={`h-screen w-screen bg-zinc-950 text-zinc-100 flex p-4 ${coachMiniMode ? cornerClass : 'items-center justify-center'}`}>
+        <div className={`${coachMiniMode ? 'w-[22rem] rounded-2xl border border-cyan-300/20 bg-zinc-900/85 p-3' : 'w-full h-full rounded-2xl border border-white/10 bg-zinc-900/70 p-4'}`}>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Coach Mode</div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCoachMiniMode((current) => !current)}
+                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              >
+                {coachMiniMode ? 'Full' : 'Mini'}
+              </button>
+              <button
+                onClick={() => setCoachSnapCorner((current) => nextCoachCorner(current))}
+                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              >
+                Snap: {coachSnapCorner}
+              </button>
+            </div>
+          </div>
+
+          {coachMiniMode ? (
+            <div className="space-y-3">
+              <CoachMissionBadge agent={coachAgent} state={coachState.state} message={coachState.message} />
+              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-2">
+                <Suspense fallback={null}>
+                  <MicrophoneStatus voiceStatus={voice.voiceStatus} />
+                </Suspense>
+              </div>
+            </div>
+          ) : coachAgent === 'miya' ? (
+            <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3 text-xs text-zinc-400">Loading companion surface...</div>}>
+              <MiyaCompanionWidget state={miyaCompanionState.state} message={miyaCompanionState.message} pinned={false} />
+            </Suspense>
+          ) : coachAgent === 'jose' ? (
+            <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3 text-xs text-zinc-400">Loading companion surface...</div>}>
+              <JoseCompanionWidget state={joseCompanionState.state} message={joseCompanionState.message} pinned={false} />
+            </Suspense>
+          ) : coachAgent === 'hector' ? (
+            <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3 text-xs text-zinc-400">Loading companion surface...</div>}>
+              <HectorCompanionWidget
+                state={hectorCompanionState.state}
+                message={hectorCompanionState.message}
+                currentSourceUrl={hectorCompanionState.currentSourceUrl}
+                pinned={false}
+              />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3 text-xs text-zinc-400">Loading companion surface...</div>}>
+              <CompanionWidget
+                state={companionStateFromVoice(voice.voiceStatus)}
+                message={coachMessageFromVoice(voice.voiceStatus)}
+                pinned={false}
+              />
+            </Suspense>
+          )}
+
+          {!coachMiniMode && (
+            <div className="mt-24">
+              <Suspense fallback={null}>
+                <MicrophoneStatus voiceStatus={voice.voiceStatus} />
+              </Suspense>
+            </div>
+          )}
+          {coachMiniMode && (
+            <div className="mt-2 text-[10px] text-zinc-500">
+              Mini mode is always-on-top friendly and corner-snapped for fast glance monitoring.
+            </div>
+          )}
+          <div className="mt-2 text-[10px] text-zinc-600">
+            Desktop coach card is local-only and supervised.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30 ${themeClassFromSettings(settings)}`}>
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isOpen={isSidebarOpen}
+        conversations={conversations}
+        activeChatId={activeChatId}
+        setActiveChatId={setActiveChatId}
+        onCreateChat={createNewChat}
+        onDeleteChat={deleteChat}
+      />
+
+      <div className="flex flex-col flex-1 relative min-w-0 border-x border-white/[0.05]">
+        <TopBar
+          settings={settings}
+          ollamaStatus={ollamaStatus}
+          selectedModelMissing={selectedModelMissing}
+          operatorMode={operatorMode}
+          activeTab={activeTab}
+        />
+        <CommandRib
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          settings={settings}
+          setSettings={setSettings}
+          ollamaStatus={ollamaStatus}
+          operatorMode={operatorMode}
+        />
+
+        <main className="flex-1 overflow-y-auto relative bg-zinc-950/50">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
+
+          <div className="h-full relative z-10">
+            <Suspense fallback={<ViewLoadingState activeTab={activeTab} />}>
+              {activeTab === 'chat' && (
+                <ChatView
+                  activeChatId={activeChatId}
+                  settings={settings}
+                  setConversations={setConversations}
+                  ollamaStatus={ollamaStatus}
+                  installedModels={installedModels}
+                  selectedModelMissing={selectedModelMissing}
+                  voice={voice}
+                  onGenerationChange={setIsGeneratingResponse}
+                  onTaskComplete={() => setLastTaskCompletedAt(Date.now())}
+                  onRetryOllama={runOllamaCheck}
+                  onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })}
+                />
+              )}
+              {activeTab === 'miya' && (
+                <MiyaStudio
+                  settings={settings}
+                  ollamaStatus={ollamaStatus}
+                  onStudioStateChange={(state, message) => setMiyaCompanionState({ state, message })}
+                  onPacketCreated={() => {
+                    const log = appendVerificationLog({
+                      type: 'miya_handoff_packet_created',
+                      source: 'miya-studio',
+                      trust: TRUST_STATES.TEMPORARY,
+                      payload: {
+                        selectedModel: settings.selectedModel || null
+                      }
+                    });
+                    setVerificationLogs((current) => [...current, log].slice(-250));
+                  }}
+                />
+              )}
+              {activeTab === 'hector' && (
+                <HectorResearchDesk
+                  onHectorStateChange={(payload) => {
+                    if (!payload) return;
+                    setHectorCompanionState((current) => ({
+                      ...current,
+                      ...payload
+                    }));
+                  }}
+                />
+              )}
+              {activeTab === 'automation' && <AutomationView />}
+              {activeTab === 'files' && <FilesView />}
+              {activeTab === 'ecosystem' && (
+                <EcosystemHub
+                  settings={settings}
+                  setSettings={setSettings}
+                  ollamaStatus={ollamaStatus}
+                  verificationLogs={verificationLogs}
+                  memoryItems={memoryItems}
+                  voiceStatus={voice.voiceStatus}
+                  workspaceFoundation={workspaceFoundation}
+                  updateCheckState={updateCheckState}
+                  nativeSelfDevProof={nativeSelfDevProof}
+                  setNativeSelfDevProof={setNativeSelfDevProof}
+                  nativeProofHooks={nativeProofHooks}
+                />
+              )}
+              {activeTab === 'project_execution' && <ProjectExecutionMode />}
+              {activeTab === 'orchestrator' && (
+                <OrchestratorView
+                  settings={settings}
+                  ollamaStatus={ollamaStatus}
+                  onJoseStateChange={(state, message) => setJoseCompanionState({ state, message })}
+                />
+              )}
+              {activeTab === 'operator' && (
+                <OperatorDashboard
+                  operatorMode={operatorMode}
+                  setOperatorMode={setOperatorMode}
+                  ollamaStatus={ollamaStatus}
+                  lastCheckedAt={lastCheckedAt}
+                  verificationLogs={verificationLogs}
+                  onVerifyOllama={verifyOllamaWithProof}
+                  onVerifyAuditChain={verifyAuditChain}
+                  onVerifyProcess={verifyProcesses}
+                  onVerifyPaths={verifyPaths}
+                  onVerifyCommand={verifyCommand}
+                  memoryItems={memoryItems}
+                  plugins={plugins}
+                  diskPluginManifests={diskPluginManifests}
+                  pluginAudit={pluginAudit}
+                  onTogglePlugin={handleTogglePlugin}
+                  onDiscoverPlugins={handleDiscoverPlugins}
+                  workspaceFoundation={workspaceFoundation}
+                  onToggleWorkspaceFeature={handleToggleWorkspaceFeature}
+                  workspaceProof={workspaceProof}
+                  ocrCapability={ocrCapability}
+                  onRunWorkspaceProof={handleRunWorkspaceProof}
+                  onCheckOcrCapability={handleCheckOcrCapability}
+                  workspaceSymbolIndex={workspaceSymbolIndex}
+                  onBuildSymbolIndex={handleBuildSymbolIndex}
+                  onExecutePluginTool={handleExecutePluginTool}
+                  onValidatePluginManifest={handleValidatePluginManifest}
+                  lastPluginToolRun={lastPluginToolRun}
+                  lastManifestValidation={lastManifestValidation}
+                  pluginSandboxPolicy={pluginSandboxPolicy}
+                  onUpdatePluginSandboxPolicy={handleUpdatePluginSandboxPolicy}
+                  auditChainProof={auditChainProof}
+                  onRunOcrAdapter={handleRunOcrAdapter}
+                  lastOcrAdapterRun={lastOcrAdapterRun}
+                  snapshots={snapshots}
+                  onCreateSnapshot={handleCreateSnapshot}
+                  onRestoreSnapshot={handleRestoreSnapshot}
+                  onBackupMemory={handleBackupMemory}
+                  onRunRuntimeRepair={handleRuntimeRepair}
+                  onRunReleasePreflight={handleRunReleasePreflight}
+                  onExportDiagnostics={handleExportDiagnostics}
+                  durableAuditLogs={durableAuditLogs}
+                  coachMode={coachMode}
+                  coachAlwaysOnTop={coachAlwaysOnTop}
+                  onToggleCoachMode={handleToggleCoachMode}
+                  onToggleCoachTop={handleToggleCoachTop}
+                  screenObserverState={screenObserverState}
+                  screenObserverLogs={screenObserverLogs}
+                  onRequestScreenObserverPermission={handleRequestScreenObserverPermission}
+                  onStartScreenObserver={handleStartScreenObserver}
+                  onStopScreenObserver={handleStopScreenObserver}
+                  onUpdateScreenObserverSettings={handleUpdateScreenObserverSettings}
+                  modes={settings}
+                />
+              )}
+              {activeTab === 'settings' && (
+                <Suspense fallback={null}>
+                  <SettingsView
+                    settings={settings}
+                    setSettings={setSettings}
+                    ollamaStatus={ollamaStatus}
+                    installedModels={installedModels}
+                    selectedModelMissing={selectedModelMissing}
+                    onCheckOllama={runOllamaCheck}
+                    onCopyTroubleshootingCommand={copyTroubleshootingCommand}
+                    copyState={copyState}
+                    updateCheckState={updateCheckState}
+                    onCheckUpdates={() => runUpdateCheck({ manual: true })}
+                    Badge={Badge}
+                    StatusDot={StatusDot}
+                    SectionHeader={SectionHeader}
+                    ModelSelector={ModelSelector}
+                    statusColors={statusColors}
+                    normalizeEndpoint={normalizeEndpoint}
+                    ollamaTroubleshootingCommand={OLLAMA_TROUBLESHOOTING_COMMAND}
+                  />
+                </Suspense>
+              )}
+            </Suspense>
+          </div>
+        </main>
+      </div>
+
+      <RightPanel
+        settings={settings}
+        ollamaStatus={ollamaStatus}
+        installedModels={installedModels}
+        desktopBridge={desktopBridge}
+        voiceStatus={voice.voiceStatus}
+        selectedModelMissing={selectedModelMissing}
+        lastCheckedAt={lastCheckedAt}
+        onCheckOllama={runOllamaCheck}
+        onCopyTroubleshootingCommand={copyTroubleshootingCommand}
+        copyState={copyState}
+        onMinimizeToCoach={minimizeToCoach}
+        operatorMode={operatorMode}
+        approvalRequiredNotice={approvalRequiredNotice}
+        miyaCompanionState={miyaCompanionState}
+        joseCompanionState={joseCompanionState}
+        hectorCompanionState={hectorCompanionState}
+        screenObserverState={screenObserverState}
+        updateCheckState={updateCheckState}
+        onCheckUpdates={() => runUpdateCheck({ manual: true })}
+      />
+      <Suspense fallback={<div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 text-sm text-zinc-400">Loading companion widgets...</div>}>
+        <CompanionWidget state={companion.state} message={companion.message} onOpenDesktopCard={openAlphonsoDesktopCard} />
+        {settings.hectorCompanionPinned !== false && (
+          <HectorCompanionWidget
+            state={hectorCompanionState.state}
+            message={hectorCompanionState.message}
+            currentSourceUrl={hectorCompanionState.currentSourceUrl}
+          />
+        )}
+        {settings.joseCompanionPinned && (
+          <JoseCompanionWidget state={joseCompanionState.state} message={joseCompanionState.message} />
+        )}
+        {settings.miyaCompanionPinned && (
+          <MiyaCompanionWidget state={miyaCompanionState.state} message={miyaCompanionState.message} />
+        )}
+      </Suspense>
+    </div>
+  );
+}
+
+function ViewLoadingState({ activeTab }) {
+  return (
+    <div className="flex h-full items-center justify-center px-6 py-10">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950/75 px-5 py-4 text-sm text-zinc-400">
+        Loading {activeTab}...
+      </div>
+    </div>
+  );
+}
+
+function Sidebar({ activeTab, setActiveTab, isOpen, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat }) {
+  const navItems = [
+    { id: 'chat', icon: MessageSquare, label: 'Chat Hub' },
+    { id: 'orchestrator', icon: Crown, label: 'Jose' },
+    { id: 'hector', icon: Cloud, label: 'Hector' },
+    { id: 'miya', icon: Clapperboard, label: 'Miya Studio' },
+    { id: 'project_execution', icon: Terminal, label: 'Project Exec' },
+    { id: 'automation', icon: Zap, label: 'Automation' },
+    { id: 'files', icon: FolderOpen, label: 'Knowledge' },
+    { id: 'ecosystem', icon: Layers, label: 'Ecosystem' },
+    { id: 'operator', icon: Activity, label: 'Operator' }
+  ];
+
+  return (
+    <aside className={`${isOpen ? 'w-72' : 'w-20'} flex flex-col transition-all duration-300 ease-in-out bg-zinc-950 shrink-0 border-r border-white/[0.03]`}>
+      <div className="h-16 flex items-center px-4 border-b border-white/[0.05] shrink-0">
+        <div className="flex items-center gap-3 w-full">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)] shrink-0">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          {isOpen && <span className="font-bold text-sm tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">ALPHONSO</span>}
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="py-4 px-3 flex flex-col gap-1 shrink-0">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                activeTab === item.id ? 'bg-zinc-800 text-white ring-1 ring-white/10' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+              }`}
+            >
+              <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-indigo-400' : ''}`} />
+              {isOpen && <span className="font-medium">{item.label}</span>}
+            </button>
+          ))}
+        </div>
+
+        {isOpen && (
+          <div className="flex flex-col flex-1 px-3 mt-4 overflow-hidden">
+            <div className="flex items-center justify-between px-3 mb-2">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent Chats</span>
+              <button
+                onClick={onCreateChat}
+                className="p-1 hover:bg-zinc-800 rounded-md transition-colors text-zinc-400 hover:text-white"
+                title="New chat"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+              {conversations.map((chat) => (
+                <div
+                  key={chat.id}
+                  onClick={() => {
+                    setActiveChatId(chat.id);
+                    setActiveTab('chat');
+                  }}
+                  className={`group flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${
+                    activeChatId === chat.id && activeTab === 'chat' ? 'bg-indigo-500/10 text-indigo-300 ring-1 ring-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <MessageSquare className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{chat.title}</span>
+                  </div>
+                  <button
+                    onClick={(event) => onDeleteChat(chat.id, event)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
+                    title="Delete chat"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t border-white/[0.05] space-y-2">
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all ${
+            activeTab === 'settings' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50'
+          }`}
+        >
+          <Settings className="w-4 h-4" />
+          {isOpen && <span>Settings</span>}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function TopBar({ settings, ollamaStatus, selectedModelMissing, operatorMode, activeTab }) {
+  const modelLabel = selectedModelMissing
+    ? 'Model not found'
+    : settings.selectedModel || 'No model selected';
+
+  return (
+    <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.05] bg-zinc-950/80 backdrop-blur-md z-20 sticky top-0">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 rounded-full border border-white/5 min-w-0">
+          <Globe className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+          <span className="text-[11px] font-mono text-zinc-400 truncate">{normalizeEndpoint(settings.endpoint)}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 rounded-full border border-white/5">
+          <StatusDot state={ollamaStatus.state} />
+          <span className="text-[11px] font-semibold text-zinc-300">{ollamaStatus.label}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {activeTab === 'orchestrator' && <Badge color="amber">Jose</Badge>}
+        {activeTab === 'hector' && <Badge color="green">Hector</Badge>}
+        {activeTab === 'miya' && <Badge color="blue">Miya</Badge>}
+        {activeTab === 'ecosystem' && <Badge color="indigo">Ecosystem</Badge>}
+        {activeTab === 'project_execution' && <Badge color="indigo">Project Execution</Badge>}
+        {operatorMode && <Badge color="blue">Operator</Badge>}
+        {settings.approvalMode && <Badge color="amber">Approval</Badge>}
+        {settings.safeMode && <Badge color="green">Safe</Badge>}
+        {settings.localOnlyMode && <Badge color="indigo">Local Only</Badge>}
+        {settings.zeroCostMode && <Badge color="green">Zero Cost</Badge>}
+        <Badge color={selectedModelMissing ? 'amber' : 'indigo'}>{modelLabel}</Badge>
+        <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+          <User className="w-4 h-4 text-zinc-400" />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ChatView({
+  activeChatId,
+  settings,
+  setConversations,
+  ollamaStatus,
+  installedModels,
+  selectedModelMissing,
+  voice,
+  onGenerationChange,
+  onTaskComplete,
+  onRetryOllama,
+  onJoseExecutionState
+}) {
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    setMessages(getStorage(`alphonso_messages_${activeChatId}`, []));
+  }, [activeChatId]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      setStorage(`alphonso_messages_${activeChatId}`, messages);
+      setConversations((current) => current.map((conversation) =>
+        conversation.id === activeChatId &&
+        (conversation.title === 'Unsaved Chat' || conversation.title === 'New Chat Session')
+          ? { ...conversation, title: `${messages[0].content.slice(0, 30)}...` }
+          : conversation
+      ));
+    }
+  }, [messages, activeChatId, setConversations]);
+
+  useEffect(() => {
+    if (settings.autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isGenerating, settings.autoScroll]);
+
+  const modelReady = settings.selectedModel && !selectedModelMissing;
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || isGenerating) return;
+    const cleanInput = inputValue.trim();
+    const joseCommand = isJoseIntakeCommand(cleanInput);
+
+    if (joseCommand) {
+      const userMessage = { id: Date.now(), role: 'user', content: cleanInput };
+      setMessages((current) => [...current, userMessage]);
+      setInputValue('');
+      setIsGenerating(true);
+      onGenerationChange(true);
+      onJoseExecutionState?.('thinking', 'Jose is decomposing and distributing the command.');
+
+      try {
+        const result = await runJoseCommandExecutionPipeline({
+          commandText: cleanInput,
+          source: 'shayan',
+          endpoint: settings.endpoint,
+          zeroCostMode: settings.zeroCostMode
+        });
+
+        const command = result?.command || {};
+        const shayanReport = command?.shayanReport || null;
+        const summary = shayanReport?.summary || 'Jose processed the command.';
+        const urlLine = shayanReport?.resultUrl ? `\nVerified URL: ${shayanReport.resultUrl}` : '\nVerified URL: not available yet.';
+        const executionLine = `\nExecuted: ${result?.executedCount || 0} | Pending approval: ${result?.pendingApprovalCount || 0} | Failed: ${result?.failedCount || 0}`;
+        const commandLine = `\nCommand ID: ${result?.commandId || 'n/a'}`;
+        const hintLine = (result?.pendingApprovalCount || 0) > 0
+          ? '\nNext step: open Jose workspace and approve high-risk external tasks.'
+          : '\nNext step: review Jose receipts in Orchestrator view.';
+
+        setMessages((current) => [...current, {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: `Jose Report\n\n${summary}${urlLine}${executionLine}${commandLine}${hintLine}`
+        }]);
+        onJoseExecutionState?.(
+          (result?.pendingApprovalCount || 0) > 0 ? 'approving' : 'task_complete',
+          (result?.pendingApprovalCount || 0) > 0
+            ? 'Jose executed safe tasks and is waiting for approvals.'
+            : 'Jose completed routing and merged reports.'
+        );
+        onTaskComplete();
+      } catch (error) {
+        setMessages((current) => [...current, {
+          id: Date.now() + 1,
+          role: 'assistant',
+          isError: true,
+          content: `Jose orchestration failed.\n\n${String(error)}`
+        }]);
+        onJoseExecutionState?.('warning', 'Jose orchestration failed.');
+      } finally {
+        setIsGenerating(false);
+        onGenerationChange(false);
+      }
+      return;
+    }
+
+    if (!modelReady) {
+      setMessages((current) => [...current, {
+        id: Date.now(),
+        role: 'assistant',
+        isError: true,
+        content: selectedModelMissing
+          ? `Model not found: ${settings.selectedModel}. Choose one of the installed models: ${installedModels.map((model) => model.name).join(', ')}.`
+          : 'No Ollama model is selected. Run Check Ollama and choose an installed model.'
+      }]);
+      return;
+    }
+
+    const userMessage = { id: Date.now(), role: 'user', content: cleanInput };
+    setMessages((current) => [...current, userMessage]);
+    setInputValue('');
+    setIsGenerating(true);
+    onGenerationChange(true);
+
+    try {
+      const data = await generateOllamaResponse({
+        endpoint: settings.endpoint,
+        model: settings.selectedModel,
+        prompt: userMessage.content
+      });
+
+      setMessages((current) => [...current, {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.response || 'Ollama returned an empty response.'
+      }]);
+      onTaskComplete();
+    } catch (error) {
+      const classified = classifyOllamaError(error);
+      setMessages((current) => [...current, {
+        id: Date.now() + 1,
+        role: 'assistant',
+        isError: true,
+        content: `${classified.label}\n\n${classified.message}\n\nPowerShell:\n${OLLAMA_TROUBLESHOOTING_COMMAND}`
+      }]);
+    } finally {
+      setIsGenerating(false);
+      onGenerationChange(false);
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(`alphonso_messages_${activeChatId}`);
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="h-12 flex items-center justify-between px-6 border-b border-white/[0.03] shrink-0 bg-zinc-950/40">
+        <div className="flex items-center gap-2">
+          <History className="w-3.5 h-3.5 text-zinc-500" />
+          <span className="text-[11px] text-zinc-500 font-medium">CHAT SESSION: {activeChatId}</span>
+        </div>
+        <button
+          onClick={clearChat}
+          className="text-[10px] text-zinc-500 hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold"
+        >
+          <Trash2 className="w-3 h-3" /> Clear Context
+        </button>
+      </div>
+
+      <Suspense fallback={null}>
+        <RuntimeNotice
+          ollamaStatus={ollamaStatus}
+          selectedModelMissing={selectedModelMissing}
+          installedModels={installedModels}
+          onRetryOllama={onRetryOllama}
+          onOpenSettings={() => setActiveTab('settings')}
+        />
+      </Suspense>
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth">
+        {messages.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-50 select-none">
+            <Bot className="w-16 h-16 mb-4" />
+            <p className="text-sm font-medium">Local chat ready when Ollama is connected</p>
+          </div>
+        )}
+
+        {messages.map((message) => (
+          <div key={message.id} className={`flex gap-4 max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
+            {message.role === 'assistant' && (
+              <div className={`w-8 h-8 rounded-lg ${message.isError ? 'bg-red-500/10 border-red-500/20' : 'bg-indigo-500/10 border-indigo-500/20'} border flex items-center justify-center shrink-0 mt-1 shadow-sm`}>
+                <Bot className={`w-4 h-4 ${message.isError ? 'text-red-400' : 'text-indigo-400'}`} />
+              </div>
+            )}
+            <div className={`flex flex-col gap-1.5 ${message.role === 'user' ? 'items-end' : 'items-start'} max-w-[85%]`}>
+              <div className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap border shadow-sm ${
+                message.role === 'user'
+                  ? 'bg-zinc-800 text-zinc-100 border-white/5 rounded-tr-sm'
+                  : `bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20' : 'text-zinc-300'}`
+              }`}>
+                {message.content}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {isGenerating && (
+          <div className="flex gap-4 max-w-4xl mx-auto w-full">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
+            </div>
+            <div className="bg-zinc-900/30 border border-white/[0.05] p-3 rounded-2xl rounded-tl-sm flex gap-1">
+              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
+              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
+              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="p-6 shrink-0 max-w-5xl mx-auto w-full">
+        <div className="relative bg-zinc-900/80 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all">
+          <div className="absolute -top-10 left-0 flex gap-2">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border border-white/5 rounded-t-lg text-[10px] text-zinc-600 cursor-not-allowed">
+              <Paperclip className="w-3 h-3" /> ATTACH DATA
+            </button>
+            <Suspense fallback={null}>
+              <VoiceInputButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
+            </Suspense>
+          </div>
+          <textarea
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                handleSend();
+              }
+            }}
+            className="w-full bg-transparent text-zinc-100 p-4 min-h-[100px] focus:outline-none text-[13px] resize-none scroll-m-0"
+          />
+          <div className="mt-1 text-[10px] text-zinc-500">
+            {ollamaStatus.state === 'connected' && !selectedModelMissing
+              ? `Message ${settings.selectedModel || 'local model'}`
+              : 'Ollama is setup_required. Check runtime, then choose a local model.'}
+          </div>
+
+          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+            <button
+              onClick={handleSend}
+              disabled={isGenerating || !inputValue.trim()}
+              className={`h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${
+                isGenerating || !inputValue.trim()
+                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
+                  : 'bg-white text-zinc-950 hover:bg-indigo-400 hover:text-white shadow-lg'
+              }`}
+            >
+              {isGenerating ? 'Computing...' : 'Run Prompt'}
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+        <div className="mt-3">
+          <Suspense fallback={null}>
+            <MicrophoneStatus voiceStatus={voice.voiceStatus} />
+          </Suspense>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsView({
+  settings,
+  setSettings,
+  ollamaStatus,
+  installedModels,
+  selectedModelMissing,
+  onCheckOllama,
+  onCopyTroubleshootingCommand,
+  copyState,
+  updateCheckState,
+  onCheckUpdates
+}) {
+  return (
+    <div className="max-w-4xl mx-auto py-12 px-8 space-y-10">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-white">System Settings</h1>
+        <p className="text-sm text-zinc-500">Configure local Ollama inference and native runtime behavior.</p>
+      </div>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Cpu} label="Ollama Runtime" />
+        <div className="grid grid-cols-1 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-zinc-300">Ollama API Endpoint</label>
+            <input
+              type="text"
+              value={settings.endpoint}
+              onChange={(event) => setSettings({ ...settings, endpoint: event.target.value })}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-zinc-300">Workspace Root (for supervised proofs)</label>
+            <input
+              type="text"
+              value={settings.workspaceRoot || ''}
+              onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+            <div className="text-[11px] text-zinc-500">Set this to the approved Alphonso workspace root before running native proof.</div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-zinc-300">OCR Engine Path (optional)</label>
+            <input
+              type="text"
+              value={settings.ocrEnginePath || ''}
+              onChange={(event) => setSettings({ ...settings, ocrEnginePath: event.target.value })}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+            <div className="text-[11px] text-zinc-500">Leave blank until an OCR engine is actually configured and verified.</div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={onCheckOllama}
+              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-950 hover:bg-indigo-300"
+            >
+              <Activity className="h-3.5 w-3.5" /> Check Installed Models
+            </button>
+            <button
+              onClick={onCheckOllama}
+              className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-300 border border-white/10 hover:bg-zinc-800"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Retry Ollama Connection
+            </button>
+            <button
+              onClick={onCopyTroubleshootingCommand}
+              className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-300 border border-white/10 hover:bg-zinc-800"
+            >
+              <Terminal className="h-3.5 w-3.5" /> {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy Failed' : 'Copy Command'}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-white/5 bg-zinc-900/50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <StatusDot state={ollamaStatus.state} />
+                <span className="text-sm font-semibold text-white">{ollamaStatus.label}</span>
+                <Badge color={statusColors[ollamaStatus.state]}>{ollamaStatus.state}</Badge>
+              </div>
+              <span className="text-[11px] text-zinc-500">{normalizeEndpoint(settings.endpoint)}/api/tags</span>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-400">{ollamaStatus.message}</p>
+            <div className="mt-4 rounded-xl bg-black/30 border border-white/5 px-3 py-2 font-mono text-[11px] text-zinc-400 whitespace-pre-wrap">
+              {OLLAMA_TROUBLESHOOTING_COMMAND}
+            </div>
+          </div>
+
+          <ModelSelector
+            models={installedModels}
+            selectedModel={settings.selectedModel}
+            selectedModelMissing={selectedModelMissing}
+            onSelectModel={(selectedModel) => setSettings({ ...settings, selectedModel })}
+          />
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Monitor} label="Desktop & UI" />
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-white/5 bg-zinc-900/50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-white">Auto Update Checks</div>
+                <div className="text-[11px] text-zinc-500 mt-0.5">Check update endpoint periodically and notify when a new version is available.</div>
+              </div>
+              <button
+                onClick={() => setSettings({ ...settings, autoUpdateEnabled: !settings.autoUpdateEnabled })}
+                className={`w-10 h-5 rounded-full transition-colors relative ${settings.autoUpdateEnabled ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+              >
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.autoUpdateEnabled ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-300">Updater Endpoint</label>
+            <input
+              type="text"
+              value={settings.updaterEndpoint || ''}
+              onChange={(event) => setSettings({ ...settings, updaterEndpoint: event.target.value })}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+            <div className="text-[11px] text-zinc-500">Enter the hosted updater endpoint only when the release manifest is actually published.</div>
+          </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-300">Updater Public Key</label>
+              <textarea
+                value={settings.updaterPubkey || ''}
+                onChange={(event) => setSettings({ ...settings, updaterPubkey: event.target.value })}
+                rows={3}
+                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              />
+              <div className="text-[11px] text-zinc-500">Paste the public key only after the signing setup is complete.</div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-300">Custom Target (optional)</label>
+            <input
+              type="text"
+              value={settings.updaterTarget || ''}
+              onChange={(event) => setSettings({ ...settings, updaterTarget: event.target.value })}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+            <div className="text-[11px] text-zinc-500">Use the actual target only when the updater release path is configured.</div>
+          </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onCheckUpdates}
+                className="rounded-xl bg-zinc-800 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-100 hover:bg-zinc-700"
+              >
+                {updateCheckState?.checking ? 'Checking...' : 'Check Updates Now'}
+              </button>
+              {updateCheckState?.available && <Badge color="green">update available</Badge>}
+              {updateCheckState?.configured && !updateCheckState?.available && <Badge color="blue">up to date / no update</Badge>}
+              {!updateCheckState?.configured && <Badge color="amber">not configured</Badge>}
+            </div>
+            <div className="rounded-xl border border-white/10 bg-zinc-900/45 p-3 text-[11px] text-zinc-300">
+              <div>Current: {updateCheckState?.currentVersion || 'n/a'} | Latest: {updateCheckState?.latestVersion || 'none'}</div>
+              <div className="mt-1">Status: {updateCheckState?.error ? updateCheckState.error : (updateCheckState?.available ? 'New version detected.' : 'No update available.')}</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Native Desktop Mode</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Tauri v2 desktop runtime is the intended target.</div>
+              <div className="text-[11px] text-amber-200/80 mt-1">On Windows, verify:desktop needs WiX 3.14 binaries locally or a permitted wix314-binaries.zip download.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, desktopMode: !settings.desktopMode })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.desktopMode ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.desktopMode ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Local-Only Runtime</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Show explicit local-only identity and disable cloud assumptions.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, localOnlyMode: !settings.localOnlyMode })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.localOnlyMode ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.localOnlyMode ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Zero-Cost Mode (Default)</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Prefer local/free connectors first. Paid or metered connector routes are held for explicit approval.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, zeroCostMode: !settings.zeroCostMode })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.zeroCostMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.zeroCostMode ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Approval Mode</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Require explicit confirmation for supervised actions.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, approvalMode: !settings.approvalMode })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode ? 'bg-amber-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Safe Mode</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Conservative runtime behavior with repair-first posture.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, safeMode: !settings.safeMode })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.safeMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.safeMode ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Privacy Shield Indicator</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Show Alphonso in privacy-shield mode for local-only work.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, privacyShieldActive: !settings.privacyShieldActive })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.privacyShieldActive ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.privacyShieldActive ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Miya Creative Companion</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Show Miya pinned creative assistant widget.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, miyaCompanionPinned: !settings.miyaCompanionPinned })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.miyaCompanionPinned ? 'bg-fuchsia-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.miyaCompanionPinned ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Jose Orchestrator Companion</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Show Jose pinned governance and routing assistant widget.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, joseCompanionPinned: !settings.joseCompanionPinned })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.joseCompanionPinned ? 'bg-amber-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.joseCompanionPinned ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Hector Cloud Scout Companion</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Show Hector pinned research companion with live source status.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, hectorCompanionPinned: !(settings.hectorCompanionPinned !== false) })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.hectorCompanionPinned !== false ? 'bg-teal-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.hectorCompanionPinned !== false ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+          <div className="space-y-2 p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <label className="text-xs font-semibold text-zinc-300">Desktop Coach Mascot</label>
+            <select
+              value={settings.coachAgent || 'alphonso'}
+              onChange={(event) => setSettings({ ...settings, coachAgent: event.target.value })}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            >
+              <option value="alphonso">Alphonso (Operator)</option>
+              <option value="miya">Miya (Creator)</option>
+              <option value="jose">Jose (Orchestrator)</option>
+              <option value="hector">Hector (Cloud Scout)</option>
+            </select>
+            <p className="text-[11px] text-zinc-500">Used by Coach Mode window on desktop. Close and reopen Coach Mode to apply immediately.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-300">Focus Mode</label>
+              <select
+                value={settings.focusMode || 'mission_control'}
+                onChange={(event) => setSettings({ ...settings, focusMode: event.target.value })}
+                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              >
+                <option value="mission_control">Mission Control</option>
+                <option value="developer">Developer Mode</option>
+                <option value="creative">Creative Mode</option>
+                <option value="research">Research Mode</option>
+                <option value="silent">Silent Mode</option>
+                <option value="presentation">Presentation Mode</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-300">Environment Theme</label>
+              <select
+                value={settings.environmentTheme || 'deep_space'}
+                onChange={(event) => setSettings({ ...settings, environmentTheme: event.target.value })}
+                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              >
+                <option value="deep_space">Deep Space</option>
+                <option value="neon_studio">Neon Studio</option>
+                <option value="orchestrator_gold">Orchestrator Gold</option>
+                <option value="minimal_runtime">Minimal Runtime</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+            <div>
+              <div className="text-sm font-semibold text-white">Auto-scroll Chat</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Keep new model responses visible while generating.</div>
+            </div>
+            <button
+              onClick={() => setSettings({ ...settings, autoScroll: !settings.autoScroll })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.autoScroll ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.autoScroll ? 'right-1' : 'left-1'}`} />
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-zinc-300">Active Inference Model</label>
+        <span className="text-[11px] text-zinc-500">{models.length} installed model{models.length === 1 ? '' : 's'}</span>
+      </div>
+
+      {models.length === 0 ? (
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+          No installed models were returned by Ollama. Pull a model in Ollama, then run Check Ollama again.
+        </div>
+      ) : (
+        <div className="relative">
+          <select
+            value={models.some((model) => model.name === selectedModel) ? selectedModel : ''}
+            onChange={(event) => onSelectModel(event.target.value)}
+            className="w-full appearance-none bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+          >
+            {selectedModelMissing && <option value="">Model not found: {selectedModel}</option>}
+            {models.map((model) => (
+              <option key={model.name} value={model.name}>
+                {model.name} - {formatModelSize(model.size)}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        </div>
+      )}
+
+      {selectedModelMissing && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+          Model not found: <span className="font-mono">{selectedModel}</span>. Suggested installed models: {models.map((model) => model.name).join(', ')}.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AutomationView() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center text-center p-12 max-w-2xl mx-auto space-y-6">
+      <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.1)]">
+        <Zap className="w-10 h-10 text-amber-500" />
+      </div>
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold text-white">Automation Safeguards</h2>
+        <p className="text-sm text-zinc-500 leading-relaxed">
+          Automation features are not connected yet. External process control and live actions should be added only with explicit approval.
+        </p>
+      </div>
+      <div className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl p-6 text-left space-y-4">
+        <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Runtime Policy</div>
+        <div className="flex items-center gap-4 p-3 bg-zinc-950 rounded-xl border border-white/5 text-zinc-500 text-[11px]">
+          <Shield className="h-4 w-4 text-amber-400" />
+          No unsafe background process starts, no process killing, and no production actions without approval.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FilesView() {
+  return (
+    <div className="p-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-white">Knowledge Hub</h1>
+          <p className="text-xs text-zinc-500">Document ingestion is not connected yet.</p>
+        </div>
+        <button className="px-4 py-2 bg-zinc-900 text-zinc-500 border border-white/5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-not-allowed">
+          <Plus className="w-3.5 h-3.5" /> Index Folder
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="border-2 border-dashed border-white/5 rounded-3xl p-8 flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4">
+            <FileText className="w-6 h-6 text-indigo-400" />
+          </div>
+          <h3 className="text-sm font-bold text-zinc-300">Local Files Pending</h3>
+          <p className="text-[10px] text-zinc-600 mt-1 max-w-[180px]">Local document pipeline is setup_required.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RightPanel({
+  settings,
+  ollamaStatus,
+  installedModels,
+  desktopBridge,
+  voiceStatus,
+  selectedModelMissing,
+  lastCheckedAt,
+  onCheckOllama,
+  onCopyTroubleshootingCommand,
+  copyState,
+  onMinimizeToCoach,
+  operatorMode,
+  approvalRequiredNotice,
+  miyaCompanionState,
+  joseCompanionState,
+  hectorCompanionState,
+  screenObserverState,
+  updateCheckState,
+  onCheckUpdates
+}) {
+  const compact = (text, max = 42) => {
+    const value = String(text || '');
+    if (value.length <= max) return value;
+    return `${value.slice(0, max - 1)}...`;
+  };
+
+  const diagnostics = useMemo(() => [
+    {
+      label: 'Ollama Runtime',
+      value: ollamaStatus.label,
+      state: ollamaStatus.state
+    },
+    {
+      label: 'Selected Model',
+      value: selectedModelMissing ? 'Model not found' : settings.selectedModel || 'None',
+      state: selectedModelMissing ? 'model_missing' : settings.selectedModel ? 'connected' : 'no_models'
+    },
+    {
+      label: 'Project Workspace',
+      value: settings.workspaceRoot ? compact(settings.workspaceRoot, 34) : 'Workspace not configured',
+      state: settings.workspaceRoot ? 'connected' : 'warning'
+    },
+    {
+      label: 'Desktop Bridge',
+      value: desktopBridge.label,
+      state: desktopBridge.state === 'connected' ? 'connected' : 'disconnected'
+    },
+    {
+      label: 'Microphone',
+      value: voiceStatus.privacyLabel,
+      state: voiceStatus.state
+    },
+    {
+      label: 'Miya Creative',
+      value: compact(miyaCompanionState?.message || 'Not active', 36),
+      state: miyaCompanionState?.state === 'warning' ? 'warning' : 'connected'
+    },
+    {
+      label: 'Jose Orchestrator',
+      value: compact(joseCompanionState?.message || 'Not active', 36),
+      state: joseCompanionState?.state === 'warning' ? 'warning' : 'connected'
+    },
+    {
+      label: 'Hector Research',
+      value: compact(
+        hectorCompanionState?.currentSourceUrl
+          ? `Scanning ${hectorCompanionState.currentSourceUrl}`
+          : (hectorCompanionState?.message || 'Not active'),
+        36
+      ),
+      state: hectorCompanionState?.state === 'warning' ? 'warning' : hectorCompanionState?.state === 'researching' ? 'connecting' : 'connected'
+    },
+    {
+      label: 'Screen Observer',
+      value: screenObserverState?.enabled
+        ? `On (${screenObserverState.status})`
+        : `Off (${screenObserverState?.status || 'idle'})`,
+      state: screenObserverState?.enabled ? 'connected' : screenObserverState?.status === 'permission_denied' ? 'warning' : 'disconnected'
+    },
+    {
+      label: 'Updater',
+      value: updateCheckState?.available
+        ? `Update ${updateCheckState.latestVersion} available`
+        : updateCheckState?.configured
+          ? 'No update available'
+          : 'Not configured',
+      state: updateCheckState?.available ? 'warning' : updateCheckState?.configured ? 'connected' : 'idle'
+    }
+  ], [desktopBridge, voiceStatus, ollamaStatus, selectedModelMissing, settings.selectedModel, settings.workspaceRoot, miyaCompanionState, joseCompanionState, hectorCompanionState, screenObserverState, updateCheckState]);
+
+  return (
+    <aside className="w-64 bg-zinc-950 border-l border-white/[0.05] flex flex-col shrink-0">
+      <div className="h-14 flex items-center px-4 border-b border-white/[0.05]">
+        <h2 className="font-bold text-[10px] uppercase tracking-[0.18em] text-zinc-400 flex items-center gap-2">
+          <Activity className="w-3.5 h-3.5 text-indigo-400" />
+          System Diagnostics
+        </h2>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {operatorMode && <Badge color="blue">Operator</Badge>}
+          {settings.localOnlyMode && <Badge color="indigo">Local Only</Badge>}
+          {settings.zeroCostMode && <Badge color="green">Zero Cost Mode</Badge>}
+          {settings.approvalMode && <Badge color="amber">Approval Mode</Badge>}
+          {settings.safeMode && <Badge color="green">Safe Mode</Badge>}
+          {settings.privacyShieldActive && <Badge color="green">Privacy Shield</Badge>}
+          {settings.environmentTheme === 'orchestrator_gold' && <Badge color="amber">Jose Theme</Badge>}
+          {approvalRequiredNotice && <Badge color="red">Approval Required</Badge>}
+        </div>
+
+        <div className="space-y-2">
+          {diagnostics.map((item) => (
+            <div key={item.label} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-zinc-900/40 px-2.5 py-2">
+              <div className="space-y-0.5 min-w-0">
+                <div className="text-[9px] uppercase tracking-widest text-zinc-600">{item.label}</div>
+                <div className="text-[11px] font-semibold text-zinc-200 truncate">{item.value}</div>
+              </div>
+              <StatusDot state={item.state} />
+            </div>
+          ))}
+        </div>
+
+        <div className="p-3 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2.5">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+            <Database className="w-3.5 h-3.5" /> Installed Models
+          </div>
+          {installedModels.length === 0 ? (
+            <p className="text-[11px] text-zinc-500 leading-relaxed">No models detected yet. Use Check Ollama after starting Ollama.</p>
+          ) : (
+            <div className="space-y-2">
+              {installedModels.map((model) => (
+                <div key={model.name} className="flex items-center justify-between gap-2 text-[11px]">
+                  <span className="truncate text-zinc-300">{model.name}</span>
+                  <span className="font-mono text-zinc-600">{formatModelSize(model.size)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="p-3 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2.5">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+            <Mic className="w-3.5 h-3.5" /> Voice Feature
+          </div>
+          <p className="text-[11px] text-zinc-400 leading-relaxed">{voiceStatus.message}</p>
+          <Suspense fallback={null}>
+            <MicrophoneStatus voiceStatus={voiceStatus} compact />
+          </Suspense>
+          <Badge color={statusColors[voiceStatus.state]}>{voiceStatus.state}</Badge>
+          <p className="text-[10px] text-zinc-600 leading-relaxed">{voiceStatus.transcription.message}</p>
+        </div>
+
+        <div className="p-3 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2.5">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+            <Terminal className="w-3.5 h-3.5" /> Ollama Startup
+          </div>
+          <div className="rounded-xl bg-black/30 border border-white/5 px-3 py-2 font-mono text-[11px] text-zinc-400 whitespace-pre-wrap">
+            {OLLAMA_TROUBLESHOOTING_COMMAND}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onCheckOllama}
+              className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+            >
+              Check Installed Models
+            </button>
+            <button
+              onClick={onCopyTroubleshootingCommand}
+              className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+            >
+              {copyState === 'copied' ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          {lastCheckedAt && (
+            <p className="text-[10px] text-zinc-600">Last checked: {lastCheckedAt.toLocaleTimeString()}</p>
+          )}
+        </div>
+
+        <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+            <Monitor className="w-3.5 h-3.5" /> Desktop Bridge
+          </div>
+          <p className="mt-2 text-[10px] text-zinc-400 leading-relaxed">{desktopBridge.message}</p>
+          <button
+            onClick={onMinimizeToCoach}
+            className="mt-3 w-full rounded-lg bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+          >
+            Minimize to Coach Mode
+          </button>
+        </div>
+
+        <div className="p-3 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2.5">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+            <RefreshCw className="w-3.5 h-3.5" /> Auto Updater
+          </div>
+          <p className="text-[11px] text-zinc-400 leading-relaxed">
+            {updateCheckState?.available
+              ? `New version ${updateCheckState.latestVersion} is available.`
+              : updateCheckState?.error
+                ? updateCheckState.error
+                : updateCheckState?.configured
+                  ? 'No update available from configured endpoint.'
+                  : 'Updater endpoint and public key are not configured yet.'}
+          </p>
+          <button
+            onClick={onCheckUpdates}
+            className="w-full rounded-lg bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+          >
+            {updateCheckState?.checking ? 'Checking...' : 'Check for Updates'}
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function SectionHeader({ icon: Icon, label }) {
+  return (
+    <div className="flex items-center gap-2 text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em] border-b border-white/5 pb-2">
+      <Icon className="w-3.5 h-3.5" /> {label}
+    </div>
+  );
+}

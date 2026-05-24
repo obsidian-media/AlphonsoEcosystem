@@ -1,0 +1,12 @@
+node_modules/
+dist/
+release/
+coverage/
+src-tauri/target/
+src-tauri/dist/
+target/
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
