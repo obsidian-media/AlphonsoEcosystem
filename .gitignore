@@ -2,6 +2,9 @@ node_modules/
 dist/
 src-tauri/target/
 release/
+.tauri/alphonso-updater.key
+.tauri-updater-key
+.tauri-updater-key.pub
 
 .env
 .env.*

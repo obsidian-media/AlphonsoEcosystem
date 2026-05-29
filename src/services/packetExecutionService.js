@@ -4,6 +4,7 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES } from './trustModel';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { requireApproval } from './approval/approvalService';
+import { executeMarcusPublish } from './marcusPublishService';
 
 function buildExecutionResult(packet, payload = {}) {
   return {
@@ -143,6 +144,29 @@ export async function executeApprovedPacket(packet) {
         confidence: TRUST_STATES.VERIFIED,
         verificationState: TRUST_STATES.VERIFIED
       });
+      return { ok: true, executionResult, result };
+    }
+
+    if (packet.packetType === 'marcus_publish_handoff') {
+      const platform = packet?.payload?.platform || '';
+      const result = await executeMarcusPublish({
+        platform,
+        payload: packet?.payload || {},
+        packetId: packet.id,
+        commandId: packet?.payload?.commandId || null,
+        workflowId: packet?.payload?.workflowId || 'packet_execution',
+        preApproved: true,
+      });
+      if (!result.ok) {
+        return { ok: false, error: result.error || 'Marcus publish failed.', result };
+      }
+      const executionResult = buildExecutionResult(packet, {
+        connectorId: platform,
+        platform,
+        externalId: result.result?.externalId || result.result?.videoId || null,
+        url: result.result?.url || null,
+      });
+      markPacketExecuted(packet.id, executionResult, TRUST_STATES.VERIFIED);
       return { ok: true, executionResult, result };
     }
 

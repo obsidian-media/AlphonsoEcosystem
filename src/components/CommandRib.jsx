@@ -58,10 +58,10 @@ export function CommandRib({
   const currentTheme = settings.environmentTheme || 'deep_space';
 
   return (
-    <section className="border-b border-white/[0.06] bg-zinc-950/90 px-3 py-2">
-      <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap">
-          <div className="mr-1.5 hidden items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500 md:flex">
+    <section className="border-b border-white/[0.06] bg-zinc-950/90 px-2.5 py-1.5">
+      <div className="flex flex-col gap-1.5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-0.5">
+          <div className="mr-1 hidden items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500 md:flex">
             <Sparkles className="h-3.5 w-3.5 text-zinc-400" />
             Command Rib
           </div>
@@ -71,7 +71,7 @@ export function CommandRib({
               <button
                 key={agent.id}
                 onClick={() => setActiveTab(agent.tab)}
-                className={`group flex items-center gap-1 rounded-md border px-1.5 py-1 text-left transition ${
+                className={`group flex items-center gap-1 rounded-md border px-1.5 py-[3px] text-left transition ${
                   active
                     ? colorClass(agent.color, 'active')
                     : 'border-white/10 bg-zinc-900/45 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100'
@@ -84,14 +84,14 @@ export function CommandRib({
                   className={active ? '' : 'opacity-90'}
                 />
                 <span className="leading-tight">
-                  <span className="block text-[10px] font-semibold">{agent.label}</span>
+                  <span className="block text-[9px] font-semibold">{agent.label}</span>
                 </span>
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap">
+        <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap">
           <SegmentedControl
             icon={Gauge}
             label="Focus"
@@ -103,12 +103,12 @@ export function CommandRib({
             value={currentTheme}
             onChange={(environmentTheme) => setSettings({ ...settings, environmentTheme })}
           />
-          <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/45 px-2 py-1">
+          <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/45 px-2 py-[3px]">
             <StatusDot state={ollamaStatus.state} />
             <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">{ollamaStatus.label}</span>
           </div>
           {operatorMode && (
-            <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/55 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-zinc-300">
+            <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/55 px-2 py-[3px] text-[9px] font-bold uppercase tracking-widest text-zinc-300">
               <ShieldCheck className="h-2.5 w-2.5" />
               Operator Telemetry
             </div>
@@ -121,7 +121,7 @@ export function CommandRib({
 
 function SegmentedControl({ icon: Icon, label, value, options, onChange }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/45 p-1">
+    <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/45 p-[3px]">
       <div className="hidden items-center gap-1 px-1 text-[9px] font-bold uppercase tracking-widest text-zinc-500 sm:flex">
         <Icon className="h-3 w-3" />
         {label}
@@ -147,7 +147,7 @@ function SegmentedControl({ icon: Icon, label, value, options, onChange }) {
 
 function ThemePicker({ value, onChange }) {
   return (
-    <label className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/45 px-2 py-1">
+    <label className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/45 px-2 py-[3px]">
       <Eye className="h-3 w-3 text-zinc-500" />
       <span className="hidden text-[9px] font-bold uppercase tracking-widest text-zinc-500 sm:inline">Theme</span>
       <select

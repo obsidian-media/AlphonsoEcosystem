@@ -7,6 +7,7 @@ import { getDefaultWorkspaceRoot, validateWorkspaceRoot } from '../services/work
 const STATE_STYLES = {
   confirmed: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
   configured: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
+  foundation_only: 'border-slate-300/20 bg-slate-500/10 text-slate-200',
   not_configured: 'border-indigo-300/20 bg-indigo-500/10 text-indigo-200',
   invalid: 'border-amber-300/20 bg-amber-500/10 text-amber-200',
   ready: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
@@ -17,7 +18,7 @@ const STATE_STYLES = {
   unknown: 'border-zinc-300/20 bg-zinc-500/10 text-zinc-200'
 };
 
-const TRUTH_LABELS = new Set(['confirmed', 'configured', 'partial', 'setup_required', 'blocked', 'failed', 'unknown', 'invalid', 'not_configured']);
+const TRUTH_LABELS = new Set(['confirmed', 'configured', 'foundation_only', 'partial', 'setup_required', 'blocked', 'failed', 'unknown', 'invalid', 'not_configured']);
 
 function displayTruthState(state, { workspaceOk = true } = {}) {
   const clean = String(state || 'unknown').trim().toLowerCase();
@@ -34,6 +35,9 @@ function readinessRowShellClass(state, workspaceOk = true) {
   const truth = displayTruthState(state, { workspaceOk });
   if (truth === 'configured') {
     return 'border-emerald-400/30 bg-emerald-500/5';
+  }
+  if (truth === 'foundation_only') {
+    return 'border-slate-400/30 bg-slate-500/10';
   }
   if (truth === 'not_configured' || truth === 'invalid') {
     return 'border-amber-400/30 bg-amber-500/5';
@@ -393,6 +397,14 @@ npm.cmd run release:updater`}
                 <div>Approval: {row.approvalRequired ? 'required' : 'not required'}</div>
                 <div>Receipt: {row.receiptStatus || 'unknown'}</div>
                 <div>Zero-cost: {row.zeroCostPolicy}</div>
+                {row.localRuntimeHealth && (
+                  <>
+                    <div>Local runtime probe: {row.localRuntimeHealth.ok ? 'verified' : 'failed'}</div>
+                    <div>Probe endpoint: {row.localRuntimeHealth.endpoint || 'unknown'}</div>
+                    <div>Probe path: {row.localRuntimeHealth.probePath || 'unknown'}</div>
+                    <div>Probe HTTP: {row.localRuntimeHealth.httpStatus || 'unknown'}</div>
+                  </>
+                )}
               </div>
               {row.lastTestAtMs && <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">Last checked: {new Date(row.lastTestAtMs).toLocaleString()}</div>}
               {row.missingEnv?.length > 0 && (
@@ -427,8 +439,8 @@ function displayConnectorRowState(row = {}) {
   const envStatus = String(row.envStatus || 'unknown').trim().toLowerCase();
   const lastTest = String(row.lastTestResult || 'unknown').trim().toLowerCase();
   const state = String(row.state || 'unknown').trim().toLowerCase();
-  if (configured === 'foundation_only' && state === 'ready') {
-    return 'confirmed';
+  if (configured === 'foundation_only' || state === 'foundation_only') {
+    return 'foundation_only';
   }
   if (configured === 'not_configured' || state === 'setup_required' || envStatus === 'missing' || envStatus === 'setup_required') {
     return 'setup_required';

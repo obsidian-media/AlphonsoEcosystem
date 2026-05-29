@@ -16,7 +16,9 @@
         "width": 800,
         "height": 600,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "backgroundColor": "#09090b",
+        "additionalBrowserArgs": "--disable-gpu --disable-gpu-compositing --use-angle=swiftshader"
       }
     ],
     "trayIcon": {
@@ -32,7 +34,10 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": "all",
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -46,7 +51,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI4OUM3MEFFMjBBMTM1NgpSV1JXRXdyaUNzZUpDOVpBVnBENXcwaUV3NVkwSGVCNVFBc3JtRUh0SG9jWHhNNGNuczIxSFUyOQo=",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUyN0I0OUQ0RTE1MTdBNEUKUldST2VsSGgxRWw3NHN6OERzd004Zk1NOUs0R1puL2tmd1FUUWVpOXIrdnczbmxPYTllVC9WMlAK",
       "endpoints": [
         "https://github.com/Thatisshayan/Alphonso/releases/download/v0.1.0/latest.json"
       ]

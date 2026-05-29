@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
-import { AGENTS, createConnectorRoutePacket, normalizeWhatsAppCloudInboundPayload, appendConnectorAudit } from './connectorRegistryService';
+import { createConnectorRoutePacket, normalizeWhatsAppCloudInboundPayload, appendConnectorAudit } from './connectorRegistryService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
-import { updatePacketStatus } from './agentBusService';
+import { AGENTS, updatePacketStatus } from './agentBusService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 
 const WEBHOOK_EVENTS_KEY = 'alphonso_whatsapp_webhook_events_v1';

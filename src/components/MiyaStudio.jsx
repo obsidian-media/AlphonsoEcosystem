@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bot,
   Clapperboard,
@@ -90,6 +90,9 @@ export function MiyaStudio({
   const [isGeneratingMedia, setIsGeneratingMedia] = useState(false);
   const [mediaResult, setMediaResult] = useState(null);
   const [runwayResult, setRunwayResult] = useState(null);
+  const [runwayElapsedMs, setRunwayElapsedMs] = useState(0);
+  const runwayTimerRef = useRef(null);
+  const runwayStartRef = useRef(null);
 
   const canGenerate = settings.selectedModel && ollamaStatus.state === 'connected';
 
@@ -558,6 +561,11 @@ export function MiyaStudio({
     setIsGeneratingMedia(true);
     setLastError('');
     setRunwayResult(null);
+    setRunwayElapsedMs(0);
+    runwayStartRef.current = Date.now();
+    runwayTimerRef.current = window.setInterval(() => {
+      setRunwayElapsedMs(Date.now() - (runwayStartRef.current || Date.now()));
+    }, 1000);
     onStudioStateChange?.('rendering', 'Miya is sending a cloud draft to Runway.');
     appendSessionEvent({
       category: 'miya_generation',
@@ -610,8 +618,22 @@ export function MiyaStudio({
       });
     } finally {
       setIsGeneratingMedia(false);
+      if (runwayTimerRef.current) {
+        window.clearInterval(runwayTimerRef.current);
+        runwayTimerRef.current = null;
+      }
     }
   };
+
+  useEffect(() => () => {
+    if (runwayTimerRef.current) window.clearInterval(runwayTimerRef.current);
+  }, []);
+
+  const runwayElapsedLabel = (() => {
+    const s = Math.floor(runwayElapsedMs / 1000);
+    const m = Math.floor(s / 60);
+    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+  })();
 
   return (
     <div className="max-w-6xl mx-auto px-8 py-8 space-y-6">
@@ -947,8 +969,27 @@ function LocalGenerationPanel({
           disabled={isBusy}
           className="rounded-lg bg-fuchsia-500/85 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-fuchsia-400 disabled:opacity-60"
         >
-          {isBusy ? 'Running...' : 'Generate Runway Video'}
+          {isGeneratingMedia && mediaRuntime.provider === 'runway' ? `Generating... ${runwayElapsedLabel}` : 'Generate Runway Video'}
         </button>
+
+        {isGeneratingMedia && mediaRuntime.provider === 'runway' && (
+          <div className="rounded-lg border border-fuchsia-500/20 bg-fuchsia-950/30 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-fuchsia-400 animate-pulse" />
+              <span className="text-[11px] font-semibold text-fuchsia-300">Runway is rendering your video</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-fuchsia-600 to-pink-500 transition-all duration-1000"
+                  style={{ width: `${Math.min(95, (runwayElapsedMs / (5 * 60 * 1000)) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[11px] text-zinc-400 tabular-nums shrink-0">{runwayElapsedLabel} / ~5 min</span>
+            </div>
+            <div className="text-[10px] text-zinc-600">Rust engine is polling Runway's task API. This window stays responsive.</div>
+          </div>
+        )}
 
         {runwayResult && (
           <div className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-2">

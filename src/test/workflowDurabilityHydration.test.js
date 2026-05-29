@@ -8,7 +8,7 @@ describe('workflow durability hydration', () => {
 
   it('re-hydrates partial workflow runs with receipts and memory links after reload', async () => {
     const { listWorkflowOperations } = await import('../services/workflowOperationsRegistryService');
-    const { executeWorkflowRun, getWorkflowRun, listWorkflowRunTimeline, startWorkflowRun } = await import('../services/workflowExecutionService');
+    const { approveWorkflowRun, executeWorkflowRun, getWorkflowRun, listWorkflowRunTimeline, startWorkflowRun } = await import('../services/workflowExecutionService');
     const { listWorkflowReceipts } = await import('../services/workflowReceiptService');
     const { listWorkflowMemory } = await import('../services/workflowMemoryService');
 
@@ -18,10 +18,11 @@ describe('workflow durability hydration', () => {
     const started = startWorkflowRun(workflow.id, {
       triggerType: 'manual_command',
       input: 'Run a marketing operations smoke test.',
-      zeroCostMode: true
+      zeroCostMode: false
     });
     expect(started.ok).toBe(true);
 
+    approveWorkflowRun(started.run.id, 'test');
     const executed = executeWorkflowRun(started.run.id);
     expect(executed.ok).toBe(true);
     expect(['partial', 'completed']).toContain(executed.run.status);

@@ -1,26 +1,30 @@
 import React from 'react';
+import { listAgentProfiles } from '../agents/agentRegistry';
 import { AgentAvatar } from './AgentAvatar';
 
 export function AgentDock({ companions }) {
+  const registryAgents = listAgentProfiles();
+  const activeIds = new Set(companions.map((item) => item.agentId));
+  const otherAgents = registryAgents.filter((agent) => !activeIds.has(agent.id));
   const summary = companions.map((item) => item.name).join(' + ');
   return (
-    <div className="pointer-events-auto w-[20rem] rounded-xl border border-white/10 bg-zinc-950/95 shadow-xl backdrop-blur-xl overflow-hidden">
+    <div className="pointer-events-auto w-[17.5rem] rounded-xl border border-white/10 bg-zinc-950/95 shadow-xl backdrop-blur-xl overflow-hidden">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100">Agents</div>
-        <div className="text-[9px] text-zinc-500">one merged dock</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100">Agent Dock</div>
+        <div className="text-[9px] text-zinc-500">compact merged view</div>
       </div>
       <div className="space-y-2 p-2.5">
         <div className="flex items-center gap-2 overflow-hidden rounded-lg border border-white/8 bg-zinc-900/60 px-2.5 py-2">
           <div className="flex -space-x-2 shrink-0">
             {companions.map((item) => (
               <div key={item.agentId} className="rounded-full border border-zinc-950 bg-zinc-950 p-0.5 shadow-md">
-                <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-7 w-7" />
+                <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-6 w-6" />
               </div>
             ))}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{summary}</div>
-            <div className="text-[9px] text-zinc-400 truncate">Alphonso, Hector, Jose, and Miya share one compact dock.</div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{summary}</div>
+            <div className="text-[8px] text-zinc-400 truncate">One compact dock for active companions.</div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
@@ -38,6 +42,19 @@ export function AgentDock({ companions }) {
             </div>
           ))}
         </div>
+        {otherAgents.length > 0 && (
+          <div className="rounded-lg border border-white/8 bg-zinc-900/35 p-2">
+            <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.14em] text-zinc-500">Other agents</div>
+            <div className="flex flex-wrap gap-1">
+              {otherAgents.map((agent) => (
+                <div key={agent.id} className="flex items-center gap-1 rounded-full border border-white/8 bg-zinc-950/60 px-1.5 py-1">
+                  <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-4 w-4" />
+                  <span className="max-w-[4.5rem] truncate text-[8px] font-semibold uppercase tracking-[0.12em] text-zinc-300">{agent.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-// @vitest-environment node
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -23,14 +23,7 @@ import { proveTelegramConnectorPath, updateConnectorAuthProfile } from '../servi
 
 describe('telegram live connector proof path', () => {
   beforeEach(() => {
-    globalThis.localStorage = {
-      data: {},
-      getItem(key) { return Object.prototype.hasOwnProperty.call(this.data, key) ? this.data[key] : null; },
-      setItem(key, value) { this.data[key] = String(value); },
-      removeItem(key) { delete this.data[key]; },
-      clear() { this.data = {}; }
-    };
-    globalThis.localStorage.clear();
+    localStorage.clear();
     updateConnectorAuthProfile('telegram', {
       enabled: true,
       allowlist: ['chat-1']

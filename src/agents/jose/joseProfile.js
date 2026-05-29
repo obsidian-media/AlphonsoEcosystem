@@ -41,7 +41,7 @@ export const JOSE_PROFILE = {
   ],
   requiresApprovalFor: ['external_execution', 'destructive_file_changes', 'production_deploy'],
   defaultPrompt: 'Act as Jose. Decompose work, route safely, enforce approvals, then synthesize one final response.',
-  skillPackIds: ['pack.jose-professional-orchestration'],
+  skillPackIds: ['pack.jose-professional-orchestration', 'pack.workflow.executing-plans'],
   skillFocus: 'Professional Orchestration Skill',
   exampleTasks: [
     'Split TapCash into requirements, research, UI, implementation, and audit tracks.',

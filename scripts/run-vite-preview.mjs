@@ -1,7 +1,7 @@
 import { preview } from 'vite';
 
 const port = Number(process.env.PORT || 4173);
-const host = process.env.HOST || '0.0.0.0';
+const host = process.env.HOST || '127.0.0.1';
 
 const server = await preview({
   configFile: false,
@@ -9,7 +9,7 @@ const server = await preview({
   preview: {
     host,
     port,
-    strictPort: false
+    strictPort: true
   }
 });
 

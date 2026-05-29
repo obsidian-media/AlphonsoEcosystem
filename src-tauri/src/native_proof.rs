@@ -13,7 +13,7 @@ use super::{
 };
 
 const DEFAULT_OUTPUT_DIR: &str = "release/rc0";
-const REQUIRED_ENTRIES: [&str; 3] = ["package.json", "src", "src-tauri"];
+const REQUIRED_ENTRIES: [&str; 4] = ["package.json", "src", "src-tauri", "docs"];
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeRc0ProofInput {
@@ -312,7 +312,15 @@ fn scan_rc0_target_surface(root: &Path, max_files: usize, max_findings: usize) -
     "src/App.jsx",
     "src/components/SelfDevelopmentPanel.jsx",
     "src/services/nativeRc0ProofService.js",
+    "src/services/connectorRegistryService.js",
+    "src/services/repoAuditService.js",
     "src/services/productionReadinessService.js",
+    "src/services/devPacketService.js",
+    "src/services/selfDevelopmentService.js",
+    "src/services/workflowExecutionService.js",
+    "src/services/workflowReceiptService.js",
+    "src/services/workflowMemoryService.js",
+    "src/services/runtimeLedgerService.js",
     "src/services/workspaceRootService.js",
     "docs/UPDATER_SIGNING_SETUP.md",
   ]
@@ -528,6 +536,7 @@ fn proof_markdown(
   lines.push(String::new());
   lines.push("## Truth Labels".to_string());
   lines.push(format!("- confirmed: build, test, Tauri build, installer artifacts"));
+  lines.push(format!("- foundation_only: local runtime surfaces that exist but are not external production connectors"));
   lines.push(format!("- partial: updater signing or external provider gaps remain"));
   lines.push(format!("- setup_required: connectors and updater manifest/signing as needed"));
   lines.push(format!("- blocked: {}, failed: {}", result.p0_count > 0, result.error.is_some()));
@@ -563,9 +572,9 @@ fn readiness_snapshot(
     json!({"id":"slack_webhook","state":"setup_required","status":"not_configured","configured":"not_configured","envStatus":"setup_required","allowlistStatus":"setup_required","testActionAvailable":false,"lastTestResult":"unknown","approvalRequired":true,"receiptStatus":"unknown","failureReason":"Slack webhook URL is not configured.","zeroCostPolicy":"local_or_free"}),
     json!({"id":"discord_webhook","state":"setup_required","status":"not_configured","configured":"not_configured","envStatus":"setup_required","allowlistStatus":"setup_required","testActionAvailable":false,"lastTestResult":"unknown","approvalRequired":true,"receiptStatus":"unknown","failureReason":"Discord webhook URL is not configured.","zeroCostPolicy":"local_or_free"}),
     json!({"id":"custom_webhook","state":"setup_required","status":"not_configured","configured":"not_configured","envStatus":"setup_required","allowlistStatus":"setup_required","testActionAvailable":false,"lastTestResult":"unknown","approvalRequired":true,"receiptStatus":"unknown","failureReason":"Custom webhook URL is not configured.","zeroCostPolicy":"local_or_free"}),
-    json!({"id":"mobile_bridge","state":"confirmed","status":"foundation_only","configured":"foundation_only","envStatus":"ready","allowlistStatus":"configured","testActionAvailable":true,"lastTestResult":"foundation_only","approvalRequired":false,"receiptStatus":"unknown","failureReason":"Mobile transport is not implemented yet.","zeroCostPolicy":"local_or_free"}),
-    json!({"id":"sd_webui","state":"confirmed","status":"foundation_only","configured":"foundation_only","envStatus":"ready","allowlistStatus":"configured","testActionAvailable":true,"lastTestResult":"foundation_only","approvalRequired":false,"receiptStatus":"unknown","failureReason":"Requires local Stable Diffusion WebUI runtime (default: http://127.0.0.1:7860).","zeroCostPolicy":"local_or_free"}),
-    json!({"id":"comfyui_video","state":"confirmed","status":"foundation_only","configured":"foundation_only","envStatus":"ready","allowlistStatus":"configured","testActionAvailable":true,"lastTestResult":"foundation_only","approvalRequired":false,"receiptStatus":"unknown","failureReason":"Requires local ComfyUI runtime + workflow JSON (default: http://127.0.0.1:8188).","zeroCostPolicy":"local_or_free"}),
+    json!({"id":"mobile_bridge","state":"foundation_only","status":"foundation_only","configured":"foundation_only","envStatus":"foundation_only","allowlistStatus":"configured","testActionAvailable":true,"lastTestResult":"foundation_only","approvalRequired":false,"receiptStatus":"unknown","failureReason":"Mobile transport is not implemented yet.","zeroCostPolicy":"local_or_free"}),
+    json!({"id":"sd_webui","state":"foundation_only","status":"foundation_only","configured":"foundation_only","envStatus":"foundation_only","allowlistStatus":"configured","testActionAvailable":true,"lastTestResult":"foundation_only","approvalRequired":false,"receiptStatus":"unknown","failureReason":"Requires local Stable Diffusion WebUI runtime (default: http://127.0.0.1:7860).","zeroCostPolicy":"local_or_free"}),
+    json!({"id":"comfyui_video","state":"foundation_only","status":"foundation_only","configured":"foundation_only","envStatus":"foundation_only","allowlistStatus":"configured","testActionAvailable":true,"lastTestResult":"foundation_only","approvalRequired":false,"receiptStatus":"unknown","failureReason":"Requires local ComfyUI runtime + workflow JSON (default: http://127.0.0.1:8188).","zeroCostPolicy":"local_or_free"}),
   ];
   let live_blockers = [
     if env_presence.values().all(|present| *present) { None } else { Some("updater_signing_setup_required") },
@@ -739,6 +748,7 @@ fn find_workspace_validation(root: &str) -> Result<(bool, Vec<String>, Vec<Strin
     format!("{root}/package.json"),
     format!("{root}/src"),
     format!("{root}/src-tauri"),
+    format!("{root}/docs"),
   ];
   let proofs = verify_paths(paths);
   let root_proof = proofs.get(0).cloned();
@@ -755,16 +765,13 @@ fn find_workspace_validation(root: &str) -> Result<(bool, Vec<String>, Vec<Strin
 fn update_state_file(
   workspace_root: &str,
   output_dir: &str,
+  proof_mode: &str,
   proof_state: &str,
   result: &NativeRc0ProofResult,
 ) -> Result<String, String> {
   let state = NativeRc0ProofState {
     runtime: "native_tauri".to_string(),
-    proof_mode: result
-      .top_packets
-      .first()
-      .map(|_| "automated".to_string())
-      .unwrap_or_else(|| "automated".to_string()),
+    proof_mode: proof_mode.to_string(),
     state: proof_state.to_string(),
     workspace_root: workspace_root.to_string(),
     output_dir: output_dir.to_string(),
@@ -836,7 +843,7 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
   let proof_request_found = proof_request.is_some();
   let mut sentinels = vec![];
   let mut artifacts = vec![];
-  let _mode = input.mode.unwrap_or_else(|| "automated".to_string());
+  let proof_mode = input.mode.unwrap_or_else(|| "automated".to_string());
   let max_files = usize::try_from(input.max_files.unwrap_or(80)).unwrap_or(80).min(80);
   let started_at_ms = now_ms();
 
@@ -902,7 +909,7 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
       proof_request_found,
       None,
     );
-    let _ = update_state_file(&workspace_root, &output_dir, "setup_required", &result);
+    let _ = update_state_file(&workspace_root, &output_dir, &proof_mode, "setup_required", &result);
     return Ok(result);
   }
 
@@ -1266,6 +1273,7 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
   artifacts.push(run_status_path);
   result.artifacts = artifacts.clone();
   result.sentinels = sentinels.clone();
+  let _ = update_state_file(&workspace_root, &output_dir, &proof_mode, "ready", &result);
 
   Ok(result)
 }

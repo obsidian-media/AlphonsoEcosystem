@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ClipboardCopy, MessageCircle, RadioTower, Smartphone } from 'lucide-react';
 import { ToolConnectionsPanel } from './ToolConnectionsPanel';
 import {
@@ -48,6 +48,27 @@ export function ConnectorSetupPanel() {
   const [transportBusy, setTransportBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const pollAvailable = ['telegram', 'whatsapp'].includes(connectorId);
+
+  useEffect(() => {
+    let cancelled = false;
+    const probeAll = async () => {
+      const ids = listConnectors().map((c) => c.id);
+      for (const id of ids) {
+        if (cancelled) break;
+        try {
+          await verifyConnectorEnvironment(id);
+        } catch {
+          // ignore individual probe failures
+        }
+      }
+      if (!cancelled) {
+        setConnectors(listConnectors());
+        setAuthProfiles(listConnectorAuthProfiles());
+      }
+    };
+    probeAll();
+    return () => { cancelled = true; };
+  }, []);
 
   const selectedConnector = useMemo(
     () => connectors.find((connector) => connector.id === connectorId) || null,
@@ -286,7 +307,7 @@ export function ConnectorSetupPanel() {
         Connector Setup: Messaging, Publishing, Work Apps, Local Media
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-zinc-500">
-        Status labels: configured, not_configured, invalid, unknown, setup_required. A connector is not live until env verification passes and last test is verified. setup_required is never shown as ready.
+        Status labels: configured, foundation_only, not_configured, invalid, unknown, setup_required. A connector is not live until env verification passes and last test is verified. setup_required is never shown as ready.
       </p>
 
       <div className="mb-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-3 text-[11px] text-sky-100/80">
@@ -601,7 +622,7 @@ function ConnectorCard({ connector, onStatus, onVerifyEnv }) {
       <div className="mt-3 flex flex-wrap gap-2">
         <button onClick={() => onStatus('not_configured')} className="rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-300">Mark not_configured</button>
         <button onClick={() => onStatus('disabled_safe')} className="rounded bg-amber-500/15 px-2 py-1 text-[10px] text-amber-200">Mark disabled_safe</button>
-        <button onClick={() => onStatus('foundation_only')} className="rounded bg-indigo-500/15 px-2 py-1 text-[10px] text-indigo-200">Mark setup_required (foundation)</button>
+        <button onClick={() => onStatus('foundation_only')} className="rounded bg-slate-500/15 px-2 py-1 text-[10px] text-slate-200">Mark foundation_only</button>
         <button onClick={onVerifyEnv} className="rounded bg-indigo-500/15 px-2 py-1 text-[10px] text-indigo-200">Verify env (local)</button>
       </div>
     </div>
@@ -612,7 +633,10 @@ function displayConnectorStatus(connector) {
   const status = String(connector?.status || 'unknown').trim().toLowerCase();
   const requiredEnv = Array.isArray(connector?.requiredEnv) ? connector.requiredEnv : [];
   const envMissing = requiredEnv.length > 0 && requiredEnv.some((name) => !connector?.envPresence?.[name]);
-  if (['foundation_only', 'disabled_safe'].includes(status)) {
+  if (status === 'foundation_only') {
+    return 'foundation_only';
+  }
+  if (status === 'disabled_safe') {
     return 'setup_required';
   }
   if (status === 'configured' && envMissing) {
@@ -646,6 +670,7 @@ function isConnectorPollAllowed(connector) {
 
 function connectorShellClass(displayStatus) {
   if (displayStatus === 'configured') return 'border-emerald-300/25 bg-emerald-500/5';
+  if (displayStatus === 'foundation_only') return 'border-slate-300/25 bg-slate-500/5';
   if (displayStatus === 'setup_required' || displayStatus === 'not_configured') return 'border-indigo-300/25 bg-indigo-500/5';
   if (displayStatus === 'invalid' || displayStatus === 'unknown') return 'border-amber-300/25 bg-amber-500/5';
   return 'border-white/10 bg-zinc-900/55';
@@ -653,6 +678,7 @@ function connectorShellClass(displayStatus) {
 
 function connectorBadgeClass(displayStatus) {
   if (displayStatus === 'configured') return 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200';
+  if (displayStatus === 'foundation_only') return 'border-slate-300/20 bg-slate-500/10 text-slate-200';
   if (displayStatus === 'setup_required' || displayStatus === 'not_configured') return 'border-indigo-300/20 bg-indigo-500/10 text-indigo-200';
   if (displayStatus === 'invalid') return 'border-amber-300/20 bg-amber-500/10 text-amber-200';
   return 'border-zinc-300/20 bg-zinc-500/10 text-zinc-200';

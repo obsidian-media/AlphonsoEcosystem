@@ -36,7 +36,7 @@ function writeRows(rows) {
 
 function normalizeState(state) {
   const clean = String(state || '').trim().toLowerCase();
-  if (['ready', 'partial', 'setup_required', 'blocked', 'failed', 'unknown'].includes(clean)) {
+  if (['ready', 'foundation_only', 'partial', 'setup_required', 'blocked', 'failed', 'unknown'].includes(clean)) {
     return clean;
   }
   return 'unknown';
@@ -44,12 +44,13 @@ function normalizeState(state) {
 
 function worstState(current, next) {
   const order = {
-    failed: 5,
-    blocked: 4,
-    setup_required: 3,
-    partial: 2,
-    unknown: 1,
-    ready: 0
+    failed: 6,
+    blocked: 5,
+    setup_required: 4,
+    partial: 3,
+    foundation_only: 2,
+    ready: 1,
+    unknown: 0
   };
   return order[normalizeState(next)] > order[normalizeState(current)] ? normalizeState(next) : normalizeState(current);
 }
@@ -122,16 +123,21 @@ function buildConnectorRows({ connectors = [], authProfiles = {}, toolConnection
       .slice()
       .reverse()
       .find((entry) => entry.connectorId === connector.id);
-    const envStatus = envPresenceStatus(proof.envPresence || {});
     const foundationOnly = connector.status === 'foundation_only';
+    const envStatus = foundationOnly
+      ? { state: 'foundation_only', missing: [] }
+      : envPresenceStatus(proof.envPresence || {});
     const localRuntime = ['sd_webui', 'comfyui_video'].includes(connector.id)
-      ? 'ready'
+      ? 'foundation_only'
       : null;
     const authRequired = ['telegram', 'whatsapp', 'youtube', 'notion', 'clickup', 'chatgpt', 'claude', 'runway'].includes(connector.id);
     const authState = authRequired
       ? (auth.enabled && (Array.isArray(auth.allowlist) ? auth.allowlist.length > 0 : true) ? 'ready' : 'setup_required')
       : 'ready';
-    const state = localRuntime || (proof.ok ? authState : envStatus.state);
+    const state = foundationOnly
+      ? 'foundation_only'
+      : localRuntime || (proof.ok ? authState : envStatus.state);
+    const localRuntimeHealth = proof.health || null;
     rows.push({
       id: connector.id,
       name: connector.name,
@@ -142,11 +148,16 @@ function buildConnectorRows({ connectors = [], authProfiles = {}, toolConnection
       envStatus: envStatus.state,
       authEnabled: Boolean(auth.enabled),
       authMode: auth.mode || 'allowlist_required',
-      allowlistStatus: Boolean(auth.enabled) && Array.isArray(auth.allowlist) && auth.allowlist.length > 0 ? 'configured' : 'setup_required',
+      allowlistStatus: foundationOnly || localRuntime
+        ? 'foundation_only'
+        : Boolean(auth.enabled) && Array.isArray(auth.allowlist) && auth.allowlist.length > 0
+          ? 'configured'
+          : 'setup_required',
       allowlistCount: Array.isArray(auth.allowlist) ? auth.allowlist.length : 0,
       requiredEnv: Array.isArray(connector.requiredEnv) ? connector.requiredEnv : [],
       missingEnv: proof.missingEnv || envStatus.missing || [],
       failureReason: proof.error || connector.disabledReason || null,
+      localRuntimeHealth,
       approvalRequired: ['upload_video', 'metadata_update', 'docs_write', 'task_write', 'inbound_messages'].some((value) => {
         const permissions = Array.isArray(connector.permissions) ? connector.permissions : [];
         return permissions.includes(value);
@@ -169,7 +180,7 @@ function buildConnectorRows({ connectors = [], authProfiles = {}, toolConnection
           : connector.id === 'comfyui_video'
             ? 'connector_queue_comfyui_video'
             : 'status_check',
-      lastTestResult: latestAudit?.action || proof.status || 'unknown',
+      lastTestResult: latestAudit?.action || localRuntimeHealth?.trust || proof.lastTestStatus || proof.status || 'unknown',
       lastTestAtMs: connector.lastTestAtMs || proof.checkedAtMs || latestAudit?.timestampMs || null,
       receiptStatus: latestAudit?.action ? 'recorded' : 'unknown',
       zeroCostPolicy: connector.id === 'chatgpt' || connector.id === 'claude' ? 'blocked' : 'local_or_free'
@@ -235,6 +246,7 @@ function buildConnectorRows({ connectors = [], authProfiles = {}, toolConnection
 function summarizeReadiness(rows = []) {
   const counts = {
     ready: 0,
+    foundation_only: 0,
     partial: 0,
     setup_required: 0,
     blocked: 0,
@@ -621,6 +633,7 @@ export function summarizeProductionReadiness(report) {
 export function getProductionReadinessStateLabel(state) {
   const normalized = normalizeState(state);
   if (normalized === 'ready') return 'ready';
+  if (normalized === 'foundation_only') return 'foundation_only';
   if (normalized === 'partial') return 'partial';
   if (normalized === 'setup_required') return 'setup_required';
   if (normalized === 'blocked') return 'blocked';

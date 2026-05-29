@@ -1,5 +1,92 @@
-import React from 'react';
-import { Activity, Monitor, RefreshCw, Terminal, Cpu } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Activity, ChevronDown, ClipboardCopy, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu } from 'lucide-react';
+import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
+import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
+
+function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-zinc-300">Active Inference Model</label>
+        <span className="text-[11px] text-zinc-500">{models.length} installed model{models.length === 1 ? '' : 's'}</span>
+      </div>
+      {models.length === 0 ? (
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+          No installed models were returned by Ollama. Pull a model in Ollama, then run Check Ollama again.
+        </div>
+      ) : (
+        <div className="relative">
+          <select
+            value={models.some((model) => model.name === selectedModel) ? selectedModel : ''}
+            onChange={(event) => onSelectModel(event.target.value)}
+            className="w-full appearance-none bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+          >
+            {selectedModelMissing && <option value="">Model not found: {selectedModel}</option>}
+            {models.map((model) => (
+              <option key={model.name} value={model.name}>
+                {model.name} - {formatModelSize(model.size)}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        </div>
+      )}
+      {selectedModelMissing && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+          Model not found: <span className="font-mono">{selectedModel}</span>. Suggested installed models: {models.map((model) => model.name).join(', ')}.
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SUGGESTED_MODELS = ['llama3.2', 'llama3.1:8b', 'mistral', 'phi3.5', 'codellama', 'deepseek-r1:7b'];
+
+function ModelPullHelper({ onRefresh }) {
+  const [modelName, setModelName] = useState('');
+  const [copied, setCopied] = useState(false);
+  const cmd = `ollama pull ${modelName.trim() || '<model-name>'}`;
+
+  const copy = () => {
+    if (!modelName.trim()) return;
+    navigator.clipboard.writeText(cmd).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-4 space-y-3">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Pull a New Model</div>
+      <div className="flex flex-wrap gap-1.5">
+        {SUGGESTED_MODELS.map((m) => (
+          <button key={m} onClick={() => setModelName(m)}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-colors ${modelName === m ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300' : 'border-white/5 bg-zinc-800 text-zinc-400 hover:text-zinc-200'}`}>
+            {m}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={modelName}
+          onChange={(e) => setModelName(e.target.value)}
+          placeholder="or type a model name..."
+          className="flex-1 bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+        />
+        <button
+          onClick={copy}
+          disabled={!modelName.trim()}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-zinc-800 border-white/10 text-zinc-300 hover:bg-zinc-700"
+        >
+          {copied ? <><ClipboardCopy className="w-3.5 h-3.5" /> Copied</> : <><Download className="w-3.5 h-3.5" /> Copy Command</>}
+        </button>
+      </div>
+      {modelName.trim() && (
+        <div className="font-mono text-[11px] bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-emerald-400 select-all">{cmd}</div>
+      )}
+      <p className="text-[11px] text-zinc-600">Paste this in a terminal. When the download finishes, click <button onClick={onRefresh} className="text-indigo-400 hover:text-indigo-300 underline">Refresh Models</button> to load it.</p>
+    </div>
+  );
+}
 
 export function SettingsView({
   settings,
@@ -12,14 +99,20 @@ export function SettingsView({
   copyState,
   updateCheckState,
   onCheckUpdates,
-  Badge,
-  StatusDot,
-  SectionHeader,
-  ModelSelector,
-  statusColors,
   normalizeEndpoint,
   ollamaTroubleshootingCommand
 }) {
+  const resolvedNormalizeEndpoint = normalizeEndpoint || _normalizeEndpoint;
+  const folderPickerRef = useRef(null);
+
+  const handleFolderPick = (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const path = files[0].path || files[0].webkitRelativePath?.split('/')[0] || '';
+    if (path) setSettings({ ...settings, workspaceRoot: path });
+    e.target.value = '';
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-8 space-y-10">
       <div className="space-y-1">
@@ -42,12 +135,22 @@ export function SettingsView({
 
           <div className="space-y-2">
             <label className="text-xs font-semibold text-zinc-300">Workspace Root (for supervised proofs)</label>
-            <input
-              type="text"
-              value={settings.workspaceRoot || ''}
-              onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={settings.workspaceRoot || ''}
+                onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
+                className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              />
+              <input ref={folderPickerRef} type="file" webkitdirectory="" onChange={handleFolderPick} className="hidden" />
+              <button
+                onClick={() => folderPickerRef.current?.click()}
+                className="px-3 py-2 rounded-xl border border-white/10 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+                title="Browse for folder"
+              >
+                <Folder className="w-4 h-4" />
+              </button>
+            </div>
             <div className="text-[11px] text-zinc-500">Set this to the approved Alphonso workspace root before running native proof.</div>
           </div>
 
@@ -90,7 +193,7 @@ export function SettingsView({
                 <span className="text-sm font-semibold text-white">{ollamaStatus.label}</span>
                 <Badge color={statusColors[ollamaStatus.state]}>{ollamaStatus.state}</Badge>
               </div>
-              <span className="text-[11px] text-zinc-500">{normalizeEndpoint(settings.endpoint)}/api/tags</span>
+              <span className="text-[11px] text-zinc-500">{resolvedNormalizeEndpoint(settings.endpoint)}/api/tags</span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-zinc-400">{ollamaStatus.message}</p>
             <div className="mt-4 rounded-xl bg-black/30 border border-white/5 px-3 py-2 font-mono text-[11px] text-zinc-400 whitespace-pre-wrap">
@@ -104,6 +207,8 @@ export function SettingsView({
             selectedModelMissing={selectedModelMissing}
             onSelectModel={(selectedModel) => setSettings({ ...settings, selectedModel })}
           />
+
+          <ModelPullHelper onRefresh={onCheckOllama} />
         </div>
       </section>
 
@@ -266,6 +371,33 @@ export function SettingsView({
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.joseCompanionPinned ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Palette} label="Appearance" />
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { id: 'minimal_runtime', label: 'Minimal Runtime', preview: 'bg-zinc-900' },
+            { id: 'deep_space', label: 'Deep Space', preview: 'bg-indigo-950' },
+            { id: 'orchestrator_gold', label: 'Orchestrator Gold', preview: 'bg-amber-950' }
+          ].map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                settings.environmentTheme === theme.id
+                  ? 'border-indigo-500/50 bg-indigo-500/10 ring-1 ring-indigo-500/20'
+                  : 'border-white/5 bg-zinc-900/50 hover:border-white/10'
+              }`}
+            >
+              <div className={`w-full h-10 rounded-lg ${theme.preview} border border-white/10`} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{theme.label}</span>
+              {settings.environmentTheme === theme.id && (
+                <span className="text-[9px] text-indigo-400 font-bold">Active</span>
+              )}
+            </button>
+          ))}
         </div>
       </section>
     </div>

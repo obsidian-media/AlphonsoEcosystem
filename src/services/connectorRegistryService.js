@@ -464,15 +464,39 @@ export async function verifyConnectorEnvironment(connectorId) {
   if (!connector) return null;
   if (!connector.requiredEnv?.length) {
     const foundationOnly = ['mobile_bridge', 'sd_webui', 'comfyui_video'].includes(connector.id);
+    let health = null;
+    if (['sd_webui', 'comfyui_video'].includes(connector.id)) {
+      try {
+        health = await invoke('connector_check_local_runtime_health', { connectorId: connector.id });
+      } catch (error) {
+        health = {
+          ok: false,
+          connectorId: connector.id,
+          provider: connector.id === 'sd_webui' ? 'automatic1111' : 'comfyui',
+          endpoint: connector.id === 'sd_webui' ? 'http://127.0.0.1:7860' : 'http://127.0.0.1:8188',
+          probePath: connector.id === 'sd_webui' ? '/sdapi/v1/samplers' : '/system_stats',
+          checkedAtMs: timestampMs(),
+          trust: TRUST_STATES.FAILED,
+          message: 'Local runtime health probe failed.',
+          error: String(error)
+        };
+      }
+    }
     return {
       connectorId,
-      ok: !foundationOnly,
+      ok: foundationOnly ? Boolean(health?.ok ?? false) : true,
       envPresence: {},
       status: foundationOnly ? 'foundation_only' : 'configured',
       checkedAtMs: timestampMs(),
       lastTestAtMs: timestampMs(),
-      lastTestStatus: foundationOnly ? 'foundation_only' : 'configured',
-      trust: foundationOnly ? TRUST_STATES.PLACEHOLDER : TRUST_STATES.VERIFIED
+      lastTestStatus: foundationOnly
+        ? (health?.ok ? 'verified' : health ? 'failed' : 'foundation_only')
+        : 'configured',
+      lastTestError: health?.error || null,
+      health,
+      trust: foundationOnly
+        ? (connector.id === 'mobile_bridge' ? TRUST_STATES.PLACEHOLDER : health?.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED)
+        : TRUST_STATES.VERIFIED
     };
   }
 

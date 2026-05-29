@@ -13,7 +13,7 @@ function run(command, args, env = process.env) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd: PROJECT_ROOT,
-      shell: false,
+      shell: process.platform === 'win32',
       env,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -42,24 +42,17 @@ function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-function getNsisArtifact() {
+function getNsisArtifactPaths() {
   const conf = readJson(join(TAURI_DIR, 'tauri.conf.json'));
   const productName = conf.productName || 'Alphonso';
   const version = conf.version || '0.1.0';
   const fileName = `${productName}_${version}_x64-setup.exe`;
   const installerPath = join(BUNDLE_NSIS_DIR, fileName);
-  const signaturePath = `${installerPath}.sig`;
-  if (!existsSync(installerPath)) {
-    throw new Error(`Expected NSIS installer not found: ${installerPath}`);
-  }
-  if (!existsSync(signaturePath)) {
-    throw new Error(`Expected updater signature not found: ${signaturePath}`);
-  }
   return {
     productName,
     version,
     installerPath,
-    signaturePath,
+    signaturePath: `${installerPath}.sig`,
     fileName
   };
 }
@@ -71,9 +64,13 @@ async function main() {
   const signingKey = process.env.TAURI_SIGNING_PRIVATE_KEY || '';
   const githubToken = process.env.GITHUB_TOKEN || '';
   const skipBuild = process.argv.includes('--skip-build');
+  const forceBuild = process.argv.includes('--force-build');
   const tauriConfigPath = join(TAURI_DIR, 'tauri.conf.json');
   const originalTauriConfig = readJson(tauriConfigPath);
   let tauriConfigPatched = false;
+  const artifactPaths = getNsisArtifactPaths();
+  const existingInstallerReady = existsSync(artifactPaths.installerPath) && existsSync(artifactPaths.signaturePath);
+  const shouldBuild = !skipBuild && (!existingInstallerReady || forceBuild);
 
   if (!skipBuild && !signingKey.trim()) {
     throw new Error('TAURI_SIGNING_PRIVATE_KEY is required for signed updater builds.');
@@ -91,7 +88,7 @@ async function main() {
   }
 
   try {
-    if (!skipBuild) {
+    if (shouldBuild) {
       const patchedConfig = {
         ...originalTauriConfig,
         bundle: {
@@ -111,9 +108,29 @@ async function main() {
       if (tauriBuild.code !== 0) {
         process.exit(tauriBuild.code);
       }
+    } else {
+      process.stdout.write(`[alphonso-release] Reusing existing signed NSIS installer at ${artifactPaths.installerPath}\n`);
     }
 
-    const artifact = getNsisArtifact();
+    const artifact = existingInstallerReady ? {
+      ...artifactPaths,
+      productName: artifactPaths.productName,
+      version: artifactPaths.version,
+      fileName: artifactPaths.fileName
+    } : (() => {
+      if (!existsSync(artifactPaths.installerPath)) {
+        throw new Error(`Expected NSIS installer not found: ${artifactPaths.installerPath}`);
+      }
+      if (!existsSync(artifactPaths.signaturePath)) {
+        throw new Error(`Expected updater signature not found: ${artifactPaths.signaturePath}`);
+      }
+      return {
+        ...artifactPaths,
+        productName: artifactPaths.productName,
+        version: artifactPaths.version,
+        fileName: artifactPaths.fileName
+      };
+    })();
     const signature = readFileSync(artifact.signaturePath, 'utf8').trim();
     if (!signature) {
       throw new Error(`Signature file is empty: ${artifact.signaturePath}`);

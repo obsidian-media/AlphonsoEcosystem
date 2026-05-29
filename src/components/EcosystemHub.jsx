@@ -194,13 +194,13 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-8 space-y-6">
-      <header className="rounded-2xl border border-white/10 bg-zinc-950/70 p-6">
+    <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
+      <header className="rounded-2xl border border-white/10 bg-zinc-950/70 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Shared Agent Intelligence Bus</div>
-            <h1 className="text-2xl font-bold text-white mt-2">Operator + Creator Ecosystem</h1>
-            <p className="text-sm text-zinc-400 mt-2 max-w-3xl">
+            <h1 className="text-xl font-bold text-white mt-2">Operator + Creator Ecosystem</h1>
+            <p className="text-sm text-zinc-400 mt-2 max-w-2xl">
           Local-first orchestration hub for handoffs, skill packs, visual workflows, session intelligence, and supervised runtime control.
             </p>
           </div>
@@ -234,7 +234,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
       {showAdvancedSections && (
         <Suspense
           fallback={
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 text-sm text-zinc-400">
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3 text-sm text-zinc-400">
               Loading advanced ecosystem tools...
             </div>
           }
@@ -422,7 +422,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
 
 function Panel({ icon: Icon, title, children }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
+    <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3.5">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-400 font-bold mb-3">
         <Icon className="w-4 h-4 text-indigo-300" /> {title}
       </div>

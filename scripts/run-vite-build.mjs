@@ -24,7 +24,6 @@ async function enforceMainChunkBudget() {
 }
 
 await build({
-  configFile: false,
   root,
   build: {
     outDir: 'dist',

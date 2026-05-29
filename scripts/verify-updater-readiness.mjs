@@ -106,6 +106,11 @@ async function main() {
         : !files.installer.present || !files.signature.present || !files.latestJson.present || !updaterConfig.configured
           ? 'blocked'
           : 'ready',
+    setupRequiredReason: !signing.TAURI_SIGNING_PRIVATE_KEY.present
+      ? 'TAURI_SIGNING_PRIVATE_KEY is missing.'
+      : !baseUrl.valid
+        ? 'ALPHONSO_UPDATE_BASE_URL is missing or invalid.'
+        : null,
     missing: {
       signing: Object.entries(signing)
         .filter(([name, entry]) => name !== 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD' && entry.state !== 'ready')

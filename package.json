@@ -20,6 +20,9 @@
     "verify:ollama": "node scripts/verify-ollama-runtime.mjs",
     "proof:native-selfdev": "node scripts/proof-native-selfdev.mjs",
     "proof:rc0": "node scripts/proof-native-selfdev.mjs --rc0",
+    "auth:youtube": "node scripts/auth-youtube.mjs",
+    "auth:meta": "node scripts/auth-meta.mjs",
+    "auth:outlook": "node scripts/auth-outlook.mjs",
     "preview": "node scripts/run-vite-preview.mjs",
     "tauri": "tauri"
   },

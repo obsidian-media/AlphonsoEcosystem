@@ -9,7 +9,7 @@ const server = await createServer({
   server: {
     host,
     port,
-    strictPort: false
+    strictPort: true
   }
 });
 

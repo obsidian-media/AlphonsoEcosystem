@@ -186,6 +186,67 @@ export async function checkOllama(endpoint, selectedModel) {
   }
 }
 
+export async function generateOllamaStream({ endpoint, model, prompt, onToken, signal }) {
+  const baseUrl = normalizeEndpoint(endpoint);
+  const controller = new AbortController();
+  const mergedSignal = signal || controller.signal;
+  const timeoutId = window.setTimeout(() => controller.abort(), 90000);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/generate`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt, stream: true }),
+      signal: mergedSignal
+    });
+
+    if (!response.ok) {
+      let message = `Ollama /api/generate returned HTTP ${response.status}`;
+      try {
+        const data = await response.json();
+        if (data?.error) message = data.error;
+      } catch { /* ignore */ }
+      throw new Error(message);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let full = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      for (const line of chunk.split('\n')) {
+        if (!line.trim()) continue;
+        try {
+          const obj = JSON.parse(line);
+          if (typeof obj.response === 'string') {
+            full += obj.response;
+            onToken?.(obj.response, full);
+          }
+          if (obj.done) break;
+        } catch { /* skip malformed line */ }
+      }
+    }
+
+    return full;
+  } catch (error) {
+    const classified = classifyOllamaError(error);
+    if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
+      throw error;
+    }
+    const proof = await invoke('ollama_generate', { endpoint: baseUrl, model, prompt });
+    if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
+    const text = proof.response || '';
+    onToken?.(text, text);
+    return text;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function generateOllamaResponse({ endpoint, model, prompt }) {
   const baseUrl = normalizeEndpoint(endpoint);
   try {

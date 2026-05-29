@@ -637,6 +637,21 @@ struct MediaGenerationProof {
   error: Option<String>,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalRuntimeHealthProof {
+  connector_id: String,
+  provider: String,
+  ok: bool,
+  endpoint: String,
+  probe_path: String,
+  http_status: Option<u16>,
+  checked_at_ms: u64,
+  trust: String,
+  message: String,
+  error: Option<String>,
+}
+
 fn now_ms() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)
@@ -657,6 +672,56 @@ fn allowed_program(program: &str) -> bool {
     program.to_ascii_lowercase().as_str(),
     "ollama" | "where" | "where.exe" | "tasklist" | "git" | "node" | "npm" | "npm.cmd"
   )
+}
+
+fn load_dotenv_file(path: &Path) -> usize {
+  let file = match fs::File::open(path) {
+    Ok(f) => f,
+    Err(_) => return 0,
+  };
+  let mut loaded = 0usize;
+  for line in BufReader::new(file).lines().map_while(Result::ok) {
+    let trimmed = line.trim().to_string();
+    if trimmed.is_empty() || trimmed.starts_with('#') {
+      continue;
+    }
+    if let Some((key, val)) = trimmed.split_once('=') {
+      let k = key.trim();
+      let v = val.trim().trim_matches('"').trim_matches('\'');
+      if !k.is_empty() && std::env::var_os(k).is_none() {
+        unsafe { std::env::set_var(k, v) };
+        loaded += 1;
+      }
+    }
+  }
+  loaded
+}
+
+fn load_dotenv() {
+  let exe_dir = std::env::current_exe()
+    .ok()
+    .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    .unwrap_or_default();
+
+  let candidates = [
+    std::env::current_dir().unwrap_or_default().join(".env"),
+    exe_dir.join(".env"),
+    dirs_home().join(".alphonso").join(".env"),
+  ];
+  for path in &candidates {
+    let n = load_dotenv_file(path);
+    if n > 0 {
+      eprintln!("[alphonso] loaded {} var(s) from {}", n, path.display());
+      return;
+    }
+  }
+}
+
+fn dirs_home() -> PathBuf {
+  std::env::var("USERPROFILE")
+    .or_else(|_| std::env::var("HOME"))
+    .map(PathBuf::from)
+    .unwrap_or_else(|_| PathBuf::from("."))
 }
 
 fn native_proof_output_dir() -> PathBuf {
@@ -688,6 +753,20 @@ fn write_native_proof_stage(
   let content = serde_json::to_string_pretty(payload).map_err(|error| error.to_string())?;
   fs::write(&file_path, format!("{content}\n")).map_err(|error| error.to_string())?;
   Ok(())
+}
+
+fn write_native_startup_trace(stage: &str, workspace_root: &str, note: Option<&str>) {
+  let trace_path = std::env::temp_dir().join("alphonso-startup-trace.json");
+  let payload = serde_json::json!({
+    "timestamp": now_ms(),
+    "stage": stage,
+    "processId": std::process::id(),
+    "workspaceRoot": workspace_root,
+    "note": note,
+  });
+  if let Ok(content) = serde_json::to_string_pretty(&payload) {
+    let _ = fs::write(trace_path, format!("{content}\n"));
+  }
 }
 
 fn write_native_proof_event(output_dir: &Path, payload: &Value) -> Result<(), String> {
@@ -3343,6 +3422,75 @@ async fn connector_generate_sdwebui_image(
   })
 }
 
+async fn probe_local_runtime_health(
+  connector_id: &str,
+  provider: &str,
+  endpoint: &str,
+  probe_path: &str,
+) -> Result<LocalRuntimeHealthProof, String> {
+  let checked_at_ms = now_ms();
+  let client = reqwest::Client::builder()
+    .timeout(Duration::from_secs(10))
+    .user_agent("Alphonso-LocalRuntimeHealth/0.1")
+    .build()
+    .map_err(|error| error.to_string())?;
+  let response = client
+    .get(format!("{endpoint}{probe_path}"))
+    .send()
+    .await
+    .map_err(|error| error.to_string())?;
+  let http_status = Some(response.status().as_u16());
+  if !response.status().is_success() {
+    return Ok(LocalRuntimeHealthProof {
+      connector_id: connector_id.to_string(),
+      provider: provider.to_string(),
+      ok: false,
+      endpoint: endpoint.to_string(),
+      probe_path: probe_path.to_string(),
+      http_status,
+      checked_at_ms,
+      trust: "failed".to_string(),
+      message: format!("{provider} runtime responded but not successfully."),
+      error: Some(format!("HTTP {}", response.status().as_u16())),
+    });
+  }
+
+  Ok(LocalRuntimeHealthProof {
+    connector_id: connector_id.to_string(),
+    provider: provider.to_string(),
+    ok: true,
+    endpoint: endpoint.to_string(),
+    probe_path: probe_path.to_string(),
+    http_status,
+    checked_at_ms,
+    trust: "verified".to_string(),
+    message: format!("{provider} runtime is reachable."),
+    error: None,
+  })
+}
+
+#[tauri::command]
+async fn connector_check_local_runtime_health(connector_id: String) -> Result<LocalRuntimeHealthProof, String> {
+  let clean_id = connector_id.trim();
+  match clean_id {
+    "sd_webui" => {
+      let endpoint = std::env::var("LOCAL_SDWEBUI_ENDPOINT")
+        .unwrap_or_else(|_| "http://127.0.0.1:7860".to_string())
+        .trim_end_matches('/')
+        .to_string();
+      probe_local_runtime_health("sd_webui", "automatic1111", &endpoint, "/sdapi/v1/samplers").await
+    }
+    "comfyui_video" => {
+      let endpoint = std::env::var("COMFYUI_ENDPOINT")
+        .unwrap_or_else(|_| "http://127.0.0.1:8188".to_string())
+        .trim_end_matches('/')
+        .to_string();
+      probe_local_runtime_health("comfyui_video", "comfyui", &endpoint, "/system_stats").await
+    }
+    _ => Err(format!("Unsupported local runtime connector: {clean_id}")),
+  }
+}
+
 #[tauri::command]
 async fn connector_queue_comfyui_video(
   prompt: String,
@@ -5798,7 +5946,7 @@ fn readiness_should_skip_path(path: &Path, file_name: &str) -> bool {
 }
 
 fn readiness_is_allowed_top_level_dir(file_name: &str) -> bool {
-  matches!(file_name, "src" | "src-tauri" | "scripts" | "gateway")
+  matches!(file_name, "src" | "src-tauri" | "scripts" | "gateway" | "docs")
 }
 
 fn readiness_proof_scan_targets(root: &Path) -> Vec<PathBuf> {
@@ -5810,8 +5958,15 @@ fn readiness_proof_scan_targets(root: &Path) -> Vec<PathBuf> {
     "src/components/OperatorDashboard.jsx",
     "src/services/nativeRc0ProofService.js",
     "src/services/nativeSelfDevelopmentAutostartService.js",
-    "src/services/productionReadinessService.js",
     "src/services/connectorRegistryService.js",
+    "src/services/repoAuditService.js",
+    "src/services/devPacketService.js",
+    "src/services/selfDevelopmentService.js",
+    "src/services/workflowExecutionService.js",
+    "src/services/workflowReceiptService.js",
+    "src/services/workflowMemoryService.js",
+    "src/services/runtimeLedgerService.js",
+    "src/services/productionReadinessService.js",
     "src/services/workspaceRootService.js",
     "scripts/proof-native-selfdev.mjs",
     "scripts/setup-updater-signing.mjs",
@@ -6486,6 +6641,7 @@ fn inspect_updater_release(bundle_dir: String, manifest_dir: String) -> Result<R
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  load_dotenv();
   tauri::Builder::default()
     .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
@@ -6506,6 +6662,12 @@ pub fn run() {
         } else {
           Some("ALPHONSO_SELFDEV_AUTORUN is missing or not enabled in the native runtime.".to_string())
         };
+
+        write_native_startup_trace(
+          "setup_started",
+          &workspace_root,
+          Some("Rust setup hook executed before the webview loads."),
+        );
 
         let process_started = NativeProofStageProof {
           stage: "01_process_started".to_string(),
@@ -6575,11 +6737,12 @@ pub fn run() {
             format!("{}/package.json", workspace_root),
             format!("{}/src", workspace_root),
             format!("{}/src-tauri", workspace_root),
+            format!("{}/docs", workspace_root),
           ];
           let validation_proofs = verify_paths(validation_paths);
           let root_proof = validation_proofs.get(0).cloned();
           let entry_proofs = validation_proofs.into_iter().skip(1).collect::<Vec<_>>();
-          let missing_entries = ["package.json", "src", "src-tauri"]
+          let missing_entries = ["package.json", "src", "src-tauri", "docs"]
             .iter()
             .zip(entry_proofs.iter())
             .filter_map(|(entry, proof)| if proof.exists { None } else { Some((*entry).to_string()) })
@@ -6746,6 +6909,16 @@ pub fn run() {
         error: None,
         duration_ms: None,
       };
+      write_native_startup_trace(
+        "page_load",
+        &window
+          .app_handle()
+          .path()
+          .app_data_dir()
+          .map(|path| path.display().to_string())
+          .unwrap_or_else(|_| native_workspace_root()),
+        Some("Tauri on_page_load observed the frontend mount."),
+      );
       let _ = write_native_proof_stage(&proof_output_dir, "04_frontend_loaded.json", &payload);
     })
     .on_window_event(|window, event| {
@@ -6823,7 +6996,8 @@ pub fn run() {
       tool_connection_post_webhook,
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,
-      connector_get_comfyui_history
+      connector_get_comfyui_history,
+      connector_check_local_runtime_health
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

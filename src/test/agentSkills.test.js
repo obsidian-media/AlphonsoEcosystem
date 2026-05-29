@@ -13,7 +13,8 @@ beforeEach(() => {
 describe('agent skill integration', () => {
   it('adds professional skill focus to the core agents', () => {
     expect(ALPHONSO_PROFILE.skillPackIds).toContain('pack.codex-professional-coding');
-    expect(ALPHONSO_PROFILE.skillFocus).toBe('OpenAI Codex Professional Coding Skill');
+    expect(ALPHONSO_PROFILE.skillPackIds).toContain('pack.coding.full-stack');
+    expect(ALPHONSO_PROFILE.skillFocus).toContain('Codex Professional Coding');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-professional-marketing');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.workflow.executing-plans');
     expect(HECTOR_PROFILE.skillFocus).toBe('Professional Marketing Skill + Execution Skill');

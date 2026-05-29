@@ -1,34 +1,5 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Activity,
-  AlertCircle,
-  Bot,
-  ChevronDown,
-  Clapperboard,
-  Cloud,
-  Crown,
-  Cpu,
-  Database,
-  FileText,
-  FolderOpen,
-  Globe,
-  History,
-  Layers,
-  MessageSquare,
-  Mic,
-  Monitor,
-  Paperclip,
-  Plus,
-  RefreshCw,
-  Send,
-  Settings,
-  Shield,
-  Sparkles,
-  Terminal,
-  Trash2,
-  User,
-  Zap
-} from 'lucide-react';
+import React, { Suspense, lazy, startTransition, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Mic } from 'lucide-react';
 import { getName, getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { emit, listen } from '@tauri-apps/api/event';
@@ -56,7 +27,6 @@ import { appendSessionEvent } from './services/sessionIntelligenceService';
 import { bootstrapRuntimeLedgerHydration } from './services/runtimeLedgerService';
 import { PACKET_SCOPE } from './services/agentBusService';
 import { JOSE_COMMAND_SCOPE } from './services/joseCommandRouterService';
-import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from './services/joseExecutionEngineService';
 import { SESSION_EVENT_SCOPE } from './services/sessionIntelligenceService';
 import { GOVERNANCE_SCOPE } from './services/orchestrationGovernanceService';
 import { ORCHESTRATION_RECEIPT_SCOPE } from './services/orchestrationReceiptService';
@@ -77,16 +47,28 @@ import { WORKFLOW_RUN_SCOPE } from './services/workflowExecutionService';
 import { WORKFLOW_RECEIPT_SCOPE } from './services/workflowReceiptService';
 import { WORKFLOW_TELEMETRY_SCOPE } from './services/workflowTelemetryService';
 import { getDefaultWorkspaceRoot } from './services/workspaceRootService';
+import { listAgentProfiles } from './agents/agentRegistry';
+import { createWorkflow, listWorkflows } from './services/workflowBuilderService';
+import { listWorkflowRuns } from './services/workflowExecutionService';
+import { listWorkflowOperations } from './services/workflowOperationsRegistryService';
 import {
   DEFAULT_OLLAMA_ENDPOINT,
   OLLAMA_TROUBLESHOOTING_COMMAND,
   checkOllama,
   chooseDefaultModel,
-  classifyOllamaError,
-  formatModelSize,
-  generateOllamaResponse,
   normalizeEndpoint
 } from './lib/ollama';
+import { getStorage, setStorage } from './lib/appStorage';
+import { needsHighRiskApproval } from './lib/chatUtils';
+import { ApprovalModal } from './components/ApprovalModal';
+import { OnboardingWizard } from './components/OnboardingWizard';
+import { ViewErrorBoundary } from './components/ViewErrorBoundary';
+import { useToast } from './components/ToastProvider';
+import { Sidebar } from './components/Sidebar';
+import { TopBar } from './components/TopBar';
+import { ChatView } from './components/ChatView';
+import { AutomationView } from './components/AutomationView';
+import { FilesView } from './components/FilesView';
 
 const EcosystemHub = lazy(() => import('./components/EcosystemHub').then((mod) => ({ default: mod.EcosystemHub })));
 const HectorResearchDesk = lazy(() => import('./components/dashboard/HectorResearchDesk').then((mod) => ({ default: mod.HectorResearchDesk })));
@@ -97,9 +79,7 @@ const OrchestratorView = lazy(() => import('./components/OrchestratorView').then
 const ProjectExecutionMode = lazy(() => import('./components/projectExecution/ProjectExecutionMode').then((mod) => ({ default: mod.ProjectExecutionMode })));
 const CommandRib = lazy(() => import('./components/CommandRib').then((mod) => ({ default: mod.CommandRib })));
 const AgentDock = lazy(() => import('./components/AgentDock').then((mod) => ({ default: mod.AgentDock })));
-const RuntimeNotice = lazy(() => import('./components/RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./components/MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
-const VoiceInputButton = lazy(() => import('./components/VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
 const SettingsView = lazy(() => import('./components/SettingsView').then((mod) => ({ default: mod.SettingsView })));
 const RightPanel = lazy(() => import('./components/RightPanel').then((mod) => ({ default: mod.RightPanel })));
 
@@ -107,145 +87,11 @@ const INITIAL_CONVERSATION_ID = 'default-session';
 const COACH_LAYOUT_KEY = 'alphonso_coach_layout_v1';
 const COACH_CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
 
-const getStorage = (key, fallback) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const CHAT_ASSISTANT_PROMPT = [
-  'You are Alphonso, a local-first desktop assistant inside a verified Windows app.',
-  'Answer like a practical operator, not a generic chatbot.',
-  'Do not say "I am just a language model", "I cannot directly interact", or similar disclaimers.',
-  'If the user asks for a local computer action, give the exact Windows steps or PowerShell command in one concise answer.',
-  'If the task needs approval, route it through Jose and state that approval is pending.',
-  'If the task is unsafe or external, keep it concise and truth-labeled.',
-  'Prefer direct action, exact file names, and exact commands when relevant.',
-  'Avoid filler, apologies, and open-ended commentary.'
-].join('\n');
-
-function shouldRouteThroughJose(text) {
-  const lower = String(text || '').toLowerCase();
-  return [
-    'folder',
-    'file',
-    'desktop',
-    'rename',
-    'create ',
-    'make ',
-    'move ',
-    'delete ',
-    'remove ',
-    'open ',
-    'save ',
-    'install ',
-    'write ',
-    'edit ',
-    'copy ',
-    'path',
-    'command',
-    'system'
-  ].some((term) => lower.includes(term));
-}
-
-function needsHighRiskApproval(actionLabel) {
-  const lower = String(actionLabel || '').toLowerCase();
-  return [
-    'delete',
-    'remove',
-    'write file',
-    'create file',
-    'rename',
-    'move',
-    'publish',
-    'upload',
-    'post',
-    'payment',
-    'charge',
-    'deploy',
-    'external',
-    'secret',
-    'credential'
-  ].some((term) => lower.includes(term));
-}
-
-const setStorage = (key, value) => {
-  localStorage.setItem(key, JSON.stringify(value));
-};
-
 const themeClassFromSettings = (settings) => {
   if (settings.environmentTheme === 'orchestrator_gold') return 'theme-orchestrator-gold';
   if (settings.environmentTheme === 'neon_studio') return 'theme-neon-studio';
   if (settings.environmentTheme === 'minimal_runtime') return 'theme-minimal-runtime';
   return 'theme-deep-space';
-};
-
-const statusColors = {
-  connected: 'green',
-  connecting: 'blue',
-  model_missing: 'amber',
-  no_models: 'amber',
-  timeout: 'amber',
-  cors: 'red',
-  not_running: 'red',
-  disconnected: 'red',
-  idle: 'zinc',
-  stopped: 'zinc',
-  requesting: 'blue',
-  requesting_permission: 'blue',
-  permission_granted: 'green',
-  listening: 'green',
-  permission_denied: 'red',
-  no_microphone: 'amber',
-  unsupported: 'amber',
-  error: 'red',
-  warning: 'amber',
-  observing: 'green'
-};
-
-const Badge = ({ children, color = 'zinc' }) => {
-  const colors = {
-    zinc: 'bg-zinc-800/60 text-zinc-300 border-zinc-600/30',
-    green: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-    blue: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-    amber: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-    red: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-    indigo: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30'
-  };
-
-  return (
-    <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>
-      {children}
-    </span>
-  );
-};
-
-const StatusDot = ({ state }) => {
-  const color = {
-    connected: 'bg-emerald-400',
-    listening: 'bg-emerald-400',
-    connecting: 'bg-blue-400',
-    requesting: 'bg-blue-400',
-    requesting_permission: 'bg-blue-400',
-    permission_granted: 'bg-emerald-400',
-    model_missing: 'bg-amber-400',
-    no_models: 'bg-amber-400',
-    no_microphone: 'bg-amber-400',
-    unsupported: 'bg-amber-400',
-    timeout: 'bg-amber-400',
-    warning: 'bg-amber-400',
-    cors: 'bg-red-400',
-    not_running: 'bg-red-400',
-    disconnected: 'bg-red-400',
-    permission_denied: 'bg-red-400',
-    error: 'bg-red-400',
-    observing: 'bg-emerald-400'
-  }[state] || 'bg-zinc-500';
-
-  return <span className={`h-2 w-2 rounded-full ${color}`} />;
 };
 
 function getCompanionState({
@@ -349,12 +195,40 @@ function CoachMissionBadge({ agent, state, message }) {
   );
 }
 
+function ViewLoadingState({ activeTab }) {
+  return (
+    <div className="flex h-full items-center justify-center px-6 py-10">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950/75 px-5 py-4 text-sm text-zinc-400">
+        Loading {activeTab}...
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  useEffect(() => {
+    let cancelled = false;
+    let rafTwo = 0;
+    const rafOne = window.requestAnimationFrame(() => {
+      rafTwo = window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        if (document.querySelector('[data-alphonso-shell-ready="true"]')) {
+          window.__ALPHONSO_BOOT_READY__?.()
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(rafOne);
+      if (rafTwo) window.cancelAnimationFrame(rafTwo);
+    };
+  }, [])
+
   const searchParams = new URLSearchParams(window.location.search);
   const isCoachWindow = searchParams.get('coach') === '1';
   const coachAgentFromQuery = searchParams.get('coachAgent');
   const [activeTab, setActiveTab] = useState('chat');
-  const [isSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [settings, setSettings] = useState(() => getStorage('alphonso_settings', {
     endpoint: DEFAULT_OLLAMA_ENDPOINT,
     selectedModel: '',
@@ -460,11 +334,36 @@ export default function App() {
     return COACH_CORNERS.includes(layout?.corner) ? layout.corner : 'bottom-right';
   });
   const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
+  const [approvalPending, setApprovalPending] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem('alphonso_onboarding_complete')
+  );
+  const approvalResolveRef = useRef(null);
   const ollamaCheckRunRef = useRef(0);
   const screenObserverRunRef = useRef(false);
   const workspaceRootBootstrapRef = useRef(false);
   const nativeSelfDevAutorunRef = useRef(false);
   const voice = useVoiceInput();
+  const toast = useToast();
+  const [, startTabTransition] = useTransition();
+  const switchTab = useCallback((tab) => startTabTransition(() => setActiveTab(tab)), []);
+  const mergedAgentDockCompanions = useMemo(() => {
+    const activeStates = {
+      alphonso: {
+        state: companionStateFromVoice(voice.voiceStatus),
+        message: coachMessageFromVoice(voice.voiceStatus)
+      },
+      hector: hectorCompanionState,
+      jose: joseCompanionState,
+      miya: miyaCompanionState
+    };
+    return listAgentProfiles().map((agent) => ({
+      agentId: agent.id,
+      name: agent.name,
+      state: activeStates[agent.id]?.state || 'idle',
+      message: activeStates[agent.id]?.message || agent.title || agent.role
+    }));
+  }, [hectorCompanionState, joseCompanionState, miyaCompanionState, voice.voiceStatus]);
 
   const writeNativeProofStage = useCallback(async (stageFileName, payload = {}) => {
     const proofWorkspaceRoot = String(payload.workspaceRoot || settings.workspaceRoot || getDefaultWorkspaceRoot() || '').trim();
@@ -768,6 +667,22 @@ export default function App() {
   }, [desktopBridge.state, nativeProofHooks, settings.workspaceRoot, updateCheckState, verificationLogs, workspaceFoundation]);
 
   useEffect(() => {
+    const onKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+        event.preventDefault();
+        switchTab('settings');
+      }
+      if (event.key === 'Escape' && approvalPending) {
+        setApprovalPending(null);
+        setApprovalRequiredNotice(true);
+        approvalResolveRef.current?.(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [approvalPending]);
+
+  useEffect(() => {
     appendSessionEvent({
       category: 'app_lifecycle',
       title: 'Alphonso app session started',
@@ -812,6 +727,27 @@ export default function App() {
       verificationState: ollamaStatus.trust || TRUST_STATES.UNVERIFIED
     });
   }, [ollamaStatus.state]);
+
+  const prevOllamaStateRef = useRef(ollamaStatus.state);
+  useEffect(() => {
+    const prev = prevOllamaStateRef.current;
+    const curr = ollamaStatus.state;
+    prevOllamaStateRef.current = curr;
+    const wasConnected = prev === 'connected';
+    const isDisconnected = ['not_running', 'cors', 'timeout', 'disconnected', 'error'].includes(curr);
+    const isNowConnected = curr === 'connected';
+    if (wasConnected && isDisconnected) {
+      toast.error('Ollama disconnected', 'Retrying automatically. Check that Ollama is running.');
+    } else if (!wasConnected && isNowConnected && prev !== 'connecting') {
+      toast.success('Ollama reconnected', `Connected to ${ollamaStatus.models?.length ?? 0} model(s).`);
+    }
+  }, [ollamaStatus.state]);
+
+  useEffect(() => {
+    if (updateCheckState.available && updateCheckState.latestVersion) {
+      toast.info('Update available', `Alphonso ${updateCheckState.latestVersion} is ready — open Settings to install.`);
+    }
+  }, [updateCheckState.available, updateCheckState.latestVersion]);
 
   useEffect(() => {
     if (ollamaStatus.state !== 'connected' && ollamaStatus.state !== 'connecting') {
@@ -1104,10 +1040,30 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      runOllamaCheck();
-    }, 20000);
-    return () => window.clearInterval(intervalId);
+    const BACKOFF = [5000, 10000, 15000, 30000];
+    const CONNECTED_INTERVAL = 30000;
+    let timeoutId = null;
+    let attempt = 0;
+    let lastState = ollamaStatus.state;
+
+    const schedule = (ms) => {
+      timeoutId = window.setTimeout(async () => {
+        await runOllamaCheck();
+        const state = ollamaStatus.state;
+        const disconnected = ['not_running', 'cors', 'timeout', 'disconnected', 'error'].includes(state);
+        if (disconnected) {
+          attempt = Math.min(attempt + 1, BACKOFF.length - 1);
+          schedule(BACKOFF[attempt]);
+        } else {
+          attempt = 0;
+          schedule(CONNECTED_INTERVAL);
+        }
+        lastState = state;
+      }, ms);
+    };
+
+    schedule(ollamaStatus.state === 'connected' ? CONNECTED_INTERVAL : BACKOFF[0]);
+    return () => window.clearTimeout(timeoutId);
   }, [runOllamaCheck]);
 
   useEffect(() => {
@@ -1158,22 +1114,21 @@ export default function App() {
     return () => window.clearTimeout(timeoutId);
   }, [approvalRequiredNotice]);
 
-  const requestApproval = (actionLabel) => {
-    if (!settings.approvalMode) return true;
-    if (!needsHighRiskApproval(actionLabel)) return true;
-    const accepted = window.confirm(`Approval required: ${actionLabel}`);
-    if (!accepted) {
-      setApprovalRequiredNotice(true);
-    }
-    return accepted;
-  };
+  const requestApproval = useCallback((actionLabel) => {
+    if (!settings.approvalMode) return Promise.resolve(true);
+    if (!needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      approvalResolveRef.current = resolve;
+      setApprovalPending(actionLabel);
+    });
+  }, [settings.approvalMode]);
 
   const createNewChat = () => {
     const newId = `chat-${Date.now()}`;
     const newChat = { id: newId, title: 'Unsaved Chat', timestamp: Date.now() };
     setConversations((current) => [newChat, ...current]);
     setActiveChatId(newId);
-    setActiveTab('chat');
+    switchTab('chat');
   };
 
   const deleteChat = (id, event) => {
@@ -1204,26 +1159,26 @@ export default function App() {
   };
 
   const verifyOllamaWithProof = async () => {
-    if (!requestApproval('Run Ollama runtime verification')) return;
+    if (!await requestApproval('Run Ollama runtime verification')) return;
     await runOllamaCheck();
     const proof = await verifyOllamaRuntimeProof(settings.endpoint);
     setVerificationLogs((current) => [...current, proof].slice(-250));
   };
 
   const verifyProcesses = async (names) => {
-    if (!requestApproval(`Check process state: ${names.join(', ')}`)) return;
+    if (!await requestApproval(`Check process state: ${names.join(', ')}`)) return;
     const proof = await verifyProcessProof(names);
     setVerificationLogs((current) => [...current, proof].slice(-250));
   };
 
   const verifyPaths = async (paths) => {
-    if (!requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
+    if (!await requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
     const proof = await verifyPathProof(paths);
     setVerificationLogs((current) => [...current, proof].slice(-250));
   };
 
   const verifyAuditChain = async () => {
-    if (!requestApproval('Verify durable audit chain integrity')) return;
+    if (!await requestApproval('Verify durable audit chain integrity')) return;
     const proof = await verifyDurableAuditChain();
     setAuditChainProof(proof?.payload || null);
     setVerificationLogs((current) => [...current, proof].slice(-250));
@@ -1249,13 +1204,13 @@ export default function App() {
         return;
       }
     }
-    if (!requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
+    if (!await requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
     const proof = await verifyCommandExecution(program, args, null);
     setVerificationLogs((current) => [...current, proof].slice(-250));
   };
 
-  const handleTogglePlugin = (pluginId, enabled) => {
-    if (!requestApproval(`${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}`)) return;
+  const handleTogglePlugin = async (pluginId, enabled) => {
+    if (!await requestApproval(`${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}`)) return;
     setPlugins(togglePlugin(pluginId, enabled));
     setPluginAudit(listPluginAudit());
   };
@@ -1272,7 +1227,7 @@ export default function App() {
   };
 
   const handleDiscoverPlugins = async () => {
-    if (!requestApproval('Discover plugin manifests from disk')) return;
+    if (!await requestApproval('Discover plugin manifests from disk')) return;
     const manifests = await discoverDiskPluginManifests(settings.workspaceRoot);
     setDiskPluginManifests(manifests);
     const log = appendVerificationLog({
@@ -1301,7 +1256,7 @@ export default function App() {
       setVerificationLogs((current) => [...current, log].slice(-250));
       return;
     }
-    if (!requestApproval(`Collect workspace proof for ${settings.workspaceRoot}`)) return;
+    if (!await requestApproval(`Collect workspace proof for ${settings.workspaceRoot}`)) return;
     try {
       const proof = await collectWorkspaceProof(settings.workspaceRoot, 1200);
       setWorkspaceProof(proof);
@@ -1333,7 +1288,7 @@ export default function App() {
   };
 
   const handleCheckOcrCapability = async () => {
-    if (!requestApproval('Check OCR engine capability')) return;
+    if (!await requestApproval('Check OCR engine capability')) return;
     try {
       const proof = await checkOcrCapability(settings.ocrEnginePath);
       setOcrCapability(proof);
@@ -1380,7 +1335,7 @@ export default function App() {
       setVerificationLogs((current) => [...current, log].slice(-250));
       return;
     }
-    if (!requestApproval(`Build workspace symbol index for ${settings.workspaceRoot}`)) return;
+    if (!await requestApproval(`Build workspace symbol index for ${settings.workspaceRoot}`)) return;
     try {
       const index = await buildWorkspaceSymbolIndex(settings.workspaceRoot, 500);
       setWorkspaceSymbolIndex(index);
@@ -1487,7 +1442,7 @@ export default function App() {
       }
     }
 
-    if (!requestApproval(`Execute plugin tool ${pluginId}:${toolId}`)) return;
+    if (!await requestApproval(`Execute plugin tool ${pluginId}:${toolId}`)) return;
     try {
       const proof = await executePluginToolRun({
         manifestPath,
@@ -1557,7 +1512,7 @@ export default function App() {
 
   const handleValidatePluginManifest = async (manifestPath) => {
     if (!manifestPath) return;
-    if (!requestApproval(`Validate plugin manifest ${manifestPath}`)) return;
+    if (!await requestApproval(`Validate plugin manifest ${manifestPath}`)) return;
     try {
       const validation = await validatePluginManifestDisk(manifestPath);
       setLastManifestValidation(validation);
@@ -1616,7 +1571,7 @@ export default function App() {
       setVerificationLogs((current) => [...current, log].slice(-250));
       return;
     }
-    if (!requestApproval(`Run OCR adapter ${adapter}`)) return;
+    if (!await requestApproval(`Run OCR adapter ${adapter}`)) return;
     try {
       const proof = await runOcrAdapter({
         adapter,
@@ -1651,7 +1606,7 @@ export default function App() {
   };
 
   const handleCreateSnapshot = async () => {
-    if (!requestApproval('Create restore point snapshot')) return;
+    if (!await requestApproval('Create restore point snapshot')) return;
     const snapshot = await createSnapshot({
       settings,
       ollamaStatus,
@@ -1663,7 +1618,7 @@ export default function App() {
   };
 
   const handleRestoreSnapshot = async (snapshotId) => {
-    if (!requestApproval(`Restore snapshot: ${snapshotId}`)) return;
+    if (!await requestApproval(`Restore snapshot: ${snapshotId}`)) return;
     const payload = restoreSnapshotById(snapshotId);
     if (!payload) return;
 
@@ -1687,8 +1642,8 @@ export default function App() {
     setLastTaskCompletedAt(Date.now());
   };
 
-  const handleBackupMemory = () => {
-    if (!requestApproval('Create memory backup')) return;
+  const handleBackupMemory = async () => {
+    if (!await requestApproval('Create memory backup')) return;
     const backup = backupMemoryLedger(memoryItems);
     const log = appendVerificationLog({
       type: 'memory_backup',
@@ -1700,12 +1655,12 @@ export default function App() {
   };
 
   const handleRunReleasePreflight = async () => {
-    if (!requestApproval('Run release preflight: test + build + tauri build')) return;
+    if (!await requestApproval('Run release preflight: test + build + tauri build')) return;
     await verifyCommand('npm.cmd', ['run', 'verify:desktop']);
   };
 
   const handleRequestScreenObserverPermission = async () => {
-    if (!requestApproval('Request desktop notification permission for screen alerts')) return;
+    if (!await requestApproval('Request desktop notification permission for screen alerts')) return;
     const permission = await requestScreenNotificationPermission();
     const next = updateScreenObserverState({
       currentSummary: permission === 'granted'
@@ -1718,7 +1673,7 @@ export default function App() {
   };
 
   const handleStartScreenObserver = async () => {
-    if (!requestApproval('Start visible screen observer (manual permission prompt)')) return;
+    if (!await requestApproval('Start visible screen observer (manual permission prompt)')) return;
     const current = getScreenObserverState();
     const result = await startScreenObserver({
       sampleEveryMs: current.sampleEveryMs || 5000,
@@ -1844,7 +1799,7 @@ export default function App() {
   };
 
   const handleRuntimeRepair = async () => {
-    if (!requestApproval('Run supervised runtime repair checks')) return;
+    if (!await requestApproval('Run supervised runtime repair checks')) return;
     await runOllamaCheck();
     await verifyProcesses(['ollama']);
     const log = appendVerificationLog({
@@ -1857,7 +1812,7 @@ export default function App() {
   };
 
   const handleToggleCoachMode = async () => {
-    if (!requestApproval(`${coachMode ? 'Close' : 'Open'} coach mode window`)) return;
+    if (!await requestApproval(`${coachMode ? 'Close' : 'Open'} coach mode window`)) return;
     if (coachMode) {
       await closeCoachWindow();
       setCoachMode(false);
@@ -1876,7 +1831,7 @@ export default function App() {
   };
 
   const minimizeToCoach = async () => {
-    if (!requestApproval('Minimize to coach mode')) return;
+    if (!await requestApproval('Minimize to coach mode')) return;
     try {
       await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
       setCoachMode(true);
@@ -1887,7 +1842,7 @@ export default function App() {
   };
 
   const openAlphonsoDesktopCard = async () => {
-    if (!requestApproval('Open Alphonso desktop card')) return;
+    if (!await requestApproval('Open Alphonso desktop card')) return;
     try {
       await openCoachWindow(coachAlwaysOnTop, 'alphonso');
       setCoachMode(true);
@@ -1958,7 +1913,7 @@ export default function App() {
     }[coachSnapCorner] || 'items-end justify-end';
 
     return (
-      <div className={`h-screen w-screen bg-zinc-950 text-zinc-100 flex p-4 ${coachMiniMode ? cornerClass : 'items-center justify-center'}`}>
+      <div data-alphonso-shell-ready="true" className={`h-screen w-screen bg-zinc-950 text-zinc-100 flex p-4 ${coachMiniMode ? cornerClass : 'items-center justify-center'}`}>
         <div className={`${coachMiniMode ? 'w-[22rem] rounded-2xl border border-cyan-300/20 bg-zinc-900/85 p-3' : 'w-full h-full rounded-2xl border border-white/10 bg-zinc-900/70 p-4'}`}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Coach Mode</div>
@@ -2012,12 +1967,31 @@ export default function App() {
     );
   }
 
+  if (showOnboarding && !isCoachWindow) {
+    return <OnboardingWizard onComplete={() => setShowOnboarding(false)} />;
+  }
+
   return (
-    <div className={`flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30 ${themeClassFromSettings(settings)}`}>
+    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30 ${themeClassFromSettings(settings)}`}>
+      {approvalPending && (
+        <ApprovalModal
+          label={approvalPending}
+          onConfirm={() => {
+            setApprovalPending(null);
+            approvalResolveRef.current?.(true);
+          }}
+          onCancel={() => {
+            setApprovalPending(null);
+            setApprovalRequiredNotice(true);
+            approvalResolveRef.current?.(false);
+          }}
+        />
+      )}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={switchTab}
         isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen((v) => !v)}
         conversations={conversations}
         activeChatId={activeChatId}
         setActiveChatId={setActiveChatId}
@@ -2032,10 +2006,13 @@ export default function App() {
           selectedModelMissing={selectedModelMissing}
           operatorMode={operatorMode}
           activeTab={activeTab}
+          updateAvailable={updateCheckState.available}
+          updateVersion={updateCheckState.latestVersion}
+          onOpenSettings={() => switchTab('settings')}
         />
         <CommandRib
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={switchTab}
           settings={settings}
           setSettings={setSettings}
           ollamaStatus={ollamaStatus}
@@ -2044,8 +2021,14 @@ export default function App() {
 
         <main className="flex-1 overflow-y-auto relative bg-zinc-950/50">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
+          <div className="absolute left-4 top-4 z-20">
+            <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-xs text-zinc-400">Loading agent dock...</div>}>
+              <AgentDock companions={mergedAgentDockCompanions} />
+            </Suspense>
+          </div>
 
           <div className="h-full relative z-10">
+            <ViewErrorBoundary label={activeTab} key={activeTab}>
             <Suspense fallback={<ViewLoadingState activeTab={activeTab} />}>
               {activeTab === 'chat' && (
                 <ChatView
@@ -2060,6 +2043,7 @@ export default function App() {
                   onTaskComplete={() => setLastTaskCompletedAt(Date.now())}
                   onRetryOllama={runOllamaCheck}
                   onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })}
+                  onOpenSettings={() => switchTab('settings')}
                 />
               )}
               {activeTab === 'miya' && (
@@ -2121,7 +2105,7 @@ export default function App() {
                 />
               )}
               {activeTab === 'automation' && <AutomationView />}
-              {activeTab === 'files' && <FilesView />}
+              {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
               {activeTab === 'ecosystem' && (
                 <EcosystemHub
                   settings={settings}
@@ -2214,17 +2198,13 @@ export default function App() {
                     copyState={copyState}
                     updateCheckState={updateCheckState}
                     onCheckUpdates={() => runUpdateCheck({ manual: true })}
-                    Badge={Badge}
-                    StatusDot={StatusDot}
-                    SectionHeader={SectionHeader}
-                    ModelSelector={ModelSelector}
-                    statusColors={statusColors}
                     normalizeEndpoint={normalizeEndpoint}
                     ollamaTroubleshootingCommand={OLLAMA_TROUBLESHOOTING_COMMAND}
                   />
                 </Suspense>
               )}
             </Suspense>
+            </ViewErrorBoundary>
           </div>
         </main>
       </div>
@@ -2252,441 +2232,6 @@ export default function App() {
           onCheckUpdates={() => runUpdateCheck({ manual: true })}
         />
       </Suspense>
-      <Suspense fallback={<div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 text-sm text-zinc-400">Loading companion widgets...</div>}>
-        <AgentDock
-          companions={[
-            { agentId: 'alphonso', name: 'Alphonso', state: companion.state, message: companion.message },
-            { agentId: 'hector', name: 'Hector', state: hectorCompanionState.state, message: hectorCompanionState.message },
-            { agentId: 'jose', name: 'Jose', state: joseCompanionState.state, message: joseCompanionState.message },
-            { agentId: 'miya', name: 'Miya', state: miyaCompanionState.state, message: miyaCompanionState.message }
-          ]}
-        />
-      </Suspense>
-    </div>
-  );
-}
-
-function ViewLoadingState({ activeTab }) {
-  return (
-    <div className="flex h-full items-center justify-center px-6 py-10">
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/75 px-5 py-4 text-sm text-zinc-400">
-        Loading {activeTab}...
-      </div>
-    </div>
-  );
-}
-
-function Sidebar({ activeTab, setActiveTab, isOpen, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat }) {
-  const navItems = [
-    { id: 'chat', icon: MessageSquare, label: 'Chat Hub' },
-    { id: 'orchestrator', icon: Crown, label: 'Jose' },
-    { id: 'hector', icon: Cloud, label: 'Hector' },
-    { id: 'miya', icon: Clapperboard, label: 'Miya Studio' },
-    { id: 'content', icon: FileText, label: 'Content' },
-    { id: 'project_execution', icon: Terminal, label: 'Project Exec' },
-    { id: 'automation', icon: Zap, label: 'Automation' },
-    { id: 'files', icon: FolderOpen, label: 'Knowledge' },
-    { id: 'ecosystem', icon: Layers, label: 'Ecosystem' },
-    { id: 'operator', icon: Activity, label: 'Operator' }
-  ];
-
-  return (
-    <aside className={`${isOpen ? 'w-72' : 'w-20'} flex flex-col transition-all duration-300 ease-in-out bg-zinc-950 shrink-0 border-r border-white/[0.03]`}>
-      <div className="h-16 flex items-center px-4 border-b border-white/[0.05] shrink-0">
-        <div className="flex items-center gap-3 w-full">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)] shrink-0">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          {isOpen && <span className="font-bold text-sm tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">ALPHONSO</span>}
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="py-4 px-3 flex flex-col gap-1 shrink-0">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                activeTab === item.id ? 'bg-zinc-800 text-white ring-1 ring-white/10' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
-              }`}
-            >
-              <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-indigo-400' : ''}`} />
-              {isOpen && <span className="font-medium">{item.label}</span>}
-            </button>
-          ))}
-        </div>
-
-        {isOpen && (
-          <div className="flex flex-col flex-1 px-3 mt-4 overflow-hidden">
-            <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent Chats</span>
-              <button
-                onClick={onCreateChat}
-                className="p-1 hover:bg-zinc-800 rounded-md transition-colors text-zinc-400 hover:text-white"
-                title="New chat"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-              {conversations.map((chat) => (
-                <div
-                  key={chat.id}
-                  onClick={() => {
-                    setActiveChatId(chat.id);
-                    setActiveTab('chat');
-                  }}
-                  className={`group flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${
-                    activeChatId === chat.id && activeTab === 'chat' ? 'bg-indigo-500/10 text-indigo-300 ring-1 ring-indigo-500/20' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <MessageSquare className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{chat.title}</span>
-                  </div>
-                  <button
-                    onClick={(event) => onDeleteChat(chat.id, event)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-                    title="Delete chat"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="p-4 border-t border-white/[0.05] space-y-2">
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all ${
-            activeTab === 'settings' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          {isOpen && <span>Settings</span>}
-        </button>
-      </div>
-    </aside>
-  );
-}
-
-function TopBar({ settings, ollamaStatus, selectedModelMissing, operatorMode, activeTab }) {
-  const modelLabel = selectedModelMissing
-    ? 'Model not found'
-    : settings.selectedModel || 'No model selected';
-
-  return (
-    <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.05] bg-zinc-950/80 backdrop-blur-md z-20 sticky top-0">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 rounded-full border border-white/5 min-w-0">
-          <Globe className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-          <span className="text-[11px] font-mono text-zinc-400 truncate">{normalizeEndpoint(settings.endpoint)}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 rounded-full border border-white/5">
-          <StatusDot state={ollamaStatus.state} />
-          <span className="text-[11px] font-semibold text-zinc-300">{ollamaStatus.label}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {activeTab === 'orchestrator' && <Badge color="amber">Jose</Badge>}
-        {activeTab === 'hector' && <Badge color="green">Hector</Badge>}
-        {activeTab === 'miya' && <Badge color="blue">Miya</Badge>}
-        {activeTab === 'content' && <Badge color="cyan">Content</Badge>}
-        {activeTab === 'ecosystem' && <Badge color="indigo">Ecosystem</Badge>}
-        {activeTab === 'project_execution' && <Badge color="indigo">Project Execution</Badge>}
-        {operatorMode && <Badge color="blue">Operator</Badge>}
-        {settings.approvalMode && <Badge color="amber">Approval</Badge>}
-        {settings.safeMode && <Badge color="green">Safe</Badge>}
-        {settings.localOnlyMode && <Badge color="indigo">Local Only</Badge>}
-        {settings.zeroCostMode && <Badge color="green">Zero Cost</Badge>}
-        <Badge color={selectedModelMissing ? 'amber' : 'indigo'}>{modelLabel}</Badge>
-        <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
-          <User className="w-4 h-4 text-zinc-400" />
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function ChatView({
-  activeChatId,
-  settings,
-  setConversations,
-  ollamaStatus,
-  installedModels,
-  selectedModelMissing,
-  voice,
-  onGenerationChange,
-  onTaskComplete,
-  onRetryOllama,
-  onJoseExecutionState
-}) {
-  const [messages, setMessages] = useState([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    setMessages(getStorage(`alphonso_messages_${activeChatId}`, []));
-  }, [activeChatId]);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      setStorage(`alphonso_messages_${activeChatId}`, messages);
-      setConversations((current) => current.map((conversation) =>
-        conversation.id === activeChatId &&
-        (conversation.title === 'Unsaved Chat' || conversation.title === 'New Chat Session')
-          ? { ...conversation, title: `${messages[0].content.slice(0, 30)}...` }
-          : conversation
-      ));
-    }
-  }, [messages, activeChatId, setConversations]);
-
-  useEffect(() => {
-    if (settings.autoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isGenerating, settings.autoScroll]);
-
-  const modelReady = settings.selectedModel && !selectedModelMissing;
-
-  const handleSend = async () => {
-    if (!inputValue.trim() || isGenerating) return;
-    const cleanInput = inputValue.trim();
-    const joseCommand = isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput);
-
-    if (joseCommand) {
-      const userMessage = { id: Date.now(), role: 'user', content: cleanInput };
-      setMessages((current) => [...current, userMessage]);
-      setInputValue('');
-      setIsGenerating(true);
-      onGenerationChange(true);
-      onJoseExecutionState?.('thinking', 'Jose is decomposing and distributing the command.');
-
-      try {
-        const result = await runJoseCommandExecutionPipeline({
-          commandText: cleanInput,
-          source: 'shayan',
-          endpoint: settings.endpoint,
-          zeroCostMode: settings.zeroCostMode
-        });
-
-        const command = result?.command || {};
-        const shayanReport = command?.shayanReport || null;
-        const summary = shayanReport?.summary || 'Jose processed the command.';
-        const urlLine = shayanReport?.resultUrl ? `\nVerified URL: ${shayanReport.resultUrl}` : '\nVerified URL: not available yet.';
-        const executionLine = `\nExecuted: ${result?.executedCount || 0} | Pending approval: ${result?.pendingApprovalCount || 0} | Failed: ${result?.failedCount || 0}`;
-        const commandLine = `\nCommand ID: ${result?.commandId || 'n/a'}`;
-        const hintLine = (result?.pendingApprovalCount || 0) > 0
-          ? '\nNext step: open Jose workspace and approve high-risk external tasks.'
-          : '\nNext step: review Jose receipts in Orchestrator view.';
-
-        setMessages((current) => [...current, {
-          id: Date.now() + 1,
-          role: 'assistant',
-          content: `Jose Report\n\n${summary}${urlLine}${executionLine}${commandLine}${hintLine}`
-        }]);
-        onJoseExecutionState?.(
-          (result?.pendingApprovalCount || 0) > 0 ? 'approving' : 'task_complete',
-          (result?.pendingApprovalCount || 0) > 0
-            ? 'Jose executed safe tasks and is waiting for approvals.'
-            : 'Jose completed routing and merged reports.'
-        );
-        onTaskComplete();
-      } catch (error) {
-        setMessages((current) => [...current, {
-          id: Date.now() + 1,
-          role: 'assistant',
-          isError: true,
-          content: `Jose orchestration failed.\n\n${String(error)}`
-        }]);
-        onJoseExecutionState?.('warning', 'Jose orchestration failed.');
-      } finally {
-        setIsGenerating(false);
-        onGenerationChange(false);
-      }
-      return;
-    }
-
-    if (!modelReady) {
-      setMessages((current) => [...current, {
-        id: Date.now(),
-        role: 'assistant',
-        isError: true,
-        content: selectedModelMissing
-          ? `Model not found: ${settings.selectedModel}. Choose one of the installed models: ${installedModels.map((model) => model.name).join(', ')}.`
-          : 'No Ollama model is selected. Run Check Ollama and choose an installed model.'
-      }]);
-      return;
-    }
-
-    const userMessage = { id: Date.now(), role: 'user', content: cleanInput };
-    setMessages((current) => [...current, userMessage]);
-    setInputValue('');
-    setIsGenerating(true);
-    onGenerationChange(true);
-
-    try {
-      const data = await generateOllamaResponse({
-        endpoint: settings.endpoint,
-        model: settings.selectedModel,
-        prompt: `${CHAT_ASSISTANT_PROMPT}\n\nUser request:\n${userMessage.content}`
-      });
-
-      setMessages((current) => [...current, {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: data.response || 'Ollama returned an empty response.'
-      }]);
-      onTaskComplete();
-    } catch (error) {
-      const classified = classifyOllamaError(error);
-      setMessages((current) => [...current, {
-        id: Date.now() + 1,
-        role: 'assistant',
-        isError: true,
-        content: `${classified.label}\n\n${classified.message}\n\nPowerShell:\n${OLLAMA_TROUBLESHOOTING_COMMAND}`
-      }]);
-    } finally {
-      setIsGenerating(false);
-      onGenerationChange(false);
-    }
-  };
-
-  const clearChat = () => {
-    setMessages([]);
-    localStorage.removeItem(`alphonso_messages_${activeChatId}`);
-  };
-
-  return (
-    <div className="h-full flex flex-col">
-      <div className="h-12 flex items-center justify-between px-6 border-b border-white/[0.03] shrink-0 bg-zinc-950/40">
-        <div className="flex items-center gap-2">
-          <History className="w-3.5 h-3.5 text-zinc-500" />
-          <span className="text-[11px] text-zinc-500 font-medium">CHAT SESSION: {activeChatId}</span>
-        </div>
-        <button
-          onClick={clearChat}
-          className="text-[10px] text-zinc-500 hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold"
-        >
-          <Trash2 className="w-3 h-3" /> Clear Context
-        </button>
-      </div>
-
-      <Suspense fallback={null}>
-        <RuntimeNotice
-          ollamaStatus={ollamaStatus}
-          selectedModelMissing={selectedModelMissing}
-          installedModels={installedModels}
-          onRetryOllama={onRetryOllama}
-          onOpenSettings={() => setActiveTab('settings')}
-        />
-      </Suspense>
-
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth">
-        {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-50 select-none">
-            <Bot className="w-16 h-16 mb-4" />
-            <p className="text-sm font-medium">Local chat ready when Ollama is connected</p>
-          </div>
-        )}
-
-        {messages.map((message) => (
-          <div key={message.id} className={`flex gap-4 max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
-            {message.role === 'assistant' && (
-              <div className={`w-8 h-8 rounded-lg ${message.isError ? 'bg-red-500/10 border-red-500/20' : 'bg-indigo-500/10 border-indigo-500/20'} border flex items-center justify-center shrink-0 mt-1 shadow-sm`}>
-                <Bot className={`w-4 h-4 ${message.isError ? 'text-red-400' : 'text-indigo-400'}`} />
-              </div>
-            )}
-            <div className={`flex flex-col gap-1.5 ${message.role === 'user' ? 'items-end' : 'items-start'} max-w-[85%]`}>
-              <div className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap border shadow-sm ${
-                message.role === 'user'
-                  ? 'bg-zinc-800 text-zinc-100 border-white/5 rounded-tr-sm'
-                  : `bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20' : 'text-zinc-300'}`
-              }`}>
-                {message.content}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {isGenerating && (
-          <div className="flex gap-4 max-w-4xl mx-auto w-full">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
-            </div>
-            <div className="bg-zinc-900/30 border border-white/[0.05] p-3 rounded-2xl rounded-tl-sm flex gap-1">
-              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
-              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
-              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="p-6 shrink-0 max-w-5xl mx-auto w-full">
-        <div className="relative bg-zinc-900/80 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all">
-          <div className="absolute -top-10 left-0 flex gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border border-white/5 rounded-t-lg text-[10px] text-zinc-600 cursor-not-allowed">
-              <Paperclip className="w-3 h-3" /> ATTACH DATA
-            </button>
-            <Suspense fallback={null}>
-              <VoiceInputButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
-            </Suspense>
-          </div>
-          <textarea
-            value={inputValue}
-            onChange={(event) => setInputValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                handleSend();
-              }
-            }}
-            className="w-full bg-transparent text-zinc-100 p-4 min-h-[100px] focus:outline-none text-[13px] resize-none scroll-m-0"
-          />
-          <div className="mt-1 text-[10px] text-zinc-500">
-            {ollamaStatus.state === 'connected' && !selectedModelMissing
-              ? `Message ${settings.selectedModel || 'local model'}`
-              : 'Ollama is setup_required. Check runtime, then choose a local model.'}
-          </div>
-
-          <div className="absolute bottom-3 right-3 flex items-center gap-2">
-            <button
-              onClick={handleSend}
-              disabled={isGenerating || !inputValue.trim()}
-              className={`h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${
-                isGenerating || !inputValue.trim()
-                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
-                  : 'bg-white text-zinc-950 hover:bg-indigo-400 hover:text-white shadow-lg'
-              }`}
-            >
-              {isGenerating ? 'Computing...' : 'Run Prompt'}
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-        <div className="mt-3">
-          <Suspense fallback={null}>
-            <MicrophoneStatus voiceStatus={voice.voiceStatus} />
-          </Suspense>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SectionHeader({ icon: Icon, label }) {
-  return (
-    <div className="flex items-center gap-2 text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em] border-b border-white/5 pb-2">
-      <Icon className="w-3.5 h-3.5" /> {label}
     </div>
   );
 }

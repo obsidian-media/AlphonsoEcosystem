@@ -21,6 +21,16 @@ vi.mock('../services/repoAuditService', () => ({
   }))
 }));
 
+vi.mock('../services/workspaceRootService', () => ({
+  validateWorkspaceRoot: vi.fn(async (root) => ({
+    ok: true,
+    root: root || 'C:/workspace',
+    status: 'ready',
+    error: null
+  })),
+  getDefaultWorkspaceRoot: vi.fn(() => 'C:/workspace')
+}));
+
 vi.mock('../services/productionReadinessService', () => ({
   collectProductionReadinessSnapshot: collectProductionReadinessSnapshotMock,
   summarizeProductionReadiness: vi.fn((report) => ({
