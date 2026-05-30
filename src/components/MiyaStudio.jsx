@@ -699,6 +699,9 @@ export function MiyaStudio({
               mediaResult={mediaResult}
               runwayResult={runwayResult}
               isBusy={isGeneratingMedia}
+              isGeneratingMedia={isGeneratingMedia}
+              runwayElapsedMs={runwayElapsedMs}
+              runwayElapsedLabel={runwayElapsedLabel}
               onGenerateImage={generateLocalImage}
               onQueueVideo={queueLocalVideo}
               onLoadComfyHistory={loadComfyHistory}
@@ -812,6 +815,9 @@ function LocalGenerationPanel({
   mediaResult,
   runwayResult,
   isBusy,
+  isGeneratingMedia,
+  runwayElapsedMs,
+  runwayElapsedLabel,
   onGenerateImage,
   onQueueVideo,
   onLoadComfyHistory,

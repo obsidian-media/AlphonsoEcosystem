@@ -47,7 +47,7 @@ export async function listWorkshopSessions(limit = 10) {
 
 export async function exportExecutionPacketToFile({ workspaceRoot, fileName, content, format = 'json' }) {
   const safeName = String(fileName || `execution-packet-${Date.now()}.${format === 'md' ? 'md' : 'json'}`)
-    .replace(/[^\w.\-]/g, '_');
+    .replace(/[^\w.-]/g, '_');
   return writeHandoffArtifact({
     workspaceRoot,
     fileName: safeName,
