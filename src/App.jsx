@@ -47,6 +47,7 @@ import { WORKFLOW_RUN_SCOPE } from './services/workflowExecutionService';
 import { WORKFLOW_RECEIPT_SCOPE } from './services/workflowReceiptService';
 import { WORKFLOW_TELEMETRY_SCOPE } from './services/workflowTelemetryService';
 import { getDefaultWorkspaceRoot } from './services/workspaceRootService';
+import { isBraveSearchConfigured } from './services/hectorResearchService';
 import { listAgentProfiles } from './agents/agentRegistry';
 import { createWorkflow, listWorkflows } from './services/workflowBuilderService';
 import { listWorkflowRuns } from './services/workflowExecutionService';
@@ -284,6 +285,7 @@ export default function App() {
     error: null,
     notificationSent: false
   });
+  const [braveSearchConfigured, setBraveSearchConfigured] = useState(false);
   const [nativeSelfDevProof, setNativeSelfDevProof] = useState(() => {
     const stored = getStorage('alphonso_native_selfdev_proof', null);
     return stored && typeof stored === 'object' ? stored : null;
@@ -1065,6 +1067,11 @@ export default function App() {
     schedule(ollamaStatus.state === 'connected' ? CONNECTED_INTERVAL : BACKOFF[0]);
     return () => window.clearTimeout(timeoutId);
   }, [runOllamaCheck]);
+
+  useEffect(() => {
+    if (isCoachWindow) return;
+    isBraveSearchConfigured().then((configured) => setBraveSearchConfigured(configured)).catch(() => {});
+  }, [isCoachWindow]);
 
   useEffect(() => {
     if (isCoachWindow) return;
@@ -2230,6 +2237,7 @@ export default function App() {
                     onCheckUpdates={() => runUpdateCheck({ manual: true })}
                     normalizeEndpoint={normalizeEndpoint}
                     ollamaTroubleshootingCommand={OLLAMA_TROUBLESHOOTING_COMMAND}
+                    braveSearchConfigured={braveSearchConfigured}
                   />
                 </Suspense>
               )}

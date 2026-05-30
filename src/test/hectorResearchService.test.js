@@ -1,7 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+let braveEnabled = false;
+
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (command, args) => {
+    if (command === 'check_env_vars_presence') {
+      return { BRAVE_SEARCH_API_KEY: braveEnabled };
+    }
+
+    if (command === 'search_brave_sources') {
+      if (!braveEnabled) throw new Error('BRAVE_SEARCH_API_KEY not set');
+      return [
+        {
+          url: 'https://brave.com/search/result',
+          title: 'Brave Search Result',
+          snippet: 'Brave search snippet.',
+          sourceType: args?.sourceType || 'official_docs',
+          provider: 'brave_search',
+          dateChecked: '2026-05-29T00:00:00.000Z',
+          confidence: 'inferred',
+          riskLevel: 'medium',
+          verificationState: 'inferred'
+        }
+      ];
+    }
+
     if (command === 'search_research_sources') {
       const query = String(args?.request?.query || '');
       if (query === 'How does Alphonso verify WhatsApp webhooks?') {
@@ -70,7 +93,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   })
 }));
 
-import { createResearchDraft, listHectorReports, runHectorLiveResearch } from '../services/hectorResearchService';
+import { createResearchDraft, isBraveSearchConfigured, listHectorReports, runHectorLiveResearch } from '../services/hectorResearchService';
 
 describe('hector research provider failover', () => {
   beforeEach(() => {
@@ -91,5 +114,35 @@ describe('hector research provider failover', () => {
     expect(report.queryUsed).toBe('official WhatsApp webhook verification docs');
     expect(saved.providerUsed).toBe('duckduckgo_html_refined');
     expect(saved.sources).toHaveLength(1);
+  });
+
+  it('uses brave_search as primary provider when BRAVE_SEARCH_API_KEY is set', async () => {
+    braveEnabled = true;
+    const draft = createResearchDraft({
+      researchQuestion: 'How does Alphonso verify WhatsApp webhooks?'
+    });
+
+    const report = await runHectorLiveResearch(draft.id);
+    const saved = listHectorReports().find((item) => item.id === draft.id);
+
+    expect(report.status).toBe('sources_verified');
+    expect(report.providerUsed).toBe('brave_search');
+    expect(report.providerChain).toEqual(['brave_search']);
+    expect(saved.sources).toHaveLength(1);
+    expect(saved.sources[0].provider).toBe('brave_search');
+    braveEnabled = false;
+  });
+
+  it('isBraveSearchConfigured returns true when key is present', async () => {
+    braveEnabled = true;
+    const result = await isBraveSearchConfigured();
+    expect(result).toBe(true);
+    braveEnabled = false;
+  });
+
+  it('isBraveSearchConfigured returns false when key is absent', async () => {
+    braveEnabled = false;
+    const result = await isBraveSearchConfigured();
+    expect(result).toBe(false);
   });
 });

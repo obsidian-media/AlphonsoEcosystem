@@ -5778,6 +5778,83 @@ async fn search_research_sources(request: ResearchSearchInput) -> Result<Vec<Res
 }
 
 #[tauri::command]
+async fn search_brave_sources(query: String, limit: Option<u8>, source_type: Option<String>) -> Result<Vec<ResearchSearchResult>, String> {
+  let query = query.trim().to_string();
+  if query.is_empty() {
+    return Ok(vec![]);
+  }
+  let api_key = std::env::var("BRAVE_SEARCH_API_KEY")
+    .map_err(|_| "BRAVE_SEARCH_API_KEY not set".to_string())?;
+  let api_key = api_key.trim().to_string();
+  if api_key.is_empty() {
+    return Err("BRAVE_SEARCH_API_KEY is empty".to_string());
+  }
+  let count = limit.unwrap_or(8).clamp(1, 20);
+  let src_type = source_type.unwrap_or_else(|| "official_docs".to_string());
+
+  let client = reqwest::Client::builder()
+    .timeout(Duration::from_secs(14))
+    .user_agent("Alphonso-Hector/0.1 local-first research discovery")
+    .build()
+    .map_err(|e| e.to_string())?;
+
+  let response = client
+    .get("https://api.search.brave.com/res/v1/web/search")
+    .query(&[
+      ("q", query.as_str()),
+      ("count", &count.to_string()),
+      ("country", "us"),
+      ("search_lang", "en"),
+      ("safesearch", "moderate"),
+    ])
+    .header("Accept", "application/json")
+    .header("Accept-Encoding", "gzip")
+    .header("X-Subscription-Token", api_key.as_str())
+    .send()
+    .await
+    .map_err(|e| format!("Brave Search request failed: {e}"))?;
+
+  let status = response.status();
+  if !status.is_success() {
+    return Err(format!("Brave Search returned HTTP {}", status.as_u16()));
+  }
+
+  let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+  let raw_results = body
+    .get("web")
+    .and_then(|w| w.get("results"))
+    .and_then(|r| r.as_array())
+    .cloned()
+    .unwrap_or_default();
+
+  let results = raw_results
+    .iter()
+    .filter_map(|item| {
+      let url = item.get("url").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+      if url.is_empty() { return None; }
+      let title = item.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled").chars().take(180).collect::<String>();
+      let snippet = item.get("description")
+        .and_then(|v| v.as_str())
+        .map(|s| s.chars().take(320).collect::<String>());
+      Some(ResearchSearchResult {
+        url,
+        title,
+        snippet,
+        source_type: src_type.clone(),
+        provider: "brave_search".to_string(),
+        date_checked: unix_now_iso(),
+        confidence: "inferred".to_string(),
+        risk_level: "medium".to_string(),
+        verification_state: "inferred".to_string(),
+      })
+    })
+    .take(count as usize)
+    .collect();
+
+  Ok(results)
+}
+
+#[tauri::command]
 fn build_workspace_symbol_index(root: String, max_files: Option<u64>) -> Result<WorkspaceSymbolIndex, String> {
   let root_path = PathBuf::from(&root);
   let generated_at_ms = now_ms();
@@ -6974,6 +7051,7 @@ pub fn run() {
       list_runtime_ledger_records,
       fetch_research_sources,
       search_research_sources,
+      search_brave_sources,
       decompose_jose_command_backend,
       build_workspace_symbol_index,
       scan_workspace_readiness,

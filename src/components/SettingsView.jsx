@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Activity, ChevronDown, ClipboardCopy, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 
@@ -100,7 +100,8 @@ export function SettingsView({
   updateCheckState,
   onCheckUpdates,
   normalizeEndpoint,
-  ollamaTroubleshootingCommand
+  ollamaTroubleshootingCommand,
+  braveSearchConfigured = false
 }) {
   const resolvedNormalizeEndpoint = normalizeEndpoint || _normalizeEndpoint;
   const folderPickerRef = useRef(null);
@@ -209,6 +210,30 @@ export function SettingsView({
           />
 
           <ModelPullHelper onRefresh={onCheckOllama} />
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Compass} label="Hector Web Search" />
+        <div className="rounded-2xl border border-white/5 bg-zinc-900/50 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${braveSearchConfigured ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+            <div className="flex-1 space-y-1">
+              <div className="text-sm font-semibold text-white">
+                {braveSearchConfigured ? 'Brave Search API — active' : 'Brave Search API — not configured'}
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                {braveSearchConfigured
+                  ? 'BRAVE_SEARCH_API_KEY is set. Hector will use the Brave Search JSON API as the primary search provider.'
+                  : 'Set BRAVE_SEARCH_API_KEY in your environment to enable Brave Search. Hector falls back to DuckDuckGo HTML scraping when the key is absent.'}
+              </div>
+              {!braveSearchConfigured && (
+                <div className="mt-2 rounded-xl bg-black/30 border border-white/5 px-3 py-2 font-mono text-[11px] text-zinc-400">
+                  {'# Free tier: 2,000 queries/month — signup at search.brave.com/register\nBRAVE_SEARCH_API_KEY=your_key_here'}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 

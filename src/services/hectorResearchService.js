@@ -260,13 +260,72 @@ async function synthesizeHectorFallbackReport(researchQuestion, sourceType, prov
   };
 }
 
+export async function isBraveSearchConfigured() {
+  try {
+    const presence = await invoke('check_env_vars_presence', { names: ['BRAVE_SEARCH_API_KEY'] });
+    return Boolean(presence?.['BRAVE_SEARCH_API_KEY']);
+  } catch {
+    return false;
+  }
+}
+
+async function discoverResearchSourcesBrave({ researchQuestion, sourceType, limit = 8 }) {
+  const results = await invoke('search_brave_sources', {
+    query: researchQuestion,
+    limit,
+    sourceType
+  });
+  if (!Array.isArray(results)) return [];
+  return results
+    .map((row) => {
+      const url = String(row.url || '').trim();
+      if (!url) return null;
+      const source = {
+        url,
+        type: row.sourceType || sourceType || 'official_docs',
+        official: /docs|developer|github|tauri|ollama/i.test(url),
+        title: row.title || null,
+        snippet: row.snippet || null
+      };
+      const score = scoreSourceConfidence(source);
+      return {
+        ...source,
+        confidence: row.confidence || score.confidence,
+        confidenceReason: score.reason,
+        verificationState: TRUST_STATES.INFERRED,
+        riskLevel: row.riskLevel || 'medium',
+        expiresAt: sourceExpiryForType(source.type),
+        dateChecked: row.dateChecked || new Date().toISOString(),
+        provider: 'brave_search'
+      };
+    })
+    .filter(Boolean);
+}
+
 async function discoverResearchSourcesWithFailover({
   researchQuestion,
   sourceType,
   limit = 8
 }) {
-  const providerChain = ['duckduckgo_html'];
   const primaryQuery = researchQuestion;
+
+  // Try Brave Search first (if API key is configured)
+  try {
+    const braveSources = await discoverResearchSourcesBrave({ researchQuestion, sourceType, limit });
+    if (braveSources.length) {
+      return {
+        ok: true,
+        sources: braveSources,
+        provider: 'brave_search',
+        providerChain: ['brave_search'],
+        queryUsed: primaryQuery,
+        refinements: [],
+        synthesis: null
+      };
+    }
+  } catch { /* key not set or API error — fall through to DDG */ }
+
+  const providerChain = ['duckduckgo_html'];
 
   try {
     const primarySources = await discoverResearchSources({
