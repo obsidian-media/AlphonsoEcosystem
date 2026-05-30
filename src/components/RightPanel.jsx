@@ -81,30 +81,6 @@ export function RightPanel({
     return <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>{children}</span>;
   };
 
-  const StatusDot = ({ state }) => {
-    const color = {
-      connected: 'bg-emerald-400',
-      listening: 'bg-emerald-400',
-      connecting: 'bg-blue-400',
-      requesting: 'bg-blue-400',
-      requesting_permission: 'bg-blue-400',
-      permission_granted: 'bg-emerald-400',
-      model_missing: 'bg-amber-400',
-      no_models: 'bg-amber-400',
-      no_microphone: 'bg-amber-400',
-      unsupported: 'bg-amber-400',
-      timeout: 'bg-amber-400',
-      warning: 'bg-amber-400',
-      cors: 'bg-red-400',
-      not_running: 'bg-red-400',
-      disconnected: 'bg-red-400',
-      permission_denied: 'bg-red-400',
-      error: 'bg-red-400',
-      observing: 'bg-emerald-400'
-    }[state] || 'bg-zinc-500';
-    return <span className={`h-2 w-2 rounded-full ${color}`} />;
-  };
-
   return (
     <aside className="w-56 bg-zinc-950 border-l border-white/[0.05] flex flex-col shrink-0">
       <div className="h-12 flex items-center px-3 border-b border-white/[0.05]">
@@ -202,6 +178,30 @@ export function RightPanel({
       </div>
     </aside>
   );
+}
+
+function StatusDot({ state }) {
+  const color = {
+    connected: 'bg-emerald-400',
+    listening: 'bg-emerald-400',
+    connecting: 'bg-blue-400',
+    requesting: 'bg-blue-400',
+    requesting_permission: 'bg-blue-400',
+    permission_granted: 'bg-emerald-400',
+    model_missing: 'bg-amber-400',
+    no_models: 'bg-amber-400',
+    no_microphone: 'bg-amber-400',
+    unsupported: 'bg-amber-400',
+    timeout: 'bg-amber-400',
+    warning: 'bg-amber-400',
+    cors: 'bg-red-400',
+    not_running: 'bg-red-400',
+    disconnected: 'bg-red-400',
+    permission_denied: 'bg-red-400',
+    error: 'bg-red-400',
+    observing: 'bg-emerald-400'
+  }[state] || 'bg-zinc-500';
+  return <span className={`h-2 w-2 rounded-full ${color}`} />;
 }
 
 function StatusGroup({ title, items }) {
