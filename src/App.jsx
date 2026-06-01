@@ -24,28 +24,36 @@ import {
   updateScreenObserverState
 } from './services/screenIntelligenceService';
 import { appendSessionEvent } from './services/sessionIntelligenceService';
+import { sendNativeNotification } from './services/notificationService';
 import { bootstrapRuntimeLedgerHydration } from './services/runtimeLedgerService';
-import { PACKET_SCOPE } from './services/agentBusService';
-import { JOSE_COMMAND_SCOPE } from './services/joseCommandRouterService';
-import { SESSION_EVENT_SCOPE } from './services/sessionIntelligenceService';
-import { GOVERNANCE_SCOPE } from './services/orchestrationGovernanceService';
-import { ORCHESTRATION_RECEIPT_SCOPE } from './services/orchestrationReceiptService';
-import { ORCHESTRATION_QUEUE_SCOPE } from './services/orchestrationQueueService';
-import { VERIFICATION_SCOPE } from './services/verificationService';
-import { CONNECTOR_SCOPE, CONNECTOR_AUDIT_SCOPE, CONNECTOR_AUTH_SCOPE, isConnectorAuthenticated, pollWhatsAppConnector } from './services/connectorRegistryService';
-import { MIYA_MEMORY_SCOPE } from './services/miyaMemoryService';
-import { PLUGINS_SCOPE, PLUGIN_AUDIT_SCOPE } from './services/pluginRegistryService';
-import { PRODUCTION_READINESS_SCOPE } from './services/productionReadinessService';
-import { REPO_AUDIT_SCOPE } from './services/repoAuditService';
-import { SELF_DEVELOPMENT_SCOPE } from './services/selfDevelopmentService';
-import { DEV_PACKET_SCOPE } from './services/devPacketService';
+import { isConnectorAuthenticated, pollWhatsAppConnector } from './services/connectorRegistryService';
 import { runSelfDevelopmentCycle } from './services/selfDevelopmentService';
-import { PROOF_AUTHORITY } from './services/nativeRc0ProofService';
-import { TOOL_CONNECTION_SCOPE, TOOL_CONNECTION_AUDIT_SCOPE } from './services/toolConnectionService';
-import { WORKFLOW_OPS_SCOPE } from './services/workflowOperationsRegistryService';
-import { WORKFLOW_RUN_SCOPE } from './services/workflowExecutionService';
-import { WORKFLOW_RECEIPT_SCOPE } from './services/workflowReceiptService';
-import { WORKFLOW_TELEMETRY_SCOPE } from './services/workflowTelemetryService';
+import {
+  DEV_PACKET_SCOPE,
+  GOVERNANCE_SCOPE,
+  JOSE_COMMAND_SCOPE,
+  MIYA_MEMORY_SCOPE,
+  ORCHESTRATION_QUEUE_SCOPE,
+  ORCHESTRATION_RECEIPT_SCOPE,
+  PACKET_SCOPE,
+  PLUGIN_AUDIT_SCOPE,
+  PLUGINS_SCOPE,
+  PRODUCTION_READINESS_SCOPE,
+  PROOF_AUTHORITY,
+  REPO_AUDIT_SCOPE,
+  SELF_DEVELOPMENT_SCOPE,
+  SESSION_EVENT_SCOPE,
+  TOOL_CONNECTION_AUDIT_SCOPE,
+  TOOL_CONNECTION_SCOPE,
+  CONNECTOR_SCOPE,
+  CONNECTOR_AUDIT_SCOPE,
+  CONNECTOR_AUTH_SCOPE,
+  VERIFICATION_SCOPE,
+  WORKFLOW_OPS_SCOPE,
+  WORKFLOW_RECEIPT_SCOPE,
+  WORKFLOW_RUN_SCOPE,
+  WORKFLOW_TELEMETRY_SCOPE
+} from './services/serviceScopes';
 import { getDefaultWorkspaceRoot } from './services/workspaceRootService';
 import { isBraveSearchConfigured } from './services/hectorResearchService';
 import { listAgentProfiles } from './agents/agentRegistry';
@@ -61,15 +69,18 @@ import {
 } from './lib/ollama';
 import { getStorage, setStorage } from './lib/appStorage';
 import { needsHighRiskApproval } from './lib/chatUtils';
-import { ApprovalModal } from './components/ApprovalModal';
-import { OnboardingWizard } from './components/OnboardingWizard';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { ChatView } from './components/ChatView';
-import { AutomationView } from './components/AutomationView';
-import { FilesView } from './components/FilesView';
+
+const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod) => ({ default: mod.ApprovalModal })));
+const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
+const ConnectorHealthPanel = lazy(() => import('./components/ConnectorHealthPanel').then((mod) => ({ default: mod.ConnectorHealthPanel })));
+
+const AutomationView = lazy(() => import('./components/AutomationView').then((mod) => ({ default: mod.AutomationView })));
+const FilesView = lazy(() => import('./components/FilesView').then((mod) => ({ default: mod.FilesView })));
 
 const EcosystemHub = lazy(() => import('./components/EcosystemHub').then((mod) => ({ default: mod.EcosystemHub })));
 const HectorResearchDesk = lazy(() => import('./components/dashboard/HectorResearchDesk').then((mod) => ({ default: mod.HectorResearchDesk })));
@@ -293,6 +304,9 @@ export default function App() {
   const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
   const [lastTaskCompletedAt, setLastTaskCompletedAt] = useState(null);
   const [operatorMode, setOperatorMode] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isLocked, setIsLocked] = useState(false);
+  const idleTimerRef = useRef(null);
   const [verificationLogs, setVerificationLogs] = useState(() => getVerificationLogs());
   const [durableAuditLogs, setDurableAuditLogs] = useState([]);
   const [auditChainProof, setAuditChainProof] = useState(null);
@@ -403,10 +417,27 @@ export default function App() {
     writeStage: writeNativeProofStage
   }), [writeNativeProofStage]);
 
-  useEffect(() => setStorage('alphonso_settings', settings), [settings]);
+  useEffect(() => {
+    setStorage('alphonso_settings', settings);
+    invoke('save_settings', { settingsJson: JSON.stringify(settings) }).catch(() => {});
+  }, [settings]);
   useEffect(() => setStorage('alphonso_conversations', conversations), [conversations]);
   useEffect(() => setStorage('alphonso_native_selfdev_proof', nativeSelfDevProof), [nativeSelfDevProof]);
   useEffect(() => setStorage(COACH_LAYOUT_KEY, { mini: coachMiniMode, corner: coachSnapCorner }), [coachMiniMode, coachSnapCorner]);
+
+  // Hydrate settings from SQLite on first boot (takes precedence over localStorage so settings survive reinstalls).
+  const settingsHydratedRef = useRef(false);
+  useEffect(() => {
+    if (settingsHydratedRef.current) return;
+    settingsHydratedRef.current = true;
+    invoke('load_settings').then((json) => {
+      if (!json) return;
+      try {
+        const saved = JSON.parse(json);
+        if (saved && typeof saved === 'object') setSettings((current) => ({ ...current, ...saved }));
+      } catch { /* ignore corrupt data */ }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (workspaceRootBootstrapRef.current) return;
@@ -683,6 +714,30 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [approvalPending]);
+
+  useEffect(() => {
+    const go  = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online',  go);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', go); window.removeEventListener('offline', off); };
+  }, []);
+
+  useEffect(() => {
+    const IDLE_MS = (settings.idleTimeoutMinutes || 10) * 60 * 1000;
+    const reset = () => {
+      setIsLocked(false);
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => setIsLocked(true), IDLE_MS);
+    };
+    const events = ['mousedown', 'keydown', 'touchstart'];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(idleTimerRef.current);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [settings.idleTimeoutMinutes]);
 
   useEffect(() => {
     appendSessionEvent({
@@ -1906,6 +1961,9 @@ export default function App() {
           setVerificationLogs((current) => [...current, log].slice(-250));
         });
 
+        await listen('alphonso://new_chat',    () => { if (!disposed) createNewChat(); });
+        await listen('alphonso://voice_start', () => { if (!disposed) voice.toggleListening(); });
+
         unlistenCoachToggle = await listen('alphonso://coach_toggle', async () => {
           if (disposed) return;
           if (coachMode) {
@@ -2005,24 +2063,32 @@ export default function App() {
   }
 
   if (showOnboarding && !isCoachWindow) {
-    return <OnboardingWizard onComplete={() => setShowOnboarding(false)} />;
+    return (
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
+        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+      </Suspense>
+    );
   }
 
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30 ${themeClassFromSettings(settings)}`}>
       {approvalPending && (
-        <ApprovalModal
-          label={approvalPending}
-          onConfirm={() => {
-            setApprovalPending(null);
-            approvalResolveRef.current?.(true);
-          }}
-          onCancel={() => {
-            setApprovalPending(null);
-            setApprovalRequiredNotice(true);
-            approvalResolveRef.current?.(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <ApprovalModal
+            label={approvalPending}
+            onConfirm={() => {
+              sendNativeNotification('Alphonso', `Approved: ${approvalPending}`);
+              setApprovalPending(null);
+              approvalResolveRef.current?.(true);
+            }}
+            onCancel={() => {
+              sendNativeNotification('Alphonso', `Denied: ${approvalPending}`);
+              setApprovalPending(null);
+              setApprovalRequiredNotice(true);
+              approvalResolveRef.current?.(false);
+            }}
+          />
+        </Suspense>
       )}
       <Sidebar
         activeTab={activeTab}
@@ -2034,6 +2100,7 @@ export default function App() {
         setActiveChatId={setActiveChatId}
         onCreateChat={createNewChat}
         onDeleteChat={deleteChat}
+        settings={settings}
       />
 
       <div className="flex flex-col flex-1 relative min-w-0 border-x border-white/[0.05]">
@@ -2045,16 +2112,19 @@ export default function App() {
           activeTab={activeTab}
           updateAvailable={updateCheckState.available}
           updateVersion={updateCheckState.latestVersion}
+          isOnline={isOnline}
           onOpenSettings={() => switchTab('settings')}
         />
-        <CommandRib
-          activeTab={activeTab}
-          setActiveTab={switchTab}
-          settings={settings}
-          setSettings={setSettings}
-          ollamaStatus={ollamaStatus}
-          operatorMode={operatorMode}
-        />
+        <Suspense fallback={null}>
+          <CommandRib
+            activeTab={activeTab}
+            setActiveTab={switchTab}
+            settings={settings}
+            setSettings={setSettings}
+            ollamaStatus={ollamaStatus}
+            operatorMode={operatorMode}
+          />
+        </Suspense>
 
         <main className="flex-1 overflow-y-auto relative bg-zinc-950/50">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
@@ -2081,6 +2151,7 @@ export default function App() {
                   onRetryOllama={runOllamaCheck}
                   onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })}
                   onOpenSettings={() => switchTab('settings')}
+                  onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))}
                 />
               )}
               {activeTab === 'miya' && (
@@ -2240,6 +2311,13 @@ export default function App() {
                     braveSearchConfigured={braveSearchConfigured}
                   />
                 </Suspense>
+              )}
+              {activeTab === 'connectors' && (
+                <div className="p-6">
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading...</div>}>
+                    <ConnectorHealthPanel zeroCostMode={settings.zeroCostMode} />
+                  </React.Suspense>
+                </div>
               )}
             </Suspense>
             </ViewErrorBoundary>
