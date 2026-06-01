@@ -1,23 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Cpu } from 'lucide-react';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
 const FETCH_TIMEOUT_MS = 3000;
 
-/**
- * ModelSwitcher — compact Ollama model dropdown for the chat header bar.
- *
- * Props:
- *   onModelChange(modelName: string) — called when the user picks a new model.
- *   initialModel(string|undefined) — seed value (e.g. from parent settings).
- */
 export function ModelSwitcher({ onModelChange, initialModel }) {
   const [models, setModels] = useState([]);
   const [selected, setSelected] = useState(
     () => initialModel || localStorage.getItem(STORAGE_KEY) || ''
   );
-  const [ollamaOnline, setOllamaOnline] = useState(null); // null = loading
+  const [ollamaOnline, setOllamaOnline] = useState(null);
+  // Ref so the effect never needs onModelChange in its dep array
+  const onModelChangeRef = useRef(onModelChange);
+  onModelChangeRef.current = onModelChange;
 
   useEffect(() => {
     let cancelled = false;
@@ -37,13 +33,19 @@ export function ModelSwitcher({ onModelChange, initialModel }) {
         setModels(names);
         setOllamaOnline(names.length > 0);
 
-        // If no stored/initial selection, default to the first model
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored && names.length > 0) {
-          const first = names[0];
-          setSelected(first);
-          localStorage.setItem(STORAGE_KEY, first);
-          onModelChange?.(first);
+        if (names.length > 0) {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          // Pick stored if valid, else first available
+          const resolved = (stored && names.includes(stored)) ? stored : names[0];
+          if (!stored || !names.includes(stored)) {
+            setSelected(resolved);
+            localStorage.setItem(STORAGE_KEY, resolved);
+          }
+          // Always sync parent — this is the critical fix:
+          // ModelSwitcher reads localStorage on init but the parent settings.selectedModel
+          // starts as '' (from persisted app settings), so modelReady stays false
+          // until we explicitly push the resolved model up.
+          onModelChangeRef.current?.(resolved);
         }
       } catch {
         clearTimeout(timer);
@@ -56,7 +58,7 @@ export function ModelSwitcher({ onModelChange, initialModel }) {
 
     void fetchModels();
     return () => { cancelled = true; };
-  }, [onModelChange]);
+  }, []); // stable — uses ref for callback
 
   function handleChange(event) {
     const name = event.target.value;
