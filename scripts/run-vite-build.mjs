@@ -24,6 +24,7 @@ async function enforceMainChunkBudget() {
 }
 
 await build({
+  configFile: join(root, 'vite.config.js'),
   root,
   build: {
     outDir: 'dist',
