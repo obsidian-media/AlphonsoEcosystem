@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, Minus } from 'lucide-react';
+import { ChevronDown, Minus } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { AgentAvatar } from './AgentAvatar';
 
@@ -37,7 +37,7 @@ export function AgentDock({ companions }) {
   function toggle() {
     setMinimized((prev) => {
       const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch {}
+      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch { return next; }
       return next;
     });
   }
