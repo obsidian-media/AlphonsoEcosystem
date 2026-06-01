@@ -1,6 +1,6 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-01 — Session 3 complete, CI fully green, boot error fixed, lib.rs split started  
-**Verified by:** Claude Code (live filesystem + GitHub Actions CI confirmed passing: verify-app ✓ CI ✓)  
+**Last verified:** 2026-06-01 — Session 4 complete  
+**Verified by:** Claude Code (live filesystem + all 42 test files, 158 tests passing, cargo clippy clean)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -183,8 +183,8 @@ workspaceRootService.test.js
 **What does NOT exist yet:**
 - ~~Rust `cargo test` step in CI~~ → **DONE** — `rust-quality` job in `ci.yml`
 - ~~`cargo clippy` step in CI~~ → **DONE** — included in `rust-quality` job with `-D warnings`
-- ~~Coverage threshold enforcement in CI~~ → **DONE** — 9% lines threshold in `vite.config.js` (actual measured 9.22%); staged path 12→20→30 requires writing tests
-- ~~Playwright E2E~~ → **SCAFFOLD DONE 2026-06-01** — `playwright.config.js` + `e2e/smoke.spec.js` exist; to run: `npm install --save-dev @playwright/test && npx playwright install chromium`, then `npm run test:e2e` (requires dev server on :5173 + Ollama running)
+- ~~Coverage threshold enforcement in CI~~ → **DONE** — threshold at **12%** in `vite.config.js`, actual measured **27.83%** (src/ scoped). Coverage include scoped to `src/**/*.{js,jsx,ts,tsx}`. 5 new test files added: `appStorage.test.js`, `chatUtils.test.js`, `ollamaUtils.test.js`, `trustModel.test.js`, `connectorAuditLogService.test.js`, `sourceConfidenceService.test.js`.
+- ~~Playwright E2E~~ → **FULLY INSTALLED 2026-06-01 Session 4** — `@playwright/test@1.60.0` installed, Chromium browser installed via `npx playwright install chromium`. Run: `npm run test:e2e` (requires dev server on :5173 + Ollama running).
 
 ---
 
@@ -254,7 +254,8 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 
 ### RUST BACKEND
 - [x] **`lib.rs` modular split started** — Phase 1 extraction done (2026-06-01, Session 3): `src-tauri/src/whatsapp_webhook.rs` created (~220 lines). Moved: `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs (`ConnectorInboundMessage`, `WhatsAppWebhookVerifyProof`, `WhatsAppWebhookSignatureProof`, `WhatsAppCloudInboundNormalizeProof`). `now_ms`/`to_hex` marked `pub(crate)`. **lib.rs is now ~7,100 lines.** `cargo check` clean, `cargo clippy -- -D warnings` clean.
-- [ ] **lib.rs further splitting** — Next candidate: KV store functions (lines ~1000–1072, 5 functions: `ensure_kv_table`, `kv_set`, `kv_get`, `save_settings`, `load_settings`). Or Telegram connector block (~lines 1543–1757).
+- [x] **lib.rs KV store split** — `src-tauri/src/kv_store.rs` created (2026-06-01, Session 4): `ensure_kv_table`, `kv_set`, `kv_get`, `save_settings`, `load_settings` extracted. `open_memory_db` marked `pub(crate)`. **lib.rs now ~6,993 lines.** `cargo check` + `cargo clippy -- -D warnings` clean.
+- [ ] **lib.rs further splitting** — Next candidate: Telegram connector block (~lines 1543–1757 in original, now shifted).
 - [x] **Rust unit tests added** — 14 tests in `#[cfg(test)] mod tests` covering `allowed_program`, `plugin_blocked_token_present`, `validate_plugin_extra_args`, `trim_trailing_slashes`, `wal_pragma_applies_on_in_memory_db`, `to_hex` — all passing (verified `cargo test` 2026-05-31, Agent D)
 - [x] **Shared `reqwest::Client`** — built at startup, registered via `.manage()`, used by `connector_poll_telegram`, `connector_send_telegram`, `connector_send_chatgpt`, `connector_send_claude` (2026-05-31, Agent D).
 - [x] **SQLite WAL mode + cache** — `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-65536;` in `open_memory_db()` — 64MB page cache added (2026-06-01, Agent 3)
@@ -267,7 +268,9 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **`serviceScopes.js` documented** — all 24 exported constants have JSDoc comments (what data, which service owns it) (2026-05-31, Agent E)
 - [x] **Duplicate Vite config removed** — `vite.config.cjs` deleted; `vite.config.js` is now the only config (2026-05-31, Agent E)
 - [ ] **Remaining 50+ services still `.js`** — migration pattern documented in `docs/FRONTEND_MIGRATION_REPORT.md`; do next services in order listed there
-- [ ] **localStorage + SQLite inconsistency** — some durable data still in localStorage. Migration checklist produced (2026-06-01): top 5 keys to migrate — `alphonso_conversations`, `alphonso_messages_${id}`, `alphonso_connector_auth_profiles_v1`, `alphonso_connector_registry_v2`, `alphonso_settings` (last one partially done via `save_settings`/`load_settings`). `kv_set`/`kv_get` Tauri commands already exist for all 5.
+- [x] **`alphonso_settings` → SQLite** — already done (Sessions 3). Both persist to localStorage + SQLite; SQLite hydrated on boot.
+- [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.jsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
+- [ ] **localStorage + SQLite remaining 3 keys** — `alphonso_messages_${id}` (partially via chatPersistenceService), `alphonso_connector_auth_profiles_v1`, `alphonso_connector_registry_v2`. `kv_set`/`kv_get` commands exist for all.
 
 ### TESTING
 - [x] **Coverage threshold** — set to 9% in `vite.config.js` (actual measured: 9.22%). Staged path: write tests to hit 12→20→30. `@vitest/coverage-v8@2.1.9` installed and version-matched.
@@ -275,7 +278,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — 36 test files, 88 tests, all passing (verified 2026-06-01, CI green).
+- [x] **Test suite confirmed passing** — **42 test files, 158 tests, all passing** (verified 2026-06-01, Session 4). 6 new test files added: `appStorage.test.js`, `chatUtils.test.js`, `ollamaUtils.test.js`, `trustModel.test.js`, `connectorAuditLogService.test.js`, `sourceConfidenceService.test.js`.
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -342,6 +345,10 @@ Before writing any new service or feature, verify it does not already exist:
 - **Desktop preflight/verify** → `verify:desktop:preflight`, `verify:desktop` already exist
 - **CI workflows** → `ci.yml` and `verify-app.yml` already exist and passing green (extend, do not replace)
 - **WhatsApp webhook Rust module** → `src-tauri/src/whatsapp_webhook.rs` — `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs live here. Do not re-add to `lib.rs`.
+- **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `save_settings`, `load_settings`, `ensure_kv_table`. Do not re-add to `lib.rs`.
+- **Multi-turn Ollama chat** → `src/lib/ollama.js` — `generateOllamaChatStream` uses `/api/chat` endpoint with full `messages` array. `ChatView.jsx` captures history snapshot before state updates and passes it. Do not recreate.
+- **appendAgentActivity wiring** → wired in `joseExecutionEngineService.js` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Both import from `../components/AgentActivityLog`.
+- **Playwright browser installed** → `@playwright/test@1.60.0` + Chromium installed. `npm run test:e2e` is ready to run (needs dev server + Ollama).
 - **Playwright config** → `playwright.config.js` at project root; tests in `e2e/`. Do not create another E2E config.
 - **`.npmrc`** — `legacy-peer-deps=true` already set at project root. Do not remove.
 
@@ -376,4 +383,4 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-01 — Session 3 complete. CI green (commit f8e82f1). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-01 — Session 4 complete. 42 test files, 158 tests, all passing. Coverage 27.83% (threshold 12%, src/ scoped). cargo clippy clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

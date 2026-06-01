@@ -422,7 +422,10 @@ export default function App() {
     setStorage('alphonso_settings', settings);
     invoke('save_settings', { settingsJson: JSON.stringify(settings) }).catch(() => {});
   }, [settings]);
-  useEffect(() => setStorage('alphonso_conversations', conversations), [conversations]);
+  useEffect(() => {
+    setStorage('alphonso_conversations', conversations);
+    invoke('kv_set', { key: 'alphonso_conversations', value: JSON.stringify(conversations) }).catch(() => {});
+  }, [conversations]);
   useEffect(() => setStorage('alphonso_native_selfdev_proof', nativeSelfDevProof), [nativeSelfDevProof]);
   useEffect(() => setStorage(COACH_LAYOUT_KEY, { mini: coachMiniMode, corner: coachSnapCorner }), [coachMiniMode, coachSnapCorner]);
 
@@ -436,6 +439,23 @@ export default function App() {
       try {
         const saved = JSON.parse(json);
         if (saved && typeof saved === 'object') setSettings((current) => ({ ...current, ...saved }));
+      } catch { /* ignore corrupt data */ }
+    }).catch(() => {});
+  }, []);
+
+  // Hydrate conversations from SQLite on first boot.
+  const conversationsHydratedRef = useRef(false);
+  useEffect(() => {
+    if (conversationsHydratedRef.current) return;
+    conversationsHydratedRef.current = true;
+    invoke('kv_get', { key: 'alphonso_conversations' }).then((json) => {
+      if (!json) return;
+      try {
+        const saved = JSON.parse(json);
+        if (Array.isArray(saved) && saved.length > 0) {
+          setConversations(saved);
+          setActiveChatId(saved[0]?.id || INITIAL_CONVERSATION_ID);
+        }
       } catch { /* ignore corrupt data */ }
     }).catch(() => {});
   }, []);

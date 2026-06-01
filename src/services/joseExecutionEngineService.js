@@ -1,3 +1,4 @@
+import { appendAgentActivity } from '../components/AgentActivityLog';
 import {
   AGENTS,
   approvePacket,
@@ -361,6 +362,7 @@ async function executeMarcusAssignment(commandText, assignment) {
 }
 
 async function executeAssignment(packet, assignment, commandText, options = {}) {
+  appendAgentActivity({ agent: assignment?.agent || 'jose', action: 'execute', detail: (commandText || '').slice(0, 80) });
   if (assignment?.agent === AGENTS.ALPHONSO) {
     return executeAlphonsoAssignment(commandText, assignment, options);
   }

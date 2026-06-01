@@ -247,6 +247,71 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
   }
 }
 
+export async function generateOllamaChatStream({ endpoint, model, messages, onToken, signal }) {
+  const baseUrl = normalizeEndpoint(endpoint);
+  const controller = new AbortController();
+  const mergedSignal = signal || controller.signal;
+  const timeoutId = window.setTimeout(() => controller.abort(), 90000);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/chat`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, stream: true }),
+      signal: mergedSignal
+    });
+
+    if (!response.ok) {
+      let message = `Ollama /api/chat returned HTTP ${response.status}`;
+      try {
+        const data = await response.json();
+        if (data?.error) message = data.error;
+      } catch { /* ignore */ }
+      throw new Error(message);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let full = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      for (const line of chunk.split('\n')) {
+        if (!line.trim()) continue;
+        try {
+          const obj = JSON.parse(line);
+          if (typeof obj.message?.content === 'string') {
+            full += obj.message.content;
+            onToken?.(obj.message.content, full);
+          }
+          if (obj.done) break;
+        } catch { /* skip malformed line */ }
+      }
+    }
+
+    return full;
+  } catch (error) {
+    const classified = classifyOllamaError(error);
+    if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
+      throw error;
+    }
+    // Desktop bridge fallback: concatenate messages into a single prompt
+    const promptFallback = messages
+      .map((m) => `${m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : 'System'}: ${m.content}`)
+      .join('\n\n');
+    const proof = await invoke('ollama_generate', { endpoint: baseUrl, model, prompt: promptFallback });
+    if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
+    const text = proof.response || '';
+    onToken?.(text, text);
+    return text;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function generateOllamaResponse({ endpoint, model, prompt }) {
   const baseUrl = normalizeEndpoint(endpoint);
   try {

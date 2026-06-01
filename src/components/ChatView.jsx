@@ -7,7 +7,7 @@ import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../se
 import {
   OLLAMA_TROUBLESHOOTING_COMMAND,
   classifyOllamaError,
-  generateOllamaStream
+  generateOllamaChatStream
 } from '../lib/ollama';
 import { ModelSwitcher } from './ModelSwitcher';
 
@@ -175,6 +175,9 @@ export function ChatView({
       return;
     }
 
+    // Capture conversation history before state updates (React batches setMessages)
+    const historySnapshot = messages.filter((m) => !m.isError && m.role && m.content);
+
     const userMessage = { id: nextMsgId(), role: 'user', content: cleanInput };
     setMessages((current) => [...current, userMessage]);
     setInputValue('');
@@ -185,12 +188,18 @@ export function ChatView({
     const assistantMsgId = nextMsgId();
     setMessages((current) => [...current, { id: assistantMsgId, role: 'assistant', content: '' }]);
 
+    const chatMessages = [
+      { role: 'system', content: CHAT_ASSISTANT_PROMPT },
+      ...historySnapshot.map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: cleanInput }
+    ];
+
     abortRef.current = new AbortController();
     try {
-      await generateOllamaStream({
+      await generateOllamaChatStream({
         endpoint: settings.endpoint,
         model: settings.selectedModel,
-        prompt: `${CHAT_ASSISTANT_PROMPT}\n\nUser request:\n${userMessage.content}`,
+        messages: chatMessages,
         signal: abortRef.current.signal,
         onToken: (_tok, full) => {
           setMessages((current) => current.map((msg) =>

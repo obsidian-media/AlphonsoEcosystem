@@ -13,9 +13,11 @@ use tauri::{Emitter, Listener, Manager, WindowEvent};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_updater::UpdaterExt;
+mod kv_store;
 mod native_proof;
 mod runway;
 mod whatsapp_webhook;
+use kv_store::{kv_get, kv_set, load_settings, save_settings};
 use native_proof::{run_native_rc0_proof, start_native_rc0_proof_if_requested};
 use runway::{runway_generate_video, runway_list_pending_jobs, runway_resume_task};
 use whatsapp_webhook::{
@@ -950,7 +952,7 @@ fn initialize_memory_schema(conn: &Connection) -> Result<u32, String> {
   Ok(read_memory_schema_version(conn))
 }
 
-fn open_memory_db(app: &tauri::AppHandle) -> Result<(Connection, PathBuf), String> {
+pub(crate) fn open_memory_db(app: &tauri::AppHandle) -> Result<(Connection, PathBuf), String> {
   let path = memory_db_path(app)?;
   let conn = Connection::open(&path).map_err(|error| error.to_string())?;
   // WAL mode: allows concurrent reads during writes, prevents UI freeze on memory writes.
@@ -959,69 +961,6 @@ fn open_memory_db(app: &tauri::AppHandle) -> Result<(Connection, PathBuf), Strin
     .map_err(|error| format!("WAL pragma failed: {}", error))?;
   initialize_memory_schema(&conn)?;
   Ok((conn, path))
-}
-
-fn ensure_kv_table(conn: &Connection) -> Result<(), String> {
-  conn.execute_batch(
-    "CREATE TABLE IF NOT EXISTS kv_store (
-       key   TEXT PRIMARY KEY,
-       value TEXT NOT NULL,
-       updated_at INTEGER NOT NULL DEFAULT 0
-     );"
-  ).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn kv_set(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
-  let (conn, _) = open_memory_db(&app)?;
-  ensure_kv_table(&conn)?;
-  let now = now_ms() as i64;
-  conn.execute(
-    "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-    params![key, value, now],
-  ).map_err(|e| e.to_string())?;
-  Ok(())
-}
-
-#[tauri::command]
-fn kv_get(app: tauri::AppHandle, key: String) -> Result<Option<String>, String> {
-  let (conn, _) = open_memory_db(&app)?;
-  ensure_kv_table(&conn)?;
-  match conn.query_row("SELECT value FROM kv_store WHERE key = ?1 LIMIT 1", params![key], |row| row.get::<_, String>(0)) {
-    Ok(v) => Ok(Some(v)),
-    Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-    Err(e) => Err(e.to_string()),
-  }
-}
-
-#[tauri::command]
-fn save_settings(app: tauri::AppHandle, settings_json: String) -> Result<(), String> {
-  let (conn, _) = open_memory_db(&app)?;
-  ensure_kv_table(&conn)?;
-  let now = now_ms() as i64;
-  conn.execute(
-    "INSERT INTO kv_store (key, value, updated_at) VALUES ('app_settings', ?1, ?2)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-    params![settings_json, now],
-  ).map_err(|e| e.to_string())?;
-  Ok(())
-}
-
-#[tauri::command]
-fn load_settings(app: tauri::AppHandle) -> Result<Option<String>, String> {
-  let (conn, _) = open_memory_db(&app)?;
-  ensure_kv_table(&conn)?;
-  let result = conn.query_row(
-    "SELECT value FROM kv_store WHERE key = 'app_settings' LIMIT 1",
-    [],
-    |row| row.get::<_, String>(0),
-  );
-  match result {
-    Ok(v) => Ok(Some(v)),
-    Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-    Err(e) => Err(e.to_string()),
-  }
 }
 
 fn unix_now_iso() -> String {

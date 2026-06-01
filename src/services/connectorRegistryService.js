@@ -1,3 +1,4 @@
+import { appendAgentActivity } from '../components/AgentActivityLog';
 import { invoke } from '@tauri-apps/api/core';
 import { AGENTS, createAgentPacket, requestPacketRetry, sendPacketToDeadLetter, updatePacketStatus } from './agentBusService';
 import { appendSessionEvent } from './sessionIntelligenceService';
@@ -446,6 +447,7 @@ export function setConnectorStatus(connectorId, status, note = '') {
 }
 
 export function appendConnectorAudit(connectorId, action, details = {}) {
+  appendAgentActivity({ agent: 'connector', action: `${connectorId}: ${action}`, detail: details?.summary || details?.reason || '' });
   const rows = readRows(CONNECTOR_AUDIT_KEY);
   const entry = {
     id: `connector-audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
