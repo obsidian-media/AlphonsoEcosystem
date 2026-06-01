@@ -1,0 +1,202 @@
+[
+  {
+    "packetId": "rc0-packet-001",
+    "title": "P0 not wired: connectorRegistryService.js",
+    "priority": "P0",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Surface is explicitly marked as not wired; keep it disabled or implement the real path. disabledReason: 'OpenAI API key is not configured. Live bridge transport is not wired yet.'",
+    "recommendedChange": "Implement the real path or keep the action disabled and clearly labeled setup_required.",
+    "riskLevel": "high",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-002",
+    "title": "P0 not wired: connectorRegistryService.js",
+    "priority": "P0",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Surface is explicitly marked as not wired; keep it disabled or implement the real path. disabledReason: 'Anthropic API key is not configured. Live bridge transport is not wired yet.'",
+    "recommendedChange": "Implement the real path or keep the action disabled and clearly labeled setup_required.",
+    "riskLevel": "high",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-003",
+    "title": "P0 simulation: connectorRegistryService.js",
+    "priority": "P0",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Production-facing surface should not imply fake or simulated execution. connectorSimulation: true,",
+    "recommendedChange": "Replace simulated success with a real backed operation or truth-label the surface.",
+    "riskLevel": "high",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-004",
+    "title": "P0 simulation: connectorRegistryService.js",
+    "priority": "P0",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Production-facing surface should not imply fake or simulated execution. appendConnectorAudit('whatsapp', 'cloud_inbound_simulated_route', {",
+    "recommendedChange": "Replace simulated success with a real backed operation or truth-label the surface.",
+    "riskLevel": "high",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-005",
+    "title": "P0 fake: devPacketService.js",
+    "priority": "P0",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/devPacketService.js"
+    ],
+    "issueSummary": "Production-facing surface should not imply fake or simulated execution. return 'No placeholder or fake path remains for the targeted surface, and the matching test/build command passes.';",
+    "recommendedChange": "Replace simulated success with a real backed operation or truth-label the surface.",
+    "riskLevel": "high",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-006",
+    "title": "P0 fake: repoAuditService.js",
+    "priority": "P0",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/repoAuditService.js"
+    ],
+    "issueSummary": "Production-facing surface should not imply fake or simulated execution. if (['placeholder', 'scaffold', 'demo', 'mock', 'not_wired', 'fake', 'simulated'].includes(finding.kind)) {",
+    "recommendedChange": "Replace simulated success with a real backed operation or truth-label the surface.",
+    "riskLevel": "high",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-007",
+    "title": "P1 placeholder: connectorRegistryService.js",
+    "priority": "P1",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Production-facing surface should be replaced with real behavior or explicitly setup-required state. verificationState: TRUST_STATES.PLACEHOLDER",
+    "recommendedChange": "Replace scaffold text with real behavior or explicitly mark the surface setup_required.",
+    "riskLevel": "medium",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-008",
+    "title": "P1 placeholder: connectorRegistryService.js",
+    "priority": "P1",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Production-facing surface should be replaced with real behavior or explicitly setup-required state. trust: TRUST_STATES.PLACEHOLDER,",
+    "recommendedChange": "Replace scaffold text with real behavior or explicitly mark the surface setup_required.",
+    "riskLevel": "medium",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-009",
+    "title": "P1 placeholder: connectorRegistryService.js",
+    "priority": "P1",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Production-facing surface should be replaced with real behavior or explicitly setup-required state. trust: connector.status === 'configured' ? TRUST_STATES.VERIFIED : TRUST_STATES.PLACEHOLDER,",
+    "recommendedChange": "Replace scaffold text with real behavior or explicitly mark the surface setup_required.",
+    "riskLevel": "medium",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  },
+  {
+    "packetId": "rc0-packet-010",
+    "title": "P1 placeholder: connectorRegistryService.js",
+    "priority": "P1",
+    "filesLikelyInvolved": [
+      "C:\\Users\\Shaya\\OneDrive\\Desktop\\ALPHONSO\\FILES\\local-agent-ui-v2\\src/services/connectorRegistryService.js"
+    ],
+    "issueSummary": "Production-facing surface should be replaced with real behavior or explicitly setup-required state. ? (connector.id === 'mobile_bridge' ? TRUST_STATES.PLACEHOLDER : health?.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED)",
+    "recommendedChange": "Replace scaffold text with real behavior or explicitly mark the surface setup_required.",
+    "riskLevel": "medium",
+    "testCommands": [
+      "npm.cmd run test",
+      "npm.cmd run build",
+      "npx.cmd tauri build",
+      "npm.cmd run proof:rc0"
+    ],
+    "expectedProof": "10_rc0_package_written.json plus refreshed RC0 evidence artifacts",
+    "rollbackNote": "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.",
+    "setupRequiredDependencies": []
+  }
+]
