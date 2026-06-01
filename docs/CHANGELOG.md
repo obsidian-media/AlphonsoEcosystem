@@ -8,6 +8,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed (2026-06-01 — Session 3, CI unblock)
+- `src/components/MarketingLandingPage.jsx` — file was imported by `main.jsx` but was never committed to git, causing Vite `UNRESOLVED_IMPORT` on every CI build. Committed the file (368 lines, uses framer-motion which was already a listed dependency).
+- `.npmrc` — added `legacy-peer-deps=true` at project root to prevent `npm ci` ERESOLVE on CI caused by `@eslint/js@10` / `eslint@9` peer dep mismatch.
+- `vite.config.js` — added `include: ['src/**/*.{test,spec}.{js,jsx}']` to scope Vitest to `src/` only, preventing it from picking up Playwright `e2e/smoke.spec.js` as a Vitest test.
+- `src-tauri/src/lib.rs` — fixed 15 pre-existing Clippy warnings: 4x `&PathBuf→&Path`, identity map removed, `.clamp(1, 12)` replaces `max/min` chain, `sort_by_key` replaces `sort_by`, `pub(crate)` on `now_ms`/`to_hex`.
+- `src-tauri/src/native_proof.rs` — fixed 2 Clippy warnings: identity map removed, `#[allow(clippy::too_many_arguments)]` on `stage_record`.
+- `src-tauri/src/runway.rs` — fixed 5 Clippy warnings: 4x `&PathBuf→&Path`, `#[allow(clippy::too_many_arguments)]` on `poll_and_download` and `failed_proof`.
+- `cargo clippy -- -D warnings` now passes on CI. Both `verify-app` and `CI` workflows green on `main`.
+
+### Fixed (2026-06-01 — Session 3, boot error)
+- `src/components/ConnectorStatusIndicators.jsx` (new) — extracted `ConnectorStatusDot` and `ConnectorStatusStrip` from `ConnectorHealthPanel.jsx` into a standalone 90-line file. `Sidebar.jsx` now imports from here instead of from `ConnectorHealthPanel`. This breaks the static/lazy-chunk collision: `ConnectorHealthPanel` is now a proper 9.7KB lazy chunk again instead of being absorbed into the 330KB main bundle. Root cause of the `ProjectExecutionMode` boot TDZ error.
+- `src/components/ConnectorHealthPanel.jsx` — replaced the two inline component definitions with `export { ConnectorStatusDot, ConnectorStatusStrip } from './ConnectorStatusIndicators'` for backward compatibility. Removed unused `memo` import.
+- `src/components/Sidebar.jsx` — updated import of `ConnectorStatusStrip` to point to `ConnectorStatusIndicators.jsx`.
+- `src/index.css` — moved `@import url(https://fonts.googleapis.com/...)` before `@tailwind` directives to fix Vite CSS warning `@import must precede all other statements`.
+
+### Added (2026-06-01 — Session 3, Architecture)
+- `src-tauri/src/whatsapp_webhook.rs` — first `lib.rs` modular extraction (~220 lines). Contains: `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` (3 pure/synchronous Tauri commands) plus 4 structs: `ConnectorInboundMessage`, `WhatsAppWebhookVerifyProof`, `WhatsAppWebhookSignatureProof`, `WhatsAppCloudInboundNormalizeProof`. `lib.rs` now imports via `use whatsapp_webhook::{...}`. `cargo check` and `cargo clippy -- -D warnings` both clean.
+
+### Added (2026-06-01 — Session 3, Quality)
+- `playwright.config.js` — Playwright test config (`testDir: ./e2e`, baseURL `:5173`, headless Chromium, 30s timeout, 1 retry).
+- `e2e/smoke.spec.js` — golden-path smoke: navigate to `/`, wait for `[data-alphonso-shell-ready="true"]`, send a chat message, assert an assistant response renders. Run with: `npm run test:e2e` (requires `npx playwright install chromium` first, plus dev server and Ollama running).
+- `package.json` — `"test:e2e": "playwright test"` script added.
+- Coverage threshold set to 9% in `vite.config.js` (actual measured: 9.22%). Staged path to 20→30 requires writing tests for uncovered services.
+
+### Research/Planning (2026-06-01 — Session 3, produced but not yet implemented)
+- **Security audit complete**: git history clean (no `.env` ever committed), `.gitignore` correct, Tauri capabilities correctly scoped. Only finding: `check_env_vars_presence` accepts arbitrary env var names (probe-only, no value leakage, low risk).
+- **localStorage→SQLite migration checklist**: top 5 keys — `alphonso_conversations`, `alphonso_messages_${id}`, `alphonso_connector_auth_profiles_v1`, `alphonso_connector_registry_v2`, `alphonso_settings`. `kv_set`/`kv_get` commands already exist. `alphonso_settings` already partially migrated via `save_settings`/`load_settings`.
+- **Docs**: last-verified footers added to `ALPHONSO_GROUND_TRUTH.md` and `CLAUDE.md`. No encoding issues found in any doc.
+
 ### Fixed (2026-06-01 — Session 2, chat fix)
 - `src/components/ModelSwitcher.jsx` — critical bug: component read selected model from localStorage on init but never called `onModelChange` to sync it to `settings.selectedModel` in App.jsx. `modelReady` was always `false`, silently blocking all chat responses. Fix: use a ref for the callback, always call `onModelChange` with the resolved model after fetch, remove `onModelChange` from effect dep array.
 
