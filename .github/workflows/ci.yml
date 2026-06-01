@@ -30,9 +30,31 @@ jobs:
       - name: Web build
         run: npm run build
 
+  rust-quality:
+    name: Rust Tests & Clippy
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: clippy
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Cargo tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
   desktop:
     name: Tauri Desktop Build
-    needs: test
+    needs: [test, rust-quality]
     runs-on: windows-latest
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     steps:
