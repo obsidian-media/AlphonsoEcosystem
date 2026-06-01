@@ -302,7 +302,6 @@ fn rc0_keyword_match(line: &str) -> Option<(&'static str, &'static str, &'static
   patterns
     .into_iter()
     .find(|(needle, _, _, _)| lower.contains(needle))
-    .map(|(needle, kind, priority, severity)| (needle, kind, priority, severity))
 }
 
 fn scan_rc0_target_surface(root: &Path, max_files: usize, max_findings: usize) -> Result<WorkspaceReadinessScan, String> {
@@ -535,10 +534,10 @@ fn proof_markdown(
 
   lines.push(String::new());
   lines.push("## Truth Labels".to_string());
-  lines.push(format!("- confirmed: build, test, Tauri build, installer artifacts"));
-  lines.push(format!("- foundation_only: local runtime surfaces that exist but are not external production connectors"));
-  lines.push(format!("- partial: updater signing or external provider gaps remain"));
-  lines.push(format!("- setup_required: connectors and updater manifest/signing as needed"));
+  lines.push("- confirmed: build, test, Tauri build, installer artifacts".to_string());
+  lines.push("- foundation_only: local runtime surfaces that exist but are not external production connectors".to_string());
+  lines.push("- partial: updater signing or external provider gaps remain".to_string());
+  lines.push("- setup_required: connectors and updater manifest/signing as needed".to_string());
   lines.push(format!("- blocked: {}, failed: {}", result.p0_count > 0, result.error.is_some()));
   lines.join("\n") + "\n"
 }
@@ -639,6 +638,7 @@ fn read_proof_request(output_dir: &str) -> Option<Value> {
   serde_json::from_str::<Value>(&content).ok()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn stage_record(
   workspace_root: &str,
   output_dir: &str,
@@ -727,8 +727,7 @@ fn build_remaining_blockers_markdown(snapshot: &Value, scan: &WorkspaceReadiness
 }
 
 fn build_install_and_run_markdown(output_dir: &str) -> String {
-  vec![
-    "# Install and Run".to_string(),
+  ["# Install and Run".to_string(),
     String::new(),
     "1. Install the desktop build from the NSIS or MSI bundle produced by `npx.cmd tauri build`.".to_string(),
     "2. Launch `src-tauri/target/release/app.exe` or the installed Alphonso desktop app.".to_string(),
@@ -736,8 +735,7 @@ fn build_install_and_run_markdown(output_dir: &str) -> String {
     "4. Use `Run Native Proof Cycle` for a supervised proof run.".to_string(),
     "5. For automated RC0 proof, run `npm.cmd run proof:rc0`.".to_string(),
     "6. Do not treat setup-required connector or updater states as live-production completion.".to_string(),
-    format!("7. RC0 outputs are written under `{output_dir}` and `docs/handoff/`."),
-  ]
+    format!("7. RC0 outputs are written under `{output_dir}` and `docs/handoff/`.")]
   .join("\n")
     + "\n"
 }
@@ -751,7 +749,7 @@ fn find_workspace_validation(root: &str) -> Result<(bool, Vec<String>, Vec<Strin
     format!("{root}/docs"),
   ];
   let proofs = verify_paths(paths);
-  let root_proof = proofs.get(0).cloned();
+  let root_proof = proofs.first().cloned();
   let entry_proofs = proofs.into_iter().skip(1).collect::<Vec<_>>();
   let missing_entries = REQUIRED_ENTRIES
     .iter()

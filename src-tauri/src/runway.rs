@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const DEFAULT_RUNWAY_BASE_URL: &str = "https://api.dev.runwayml.com";
@@ -66,20 +66,21 @@ fn resolve_output_dir(output_dir: &str) -> PathBuf {
   }
 }
 
-fn pending_marker_path(dir: &PathBuf, task_id: &str) -> PathBuf {
+fn pending_marker_path(dir: &Path, task_id: &str) -> PathBuf {
   dir.join(format!("runway-{task_id}-pending.json"))
 }
 
-fn write_pending_marker(dir: &PathBuf, job: &RunwayPendingJob) {
+fn write_pending_marker(dir: &Path, job: &RunwayPendingJob) {
   if let Ok(json) = serde_json::to_string_pretty(job) {
     let _ = fs::write(pending_marker_path(dir, &job.task_id), json);
   }
 }
 
-fn remove_pending_marker(dir: &PathBuf, task_id: &str) {
+fn remove_pending_marker(dir: &Path, task_id: &str) {
   let _ = fs::remove_file(pending_marker_path(dir, task_id));
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn poll_and_download(
   client: &reqwest::Client,
   auth_header: &str,
@@ -570,6 +571,7 @@ pub async fn runway_resume_task(request: RunwayResumeRequest) -> RunwayVideoProo
   .await
 }
 
+#[allow(clippy::too_many_arguments)]
 fn failed_proof(
   started_at_ms: u64,
   output_dir: String,

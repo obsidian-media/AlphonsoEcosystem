@@ -751,12 +751,7 @@ fn write_native_proof_event(output_dir: &Path, payload: &Value) -> Result<(), St
 
 fn plugin_blocked_token_present(value: &str) -> Option<&'static str> {
   const BLOCKED: [&str; 8] = ["&&", "||", ";", "|", ">", "<", "$(", "`"];
-  for token in BLOCKED {
-    if value.contains(token) {
-      return Some(token);
-    }
-  }
-  None
+  BLOCKED.into_iter().find(|&token| value.contains(token)).map(|v| v as _)
 }
 
 fn validate_plugin_extra_args(extra_args: &[String]) -> Result<(), String> {
@@ -1154,7 +1149,7 @@ fn json_value_to_plain_string(value: &Value) -> String {
   value.to_string()
 }
 
-fn mime_for_video_path(path: &PathBuf) -> String {
+fn mime_for_video_path(path: &Path) -> String {
   let extension = path
     .extension()
     .and_then(|value| value.to_str())
@@ -1173,7 +1168,7 @@ fn mime_for_video_path(path: &PathBuf) -> String {
 }
 
 #[allow(dead_code)]
-fn mime_for_image_path(path: &PathBuf) -> String {
+fn mime_for_image_path(path: &Path) -> String {
   let extension = path
     .extension()
     .and_then(|value| value.to_str())
@@ -1192,7 +1187,7 @@ fn mime_for_image_path(path: &PathBuf) -> String {
 }
 
 #[allow(dead_code)]
-fn looks_like_video_path(path: &PathBuf) -> bool {
+fn looks_like_video_path(path: &Path) -> bool {
   matches!(
     path.extension()
       .and_then(|value| value.to_str())
@@ -1203,7 +1198,7 @@ fn looks_like_video_path(path: &PathBuf) -> bool {
 }
 
 #[allow(dead_code)]
-fn looks_like_image_path(path: &PathBuf) -> bool {
+fn looks_like_image_path(path: &Path) -> bool {
   matches!(
     path.extension()
       .and_then(|value| value.to_str())
@@ -1301,7 +1296,7 @@ async fn youtube_access_token() -> Result<String, String> {
 fn parse_ddg_results(html: &str, source_type: &str, limit: usize) -> Vec<ResearchSearchResult> {
   let mut results: Vec<ResearchSearchResult> = vec![];
   let mut cursor = 0usize;
-  let max_results = limit.max(1).min(12);
+  let max_results = limit.clamp(1, 12);
   let lower = html.to_ascii_lowercase();
 
   while cursor < lower.len() && results.len() < max_results {
@@ -3683,21 +3678,19 @@ fn extract_dependencies(content: &str, language: &str) -> Vec<String> {
     }
 
     match language {
-      "javascript" | "react-jsx" | "typescript" | "react-tsx" => {
-        if trimmed.starts_with("import ") || trimmed.contains(" from ") || trimmed.contains("require(") {
+      "javascript" | "react-jsx" | "typescript" | "react-tsx"
+        if (trimmed.starts_with("import ") || trimmed.contains(" from ") || trimmed.contains("require(")) => {
           if let Some(dep) = between_quotes(trimmed) {
             deps.push(dep);
           }
         }
-      }
-      "rust" => {
-        if trimmed.starts_with("use ") {
+      "rust"
+        if trimmed.starts_with("use ") => {
           let raw = trimmed.trim_start_matches("use ").trim_end_matches(';').trim();
           if !raw.is_empty() {
             deps.push(raw.to_string());
           }
         }
-      }
       "python" => {
         if trimmed.starts_with("import ") {
           let raw = trimmed.trim_start_matches("import ").trim();
@@ -3722,7 +3715,7 @@ fn parse_tasklist(tasklist_output: &str, query: &str) -> Vec<ProcessMatch> {
   let lower_query = query.to_ascii_lowercase();
   #[cfg(target_os = "windows")]
   {
-    return tasklist_output
+    tasklist_output
       .lines()
       .filter_map(|line| {
         let trimmed = line.trim();
@@ -3747,7 +3740,7 @@ fn parse_tasklist(tasklist_output: &str, query: &str) -> Vec<ProcessMatch> {
           pid,
         })
       })
-      .collect();
+      .collect()
   }
 
   #[cfg(not(target_os = "windows"))]
@@ -3779,7 +3772,7 @@ fn text_has_any(text: &str, terms: &[&str]) -> bool {
 
 fn split_command_fragments(input: &str) -> Vec<String> {
   input
-    .split(|ch| ch == ',' || ch == '.')
+    .split([',', '.'])
     .flat_map(|part| part.split(" then "))
     .flat_map(|part| part.split(" and "))
     .map(|part| part.trim().to_string())
@@ -4048,7 +4041,7 @@ async fn alphonso_bridge_send_packet(packet: Value) -> Result<Value, String> {
 
   let http_status = response.status().as_u16();
   let response_text = response.text().await.map_err(|error| error.to_string())?;
-  let parsed_response = serde_json::from_str(&response_text).unwrap_or_else(|_| serde_json::Value::String(response_text));
+  let parsed_response = serde_json::from_str(&response_text).unwrap_or(serde_json::Value::String(response_text));
   let status_proof = alphonso_bridge_status();
   let ok = http_status < 400;
 
@@ -4776,7 +4769,7 @@ fn validate_plugin_manifest_disk(app: tauri::AppHandle, manifest_path: String) -
   Ok(proof)
 }
 
-fn resolve_plugin_cwd(manifest_path: &PathBuf, tool_cwd: &Option<String>, workspace_root: &Option<String>) -> Result<Option<PathBuf>, String> {
+fn resolve_plugin_cwd(manifest_path: &Path, tool_cwd: &Option<String>, workspace_root: &Option<String>) -> Result<Option<PathBuf>, String> {
   let Some(tool_cwd) = tool_cwd else {
     return Ok(None);
   };
@@ -6205,7 +6198,6 @@ fn readiness_keyword_match(line: &str) -> Option<(&'static str, &'static str, &'
   patterns
     .into_iter()
     .find(|(needle, _, _, _)| lower.contains(needle))
-    .map(|(needle, kind, priority, severity)| (needle, kind, priority, severity))
 }
 
 #[tauri::command]
@@ -6577,7 +6569,7 @@ fn inspect_updater_release(bundle_dir: String, manifest_dir: String) -> Result<R
       .unwrap_or(0);
     installer_candidates.push((path, modified_at_ms));
   }
-  installer_candidates.sort_by(|a, b| b.1.cmp(&a.1));
+  installer_candidates.sort_by_key(|b| std::cmp::Reverse(b.1));
 
   let installer_path = installer_candidates.first().map(|(path, _)| path.clone());
   let signature_path = installer_path.as_ref().map(|path| PathBuf::from(format!("{}.sig", path.to_string_lossy())));
@@ -6759,7 +6751,7 @@ pub fn run() {
             format!("{}/docs", workspace_root),
           ];
           let validation_proofs = verify_paths(validation_paths);
-          let root_proof = validation_proofs.get(0).cloned();
+          let root_proof = validation_proofs.first().cloned();
           let entry_proofs = validation_proofs.into_iter().skip(1).collect::<Vec<_>>();
           let missing_entries = ["package.json", "src", "src-tauri", "docs"]
             .iter()
@@ -6967,13 +6959,12 @@ pub fn run() {
     })
     .on_window_event(|window, event| {
       match event {
-        WindowEvent::CloseRequested { api, .. } => {
+        WindowEvent::CloseRequested { api, .. }
           // Hide to tray instead of closing; "Quit Alphonso" in the tray menu exits for real.
-          if window.label() == "main" {
+          if window.label() == "main" => {
             let _ = window.hide();
             api.prevent_close();
           }
-        }
         WindowEvent::Focused(true) | WindowEvent::Resized(_) => {
           let proof_output_dir = native_proof_output_dir();
           let payload = NativeProofStageProof {
