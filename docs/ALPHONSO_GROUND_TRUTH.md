@@ -1,5 +1,5 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-05-31 (updated after all 4 agents completed)  
+**Last verified:** 2026-05-31 — FINAL SESSION STATE, all 8 agents + autonomous mode complete  
 **Verified by:** Claude Code (cross-referenced audit report, handoff package 2026-05-13, and live filesystem inspection)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
@@ -291,6 +291,11 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 ### PERFORMANCE
 - [x] **Lazy loading** — 14 heavy views already lazy-loaded in App.jsx before this session. Agent G added 3 more: `ApprovalModal`, `OnboardingWizard`, `ConnectorHealthPanel`. Fixed missing `<Suspense>` wrapper on `CommandRib`. Main chunk: 331KB → **320KB** (2026-05-31, Agent G)
 - [ ] **Image asset compression** — mascot PNGs still heavy in build output
+
+### TOOLING
+- [x] **eslint-plugin-security** — installed + wired in `eslint.config.js` (2026-05-31, autonomous)
+- [x] **eslint-plugin-react-hooks** — already in config pre-session; confirmed present
+- [x] **TypeScript** — installed as devDependency; `tsconfig.json` + `tsconfig.node.json` created (2026-05-31, Agent E)
 
 ### UX/UI
 - [x] **Connector health dashboard** — `src/components/ConnectorHealthPanel.jsx` created with `ConnectorHealthPanel` (full panel), `ConnectorStatusStrip` (compact sidebar count), `ConnectorStatusDot` (per-connector dot). Mounted as `connectors` tab in `src/App.jsx` (2026-05-31, Agent C)

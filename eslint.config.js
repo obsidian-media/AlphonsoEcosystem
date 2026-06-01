@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import security from 'eslint-plugin-security';
 import globals from 'globals';
 
 export default [
@@ -18,7 +19,8 @@ export default [
     ignores: ['src/test/**'],
     plugins: {
       react: reactPlugin,
-      'react-hooks': reactHooks
+      'react-hooks': reactHooks,
+      security
     },
     languageOptions: {
       globals: {

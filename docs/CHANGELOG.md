@@ -38,6 +38,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Runtime `.unwrap()` audit — 1 runtime panic replaced with safe `match + continue` in `fetch_research_sources` (~line 5859); 2 startup-only `.expect()` calls intentionally kept
 - `docs/PERFORMANCE_RUST_REPORT.md` — documents Rust backend changes
 
+### Added (2026-05-31 — Claude Code session, Agent E: Frontend / TypeScript)
+- `tsconfig.json` + `tsconfig.node.json` at project root — TypeScript foundation with `strict: false`, `allowJs: true`, `checkJs: false` for safe incremental migration
+- `typescript` installed as devDependency
+- `src/services/memoryService.ts` — first TypeScript service migration with `MemoryRecord`, `MemoryWriteOptions`, `MemoryFilters` interfaces; Vite resolves `.ts` before `.js` automatically
+- `src/services/serviceScopes.js` — all 24 storage key constants documented with JSDoc comments
+- `vite.config.cjs` deleted — `vite.config.js` is now the only Vite config
+- `docs/FRONTEND_MIGRATION_REPORT.md` — step-by-step pattern and prioritized migration order for all 50+ remaining services
+
+### Added (2026-05-31 — Claude Code session, Agent F: Connector completion)
+- `connectorRegistryService.js` — Claude and ChatGPT connectors now return structured `{ success, code, error }` objects with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`; 30-second timeout; pre-flight API key check before any network call
+- `hectorResearchService.js` — Brave Search dual-path: Rust `search_brave_sources` command first; falls through to `VITE_BRAVE_SEARCH_API_KEY` frontend fetch if Rust path returns empty or fails
+- `src/components/ModelSwitcher.jsx` — Ollama model dropdown; fetches `/api/tags`, shows "Ollama offline" pill if unreachable, persists selection to `alphonso_selected_model_v1`; mounted in ChatView header bar
+- `docs/CONNECTOR_COMPLETION_REPORT.md` — documents all connector improvements
+
+### Added (2026-05-31 — Claude Code session, Agent G: Performance)
+- `src/App.jsx` — `ApprovalModal`, `OnboardingWizard`, `ConnectorHealthPanel` converted from static to `React.lazy()` imports; missing `<Suspense>` added to `CommandRib`
+- Main JS chunk reduced: 331 KB → 320 KB
+- `docs/BUNDLE_PERF_REPORT.md` — documents bundle size changes
+
+### Added (2026-05-31 — Claude Code session, Agent H: Infrastructure + Docs)
+- `ARCHITECTURE.md` at project root — full stack diagram, 9-agent roster, orchestration flow, service groups, storage model, security model, deployment
+- `CLAUDE.md` at project root — session-start guide: all npm/cargo commands, do-not-duplicate table, real gaps, directory tree
+- `docs/CONNECTORS.md` — all 11 connectors: required env vars, credential acquisition steps, test procedure, known limitations
+- `docs/CHANGELOG.md` — started; this file
+- `.github/dependabot.yml` — weekly updates for npm, Cargo, and GitHub Actions
+- `docs/INFRA_DOCS_REPORT.md` — new-developer setup path and maintainer release path
+
+### Added (2026-05-31 — Claude Code session, Autonomous mode)
+- `src/components/AgentDock.jsx` — minimize/expand toggle (persisted to `alphonso_agent_dock_minimized_v1`); Ollama connectivity pill showing online/offline/checking state; Minus and ChevronDown icons from Lucide
+- `eslint-plugin-security` installed and added to `eslint.config.js` — catches eval, prototype pollution, innerHTML XSS sources
+- `docs/HANDOFF_2026-05-31.md` — this session's full handoff document
+- App uninstalled (0.1.0 pre-hardening) and reinstalled from fresh build with all above changes
+
+### Fixed (2026-05-31 — Claude Code session)
+- Port 5173 conflict resolution documented: kill process with `Get-NetTCPConnection -LocalPort 5173`
+- `.env.example` had real WhatsApp phone numbers — replaced with placeholders
+
 ---
 
 ## [0.1.0] - 2026-05-13
