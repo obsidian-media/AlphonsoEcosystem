@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
-import { ConnectorStatusStrip } from './ConnectorHealthPanel';
+import { ConnectorStatusStrip } from './ConnectorStatusIndicators';
 
 const NAV_ITEMS = [
   { id: 'chat', icon: MessageSquare, label: 'Chat Hub' },

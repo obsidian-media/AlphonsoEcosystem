@@ -32,7 +32,7 @@ npm run auth:youtube     # OAuth flow for YouTube
 npm run auth:meta        # OAuth flow for Meta/Instagram
 
 # Coverage (requires @vitest/coverage-v8 installed)
-npm run test:coverage    # Run tests with 30% line coverage threshold
+npm run test:coverage    # Run tests with 20% line coverage threshold
 ```
 
 ---
@@ -116,3 +116,7 @@ gateway/
   whatsapp-cloud/      Railway-hosted WhatsApp Cloud gateway (setup_required)
 scripts/               Build, release, and auth helper scripts
 ```
+
+---
+
+_Last verified: 2026-06-01 — run `npm run verify:app` and `cargo test --lib` from src-tauri/ to re-verify._

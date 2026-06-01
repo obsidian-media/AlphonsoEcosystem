@@ -26,7 +26,8 @@
     "auth:meta": "node scripts/auth-meta.mjs",
     "auth:outlook": "node scripts/auth-outlook.mjs",
     "preview": "node scripts/run-vite-preview.mjs",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
@@ -37,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
     "@tauri-apps/cli": "^2.0.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
