@@ -75,7 +75,7 @@ const DEFAULT_PLUGINS = [
   {
     id: 'connector.chatgpt',
     name: 'ChatGPT Connector',
-    description: 'ChatGPT bridge foundation. Live transport is not wired yet.',
+    description: 'ChatGPT placeholder connector. Visible for future use; Qwen is the active cloud lane.',
     version: '0.1.0',
     author: 'Alphonso Core',
     enabled: false,
@@ -91,7 +91,7 @@ const DEFAULT_PLUGINS = [
   {
     id: 'connector.claude',
     name: 'Claude Connector',
-    description: 'Claude bridge foundation. Live transport is not wired yet.',
+    description: 'Claude placeholder connector. Visible for future use; Qwen is the active cloud lane.',
     version: '0.1.0',
     author: 'Alphonso Core',
     enabled: false,
@@ -102,6 +102,22 @@ const DEFAULT_PLUGINS = [
     memoryHandlers: [],
     status: 'not_configured',
     trust: TRUST_STATES.PLACEHOLDER,
+    manifestVersion: '1.0.0'
+  },
+  {
+    id: 'connector.qwen',
+    name: 'Alibaba Qwen Connector',
+    description: 'Qwen/DashScope connector. Live transport is wired through backend env and approval gates.',
+    version: '0.1.0',
+    author: 'Alphonso Core',
+    enabled: false,
+    permissions: ['connector.outbound', 'approval.request'],
+    panels: ['connectors.qwen'],
+    tools: [],
+    workflows: ['qwen_provider_adapter'],
+    memoryHandlers: [],
+    status: 'configured',
+    trust: TRUST_STATES.VERIFIED,
     manifestVersion: '1.0.0'
   },
   {

@@ -1,4 +1,4 @@
-import { appendAgentActivity } from '../components/AgentActivityLog';
+import { appendAgentActivity } from './agentActivityService';
 import { invoke } from '@tauri-apps/api/core';
 import { AGENTS, createAgentPacket, requestPacketRetry, sendPacketToDeadLetter, updatePacketStatus } from './agentBusService';
 import { appendSessionEvent } from './sessionIntelligenceService';
@@ -61,7 +61,7 @@ const DEFAULT_CONNECTORS = [
     transport: 'openai_api_adapter',
     requiredEnv: ['OPENAI_API_KEY'],
     permissions: ['prompt_exchange', 'approval_requests'],
-    disabledReason: 'OpenAI API key is not configured. Live bridge transport is not wired yet.'
+    disabledReason: 'Placeholder connector. Leave visible; not part of the active cloud lane.'
   },
   {
     id: 'claude',
@@ -70,7 +70,16 @@ const DEFAULT_CONNECTORS = [
     transport: 'anthropic_api_adapter',
     requiredEnv: ['ANTHROPIC_API_KEY'],
     permissions: ['prompt_exchange', 'approval_requests'],
-    disabledReason: 'Anthropic API key is not configured. Live bridge transport is not wired yet.'
+    disabledReason: 'Placeholder connector. Leave visible; not part of the active cloud lane.'
+  },
+  {
+    id: 'qwen',
+    name: 'Alibaba Qwen Connector',
+    status: 'not_configured',
+    transport: 'dashscope_openai_compatible_adapter',
+    requiredEnv: ['DASHSCOPE_API_KEY'],
+    permissions: ['prompt_exchange', 'approval_requests', 'paid_connector_send'],
+    disabledReason: 'DashScope/Qwen API key is not configured in the backend environment.'
   },
   {
     id: 'notion',
@@ -101,12 +110,12 @@ const DEFAULT_CONNECTORS = [
   },
   {
     id: 'comfyui_video',
-    name: 'Local ComfyUI Video',
+    name: 'Local ComfyUI Image + Video',
     status: 'foundation_only',
     transport: 'comfyui_local_api',
     requiredEnv: [],
-    permissions: ['local_video_generation'],
-    disabledReason: 'Requires local ComfyUI runtime + workflow JSON (default: http://127.0.0.1:8188).'
+    permissions: ['local_image_generation', 'local_video_generation'],
+    disabledReason: 'Requires local ComfyUI runtime + model/workflow JSON (default: http://127.0.0.1:8188).'
   },
   {
     id: 'runway',
@@ -141,6 +150,11 @@ const DEFAULT_AUTH_PROFILES = {
     mode: 'allowlist_required'
   },
   claude: {
+    enabled: false,
+    allowlist: [],
+    mode: 'allowlist_required'
+  },
+  qwen: {
     enabled: false,
     allowlist: [],
     mode: 'allowlist_required'
@@ -1315,6 +1329,94 @@ export async function sendClaudeConnectorMessage(text, options = {}) {
   return result;
 }
 
+export async function sendQwenConnectorMessage(text, options = {}) {
+  const auth = isConnectorAuthenticated('qwen');
+  if (!auth.ok) {
+    return logUnauthenticatedConnectorRequest('qwen', 'paid_connector_send', text, options);
+  }
+
+  let envCheck = null;
+  try {
+    envCheck = await invoke('check_env_vars_presence', { names: ['DASHSCOPE_API_KEY'] });
+  } catch {
+    envCheck = null;
+  }
+  if (envCheck && !envCheck.DASHSCOPE_API_KEY) {
+    appendConnectorAudit('qwen', 'send_blocked_missing_key', { text: String(text || '').slice(0, 80) });
+    return {
+      success: false,
+      ok: false,
+      connectorId: 'qwen',
+      blocked: true,
+      error: 'API key missing — configure DASHSCOPE_API_KEY in the backend environment',
+      code: 'MISSING_KEY',
+      trust: TRUST_STATES.FAILED
+    };
+  }
+
+  const approval = await requireConnectorApproval('qwen', 'paid_connector_send', text, options);
+  if (!approval.ok) return approval;
+  const readiness = await requireConnectorReady('qwen', 'paid_connector_send', text, options);
+  if (!readiness.ok) return readiness;
+  const gate = gateConnectorAction('qwen', 'paid_connector_send', text, options);
+  if (!gate.ok) {
+    return {
+      ok: false,
+      connectorId: 'qwen',
+      blocked: true,
+      trust: gate.verificationState || TRUST_STATES.PENDING,
+      error: gate.reason || 'Qwen connector policy gate blocked the action.'
+    };
+  }
+
+  let result;
+  try {
+    const timeoutMs = options.timeoutMs || 30000;
+    const invokePromise = invoke('connector_send_qwen', { text });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('CONNECTOR_TIMEOUT')), timeoutMs)
+    );
+    result = await Promise.race([invokePromise, timeoutPromise]);
+  } catch (error) {
+    const errMsg = String(error || '');
+    const lower = errMsg.toLowerCase();
+    const isTimeout = errMsg === 'CONNECTOR_TIMEOUT' || lower.includes('timeout');
+    const isRateLimit = errMsg.includes('429') || lower.includes('rate limit') || lower.includes('rate_limit');
+    const isMissingKey = lower.includes('api key') || lower.includes('unauthorized') || errMsg.includes('401');
+    const code = isTimeout ? 'TIMEOUT' : isRateLimit ? 'RATE_LIMITED' : isMissingKey ? 'MISSING_KEY' : 'INVOKE_ERROR';
+    const userError = isTimeout
+      ? 'Request timed out after 30s'
+      : isRateLimit
+        ? 'Rate limited — wait 60s and retry'
+        : isMissingKey
+          ? 'API key missing — configure DASHSCOPE_API_KEY in the backend environment'
+          : `Qwen connector error: ${errMsg}`;
+    appendConnectorAudit('qwen', 'send_failed', { error: errMsg, code });
+    return { success: false, ok: false, connectorId: 'qwen', blocked: false, error: userError, code, trust: TRUST_STATES.FAILED };
+  }
+
+  if (result && !result.ok) {
+    const httpStatus = result.httpStatus || result.status || null;
+    const lower = String(result.error || '').toLowerCase();
+    const code = httpStatus === 429 || lower.includes('rate limit') ? 'RATE_LIMITED' : httpStatus === 401 || httpStatus === 403 ? 'MISSING_KEY' : 'SEND_FAILED';
+    const userError = code === 'RATE_LIMITED'
+      ? 'Rate limited — wait 60s and retry'
+      : code === 'MISSING_KEY'
+        ? 'API key missing — configure DASHSCOPE_API_KEY in the backend environment'
+        : result.error || 'Qwen connector returned an error.';
+    appendConnectorAudit('qwen', 'send_failed', { error: userError, code, httpStatus });
+    return { success: false, ok: false, connectorId: 'qwen', error: userError, code, httpStatus, trust: TRUST_STATES.FAILED };
+  }
+
+  appendConnectorAudit('qwen', 'send_success', {
+    target: result?.target || 'qwen',
+    externalId: result?.externalId || null,
+    error: result?.error || null
+  });
+  appendConnectorAuditEntry({ connectorId: 'qwen', ok: Boolean(result?.ok), latencyMs: null, errorCode: null });
+  return result;
+}
+
 export async function sendNotionConnectorEntry({ title, content = '', parentPageId = '' }, options = {}) {
   const auth = isConnectorAuthenticated('notion');
   if (!auth.ok) {
@@ -1473,11 +1575,13 @@ export async function generateSdWebUiImage({
   return result;
 }
 
-export async function queueComfyUiVideo({
+export async function queueComfyUiWorkflow({
   prompt,
-  workflowJson
+  workflowJson,
+  mediaType = 'video'
 }, options = {}) {
-  const gate = gateConnectorAction('comfyui_video', 'local_video_generation', prompt, { ...options, approved: true });
+  const permission = mediaType === 'image' ? 'local_image_generation' : 'local_video_generation';
+  const gate = gateConnectorAction('comfyui_video', permission, prompt, { ...options, approved: true });
   if (!gate.ok) {
     return {
       ok: false,
@@ -1491,12 +1595,19 @@ export async function queueComfyUiVideo({
     prompt,
     workflowJson
   });
-  appendConnectorAudit('comfyui_video', result?.ok ? 'video_queue_success' : 'video_queue_failed', {
+  appendConnectorAudit('comfyui_video', result?.ok ? `${mediaType}_queue_success` : `${mediaType}_queue_failed`, {
     provider: result?.provider || 'comfyui',
     jobId: result?.jobId || null,
     error: result?.error || null
   });
   return result;
+}
+
+export async function queueComfyUiVideo({
+  prompt,
+  workflowJson
+}, options = {}) {
+  return queueComfyUiWorkflow({ prompt, workflowJson, mediaType: 'video' }, options);
 }
 
 export async function getComfyUiVideoHistory(promptId) {

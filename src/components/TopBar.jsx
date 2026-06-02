@@ -1,3 +1,4 @@
+import React from 'react';
 import { ArrowUpCircle, Globe, WifiOff } from 'lucide-react';
 import { normalizeEndpoint } from '../lib/ollama';
 import { Badge, StatusDot } from './ui/Badge';

@@ -6,7 +6,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args) => invoke(...args)
 }));
 
-import { verifyConnectorEnvironment } from '../services/connectorRegistryService';
+import { listConnectors, sendQwenConnectorMessage, verifyConnectorEnvironment } from '../services/connectorRegistryService';
 
 describe('connectorRegistryService', () => {
   beforeEach(() => {
@@ -42,6 +42,35 @@ describe('connectorRegistryService', () => {
       lastTestStatus: 'verified'
     });
     expect(invoke).toHaveBeenCalledWith('connector_check_local_runtime_health', { connectorId: 'sd_webui' });
+  });
+
+  it('registers Alibaba Qwen as an approval-gated paid prompt connector', () => {
+    const qwen = listConnectors().find((connector) => connector.id === 'qwen');
+
+    expect(qwen).toMatchObject({
+      name: 'Alibaba Qwen Connector',
+      status: 'not_configured',
+      transport: 'dashscope_openai_compatible_adapter',
+      requiredEnv: ['DASHSCOPE_API_KEY']
+    });
+    expect(qwen.permissions).toEqual(expect.arrayContaining(['prompt_exchange', 'approval_requests', 'paid_connector_send']));
+  });
+
+  it('blocks Qwen sends before network when DashScope key is missing', async () => {
+    localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({
+      qwen: { enabled: true, allowlist: [], mode: 'allowlist_required' }
+    }));
+    invoke.mockResolvedValue({ DASHSCOPE_API_KEY: false });
+    const result = await sendQwenConnectorMessage('hello qwen', { approved: true });
+
+    expect(result).toMatchObject({
+      ok: false,
+      blocked: true,
+      connectorId: 'qwen',
+      code: 'MISSING_KEY'
+    });
+    expect(invoke).toHaveBeenCalledWith('check_env_vars_presence', { names: ['DASHSCOPE_API_KEY'] });
+    expect(invoke).not.toHaveBeenCalledWith('connector_send_qwen', expect.anything());
   });
 
   it('keeps foundation_only connectors truthfully non-operational until a real health proof exists', async () => {

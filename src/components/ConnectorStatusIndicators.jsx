@@ -1,3 +1,4 @@
+import React from 'react';
 import { memo, useEffect, useState } from 'react';
 import { ZapOff } from 'lucide-react';
 import { listConnectors } from '../services/connectorRegistryService';

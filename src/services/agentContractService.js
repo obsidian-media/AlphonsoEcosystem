@@ -73,7 +73,9 @@ export function validateAgentExecutionContract(packet) {
   }
 
   const blockedByPrefix = startsWithAny(action, contract.blockedActionPrefixes);
+  const previewStatesDisabled = /disabled unless separately approved|requires shayan approval before|read-only|draft\/package only/i.test(preview);
   const blockedByPreview = /execute|delete|remove|format|publish|upload|buy|purchase|post/.test(preview)
+    && !previewStatesDisabled
     && toAgent !== AGENTS.ALPHONSO;
   if (blockedByPrefix || blockedByPreview) {
     return {

@@ -36,6 +36,12 @@ describe('chatUtils', () => {
       expect(shouldRouteThroughJose('edit the config path')).toBe(true);
     });
 
+    it('returns true for agent delegation and creative image requests', () => {
+      expect(shouldRouteThroughJose('tell maia to generate an image for me')).toBe(true);
+      expect(shouldRouteThroughJose('ask miya for a visual prompt')).toBe(true);
+      expect(shouldRouteThroughJose('delegate this task to jose')).toBe(true);
+    });
+
     it('returns false for conversational messages', () => {
       expect(shouldRouteThroughJose('hello how are you')).toBe(false);
       expect(shouldRouteThroughJose('what is the capital of France')).toBe(false);

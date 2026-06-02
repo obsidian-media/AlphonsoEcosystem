@@ -5,6 +5,7 @@ const SETTINGS_KEY = 'alphonso_settings';
 const PAID_OR_METERED_CONNECTORS = new Set([
   'chatgpt',
   'claude',
+  'qwen',
   'whatsapp',
   'notion',
   'clickup',
@@ -49,7 +50,7 @@ export function classifyConnectorRisk(connectorId, actionType = '') {
   const action = String(actionType || '').toLowerCase();
   if (id === 'youtube' || action.includes('publish') || action.includes('upload')) return 'high';
   if (id === 'telegram' || id === 'whatsapp') return 'high';
-  if (id === 'chatgpt' || id === 'claude' || id === 'notion' || id === 'clickup') return 'medium';
+  if (id === 'chatgpt' || id === 'claude' || id === 'qwen' || id === 'notion' || id === 'clickup') return 'medium';
   return 'low';
 }
 

@@ -15,8 +15,9 @@ export const CHAT_ASSISTANT_PROMPT = [
 export function shouldRouteThroughJose(text) {
   const lower = String(text || '').toLowerCase();
   return [
-    'folder', 'file', 'desktop', 'rename', 'create ', 'make ', 'move ', 'delete ',
-    'remove ', 'open ', 'save ', 'install ', 'write ', 'edit ', 'copy ', 'path',
+    'folder', 'file', 'desktop', 'rename', 'create ', 'make ', 'generate ', 'image',
+    'picture', 'visual', 'miya', 'maia', 'jose', 'agent', 'delegate', 'task',
+    'move ', 'delete ', 'remove ', 'open ', 'save ', 'install ', 'write ', 'edit ', 'copy ', 'path',
     'command', 'system'
   ].some((term) => lower.includes(term));
 }

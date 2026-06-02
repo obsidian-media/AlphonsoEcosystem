@@ -1,20 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Activity } from 'lucide-react';
-
-// Simple in-memory log — imported by services to append events
-export const agentActivityLog = [];
-
-export function appendAgentActivity({ agent, action, detail }) {
-  agentActivityLog.push({ agent, action, detail: detail || '', ts: Date.now() });
-  if (agentActivityLog.length > 200) agentActivityLog.shift();
-}
+import { listAgentActivity } from '../services/agentActivityService';
 
 export function AgentActivityLog() {
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
-    setEntries([...agentActivityLog].reverse());
-    const interval = setInterval(() => setEntries([...agentActivityLog].reverse()), 3000);
+    setEntries(listAgentActivity().reverse());
+    const interval = setInterval(() => setEntries(listAgentActivity().reverse()), 3000);
     return () => clearInterval(interval);
   }, []);
 

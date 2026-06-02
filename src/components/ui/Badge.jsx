@@ -1,3 +1,4 @@
+import React from 'react';
 export const statusColors = {
   connected: 'green',
   connecting: 'blue',

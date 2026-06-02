@@ -20,7 +20,7 @@ export const JOSE_COMMAND_SCOPE = 'jose_command_routes_v2';
 const MAX_AUTO_RETRIES = 2;
 const STALE_ROUTE_MS = 10 * 60 * 1000;
 const ZERO_COST_PAID_TERMS = [
-  'chatgpt', 'openai', 'claude', 'anthropic', 'whatsapp', 'twilio',
+  'chatgpt', 'openai', 'claude', 'anthropic', 'qwen', 'dashscope', 'alibaba', 'whatsapp', 'twilio',
   'notion', 'clickup', 'gmail', 'google drive', 'airtable'
 ];
 const ZERO_COST_FREE_TERMS = [
@@ -173,7 +173,7 @@ export function parseJoseCommand(commandText) {
   const connectorCost = classifyCommandCost(lower);
   const intents = {
     research: matchesAny(lower, ['research', 'lookup', 'docs', 'pricing', 'market', 'source', 'citation', 'latest']),
-    creative: matchesAny(lower, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative']),
+    creative: matchesAny(lower, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']),
     localExecution: matchesAny(lower, ['build', 'runtime', 'ollama', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package']),
     governanceAudit: matchesAny(lower, ['audit', 'compliance', 'policy', 'approval', 'governance', 'risk']),
     securityMonitoring: matchesAny(lower, ['security', 'secrets', 'permission', 'vulnerability', 'unsafe', 'incident']),
@@ -212,8 +212,8 @@ export function decomposeJoseCommand(parsed, policy = {}) {
       rationale: 'Research language detected. Hector should fetch and verify supplied/public sources.',
       actionType: 'research',
       riskLevel: 'low',
-      requiresApproval: true,
-      commandPreview: 'Research/source verification only. No posting, buying, file writes, or account access.',
+      requiresApproval: false,
+      commandPreview: 'Research/source verification only. Read-only analysis; external actions are disabled unless separately approved.',
       fragments: fragments.filter((fragment) => /research|lookup|docs|source|latest|pricing|market/i.test(fragment))
     });
   }
@@ -238,9 +238,9 @@ export function decomposeJoseCommand(parsed, policy = {}) {
       rationale: 'Creative language detected. Miya should produce script/storyboard/prompt package.',
       actionType: 'creative_package',
       riskLevel: 'low',
-      requiresApproval: true,
-      commandPreview: 'Creative package only. No external generation or posting.',
-      fragments: fragments.filter((fragment) => /video|script|brand|campaign|thumbnail|storyboard|prompt|creative/i.test(fragment))
+      requiresApproval: false,
+      commandPreview: 'Creative draft/package only. Local prompt/storyboard output; external generation is disabled unless separately approved.',
+      fragments: fragments.filter((fragment) => /video|script|brand|campaign|thumbnail|storyboard|prompt|creative|image|picture|visual|miya|maia/i.test(fragment))
     });
   }
 
@@ -266,8 +266,8 @@ export function decomposeJoseCommand(parsed, policy = {}) {
       rationale: 'Governance/compliance/risk language detected.',
       actionType: 'governance_audit',
       riskLevel: 'medium',
-      requiresApproval: true,
-      commandPreview: 'Audit and governance review only. No posting or execution.',
+      requiresApproval: false,
+      commandPreview: 'Audit and governance review only. Read-only analysis; external actions are disabled unless separately approved.',
       fragments: fragments.filter((fragment) => /audit|compliance|policy|approval|governance|risk/i.test(fragment))
     });
   }
@@ -279,8 +279,8 @@ export function decomposeJoseCommand(parsed, policy = {}) {
       rationale: 'Security/permission language detected.',
       actionType: 'security_monitor',
       riskLevel: 'medium',
-      requiresApproval: true,
-      commandPreview: 'Safety monitoring only. No destructive action.',
+      requiresApproval: false,
+      commandPreview: 'Safety monitoring only. Read-only review; destructive actions are disabled unless separately approved.',
       fragments: fragments.filter((fragment) => /security|secrets|permission|vulnerability|unsafe|incident/i.test(fragment))
     });
   }
@@ -305,7 +305,7 @@ export function decomposeJoseCommand(parsed, policy = {}) {
       rationale: 'Opportunity/priority language detected.',
       actionType: 'opportunity_analysis',
       riskLevel: 'low',
-      requiresApproval: true,
+      requiresApproval: false,
       commandPreview: 'Opportunity scoring only. No execution.',
       fragments: fragments.filter((fragment) => /opportunity|priority|score|roi|value|timing/i.test(fragment))
     });
@@ -319,7 +319,7 @@ export function decomposeJoseCommand(parsed, policy = {}) {
       actionType: 'distribution_execution',
       riskLevel: 'high',
       requiresApproval: true,
-      commandPreview: 'Distribution requires approval-gated external execution.',
+      commandPreview: 'Distribution handoff requires Shayan approval before connector execution.',
       fragments: fragments.filter((fragment) => /distribute|schedule|engage|community|publish/i.test(fragment))
     });
   }
@@ -621,7 +621,7 @@ export function createAgentReportToJose({
     source: 'jose-command-router',
     confidence: contractValidation.valid ? TRUST_STATES.TEMPORARY : TRUST_STATES.FAILED,
     verificationState: contractValidation.valid ? TRUST_STATES.UNVERIFIED : TRUST_STATES.FAILED,
-    requiresApproval: true,
+    requiresApproval: false,
     riskLevel: 'low',
     actionType: 'agent_report',
     commandPreview: 'No command execution. Report back to Jose only.',
@@ -765,6 +765,8 @@ export function createJoseReportToShayan(
         assignmentStatus: assignment.status,
         reportStatus: report?.payload?.resultState || 'not_reported',
         reportSummary: report?.payload?.summary || 'No agent report received yet.',
+        artifacts: Array.isArray(report?.payload?.artifacts) ? report.payload.artifacts : [],
+        resultUrl: report?.payload?.resultUrl || null,
         packetId: assignment.packetId,
         reportPacketId: report?.id || null
       };

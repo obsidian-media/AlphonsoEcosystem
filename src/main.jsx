@@ -22,6 +22,13 @@ function recordCrash(type, message, stack) {
 window.addEventListener('error', (e) => recordCrash('uncaught', e.message, e.error?.stack || ''));
 window.addEventListener('unhandledrejection', (e) => recordCrash('promise', String(e.reason), e.reason?.stack || ''));
 
+function BootReadySignal() {
+  React.useEffect(() => {
+    window.__ALPHONSO_BOOT_READY__?.();
+  }, []);
+  return null;
+}
+
 class BootBoundary extends React.Component {
   constructor(props) {
     super(props)
@@ -77,6 +84,7 @@ root.render(
           <App />
         </ToastProvider>
       )}
+      <BootReadySignal />
     </BootBoundary>
   </React.StrictMode>,
 )

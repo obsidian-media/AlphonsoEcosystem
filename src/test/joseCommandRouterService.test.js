@@ -97,6 +97,15 @@ describe('decomposeJoseCommand — agent assignment routing', () => {
     expect(assignments.some((a) => a.agent === 'miya')).toBe(true);
   });
 
+  it('assigns Miya for Maia/image generation requests without Shayan approval for safe drafting', () => {
+    const parsed = parseJoseCommand('tell maia to generate an image for me');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const miya = assignments.find((a) => a.agent === 'miya');
+    expect(miya).toBeTruthy();
+    expect(miya.requiresApproval).toBe(false);
+    expect(miya.riskLevel).toBe('low');
+  });
+
   it('assigns Alphonso for local execution commands', () => {
     const parsed = parseJoseCommand('verify ollama runtime and run build tests');
     const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });

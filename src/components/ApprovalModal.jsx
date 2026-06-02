@@ -1,3 +1,4 @@
+import React from 'react';
 import { AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
 
 const RISK_BADGE = {
@@ -67,6 +68,7 @@ function inferConnector(label) {
   if (lower.includes('whatsapp')) return 'WhatsApp';
   if (lower.includes('youtube')) return 'YouTube';
   if (lower.includes('claude')) return 'Claude';
+  if (lower.includes('qwen') || lower.includes('dashscope') || lower.includes('alibaba')) return 'Qwen';
   if (lower.includes('chatgpt') || lower.includes('openai')) return 'ChatGPT';
   if (lower.includes('notion')) return 'Notion';
   if (lower.includes('clickup')) return 'ClickUp';

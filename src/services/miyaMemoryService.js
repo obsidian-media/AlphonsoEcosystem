@@ -1,3 +1,4 @@
+import { appendAgentActivity } from './agentActivityService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 
@@ -48,6 +49,7 @@ export function pushMiyaMemory({
   verificationState = TRUST_STATES.UNVERIFIED,
   expiresAt = null
 }) {
+  appendAgentActivity({ agent: 'miya', action: 'memory push', detail: (title || category).slice(0, 60) });
   const rows = readRows();
   const item = {
     id: `miya-mem-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,

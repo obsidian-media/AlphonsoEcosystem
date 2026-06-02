@@ -1,4 +1,4 @@
-import { appendAgentActivity } from '../components/AgentActivityLog';
+import { appendAgentActivity } from './agentActivityService';
 import {
   AGENTS,
   approvePacket,
@@ -15,6 +15,7 @@ import {
 } from './joseCommandRouterService';
 import { pushMemoryItem } from './memoryService';
 import { pushMiyaMemory } from './miyaMemoryService';
+import { listMiyaComfyWorkflowPresets } from './miyaComfyWorkflowPresetService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { runHectorLiveResearch, createResearchDraft } from './hectorResearchService';
 import { TRUST_STATES, timestampMs } from './trustModel';
@@ -247,7 +248,21 @@ async function executeMiyaAssignment(commandText, assignment) {
     summary: `Miya generated a structured creative package for "${creativePackage.title}".`,
     resultState: 'completed',
     resultUrl: null,
-    artifacts: [creativePackage],
+    artifacts: [
+      creativePackage,
+      {
+        type: 'comfyui_local_generation_options',
+        connectorId: 'comfyui_video',
+        endpoint: 'http://127.0.0.1:8188',
+        presets: listMiyaComfyWorkflowPresets().map((preset) => ({
+          id: preset.id,
+          name: preset.name,
+          mediaType: preset.mediaType,
+          status: preset.status,
+          description: preset.description
+        }))
+      }
+    ],
     sources: [],
     contractAction: assignment?.actionType || 'creative_package'
   };
@@ -273,12 +288,13 @@ async function executeHectorAssignment(commandText, assignment) {
     riskLevel: assignment?.riskLevel || 'medium'
   });
   const report = await runHectorLiveResearch(draft.id);
+  const sourceRefs = Array.isArray(report?.sources) ? report.sources.map((item) => item?.url).filter(Boolean) : [];
   return {
     summary: report?.summary || 'Hector research run completed.',
     resultState: report?.confidenceLevel === TRUST_STATES.VERIFIED ? 'verified' : 'pending_review',
     resultUrl: null,
     artifacts: [{ type: 'hector_report', reportId: report?.id || draft.id }],
-    sources: Array.isArray(report?.sources) ? report.sources.map((item) => item?.url).filter(Boolean) : [],
+    sources: sourceRefs.length ? sourceRefs : [`hector_report:${report?.id || draft.id}`],
     contractAction: assignment?.actionType || 'research'
   };
 }

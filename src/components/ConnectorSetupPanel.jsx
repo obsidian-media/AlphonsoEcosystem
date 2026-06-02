@@ -14,6 +14,7 @@ import {
   sendWhatsAppConnectorMessage,
   sendChatGptConnectorMessage,
   sendClaudeConnectorMessage,
+  sendQwenConnectorMessage,
   sendNotionConnectorEntry,
   sendClickUpConnectorTask,
   uploadYouTubeConnectorVideo,
@@ -156,7 +157,7 @@ export function ConnectorSetupPanel() {
   };
 
   const sendOutbound = async () => {
-    const needsTarget = !['chatgpt', 'claude', 'youtube'].includes(connectorId);
+    const needsTarget = !['chatgpt', 'claude', 'qwen', 'youtube'].includes(connectorId);
     if ((needsTarget && !outboundTarget.trim()) || !outboundText.trim()) {
       setNotice(needsTarget ? 'Outbound target and message are required.' : 'Outbound message is required.');
       return;
@@ -179,6 +180,10 @@ export function ConnectorSetupPanel() {
         });
       } else if (connectorId === 'claude') {
         result = await sendClaudeConnectorMessage(outboundText.trim(), {
+          approved: explicitApproval
+        });
+      } else if (connectorId === 'qwen') {
+        result = await sendQwenConnectorMessage(outboundText.trim(), {
           approved: explicitApproval
         });
       } else if (connectorId === 'notion') {
@@ -212,7 +217,7 @@ export function ConnectorSetupPanel() {
           approved: explicitApproval
         });
       } else {
-        setNotice('Outbound send is supported for Telegram, WhatsApp, YouTube, ChatGPT, Claude, Notion, and ClickUp. Use Miya Studio for local media generation.');
+        setNotice('Outbound send is supported for Telegram, WhatsApp, YouTube, ChatGPT, Claude, Qwen, Notion, and ClickUp. Use Miya Studio for local media generation.');
         return;
       }
 
@@ -223,6 +228,8 @@ export function ConnectorSetupPanel() {
           setNotice(`ChatGPT connector success. Response id: ${result.externalId || 'n/a'}`);
         } else if (connectorId === 'claude') {
           setNotice(`Claude connector success. Response id: ${result.externalId || 'n/a'}`);
+        } else if (connectorId === 'qwen') {
+          setNotice(`Qwen connector success. Response id: ${result.externalId || 'n/a'}`);
         } else if (connectorId === 'notion') {
           setNotice(`Notion write success. Page id: ${result.externalId || 'n/a'}`);
         } else if (connectorId === 'clickup') {
@@ -339,7 +346,7 @@ export function ConnectorSetupPanel() {
       </div>
 
       <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/80">
-        External messaging remains supervised. Telegram live poll/send and WhatsApp official send are wired through Jose routing and connector audit logs. WhatsApp inbound polling is available for Twilio provider; Cloud API inbound still requires webhook wiring. YouTube upload, Notion, ClickUp, ChatGPT, and Claude outbound actions are wired with env-based auth. Slack, Discord, and custom webhook connections are managed in the tool connection registry below. Miya Studio wires local SD WebUI and ComfyUI media connectors plus a backend-backed Runway cloud draft path. Risky external actions still require approval.
+        External messaging remains supervised. Telegram live poll/send and WhatsApp official send are wired through Jose routing and connector audit logs. WhatsApp inbound polling is available for Twilio provider; Cloud API inbound still requires webhook wiring. YouTube upload, Notion, ClickUp, ChatGPT, Claude, and Qwen outbound actions are wired with env-based auth. Slack, Discord, and custom webhook connections are managed in the tool connection registry below. Miya Studio wires local SD WebUI and ComfyUI media connectors plus a backend-backed Runway cloud draft path. Risky external actions still require approval.
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[11rem_1fr_12rem]">

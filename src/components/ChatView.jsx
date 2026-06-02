@@ -1,3 +1,4 @@
+import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, Copy, Download, History, Paperclip, Search, Send, Square, Trash2, X } from 'lucide-react';
 import { getStorage, setStorage } from '../lib/appStorage';
@@ -10,6 +11,7 @@ import {
   generateOllamaChatStream
 } from '../lib/ollama';
 import { ModelSwitcher } from './ModelSwitcher';
+import { MarkdownMessage } from './MarkdownMessage';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -132,14 +134,39 @@ export function ChatView({
         const urlLine = shayanReport?.resultUrl ? `\nVerified URL: ${shayanReport.resultUrl}` : '\nVerified URL: not available yet.';
         const executionLine = `\nExecuted: ${result?.executedCount || 0} | Pending approval: ${result?.pendingApprovalCount || 0} | Failed: ${result?.failedCount || 0}`;
         const commandLine = `\nCommand ID: ${result?.commandId || 'n/a'}`;
+        const assignmentLines = Array.isArray(shayanReport?.assignmentSummaries)
+          ? shayanReport.assignmentSummaries.map((item) => {
+            const artifacts = Array.isArray(item.artifacts) ? item.artifacts : [];
+            const artifactText = artifacts.map((artifact) => {
+              if (!artifact || typeof artifact !== 'object') return String(artifact);
+              if (artifact.script || artifact.prompts || artifact.scenes) {
+                const prompts = Array.isArray(artifact.prompts) ? artifact.prompts.map((prompt) => `    - ${prompt}`).join('\n') : '';
+                const scenes = Array.isArray(artifact.scenes) ? artifact.scenes.map((scene) => `    - ${scene}`).join('\n') : '';
+                return [
+                  artifact.title ? `  Output: ${artifact.title}` : null,
+                  artifact.hook ? `  Hook: ${artifact.hook}` : null,
+                  prompts ? `  Prompts:\n${prompts}` : null,
+                  scenes ? `  Scenes:\n${scenes}` : null
+                ].filter(Boolean).join('\n');
+              }
+              return `  Artifact: ${artifact.type || artifact.status || JSON.stringify(artifact)}`;
+            }).filter(Boolean).join('\n');
+            return [
+              `- ${item.agent}: ${item.reportStatus}`,
+              `  ${item.reportSummary}`,
+              artifactText
+            ].filter(Boolean).join('\n');
+          }).join('\n')
+          : '';
+        const outputLine = assignmentLines ? `\n\nAgent Outputs\n${assignmentLines}` : '';
         const hintLine = (result?.pendingApprovalCount || 0) > 0
-          ? '\nNext step: open Jose workspace and approve high-risk external tasks.'
-          : '\nNext step: review Jose receipts in Orchestrator view.';
+          ? '\nNext step: approve only the high-risk external/destructive tasks. Safe planning/delegation has already run.'
+          : '\nNext step: review outputs here or Jose receipts in Orchestrator view.';
 
         setMessages((current) => [...current, {
           id: nextMsgId(),
           role: 'assistant',
-          content: `Jose Report\n\n${summary}${urlLine}${executionLine}${commandLine}${hintLine}`
+          content: `Jose Report\n\n${summary}${urlLine}${executionLine}${commandLine}${outputLine}\n${hintLine}`
         }]);
         onJoseExecutionState?.(
           (result?.pendingApprovalCount || 0) > 0 ? 'approving' : 'task_complete',
@@ -175,8 +202,11 @@ export function ChatView({
       return;
     }
 
-    // Capture conversation history before state updates (React batches setMessages)
-    const historySnapshot = messages.filter((m) => !m.isError && m.role && m.content);
+    // Capture conversation history before state updates (React batches setMessages).
+    // Cap at 20 most-recent non-error turns to keep the Ollama context window bounded.
+    const historySnapshot = messages
+      .filter((m) => !m.isError && m.role && m.content)
+      .slice(-20);
 
     const userMessage = { id: nextMsgId(), role: 'user', content: cleanInput };
     setMessages((current) => [...current, userMessage]);
@@ -343,8 +373,8 @@ export function ChatView({
             <div className={`flex flex-col gap-1.5 ${message.role === 'user' ? 'items-end' : 'items-start'} max-w-[90%]`}>
               {message.role === 'assistant' ? (
                 <div className="relative group">
-                  <div className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap border shadow-sm bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20' : 'text-zinc-300'}`}>
-                    {message.content}
+                  <div className={`px-4 py-3 rounded-2xl border shadow-sm bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20 text-[13px] leading-relaxed whitespace-pre-wrap' : 'text-zinc-300'}`}>
+                    {message.isError ? message.content : <MarkdownMessage content={message.content} />}
                   </div>
                   <button
                     onClick={() => {

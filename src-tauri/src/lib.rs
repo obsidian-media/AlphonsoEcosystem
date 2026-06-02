@@ -2400,6 +2400,90 @@ async fn connector_send_claude(
 }
 
 #[tauri::command]
+async fn connector_send_qwen(
+  http_client: tauri::State<'_, reqwest::Client>,
+  text: String,
+) -> Result<ConnectorSendProof, String> {
+  let sent_at_ms = now_ms();
+  let key = std::env::var("DASHSCOPE_API_KEY").unwrap_or_default();
+  if key.trim().is_empty() {
+    return Ok(ConnectorSendProof {
+      connector_id: "qwen".to_string(),
+      ok: false,
+      target: "qwen".to_string(),
+      external_id: None,
+      sent_at_ms,
+      trust: "unverified".to_string(),
+      error: Some("DASHSCOPE_API_KEY is not configured.".to_string()),
+    });
+  }
+
+  let clean_text = text.trim().to_string();
+  if clean_text.is_empty() {
+    return Ok(ConnectorSendProof {
+      connector_id: "qwen".to_string(),
+      ok: false,
+      target: "qwen".to_string(),
+      external_id: None,
+      sent_at_ms,
+      trust: "failed".to_string(),
+      error: Some("text is required.".to_string()),
+    });
+  }
+
+  let model = std::env::var("QWEN_CONNECTOR_MODEL").unwrap_or_else(|_| "qwen-plus".to_string());
+  let base_url = std::env::var("QWEN_CONNECTOR_BASE_URL")
+    .unwrap_or_else(|_| "https://dashscope-intl.aliyuncs.com/compatible-mode/v1".to_string())
+    .trim_end_matches('/')
+    .to_string();
+  let endpoint = format!("{}/chat/completions", base_url);
+  let client = http_client.inner();
+  let payload = serde_json::json!({
+    "model": model,
+    "messages": [
+      { "role": "user", "content": clean_text }
+    ]
+  });
+  let response = client
+    .post(endpoint)
+    .bearer_auth(key.trim())
+    .header("Content-Type", "application/json")
+    .json(&payload)
+    .send()
+    .await
+    .map_err(|error| error.to_string())?;
+  let status = response.status();
+  let body: Value = response.json().await.map_err(|error| error.to_string())?;
+  if !status.is_success() {
+    let message = body
+      .get("error")
+      .and_then(|value| value.get("message"))
+      .and_then(|value| value.as_str())
+      .or_else(|| body.get("message").and_then(|value| value.as_str()))
+      .unwrap_or("Qwen chat completions API call failed.");
+    return Ok(ConnectorSendProof {
+      connector_id: "qwen".to_string(),
+      ok: false,
+      target: model,
+      external_id: None,
+      sent_at_ms,
+      trust: "failed".to_string(),
+      error: Some(message.to_string()),
+    });
+  }
+  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
+  Ok(ConnectorSendProof {
+    connector_id: "qwen".to_string(),
+    ok: true,
+    target: model,
+    external_id,
+    sent_at_ms,
+    trust: "verified".to_string(),
+    error: None,
+  })
+}
+
+#[tauri::command]
 async fn connector_upload_youtube(
   file_path: String,
   title: String,
@@ -6978,6 +7062,7 @@ pub fn run() {
       connector_send_whatsapp,
       connector_send_chatgpt,
       connector_send_claude,
+      connector_send_qwen,
       connector_send_notion,
       connector_send_clickup,
       connector_upload_youtube,

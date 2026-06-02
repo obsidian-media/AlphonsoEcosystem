@@ -1,3 +1,4 @@
+import { appendAgentActivity } from './agentActivityService';
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
@@ -631,6 +632,7 @@ export async function runHectorLiveResearch(reportId, onProgress) {
   if (!report) {
     throw new Error('Hector report not found.');
   }
+  appendAgentActivity({ agent: 'hector', action: 'research', detail: (report.researchQuestion || '').slice(0, 80) });
   let workingReport = report;
   if (!Array.isArray(workingReport.sources) || workingReport.sources.length === 0) {
     const discoveryStart = updateReport(reportId, {

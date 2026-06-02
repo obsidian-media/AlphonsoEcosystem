@@ -6,6 +6,8 @@ import { emit, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useVoiceInput } from './hooks/useVoiceInput';
 import { openCoachWindow, closeCoachWindow } from './services/coachModeService';
+import { listCoachSkills } from './services/coachSkillService';
+import { buildDemoSlotIntervention } from './services/coachInterventionService';
 import { checkAppUpdate, notifyUpdateAvailable } from './services/appUpdateService';
 import { hydrateMemoryFromDurable, listMemoryItems, pushMemoryItem } from './services/memoryService';
 import { appendPluginAuditEntry, discoverDiskPluginManifests, executePluginToolRun, listPluginAudit, listPlugins, togglePlugin, validatePluginManifestDisk } from './services/pluginRegistryService';
@@ -208,6 +210,76 @@ function CoachMissionBadge({ agent, state, message }) {
   );
 }
 
+function CoachInterventionCard({ intervention, onDismiss, onDemo }) {
+  const level = intervention?.level || 'quiet';
+  const tone = level === 'hard'
+    ? 'border-red-300/40 bg-red-500/15 text-red-50 shadow-[0_0_40px_rgba(239,68,68,0.18)]'
+    : level === 'firm'
+      ? 'border-amber-300/35 bg-amber-500/12 text-amber-50 shadow-[0_0_34px_rgba(245,158,11,0.14)]'
+      : 'border-cyan-300/25 bg-cyan-500/10 text-cyan-50';
+
+  if (!intervention) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
+        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Session guard</div>
+        <div className="mt-2 text-sm font-semibold text-zinc-200">No active intervention.</div>
+        <div className="mt-1 text-xs leading-relaxed text-zinc-400">Local bridge is ready for protective session events.</div>
+        {onDemo && (
+          <button
+            type="button"
+            onClick={onDemo}
+            className="mt-3 rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/20"
+          >
+            Demo check-in
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`rounded-2xl border p-4 ${tone}`} role="alert">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Local Coach Intervention</div>
+          <div className="mt-1 text-lg font-black">{intervention.title}</div>
+        </div>
+        <div className="rounded-full border border-white/15 px-2 py-1 text-[10px] font-bold uppercase tracking-widest">{level}</div>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed">{intervention.message}</p>
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px] text-white/75">
+        <div className="rounded-lg bg-black/20 px-2 py-1">Spins<br /><b>{intervention.metrics?.spinCount || 0}</b></div>
+        <div className="rounded-lg bg-black/20 px-2 py-1">Net<br /><b>{intervention.metrics?.netResult || 0}</b></div>
+        <div className="rounded-lg bg-black/20 px-2 py-1">Stretch<br /><b>{intervention.metrics?.longestLosingStretch || 0}</b></div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className="rounded-lg bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-white">Pause 60s</button>
+        <button type="button" className="rounded-lg border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/90 hover:bg-white/10">End session</button>
+        <button type="button" onClick={onDismiss} className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10">Continue</button>
+      </div>
+      <div className="mt-2 text-[10px] text-white/45">Private/local-only. No upload, no prediction advice.</div>
+    </div>
+  );
+}
+
+function CoachSkillGrid({ skills, compact = false }) {
+  return (
+    <div className={compact ? 'grid grid-cols-2 gap-1.5' : 'grid grid-cols-2 gap-2'}>
+      {skills.map((skill) => (
+        <button
+          key={skill.id}
+          type="button"
+          title={skill.purpose}
+          className={`rounded-xl border border-white/10 bg-zinc-950/45 text-left transition hover:border-cyan-300/30 hover:bg-cyan-500/10 ${compact ? 'px-2 py-1.5' : 'px-3 py-2'}`}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100">{skill.label}</div>
+          {!compact && <div className="mt-1 text-[11px] leading-relaxed text-zinc-400">{skill.purpose}</div>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ViewLoadingState({ activeTab }) {
   return (
     <div className="flex h-full items-center justify-center px-6 py-10">
@@ -322,6 +394,7 @@ export default function App() {
   const [workspaceSymbolIndex, setWorkspaceSymbolIndex] = useState(null);
   const [screenObserverState, setScreenObserverState] = useState(() => getScreenObserverState());
   const [screenObserverLogs, setScreenObserverLogs] = useState(() => getScreenObserverLogs());
+  const [coachIntervention, setCoachIntervention] = useState(null);
   const [lastPluginToolRun, setLastPluginToolRun] = useState(null);
   const [lastManifestValidation, setLastManifestValidation] = useState(null);
   const [lastOcrAdapterRun, setLastOcrAdapterRun] = useState(null);
@@ -353,7 +426,7 @@ export default function App() {
   const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
   const [approvalPending, setApprovalPending] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem('alphonso_onboarding_complete')
+    () => !getStorage('alphonso_onboarding_complete_v1', false)
   );
   const approvalResolveRef = useRef(null);
   const ollamaCheckRunRef = useRef(0);
@@ -1925,7 +1998,6 @@ export default function App() {
   };
 
   const handleToggleCoachMode = async () => {
-    if (!await requestApproval(`${coachMode ? 'Close' : 'Open'} coach mode window`)) return;
     if (coachMode) {
       await closeCoachWindow();
       setCoachMode(false);
@@ -1944,7 +2016,6 @@ export default function App() {
   };
 
   const minimizeToCoach = async () => {
-    if (!await requestApproval('Minimize to coach mode')) return;
     try {
       await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
       setCoachMode(true);
@@ -1955,7 +2026,6 @@ export default function App() {
   };
 
   const openAlphonsoDesktopCard = async () => {
-    if (!await requestApproval('Open Alphonso desktop card')) return;
     try {
       await openCoachWindow(coachAlwaysOnTop, 'alphonso');
       setCoachMode(true);
@@ -2021,6 +2091,8 @@ export default function App() {
             state: companionStateFromVoice(voice.voiceStatus),
             message: coachMessageFromVoice(voice.voiceStatus)
           };
+    const coachSkills = listCoachSkills();
+    const showDemoIntervention = () => setCoachIntervention(buildDemoSlotIntervention());
     const cornerClass = {
       'bottom-right': 'items-end justify-end',
       'bottom-left': 'items-end justify-start',
@@ -2051,7 +2123,9 @@ export default function App() {
 
           {coachMiniMode ? (
             <div className="space-y-3">
+              <CoachInterventionCard intervention={coachIntervention} onDismiss={() => setCoachIntervention(null)} onDemo={showDemoIntervention} />
               <CoachMissionBadge agent={coachAgent} state={coachState.state} message={coachState.message} />
+              <CoachSkillGrid skills={coachSkills.slice(0, 4)} compact />
               <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-2">
                 <Suspense fallback={null}>
                   <MicrophoneStatus voiceStatus={voice.voiceStatus} />
@@ -2059,16 +2133,27 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3 text-xs text-zinc-400">Loading agent dock...</div>}>
-              <AgentDock
-                companions={[
-                  { agentId: 'alphonso', name: 'Alphonso', state: companionStateFromVoice(voice.voiceStatus), message: coachMessageFromVoice(voice.voiceStatus) },
-                  { agentId: 'hector', name: 'Hector', state: hectorCompanionState.state, message: hectorCompanionState.message },
-                  { agentId: 'jose', name: 'Jose', state: joseCompanionState.state, message: joseCompanionState.message },
-                  { agentId: 'miya', name: 'Miya', state: miyaCompanionState.state, message: miyaCompanionState.message }
-                ]}
-              />
-            </Suspense>
+            <div className="grid h-[calc(100%-2.5rem)] grid-cols-[minmax(0,1fr)_17rem] gap-4">
+              <div className="space-y-4 overflow-auto pr-1">
+                <CoachInterventionCard intervention={coachIntervention} onDismiss={() => setCoachIntervention(null)} onDemo={showDemoIntervention} />
+                <div className="rounded-2xl border border-cyan-300/15 bg-cyan-500/5 p-4">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">Coach skills</div>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                    Coach Mode is for guidance, focus, handoffs, rehearsal, and safety checks — not just agent status.
+                  </p>
+                </div>
+                <CoachSkillGrid skills={coachSkills} />
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
+                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Agent status</div>
+                <div className="space-y-2">
+                  <CoachMissionBadge agent="alphonso" state={companionStateFromVoice(voice.voiceStatus)} message={coachMessageFromVoice(voice.voiceStatus)} />
+                  <CoachMissionBadge agent="hector" state={hectorCompanionState.state} message={hectorCompanionState.message} />
+                  <CoachMissionBadge agent="jose" state={joseCompanionState.state} message={joseCompanionState.message} />
+                  <CoachMissionBadge agent="miya" state={miyaCompanionState.state} message={miyaCompanionState.message} />
+                </div>
+              </div>
+            </div>
           )}
           {coachMiniMode && (
             <div className="mt-2 text-[10px] text-zinc-500">
@@ -2083,10 +2168,17 @@ export default function App() {
     );
   }
 
-  if (showOnboarding && !isCoachWindow) {
+  if (showOnboarding && !settings.selectedModel && !isCoachWindow) {
     return (
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
-        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+        <OnboardingWizard
+          onComplete={(chosenModel) => {
+            if (chosenModel) {
+              setSettings((current) => ({ ...current, selectedModel: chosenModel }));
+            }
+            setShowOnboarding(false);
+          }}
+        />
       </Suspense>
     );
   }

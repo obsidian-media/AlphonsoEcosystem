@@ -1,6 +1,6 @@
 import { createApprovalRequest, getApprovalReason } from '../approval/approvalService';
 import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
-import { sendChatGptConnectorMessage, sendClaudeConnectorMessage } from '../connectorRegistryService';
+import { sendChatGptConnectorMessage, sendClaudeConnectorMessage, sendQwenConnectorMessage } from '../connectorRegistryService';
 import { TRUST_STATES, timestampMs } from '../trustModel';
 
 const PROVIDERS = {
@@ -13,13 +13,19 @@ const PROVIDERS = {
     connectorId: 'claude',
     actionType: 'paid_connector_send',
     runner: (input, options) => sendClaudeConnectorMessage(input.prompt, options)
+  },
+  qwen: {
+    connectorId: 'qwen',
+    actionType: 'paid_connector_send',
+    runner: (input, options) => sendQwenConnectorMessage(input.prompt, options)
   }
 };
 
 export function listOptionalProviderAdapters() {
   return [
-    { id: 'chatgpt', label: 'ChatGPT Adapter', setupStatus: 'setup_required' },
-    { id: 'claude', label: 'Claude Adapter', setupStatus: 'setup_required' }
+    { id: 'chatgpt', label: 'ChatGPT Adapter', setupStatus: 'placeholder' },
+    { id: 'claude', label: 'Claude Adapter', setupStatus: 'placeholder' },
+    { id: 'qwen', label: 'Qwen Adapter', setupStatus: 'configured' }
   ];
 }
 

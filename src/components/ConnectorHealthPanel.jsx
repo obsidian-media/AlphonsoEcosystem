@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import {
   Bot,
@@ -28,6 +29,7 @@ const CONNECTOR_ICONS = {
   youtube: Youtube,
   claude: Bot,
   chatgpt: Bot,
+  qwen: Bot,
   notion: FileText,
   clickup: PenLine,
   sd_webui: Image,
@@ -43,6 +45,7 @@ const CONNECTOR_LABELS = {
   youtube: 'YouTube',
   claude: 'Claude',
   chatgpt: 'ChatGPT',
+  qwen: 'Qwen',
   notion: 'Notion',
   clickup: 'ClickUp',
   sd_webui: 'SD WebUI',
@@ -58,6 +61,7 @@ const CONNECTOR_LABELS = {
  *   'live'           — configured + env verified + last test verified
  *   'missing_config' — has required env keys but none are present
  *   'foundation_only'— local-only connector with no env requirements
+ *   'placeholder'    — visible but intentionally inactive placeholder connector
  *   'disabled'       — everything else (not_configured, unknown, etc.)
  */
 function deriveStatus(connector) {
@@ -67,6 +71,11 @@ function deriveStatus(connector) {
   const envPresence = connector.envPresence || {};
 
   if (status === 'foundation_only') return 'foundation_only';
+
+  if (['chatgpt', 'claude'].includes(connector.id) && requiredEnv.length > 0) {
+    const anyPresent = requiredEnv.some((k) => Boolean(envPresence[k]));
+    if (!anyPresent) return 'placeholder';
+  }
 
   if (status === 'configured') {
     const allEnvPresent = requiredEnv.length === 0 || requiredEnv.every((k) => Boolean(envPresence[k]));
@@ -100,6 +109,11 @@ const STATUS_BADGE = {
     badge: 'border-slate-500/30 bg-slate-500/10 text-slate-300',
     label: 'Local Only'
   },
+  placeholder: {
+    dot: 'bg-zinc-500',
+    badge: 'border-zinc-500/30 bg-zinc-700/20 text-zinc-300',
+    label: 'Placeholder'
+  },
   disabled: {
     dot: 'bg-zinc-600',
     badge: 'border-zinc-600/30 bg-zinc-800/40 text-zinc-500',
@@ -114,6 +128,7 @@ const CONNECTOR_VITE_ENV_KEYS = {
   youtube: 'VITE_YOUTUBE_CLIENT_ID',
   claude: 'VITE_ANTHROPIC_API_KEY',
   chatgpt: 'VITE_OPENAI_API_KEY',
+  qwen: 'VITE_DASHSCOPE_API_KEY',
   notion: 'VITE_NOTION_API_KEY',
   clickup: 'VITE_CLICKUP_API_KEY',
   runway: 'VITE_RUNWAYML_API_SECRET'
@@ -200,7 +215,7 @@ function ConnectorCard({ connector, zeroCostMode }) {
   const displayName = CONNECTOR_LABELS[connector.id] || connector.name;
   const requiredEnv = Array.isArray(connector.requiredEnv) ? connector.requiredEnv : [];
   const envPresence = connector.envPresence || {};
-  const zeroCostBlocking = zeroCostMode && ['claude', 'chatgpt', 'runway', 'youtube'].includes(connector.id);
+  const zeroCostBlocking = zeroCostMode && ['qwen', 'runway', 'youtube'].includes(connector.id);
 
   return (
     <div className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${

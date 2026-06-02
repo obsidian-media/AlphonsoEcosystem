@@ -83,12 +83,17 @@ function markAutostartFlag(value) {
   window.__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__ = Boolean(value);
 }
 
+function isTauriRuntime() {
+  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__?.invoke);
+}
+
 export function isNativeSelfDevelopmentAutostartRunning() {
   return Boolean(window.__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__);
 }
 
 export async function startNativeSelfDevelopmentAutostart() {
   if (typeof window === 'undefined') return { started: false, reason: 'window_unavailable' };
+  if (!isTauriRuntime()) return { started: false, reason: 'tauri_runtime_unavailable' };
   if (isNativeSelfDevelopmentAutostartRunning()) return { started: false, reason: 'already_running' };
   const rc0ProofValue = await readRuntimeEnvValue('ALPHONSO_RC0_PROOF');
   if (rc0ProofValue === '1') {

@@ -130,7 +130,7 @@ function buildConnectorRows({ connectors = [], authProfiles = {}, toolConnection
     const localRuntime = ['sd_webui', 'comfyui_video'].includes(connector.id)
       ? 'foundation_only'
       : null;
-    const authRequired = ['telegram', 'whatsapp', 'youtube', 'notion', 'clickup', 'chatgpt', 'claude', 'runway'].includes(connector.id);
+    const authRequired = ['telegram', 'whatsapp', 'youtube', 'notion', 'clickup', 'chatgpt', 'claude', 'qwen', 'runway'].includes(connector.id);
     const authState = authRequired
       ? (auth.enabled && (Array.isArray(auth.allowlist) ? auth.allowlist.length > 0 : true) ? 'ready' : 'setup_required')
       : 'ready';
@@ -183,7 +183,7 @@ function buildConnectorRows({ connectors = [], authProfiles = {}, toolConnection
       lastTestResult: latestAudit?.action || localRuntimeHealth?.trust || proof.lastTestStatus || proof.status || 'unknown',
       lastTestAtMs: connector.lastTestAtMs || proof.checkedAtMs || latestAudit?.timestampMs || null,
       receiptStatus: latestAudit?.action ? 'recorded' : 'unknown',
-      zeroCostPolicy: connector.id === 'chatgpt' || connector.id === 'claude' ? 'blocked' : 'local_or_free'
+      zeroCostPolicy: connector.id === 'chatgpt' || connector.id === 'claude' || connector.id === 'qwen' ? 'blocked' : 'local_or_free'
     });
   });
 

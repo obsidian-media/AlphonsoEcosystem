@@ -43,7 +43,7 @@ export function evaluateWorkflowGovernance(workflow, options = {}) {
   const requiresApproval = normalizedApprovals.length > 0;
   const riskLevel = String(workflow?.riskLevel || 'medium').toLowerCase();
   const zeroCostMode = Boolean(options?.zeroCostMode);
-  const includesPaidPath = requiredConnectors.some((name) => ['chatgpt', 'claude', 'paid_provider'].includes(name));
+  const includesPaidPath = requiredConnectors.some((name) => ['chatgpt', 'claude', 'qwen', 'paid_provider'].includes(name));
   const blockedByZeroCost = zeroCostMode && includesPaidPath;
 
   const setupRequired = unavailableConnectors.length > 0;

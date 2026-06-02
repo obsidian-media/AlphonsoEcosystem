@@ -1,60 +1,28 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight, CheckCircle, Download, Sparkles, Terminal, Zap } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowRight, CheckCircle, RefreshCw, Sparkles, Zap } from 'lucide-react';
+import { checkOllama, fetchOllamaModels } from '../lib/ollama';
+import { setStorage } from '../lib/appStorage';
 
-const STEPS = [
-  {
-    id: 'welcome',
-    title: 'Welcome to Alphonso',
-    subtitle: 'Local-first AI assistant. Nothing leaves your machine.',
-    icon: Sparkles,
-    iconColor: 'text-indigo-400',
-    iconBg: 'bg-indigo-500/10 border-indigo-500/20'
-  },
-  {
-    id: 'ollama',
-    title: 'Install Ollama',
-    subtitle: 'Alphonso runs AI models locally through Ollama — no cloud required.',
-    icon: Download,
-    iconColor: 'text-cyan-400',
-    iconBg: 'bg-cyan-500/10 border-cyan-500/20'
-  },
-  {
-    id: 'model',
-    title: 'Pull a model',
-    subtitle: 'Choose a local model to power your AI assistant.',
-    icon: Terminal,
-    iconColor: 'text-emerald-400',
-    iconBg: 'bg-emerald-500/10 border-emerald-500/20'
-  },
-  {
-    id: 'ready',
-    title: "You're ready",
-    subtitle: 'Alphonso is configured and ready to go.',
-    icon: Zap,
-    iconColor: 'text-amber-400',
-    iconBg: 'bg-amber-500/10 border-amber-500/20'
-  }
-];
+const DEFAULT_ENDPOINT = 'http://localhost:11434';
+const PREFERRED_PRESELECT = 'llama3.2:3b';
 
-const RECOMMENDED_MODELS = [
-  { name: 'llama3.2', size: '2 GB', speed: 'Fast', note: 'Recommended for most users' },
-  { name: 'llama3.1:8b', size: '4.7 GB', speed: 'Balanced', note: 'Better quality, needs 8 GB RAM' },
-  { name: 'mistral', size: '4 GB', speed: 'Fast', note: 'Excellent at code and reasoning' },
-  { name: 'phi3.5', size: '2.2 GB', speed: 'Very fast', note: 'Great for low-end hardware' }
-];
+// ─── Step indicator ──────────────────────────────────────────────────────────
 
-function StepIndicator({ steps, currentStep }) {
+function StepIndicator({ currentStep }) {
+  const steps = ['Check Ollama', 'Pick a model', "You're ready"];
   return (
     <div className="flex items-center gap-2 mb-8">
-      {steps.map((step, i) => (
-        <div key={step.id} className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${
-            i < currentStep
-              ? 'bg-emerald-500 text-white'
-              : i === currentStep
-                ? 'bg-indigo-500 text-white ring-2 ring-indigo-500/30'
-                : 'bg-zinc-800 text-zinc-500'
-          }`}>
+      {steps.map((label, i) => (
+        <div key={label} className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${
+              i < currentStep
+                ? 'bg-emerald-500 text-white'
+                : i === currentStep
+                  ? 'bg-indigo-500 text-white ring-2 ring-indigo-500/30'
+                  : 'bg-zinc-800 text-zinc-500'
+            }`}
+          >
             {i < currentStep ? <CheckCircle className="w-4 h-4" /> : i + 1}
           </div>
           {i < steps.length - 1 && (
@@ -66,91 +34,94 @@ function StepIndicator({ steps, currentStep }) {
   );
 }
 
-function WelcomeStep({ onNext }) {
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.3)] mb-6">
-        <Sparkles className="w-8 h-8 text-white" />
-      </div>
-      <h1 className="text-2xl font-bold text-white mb-3">Welcome to Alphonso</h1>
-      <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mb-2">
-        Your local-first AI desktop assistant. Everything runs on your machine — no subscriptions, no cloud, no data leaving your computer.
-      </p>
-      <p className="text-zinc-500 text-xs mb-8">This setup takes about 2 minutes.</p>
-      <button
-        onClick={onNext}
-        className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
-      >
-        Get started <ArrowRight className="w-4 h-4" />
-      </button>
-    </div>
-  );
-}
+// ─── Step 1: Check Ollama ────────────────────────────────────────────────────
 
-function OllamaStep({ onNext, onSkip }) {
-  const [checked, setChecked] = useState(false);
+function CheckOllamaStep({ onNext }) {
+  const [status, setStatus] = useState('checking'); // checking | connected | not_running | no_models | error
+  const [message, setMessage] = useState('Checking Ollama...');
+  const [isRetrying, setIsRetrying] = useState(false);
+  const hasMountedRef = useRef(false);
 
-  const checkOllamaRunning = async () => {
+  const runCheck = async () => {
+    setStatus('checking');
+    setMessage('Checking Ollama...');
+    setIsRetrying(true);
     try {
-      const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
-        setChecked(true);
-        setTimeout(onNext, 800);
+      const result = await checkOllama(DEFAULT_ENDPOINT, '');
+      if (result.state === 'connected' || result.state === 'model_missing') {
+        setStatus('connected');
+        setMessage('Ollama is running and ready.');
+      } else if (result.state === 'no_models') {
+        setStatus('no_models');
+        setMessage('Ollama is running but no models are installed yet.');
+      } else {
+        setStatus('not_running');
+        setMessage(result.message || 'Ollama is not running. Start it with: ollama serve');
       }
     } catch {
-      // Not running yet
+      setStatus('error');
+      setMessage('Could not reach Ollama. Make sure it is running.');
+    } finally {
+      setIsRetrying(false);
     }
   };
 
   useEffect(() => {
-    checkOllamaRunning();
-    const interval = setInterval(checkOllamaRunning, 3000);
-    return () => clearInterval(interval);
+    if (hasMountedRef.current) return;
+    hasMountedRef.current = true;
+    runCheck();
   }, []);
+
+  const canProceed = status === 'connected' || status === 'no_models';
+
+  const statusConfig = {
+    checking: { dot: 'bg-zinc-500 animate-pulse', text: 'text-zinc-400', border: 'border-white/[0.06] bg-zinc-900/40' },
+    connected: { dot: 'bg-emerald-400', text: 'text-emerald-300', border: 'border-emerald-500/30 bg-emerald-500/10' },
+    no_models: { dot: 'bg-amber-400', text: 'text-amber-300', border: 'border-amber-500/30 bg-amber-500/10' },
+    not_running: { dot: 'bg-red-400', text: 'text-red-300', border: 'border-red-500/30 bg-red-500/10' },
+    error: { dot: 'bg-red-400', text: 'text-red-300', border: 'border-red-500/30 bg-red-500/10' },
+  };
+  const cfg = statusConfig[status] || statusConfig.checking;
 
   return (
     <div className="flex flex-col">
-      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 p-5 mb-4">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-3">Step 1 — Install Ollama</div>
-        <p className="text-sm text-zinc-300 mb-4">
-          Ollama runs AI models locally on your machine. Download and install it, then come back.
-        </p>
-        <a
-          href="https://ollama.com/download"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-white text-xs font-bold rounded-xl transition-colors"
-        >
-          <Download className="w-3.5 h-3.5" /> Download Ollama for Windows
-        </a>
-      </div>
+      <h2 className="text-lg font-bold text-white mb-1">Check Ollama</h2>
+      <p className="text-zinc-400 text-sm mb-6">
+        Alphonso needs Ollama running locally to power AI responses.
+      </p>
 
-      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 p-5 mb-6">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-3">Step 2 — Start Ollama</div>
-        <p className="text-xs text-zinc-400 mb-3">After installing, open a terminal and run:</p>
-        <div className="font-mono text-xs bg-black/40 border border-white/5 rounded-lg px-4 py-3 text-emerald-400 select-all">
-          ollama serve
+      <div className={`flex items-start gap-3 rounded-xl border px-4 py-4 mb-4 transition-all ${cfg.border}`}>
+        <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${cfg.dot}`} />
+        <div>
+          <div className={`text-sm font-semibold ${cfg.text}`}>
+            {status === 'checking' ? 'Checking...' : status === 'connected' ? 'Connected' : status === 'no_models' ? 'Running (no models)' : 'Not running'}
+          </div>
+          <div className="text-xs text-zinc-400 mt-0.5">{message}</div>
         </div>
       </div>
 
-      <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 mb-6 transition-all ${
-        checked
-          ? 'border-emerald-500/30 bg-emerald-500/10'
-          : 'border-white/[0.06] bg-zinc-900/40'
-      }`}>
-        <div className={`w-2 h-2 rounded-full ${checked ? 'bg-emerald-400' : 'bg-zinc-600 animate-pulse'}`} />
-        <span className={`text-xs font-semibold ${checked ? 'text-emerald-300' : 'text-zinc-400'}`}>
-          {checked ? 'Ollama detected — continuing...' : 'Waiting for Ollama to start...'}
-        </span>
-      </div>
+      {(status === 'not_running' || status === 'error') && (
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900/60 px-4 py-3 mb-4">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Start Ollama</div>
+          <div className="font-mono text-xs bg-black/40 border border-white/5 rounded-lg px-4 py-3 text-emerald-400 select-all">
+            ollama serve
+          </div>
+        </div>
+      )}
 
-      <div className="flex justify-between">
-        <button onClick={onSkip} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-          Skip for now
+      <div className="flex justify-between items-center mt-2">
+        <button
+          onClick={runCheck}
+          disabled={isRetrying}
+          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+          Retry
         </button>
         <button
           onClick={onNext}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors"
+          disabled={!canProceed}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-bold rounded-xl transition-colors"
         >
           Continue <ArrowRight className="w-3.5 h-3.5" />
         </button>
@@ -159,51 +130,108 @@ function OllamaStep({ onNext, onSkip }) {
   );
 }
 
-function ModelStep({ onNext, onSkip }) {
-  const [copied, setCopied] = useState('');
+// ─── Step 2: Pick a model ────────────────────────────────────────────────────
 
-  const copy = (text) => {
-    navigator.clipboard.writeText(text).catch(() => {});
-    setCopied(text);
-    setTimeout(() => setCopied(''), 2000);
+function PickModelStep({ onNext }) {
+  const [models, setModels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selected, setSelected] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchOllamaModels(DEFAULT_ENDPOINT)
+      .then(({ models: fetched }) => {
+        if (cancelled) return;
+        setModels(fetched);
+        const preferred = fetched.find((m) => m.name === PREFERRED_PRESELECT);
+        setSelected(preferred ? preferred.name : fetched[0]?.name || '');
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(String(err?.message || err));
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleNext = () => {
+    if (selected) onNext(selected);
   };
 
   return (
     <div className="flex flex-col">
-      <p className="text-sm text-zinc-400 mb-4">
-        Run one of these commands in your terminal to pull a model. Alphonso will detect it automatically.
+      <h2 className="text-lg font-bold text-white mb-1">Pick a model</h2>
+      <p className="text-zinc-400 text-sm mb-6">
+        Choose which local model Alphonso will use for conversations.
       </p>
 
-      <div className="space-y-2 mb-6">
-        {RECOMMENDED_MODELS.map((model) => (
-          <div
-            key={model.name}
-            className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-zinc-900/60 px-4 py-3"
-          >
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-zinc-100">{model.name}</span>
-                <span className="text-[10px] text-zinc-500 font-medium">{model.size} · {model.speed}</span>
-              </div>
-              <span className="text-[11px] text-zinc-500">{model.note}</span>
-            </div>
-            <button
-              onClick={() => copy(`ollama pull ${model.name}`)}
-              className="shrink-0 ml-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg transition-colors"
-            >
-              {copied === `ollama pull ${model.name}` ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-        ))}
-      </div>
+      {loading && (
+        <div className="flex items-center gap-2 text-xs text-zinc-400 py-4">
+          <div className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse" />
+          Loading installed models...
+        </div>
+      )}
 
-      <div className="flex justify-between">
-        <button onClick={onSkip} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-          Skip — I already have a model
-        </button>
+      {error && !loading && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-300 mb-4">
+          Could not load models: {error}
+        </div>
+      )}
+
+      {!loading && !error && models.length === 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-4">
+          <div className="text-xs font-semibold text-amber-300 mb-1">No models installed</div>
+          <div className="text-[11px] text-zinc-400">
+            Run <code className="font-mono text-emerald-400">ollama pull llama3.2:3b</code> in a terminal, then come back.
+          </div>
+        </div>
+      )}
+
+      {!loading && models.length > 0 && (
+        <div className="space-y-2 mb-6 max-h-[240px] overflow-y-auto pr-1">
+          {models.map((model) => {
+            const isSelected = model.name === selected;
+            const isPreferred = model.name === PREFERRED_PRESELECT;
+            return (
+              <button
+                key={model.name}
+                onClick={() => setSelected(model.name)}
+                className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all ${
+                  isSelected
+                    ? 'border-indigo-500/50 bg-indigo-500/10'
+                    : 'border-white/[0.06] bg-zinc-900/60 hover:border-white/10 hover:bg-zinc-800/60'
+                }`}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm text-zinc-100">{model.name}</span>
+                    {isPreferred && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-400 border border-indigo-500/30 bg-indigo-500/10 rounded px-1.5 py-0.5">
+                        Recommended
+                      </span>
+                    )}
+                  </div>
+                  {model.size > 0 && (
+                    <span className="text-[11px] text-zinc-500">
+                      {(model.size / 1e9).toFixed(1)} GB
+                    </span>
+                  )}
+                </div>
+                {isSelected && <CheckCircle className="w-4 h-4 text-indigo-400 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex justify-end mt-2">
         <button
-          onClick={onNext}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors"
+          onClick={handleNext}
+          disabled={!selected}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-bold rounded-xl transition-colors"
         >
           Continue <ArrowRight className="w-3.5 h-3.5" />
         </button>
@@ -212,52 +240,75 @@ function ModelStep({ onNext, onSkip }) {
   );
 }
 
-function ReadyStep({ onFinish }) {
+// ─── Step 3: You're ready ─────────────────────────────────────────────────────
+
+function ReadyStep({ selectedModel, onFinish }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6">
-        <Zap className="w-8 h-8 text-amber-400" />
+      <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6">
+        <Zap className="w-8 h-8 text-emerald-400" />
       </div>
-      <h2 className="text-xl font-bold text-white mb-3">You're all set</h2>
-      <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mb-2">
-        Alphonso is ready. Select a model in Settings, then start chatting.
+      <h2 className="text-xl font-bold text-white mb-3">You're ready</h2>
+      <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mb-4">
+        Alphonso is configured and ready to go.
       </p>
-      <p className="text-zinc-500 text-xs mb-8">
-        Open Settings with <kbd className="px-1.5 py-0.5 bg-zinc-800 border border-white/10 rounded text-zinc-300 font-mono text-[10px]">Ctrl + ,</kbd> at any time.
-      </p>
+
+      {selectedModel && (
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900/60 px-5 py-3 mb-8 w-full max-w-xs">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">Selected model</div>
+          <div className="font-mono text-sm text-indigo-300 font-semibold">{selectedModel}</div>
+        </div>
+      )}
+
       <button
         onClick={onFinish}
         className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
       >
-        Open Alphonso <ArrowRight className="w-4 h-4" />
+        Start chatting <ArrowRight className="w-4 h-4" />
       </button>
     </div>
   );
 }
 
+// ─── Root wizard ─────────────────────────────────────────────────────────────
+
 export function OnboardingWizard({ onComplete }) {
   const [step, setStep] = useState(0);
+  const [selectedModel, setSelectedModel] = useState('');
 
-  const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  const finish = () => {
-    localStorage.setItem('alphonso_onboarding_complete', 'true');
-    onComplete();
+  const handleOllamaNext = () => setStep(1);
+
+  const handleModelNext = (model) => {
+    setSelectedModel(model);
+    setStep(2);
   };
 
-  const stepContent = [
-    <WelcomeStep key="welcome" onNext={next} />,
-    <OllamaStep key="ollama" onNext={next} onSkip={next} />,
-    <ModelStep key="model" onNext={next} onSkip={next} />,
-    <ReadyStep key="ready" onFinish={finish} />
-  ];
+  const handleFinish = () => {
+    setStorage('alphonso_onboarding_complete_v1', true);
+    onComplete(selectedModel);
+  };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-zinc-950">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-transparent to-cyan-950/20 pointer-events-none" />
       <div className="relative w-full max-w-md mx-4">
         <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/90 backdrop-blur-xl shadow-2xl p-8">
-          <StepIndicator steps={STEPS} currentStep={step} />
-          {stepContent[step]}
+          {/* Brand header */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white">Alphonso</div>
+              <div className="text-[10px] text-zinc-500">Local-first AI assistant</div>
+            </div>
+          </div>
+
+          <StepIndicator currentStep={step} />
+
+          {step === 0 && <CheckOllamaStep onNext={handleOllamaNext} />}
+          {step === 1 && <PickModelStep onNext={handleModelNext} />}
+          {step === 2 && <ReadyStep selectedModel={selectedModel} onFinish={handleFinish} />}
         </div>
         <div className="mt-4 text-center text-[10px] text-zinc-600">
           Local-first · Zero cloud · All data stays on your machine

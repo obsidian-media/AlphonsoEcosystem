@@ -47,5 +47,25 @@ describe('jose execution pipeline e2e', () => {
     expect(types).toContain('pipeline_completed');
     expect(types).toContain('jose_merge_confirm_reported');
   });
+
+  it('executes low-risk specialist agents without noisy approval or contract failures', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: research launch positioning, create a campaign image prompt, audit approval policy, check security permissions, remember this decision, and score the opportunity priority',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.failedCount).toBe(0);
+    expect(result.pendingApprovalCount).toBe(0);
+    expect(result.executedCount).toBeGreaterThanOrEqual(6);
+
+    const summaries = result.command?.shayanReport?.assignmentSummaries || [];
+    expect(summaries.map((item) => item.agent)).toEqual(expect.arrayContaining([
+      'hector', 'miya', 'maria', 'sentinel', 'echo', 'nova'
+    ]));
+    expect(summaries.every((item) => item.reportStatus !== 'not_reported')).toBe(true);
+    expect(result.command?.shayanReport?.contractFailures || []).toHaveLength(0);
+  });
 });
 

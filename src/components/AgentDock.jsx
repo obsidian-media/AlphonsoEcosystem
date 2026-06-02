@@ -1,9 +1,32 @@
-import React, { useEffect, useState } from 'react';
-import { ChevronDown, Minus } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronDown, GripHorizontal, Minus } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { AgentAvatar } from './AgentAvatar';
 
 const STORAGE_KEY = 'alphonso_agent_dock_minimized_v1';
+const POSITION_STORAGE_KEY = 'alphonso_agent_dock_position_v1';
+
+const DEFAULT_POSITION = { x: 16, y: 16 };
+
+function readStoredPosition() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) || 'null');
+    if (Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y)) return parsed;
+  } catch {
+    // Ignore corrupted storage and fall back to safe top-left default.
+  }
+  return DEFAULT_POSITION;
+}
+
+function clampPosition(position) {
+  if (typeof window === 'undefined') return position;
+  const maxX = Math.max(8, window.innerWidth - 96);
+  const maxY = Math.max(8, window.innerHeight - 56);
+  return {
+    x: Math.min(Math.max(8, position.x), maxX),
+    y: Math.min(Math.max(8, position.y), maxY)
+  };
+}
 
 function useOllamaStatus() {
   const [online, setOnline] = useState(null);
@@ -26,13 +49,30 @@ function useOllamaStatus() {
 
 export function AgentDock({ companions }) {
   const [minimized, setMinimized] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) === 'true'; } catch { return false; }
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored === null ? true : stored === 'true';
+    } catch {
+      return true;
+    }
   });
+  const [position, setPosition] = useState(() => clampPosition(readStoredPosition()));
+  const dragRef = useRef(null);
   const registryAgents = listAgentProfiles();
   const activeIds = new Set(companions.map((item) => item.agentId));
   const otherAgents = registryAgents.filter((agent) => !activeIds.has(agent.id));
   const summary = companions.map((item) => item.name).join(' · ');
   const ollamaOnline = useOllamaStatus();
+
+  useEffect(() => {
+    const onResize = () => setPosition((current) => {
+      const next = clampPosition(current);
+      try { localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(next)); } catch { /* no-op */ }
+      return next;
+    });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   function toggle() {
     setMinimized((prev) => {
@@ -42,11 +82,63 @@ export function AgentDock({ companions }) {
     });
   }
 
+  function startDrag(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    event.preventDefault();
+    dragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: position.x,
+      originY: position.y
+    };
+  }
+
+  useEffect(() => {
+    function onPointerMove(event) {
+      if (!dragRef.current) return;
+      const next = clampPosition({
+        x: dragRef.current.originX + event.clientX - dragRef.current.startX,
+        y: dragRef.current.originY + event.clientY - dragRef.current.startY
+      });
+      setPosition(next);
+    }
+    function onPointerUp() {
+      if (!dragRef.current) return;
+      dragRef.current = null;
+      setPosition((current) => {
+        const next = clampPosition(current);
+        try { localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(next)); } catch { /* no-op */ }
+        return next;
+      });
+    }
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+  }, []);
+
   return (
-    <div className="pointer-events-auto w-[17.5rem] rounded-xl border border-white/10 bg-zinc-950/95 shadow-xl backdrop-blur-xl overflow-hidden">
+    <div
+      className={`pointer-events-auto fixed z-50 rounded-xl border border-white/10 bg-zinc-950/95 shadow-xl backdrop-blur-xl overflow-hidden ${minimized ? 'w-[12.5rem]' : 'w-[17.5rem]'}`}
+      style={{ left: `${position.x}px`, top: `${position.y}px` }}
+    >
       {/* Header — always visible */}
       <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 flex-1">Agent Dock</div>
+        <button
+          type="button"
+          onPointerDown={startDrag}
+          title="Move agent dock"
+          className="cursor-grab rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 active:cursor-grabbing"
+        >
+          <GripHorizontal className="h-3 w-3" />
+        </button>
+        <div
+          className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 flex-1 cursor-grab select-none active:cursor-grabbing"
+          onPointerDown={startDrag}
+          title="Drag to move agent dock"
+        >Agent Dock</div>
 
         {/* Ollama connectivity pill */}
         <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border ${
