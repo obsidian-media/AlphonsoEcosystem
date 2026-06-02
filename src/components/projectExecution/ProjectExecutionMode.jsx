@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { listAgentProfiles } from '../../agents/agentRegistry';
 import { JOSE_PERMISSIONS } from '../../agents/jose/josePermissions';
 import { ALPHONSO_PERMISSIONS } from '../../agents/alphonso/alphonsoPermissions';
@@ -38,6 +39,23 @@ import { listWorkContracts, signWorkContract, archiveWorkContract } from '../../
 import { listVerificationChains } from '../../services/agentWorkshop/verificationChainService';
 import { OPERATIONAL_MODES, getOperationalMode, setOperationalMode } from '../../services/agentWorkshop/operationalModeService';
 
+function ExecutionSection({ title, id, focusMode, openSections, onToggle, children }) {
+  const open = !focusMode || openSections.has(id);
+  return (
+    <section className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
+      <button
+        type="button"
+        onClick={() => onToggle?.(id)}
+        className="flex w-full items-center justify-between gap-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 hover:text-indigo-100"
+      >
+        <span>{title}</span>
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {open ? <div className="mt-3">{children}</div> : <div className="mt-2 text-[11px] text-zinc-600">Collapsed in Focus view.</div>}
+    </section>
+  );
+}
+
 export const TAPCASH_PRESET = {
   label: 'TapCash Preset',
   projectName: 'TapCash GPT Rewards Platform',
@@ -74,6 +92,8 @@ export function ProjectExecutionMode() {
   const [mode, setMode] = useState(getAgentMode());
   const [execState, setExecState] = useState(getExecutionApprovalState());
   const [opMode, setOpMode] = useState(getOperationalMode());
+  const [focusMode, setFocusMode] = useState(() => localStorage.getItem('alphonso_project_execution_density_v1') !== 'full');
+  const [openSections, setOpenSections] = useState(() => new Set(['intake', 'modes', 'generate', 'outputs']));
 
   const allProfiles = useMemo(() => listAgentProfiles().filter((agent) => ALL_AGENT_IDS.includes(agent.id)), []);
   const selectedAgent = useMemo(() => allProfiles.find((agent) => agent.id === selectedAgentId) || null, [allProfiles, selectedAgentId]);
@@ -129,21 +149,57 @@ export function ProjectExecutionMode() {
 
   const refreshView = () => setResult((current) => (current ? { ...current } : current));
 
+  const toggleFocusMode = () => {
+    setFocusMode((current) => {
+      const next = !current;
+      localStorage.setItem('alphonso_project_execution_density_v1', next ? 'focus' : 'full');
+      return next;
+    });
+  };
+
+  const toggleSection = (id) => {
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const researchBrief = result ? createResearchBrief(result.project.projectName) : null;
   const auditReport = result ? auditProjectPlan(result.project) : null;
 
   return (
     <div className="space-y-4">
-      <ProjectIntakePanel
+      <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Project Execution Workspace</div>
+          <div className="mt-1 text-sm text-zinc-400">Plan, route, verify, and package agent work without crowding every control at once.</div>
+        </div>
+        <button
+          type="button"
+          onClick={toggleFocusMode}
+          className="rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-indigo-100 hover:bg-indigo-500/20"
+        >
+          {focusMode ? 'Focus view: essentials' : 'Full view: all sections'}
+        </button>
+      </div>
+
+      <ExecutionSection title="Project Intake" id="intake" focusMode={false} openSections={openSections} onToggle={toggleSection}>
+        <ProjectIntakePanel
         intake={intake}
         setIntake={setIntake}
         presets={{ tapcash: TAPCASH_PRESET }}
-        onApplyPreset={(preset) => setIntake((current) => ({ ...current, ...preset }))}
-      />
+          onApplyPreset={(preset) => setIntake((current) => ({ ...current, ...preset }))}
+        />
+      </ExecutionSection>
 
-      <SystemHealthPanel />
+      <ExecutionSection title="System Health" id="system-health" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <SystemHealthPanel />
+      </ExecutionSection>
 
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
+      <ExecutionSection title="Operational Modes" id="modes" focusMode={false} openSections={openSections} onToggle={toggleSection}>
+        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
         <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Operational Modes</div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
           {OPERATIONAL_MODES.map((item) => (
@@ -203,27 +259,33 @@ export function ProjectExecutionMode() {
             </button>
           ))}
         </div>
-        <div className="mt-2 text-[11px] text-zinc-500">Read-only default: {mode === AGENT_MODES.PROPOSAL ? 'enabled' : 'disabled (execution mode)'}</div>
-      </div>
+          <div className="mt-2 text-[11px] text-zinc-500">Read-only default: {mode === AGENT_MODES.PROPOSAL ? 'enabled' : 'disabled (execution mode)'}</div>
+        </div>
+      </ExecutionSection>
 
-      <AgentDock agents={allProfiles} activeAgents={activeAgents} onToggleAgent={toggleAgent} />
+      <ExecutionSection title="Agent Selection" id="agents" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <AgentDock agents={allProfiles} activeAgents={activeAgents} onToggleAgent={toggleAgent} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <AgentProfilePanel agent={selectedAgent} />
-        <AgentCapabilityMatrix agentPermissions={permissions} agentProfiles={agentProfileMap} />
-      </div>
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AgentProfilePanel agent={selectedAgent} />
+          <AgentCapabilityMatrix agentPermissions={permissions} agentProfiles={agentProfileMap} />
+        </div>
+      </ExecutionSection>
 
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 flex items-center justify-between">
+      <ExecutionSection title="Generate Execution Packet" id="generate" focusMode={false} openSections={openSections} onToggle={toggleSection}>
+        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 flex items-center justify-between">
         <div>
           <div className="text-sm font-semibold text-white">Project Execution Mode</div>
           <div className="text-xs text-zinc-400">Jose decomposes and routes tasks to active agents with supervised approvals.</div>
         </div>
-        <button type="button" onClick={runWorkshop} className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-indigo-100">
-          Generate Execution Packet
-        </button>
-      </div>
+          <button type="button" onClick={runWorkshop} className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-indigo-100">
+            Generate Execution Packet
+          </button>
+        </div>
+      </ExecutionSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ExecutionSection title="Traceability + Proposals" id="traceability" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
           <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Traceability Chain</div>
           {!traceSummary && <div className="text-sm text-zinc-500">Run workshop to generate trace chain.</div>}
@@ -249,11 +311,13 @@ export function ProjectExecutionMode() {
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      </ExecutionSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Work Contracts</div>
+      <ExecutionSection title="Contracts + Verification Chains" id="contracts" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Work Contracts</div>
           {contracts.length === 0 && <div className="text-sm text-zinc-500">No contracts yet. Generate packet first.</div>}
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {contracts.map((contract) => (
@@ -282,21 +346,27 @@ export function ProjectExecutionMode() {
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      </ExecutionSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <AgentAssignmentBoard packets={result?.packets || []} />
-        <AgentOutputPanel outputs={result?.outputs || []} />
-      </div>
+      <ExecutionSection title="Assignments + Agent Outputs" id="outputs" focusMode={false} openSections={openSections} onToggle={toggleSection}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AgentAssignmentBoard packets={result?.packets || []} />
+          <AgentOutputPanel outputs={result?.outputs || []} />
+        </div>
+      </ExecutionSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ExecutionTimeline timeline={result?.sequence || []} />
-        <ApprovalGatePanel gates={result?.approvalGates || []} />
-        <FinalExecutionPacket finalPacket={result?.finalPacket || null} />
-      </div>
+      <ExecutionSection title="Timeline + Approval + Final Packet" id="timeline" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <ExecutionTimeline timeline={result?.sequence || []} />
+          <ApprovalGatePanel gates={result?.approvalGates || []} />
+          <FinalExecutionPacket finalPacket={result?.finalPacket || null} />
+        </div>
+      </ExecutionSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
+      <ExecutionSection title="Project DNA + AI Review" id="review" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
           <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Project DNA</div>
           {!result?.projectDna && <div className="text-sm text-zinc-500">No project DNA yet. Generate packet first.</div>}
           {result?.projectDna && (
@@ -323,25 +393,32 @@ export function ProjectExecutionMode() {
             </div>
           )}
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Reliability Doctrine</div>
-        <div className="text-xs text-zinc-400 mt-1">
-          Reliability over impressiveness: orchestration quality, verification depth, memory confidence, auditability, rollback, and observability are prioritized over flashy autonomy.
         </div>
-      </div>
+      </ExecutionSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ProjectRoadmap timeline={result?.project?.timeline || result?.project?.output?.proposedChanges || []} />
-        <ProjectRiskRegister risks={result?.project?.riskRegister || []} />
-        <ProjectVerificationChecklist checklist={result?.project?.verificationChecklist || []} />
-      </div>
+      <ExecutionSection title="Reliability Doctrine" id="doctrine" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Reliability Doctrine</div>
+          <div className="text-xs text-zinc-400 mt-1">
+            Reliability over impressiveness: orchestration quality, verification depth, memory confidence, auditability, rollback, and observability are prioritized over flashy autonomy.
+          </div>
+        </div>
+      </ExecutionSection>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <MarcusAuditPanel auditReport={auditReport} />
-        <HectorResearchPanel researchBrief={researchBrief} />
-      </div>
+      <ExecutionSection title="Roadmap + Risk + Verification" id="roadmap" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <ProjectRoadmap timeline={result?.project?.timeline || result?.project?.output?.proposedChanges || []} />
+          <ProjectRiskRegister risks={result?.project?.riskRegister || []} />
+          <ProjectVerificationChecklist checklist={result?.project?.verificationChecklist || []} />
+        </div>
+      </ExecutionSection>
+
+      <ExecutionSection title="Audit + Research" id="audit-research" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <MarcusAuditPanel auditReport={auditReport} />
+          <HectorResearchPanel researchBrief={researchBrief} />
+        </div>
+      </ExecutionSection>
     </div>
   );
 }

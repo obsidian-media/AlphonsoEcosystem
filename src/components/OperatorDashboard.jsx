@@ -3,6 +3,8 @@ import {
   Activity,
   Brain,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Command,
   Download,
   FolderTree,
@@ -93,6 +95,8 @@ export function OperatorDashboard({
   const [ocrImagePath, setOcrImagePath] = useState('');
   const [ocrExtraArgs, setOcrExtraArgs] = useState('');
   const [sampleEveryInput, setSampleEveryInput] = useState(String(screenObserverState?.sampleEveryMs || 5000));
+  const [focusMode, setFocusMode] = useState(() => localStorage.getItem('alphonso_operator_density_v1') !== 'full');
+  const [openSections, setOpenSections] = useState(() => new Set(['core', 'screen', 'verification']));
 
   const latestLogs = [...verificationLogs].reverse().slice(0, 10);
   const latestMemory = [...memoryItems].reverse().slice(0, 10);
@@ -120,6 +124,23 @@ export function OperatorDashboard({
       adapter: ocrAdapter,
       imagePath: ocrImagePath.trim() || null,
       extraArgs
+    });
+  };
+
+  const toggleFocusMode = () => {
+    setFocusMode((current) => {
+      const next = !current;
+      localStorage.setItem('alphonso_operator_density_v1', next ? 'focus' : 'full');
+      return next;
+    });
+  };
+
+  const toggleSection = (id) => {
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
 
@@ -151,14 +172,24 @@ export function OperatorDashboard({
           <h1 className="text-xl font-bold text-white">Operator Mode</h1>
           <p className="text-sm text-zinc-500">Supervised runtime control, verification logs, memory state, plugin registry, and recovery foundations.</p>
         </div>
-        <button
-          onClick={() => setOperatorMode(!operatorMode)}
-          className={`w-14 h-7 rounded-full transition-colors relative ${operatorMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
-        >
-          <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${operatorMode ? 'right-1' : 'left-1'}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleFocusMode}
+            className="rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-indigo-100 hover:bg-indigo-500/20"
+          >
+            {focusMode ? 'Focus' : 'Full'}
+          </button>
+          <button
+            onClick={() => setOperatorMode(!operatorMode)}
+            className={`w-14 h-7 rounded-full transition-colors relative ${operatorMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+          >
+            <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${operatorMode ? 'right-1' : 'left-1'}`} />
+          </button>
+        </div>
       </div>
 
+      <OperatorSection title="Core Runtime" id="core" focusMode={false} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
         <Panel icon={Activity} title="Runtime Health">
           <div className="space-y-2 text-sm">
@@ -198,7 +229,9 @@ export function OperatorDashboard({
           </div>
         </Panel>
       </div>
+      </OperatorSection>
 
+      <OperatorSection title="Screen Intelligence" id="screen" focusMode={false} openSections={openSections} onToggle={toggleSection}>
       <Panel icon={Monitor} title="Screen Intelligence (Visible Only)">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
@@ -275,7 +308,9 @@ export function OperatorDashboard({
           </div>
         </div>
       </Panel>
+      </OperatorSection>
 
+      <OperatorSection title="Command + Plugin Controls" id="commands" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         <Panel icon={TerminalSquare} title="Command Verification">
           <div className="space-y-2">
@@ -368,7 +403,9 @@ export function OperatorDashboard({
           </div>
         </Panel>
       </div>
+      </OperatorSection>
 
+      <OperatorSection title="Memory + Workspace Intelligence" id="workspace" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Panel icon={Brain} title="Memory Dashboard">
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -452,7 +489,9 @@ export function OperatorDashboard({
           </div>
         </Panel>
       </div>
+      </OperatorSection>
 
+      <OperatorSection title="Recovery + Verification Logs" id="verification" focusMode={false} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Panel icon={HardDrive} title="Recovery Systems">
           <div className="flex flex-wrap gap-2">
@@ -536,7 +575,9 @@ export function OperatorDashboard({
           </div>
         </Panel>
       </div>
+      </OperatorSection>
 
+      <OperatorSection title="Trust Receipts" id="trust-receipts" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 gap-3">
         <Panel icon={Shield} title="Trust Receipt Browser">
           <Suspense fallback={null}>
@@ -544,7 +585,25 @@ export function OperatorDashboard({
           </Suspense>
         </Panel>
       </div>
+      </OperatorSection>
     </div>
+  );
+}
+
+function OperatorSection({ title, id, focusMode, openSections, onToggle, children }) {
+  const open = !focusMode || openSections.has(id);
+  return (
+    <section className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
+      <button
+        type="button"
+        onClick={() => onToggle?.(id)}
+        className="flex w-full items-center justify-between gap-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 hover:text-indigo-100"
+      >
+        <span>{title}</span>
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {open ? <div className="mt-3">{children}</div> : <div className="mt-2 text-[11px] text-zinc-600">Collapsed in Focus view.</div>}
+    </section>
   );
 }
 

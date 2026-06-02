@@ -412,7 +412,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
           <p className="mt-0.5 text-[11px] text-zinc-500 leading-relaxed">
             {probing
               ? 'Probing connector environments…'
-              : 'Live status of all configured connector paths. Env keys are checked via the Tauri runtime.'}
+              : 'Live status of connector paths. Local/private keys should stay local; Railway/public builds should remain demo-safe unless intentionally promoted.'}
           </p>
         </div>
         <button
@@ -423,6 +423,10 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
         >
           Refresh
         </button>
+      </div>
+
+      <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-[11px] leading-relaxed text-amber-100/85">
+        Public deploy note: this app auto-deploys from GitHub main to Railway. Do not add real connector secrets to browser-exposed env vars unless that connector is meant to be public/cloud-facing.
       </div>
 
       {/* Summary bar */}
