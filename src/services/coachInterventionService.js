@@ -14,6 +14,25 @@ export const SESSION_GUARD_EVENT_TYPES = {
   HIGH_VOLATILITY: 'high_volatility'
 };
 
+export const SESSION_GUARD_BRIDGE_STORAGE_KEY = 'alphonso_sessionguard_bridge_events_v1';
+export const COACH_INTERVENTION_ACTION_LOG_KEY = 'alphonso_coach_intervention_action_log_v1';
+export const SESSION_GUARD_BRIDGE_EVENT = 'alphonso:sessionguard-event';
+
+function readJsonArray(key) {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeJsonArray(key, rows, limit = 50) {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(key, JSON.stringify(rows.slice(-limit)));
+}
+
 export function normalizeSessionGuardEvent(event = {}) {
   const metrics = event.metrics || {};
   return {
@@ -120,4 +139,70 @@ export function buildDemoSlotIntervention() {
     },
     localOnly: true
   });
+}
+
+export function listSessionGuardBridgeEvents() {
+  return readJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY);
+}
+
+export function pushSessionGuardBridgeEvent(event = {}) {
+  const intervention = buildCoachIntervention(event);
+  const bridgeEvent = {
+    ...normalizeSessionGuardEvent(event),
+    intervention,
+    receivedAtMs: timestampMs()
+  };
+
+  const events = [...listSessionGuardBridgeEvents(), bridgeEvent];
+  writeJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY, events, 20);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SESSION_GUARD_BRIDGE_EVENT, { detail: bridgeEvent }));
+  }
+
+  return bridgeEvent;
+}
+
+export function getLatestSessionGuardBridgeIntervention() {
+  return listSessionGuardBridgeEvents().at(-1)?.intervention || null;
+}
+
+export function subscribeSessionGuardBridge(onBridgeEvent) {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleCustomEvent = (event) => {
+    if (event?.detail?.intervention) onBridgeEvent(event.detail);
+  };
+
+  const handleStorageEvent = (event) => {
+    if (event.key !== SESSION_GUARD_BRIDGE_STORAGE_KEY) return;
+    const latest = listSessionGuardBridgeEvents().at(-1);
+    if (latest?.intervention) onBridgeEvent(latest);
+  };
+
+  window.addEventListener(SESSION_GUARD_BRIDGE_EVENT, handleCustomEvent);
+  window.addEventListener('storage', handleStorageEvent);
+
+  return () => {
+    window.removeEventListener(SESSION_GUARD_BRIDGE_EVENT, handleCustomEvent);
+    window.removeEventListener('storage', handleStorageEvent);
+  };
+}
+
+export function listCoachInterventionActionLog() {
+  return readJsonArray(COACH_INTERVENTION_ACTION_LOG_KEY);
+}
+
+export function recordCoachInterventionAction(intervention, action, details = {}) {
+  const entry = {
+    id: `coach-action-${timestampMs()}`,
+    interventionId: intervention?.id || null,
+    source: intervention?.source || 'coach',
+    action,
+    details,
+    timestampMs: timestampMs(),
+    localOnly: true
+  };
+  writeJsonArray(COACH_INTERVENTION_ACTION_LOG_KEY, [...listCoachInterventionActionLog(), entry], 100);
+  return entry;
 }

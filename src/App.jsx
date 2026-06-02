@@ -7,7 +7,14 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useVoiceInput } from './hooks/useVoiceInput';
 import { openCoachWindow, closeCoachWindow } from './services/coachModeService';
 import { listCoachSkills } from './services/coachSkillService';
-import { buildDemoSlotIntervention } from './services/coachInterventionService';
+import { playCoachSoundCue } from './services/coachSoundCueService';
+import {
+  COACH_INTERVENTION_LEVELS,
+  buildDemoSlotIntervention,
+  getLatestSessionGuardBridgeIntervention,
+  recordCoachInterventionAction,
+  subscribeSessionGuardBridge
+} from './services/coachInterventionService';
 import { checkAppUpdate, notifyUpdateAvailable } from './services/appUpdateService';
 import { hydrateMemoryFromDurable, listMemoryItems, pushMemoryItem } from './services/memoryService';
 import { appendPluginAuditEntry, discoverDiskPluginManifests, executePluginToolRun, listPluginAudit, listPlugins, togglePlugin, validatePluginManifestDisk } from './services/pluginRegistryService';
@@ -210,7 +217,7 @@ function CoachMissionBadge({ agent, state, message }) {
   );
 }
 
-function CoachInterventionCard({ intervention, onDismiss, onDemo }) {
+function CoachInterventionCard({ intervention, onAction, onDemo, pauseUntilMs }) {
   const level = intervention?.level || 'quiet';
   const tone = level === 'hard'
     ? 'border-red-300/40 bg-red-500/15 text-red-50 shadow-[0_0_40px_rgba(239,68,68,0.18)]'
@@ -252,12 +259,50 @@ function CoachInterventionCard({ intervention, onDismiss, onDemo }) {
         <div className="rounded-lg bg-black/20 px-2 py-1">Net<br /><b>{intervention.metrics?.netResult || 0}</b></div>
         <div className="rounded-lg bg-black/20 px-2 py-1">Stretch<br /><b>{intervention.metrics?.longestLosingStretch || 0}</b></div>
       </div>
+      {pauseUntilMs > Date.now() && (
+        <div className="mt-3 rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-[11px] font-semibold text-white/80">
+          Pause active until {new Date(pauseUntilMs).toLocaleTimeString()}.
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" className="rounded-lg bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-white">Pause 60s</button>
-        <button type="button" className="rounded-lg border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/90 hover:bg-white/10">End session</button>
-        <button type="button" onClick={onDismiss} className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10">Continue</button>
+        <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-lg bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-white">Pause 60s</button>
+        <button type="button" onClick={() => onAction?.('end_session')} className="rounded-lg border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/90 hover:bg-white/10">End session</button>
+        <button type="button" onClick={() => onAction?.(level === 'hard' ? 'continue_anyway' : 'continue')} className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10">{level === 'hard' ? 'Continue anyway' : 'Continue'}</button>
       </div>
-      <div className="mt-2 text-[10px] text-white/45">Private/local-only. No upload, no prediction advice.</div>
+      <div className="mt-2 text-[10px] text-white/45">Private/local-only. Actions write a local log only — no upload, no prediction advice.</div>
+    </div>
+  );
+}
+
+function CoachHardInterruptOverlay({ intervention, pauseUntilMs, onAction }) {
+  if (intervention?.level !== COACH_INTERVENTION_LEVELS.HARD) return null;
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-red-950/45 p-6 backdrop-blur-md" role="alertdialog" aria-modal="true">
+      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-red-300/35 bg-zinc-950 shadow-[0_0_90px_rgba(239,68,68,0.35)]">
+        <div className="border-b border-red-300/20 bg-red-500/15 px-6 py-4">
+          <div className="text-[11px] font-black uppercase tracking-[0.24em] text-red-100">Hard Interrupt</div>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Pause before continuing.</h2>
+        </div>
+        <div className="space-y-4 p-6">
+          <p className="text-sm leading-relaxed text-zinc-200">{intervention.message}</p>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs text-zinc-300">
+            <div className="rounded-xl border border-white/10 bg-black/25 p-3">Spins<br /><b className="text-white">{intervention.metrics?.spinCount || 0}</b></div>
+            <div className="rounded-xl border border-white/10 bg-black/25 p-3">Net<br /><b className="text-white">{intervention.metrics?.netResult || 0}</b></div>
+            <div className="rounded-xl border border-white/10 bg-black/25 p-3">Stretch<br /><b className="text-white">{intervention.metrics?.longestLosingStretch || 0}</b></div>
+          </div>
+          {pauseUntilMs > Date.now() && (
+            <div className="rounded-xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-50">
+              Pause active until {new Date(pauseUntilMs).toLocaleTimeString()}.
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-zinc-950 hover:bg-red-100">Pause 60s</button>
+            <button type="button" onClick={() => onAction?.('end_session')} className="rounded-xl border border-red-300/30 bg-red-500/15 px-4 py-2 text-xs font-bold uppercase tracking-widest text-red-50 hover:bg-red-500/25">End session</button>
+            <button type="button" onClick={() => onAction?.('continue_anyway')} className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:bg-white/10 hover:text-zinc-100">Continue anyway</button>
+          </div>
+          <div className="text-[11px] text-zinc-500">Protective/local-only interruption. No upload, no prediction advice.</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -376,7 +421,14 @@ export default function App() {
   });
   const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
   const [lastTaskCompletedAt, setLastTaskCompletedAt] = useState(null);
-  const [operatorMode, setOperatorMode] = useState(false);
+  const [operatorMode, setOperatorModeState] = useState(() => Boolean(getStorage('alphonso_operator_mode_v1', false)));
+  const setOperatorMode = useCallback((value) => {
+    setOperatorModeState((current) => {
+      const next = typeof value === 'function' ? value(current) : Boolean(value);
+      setStorage('alphonso_operator_mode_v1', next);
+      return next;
+    });
+  }, []);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [isLocked, setIsLocked] = useState(false);
   const idleTimerRef = useRef(null);
@@ -394,7 +446,8 @@ export default function App() {
   const [workspaceSymbolIndex, setWorkspaceSymbolIndex] = useState(null);
   const [screenObserverState, setScreenObserverState] = useState(() => getScreenObserverState());
   const [screenObserverLogs, setScreenObserverLogs] = useState(() => getScreenObserverLogs());
-  const [coachIntervention, setCoachIntervention] = useState(null);
+  const [coachIntervention, setCoachIntervention] = useState(() => getLatestSessionGuardBridgeIntervention());
+  const [coachPauseUntilMs, setCoachPauseUntilMs] = useState(0);
   const [lastPluginToolRun, setLastPluginToolRun] = useState(null);
   const [lastManifestValidation, setLastManifestValidation] = useState(null);
   const [lastOcrAdapterRun, setLastOcrAdapterRun] = useState(null);
@@ -501,6 +554,18 @@ export default function App() {
   }, [conversations]);
   useEffect(() => setStorage('alphonso_native_selfdev_proof', nativeSelfDevProof), [nativeSelfDevProof]);
   useEffect(() => setStorage(COACH_LAYOUT_KEY, { mini: coachMiniMode, corner: coachSnapCorner }), [coachMiniMode, coachSnapCorner]);
+
+  useEffect(() => subscribeSessionGuardBridge((bridgeEvent) => {
+    setCoachIntervention(bridgeEvent.intervention);
+    const level = bridgeEvent.intervention?.level;
+    if (level === COACH_INTERVENTION_LEVELS.HARD) {
+      setCoachMiniMode(false);
+      setCoachMode(true);
+    }
+    if (level) {
+      playCoachSoundCue(level);
+    }
+  }), []);
 
   // Hydrate settings from SQLite on first boot (takes precedence over localStorage so settings survive reinstalls).
   const settingsHydratedRef = useRef(false);
@@ -2079,6 +2144,22 @@ export default function App() {
     };
   }, [coachMode, coachAlwaysOnTop, settings.coachAgent]);
 
+  const handleCoachInterventionAction = (action) => {
+    if (!coachIntervention) return;
+
+    const details = action === 'pause_60_seconds' ? { durationMs: 60000 } : {};
+    recordCoachInterventionAction(coachIntervention, action, details);
+
+    if (action === 'pause_60_seconds') {
+      setCoachPauseUntilMs(Date.now() + 60000);
+      return;
+    }
+
+    if (['end_session', 'continue', 'continue_anyway'].includes(action)) {
+      setCoachIntervention(null);
+    }
+  };
+
   if (isCoachWindow) {
     const coachAgent = coachAgentFromQuery || settings.coachAgent || 'alphonso';
     const coachState = coachAgent === 'miya'
@@ -2123,7 +2204,7 @@ export default function App() {
 
           {coachMiniMode ? (
             <div className="space-y-3">
-              <CoachInterventionCard intervention={coachIntervention} onDismiss={() => setCoachIntervention(null)} onDemo={showDemoIntervention} />
+              <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
               <CoachMissionBadge agent={coachAgent} state={coachState.state} message={coachState.message} />
               <CoachSkillGrid skills={coachSkills.slice(0, 4)} compact />
               <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-2">
@@ -2135,7 +2216,7 @@ export default function App() {
           ) : (
             <div className="grid h-[calc(100%-2.5rem)] grid-cols-[minmax(0,1fr)_17rem] gap-4">
               <div className="space-y-4 overflow-auto pr-1">
-                <CoachInterventionCard intervention={coachIntervention} onDismiss={() => setCoachIntervention(null)} onDemo={showDemoIntervention} />
+                <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
                 <div className="rounded-2xl border border-cyan-300/15 bg-cyan-500/5 p-4">
                   <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">Coach skills</div>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-300">
@@ -2185,6 +2266,7 @@ export default function App() {
 
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30 ${themeClassFromSettings(settings)}`}>
+      <CoachHardInterruptOverlay intervention={coachIntervention} pauseUntilMs={coachPauseUntilMs} onAction={handleCoachInterventionAction} />
       {approvalPending && (
         <Suspense fallback={null}>
           <ApprovalModal

@@ -1,5 +1,5 @@
-import React, { Suspense, useMemo } from 'react';
-import { Activity, Database, Mic, Monitor, RefreshCw, Terminal } from 'lucide-react';
+import React, { Suspense, useMemo, useState } from 'react';
+import { Activity, ChevronLeft, ChevronRight, Database, Mic, Monitor, RefreshCw, Terminal } from 'lucide-react';
 import { formatModelSize, OLLAMA_TROUBLESHOOTING_COMMAND } from '../lib/ollama';
 import { MicrophoneStatus } from './MicrophoneStatus';
 
@@ -66,6 +66,12 @@ export function RightPanel({
     }
   ], [desktopBridge, voiceStatus, ollamaStatus, selectedModelMissing, settings.selectedModel, settings.workspaceRoot, miyaCompanionState, joseCompanionState, hectorCompanionState, screenObserverState, updateCheckState]);
 
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('alphonso_right_panel_collapsed_v1') === 'true');
+  const setPanelCollapsed = (value) => {
+    setCollapsed(value);
+    localStorage.setItem('alphonso_right_panel_collapsed_v1', String(value));
+  };
+
   const coreSignals = diagnostics.slice(0, 4);
   const supportSignals = diagnostics.slice(4);
 
@@ -81,13 +87,34 @@ export function RightPanel({
     return <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>{children}</span>;
   };
 
+  if (collapsed) {
+    return (
+      <aside className="w-11 bg-zinc-950 border-l border-white/[0.05] flex flex-col shrink-0 items-center py-3 gap-3">
+        <button
+          type="button"
+          onClick={() => setPanelCollapsed(false)}
+          className="rounded-lg border border-white/10 bg-zinc-900 p-2 text-zinc-400 hover:text-indigo-300"
+          title="Expand diagnostics"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <Activity className="h-4 w-4 text-indigo-400" />
+        {operatorMode && <span className="h-2 w-2 rounded-full bg-blue-400" title="Operator mode" />}
+        {approvalRequiredNotice && <span className="h-2 w-2 rounded-full bg-red-400" title="Approval required" />}
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-56 bg-zinc-950 border-l border-white/[0.05] flex flex-col shrink-0">
-      <div className="h-12 flex items-center px-3 border-b border-white/[0.05]">
+      <div className="h-12 flex items-center justify-between px-3 border-b border-white/[0.05]">
         <h2 className="font-bold text-[10px] uppercase tracking-[0.18em] text-zinc-400 flex items-center gap-2">
           <Activity className="w-3.5 h-3.5 text-indigo-400" />
           System Diagnostics
         </h2>
+        <button type="button" onClick={() => setPanelCollapsed(true)} className="rounded-md p-1 text-zinc-600 hover:bg-zinc-900 hover:text-zinc-300" title="Collapse diagnostics">
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         <div className="flex flex-wrap gap-1.5">

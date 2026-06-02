@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
   Brain,
   MessageCircle,
   CheckCircle2,
@@ -74,6 +76,8 @@ export function OrchestratorView({
   const [queueTransitions, setQueueTransitions] = useState(() => listOrchestrationQueueTransitions().slice(0, 80));
   const [whatsappAudit, setWhatsappAudit] = useState(() => listConnectorAudit().filter((e) => e.connectorId === 'whatsapp').slice(-30).reverse());
   const [whatsappPolling, setWhatsappPolling] = useState(false);
+  const [focusMode, setFocusMode] = useState(() => localStorage.getItem('alphonso_jose_density_v1') !== 'full');
+  const [openPanels, setOpenPanels] = useState(() => new Set(['jose-task-queue', 'jose-intake', 'pending-approvals', 'active-handoffs']));
   const whatsappConfigured = isConnectorAuthenticated('whatsapp');
 
   const approvalQueue = useMemo(() => listApprovalQueue(), [packets]);
@@ -83,6 +87,19 @@ export function OrchestratorView({
   const conflictCandidates = useMemo(() => findConflictCandidates(packets), [packets]);
   const idleAgents = useMemo(() => workload.filter((row) => row.pending === 0 && row.inbound === 0).map((row) => row.agent), [workload]);
   const escalations = useMemo(() => packets.filter((packet) => ['high', 'critical'].includes(packet.riskLevel || '') || packet.status === 'rejected'), [packets]);
+
+  useEffect(() => {
+    localStorage.setItem('alphonso_jose_density_v1', focusMode ? 'focus' : 'full');
+  }, [focusMode]);
+
+  const togglePanel = (id) => {
+    setOpenPanels((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const refreshAll = () => {
     setPackets(listAgentPackets());
@@ -300,18 +317,29 @@ export function OrchestratorView({
               Jose coordinates Alphonso and Miya through supervised packets, approvals, memory governance, and runtime balance. This is a local UI and ledger layer; it does not execute hidden actions.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-right sm:grid-cols-4 lg:min-w-[34rem]">
-            <Metric label="Packets" value={packets.length} />
-            <Metric label="Approvals" value={approvalQueue.length} tone={approvalQueue.length ? 'amber' : 'zinc'} />
-            <Metric label="Workflows" value={workflows.length} />
-            <Metric label="Runtime" value={ollamaStatus.label} tone={runtimeState === 'failed' ? 'red' : runtimeState === 'verified' ? 'green' : 'amber'} />
+          <div className="space-y-3 lg:min-w-[34rem]">
+            <div className="grid grid-cols-2 gap-2 text-right sm:grid-cols-4">
+              <Metric label="Packets" value={packets.length} />
+              <Metric label="Approvals" value={approvalQueue.length} tone={approvalQueue.length ? 'amber' : 'zinc'} />
+              <Metric label="Workflows" value={workflows.length} />
+              <Metric label="Runtime" value={ollamaStatus.label} tone={runtimeState === 'failed' ? 'red' : runtimeState === 'verified' ? 'green' : 'amber'} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setFocusMode((current) => !current)}
+              className="w-full rounded-xl border border-amber-200/15 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-100 hover:bg-amber-500/20"
+            >
+              {focusMode ? 'Focus view: critical panels only' : 'Full view: all panels visible'}
+            </button>
           </div>
         </div>
       </header>
 
-      <JoseTaskQueue onRefresh={refreshAll} />
+      <CollapsiblePanel icon={ClipboardList} title="Jose Task Pipeline" id="jose-task-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
+        <JoseTaskQueue onRefresh={refreshAll} />
+      </CollapsiblePanel>
 
-      <Panel icon={Crown} title="Jose Command Intake: Shayan -> Jose -> Agents -> Jose -> Shayan">
+      <CollapsiblePanel icon={Crown} title="Jose Command Intake: Shayan -> Jose -> Agents -> Jose -> Shayan" id="jose-intake" focusMode={false} openPanels={openPanels} onToggle={togglePanel}>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-3">
             <textarea
@@ -342,9 +370,9 @@ export function OrchestratorView({
             </div>
           </div>
         </div>
-      </Panel>
+      </CollapsiblePanel>
 
-      <Panel icon={MessageCircle} title="WhatsApp Inbound">
+      <CollapsiblePanel icon={MessageCircle} title="WhatsApp Inbound" id="whatsapp-inbound" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -413,10 +441,10 @@ export function OrchestratorView({
             </div>
           )}
         </div>
-      </Panel>
+      </CollapsiblePanel>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Panel icon={Users} title="Agent Workload">
+        <CollapsiblePanel icon={Users} title="Agent Workload" id="agent-workload" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2">
             {workload.map((row) => (
               <div key={row.agent} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
@@ -433,9 +461,9 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={AlertTriangle} title="Workflow Governance">
+        <CollapsiblePanel icon={AlertTriangle} title="Workflow Governance" id="workflow-governance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-3">
             <GovernanceRow label="Duplicate Task Detection" value={`${duplicateCandidates.length} candidates`} state="verified" />
             <GovernanceRow label="Conflict Detection" value={`${conflictCandidates.length} candidates`} state="verified" />
@@ -445,9 +473,9 @@ export function OrchestratorView({
           <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
             Duplicate and conflict detection are heuristic UI foundations only. No tasks are merged, canceled, or rerouted automatically.
           </p>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={Route} title="Task Routing">
+        <CollapsiblePanel icon={Route} title="Task Routing" id="task-routing" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-3">
             <input
               value={routeTitle}
@@ -475,9 +503,9 @@ export function OrchestratorView({
               Creates a real local handoff packet in the shared agent bus. It is not executed automatically.
             </p>
           </div>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={Activity} title="Runtime Balance">
+        <CollapsiblePanel icon={Activity} title="Runtime Balance" id="runtime-balance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-3 text-sm">
             <RuntimeRow label="Ollama" value={ollamaStatus.label} trust={runtimeState} />
             <RuntimeRow label="Model" value={settings.selectedModel || 'None selected'} trust={settings.selectedModel ? 'temporary' : 'unverified'} />
@@ -487,9 +515,9 @@ export function OrchestratorView({
               Resource points: {resourceSummary.points}. CPU/VRAM readings are limited to WebView-safe browser signals until native telemetry is wired.
             </div>
           </div>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={RefreshCw} title="Durable Queue + Dead-Letter">
+        <CollapsiblePanel icon={RefreshCw} title="Durable Queue + Dead-Letter" id="durable-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-zinc-500">
             <MiniStat label="Queued" value={queueSnapshot.queued} />
             <MiniStat label="Failed" value={queueSnapshot.failed} />
@@ -518,11 +546,11 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Panel icon={ShieldCheck} title="Pending Approvals">
+        <CollapsiblePanel icon={ShieldCheck} title="Pending Approvals" id="pending-approvals" focusMode={false} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
             {approvalQueue.length === 0 && <p className="text-sm text-zinc-500">No pending approvals.</p>}
             {approvalQueue.map((packet) => (
@@ -550,9 +578,9 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={GitBranch} title="Active Workflows">
+        <CollapsiblePanel icon={GitBranch} title="Active Workflows" id="active-workflows" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
             {workflows.length === 0 && <p className="text-sm text-zinc-500">No workflows created yet.</p>}
             {workflows.map((flow) => (
@@ -567,11 +595,11 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Panel icon={Brain} title="Memory Governance">
+        <CollapsiblePanel icon={Brain} title="Memory Governance" id="memory-governance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Metric label="Shared Memory" value={memoryItems.length} />
             <Metric label="Miya Memory" value={miyaMemory.length} tone="fuchsia" />
@@ -580,9 +608,9 @@ export function OrchestratorView({
           <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
             Memory items are local records with confidence, source, timestamp, and verification state. Jose currently governs visibility and queue state; semantic deduplication is still backend work.
           </p>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={ClipboardList} title="System Decisions">
+        <CollapsiblePanel icon={ClipboardList} title="System Decisions" id="system-decisions" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="flex gap-2">
             <button onClick={recordDecision} className="rounded-xl bg-amber-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-amber-100">
               Record Governance Snapshot
@@ -605,11 +633,11 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Panel icon={Gauge} title="Orchestration Analytics">
+        <CollapsiblePanel icon={Gauge} title="Orchestration Analytics" id="orchestration-analytics" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2 text-sm">
             <RuntimeRow label="Packets Created" value={packets.length} trust="temporary" />
             <RuntimeRow label="Approval Rate" value={formatPercent(countStatus(packets, 'approved'), packets.length)} trust="inferred" />
@@ -621,9 +649,9 @@ export function OrchestratorView({
           <button onClick={runRetrySweep} className="mt-3 w-full rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
             Run Retry + Dead-Letter Sweep
           </button>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={Network} title="Active Handoffs">
+        <CollapsiblePanel icon={Network} title="Active Handoffs" id="active-handoffs" focusMode={false} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {packets.filter((packet) => ['pending_approval', 'approved', 'queued'].includes(packet.status)).length === 0 && <p className="text-sm text-zinc-500">No active handoffs.</p>}
             {packets.filter((packet) => ['pending_approval', 'approved', 'queued'].includes(packet.status)).slice().reverse().slice(0, 8).map((packet) => (
@@ -650,19 +678,19 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={ShieldCheck} title="Approval Governance">
+        <CollapsiblePanel icon={ShieldCheck} title="Approval Governance" id="approval-governance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2 text-sm">
             <RuntimeRow label="Visible Approval Queue" value={`${approvalQueue.length} pending`} trust={approvalQueue.length ? 'pending' : 'verified'} />
             <RuntimeRow label="High Risk Items" value={packets.filter((packet) => ['high', 'critical'].includes(packet.riskLevel || '')).length} trust="temporary" />
             <RuntimeRow label="Rollback Wiring" value="Planned but not execution-backed yet" trust="unverified" />
             <RuntimeRow label="Dangerous Auto-Execution" value="Disabled" trust="verified" />
           </div>
-        </Panel>
+        </CollapsiblePanel>
       </div>
 
-      <Panel icon={Database} title="Handoff Queue + Timeline">
+      <CollapsiblePanel icon={Database} title="Handoff Queue + Timeline" id="handoff-timeline" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
             {packets.slice().reverse().slice(0, 12).map((packet) => (
@@ -681,10 +709,10 @@ export function OrchestratorView({
             ))}
           </div>
         </div>
-      </Panel>
+      </CollapsiblePanel>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Panel icon={AlertTriangle} title="Dead-Letter Queue">
+        <CollapsiblePanel icon={AlertTriangle} title="Dead-Letter Queue" id="dead-letter-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {deadLetters.length === 0 && <p className="text-sm text-zinc-500">No dead-letter items.</p>}
             {deadLetters.slice().reverse().slice(0, 12).map((item) => (
@@ -695,9 +723,9 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
 
-        <Panel icon={ClipboardList} title="Jose Receipts">
+        <CollapsiblePanel icon={ClipboardList} title="Jose Receipts" id="jose-receipts" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {(workflowObs?.receipts || []).length === 0 && <p className="text-sm text-zinc-500">No orchestration receipts yet.</p>}
             {(workflowObs?.receipts || []).slice(0, 20).map((receipt) => (
@@ -707,10 +735,10 @@ export function OrchestratorView({
               </div>
             ))}
           </div>
-        </Panel>
+        </CollapsiblePanel>
       </div>
 
-      <Panel icon={ClipboardList} title="Jose Command Ledger">
+      <CollapsiblePanel icon={ClipboardList} title="Jose Command Ledger" id="jose-command-ledger" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
           {joseCommands.length === 0 && <p className="text-sm text-zinc-500">No Shayan {'->'} Jose commands recorded yet.</p>}
           {joseCommands.slice().reverse().slice(0, 10).map((command) => (
@@ -756,7 +784,7 @@ export function OrchestratorView({
             </div>
           ))}
         </div>
-      </Panel>
+      </CollapsiblePanel>
     </div>
   );
 }
@@ -769,6 +797,26 @@ function Panel({ icon: Icon, title, children }) {
         {title}
       </div>
       {children}
+    </section>
+  );
+}
+
+function CollapsiblePanel({ icon: Icon, title, id, focusMode, openPanels, onToggle, children }) {
+  const open = !focusMode || openPanels.has(id);
+  return (
+    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4 shadow-[0_0_50px_rgba(0,0,0,0.22)]">
+      <button
+        type="button"
+        onClick={() => onToggle?.(id)}
+        className="mb-0 flex w-full items-center justify-between gap-3 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 hover:text-amber-100"
+      >
+        <span className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-amber-200/80" />
+          {title}
+        </span>
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {open ? <div className="mt-4">{children}</div> : <div className="mt-2 text-[11px] text-zinc-600">Collapsed in Focus view.</div>}
     </section>
   );
 }
