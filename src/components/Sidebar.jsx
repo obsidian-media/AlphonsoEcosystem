@@ -8,6 +8,7 @@ import {
   Crown,
   FileText,
   FolderOpen,
+  Home,
   Layers,
   MessageSquare,
   Moon,
@@ -24,6 +25,7 @@ import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { ConnectorStatusStrip } from './ConnectorStatusIndicators';
 
 const NAV_ITEMS = [
+  { id: 'mission', icon: Home, label: 'Mission' },
   { id: 'chat', icon: MessageSquare, label: 'Chat Hub' },
   { id: 'orchestrator', icon: Crown, label: 'Jose' },
   { id: 'hector', icon: Cloud, label: 'Hector' },

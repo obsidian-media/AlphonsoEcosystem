@@ -206,14 +206,14 @@ export function runProjectWorkshop(projectInput) {
   const coordinationReport = createJoseCoordinationReport(project, packets);
   const finalPacket = createFinalExecutionPacket(project, collected, approvalGates, sequence);
   const verificationChain = createDefaultCrossVerificationChain({ traceId, projectId: project.id });
+  const mode = getAgentMode();
+  const executionState = getExecutionApprovalState();
+  const executionGate = canExecuteAction(executionState);
   const aiReviewGate = evaluateAiReviewRequirement({
     hasHumanReview: Boolean(executionState.approved),
     runtimeValidated: Boolean(executionState.verified),
     buildVerified: Boolean(executionState.dependenciesChecked)
   });
-  const mode = getAgentMode();
-  const executionState = getExecutionApprovalState();
-  const executionGate = canExecuteAction(executionState);
 
   if (mode === AGENT_MODES.EXECUTION && !executionGate.ok) {
     addFailureMemory({

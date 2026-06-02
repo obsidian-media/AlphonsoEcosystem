@@ -87,6 +87,7 @@ import { ChatView } from './components/ChatView';
 const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod) => ({ default: mod.ApprovalModal })));
 const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
 const ConnectorHealthPanel = lazy(() => import('./components/ConnectorHealthPanel').then((mod) => ({ default: mod.ConnectorHealthPanel })));
+const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 
 const AutomationView = lazy(() => import('./components/AutomationView').then((mod) => ({ default: mod.AutomationView })));
 const FilesView = lazy(() => import('./components/FilesView').then((mod) => ({ default: mod.FilesView })));
@@ -357,7 +358,7 @@ export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isCoachWindow = searchParams.get('coach') === '1';
   const coachAgentFromQuery = searchParams.get('coachAgent');
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('mission');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [settings, setSettings] = useState(() => getStorage('alphonso_settings', {
     endpoint: DEFAULT_OLLAMA_ENDPOINT,
@@ -2332,6 +2333,19 @@ export default function App() {
           <div className="h-full relative z-10">
             <ViewErrorBoundary label={activeTab} key={activeTab}>
             <Suspense fallback={<ViewLoadingState activeTab={activeTab} />}>
+              {activeTab === 'mission' && (
+                <MissionControlHome
+                  settings={settings}
+                  ollamaStatus={ollamaStatus}
+                  operatorMode={operatorMode}
+                  coachMode={coachMode}
+                  coachIntervention={coachIntervention}
+                  verificationLogs={verificationLogs}
+                  memoryItems={memoryItems}
+                  updateCheckState={updateCheckState}
+                  onNavigate={switchTab}
+                />
+              )}
               {activeTab === 'chat' && (
                 <ChatView
                   activeChatId={activeChatId}
