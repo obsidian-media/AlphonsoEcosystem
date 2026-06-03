@@ -9,6 +9,7 @@ import { evaluatePolicyGate } from './policyEnforcementService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { requireApproval } from './approval/approvalService';
 import { appendConnectorAuditEntry } from './connectorAuditLogService';
+import { browserSendTelegram, browserPollTelegram, verifyTelegramBotEnvironment } from './telegramBrowserConnector';
 
 const CONNECTOR_KEY = 'alphonso_connector_registry_v2';
 const CONNECTOR_AUDIT_KEY = 'alphonso_connector_audit_v2';
