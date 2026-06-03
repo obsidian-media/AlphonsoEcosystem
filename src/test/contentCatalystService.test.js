@@ -16,9 +16,19 @@ vi.mock('../lib/ollama', () => ({
 }));
 
 vi.mock('../services/connectorRegistryService', () => ({
-  generateSdWebUiImage: vi.fn(async () => ({
+  generateComfyUiImage: vi.fn(async () => ({
     ok: true,
-    imageUrl: 'file:///tmp/content-image.png'
+    provider: 'comfyui',
+    checkpoint: 'v1-5-pruned-emaonly-fp16.safetensors',
+    jobId: 'comfy_prompt_001',
+    prompt: 'premium visual',
+    width: 512,
+    height: 512,
+    steps: 20,
+    cfgScale: 7,
+    imageUrls: ['http://127.0.0.1:8188/view?filename=content-image.png&type=output'],
+    outputPaths: ['content-image.png'],
+    previewBase64: 'base64-preview'
   })),
   queueComfyUiVideo: vi.fn(),
   getComfyUiVideoHistory: vi.fn()
@@ -101,6 +111,14 @@ describe('content catalyst', () => {
     expect(bridge.step).toBeTruthy();
     expect(bridge.progress).toBeGreaterThan(0);
     expect(bridge.artifacts.image_url).toBeTruthy();
+    expect(bridge.artifacts.comfyui.provider).toBe('comfyui');
+    expect(bridge.artifacts.comfyui.checkpoint).toBe('v1-5-pruned-emaonly-fp16.safetensors');
+    expect(bridge.artifacts.local_media_artifacts[0]).toMatchObject({
+      engine: 'comfyui',
+      source: 'alphonso-miya',
+      media_type: 'image',
+      privacy: 'local_only'
+    });
   });
 
   it('reuses jobs for the same request id', async () => {

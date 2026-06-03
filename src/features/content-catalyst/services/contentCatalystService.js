@@ -1,5 +1,5 @@
 import { generateOllamaResponse } from '../../../lib/ollama';
-import { generateSdWebUiImage } from '../../../services/connectorRegistryService';
+import { generateComfyUiImage } from '../../../services/connectorRegistryService';
 import { publishMetaContent } from '../../../services/metaPublishService';
 import { generateRunwayVideo } from '../../../services/runwayService';
 import { requireApproval } from '../../../services/approval/approvalService';
@@ -70,6 +70,35 @@ function buildAssetPlan(request) {
     video: Boolean(needs.video),
     narration: Boolean(needs.narration),
     publish: Boolean(needs.publish)
+  };
+}
+
+function normalizeLocalMediaArtifact(result = {}, fallbackPrompt = '') {
+  const outputPaths = Array.isArray(result.outputPaths) ? result.outputPaths : [];
+  const imageUrls = Array.isArray(result.imageUrls) ? result.imageUrls : [];
+  const primaryUrl = result.imageUrl || result.url || imageUrls[0] || null;
+  const primaryPath = result.outputPath || result.filePath || outputPaths[0] || null;
+  return {
+    id: result.jobId || result.promptId || `local-media-${timestampMs()}`,
+    provider: result.provider || 'comfyui',
+    engine: 'comfyui',
+    source: 'alphonso-miya',
+    media_type: 'image',
+    privacy: 'local_only',
+    prompt: result.prompt || fallbackPrompt,
+    checkpoint: result.checkpoint || null,
+    url: primaryUrl,
+    path: primaryPath,
+    outputPaths,
+    imageUrls,
+    previewBase64: result.previewBase64 || null,
+    metadata: {
+      width: result.width || null,
+      height: result.height || null,
+      steps: result.steps || null,
+      cfgScale: result.cfgScale || null,
+      jobId: result.jobId || result.promptId || null
+    }
   };
 }
 
@@ -335,13 +364,13 @@ export async function generateContentDraft(job) {
 
 export async function generateContentImage(job) {
   const prompt = job.draft?.visual_prompt || job.brief?.visual_prompt || `${job.request.idea || 'Content'} premium studio visual`;
-  const result = await generateSdWebUiImage({
+  const result = await generateComfyUiImage({
     prompt,
     negativePrompt: job.request?.tone ? `low quality, blurry, ${job.request.tone}` : 'low quality, blurry',
-    width: 1024,
-    height: 1024,
-    steps: 28,
-    cfgScale: 7.5
+    width: 512,
+    height: 512,
+    steps: 20,
+    cfgScale: 7
   });
   if (!result?.ok) {
     return {
@@ -352,12 +381,27 @@ export async function generateContentImage(job) {
       assets: job.assets || { image_url: null, video_url: null, narration_url: null }
     };
   }
-  const next = withLog({ ...job, status: CONTENT_JOB_STATES.IMAGE_READY, currentStep: 'image' }, 'info', 'Image asset ready.', { result });
+  const mediaArtifact = normalizeLocalMediaArtifact(result, prompt);
+  const next = withLog({ ...job, status: CONTENT_JOB_STATES.IMAGE_READY, currentStep: 'image' }, 'info', 'ComfyUI image asset ready.', { result, mediaArtifact });
   return {
     ...next,
     assets: {
       ...(job.assets || {}),
-      image_url: result.imageUrl || result.outputPath || result.url || null
+      image_url: mediaArtifact.url || mediaArtifact.path || null,
+      image_path: mediaArtifact.path || null,
+      image_preview_base64: mediaArtifact.previewBase64 || null,
+      local_media_artifacts: [
+        ...((job.assets?.local_media_artifacts || []).filter((artifact) => artifact.media_type !== 'image')),
+        mediaArtifact
+      ],
+      comfyui: {
+        provider: mediaArtifact.provider,
+        checkpoint: mediaArtifact.checkpoint,
+        jobId: mediaArtifact.metadata.jobId,
+        outputPaths: mediaArtifact.outputPaths,
+        imageUrls: mediaArtifact.imageUrls,
+        privacy: mediaArtifact.privacy
+      }
     },
     bridge: next.bridge || getAccBridgeStatus()
   };
@@ -700,8 +744,12 @@ export function createContentBridgeResponse(job) {
     draft: job?.draft || null,
     artifacts: {
       image_url: job?.assets?.image_url || null,
+      image_path: job?.assets?.image_path || null,
+      image_preview_base64: job?.assets?.image_preview_base64 || null,
       video_url: job?.assets?.video_url || null,
-      audio_url: job?.assets?.narration_url || job?.narration?.audio_url || null
+      audio_url: job?.assets?.narration_url || job?.narration?.audio_url || null,
+      local_media_artifacts: job?.assets?.local_media_artifacts || [],
+      comfyui: job?.assets?.comfyui || null
     },
     assets: job?.assets || {
       image_url: null,

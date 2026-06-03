@@ -43,6 +43,7 @@ export function TopBar({ settings, ollamaStatus, selectedModelMissing, operatorM
         {activeTab === 'hector' && <Badge color="green">Hector</Badge>}
         {activeTab === 'miya' && <Badge color="blue">Miya</Badge>}
         {activeTab === 'content' && <Badge color="cyan">Content</Badge>}
+        {activeTab === 'mission_room' && <Badge color="cyan">Mission Room</Badge>}
         {activeTab === 'ecosystem' && <Badge color="indigo">Ecosystem</Badge>}
         {activeTab === 'project_execution' && <Badge color="indigo">Project Execution</Badge>}
         {operatorMode && <Badge color="blue">Operator</Badge>}

@@ -14,7 +14,7 @@ import { appendSessionEvent } from '../services/sessionIntelligenceService';
 import { pushMiyaMemory, upsertBrandKit } from '../services/miyaMemoryService';
 import { buildMiyaExportPacket } from '../services/miyaExportPacketService';
 import { generateOllamaResponse } from '../lib/ollama';
-import { generateSdWebUiImage, getComfyUiVideoHistory, queueComfyUiVideo } from '../services/connectorRegistryService';
+import { generateComfyUiImage, getComfyUiVideoHistory, queueComfyUiVideo } from '../services/connectorRegistryService';
 import { generateRunwayVideo, listPendingRunwayJobs, resumeRunwayTask } from '../services/runwayService';
 import { sendNativeNotification } from '../services/notificationService';
 
@@ -58,12 +58,12 @@ const defaultCapcutDraft = {
 };
 
 const defaultMediaRuntime = {
-  provider: 'sd_webui',
+  provider: 'comfyui',
   prompt: '',
   negativePrompt: '',
-  width: 768,
-  height: 768,
-  steps: 24,
+  width: 512,
+  height: 512,
+  steps: 20,
   cfgScale: 7,
   workflowJson: '',
   lastJobId: '',
@@ -386,21 +386,22 @@ export function MiyaStudio({
 
     setIsGeneratingMedia(true);
     setLastError('');
-    onStudioStateChange?.('rendering', 'Miya is generating image with local SD WebUI.');
+    setMediaRuntime((current) => ({ ...current, provider: 'comfyui' }));
+    onStudioStateChange?.('rendering', 'Miya is generating image with local ComfyUI.');
     appendSessionEvent({
       category: 'miya_generation',
       title: 'Miya local image generation started',
-      details: { provider: 'sd_webui', promptPreview: prompt.slice(0, 120) },
+      details: { provider: 'comfyui', promptPreview: prompt.slice(0, 120) },
       agent: 'miya'
     });
 
     try {
-      const result = await generateSdWebUiImage({
+      const result = await generateComfyUiImage({
         prompt,
         negativePrompt: mediaRuntime.negativePrompt,
-        width: Number(mediaRuntime.width || 768),
-        height: Number(mediaRuntime.height || 768),
-        steps: Number(mediaRuntime.steps || 24),
+        width: Number(mediaRuntime.width || 512),
+        height: Number(mediaRuntime.height || 512),
+        steps: Number(mediaRuntime.steps || 20),
         cfgScale: Number(mediaRuntime.cfgScale || 7)
       });
 
@@ -425,11 +426,14 @@ export function MiyaStudio({
           provider: result.provider,
           message: result.message,
           prompt,
+          checkpoint: result.checkpoint || null,
+          imageUrls: result.imageUrls || [],
+          outputPaths: result.outputPaths || [],
           previewBase64: result.previewBase64 || null
         },
-        source: 'miya-sd-webui'
+        source: 'miya-comfyui-image'
       });
-      onStudioStateChange?.('task_complete', 'Local image generated with SD WebUI.');
+      onStudioStateChange?.('task_complete', 'Local image generated with ComfyUI.');
       appendSessionEvent({
         category: 'miya_generation',
         title: 'Miya local image generated',
@@ -703,12 +707,12 @@ export function MiyaStudio({
 
     let imgResult = null;
     try {
-      imgResult = await generateSdWebUiImage({
+      imgResult = await generateComfyUiImage({
         prompt: imgPrompt,
         negativePrompt: mediaRuntime.negativePrompt,
-        width: Number(mediaRuntime.width || 768),
-        height: Number(mediaRuntime.height || 768),
-        steps: Number(mediaRuntime.steps || 24),
+        width: Number(mediaRuntime.width || 512),
+        height: Number(mediaRuntime.height || 512),
+        steps: Number(mediaRuntime.steps || 20),
         cfgScale: Number(mediaRuntime.cfgScale || 7)
       });
       setMediaResult(imgResult);
@@ -911,7 +915,7 @@ function ExportPackageReadiness({ output, canGenerate }) {
         <div>
           <div className="text-xs font-bold uppercase tracking-widest text-fuchsia-200">Miya Production Pipeline</div>
           <p className="mt-1 text-[11px] text-zinc-500">
-            Script-to-video package wiring is local and supervised. Local SD WebUI and ComfyUI adapters are available, and Runway cloud draft generation is backend-backed.
+            Script-to-video package wiring is local and supervised. Local ComfyUI image/workflow adapters are available, and Runway cloud draft generation is backend-backed.
           </p>
         </div>
         <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
@@ -960,7 +964,7 @@ function LocalGenerationPanel({
         <div>
           <div className="text-xs font-bold uppercase tracking-widest text-fuchsia-200">Local Media Generators</div>
           <p className="mt-1 text-[11px] text-zinc-500">
-            Low-cost local-first adapters: SD WebUI for images, ComfyUI for video workflow queueing.
+            Low-cost local-first adapters: ComfyUI for SD 1.5 images and workflow queueing.
           </p>
         </div>
         <span className="rounded-full border border-zinc-300/20 bg-zinc-800/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-300">
@@ -981,7 +985,7 @@ function LocalGenerationPanel({
           onChange={(event) => setMediaRuntime((current) => ({ ...current, negativePrompt: event.target.value }))}
           rows={3}
           className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm text-zinc-200"
-          placeholder="Negative prompt for SD WebUI (optional)"
+          placeholder="Negative prompt for ComfyUI SD 1.5 (optional)"
         />
       </div>
 
@@ -1210,7 +1214,7 @@ function LocalGenerationPanel({
       </div>
 
       <div className="rounded-lg border border-amber-300/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100/90">
-        ComfyUI video rendering is local only. Miya queues ComfyUI workflows and also offers a backend-backed Runway draft path; it does not fake completed renders.
+        ComfyUI rendering is local only. Miya can generate SD 1.5 images through ComfyUI, queue ComfyUI workflows, and also offers a backend-backed Runway draft path; it does not fake completed renders.
       </div>
 
       {mediaResult && (

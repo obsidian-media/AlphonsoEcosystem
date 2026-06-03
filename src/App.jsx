@@ -88,6 +88,7 @@ const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod)
 const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
 const ConnectorHealthPanel = lazy(() => import('./components/ConnectorHealthPanel').then((mod) => ({ default: mod.ConnectorHealthPanel })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
+const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 
 const AutomationView = lazy(() => import('./components/AutomationView').then((mod) => ({ default: mod.AutomationView })));
 const FilesView = lazy(() => import('./components/FilesView').then((mod) => ({ default: mod.FilesView })));
@@ -2344,6 +2345,11 @@ export default function App() {
                   memoryItems={memoryItems}
                   updateCheckState={updateCheckState}
                   onNavigate={switchTab}
+                />
+              )}
+              {activeTab === 'mission_room' && (
+                <MissionRoom
+                  onCreateApprovalRequest={() => setApprovalRequiredNotice(true)}
                 />
               )}
               {activeTab === 'chat' && (

@@ -18,6 +18,7 @@ import {
   Sun,
   Terminal,
   Trash2,
+  UsersRound,
   Zap
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -27,6 +28,7 @@ import { ConnectorStatusStrip } from './ConnectorStatusIndicators';
 const NAV_ITEMS = [
   { id: 'mission', icon: Home, label: 'Mission' },
   { id: 'chat', icon: MessageSquare, label: 'Chat Hub' },
+  { id: 'mission_room', icon: UsersRound, label: 'Mission Room' },
   { id: 'orchestrator', icon: Crown, label: 'Jose' },
   { id: 'hector', icon: Cloud, label: 'Hector' },
   { id: 'miya', icon: Clapperboard, label: 'Miya Studio' },
