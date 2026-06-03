@@ -1,106 +1,104 @@
-import { TRUST_STATES, timestampMs } from './trustModel';
-import {
-  createAgentPacket,
-  updatePacketStatus,
-  markPacketExecuted,
-  markPacketFailed,
-  requestPacketRetry,
-  sendPacketToDeadLetter,
-  listAgentPackets
-} from './agentBusService';
 import { appendConnectorAudit } from './connectorRegistryService';
-import { browserPollTelegram, browserSendTelegram } from './telegramBrowserConnector';
+import { timestampMs } from './trustModel';
+import { browserPollTelegram } from './telegramBrowserConnector';
 
-const POLL_STATE_KEY = 'alphonso_telegram_auto_poll_state_v1';
+const TELEGRAM_AUTO_POLL_STATE_KEY = 'alphonso_telegram_auto_poll_state_v1';
 
-export function getAutoPollState() {
+export function getTelegramAutoPollState() {
   try {
-    const raw = localStorage.getItem(POLL_STATE_KEY);
+    const raw = localStorage.getItem(TELEGRAM_AUTO_POLL_STATE_KEY);
     if (!raw) return { enabled: false, lastPolledAtMs: null, errors: 0 };
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return {
+      enabled: Boolean(parsed.enabled),
+      lastPolledAtMs: typeof parsed.lastPolledAtMs === 'number' ? parsed.lastPolledAtMs : null,
+      errors: typeof parsed.errors === 'number' ? parsed.errors : 0
+    };
   } catch {
     return { enabled: false, lastPolledAtMs: null, errors: 0 };
   }
 }
 
-function setAutoPollState(state) {
+function setTelegramAutoPollState(state) {
   try {
-    localStorage.setItem(POLL_STATE_KEY, JSON.stringify(state));
+    localStorage.setItem(TELEGRAM_AUTO_POLL_STATE_KEY, JSON.stringify(state));
   } catch {
     // ignore
   }
 }
 
 export async function runSingleTelegramPoll({ limit = 12 } = {}) {
-  const state = getAutoPollState();
-  state.lastPolledAtMs = timestampMs();
-
-  let proof;
-  try {
-    proof = await browserPollTelegram({ limit });
-  } catch (error) {
-    state.errors += 1;
-    setAutoPollState(state);
-    appendConnectorAudit('telegram', 'poll_failed', { error: String(error) });
-    return { ok: false, reason: String(error), count: 0 };
+  const env = getTelegramEnvSafe();
+  const token = env?.TELEGRAM_BOT_TOKEN || '';
+  if (!token) {
+    appendConnectorAudit('telegram', 'poll_failed', { reason: 'missing_bot_token' });
+    return { ok: false, reason: 'missing_bot_token' };
   }
 
+  const proof = await browserPollTelegram({ botToken: token, limit });
+  const state = getTelegramAutoPollState();
+  state.lastPolledAtMs = timestampMs();
   state.errors = proof.ok ? 0 : state.errors + 1;
-  setAutoPollState(state);
+  setTelegramAutoPollState(state);
 
   if (!proof.ok) {
-    appendConnectorAudit('telegram', 'poll_failed', { error: proof.error || 'unknown_poll_failure' });
-    return { ok: false, reason: proof.error || 'unknown_poll_failure', count: 0 };
+    appendConnectorAudit('telegram', 'poll_failed', {
+      error: proof.error || 'unknown_poll_failure'
+    });
+    return { ok: false, reason: proof.error || 'poll_failed', count: 0 };
   }
 
-  const packets = listAgentPackets();
-  let created = 0;
-  for (const message of proof.messages || []) {
-    const packet = createAgentPacket({
-      fromAgent: 'telegram',
-      toAgent: 'jose',
-      title: 'Telegram inbound route',
-      packetType: 'telegram_inbound',
-      payload: {
-        chatId: message.chatId,
-        from: message.from,
-        text: message.text,
-        receivedAtMs: message.receivedAtMs
-      },
-      source: 'telegram_bridge',
-      confidence: TRUST_STATES.TEMPORARY,
-      verificationState: TRUST_STATES.UNVERIFIED,
-      requiresApproval: true,
-      riskLevel: 'low',
-      actionType: 'connector_inbound_message'
-    });
-    created += 1;
+  const messages = Array.isArray(proof.messages) ? proof.messages : [];
+  let routed = 0;
+  let rejected = 0;
+
+  for (const message of messages) {
+    const senderId = message?.from_id || message?.chat_id || '';
+    const route = createConnectorRoutePacket('telegram', message?.text || '', senderId);
+    if (route?.rejected) {
+      rejected += 1;
+      appendConnectorAudit('telegram', 'poll_message_rejected', {
+        chatId: message?.chat_id || null,
+        updateId: message?.update_id || null
+      });
+      continue;
+    }
+    if (route?.packet) {
+      routed += 1;
+      appendConnectorAudit('telegram', 'poll_message_routed', {
+        packetId: route.packet.id,
+        chatId: message?.chat_id || null,
+        updateId: message?.update_id || null
+      });
+      try {
+        await createJoseCommandRoute({
+          commandText: route?.parsed?.originalText || message?.text || '',
+          source: 'telegram'
+        });
+      } catch (error) {
+        appendConnectorAudit('telegram', 'jose_routing_failed', {
+          packetId: route.packet?.id || null,
+          error: String(error)
+        });
+      }
+    }
   }
 
   appendConnectorAudit('telegram', 'poll_success', {
-    count: (proof.messages || []).length,
-    created
+    count: messages.length,
+    routed,
+    rejected,
+    lastUpdateId: proof.cursor || null
   });
 
-  return { ok: true, count: (proof.messages || []).length, created };
+  return { ok: true, count: messages.length, routed, rejected };
 }
 
-export async function sendTelegramProof(chatId, text) {
-  let result;
-  try {
-    const envRaw = localStorage.getItem('alphonso_connector_registry_v2');
-    const env = envRaw ? JSON.parse(envRaw).envPresence || {} : {};
-    result = await browserSendTelegram({ botToken: env.TELEGRAM_BOT_TOKEN || '', chatId, text });
-  } catch (error) {
-    appendConnectorAudit('telegram', 'send_failed', { error: String(error), chatId });
-    return { ok: false, error: String(error) };
-  }
-
-  appendConnectorAudit('telegram', result.ok ? 'send_success' : 'send_failed', {
-    chatId,
-    error: result.error || null,
-    externalId: result.external_id || null
-  });
-
-  return result;
+export function getTelegramEnvSafe() {
+  const raw = localStorage.getItem('alphonso_connector_registry_v2');
+  const parsed = raw ? JSON.parse(raw) : {};
+  if (parsed?.envPresence && typeof parsed.envPresence === 'object') return parsed.envPresence;
+  const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+  const telegram = rows.find((row) => row?.id === 'telegram');
+  return telegram?.envPresence || {};
 }

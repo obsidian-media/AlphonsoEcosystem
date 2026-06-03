@@ -1,9 +1,12 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
+
 import {
+  approvePacket,
   createAgentPacket,
-  updatePacketStatus,
+  getPacketById,
   markPacketExecuted,
-  markPacketFailed
+  markPacketFailed,
+  rejectPacket
 } from './agentBusService';
 import { resolveAgentPairingRoute } from './agentPairingRegistryService';
 
@@ -55,7 +58,7 @@ export function executeAgentPairing(pairingId, context = {}) {
   logPairingEvent(pairingId, 'packet_created', { packetId: packet.id });
 
   if (route.approvalMode === 'auto') {
-    markPacketExecuted(packet.id, { autoApproved: true, reason: 'pairing_system_auto_approval' }, TRUST_STATES.PENDING);
+    const approved = approvePacket(packet.id, 'pairing_system');
     logPairingEvent(pairingId, 'auto_approved', { packetId: packet.id });
   }
 
@@ -86,7 +89,7 @@ export function rejectAgentPairing(pairingId, reason = 'Denied by operator') {
     const packets = raw ? JSON.parse(raw) : [];
     const match = packets.find((item) => item.payload?.pairingId === pairingId && item.status === 'pending_approval');
     if (!match) return { ok: false, error: 'No pending pairing packet found.' };
-    const updated = updatePacketStatus(match.id, 'rejected', { rejectionReason: reason });
+    const updated = rejectPacket(match.id, reason);
     logPairingEvent(pairingId, 'rejected', { packetId: match.id, reason });
     return { ok: true, pairingId, packetId: match.id, packet: updated };
   } catch {

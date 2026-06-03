@@ -8,17 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Added (2026-06-03 — OpenCode agent system & CI consolidation)
-- `.opencode/agents/` — 6 specialist agents: `doc-maintainer`, `test-analyst`, `connector-verifier`, `release`, `security`, `audit`
-- `.opencode/skills/` — 5 reusable skills: `doc-freshness`, `security-sweep`, `connector-truth`, `release-gate`, `audit-checklist`
-- CI consolidation — removed `verify-app.yml` (duplicated `ci.yml`); `ci.yml` now runs `npm audit --audit-level=high` and `cargo audit` on every push/PR
-- `src/test/policyEnforcementService.test.js` — 28 tests covering fail-closed gate, connector blocking, approval enforcement, zero-cost mode
-- `src/test/agentContractService.test.js` — 25 tests covering per-agent allowed/blocked actions, prefix matching, fallback behavior
-- `CONTRIBUTING.md` — setup, workflow, code style, testing, and PR guidelines
-- `SECURITY.md` — vulnerability reporting policy, scope, response SLA
-- `.github/ISSUE_TEMPLATE/bug_report.md`, `feature_request.md`, `security_report.md` — structured issue templates
-- `.github/PULL_REQUEST_TEMPLATE.md` — PR checklist template
-- `scripts/bump-version.mjs` — automated version bump across `package.json`, `tauri.conf.json`, `Cargo.toml`; `npm run version:bump` script
+### Added (2026-06-03 — Session 5)
+- SQLite migration for `alphonso_connector_auth_profiles_v1` and `alphonso_connector_registry_v2` — both keys now persist to SQLite via `kv_set`/`kv_get`, with localStorage fallback for backward compatibility
+- New orchestration tests: 54 tests added covering `orchestrationQueueService`, `orchestrationReceiptService`, `orchestrationGovernanceService`, and `joseCommandRouterService`
+- `README.md` created at project root — project overview, quick-start instructions, architecture summary, and contributor guide
 
 ### Fixed (2026-06-01 — Session 3, CI unblock)
 - `src/components/MarketingLandingPage.jsx` — file was imported by `main.jsx` but was never committed to git, causing Vite `UNRESOLVED_IMPORT` on every CI build. Committed the file (368 lines, uses framer-motion which was already a listed dependency).

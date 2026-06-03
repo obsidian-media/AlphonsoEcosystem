@@ -150,6 +150,174 @@ describe('decomposeJoseCommand — agent assignment routing', () => {
   });
 });
 
+describe('decomposeJoseCommand — agent assignment routing', () => {
+  it('assigns Jose for unrecognized commands', () => {
+    const parsed = parseJoseCommand('hello');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    expect(assignments.some((a) => a.agent === 'jose')).toBe(true);
+  });
+
+  it('assigns Maria for governance/audit commands', () => {
+    const parsed = parseJoseCommand('run a compliance audit on our policy');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    expect(assignments.some((a) => a.agent === 'maria')).toBe(true);
+    const maria = assignments.find((a) => a.agent === 'maria');
+    expect(maria.actionType).toBe('governance_audit');
+  });
+
+  it('assigns Sentinel for security monitoring commands', () => {
+    const parsed = parseJoseCommand('check security vulnerabilities and permissions');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    expect(assignments.some((a) => a.agent === 'sentinel')).toBe(true);
+    const sentinel = assignments.find((a) => a.agent === 'sentinel');
+    expect(sentinel.actionType).toBe('security_monitor');
+  });
+
+  it('assigns Echo for memory preservation commands', () => {
+    const parsed = parseJoseCommand('remember this decision and archive the timeline');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    expect(assignments.some((a) => a.agent === 'echo')).toBe(true);
+    const echo = assignments.find((a) => a.agent === 'echo');
+    expect(echo.actionType).toBe('memory_preservation');
+  });
+
+  it('assigns Nova for opportunity scoring commands', () => {
+    const parsed = parseJoseCommand('score and prioritize this opportunity by ROI');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    expect(assignments.some((a) => a.agent === 'nova')).toBe(true);
+    const nova = assignments.find((a) => a.agent === 'nova');
+    expect(nova.actionType).toBe('opportunity_analysis');
+  });
+
+  it('assigns Marcus for distribution execution commands', () => {
+    const parsed = parseJoseCommand('distribute and schedule this for community engagement');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    expect(assignments.some((a) => a.agent === 'marcus')).toBe(true);
+    const marcus = assignments.find((a) => a.agent === 'marcus');
+    expect(marcus.requiresApproval).toBe(true);
+  });
+
+  it('assigns Hector for publishing handoff', () => {
+    const parsed = parseJoseCommand('upload and publish this video to youtube');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const hectorPublish = assignments.find((a) => a.agent === 'hector' && a.actionType === 'external_publish_handoff');
+    expect(hectorPublish).toBeTruthy();
+    expect(hectorPublish.requiresApproval).toBe(true);
+  });
+
+  it('marks local execution as high risk when riskyLocal is true', () => {
+    const parsed = parseJoseCommand('modify the build files and deploy to production');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const alphonso = assignments.find((a) => a.agent === 'alphonso');
+    expect(alphonso).toBeTruthy();
+    expect(alphonso.riskLevel).toBe('high');
+  });
+
+  it('marks local execution as medium risk when riskyLocal is false', () => {
+    const parsed = parseJoseCommand('verify ollama runtime diagnostics');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const alphonso = assignments.find((a) => a.agent === 'alphonso');
+    expect(alphonso).toBeTruthy();
+    expect(alphonso.riskLevel).toBe('medium');
+  });
+});
+
+describe('decomposeJoseCommand — cost and zero-cost routing', () => {
+  it('sets costClass on each assignment', () => {
+    const parsed = parseJoseCommand('research ollama models');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    expect(assignments.length).toBeGreaterThan(0);
+    assignments.forEach((a) => {
+      expect(a).toHaveProperty('costClass');
+    });
+  });
+
+  it('adds Jose cost-policy gate assignment when zero-cost mode blocks paid connector', () => {
+    const parsed = parseJoseCommand('send message via notion API');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const gate = assignments.find((a) => a.actionType === 'cost_policy_enforcement');
+    expect(gate).toBeTruthy();
+    expect(gate.agent).toBe('jose');
+    expect(gate.blockedByZeroCostMode).toBe(true);
+    expect(gate.requiresApproval).toBe(true);
+  });
+
+  it('does not add cost-policy gate when zero-cost mode is off', () => {
+    const parsed = parseJoseCommand('send message via notion API');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: false });
+    const gate = assignments.find((a) => a.actionType === 'cost_policy_enforcement');
+    expect(gate).toBeFalsy();
+  });
+
+  it('classifies unknown connectors as unknown cost', () => {
+    const parsed = parseJoseCommand('do something random');
+    expect(parsed.connectorCost.class).toBe('unknown');
+  });
+
+  it('classifies free connectors as zero_cost_preferred', () => {
+    const parsed = parseJoseCommand('generate an image using comfyui');
+    expect(parsed.connectorCost.class).toBe('zero_cost_preferred');
+  });
+});
+
+describe('decomposeJoseCommand — fragments and decomposition', () => {
+  it('includes fragments on each assignment', () => {
+    const parsed = parseJoseCommand('research ollama models and create video script');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    assignments.forEach((a) => {
+      expect(a).toHaveProperty('decomposition');
+      expect(Array.isArray(a.decomposition)).toBe(true);
+    });
+  });
+
+  it('sets decomposition to full command when no fragments match', () => {
+    const parsed = parseJoseCommand('hello world');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    assignments.forEach((a) => {
+      expect(a.decomposition).toEqual([parsed.clean]);
+    });
+  });
+
+  it('produces multiple assignments for multi-intent commands', () => {
+    const parsed = parseJoseCommand('research ollama pricing and create a video script');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const agents = new Set(assignments.map((a) => a.agent));
+    expect(agents.size).toBeGreaterThan(1);
+  });
+});
+
+describe('decomposeJoseCommand — contract fields', () => {
+  it('all assignments have required fields', () => {
+    const parsed = parseJoseCommand('research ollama and run security audit and remember this');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    assignments.forEach((a) => {
+      expect(a).toHaveProperty('agent');
+      expect(a).toHaveProperty('title');
+      expect(a).toHaveProperty('rationale');
+      expect(a).toHaveProperty('actionType');
+      expect(a).toHaveProperty('riskLevel');
+      expect(a).toHaveProperty('requiresApproval');
+      expect(a).toHaveProperty('commandPreview');
+    });
+  });
+
+  it('Hector research assignment has low risk and no approval required', () => {
+    const parsed = parseJoseCommand('research market data');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const hector = assignments.find((a) => a.agent === 'hector');
+    expect(hector.riskLevel).toBe('low');
+    expect(hector.requiresApproval).toBe(false);
+  });
+
+  it('Miya creative assignment has low risk and no approval required', () => {
+    const parsed = parseJoseCommand('create a storyboard');
+    const assignments = decomposeJoseCommand(parsed, { zeroCostMode: true });
+    const miya = assignments.find((a) => a.agent === 'miya');
+    expect(miya.riskLevel).toBe('low');
+    expect(miya.requiresApproval).toBe(false);
+  });
+});
+
 describe('listJoseCommands', () => {
   it('returns an empty array when no commands exist', () => {
     const commands = listJoseCommands();
@@ -163,6 +331,11 @@ describe('listJoseDeadLetters', () => {
     const dlq = listJoseDeadLetters();
     expect(Array.isArray(dlq)).toBe(true);
   });
+
+  it('returns empty array when no dead letters exist', () => {
+    const dlq = listJoseDeadLetters();
+    expect(dlq.length).toBe(0);
+  });
 });
 
 describe('getJoseWorkflowObservability', () => {
@@ -171,5 +344,24 @@ describe('getJoseWorkflowObservability', () => {
     expect(obs).toHaveProperty('totals');
     expect(obs).toHaveProperty('receipts');
     expect(typeof obs.totals).toBe('object');
+  });
+
+  it('has expected total fields', () => {
+    const obs = getJoseWorkflowObservability();
+    expect(obs.totals).toHaveProperty('commands');
+    expect(obs.totals).toHaveProperty('distributed');
+    expect(obs.totals).toHaveProperty('inProgress');
+    expect(obs.totals).toHaveProperty('reported');
+    expect(obs.totals).toHaveProperty('pendingApprovals');
+    expect(obs.totals).toHaveProperty('failedPackets');
+    expect(obs.totals).toHaveProperty('deadLetters');
+  });
+
+  it('starts with zero counts', () => {
+    const obs = getJoseWorkflowObservability();
+    expect(obs.totals.commands).toBe(0);
+    expect(obs.totals.distributed).toBe(0);
+    expect(obs.totals.deadLetters).toBe(0);
+    expect(obs.receipts).toEqual([]);
   });
 });
