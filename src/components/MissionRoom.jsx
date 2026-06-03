@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, CheckCircle2, Clipboard, Crown, ExternalLink, Hammer, LockKeyhole, MessageSquare, Plus, RadioTower, Send, Shield, Sparkles, User } from 'lucide-react';
+import { AlertTriangle, Bot, CheckCircle2, Clipboard, ClipboardList, Crown, Clapperboard, ExternalLink, Hammer, LockKeyhole, MessageSquare, Plus, RadioTower, Send, Shield, Sparkles, User, Zap } from 'lucide-react';
 import {
   MISSION_ROOM_AGENTS,
   MISSION_ROOM_SECURITY_MODEL,
