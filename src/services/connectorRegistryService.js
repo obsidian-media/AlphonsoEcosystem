@@ -18,6 +18,10 @@ export const CONNECTOR_SCOPE = 'connector_registry_v2';
 export const CONNECTOR_AUDIT_SCOPE = 'connector_audit_v2';
 export const CONNECTOR_AUTH_SCOPE = 'connector_auth_profiles_v1';
 
+const SQLITE_WRITE_DEBOUNCE_MS = 300;
+let connectorSqliteWriteTimer = null;
+let authProfilesSqliteWriteTimer = null;
+
 const DEFAULT_CONNECTORS = [
   {
     id: 'telegram',
@@ -200,6 +204,7 @@ function readRows(key) {
 function writeRows(key, rows) {
   const nextRows = rows.slice(-500);
   localStorage.setItem(key, JSON.stringify(nextRows));
+  persistToSqliteDebounced(key, nextRows);
   const scope = key === CONNECTOR_KEY
     ? CONNECTOR_SCOPE
     : key === CONNECTOR_AUDIT_KEY
@@ -217,6 +222,35 @@ function writeRows(key, rows) {
   }
 }
 
+function persistToSqliteDebounced(key, data) {
+  clearTimeout(connectorSqliteWriteTimer);
+  connectorSqliteWriteTimer = setTimeout(() => {
+    invoke('kv_set', { key, value: JSON.stringify(data) }).catch(() => {});
+  }, SQLITE_WRITE_DEBOUNCE_MS);
+}
+
+export async function hydrateConnectorRegistryFromSqlite() {
+  try {
+    const json = await invoke('kv_get', { key: CONNECTOR_KEY });
+    if (!json) return null;
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function hydrateConnectorAuditFromSqlite() {
+  try {
+    const json = await invoke('kv_get', { key: CONNECTOR_AUDIT_KEY });
+    if (!json) return null;
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function readAuthProfiles() {
   try {
     const raw = localStorage.getItem(CONNECTOR_AUTH_KEY);
@@ -229,6 +263,10 @@ function readAuthProfiles() {
 
 function writeAuthProfiles(profiles) {
   localStorage.setItem(CONNECTOR_AUTH_KEY, JSON.stringify(profiles));
+  clearTimeout(authProfilesSqliteWriteTimer);
+  authProfilesSqliteWriteTimer = setTimeout(() => {
+    invoke('kv_set', { key: CONNECTOR_AUTH_KEY, value: JSON.stringify(profiles) }).catch(() => {});
+  }, SQLITE_WRITE_DEBOUNCE_MS);
   const rows = Object.entries(profiles || {}).map(([id, profile]) => ({
     id: `auth-${id}`,
     ...profile
@@ -241,6 +279,48 @@ function writeAuthProfiles(profiles) {
     verificationState: TRUST_STATES.UNVERIFIED,
     timestampMs: timestampMs()
   }));
+}
+
+export async function hydrateConnectorAuthProfilesFromSqlite() {
+  try {
+    const json = await invoke('kv_get', { key: CONNECTOR_AUTH_KEY });
+    if (!json) return null;
+    const parsed = JSON.parse(json);
+    return typeof parsed === 'object' && parsed !== null ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function initializeConnectorRegistryFromSqlite() {
+  try {
+    const [registry, audit, auth] = await Promise.all([
+      hydrateConnectorRegistryFromSqlite(),
+      hydrateConnectorAuditFromSqlite(),
+      hydrateConnectorAuthProfilesFromSqlite()
+    ]);
+    if (registry && registry.length > 0) {
+      const existing = readRows(CONNECTOR_KEY);
+      if (existing.length === 0) {
+        localStorage.setItem(CONNECTOR_KEY, JSON.stringify(registry));
+      }
+    }
+    if (audit && audit.length > 0) {
+      const existing = readRows(CONNECTOR_AUDIT_KEY);
+      if (existing.length === 0) {
+        localStorage.setItem(CONNECTOR_AUDIT_KEY, JSON.stringify(audit));
+      }
+    }
+    if (auth && Object.keys(auth).length > 0) {
+      const raw = localStorage.getItem(CONNECTOR_AUTH_KEY);
+      const existing = raw ? JSON.parse(raw) : {};
+      if (Object.keys(existing).length === 0) {
+        localStorage.setItem(CONNECTOR_AUTH_KEY, JSON.stringify(auth));
+      }
+    }
+  } catch {
+    // SQLite not available in browser dev mode — localStorage remains primary.
+  }
 }
 
 function normalizeAllowlist(value) {
