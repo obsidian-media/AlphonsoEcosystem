@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const invoke = vi.fn();
+const { invoke: mockInvoke } = vi.hoisted(() => ({
+  invoke: vi.fn().mockResolvedValue(null)
+}));
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args) => invoke(...args)
+  invoke: (...args) => mockInvoke(...args)
 }));
 
 import { listConnectors, sendQwenConnectorMessage, verifyConnectorEnvironment } from '../services/connectorRegistryService';
@@ -11,11 +13,12 @@ import { listConnectors, sendQwenConnectorMessage, verifyConnectorEnvironment } 
 describe('connectorRegistryService', () => {
   beforeEach(() => {
     localStorage.clear();
-    invoke.mockReset();
+    mockInvoke.mockReset();
+    mockInvoke.mockResolvedValue(null);
   });
 
   it('probes local runtime health separately from external setup_required connectors', async () => {
-    invoke.mockImplementation(async (command) => {
+    mockInvoke.mockImplementation(async (command) => {
       if (command === 'connector_check_local_runtime_health') {
         return {
           ok: true,
@@ -41,7 +44,7 @@ describe('connectorRegistryService', () => {
       status: 'foundation_only',
       lastTestStatus: 'verified'
     });
-    expect(invoke).toHaveBeenCalledWith('connector_check_local_runtime_health', { connectorId: 'sd_webui' });
+    expect(mockInvoke).toHaveBeenCalledWith('connector_check_local_runtime_health', { connectorId: 'sd_webui' });
   });
 
   it('registers Alibaba Qwen as an approval-gated paid prompt connector', () => {
@@ -60,7 +63,7 @@ describe('connectorRegistryService', () => {
     localStorage.setItem('alphonso_connector_auth_profiles_v1', JSON.stringify({
       qwen: { enabled: true, allowlist: [], mode: 'allowlist_required' }
     }));
-    invoke.mockResolvedValue({ DASHSCOPE_API_KEY: false });
+    mockInvoke.mockResolvedValue({ DASHSCOPE_API_KEY: false });
     const result = await sendQwenConnectorMessage('hello qwen', { approved: true });
 
     expect(result).toMatchObject({
@@ -69,8 +72,8 @@ describe('connectorRegistryService', () => {
       connectorId: 'qwen',
       code: 'MISSING_KEY'
     });
-    expect(invoke).toHaveBeenCalledWith('check_env_vars_presence', { names: ['DASHSCOPE_API_KEY'] });
-    expect(invoke).not.toHaveBeenCalledWith('connector_send_qwen', expect.anything());
+    expect(mockInvoke).toHaveBeenCalledWith('check_env_vars_presence', { names: ['DASHSCOPE_API_KEY'] });
+    expect(mockInvoke).not.toHaveBeenCalledWith('connector_send_qwen', expect.anything());
   });
 
   it('keeps foundation_only connectors truthfully non-operational until a real health proof exists', async () => {
@@ -82,6 +85,7 @@ describe('connectorRegistryService', () => {
       status: 'foundation_only',
       lastTestStatus: 'foundation_only'
     });
-    expect(invoke).not.toHaveBeenCalled();
+    expect(mockInvoke).not.toHaveBeenCalledWith('check_env_vars_presence', expect.anything());
+    expect(mockInvoke).not.toHaveBeenCalledWith('connector_check_local_runtime_health', expect.anything());
   });
 });

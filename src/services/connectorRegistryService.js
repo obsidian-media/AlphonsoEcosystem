@@ -129,23 +129,6 @@ const DEFAULT_CONNECTORS = [
   }
 ];
 
-let _sqliteConnectorRows = null;
-let _sqliteAuthProfiles = null;
-let _sqliteHydrated = false;
-
-Promise.all([
-  invoke('kv_get', { key: 'alphonso_connector_registry_v2' }).catch(() => null),
-  invoke('kv_get', { key: 'alphonso_connector_auth_profiles_v1' }).catch(() => null)
-]).then(([connectorJson, authJson]) => {
-  if (connectorJson) {
-    try { _sqliteConnectorRows = JSON.parse(connectorJson); } catch {}
-  }
-  if (authJson) {
-    try { _sqliteAuthProfiles = JSON.parse(authJson); } catch {}
-  }
-  _sqliteHydrated = true;
-}).catch(() => { _sqliteHydrated = true; });
-
 const DEFAULT_AUTH_PROFILES = {
   telegram: {
     enabled: false,
@@ -205,28 +188,13 @@ const DEFAULT_AUTH_PROFILES = {
 };
 
 function readRows(key) {
-  if (key === CONNECTOR_KEY && _sqliteHydrated && _sqliteConnectorRows) {
-    return Array.isArray(_sqliteConnectorRows) ? _sqliteConnectorRows : [];
-  }
-  if (key === CONNECTOR_KEY && !_sqliteHydrated) {
-    return new Promise((resolve) => {
-      const check = () => {
-        if (_sqliteHydrated) {
-          resolve(_sqliteConnectorRows ? (Array.isArray(_sqliteConnectorRows) ? _sqliteConnectorRows : []) : readRowsFromLocalStorage(key));
-        } else { setTimeout(check, 50); }
-      };
-      check();
-    });
-  }
-  return readRowsFromLocalStorage(key);
-}
-
-function readRowsFromLocalStorage(key) {
   try {
     const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function writeRows(key, rows) {
@@ -251,30 +219,13 @@ function writeRows(key, rows) {
 }
 
 function readAuthProfiles() {
-  if (_sqliteHydrated && _sqliteAuthProfiles) {
-    return { ...DEFAULT_AUTH_PROFILES, ...(_sqliteAuthProfiles || {}) };
-  }
-  if (!_sqliteHydrated) {
-    return new Promise((resolve) => {
-      const check = () => {
-        if (_sqliteHydrated) {
-          resolve(_sqliteAuthProfiles
-            ? { ...DEFAULT_AUTH_PROFILES, ...(_sqliteAuthProfiles || {}) }
-            : readAuthProfilesFromLocalStorage());
-        } else { setTimeout(check, 50); }
-      };
-      check();
-    });
-  }
-  return readAuthProfilesFromLocalStorage();
-}
-
-function readAuthProfilesFromLocalStorage() {
   try {
     const raw = localStorage.getItem(CONNECTOR_AUTH_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     return { ...DEFAULT_AUTH_PROFILES, ...(parsed || {}) };
-  } catch { return { ...DEFAULT_AUTH_PROFILES }; }
+  } catch {
+    return { ...DEFAULT_AUTH_PROFILES };
+  }
 }
 
 function writeAuthProfiles(profiles) {
