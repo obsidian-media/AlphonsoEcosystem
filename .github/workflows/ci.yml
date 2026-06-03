@@ -121,6 +121,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Start dev server
         run: npm run dev
         background: true
