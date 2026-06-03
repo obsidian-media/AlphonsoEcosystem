@@ -72,7 +72,7 @@ function AgentCard({ agentKey, reservedSlot }) {
       </div>
     );
   }
-  const agent = MISSION_ROOM_AGENTS[agentKey];
+  const agent = lookupAgent(agentKey);
   const Icon = speakerIcon(agentKey);
   return (
     <div className={cx('rounded-3xl border p-4', agentTone(agent.accent))}>

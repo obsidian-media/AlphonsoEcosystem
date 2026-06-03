@@ -170,7 +170,7 @@ export const MISSION_ROOM_SECURITY_MODEL = {
   ]
 };
 
-function sanitizeAgentKey(key, fallback = 'kite') {
+function sanitizeAgentKey(key, fallback = 'alphonso') {
   return Object.prototype.hasOwnProperty.call(MISSION_ROOM_AGENTS, key) ? key : fallback;
 }
 
@@ -207,13 +207,13 @@ export function classifyMissionRoomRisk(content = '') {
   };
 }
 
-export function appendMissionSecurityEvent({ roomId = 'mission_room_main', type = 'event', actor = 'kite', riskLevel = 'low', summary = '', metadata = {} } = {}) {
+export function appendMissionSecurityEvent({ roomId = 'mission_room_main', type = 'event', actor = 'alphonso', riskLevel = 'low', summary = '', metadata = {} } = {}) {
   const rows = readJson(SECURITY_EVENTS_KEY, []);
   const event = {
     id: makeId('mission_security'),
     roomId,
     type,
-    actor: sanitizeAgentKey(actor, 'kite'),
+    actor: sanitizeAgentKey(actor, 'alphonso'),
     riskLevel,
     summary: redactMissionRoomSecrets(summary),
     summaryHash: hashText(summary),
@@ -259,16 +259,27 @@ export function listMissionRooms() {
 }
 
 export function getMissionRoom(roomId = 'mission_room_main') {
-  return listMissionRooms().find((room) => room.id === roomId) || listMissionRooms()[0];
+  const room = listMissionRooms().find((row) => row.id === roomId) || createDefaultMissionRoom();
+  const validAgents = Object.keys(MISSION_ROOM_AGENTS);
+  const selectedAgents = Array.isArray(room.selectedAgents)
+    ? room.selectedAgents.filter((key) => validAgents.includes(key))
+    : validAgents;
+  if (selectedAgents.length !== room.selectedAgents?.length) {
+    const next = { ...room, selectedAgents, updatedAt: nowIso(), updatedAtMs: timestampMs() };
+    const rooms = listMissionRooms();
+    writeJson(ROOMS_KEY, [{ ...next, id: room.id }, ...rooms.filter((row) => row.id !== room.id && row.id !== next.id)].slice(0, 20));
+    return { ...next };
+  }
+  return { ...room, selectedAgents };
 }
 
 export function saveMissionRoom(room) {
   const allowedAgents = Array.isArray(room.selectedAgents)
     ? room.selectedAgents.filter((agentKey) => Object.prototype.hasOwnProperty.call(MISSION_ROOM_AGENTS, agentKey))
-    : ['shayan', 'kite', 'hermes'];
+    : ['shayan', 'alphonso', 'jose'];
   const next = {
     ...room,
-    selectedAgents: allowedAgents.length ? allowedAgents : ['shayan', 'kite', 'hermes'],
+    selectedAgents: allowedAgents.length ? allowedAgents : ['shayan', 'alphonso', 'jose'],
     updatedAt: nowIso(),
     updatedAtMs: timestampMs()
   };
