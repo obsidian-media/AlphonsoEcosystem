@@ -53,6 +53,8 @@ function speakerIcon(speaker) {
   return Bot;
 }
 
+const lookupAgent = (key) => MISSION_ROOM_AGENTS[key] || MISSION_ROOM_AGENTS.alphonso || MISSION_ROOM_AGENTS.jose || Object.values(MISSION_ROOM_AGENTS)[0] || { name: 'Unknown', role: 'unknown', accent: 'zinc' };
+
 function AgentCard({ agentKey, reservedSlot }) {
   if (reservedSlot) {
     return (
@@ -92,7 +94,7 @@ function AgentCard({ agentKey, reservedSlot }) {
 }
 
 function MessageBubble({ message }) {
-  const agent = MISSION_ROOM_AGENTS[message.speaker] || MISSION_ROOM_AGENTS.kite;
+  const agent = lookupAgent(message.speaker);
   const Icon = speakerIcon(message.speaker);
   return (
     <div className={cx('rounded-3xl border p-4', agentTone(agent.accent))}>
@@ -131,7 +133,7 @@ function MessageBubble({ message }) {
 }
 
 function TaskCard({ task, onUpdate }) {
-  const owner = MISSION_ROOM_AGENTS[task.owner] || MISSION_ROOM_AGENTS.hermes;
+  const owner = lookupAgent(task.owner);
   return (
     <div className="rounded-3xl border border-white/10 bg-zinc-950/70 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -189,9 +191,9 @@ export function MissionRoom({ onCreateApprovalRequest }) {
     if (messages.length === 0) {
       addMissionMessage({
         roomId: room.id,
-        speaker: 'kite',
+        speaker: 'alphonso',
         kind: 'system',
-        content: 'Mission Room online. Current scope: Shayan + Kite + Hermes only. External publish/delete/push/spend actions stay approval-gated.'
+        content: 'Mission Room online. Current scope: Shayan + ALPHONSO boardroom. External publish/delete/push/spend actions stay approval-gated.'
       });
       reload();
     }
@@ -238,7 +240,7 @@ export function MissionRoom({ onCreateApprovalRequest }) {
       acceptance: 'Return readiness score, blockers, changed files, verification commands/results, and next action.'
     });
     setHandoffText(text);
-    addMissionMessage({ roomId: room.id, speaker: 'kite', kind: 'handoff', content: `Hermes handoff drafted for ${handoffProject}. Awaiting copy/send by Shayan.` });
+    addMissionMessage({ roomId: room.id, speaker: 'alphonso', kind: 'handoff', content: `Mission brief drafted for ${handoffProject}. Awaiting copy/send by Shayan.` });
     reload();
     try {
       await navigator.clipboard.writeText(text);
