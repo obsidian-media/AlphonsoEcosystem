@@ -41,7 +41,15 @@ function riskTone(riskLevel) {
 
 function speakerIcon(speaker) {
   if (speaker === 'shayan') return User;
-  if (speaker === 'hermes') return Hammer;
+  if (speaker === 'alphonso') return Bot;
+  if (speaker === 'jose') return Crown;
+  if (speaker === 'hector') return ClipboardList;
+  if (speaker === 'miya') return Clapperboard;
+  if (speaker === 'maria') return Shield;
+  if (speaker === 'marcus') return Send;
+  if (speaker === 'echo') return RadioTower;
+  if (speaker === 'sentinel') return LockKeyhole;
+  if (speaker === 'nova') return Zap;
   return Bot;
 }
 
@@ -205,13 +213,13 @@ export function MissionRoom({ onCreateApprovalRequest }) {
     const task = addMissionTask({
       roomId: room.id,
       title: taskTitle,
-      owner: 'hermes',
+      owner: 'alphonso',
       status: 'todo',
       priority: 'P1',
       acceptance: taskAcceptance || 'Evidence-backed report with changed files, checks, blockers, and risks.'
     });
     if (task) {
-      addMissionMessage({ roomId: room.id, speaker: 'kite', kind: 'task', content: `Assigned to Hermes: ${task.title}` });
+      addMissionMessage({ roomId: room.id, speaker: 'alphonso', kind: 'task', content: `Assigned: ${task.title}` });
       setTaskTitle('');
       setTaskAcceptance('');
       reload();

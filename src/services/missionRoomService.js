@@ -89,19 +89,68 @@ export const MISSION_ROOM_AGENTS = {
     lane: 'human',
     accent: 'emerald'
   },
-  kite: {
-    key: 'kite',
-    name: 'Kite',
-    role: 'Commander / QA / routing',
-    lane: 'commander',
+  alphonso: {
+    key: 'alphonso',
+    name: 'Alphonso',
+    role: 'Local operator — execution, verification, packaging',
+    lane: 'operator',
     accent: 'cyan'
   },
-  hermes: {
-    key: 'hermes',
-    name: 'Hermes',
-    role: 'External executor / worker',
-    lane: 'executor',
+  jose: {
+    key: 'jose',
+    name: 'Jose',
+    role: 'Orchestrator — intake, routing, merge, confirm, report',
+    lane: 'orchestrator',
     accent: 'amber'
+  },
+  hector: {
+    key: 'hector',
+    name: 'Hector',
+    role: 'Research + citations, source scan',
+    lane: 'research',
+    accent: 'violet'
+  },
+  miya: {
+    key: 'miya',
+    name: 'Miya',
+    role: 'Creative — strategy, script, storyboard, export',
+    lane: 'creative',
+    accent: 'pink'
+  },
+  maria: {
+    key: 'maria',
+    name: 'Maria',
+    role: 'Governance, audit, risk, approval review',
+    lane: 'governance',
+    accent: 'emerald'
+  },
+  marcus: {
+    key: 'marcus',
+    name: 'Marcus',
+    role: 'Approved distribution execution',
+    lane: 'distribution',
+    accent: 'orange'
+  },
+  echo: {
+    key: 'echo',
+    name: 'Echo',
+    role: 'Memory historian and archival',
+    lane: 'memory',
+    accent: 'blue'
+  },
+  sentinel: {
+    key: 'sentinel',
+    name: 'Sentinel',
+    role: 'Security monitoring, automation safety',
+    lane: 'security',
+    accent: 'red'
+  },
+  nova: {
+    key: 'nova',
+    name: 'Nova',
+    role: 'Scoring, analysis, opportunity prioritization',
+    lane: 'analysis',
+    accent: 'teal'
   }
 };
 
@@ -188,14 +237,11 @@ export function listMissionSecurityEvents(roomId = 'mission_room_main') {
 export function createDefaultMissionRoom() {
   return {
     id: 'mission_room_main',
-    name: 'Kite × Hermes Mission Room',
-    description: 'Shared command table for Shayan, Kite, and Hermes.',
+    name: 'ALPHONSO Mission Room',
+    description: 'Shared command table for Shayan and the ALPHONSO agent board.',
     context: 'Coordinate projects, assign execution lanes, review evidence, and keep publish/external actions behind Shayan approval.',
-    selectedAgents: ['shayan', 'kite', 'hermes'],
-    openParticipantSlots: [
-      { id: 'slot_1', label: 'Reserved participant slot', status: 'empty' },
-      { id: 'slot_2', label: 'Reserved participant slot', status: 'empty' }
-    ],
+    selectedAgents: Object.keys(MISSION_ROOM_AGENTS),
+    openParticipantSlots: [],
     mode: 'mission-control',
     createdAt: nowIso(),
     createdAtMs: timestampMs(),
