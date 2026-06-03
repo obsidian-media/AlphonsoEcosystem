@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Home,
   Layers,
+  ListChecks,
   MessageSquare,
   Moon,
   Plus,
@@ -39,7 +40,8 @@ const NAV_ITEMS = [
   { id: 'ecosystem', icon: Layers, label: 'Ecosystem' },
   { id: 'operator', icon: Activity, label: 'Operator' },
   { id: 'connectors', icon: RadioTower, label: 'Connectors', showStatusDot: true },
-  { id: 'activity', icon: ClipboardList, label: 'Activity' }
+  { id: 'activity', icon: ClipboardList, label: 'Activity' },
+  { id: 'workflows', icon: ListChecks, label: 'Workflows' }
 ];
 
 export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings }) {
