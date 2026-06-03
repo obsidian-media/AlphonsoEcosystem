@@ -21,6 +21,8 @@
 | OpenCode | Create PR template | `.github/PULL_REQUEST_TEMPLATE.md` | N/A | COMPLETE | Contributor checklist with testing requirements |
 | OpenCode | Add Playwright E2E to CI | `.github/workflows/ci.yml` | N/A | COMPLETE | Added E2E job with dev server startup and Playwright test run |
 | OpenCode | Create version bump script | `scripts/bump-version.mjs`, `package.json` | N/A | COMPLETE | Automated version update across package.json, Cargo.toml, tauri.conf.json |
+| OpenCode | Add policyEnforcement tests | `src/test/policyEnforcementService.test.js` | 31 pass | COMPLETE | Policy gate, risk classification, settings |
+| OpenCode | Add agentContract tests | `src/test/agentContractService.test.js` | 22 pass | COMPLETE | All 9 agent contracts, validation logic |
 
 ## Blockers
 
