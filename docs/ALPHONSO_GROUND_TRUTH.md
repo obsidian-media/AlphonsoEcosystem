@@ -1,6 +1,6 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-01 — Session 4 complete  
-**Verified by:** Claude Code (live filesystem + all 42 test files, 158 tests passing, cargo clippy clean)  
+**Last verified:** 2026-06-03 — Session 5 complete  
+**Verified by:** Claude Code (live filesystem + all 51 test files, 287+ tests passing, cargo clippy clean)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -37,6 +37,8 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 ## 2. Agent Roster — 9 Agents (not 4)
 
 Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 are registered in `src/agents/agentRegistry.js` and enforced by `src/services/agentContractService.js`.
+
+**Note:** Agent orchestration in this project is managed via OpenCode (opencode.ai), an interactive CLI tool that provides specialized agent skills and subagents for software engineering tasks. OpenCode agents are distinct from the 9 Alphonso agents defined in `src/agents/`.
 
 | Agent | Role | Key constraint |
 |---|---|---|
@@ -111,11 +113,11 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 37 Files in `src/test/` (not zero)
+## 4. Test Suite — 51 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-05-31):**
+**Test files (verified 2026-06-03):**
 ```
 accBridgeService.test.js
 agentSkills.test.js
@@ -270,7 +272,9 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [ ] **Remaining 50+ services still `.js`** — migration pattern documented in `docs/FRONTEND_MIGRATION_REPORT.md`; do next services in order listed there
 - [x] **`alphonso_settings` → SQLite** — already done (Sessions 3). Both persist to localStorage + SQLite; SQLite hydrated on boot.
 - [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.jsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
-- [ ] **localStorage + SQLite remaining 3 keys** — `alphonso_messages_${id}` (partially via chatPersistenceService), `alphonso_connector_auth_profiles_v1`, `alphonso_connector_registry_v2`. `kv_set`/`kv_get` commands exist for all.
+- [x] **`alphonso_connector_auth_profiles_v1` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
+- [x] **`alphonso_connector_registry_v2` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
+- [ ] **localStorage + SQLite remaining 1 key** — `alphonso_messages_${id}` (partially via chatPersistenceService). `kv_set`/`kv_get` commands exist for all.
 
 ### TESTING
 - [x] **Coverage threshold** — set to 9% in `vite.config.js` (actual measured: 9.22%). Staged path: write tests to hit 12→20→30. `@vitest/coverage-v8@2.1.9` installed and version-matched.
@@ -278,7 +282,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **42 test files, 158 tests, all passing** (verified 2026-06-01, Session 4). 6 new test files added: `appStorage.test.js`, `chatUtils.test.js`, `ollamaUtils.test.js`, `trustModel.test.js`, `connectorAuditLogService.test.js`, `sourceConfidenceService.test.js`.
+- [x] **Test suite confirmed passing** — **51 test files, 287+ tests, all passing** (verified 2026-06-03, Session 5). 9 new test files added since Session 4: `appStorage.test.js`, `chatUtils.test.js`, `ollamaUtils.test.js`, `trustModel.test.js`, `connectorAuditLogService.test.js`, `sourceConfidenceService.test.js`, `orchestrationQueueService.test.js`, `orchestrationReceiptService.test.js`, `orchestrationGovernanceService.test.js`.
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -383,4 +387,4 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-01 — Session 4 complete. 42 test files, 158 tests, all passing. Coverage 27.83% (threshold 12%, src/ scoped). cargo clippy clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-03 — Session 5 complete. 51 test files, 287+ tests, all passing. Coverage 27.83% (threshold 12%, src/ scoped). cargo clippy clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

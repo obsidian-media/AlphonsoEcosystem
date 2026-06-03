@@ -8,6 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added (2026-06-03 — Session 5)
+- SQLite migration for `alphonso_connector_auth_profiles_v1` and `alphonso_connector_registry_v2` — both keys now persist to SQLite via `kv_set`/`kv_get`, with localStorage fallback for backward compatibility
+- New orchestration tests: 54 tests added covering `orchestrationQueueService`, `orchestrationReceiptService`, `orchestrationGovernanceService`, and `joseCommandRouterService`
+- `README.md` created at project root — project overview, quick-start instructions, architecture summary, and contributor guide
+
 ### Fixed (2026-06-01 — Session 3, CI unblock)
 - `src/components/MarketingLandingPage.jsx` — file was imported by `main.jsx` but was never committed to git, causing Vite `UNRESOLVED_IMPORT` on every CI build. Committed the file (368 lines, uses framer-motion which was already a listed dependency).
 - `.npmrc` — added `legacy-peer-deps=true` at project root to prevent `npm ci` ERESOLVE on CI caused by `@eslint/js@10` / `eslint@9` peer dep mismatch.

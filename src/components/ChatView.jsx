@@ -1,5 +1,6 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Bot, ChevronsDown, ChevronsUp, Copy, Download, History, Paperclip, Search, Send, Square, Trash2, X } from 'lucide-react';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
@@ -75,6 +76,16 @@ export function ChatView({
       if (durable && durable.length > 0) {
         setMessages(durable);
       } else {
+        try {
+          const sqliteData = await invoke('kv_get', { key: `alphonso_messages_${activeChatId}` });
+          if (sqliteData) {
+            const parsed = JSON.parse(sqliteData);
+            if (Array.isArray(parsed)) {
+              setMessages(parsed);
+              return;
+            }
+          }
+        } catch {}
         setMessages(getStorage(`alphonso_messages_${activeChatId}`, []));
       }
     }
@@ -86,6 +97,7 @@ export function ChatView({
     if (messages.length > 0) {
       setStorage(`alphonso_messages_${activeChatId}`, messages);
       persistChatMessages(activeChatId, messages);
+      invoke('kv_set', { key: `alphonso_messages_${activeChatId}`, value: JSON.stringify(messages) }).catch(() => {});
       setConversations((current) => current.map((conversation) => {
         if (
           conversation.id !== activeChatId ||
