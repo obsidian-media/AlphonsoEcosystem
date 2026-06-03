@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 158 tests across 42 files — all should pass
+npm run test             # Run all 180+ tests across 47 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + test + build in one command
@@ -45,9 +45,9 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 
 - **9 agents**: Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — all in `src/agents/`, all enforced by `agentContractService.js`
 - **policyEnforcementService.js is fail-closed**: every outbound connector call goes through this gate; if credentials are missing or the action is ambiguous it is blocked, not allowed
-- **lib.rs is ~6,993 lines** — two modules extracted: `whatsapp_webhook.rs` (Session 3) + `kv_store.rs` (Session 4). Next candidate: Telegram connector block.
-- **All 158 tests are in `src/test/`** — 42 test files; Vitest is scoped to `src/` via `include` pattern in `vite.config.js`
-- **Two CI workflows exist**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy) and `verify-app.yml` (lint + test + build). Both passing green.
+- **lib.rs is ~7,078 lines** — two modules extracted: `whatsapp_webhook.rs` (Session 3) + `kv_store.rs` (Session 4). Next candidate: Telegram connector block.
+- **All 180+ tests are in `src/test/`** — 47 test files; Vitest is scoped to `src/` via `include` pattern in `vite.config.js`
+- **One CI workflow exists**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit). Passing green.
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
 - **appendAgentActivity**: wired in `joseExecutionEngineService.js` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Activity tab now shows live data.
@@ -85,9 +85,9 @@ Before writing any new service, component, or feature, check this list:
 ## Before Making Changes
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
-2. Check `src/services/` for an existing service before writing a new one — there are 65+ services
-3. Check `src/test/` — there are 42 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 158 tests must continue to pass
+2. Check `src/services/` for an existing service before writing a new one — there are 89+ services
+3. Check `src/test/` — there are 47 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 180+ tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -117,14 +117,14 @@ src/                   React frontend (all .jsx, no TypeScript except memoryServ
     ConnectorHealthPanel.jsx        — full connector panel (lazy chunk)
     ConnectorStatusIndicators.jsx   — small dot/strip components (static-safe import)
     AgentActivityLog.jsx            — activity timeline tab (appendAgentActivity wired)
-  services/            65+ services
+  services/            89+ services
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                42 test files (Vitest, scoped to src/)
+  test/                47 test files (Vitest, scoped to src/)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
-    lib.rs             Rust backend (~6,993 lines)
+    lib.rs             Rust backend (~7,078 lines)
     kv_store.rs        KV store module — kv_set, kv_get, save_settings, load_settings
     whatsapp_webhook.rs  WhatsApp webhook module (3 commands, 4 structs)
     native_proof.rs    Native proof module
@@ -135,8 +135,7 @@ docs/                  Documentation and handoff packages
   CHANGELOG.md
 .github/
   workflows/
-    ci.yml             Main CI: lint + test + build + cargo clippy/test + Tauri artifact
-    verify-app.yml     Secondary: verify:app script
+    ci.yml             Main CI: lint + test + build + cargo clippy/test + Tauri artifact + security audits
 .npmrc                 legacy-peer-deps=true (required for npm ci to work)
 playwright.config.js   Playwright config (baseURL :5173, headless Chromium)
 gateway/
@@ -146,4 +145,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-01 — Session 4 complete. 42 test files, 158 tests, all passing. Coverage 27.83% (threshold 12%). cargo clippy clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-03 — OpenCode audit. 47 test files, 180+ tests, all passing. Coverage 27.83% (threshold 12%). cargo clippy clean. CI consolidated (verify-app.yml removed, security audits added). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

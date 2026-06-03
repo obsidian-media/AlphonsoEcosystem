@@ -1,0 +1,103 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "*": "allow",
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow",
+      ".tauri-updater-key": "deny",
+      ".tauri-updater-key.pub": "deny"
+    },
+    "edit": "ask",
+    "bash": {
+      "*": "allow",
+      "rm *": "deny",
+      "git push *": "ask",
+      "git commit *": "ask",
+      "cargo publish *": "deny"
+    },
+    "task": {
+      "*": "allow"
+    },
+    "webfetch": "allow",
+    "websearch": "allow",
+    "skill": "allow",
+    "question": "allow"
+  },
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "description": "Default build agent with full tool access for Alphonso development"
+    },
+    "plan": {
+      "mode": "primary",
+      "description": "Read-only planning and analysis for Alphonso architecture decisions",
+      "permission": {
+        "edit": "deny",
+        "bash": "ask"
+      }
+    },
+    "audit": {
+      "mode": "subagent",
+      "description": "Deep read-only audit of Alphonso components, services, connectors, and truth labels",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    "security": {
+      "mode": "subagent",
+      "description": "Security review of CSP, secrets, permissions, connector gating, and Tauri capabilities",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    "release": {
+      "mode": "subagent",
+      "description": "Release gatekeeper — validates readiness before any version promotion",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "npm run verify*": "allow",
+          "npm run test*": "allow",
+          "npm run lint*": "allow",
+          "cargo check*": "allow",
+          "cargo clippy*": "allow",
+          "cargo test*": "allow"
+        }
+      }
+    },
+    "connector-verifier": {
+      "mode": "subagent",
+      "description": "Verifies connector implementations are real, not stubs — checks policy gating and proof paths",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    "test-analyst": {
+      "mode": "subagent",
+      "description": "Analyzes test coverage gaps, identifies untested services and components",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "npm run test*": "allow",
+          "npm run test:coverage*": "allow"
+        }
+      }
+    },
+    "doc-maintainer": {
+      "mode": "subagent",
+      "description": "Checks documentation freshness against actual code — finds stale counts, missing sections, outdated claims",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    }
+  }
+}

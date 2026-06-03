@@ -160,9 +160,11 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 
 ## Known Technical Debt
 
-- `src-tauri/src/lib.rs` is ~7,200 lines — module splitting deferred
-- All frontend files are `.jsx` not `.tsx` — no TypeScript migration yet
-- `vite.config.js` and `vite.config.cjs` both exist (duplicate)
-- Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get`
+- `src-tauri/src/lib.rs` is ~7,078 lines — two modules extracted: `whatsapp_webhook.rs` + `kv_store.rs`. Next candidate: Telegram connector block
+- All frontend files are `.jsx` not `.tsx` — no TypeScript migration yet (only `memoryService.ts` migrated)
+- Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud inbound webhook requires hosted endpoint deployment (not yet live)
-- No Playwright E2E smoke test
+- Playwright E2E exists (`e2e/smoke.spec.js`) but not wired into CI
+- Component test coverage at 5.78% — 4 agent modules at 0%
+- App.jsx is ~2,700 lines — god component needs refactoring
+- Mascot images not compressed (jose: 236KB, alphonso: 243KB)
