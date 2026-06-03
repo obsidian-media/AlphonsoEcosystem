@@ -27,7 +27,8 @@
     "auth:outlook": "node scripts/auth-outlook.mjs",
     "preview": "node scripts/run-vite-preview.mjs",
     "tauri": "tauri",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "version:bump": "node scripts/bump-version.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

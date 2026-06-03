@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test & Build
@@ -20,6 +24,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Security audit (npm)
+        run: npm audit --audit-level=high
+        continue-on-error: true
 
       - name: Lint check
         run: npm run lint --if-present
@@ -45,6 +53,10 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+
+      - name: Security audit (cargo)
+        run: cargo install cargo-audit && cargo audit --manifest-path src-tauri/Cargo.toml
+        continue-on-error: true
 
       - name: Cargo tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
@@ -88,3 +100,54 @@ jobs:
           name: Alphonso-${{ github.sha }}-x64-setup
           path: src-tauri/target/release/bundle/nsis/Alphonso_*_x64-setup.exe
           retention-days: 14
+
+  e2e:
+    name: Playwright E2E Smoke Test
+    needs: [test]
+    runs-on: windows-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Start dev server
+        run: npm run dev
+        background: true
+
+      - name: Wait for dev server
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          while ($attempt -lt $maxAttempts) {
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 2 -ErrorAction Stop
+              if ($response.StatusCode -eq 200) {
+                Write-Host "Dev server is ready"
+                break
+              }
+            } catch {
+              $attempt++
+              Write-Host "Waiting for dev server... attempt $attempt/$maxAttempts"
+              Start-Sleep -Seconds 2
+            }
+          }
+          if ($attempt -ge $maxAttempts) {
+            Write-Host "Dev server failed to start"
+            exit 1
+          }
+
+      - name: Run Playwright tests
+        run: npx playwright test --reporter=list
+        env:
+          CI: true

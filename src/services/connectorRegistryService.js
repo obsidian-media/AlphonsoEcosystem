@@ -129,6 +129,23 @@ const DEFAULT_CONNECTORS = [
   }
 ];
 
+let _sqliteConnectorRows = null;
+let _sqliteAuthProfiles = null;
+let _sqliteHydrated = false;
+
+Promise.all([
+  invoke('kv_get', { key: 'alphonso_connector_registry_v2' }).catch(() => null),
+  invoke('kv_get', { key: 'alphonso_connector_auth_profiles_v1' }).catch(() => null)
+]).then(([connectorJson, authJson]) => {
+  if (connectorJson) {
+    try { _sqliteConnectorRows = JSON.parse(connectorJson); } catch {}
+  }
+  if (authJson) {
+    try { _sqliteAuthProfiles = JSON.parse(authJson); } catch {}
+  }
+  _sqliteHydrated = true;
+}).catch(() => { _sqliteHydrated = true; });
+
 const DEFAULT_AUTH_PROFILES = {
   telegram: {
     enabled: false,
@@ -188,18 +205,34 @@ const DEFAULT_AUTH_PROFILES = {
 };
 
 function readRows(key) {
+  if (key === CONNECTOR_KEY && _sqliteHydrated && _sqliteConnectorRows) {
+    return Array.isArray(_sqliteConnectorRows) ? _sqliteConnectorRows : [];
+  }
+  if (key === CONNECTOR_KEY && !_sqliteHydrated) {
+    return new Promise((resolve) => {
+      const check = () => {
+        if (_sqliteHydrated) {
+          resolve(_sqliteConnectorRows ? (Array.isArray(_sqliteConnectorRows) ? _sqliteConnectorRows : []) : readRowsFromLocalStorage(key));
+        } else { setTimeout(check, 50); }
+      };
+      check();
+    });
+  }
+  return readRowsFromLocalStorage(key);
+}
+
+function readRowsFromLocalStorage(key) {
   try {
     const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function writeRows(key, rows) {
   const nextRows = rows.slice(-500);
   localStorage.setItem(key, JSON.stringify(nextRows));
+  invoke('kv_set', { key, value: JSON.stringify(nextRows) }).catch(() => {});
   const scope = key === CONNECTOR_KEY
     ? CONNECTOR_SCOPE
     : key === CONNECTOR_AUDIT_KEY
@@ -218,17 +251,35 @@ function writeRows(key, rows) {
 }
 
 function readAuthProfiles() {
+  if (_sqliteHydrated && _sqliteAuthProfiles) {
+    return { ...DEFAULT_AUTH_PROFILES, ...(_sqliteAuthProfiles || {}) };
+  }
+  if (!_sqliteHydrated) {
+    return new Promise((resolve) => {
+      const check = () => {
+        if (_sqliteHydrated) {
+          resolve(_sqliteAuthProfiles
+            ? { ...DEFAULT_AUTH_PROFILES, ...(_sqliteAuthProfiles || {}) }
+            : readAuthProfilesFromLocalStorage());
+        } else { setTimeout(check, 50); }
+      };
+      check();
+    });
+  }
+  return readAuthProfilesFromLocalStorage();
+}
+
+function readAuthProfilesFromLocalStorage() {
   try {
     const raw = localStorage.getItem(CONNECTOR_AUTH_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     return { ...DEFAULT_AUTH_PROFILES, ...(parsed || {}) };
-  } catch {
-    return { ...DEFAULT_AUTH_PROFILES };
-  }
+  } catch { return { ...DEFAULT_AUTH_PROFILES }; }
 }
 
 function writeAuthProfiles(profiles) {
   localStorage.setItem(CONNECTOR_AUTH_KEY, JSON.stringify(profiles));
+  invoke('kv_set', { key: CONNECTOR_AUTH_KEY, value: JSON.stringify(profiles) }).catch(() => {});
   const rows = Object.entries(profiles || {}).map(([id, profile]) => ({
     id: `auth-${id}`,
     ...profile
@@ -685,15 +736,33 @@ export async function pollTelegramConnector(limit = 12) {
   try {
     proof = await invoke('connector_poll_telegram', { limit });
   } catch (error) {
-    appendConnectorAudit('telegram', 'poll_failed', { error: String(error) });
-    return {
-      ok: false,
-      count: 0,
-      routed: 0,
-      rejected: 0,
-      messages: [],
-      error: String(error)
-    };
+    const env = getConnectorEnvironment();
+    const token = env?.TELEGRAM_BOT_TOKEN || '';
+    if (token) {
+      try {
+        proof = await browserPollTelegram({ botToken: token, limit });
+      } catch (browserError) {
+        appendConnectorAudit('telegram', 'poll_failed', { error: String(browserError) });
+        return {
+          ok: false,
+          count: 0,
+          routed: 0,
+          rejected: 0,
+          messages: [],
+          error: String(browserError)
+        };
+      }
+    } else {
+      appendConnectorAudit('telegram', 'poll_failed', { error: String(error) });
+      return {
+        ok: false,
+        count: 0,
+        routed: 0,
+        rejected: 0,
+        messages: [],
+        error: String(error)
+      };
+    }
   }
 
   const messages = Array.isArray(proof?.messages) ? proof.messages : [];
@@ -996,6 +1065,20 @@ async function requireConnectorApproval(connectorId, actionType, summary, option
   });
 }
 
+function getConnectorEnvironment() {
+  try {
+    const raw = localStorage.getItem('alphonso_connector_registry_v2');
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (parsed?.envPresence && typeof parsed.envPresence === 'object') return parsed.envPresence;
+    const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+    const telegram = rows.find((row) => row?.id === 'telegram');
+    const presence = telegram?.envPresence || {};
+    return presence;
+  } catch {
+    return {};
+  }
+}
+
 export async function sendTelegramConnectorMessage(chatId, text, options = {}) {
   const auth = isConnectorAuthenticated('telegram');
   if (!auth.ok) {
@@ -1021,9 +1104,55 @@ export async function sendTelegramConnectorMessage(chatId, text, options = {}) {
       error: gate.reason || 'Telegram policy gate blocked the action.'
     };
   }
-  const result = await invoke('connector_send_telegram', { chatId, text });
+
+  const env = getConnectorEnvironment();
+  const token = (env?.TELEGRAM_BOT_TOKEN || '').trim();
+  if (!token) {
+    return {
+      ok: false,
+      connectorId: 'telegram',
+      blocked: true,
+      trust: TRUST_STATES.UNVERIFIED,
+      error: 'Telegram bot token is not configured.'
+    };
+  }
+
+  const target = String(chatId || '').trim();
+  const body = String(text || '').trim();
+  if (!target) {
+    return {
+      ok: false,
+      connectorId: 'telegram',
+      blocked: true,
+      error: 'Telegram chat id is required.'
+    };
+  }
+  if (!body) {
+    return {
+      ok: false,
+      connectorId: 'telegram',
+      blocked: true,
+      error: 'Message text is required.'
+    };
+  }
+
+  let result;
+  try {
+    result = await browserSendTelegram({ botToken: token, chatId: target, text: body });
+  } catch (error) {
+    appendConnectorAudit('telegram', 'send_failed', {
+      target,
+      error: String(error)
+    });
+    return {
+      ok: false,
+      connectorId: 'telegram',
+      error: String(error)
+    };
+  }
+
   appendConnectorAudit('telegram', result?.ok ? 'send_success' : 'send_failed', {
-    target: chatId,
+    target,
     externalId: result?.externalId || null,
     error: result?.error || null
   });

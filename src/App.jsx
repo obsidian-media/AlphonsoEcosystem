@@ -83,6 +83,7 @@ import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { ChatView } from './components/ChatView';
+import { WorkflowPanel } from './components/WorkflowPanel';
 
 const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod) => ({ default: mod.ApprovalModal })));
 const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
@@ -478,6 +479,7 @@ export default function App() {
     const layout = getStorage(COACH_LAYOUT_KEY, { mini: false, corner: 'bottom-right' });
     return COACH_CORNERS.includes(layout?.corner) ? layout.corner : 'bottom-right';
   });
+  const [showWorkflowPanel, setShowWorkflowPanel] = useState(false);
   const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
   const [approvalPending, setApprovalPending] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(
@@ -2452,6 +2454,21 @@ export default function App() {
                   onJoseStateChange={(state, message) => setJoseCompanionState({ state, message })}
                 />
               )}
+              {activeTab === 'workflows' && (
+                <div className="flex items-center justify-between p-4">
+                  <div>
+                    <div className="text-sm font-semibold text-zinc-200">Workflows</div>
+                    <div className="text-xs text-zinc-500">Trigger and review workflows from this panel.</div>
+                  </div>
+                  <button
+                    onClick={() => setShowWorkflowPanel(true)}
+                    className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-zinc-200 hover:border-white/20"
+                  >
+                    <ListChecks className="h-3.5 w-3.5" />
+                    Open Workflows
+                  </button>
+                </div>
+              )}
               {activeTab === 'operator' && (
                 <OperatorDashboard
                   operatorMode={operatorMode}
@@ -2568,6 +2585,10 @@ export default function App() {
           onCheckUpdates={() => runUpdateCheck({ manual: true })}
         />
       </Suspense>
+
+      {showWorkflowPanel ? (
+        <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(workflowId) => switchTab('activity')} />
+      ) : null}
     </div>
   );
 }
