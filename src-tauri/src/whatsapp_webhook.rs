@@ -272,3 +272,101 @@ pub(crate) fn normalize_whatsapp_cloud_inbound(raw_body: String) -> WhatsAppClou
     error: None,
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn normalize_valid_payload_with_messages() {
+    let payload = r#"{
+      "entry": [{
+        "changes": [{
+          "value": {
+            "messages": [
+              {
+                "from": "15551234567",
+                "id": "wamid.abc123",
+                "timestamp": "1700000000",
+                "text": { "body": "Hello world" }
+              }
+            ]
+          }
+        }]
+      }]
+    }"#;
+
+    let proof = normalize_whatsapp_cloud_inbound(payload.to_string());
+    assert!(proof.ok);
+    assert_eq!(proof.provider, "whatsapp_cloud_api");
+    assert_eq!(proof.count, 1);
+    assert_eq!(proof.messages.len(), 1);
+    assert_eq!(proof.messages[0].text, "Hello world");
+    assert_eq!(proof.messages[0].chat_id, "15551234567");
+    assert_eq!(proof.messages[0].from_id, Some("15551234567".to_string()));
+    assert_eq!(proof.messages[0].date_unix, Some(1700000000));
+    assert_eq!(proof.trust, "verified");
+    assert!(proof.error.is_none());
+  }
+
+  #[test]
+  fn normalize_empty_payload() {
+    let payload = r#"{}"#;
+    let proof = normalize_whatsapp_cloud_inbound(payload.to_string());
+    assert!(proof.ok);
+    assert_eq!(proof.count, 0);
+    assert!(proof.messages.is_empty());
+    assert_eq!(proof.trust, "verified");
+  }
+
+  #[test]
+  fn normalize_payload_no_messages_array() {
+    let payload = r#"{
+      "entry": [{
+        "changes": [{
+          "value": {
+            "contacts": [{"wa_id": "15551234567"}]
+          }
+        }]
+      }]
+    }"#;
+    let proof = normalize_whatsapp_cloud_inbound(payload.to_string());
+    assert!(proof.ok);
+    assert_eq!(proof.count, 0);
+    assert!(proof.messages.is_empty());
+  }
+
+  #[test]
+  fn normalize_invalid_json_returns_error() {
+    let payload = "not json at all";
+    let proof = normalize_whatsapp_cloud_inbound(payload.to_string());
+    assert!(!proof.ok);
+    assert_eq!(proof.count, 0);
+    assert!(proof.error.is_some());
+    assert!(proof.error.unwrap().contains("Invalid JSON"));
+  }
+
+  #[test]
+  fn normalize_skips_messages_with_empty_text() {
+    let payload = r#"{
+      "entry": [{
+        "changes": [{
+          "value": {
+            "messages": [
+              {
+                "from": "15551234567",
+                "id": "wamid.abc123",
+                "timestamp": "1700000000",
+                "text": { "body": "" }
+              }
+            ]
+          }
+        }]
+      }]
+    }"#;
+    let proof = normalize_whatsapp_cloud_inbound(payload.to_string());
+    assert!(proof.ok);
+    assert_eq!(proof.count, 0);
+    assert!(proof.messages.is_empty());
+  }
+}
