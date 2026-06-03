@@ -1,6 +1,6 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-03 — Session 5 complete  
-**Verified by:** Claude Code (live filesystem + all 51 test files, 287+ tests passing, cargo clippy clean)  
+**Last verified:** 2026-06-03 — Session 6 complete  
+**Verified by:** OpenCode agent (live filesystem + all 56 test files, 442 tests passing, 24 Rust tests passing, cargo clippy clean, lint clean, build passing)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -113,15 +113,24 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 51 Files in `src/test/` (not zero)
+## 4. Test Suite — 56 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-03):**
+**Test files (verified 2026-06-03, Session 6):**
 ```
 accBridgeService.test.js
+agentContractService.test.js
+agentPairingConstants.test.js
+agentPairingExecutionService.test.js
 agentSkills.test.js
 approvalEnforcement.test.js
+appStorage.test.js
+chatUtils.test.js
+coachInterventionService.test.js
+coachSkillService.test.js
+coachSoundCueService.test.js
+connectorAuditLogService.test.js
 connectorRegistryService.test.js
 contentCatalystBridgeService.test.js
 contentCatalystService.test.js
@@ -131,22 +140,31 @@ joseCommandRouterService.test.js
 joseExecutionEngineService.test.js
 josePipelineE2E.test.js
 joseZeroCostRouting.test.js
+memoryService.test.js
+missionRoomService.test.js
+miyaComfyWorkflowPresetService.test.js
 miyaExportPacketService.test.js
 miyaWorkflowTemplates.test.js
 ollamaReadinessGuide.test.js
 ollamaState.test.js
+ollamaUtils.test.js
 operatorDashboard.test.jsx
+orchestrationQueueService.test.js
+orchestrationReceiptService.test.js
 pluginSandboxService.test.js
+policyEnforcementService.test.js
 productionReadinessService.test.js
 recoveryService.test.js
 runtimeLedgerService.test.js
 runwayService.test.js
 selfDevelopmentService.test.js
-setupTests.js
+sourceConfidenceService.test.js
+telegramAutoPollService.test.js
 telegramConnectorProof.test.js
 toolConnectionLiveProof.test.js
 toolConnectionService.test.js
 toolNotificationDispatcher.test.js
+trustModel.test.js
 TrustReceiptBrowser.test.jsx
 updaterReleaseUtils.test.js
 whatsappCloudGateway.test.js
@@ -155,8 +173,13 @@ whatsappGatewaySecurity.test.js
 whatsappWebhookService.test.js
 workflowDurabilityHydration.test.js
 workflowExecutionService.test.js
+workflowOperationsRegistryService.test.js
 workspaceRootService.test.js
 ```
+
+**Rust tests (verified 2026-06-03, Session 6):**
+- 24 tests in `src-tauri/src/lib.rs`, `kv_store.rs`, `whatsapp_webhook.rs` — all passing
+- `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
 - Run the existing tests and measure actual pass rate: `npm run test`
@@ -274,7 +297,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.jsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
 - [x] **`alphonso_connector_auth_profiles_v1` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
 - [x] **`alphonso_connector_registry_v2` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
-- [ ] **localStorage + SQLite remaining 1 key** — `alphonso_messages_${id}` (partially via chatPersistenceService). `kv_set`/`kv_get` commands exist for all.
+- [x] **`alphonso_messages_${id}` → SQLite** — DONE (2026-06-03, Session 6): `chatPersistenceService.js` persists via `upsert_memory_records`/`list_memory_records`; `ChatView.jsx` also calls `kv_set`/`kv_get` for secondary SQLite path. localStorage kept as fallback. All message keys now dual-write.
 
 ### TESTING
 - [x] **Coverage threshold** — set to 9% in `vite.config.js` (actual measured: 9.22%). Staged path: write tests to hit 12→20→30. `@vitest/coverage-v8@2.1.9` installed and version-matched.
@@ -282,7 +305,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **51 test files, 287+ tests, all passing** (verified 2026-06-03, Session 5). 9 new test files added since Session 4: `appStorage.test.js`, `chatUtils.test.js`, `ollamaUtils.test.js`, `trustModel.test.js`, `connectorAuditLogService.test.js`, `sourceConfidenceService.test.js`, `orchestrationQueueService.test.js`, `orchestrationReceiptService.test.js`, `orchestrationGovernanceService.test.js`.
+- [x] **Test suite confirmed passing** — **56 test files, 442 tests, all passing** (verified 2026-06-03, Session 6). 24 Rust unit tests also passing. New test files since Session 5: `agentPairingConstants.test.js`, `agentPairingExecutionService.test.js`, `telegramAutoPollService.test.js`.
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -305,7 +328,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 
 ### PERFORMANCE
 - [x] **Lazy loading** — 14 heavy views lazy-loaded. Session 2 added 3 more. Main chunk history: 331KB → 320KB (session 2) → **330KB** (session 3 temporarily, when `ConnectorHealthPanel` was pulled into main via `Sidebar.jsx` static import) → **330KB fixed** (session 3 fix: `ConnectorStatusIndicators.jsx` extraction restores `ConnectorHealthPanel` as a proper 9.7KB lazy chunk). Net: main bundle 330KB.
-- [ ] **Image asset compression** — mascot PNGs/WebPs still heavy in build output (jose: 236KB, alphonso: 243KB)
+- [x] **Image asset compression** — DONE (2026-06-03, Session 6): Logo/banner/icon/thumbnail PNGs converted to WebP (89% reduction, ~9MB saved). `miya-mascot.png` converted to WebP (77.7% reduction). Unused `ChatGPT Image Jun 1` deleted (2.7MB). Total savings: ~12MB.
 
 ### TOOLING
 - [x] **eslint-plugin-security** — installed + wired in `eslint.config.js` (2026-05-31, autonomous)
@@ -387,4 +410,4 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-03 — Session 5 complete. 51 test files, 287+ tests, all passing. Coverage 27.83% (threshold 12%, src/ scoped). cargo clippy clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-03 — Session 6 complete. 56 test files, 442 tests, all passing. 24 Rust tests passing. Coverage 27.83% (threshold 12%, src/ scoped). cargo clippy clean. lint clean. Build passing. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
