@@ -1,5 +1,5 @@
 import React from 'react';
-import { listWorkflows, runWorkflow, runWorkflowTasks } from '../services/workflowRegistryService';
+import { listWorkflows, runWorkflow, executeWorkflowTasks } from '../services/workflowRegistryService';
 import { Play, ListChecks, X } from 'lucide-react';
 
 export function WorkflowPanel({ onClose, onRunWorkflow }) {
@@ -15,7 +15,7 @@ export function WorkflowPanel({ onClose, onRunWorkflow }) {
     setActive(workflow.id);
     setStatus('Running workflow...');
     try {
-      const result = await runWorkflowTasks(workflow.id);
+      const result = await executeWorkflowTasks(workflow.id);
       setStatus(result.ok ? 'Completed. Check Mission Room for outputs.' : 'Failed. See logs.');
       onRunWorkflow?.(workflow.id);
     } catch (error) {

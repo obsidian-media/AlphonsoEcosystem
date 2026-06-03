@@ -2,10 +2,10 @@ import React, { useMemo } from 'react';
 import { Activity, AlertTriangle, Bot, CheckCircle2, Clapperboard, Crown, Gauge, MessageSquare, RadioTower, Shield, Sparkles, Terminal } from 'lucide-react';
 import { listApprovalQueue, listAgentPackets } from '../services/agentBusService';
 import { listAgentActivity } from '../services/agentActivityService';
-import alphonsoBanner from '../../logo-banner-thumbnail-media/ALPHONSO_BANNER.png';
-import alphonsoIcon from '../../logo-banner-thumbnail-media/ALPHONSO_ICON.png';
-import alphonsoLogo from '../../logo-banner-thumbnail-media/ALPHONSO_LOGO.png';
-import alphonsoThumbnail from '../../logo-banner-thumbnail-media/ALPHONSO_THUMBNAIL.png';
+import alphonsoBanner from '../../logo-banner-thumbnail-media/ALPHONSO_BANNER.webp';
+import alphonsoIcon from '../../logo-banner-thumbnail-media/ALPHONSO_ICON.webp';
+import alphonsoLogo from '../../logo-banner-thumbnail-media/ALPHONSO_LOGO.webp';
+import alphonsoThumbnail from '../../logo-banner-thumbnail-media/ALPHONSO_THUMBNAIL.webp';
 
 function toneClass(tone = 'zinc') {
   if (tone === 'green') return 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100';

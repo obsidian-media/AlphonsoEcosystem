@@ -461,3 +461,23 @@ export function getWorkflowExecutor(actionType) {
 export function listSupportedExecutors() {
   return Object.keys(EXECUTORS);
 }
+
+export function listWorkflowRuns() {
+  return [];
+}
+
+export function startWorkflowRun() {
+  return { ok: false, error: 'Workflow run engine is not yet wired.' };
+}
+
+export function executeWorkflowRun() {
+  return { ok: false, error: 'Workflow run execution is not yet wired.' };
+}
+
+export function approveWorkflowRun() {
+  return { ok: false, error: 'Workflow run approval is not yet wired.' };
+}
+
+export function listWorkflowRunTimeline() {
+  return [];
+}

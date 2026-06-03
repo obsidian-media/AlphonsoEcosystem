@@ -1,12 +1,12 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
 import { createWorkflow, listWorkflows } from '../services/workflowBuilderService';
-import { listWorkflowRuns } from '../services/workflowExecutionService';
+import { listWorkflowReceipts } from '../services/workflowReceiptService';
 import { listWorkflowOperations } from '../services/workflowOperationsRegistryService';
 
 export function AutomationView() {
   const [workflows, setWorkflows] = React.useState(() => listWorkflows());
-  const [runs, setRuns] = React.useState(() => listWorkflowRuns());
+  const [runs, setRuns] = React.useState(() => listWorkflowReceipts());
   const [ops, setOps] = React.useState(() => listWorkflowOperations());
   const [newName, setNewName] = React.useState('');
 
@@ -20,7 +20,7 @@ export function AutomationView() {
 
   const refresh = () => {
     setWorkflows(listWorkflows());
-    setRuns(listWorkflowRuns());
+    setRuns(listWorkflowReceipts());
     setOps(listWorkflowOperations());
   };
 

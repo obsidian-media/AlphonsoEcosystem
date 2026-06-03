@@ -2,7 +2,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { listConnectors, listConnectorAuthProfiles, listConnectorAudit, verifyConnectorEnvironment } from './connectorRegistryService';
 import { listToolConnectionTypes, listToolConnections } from './toolConnectionService';
 import { listWorkflowReceipts } from './workflowReceiptService';
-import { listWorkflowRuns } from './workflowExecutionService';
 import { listOrchestrationReceipts } from './orchestrationReceiptService';
 import { getLastRepoAudit, summarizeRepoAudit } from './repoAuditService';
 import { TRUST_STATES, timestampMs } from './trustModel';
@@ -508,7 +507,7 @@ export async function collectProductionReadinessSnapshot({
     connectorAudit
   });
 
-  const workflowRuns = listWorkflowRuns();
+  const workflowRuns = listWorkflowReceipts();
   const workflowReceipts = listWorkflowReceipts();
   const orchestrationReceipts = listOrchestrationReceipts();
 
