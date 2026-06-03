@@ -26,6 +26,11 @@
 | OpenCode | Add orchestration queue tests | `src/test/orchestrationQueueService.test.js` | 34 pass | COMPLETE | Queue transitions, dead-letter, snapshots |
 | OpenCode | Add orchestration receipt tests | `src/test/orchestrationReceiptService.test.js` | 20 pass | COMPLETE | Receipts, filtering, persistence |
 | OpenCode | Create public README | `README.md` | N/A | COMPLETE | Project overview, quick start, architecture |
+| OpenCode | Add workflow operations tests | `src/test/workflowOperationsRegistryService.test.js` | 34 pass | COMPLETE | All 16 workflow operations |
+| OpenCode | Add memory service tests | `src/test/memoryService.test.js` | 36 pass | COMPLETE | CRUD, expiry, filtering, persistence |
+| OpenCode | Migrate ChatView to SQLite | `src/components/ChatView.jsx` | N/A | COMPLETE | Messages read from SQLite first, localStorage fallback |
+| OpenCode | Update CHANGELOG.md | `docs/CHANGELOG.md` | N/A | COMPLETE | Added Session 5 entries |
+| OpenCode | Update ALPHONSO_GROUND_TRUTH.md | `docs/ALPHONSO_GROUND_TRUTH.md` | N/A | COMPLETE | Updated counts: 51 files, 287+ tests |
 
 ## Blockers
 
