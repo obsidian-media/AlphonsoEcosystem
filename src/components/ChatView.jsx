@@ -85,7 +85,7 @@ export function ChatView({
               return;
             }
           }
-        } catch {}
+        } catch { /* SQLite read failed — fall through to localStorage */ }
         setMessages(getStorage(`alphonso_messages_${activeChatId}`, []));
       }
     }

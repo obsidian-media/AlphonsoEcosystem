@@ -1,4 +1,5 @@
-import { appendConnectorAudit } from './connectorRegistryService';
+import { appendConnectorAudit, createConnectorRoutePacket } from './connectorRegistryService';
+import { createJoseCommandRoute } from './joseCommandRouterService';
 import { timestampMs } from './trustModel';
 import { browserPollTelegram } from './telegramBrowserConnector';
 

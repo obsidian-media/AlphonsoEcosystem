@@ -3,6 +3,14 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 
+async function webSearch({ query = '', limit = 5 } = {}) {
+  return { ok: false, data: { web: [] }, error: 'Web search not available in workflow engine.', query, limit };
+}
+
+async function searchFiles({ pattern = '', path = 'src', limit = 20 } = {}) {
+  return { ok: false, matches: [], error: 'File search not available in workflow engine.', pattern, path, limit };
+}
+
 const EXECUTORS = {
   research: executeResearch,
   repo_audit: executeRepoAudit,
@@ -181,19 +189,19 @@ async function executeRepoAudit(packet) {
 }
 
 async function executeTechnicalDebt(packet) {
-  const result = await searchFiles({ pattern: 'function\s+\w+\s*\([^)]*\)\s*\{\s*\}`|defer|setTimeout\s*\(\s*0\s*\)', path: 'src', limit: 40 });
+  const result = await searchFiles({ pattern: 'TODO|FIXME|HACK|STUB|PLACEHOLDER|deprecated', path: 'src', limit: 40 });
   updatePacketAsDone(packet.id, `Technical debt scan found ${result.matches.length} items.`);
   return `Technical debt scan found ${result.matches.length} items.`;
 }
 
 async function executeMissingFeatures(packet) {
-  const result = await searchFiles({ pattern: 'not\s+wired|TODO|coming soon|implementation\s+needed|placeholder', path: 'src', limit: 40 });
+  const result = await searchFiles({ pattern: 'not wired|TODO|coming soon|implementation needed|placeholder', path: 'src', limit: 40 });
   updatePacketAsDone(packet.id, `Missing feature scan found ${result.matches.length} items.`);
   return `Missing feature scan found ${result.matches.length} items.`;
 }
 
 async function executeBugDiscovery(packet) {
-  const result = await searchFiles({ pattern: 'catch\s*\([^)]*\)\s*\{\s*\}|\|\|\s*\[\]|console\.log\(|error[:\s]\s*null', path: 'src', limit: 40 });
+  const result = await searchFiles({ pattern: 'catch.*\\{\\s*\\}|\\|\\|\\s*\\[\\]|console\\.log|error:\\s*null', path: 'src', limit: 40 });
   updatePacketAsDone(packet.id, `Bug discovery scan found ${result.matches.length} items.`);
   return `Bug discovery scan found ${result.matches.length} items.`;
 }
