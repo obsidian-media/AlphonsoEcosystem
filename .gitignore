@@ -25,3 +25,4 @@ pnpm-debug.log*
 sessionguard-bridge/
 coach-session-events*.json
 sessionguard-events*.json
+.vercel

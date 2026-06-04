@@ -8,6 +8,7 @@ import {
   sendPacketToDeadLetter,
   updatePacketStatus
 } from './agentBusService';
+import { AGENT_EXECUTION_CONTRACTS as AGENT_CONTRACTS } from './agentContractService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';

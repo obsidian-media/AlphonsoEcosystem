@@ -1,8 +1,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY ./whatsapp-cloud/package*.json ./
+COPY package*.json ./
 RUN npm ci --omit=dev
-COPY ./whatsapp-cloud/src ./src
+COPY src ./src
 
 FROM node:20-alpine
 RUN apk add --no-cache wget
