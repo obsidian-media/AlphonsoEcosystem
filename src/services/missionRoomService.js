@@ -152,6 +152,13 @@ export const MISSION_ROOM_AGENTS = {
     lane: 'design',
     accent: 'fuchsia'
   },
+  kairo: {
+    key: 'kairo',
+    name: 'Kairo',
+    role: 'Backend engineering — systems, APIs, data, reliability, scaling',
+    lane: 'backend',
+    accent: 'sky'
+  }
 };
 
 export const MISSION_TASK_STATUSES = ['todo', 'doing', 'review', 'approved', 'blocked'];
