@@ -148,10 +148,10 @@ export const MISSION_ROOM_AGENTS = {
   nova: {
     key: 'nova',
     name: 'Nova',
-    role: 'Scoring, analysis, opportunity prioritization',
-    lane: 'analysis',
-    accent: 'teal'
-  }
+    role: 'Frontend design, UI/UX, visual systems, layout, and design ops',
+    lane: 'design',
+    accent: 'fuchsia'
+  },
 };
 
 export const MISSION_TASK_STATUSES = ['todo', 'doing', 'review', 'approved', 'blocked'];

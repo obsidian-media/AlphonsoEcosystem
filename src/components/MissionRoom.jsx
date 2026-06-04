@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, CheckCircle2, Clipboard, ClipboardList, Crown, Clapperboard, ExternalLink, Hammer, LockKeyhole, MessageSquare, Plus, RadioTower, Send, Shield, Sparkles, User, Zap } from 'lucide-react';
+import { AlertTriangle, Bot, CheckCircle2, Clipboard, ClipboardList, Crown, Clapperboard, ExternalLink, Hammer, LockKeyhole, MessageSquare, Palette, PenTool, Plus, RadioTower, Send, Shield, Sparkles, User, Zap } from 'lucide-react';
 import {
   MISSION_ROOM_AGENTS,
   MISSION_ROOM_SECURITY_MODEL,
@@ -22,6 +22,7 @@ function cx(...classes) {
 function agentTone(accent) {
   if (accent === 'emerald') return 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100 shadow-[0_0_36px_rgba(16,185,129,0.08)]';
   if (accent === 'amber') return 'border-amber-300/20 bg-amber-500/10 text-amber-100 shadow-[0_0_36px_rgba(245,158,11,0.08)]';
+  if (accent === 'fuchsia') return 'border-fuchsia-300/20 bg-fuchsia-500/10 text-fuchsia-100 shadow-[0_0_36px_rgba(217,70,239,0.08)]';
   return 'border-cyan-300/20 bg-cyan-500/10 text-cyan-100 shadow-[0_0_36px_rgba(34,211,238,0.08)]';
 }
 
@@ -49,7 +50,7 @@ function speakerIcon(speaker) {
   if (speaker === 'marcus') return Send;
   if (speaker === 'echo') return RadioTower;
   if (speaker === 'sentinel') return LockKeyhole;
-  if (speaker === 'nova') return Zap;
+  if (speaker === 'nova') return Palette;
   return Bot;
 }
 
