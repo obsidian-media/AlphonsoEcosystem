@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 
@@ -16,6 +17,11 @@ function readEvents() {
 
 function writeEvents(events) {
   const rows = events.slice(-1500);
+  try {
+    invoke('kv_set', { key: EVENT_KEY, value: JSON.stringify(rows) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(EVENT_KEY, JSON.stringify(rows));
   persistScopeRows(SESSION_EVENT_SCOPE, rows, (row) => ({
     id: row.id,

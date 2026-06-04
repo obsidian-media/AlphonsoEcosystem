@@ -1,4 +1,5 @@
 import { appendAgentActivity } from './agentActivityService';
+import { invoke } from '@tauri-apps/api/core';
 import {
   AGENTS,
   approvePacket,
@@ -81,6 +82,11 @@ function normalizeJoseExecutionDlqEntry(entry = {}) {
 function persistJoseExecutionDlq(nextRows) {
   const rows = nextRows.map((entry) => normalizeJoseExecutionDlqEntry(entry)).filter((entry) => entry.taskId);
   joseExecutionDlq = rows.slice(-MAX_DLQ_ENTRIES);
+  try {
+    invoke('kv_set', { key: JOSE_EXECUTION_DLQ_KEY, value: JSON.stringify(joseExecutionDlq) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   try {
     localStorage.setItem(JOSE_EXECUTION_DLQ_KEY, JSON.stringify(joseExecutionDlq));
   } catch {

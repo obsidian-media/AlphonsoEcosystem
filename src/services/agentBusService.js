@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 import { validateAgentExecutionContract } from './agentContractService';
@@ -17,6 +18,11 @@ function readPackets() {
 
 function writePackets(items) {
   const rows = items.slice(-800);
+  try {
+    invoke('kv_set', { key: PACKET_KEY, value: JSON.stringify(rows) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(PACKET_KEY, JSON.stringify(rows));
   persistScopeRows(PACKET_SCOPE, rows, (row) => ({
     id: row.id,

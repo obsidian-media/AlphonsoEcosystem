@@ -203,6 +203,11 @@ function readRows(key) {
 
 function writeRows(key, rows) {
   const nextRows = rows.slice(-500);
+  try {
+    invoke('kv_set', { key, value: JSON.stringify(nextRows) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(key, JSON.stringify(nextRows));
   persistToSqliteDebounced(key, nextRows);
   const scope = key === CONNECTOR_KEY
@@ -262,6 +267,11 @@ function readAuthProfiles() {
 }
 
 function writeAuthProfiles(profiles) {
+  try {
+    invoke('kv_set', { key: CONNECTOR_AUTH_KEY, value: JSON.stringify(profiles) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(CONNECTOR_AUTH_KEY, JSON.stringify(profiles));
   clearTimeout(authProfilesSqliteWriteTimer);
   authProfilesSqliteWriteTimer = setTimeout(() => {

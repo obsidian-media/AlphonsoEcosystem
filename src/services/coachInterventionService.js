@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { timestampMs } from './trustModel';
 
 export const COACH_INTERVENTION_LEVELS = {
@@ -30,7 +31,13 @@ function readJsonArray(key) {
 
 function writeJsonArray(key, rows, limit = 50) {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(key, JSON.stringify(rows.slice(-limit)));
+  const sliced = rows.slice(-limit);
+  try {
+    invoke('kv_set', { key, value: JSON.stringify(sliced) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
+  localStorage.setItem(key, JSON.stringify(sliced));
 }
 
 export function normalizeSessionGuardEvent(event = {}) {

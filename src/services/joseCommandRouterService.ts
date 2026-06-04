@@ -181,6 +181,11 @@ function readCommands(): JoseCommand[] {
 
 function writeCommands(rows: JoseCommand[]): void {
   const nextRows = rows.slice(-500);
+  try {
+    invoke('kv_set', { key: COMMAND_KEY, value: JSON.stringify(nextRows) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(COMMAND_KEY, JSON.stringify(nextRows));
   persistScopeRows(JOSE_COMMAND_SCOPE, nextRows, (row: JoseCommand) => ({
     id: row.id,

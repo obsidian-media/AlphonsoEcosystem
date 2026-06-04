@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 
@@ -275,6 +276,11 @@ function readRows() {
 
 function writeRows(rows) {
   const next = rows.slice(-120);
+  try {
+    invoke('kv_set', { key: WORKFLOW_OPS_KEY, value: JSON.stringify(next) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(WORKFLOW_OPS_KEY, JSON.stringify(next));
   persistScopeRows(WORKFLOW_OPS_SCOPE, next, (row) => ({
     id: row.id,

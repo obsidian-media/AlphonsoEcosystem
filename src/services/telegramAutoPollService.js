@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { appendConnectorAudit, createConnectorRoutePacket } from './connectorRegistryService';
 import { createJoseCommandRoute } from './joseCommandRouterService';
 import { timestampMs } from './trustModel';
@@ -21,6 +22,11 @@ export function getTelegramAutoPollState() {
 }
 
 function setTelegramAutoPollState(state) {
+  try {
+    invoke('kv_set', { key: TELEGRAM_AUTO_POLL_STATE_KEY, value: JSON.stringify(state) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   try {
     localStorage.setItem(TELEGRAM_AUTO_POLL_STATE_KEY, JSON.stringify(state));
   } catch {

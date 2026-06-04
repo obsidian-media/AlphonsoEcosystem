@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { getPacketById, listAgentPackets, requestPacketRetry, sendPacketToDeadLetter, updatePacketStatus } from './agentBusService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { TRUST_STATES, timestampMs } from './trustModel';
@@ -76,6 +77,11 @@ function readJoseCommands(): any[] {
 
 function writeTransitions(rows: QueueTransition[]): void {
   const next = rows.slice(-MAX_TRANSITIONS);
+  try {
+    invoke('kv_set', { key: QUEUE_KEY, value: JSON.stringify(next) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(QUEUE_KEY, JSON.stringify(next));
   persistScopeRows(ORCHESTRATION_QUEUE_SCOPE, next, (row: QueueTransition) => ({
     id: row.id,

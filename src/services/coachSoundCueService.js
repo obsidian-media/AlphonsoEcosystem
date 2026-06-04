@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+
 const SOUND_CUE_STORAGE_KEY = 'alphonso_coach_sound_cues_v1';
 
 const DEFAULT_SETTINGS = {
@@ -32,6 +34,11 @@ export function getCoachSoundCueSettings() {
 
 export function updateCoachSoundCueSettings(patch = {}) {
   const next = { ...getCoachSoundCueSettings(), ...patch };
+  try {
+    invoke('kv_set', { key: SOUND_CUE_STORAGE_KEY, value: JSON.stringify(next) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   try {
     localStorage.setItem(SOUND_CUE_STORAGE_KEY, JSON.stringify(next));
   } catch {

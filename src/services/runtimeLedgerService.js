@@ -75,6 +75,11 @@ export async function hydrateScopeToLocalStorage(scope, storageKey) {
   const records = await listScopeRecords(scope, 2500);
   if (!records.length) return { scope, loaded: 0 };
   const rows = records.map((record) => record.data).filter(Boolean);
+  try {
+    invoke('kv_set', { key: storageKey, value: JSON.stringify(rows) }).catch(() => {});
+  } catch {
+    // SQLite not available in browser
+  }
   localStorage.setItem(storageKey, JSON.stringify(rows));
   window.dispatchEvent(new CustomEvent('alphonso:ledger_hydrated', {
     detail: {
