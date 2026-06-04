@@ -362,3 +362,59 @@ export async function generateOllamaResponse({ endpoint, model, prompt }) {
     };
   }
 }
+
+export async function pullOllamaModel({ endpoint, model, onProgress }) {
+  const baseUrl = normalizeEndpoint(endpoint);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 600000);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/pull`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: model }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      let message = `Ollama /api/pull returned HTTP ${response.status}`;
+      try {
+        const data = await response.json();
+        if (data?.error) message = data.error;
+      } catch { /* ignore */ }
+      throw new Error(message);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let lastStatus = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      for (const line of chunk.split('\n')) {
+        if (!line.trim()) continue;
+        try {
+          const obj = JSON.parse(line);
+          if (typeof obj.status === 'string') {
+            lastStatus = obj.status;
+          }
+          if (typeof obj.completed === 'number' && typeof obj.total === 'number') {
+            onProgress?.({ status: lastStatus, completed: obj.completed, total: obj.total, percent: Math.round((obj.completed / obj.total) * 100) });
+          } else {
+            onProgress?.({ status: lastStatus, completed: null, total: null, percent: null });
+          }
+        } catch { /* skip malformed line */ }
+      }
+    }
+
+    return { ok: true, model };
+  } catch (error) {
+    const classified = classifyOllamaError(error);
+    throw new Error(classified.message || String(error));
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}

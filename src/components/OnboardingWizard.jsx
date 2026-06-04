@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle, RefreshCw, Sparkles, Zap } from 'lucide-react';
-import { checkOllama, fetchOllamaModels } from '../lib/ollama';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowRight, CheckCircle, Download, RefreshCw, Sparkles, Zap } from 'lucide-react';
+import { checkOllama, fetchOllamaModels, normalizeEndpoint, pullOllamaModel } from '../lib/ollama';
 import { setStorage } from '../lib/appStorage';
 
 const DEFAULT_ENDPOINT = 'http://localhost:11434';
@@ -137,25 +137,50 @@ function PickModelStep({ onNext }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState('');
+  const [pulling, setPulling] = useState(false);
+  const [pullProgress, setPullProgress] = useState(null);
+  const [pullComplete, setPullComplete] = useState(false);
+  const [pullError, setPullError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshModels = useCallback(() => {
     setLoading(true);
+    setError(null);
     fetchOllamaModels(DEFAULT_ENDPOINT)
       .then(({ models: fetched }) => {
-        if (cancelled) return;
         setModels(fetched);
         const preferred = fetched.find((m) => m.name === PREFERRED_PRESELECT);
         setSelected(preferred ? preferred.name : fetched[0]?.name || '');
         setLoading(false);
       })
       .catch((err) => {
-        if (cancelled) return;
         setError(String(err?.message || err));
         setLoading(false);
       });
-    return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    refreshModels();
+  }, [refreshModels]);
+
+  const handlePullModel = async () => {
+    setPulling(true);
+    setPullError(null);
+    setPullComplete(false);
+    setPullProgress(null);
+    try {
+      await pullOllamaModel({
+        endpoint: DEFAULT_ENDPOINT,
+        model: PREFERRED_PRESELECT,
+        onProgress: (progress) => setPullProgress(progress)
+      });
+      setPullComplete(true);
+      refreshModels();
+    } catch (err) {
+      setPullError(String(err?.message || err));
+    } finally {
+      setPulling(false);
+    }
+  };
 
   const handleNext = () => {
     if (selected) onNext(selected);
@@ -184,9 +209,47 @@ function PickModelStep({ onNext }) {
       {!loading && !error && models.length === 0 && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-4">
           <div className="text-xs font-semibold text-amber-300 mb-1">No models installed</div>
-          <div className="text-[11px] text-zinc-400">
-            Run <code className="font-mono text-emerald-400">ollama pull llama3.2:3b</code> in a terminal, then come back.
+          <div className="text-[11px] text-zinc-400 mb-3">
+            Download the recommended model or run <code className="font-mono text-emerald-400">ollama pull {PREFERRED_PRESELECT}</code> in a terminal.
           </div>
+          <button
+            onClick={handlePullModel}
+            disabled={pulling}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-bold rounded-xl transition-colors"
+          >
+            {pulling ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Downloading...
+              </>
+            ) : pullComplete ? (
+              <>
+                <CheckCircle className="w-3.5 h-3.5" />
+                Downloaded
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                Download {PREFERRED_PRESELECT}
+              </>
+            )}
+          </button>
+          {pulling && pullProgress && (
+            <div className="mt-2">
+              <div className="text-[10px] text-zinc-500 mb-1">{pullProgress.status}</div>
+              {pullProgress.percent !== null && (
+                <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                  <div className="bg-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${pullProgress.percent}%` }} />
+                </div>
+              )}
+            </div>
+          )}
+          {pullComplete && (
+            <div className="text-[11px] text-emerald-400 mt-2">Model downloaded. Refreshing list...</div>
+          )}
+          {pullError && (
+            <div className="text-[11px] text-red-400 mt-2">Download failed: {pullError}</div>
+          )}
         </div>
       )}
 
