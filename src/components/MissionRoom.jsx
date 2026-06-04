@@ -198,6 +198,21 @@ export function MissionRoom({ onCreateApprovalRequest }) {
         kind: 'system',
         content: 'Mission Room online. Current scope: Shayan + ALPHONSO boardroom. External publish/delete/push/spend actions stay approval-gated.'
       });
+      addMissionTask({
+        roomId: room.id,
+        title: 'Wire the remaining agent runtimes',
+        owner: 'alphonso',
+        status: 'todo',
+        priority: 'P1',
+        acceptance: 'Documented runtime contract per seat, verified handoffs, and summarized status in a Mission Room message.',
+        proof: 'Changed files, connector configs, run commands, and test/build outputs.'
+      });
+      addMissionMessage({
+        roomId: room.id,
+        speaker: 'jose',
+        kind: 'task',
+        content: 'Assigned: Wire the remaining agent runtimes. Acceptance: documented runtime contract per seat, verified handoffs, and summarized status.'
+      });
       reload();
     }
   }, []);
