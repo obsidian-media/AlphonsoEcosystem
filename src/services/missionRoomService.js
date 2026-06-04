@@ -92,7 +92,7 @@ export const MISSION_ROOM_AGENTS = {
   alphonso: {
     key: 'alphonso',
     name: 'Alphonso',
-    role: 'Local operator — execution, verification, packaging',
+    role: 'Local operator — execution, verification, packaging, backend/infra, deployments, CI/CD',
     lane: 'operator',
     accent: 'cyan'
   },
@@ -148,7 +148,7 @@ export const MISSION_ROOM_AGENTS = {
   nova: {
     key: 'nova',
     name: 'Nova',
-    role: 'Frontend design, UI/UX, visual systems, layout, and design ops',
+    role: 'Frontend design, UI/UX, visual systems, layout, scoring, analysis, opportunity prioritization',
     lane: 'design',
     accent: 'fuchsia'
   },
