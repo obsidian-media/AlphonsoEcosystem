@@ -16,7 +16,7 @@ const {
   forceDeadLetterPacket,
   markPacketInterrupted,
   ORCHESTRATION_QUEUE_SCOPE
-} = await import('../services/orchestrationQueueService.js');
+} = await import('../services/orchestrationQueueService.ts');
 
 function seedPacket(id, status, extra = {}) {
   const raw = localStorage.getItem(PACKET_KEY);

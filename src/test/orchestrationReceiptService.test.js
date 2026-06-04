@@ -10,7 +10,7 @@ const {
   listOrchestrationReceipts,
   appendOrchestrationReceipt,
   ORCHESTRATION_RECEIPT_SCOPE
-} = await import('../services/orchestrationReceiptService.js');
+} = await import('../services/orchestrationReceiptService.ts');
 
 describe('orchestrationReceiptService', () => {
   beforeEach(() => {

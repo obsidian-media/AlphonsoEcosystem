@@ -4,7 +4,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue(null)
 }));
 
-const { getRuntimePolicySettings, classifyConnectorRisk, evaluatePolicyGate } = await import('../services/policyEnforcementService.js');
+const { getRuntimePolicySettings, classifyConnectorRisk, evaluatePolicyGate } = await import('../services/policyEnforcementService.ts');
 
 describe('policyEnforcementService', () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-const { AGENT_EXECUTION_CONTRACTS, validateAgentExecutionContract } = await import('../services/agentContractService.js');
+const { AGENT_EXECUTION_CONTRACTS, validateAgentExecutionContract } = await import('../services/agentContractService.ts');
 
 describe('agentContractService', () => {
   describe('AGENT_EXECUTION_CONTRACTS', () => {

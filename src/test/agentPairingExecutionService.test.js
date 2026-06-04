@@ -10,7 +10,7 @@ const {
   listPairingEvents
 } = await import('../services/agentPairingExecutionService.js');
 
-const { AGENT_PAIRINGS_V1 } = await import('../services/agentPairingConstants.js');
+const { AGENT_PAIRINGS_V1 } = await import('../services/agentPairingConstants.ts');
 
 const EVENT_KEY = 'alphonso_pairing_events_v1';
 const PACKET_KEY = 'alphonso_agent_bus_packets_v1';

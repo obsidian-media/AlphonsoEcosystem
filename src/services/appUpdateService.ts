@@ -3,7 +3,31 @@ import { TRUST_STATES } from './trustModel';
 
 const UPDATE_NOTICE_KEY = 'alphonso_update_notice_v1';
 
-export function getLastUpdateNotice() {
+export interface UpdateNotice {
+  latestVersion: string;
+  noticedAtMs: number;
+}
+
+export interface UpdateCheckInput {
+  endpoint?: string | null;
+  pubkey?: string | null;
+  target?: string | null;
+}
+
+export interface UpdateCheckResult {
+  configured: boolean;
+  available: boolean;
+  currentVersion: string;
+  latestVersion: string | null;
+  notes: string | null;
+  pubDate: string | null;
+  downloadUrl: string | null;
+  checkedAtMs: number;
+  trust: string;
+  error?: string;
+}
+
+export function getLastUpdateNotice(): UpdateNotice | null {
   try {
     const raw = localStorage.getItem(UPDATE_NOTICE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -12,13 +36,13 @@ export function getLastUpdateNotice() {
   }
 }
 
-export function setLastUpdateNotice(payload) {
+export function setLastUpdateNotice(payload: UpdateNotice): void {
   localStorage.setItem(UPDATE_NOTICE_KEY, JSON.stringify(payload));
 }
 
-export async function checkAppUpdate({ endpoint, pubkey, target } = {}) {
+export async function checkAppUpdate({ endpoint, pubkey, target }: UpdateCheckInput = {}): Promise<UpdateCheckResult> {
   try {
-    const proof = await invoke('check_app_update', {
+    const proof: any = await invoke('check_app_update', {
       endpoint: endpoint || null,
       pubkey: pubkey || null,
       target: target || null
@@ -43,7 +67,7 @@ export async function checkAppUpdate({ endpoint, pubkey, target } = {}) {
   }
 }
 
-export async function notifyUpdateAvailable(update) {
+export async function notifyUpdateAvailable(update: UpdateCheckResult): Promise<boolean> {
   if (!update?.available || !update?.latestVersion) return false;
   if (!('Notification' in window)) return false;
 

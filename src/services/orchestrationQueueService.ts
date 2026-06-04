@@ -7,7 +7,54 @@ const JOSE_COMMAND_KEY = 'alphonso_jose_command_routes_v2';
 export const ORCHESTRATION_QUEUE_SCOPE = 'orchestration_queue_transitions_v1';
 const MAX_TRANSITIONS = 4000;
 
-function readTransitions() {
+export interface QueueTransition {
+  id: string;
+  commandId: string | null;
+  packetId: string;
+  agent: string;
+  fromStatus: string;
+  toStatus: string;
+  reason: string;
+  retryCount: number;
+  confidence: string;
+  verificationState: string;
+  timestampMs: number;
+}
+
+export interface QueueTransitionFilters {
+  commandId?: string;
+  packetId?: string;
+  toStatus?: string;
+  agent?: string;
+}
+
+export interface QueueSnapshot {
+  queued: number;
+  executing: number;
+  pendingApproval: number;
+  failed: number;
+  deadLetter: number;
+  reportedToJose: number;
+  commandsInProgress: number;
+  commandsReported: number;
+  timestampMs: number;
+}
+
+export interface ReplayResult {
+  ok: boolean;
+  reason?: string;
+  packet?: any;
+  transition?: QueueTransition | null;
+}
+
+export interface ForceDeadLetterResult {
+  ok: boolean;
+  reason?: string;
+  packet?: any;
+  transition?: QueueTransition | null;
+}
+
+function readTransitions(): QueueTransition[] {
   try {
     const raw = localStorage.getItem(QUEUE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -17,7 +64,7 @@ function readTransitions() {
   }
 }
 
-function readJoseCommands() {
+function readJoseCommands(): any[] {
   try {
     const raw = localStorage.getItem(JOSE_COMMAND_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -27,10 +74,10 @@ function readJoseCommands() {
   }
 }
 
-function writeTransitions(rows) {
+function writeTransitions(rows: QueueTransition[]): void {
   const next = rows.slice(-MAX_TRANSITIONS);
   localStorage.setItem(QUEUE_KEY, JSON.stringify(next));
-  persistScopeRows(ORCHESTRATION_QUEUE_SCOPE, next, (row) => ({
+  persistScopeRows(ORCHESTRATION_QUEUE_SCOPE, next, (row: QueueTransition) => ({
     id: row.id,
     data: row,
     status: row.toStatus || row.status || 'recorded',
@@ -40,7 +87,7 @@ function writeTransitions(rows) {
   }));
 }
 
-export function listOrchestrationQueueTransitions(filters = {}) {
+export function listOrchestrationQueueTransitions(filters: QueueTransitionFilters = {}): QueueTransition[] {
   const rows = readTransitions().slice().reverse();
   return rows.filter((row) => {
     if (filters.commandId && row.commandId !== filters.commandId) return false;
@@ -61,12 +108,22 @@ export function recordOrchestrationQueueTransition({
   retryCount = 0,
   confidence = TRUST_STATES.TEMPORARY,
   verificationState = TRUST_STATES.UNVERIFIED
-}) {
+}: {
+  commandId?: string | null;
+  packetId: string;
+  agent?: string;
+  fromStatus?: string;
+  toStatus?: string;
+  reason?: string;
+  retryCount?: number;
+  confidence?: string;
+  verificationState?: string;
+}): QueueTransition | null {
   if (!packetId) return null;
   const rows = readTransitions();
-  const transition = {
+  const transition: QueueTransition = {
     id: `qtx-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    commandId,
+    commandId: commandId ?? null,
     packetId,
     agent,
     fromStatus,
@@ -82,7 +139,7 @@ export function recordOrchestrationQueueTransition({
   return transition;
 }
 
-export function getOrchestrationQueueSnapshot() {
+export function getOrchestrationQueueSnapshot(): QueueSnapshot {
   const packets = listAgentPackets();
   const commands = readJoseCommands();
   return {
@@ -98,7 +155,7 @@ export function getOrchestrationQueueSnapshot() {
   };
 }
 
-export function replayPacketFromDeadLetter(packetId, reason = 'Manual dead-letter replay requested.') {
+export function replayPacketFromDeadLetter(packetId: string, reason: string = 'Manual dead-letter replay requested.'): ReplayResult {
   const packet = getPacketById(packetId);
   if (!packet || packet.status !== 'dead_letter') {
     return { ok: false, reason: 'Packet is not in dead-letter state.' };
@@ -121,7 +178,7 @@ export function replayPacketFromDeadLetter(packetId, reason = 'Manual dead-lette
   return { ok: true, packet: retried, transition };
 }
 
-export function forceDeadLetterPacket(packetId, reason = 'Manual dead-letter action requested.') {
+export function forceDeadLetterPacket(packetId: string, reason: string = 'Manual dead-letter action requested.'): ForceDeadLetterResult {
   const packet = getPacketById(packetId);
   if (!packet) return { ok: false, reason: 'Packet not found.' };
   const dead = sendPacketToDeadLetter(packetId, reason);
@@ -139,7 +196,7 @@ export function forceDeadLetterPacket(packetId, reason = 'Manual dead-letter act
   return { ok: true, packet: dead, transition };
 }
 
-export function markPacketInterrupted(packetId, reason = 'Pipeline interrupted.') {
+export function markPacketInterrupted(packetId: string, reason: string = 'Pipeline interrupted.'): ReplayResult {
   const packet = getPacketById(packetId);
   if (!packet) return { ok: false, reason: 'Packet not found.' };
   const updated = updatePacketStatus(packetId, 'failed', {

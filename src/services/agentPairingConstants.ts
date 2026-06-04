@@ -1,11 +1,27 @@
-const AGENT_PAIRINGS_V1 = Object.freeze({
+export type AgentPairingKey = 'miya->comfyui' | 'jose->miya' | 'miya->maria' | 'maria->jose';
+
+export type PairingRouteType = 'generation_request' | 'task_delegation' | 'content_handoff' | 'status_report';
+
+export type ApprovalMode = 'auto' | 'manual';
+
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export interface AgentPairingRoute {
+  from: string;
+  to: string;
+  type: PairingRouteType;
+  approvalMode: ApprovalMode;
+  riskLevel: RiskLevel;
+}
+
+export const AGENT_PAIRINGS_V1: Record<string, AgentPairingKey> = Object.freeze({
   MIYA_COMFYUI: 'miya->comfyui',
   JOSE_MIYA: 'jose->miya',
   MIYA_MARIA: 'miya->maria',
   MARIA_JOSE: 'maria->jose'
 });
 
-const AGENT_PAIRING_ROUTES = Object.freeze({
+export const AGENT_PAIRING_ROUTES: Record<AgentPairingKey, AgentPairingRoute> = Object.freeze({
   [AGENT_PAIRINGS_V1.MIYA_COMFYUI]: {
     from: 'miya',
     to: 'comfyui',
@@ -36,10 +52,4 @@ const AGENT_PAIRING_ROUTES = Object.freeze({
   }
 });
 
-const PAIRING_SCOPE = 'agent_pairings_v1';
-
-export {
-  AGENT_PAIRINGS_V1,
-  AGENT_PAIRING_ROUTES,
-  PAIRING_SCOPE
-};
+export const PAIRING_SCOPE: string = 'agent_pairings_v1';

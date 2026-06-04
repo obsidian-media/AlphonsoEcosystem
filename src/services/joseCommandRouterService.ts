@@ -19,63 +19,156 @@ const SETTINGS_KEY = 'alphonso_settings';
 export const JOSE_COMMAND_SCOPE = 'jose_command_routes_v2';
 const MAX_AUTO_RETRIES = 2;
 const STALE_ROUTE_MS = 10 * 60 * 1000;
-const ZERO_COST_PAID_TERMS = [
+const ZERO_COST_PAID_TERMS: string[] = [
   'chatgpt', 'openai', 'claude', 'anthropic', 'qwen', 'dashscope', 'alibaba', 'whatsapp', 'twilio',
   'notion', 'clickup', 'gmail', 'google drive', 'airtable'
 ];
-const ZERO_COST_FREE_TERMS = [
+const ZERO_COST_FREE_TERMS: string[] = [
   'ollama', 'comfyui', 'sd webui', 'stable diffusion', 'telegram', 'youtube'
 ];
 
-const AGENT_CONTRACTS = {
-  [AGENTS.MIYA]: {
-    requiredFields: ['summary', 'artifacts'],
-    allowedResultStates: ['draft', 'pending_review', 'verified', 'completed'],
-    requiresUrlForVerified: false
-  },
-  [AGENTS.ALPHONSO]: {
-    requiredFields: ['summary'],
-    allowedResultStates: ['pending_review', 'verified', 'completed', 'failed'],
-    requiresUrlForVerified: false
-  },
-  [AGENTS.HECTOR]: {
-    requiredFields: ['summary', 'sources'],
-    allowedResultStates: ['pending_review', 'verified', 'completed', 'failed'],
-    requiresUrlForVerified: false
-  },
-  [AGENTS.JOSE]: {
-    requiredFields: ['summary'],
-    allowedResultStates: ['pending_review', 'verified', 'completed'],
-    requiresUrlForVerified: false
-  },
-  [AGENTS.MARIA]: {
-    requiredFields: ['summary', 'artifacts'],
-    allowedResultStates: ['pending_review', 'verified', 'completed'],
-    requiresUrlForVerified: false
-  },
-  [AGENTS.MARCUS]: {
-    requiredFields: ['summary', 'artifacts'],
-    allowedResultStates: ['pending_review', 'verified', 'completed', 'failed'],
-    requiresUrlForVerified: true
-  },
-  [AGENTS.ECHO]: {
-    requiredFields: ['summary', 'artifacts'],
-    allowedResultStates: ['pending_review', 'completed'],
-    requiresUrlForVerified: false
-  },
-  [AGENTS.SENTINEL]: {
-    requiredFields: ['summary', 'artifacts'],
-    allowedResultStates: ['pending_review', 'verified', 'completed', 'failed'],
-    requiresUrlForVerified: false
-  },
-  [AGENTS.NOVA]: {
-    requiredFields: ['summary', 'artifacts'],
-    allowedResultStates: ['pending_review', 'completed'],
-    requiresUrlForVerified: false
-  }
-};
+export interface AgentContract {
+  requiredFields: string[];
+  allowedResultStates: string[];
+  requiresUrlForVerified: boolean;
+}
 
-function readCommands() {
+export interface JoseCommandParserIntents {
+  research: boolean;
+  creative: boolean;
+  localExecution: boolean;
+  governanceAudit: boolean;
+  securityMonitoring: boolean;
+  memoryPreservation: boolean;
+  opportunityScoring: boolean;
+  distributionExecution: boolean;
+  publishing: boolean;
+  riskyLocal: boolean;
+  connector: boolean;
+  paidConnector: boolean;
+  [key: string]: boolean;
+}
+
+export interface ConnectorCostClassification {
+  class: string;
+  reason: string;
+}
+
+export interface JoseCommandParser {
+  intents: JoseCommandParserIntents;
+  fragments: string[];
+  parsedAtMs: number;
+  connectorCost: ConnectorCostClassification;
+}
+
+export interface JoseCommandPolicy {
+  zeroCostMode: boolean;
+}
+
+export interface JoseCommandAssignment {
+  agent: string;
+  title: string;
+  rationale: string;
+  actionType: string;
+  riskLevel: string;
+  requiresApproval: boolean;
+  commandPreview: string;
+  fragments: string[];
+  decomposition?: string[];
+  costClass?: string;
+  blockedByZeroCostMode?: boolean;
+  packetId?: string;
+  status?: string;
+  retries?: number;
+  lastUpdatedAtMs?: number;
+  reportPacketId?: string;
+  contractValid?: boolean;
+  contractIssues?: string[];
+  deadLetterAtMs?: number;
+}
+
+export interface JoseCommandReceipt {
+  id: string;
+  type: string;
+  packetId?: string;
+  reportPacketId?: string;
+  agent?: string;
+  trust: string;
+  timestampMs: number;
+}
+
+export interface JoseCommand {
+  id: string;
+  source: string;
+  commandText: string;
+  parser: JoseCommandParser;
+  policy: JoseCommandPolicy;
+  contracts: AgentContract[];
+  status: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  assignments: JoseCommandAssignment[];
+  receipts: JoseCommandReceipt[];
+  joseConfirmation: string | null;
+  deadLetters: any[];
+  retryPolicy: { maxRetries: number; staleAfterMs: number };
+  trust: string;
+  confirmedAtMs?: number;
+  shayanReport?: ShayanReport | null;
+}
+
+export interface ShayanReport {
+  id: string;
+  commandId: string;
+  createdAtMs: number;
+  fromAgent: string;
+  to: string;
+  summary: string;
+  confirmation: string;
+  resultUrl: string | null;
+  assignmentCount: number;
+  reportCount: number;
+  pendingCount: number;
+  contractFailures: { agent: string; packetId: string; issues: string[] }[];
+  assignmentSummaries: {
+    agent: string;
+    title: string;
+    assignmentStatus: string;
+    reportStatus: string;
+    reportSummary: string;
+    artifacts: any[];
+    resultUrl: string | null;
+    packetId: string;
+    reportPacketId: string | null;
+  }[];
+  trust: string;
+}
+
+export interface CommandRouteOptions {
+  commandText: string;
+  source?: string;
+  zeroCostMode?: boolean;
+}
+
+export interface JoseCommandRouteResult {
+  id: string;
+  source: string;
+  commandText: string;
+  parser: JoseCommandParser;
+  policy: JoseCommandPolicy;
+  contracts: AgentContract[];
+  status: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  assignments: any[];
+  receipts: JoseCommandReceipt[];
+  joseConfirmation: string | null;
+  deadLetters: any[];
+  retryPolicy: { maxRetries: number; staleAfterMs: number };
+  trust: string;
+}
+
+function readCommands(): JoseCommand[] {
   try {
     const raw = localStorage.getItem(COMMAND_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -85,10 +178,10 @@ function readCommands() {
   }
 }
 
-function writeCommands(rows) {
+function writeCommands(rows: JoseCommand[]): void {
   const nextRows = rows.slice(-500);
   localStorage.setItem(COMMAND_KEY, JSON.stringify(nextRows));
-  persistScopeRows(JOSE_COMMAND_SCOPE, nextRows, (row) => ({
+  persistScopeRows(JOSE_COMMAND_SCOPE, nextRows, (row: JoseCommand) => ({
     id: row.id,
     data: row,
     status: row.status || 'distributed',
@@ -98,23 +191,23 @@ function writeCommands(rows) {
   }));
 }
 
-function newId(prefix) {
+function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
-function riskRank(risk) {
+function riskRank(risk: string): number {
   return { low: 1, medium: 2, high: 3, critical: 4 }[risk] || 0;
 }
 
-function matchesAny(text, terms) {
+function matchesAny(text: string, terms: string[]): boolean {
   return terms.some((term) => text.includes(term));
 }
 
-function shorten(text) {
+function shorten(text: string): string {
   return text.length > 64 ? `${text.slice(0, 61)}...` : text;
 }
 
-function resolveZeroCostMode(override = undefined) {
+function resolveZeroCostMode(override: boolean | undefined = undefined): boolean {
   if (typeof override === 'boolean') return override;
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -126,7 +219,7 @@ function resolveZeroCostMode(override = undefined) {
   return true;
 }
 
-function classifyCommandCost(lower) {
+function classifyCommandCost(lower: string): ConnectorCostClassification {
   const paid = ZERO_COST_PAID_TERMS.some((term) => lower.includes(term));
   if (paid) return { class: 'paid_or_metered', reason: 'Uses metered/paid connector family.' };
   const free = ZERO_COST_FREE_TERMS.some((term) => lower.includes(term));
@@ -134,7 +227,7 @@ function classifyCommandCost(lower) {
   return { class: 'unknown', reason: 'No explicit connector family detected.' };
 }
 
-function defaultContractsForAssignments(assignments) {
+function defaultContractsForAssignments(assignments: JoseCommandAssignment[]): AgentContract[] {
   return assignments.map((assignment) => ({
     agent: assignment.agent,
     actionType: assignment.actionType,
@@ -142,14 +235,14 @@ function defaultContractsForAssignments(assignments) {
   }));
 }
 
-function dedupeAssignments(assignments) {
-  const byAgent = new Map();
+function dedupeAssignments(assignments: JoseCommandAssignment[]): JoseCommandAssignment[] {
+  const byAgent = new Map<string, JoseCommandAssignment>();
   assignments.forEach((assignment) => {
     if (!byAgent.has(assignment.agent)) {
       byAgent.set(assignment.agent, assignment);
       return;
     }
-    const current = byAgent.get(assignment.agent);
+    const current = byAgent.get(assignment.agent)!;
     byAgent.set(assignment.agent, {
       ...current,
       title: `${current.title} + ${assignment.actionType.replace(/_/g, ' ')}`,
@@ -163,15 +256,24 @@ function dedupeAssignments(assignments) {
   return [...byAgent.values()];
 }
 
-export function listJoseCommands() {
+export function listJoseCommands(): JoseCommand[] {
   return readCommands();
 }
 
-export function parseJoseCommand(commandText) {
+export interface ParsedJoseCommand {
+  clean: string;
+  lower: string;
+  intents: JoseCommandParserIntents;
+  fragments: string[];
+  parsedAtMs: number;
+  connectorCost: ConnectorCostClassification;
+}
+
+export function parseJoseCommand(commandText: string): ParsedJoseCommand {
   const clean = String(commandText || '').trim();
   const lower = clean.toLowerCase();
   const connectorCost = classifyCommandCost(lower);
-  const intents = {
+  const intents: JoseCommandParserIntents = {
     research: matchesAny(lower, ['research', 'lookup', 'docs', 'pricing', 'market', 'source', 'citation', 'latest']),
     creative: matchesAny(lower, ['video', 'script', 'brand', 'campaign', 'thumbnail', 'storyboard', 'prompt', 'creative', 'image', 'generate image', 'generate an image', 'picture', 'visual', 'miya', 'maia']),
     localExecution: matchesAny(lower, ['build', 'runtime', 'ollama', 'file', 'verify', 'diagnostic', 'install', 'command', 'fix', 'test', 'package']),
@@ -200,10 +302,14 @@ export function parseJoseCommand(commandText) {
   };
 }
 
-export function decomposeJoseCommand(parsed, policy = {}) {
+export interface DecomposePolicy {
+  zeroCostMode?: boolean;
+}
+
+export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: DecomposePolicy = {}): JoseCommandAssignment[] {
   const { clean, lower, intents, fragments, connectorCost } = parsed;
   const zeroCostMode = resolveZeroCostMode(policy?.zeroCostMode);
-  const assignments = [];
+  const assignments: JoseCommandAssignment[] = [];
 
   if (intents.research) {
     assignments.push({
@@ -361,13 +467,13 @@ export function decomposeJoseCommand(parsed, policy = {}) {
   return normalized;
 }
 
-async function decomposeViaBackend(parsed) {
+async function decomposeViaBackend(parsed: ParsedJoseCommand): Promise<JoseCommandAssignment[] | null> {
   try {
-    const rows = await invoke('decompose_jose_command_backend', {
+    const rows: any[] = await invoke('decompose_jose_command_backend', {
       commandText: parsed.clean
     });
     if (!Array.isArray(rows) || rows.length === 0) return null;
-    return rows.map((row) => ({
+    return rows.map((row: any) => ({
       agent: row.agent,
       title: row.title,
       rationale: row.rationale,
@@ -382,14 +488,14 @@ async function decomposeViaBackend(parsed) {
   }
 }
 
-export async function createJoseCommandRoute({ commandText, source = 'shayan', zeroCostMode = undefined }) {
+export async function createJoseCommandRoute({ commandText, source = 'shayan', zeroCostMode = undefined }: CommandRouteOptions): Promise<JoseCommandRouteResult | null> {
   const parsed = parseJoseCommand(commandText);
   if (!parsed.clean) return null;
 
   const backendAssignments = await decomposeViaBackend(parsed);
   const assignments = backendAssignments || decomposeJoseCommand(parsed, { zeroCostMode });
   const effectiveZeroCostMode = resolveZeroCostMode(zeroCostMode);
-  const command = {
+  const command: JoseCommand = {
     id: newId('jose-command'),
     source,
     commandText: parsed.clean,
@@ -521,7 +627,14 @@ export async function createJoseCommandRoute({ commandText, source = 'shayan', z
   return command;
 }
 
-function validateReportContract(assignment, reportPayload) {
+interface ContractValidation {
+  valid: boolean;
+  missing: string[];
+  invalidState: boolean;
+  urlMissing: boolean;
+}
+
+function validateReportContract(assignment: JoseCommandAssignment, reportPayload: any): ContractValidation {
   const contract = AGENT_CONTRACTS[assignment?.agent] || AGENT_CONTRACTS[AGENTS.JOSE];
   const payload = reportPayload || {};
   const missing = contract.requiredFields.filter((field) => {
@@ -539,7 +652,7 @@ function validateReportContract(assignment, reportPayload) {
   };
 }
 
-function updateCommandWithReport(commandId, packetId, reportPacket, contractValidation) {
+function updateCommandWithReport(commandId: string, packetId: string, reportPacket: any, contractValidation: ContractValidation): JoseCommand | null {
   const rows = readCommands().map((command) => {
     if (command.id !== commandId) return command;
     const assignments = (command.assignments || []).map((assignment) => {
@@ -584,6 +697,16 @@ function updateCommandWithReport(commandId, packetId, reportPacket, contractVali
   return rows.find((row) => row.id === commandId) || null;
 }
 
+export interface AgentReportInput {
+  packetId: string;
+  reportingAgent?: string;
+  summary?: string;
+  resultState?: string;
+  resultUrl?: string | null;
+  artifacts?: any[];
+  sources?: any[];
+}
+
 export function createAgentReportToJose({
   packetId,
   reportingAgent,
@@ -592,7 +715,7 @@ export function createAgentReportToJose({
   resultUrl = null,
   artifacts = [],
   sources = []
-}) {
+}: AgentReportInput): { reportPacket: any; command: JoseCommand | null; contractValidation: ContractValidation } | null {
   const packet = getPacketById(packetId);
   if (!packet) return null;
   const commandId = packet.payload?.joseCommandId;
@@ -688,14 +811,14 @@ export function createAgentReportToJose({
   };
 }
 
-function collectAgentReports(command) {
+function collectAgentReports(command: JoseCommand): any[] {
   const packetIds = new Set((command.assignments || []).map((assignment) => assignment.packetId));
   return listAgentPackets().filter((packet) => (
     packet.packetType === 'agent_report_to_jose' && packetIds.has(packet.payload?.originalPacketId)
   ));
 }
 
-function buildShayanSummary(command, reports, resultUrl, pendingAssignments) {
+function buildShayanSummary(command: JoseCommand, reports: any[], resultUrl: string | null, pendingAssignments: JoseCommandAssignment[]): string {
   if (!reports.length) {
     return `Jose distributed "${shorten(command.commandText)}" and is waiting for agent reports.`;
   }
@@ -708,7 +831,7 @@ function buildShayanSummary(command, reports, resultUrl, pendingAssignments) {
   return `Jose merged ${reports.length} agent report(s). ${pendingText}${urlText}`;
 }
 
-function updateCommandOnConfirm(commandId, payload) {
+function updateCommandOnConfirm(commandId: string, payload: Partial<JoseCommand>): JoseCommand | null {
   const rows = readCommands().map((row) => (
     row.id === commandId
       ? {
@@ -723,9 +846,9 @@ function updateCommandOnConfirm(commandId, payload) {
 }
 
 export function createJoseReportToShayan(
-  commandId,
-  confirmation = 'Jose reviewed agent reports and confirmed the command state.'
-) {
+  commandId: string,
+  confirmation: string = 'Jose reviewed agent reports and confirmed the command state.'
+): JoseCommand | null {
   const command = readCommands().find((item) => item.id === commandId);
   if (!command) return null;
   const reports = collectAgentReports(command);
@@ -740,7 +863,7 @@ export function createJoseReportToShayan(
   });
   const hasContractFailure = assignments.some((assignment) => assignment.status === 'contract_invalid');
 
-  const shayanReport = {
+  const shayanReport: ShayanReport = {
     id: newId('jose-shayan-report'),
     commandId,
     createdAtMs: timestampMs(),
@@ -819,20 +942,20 @@ export function createJoseReportToShayan(
   return updatedCommand;
 }
 
-export function confirmJoseCommand(commandId, confirmation) {
+export function confirmJoseCommand(commandId: string, confirmation: string): JoseCommand | null {
   return createJoseReportToShayan(commandId, confirmation);
 }
 
-export function runJoseRetrySweep() {
+export function runJoseRetrySweep(): { touched: string[] } {
   const now = timestampMs();
   const commands = readCommands();
-  const touched = [];
+  const touched: string[] = [];
 
   commands.forEach((command) => {
     const maxRetries = command.retryPolicy?.maxRetries ?? MAX_AUTO_RETRIES;
     let changed = false;
     const nextAssignments = (command.assignments || []).map((assignment) => {
-      const packet = getPacketById(assignment.packetId);
+      const packet = getPacketById(assignment.packetId || '');
       if (!packet) return assignment;
 
       const stale = now - Number(packet.updatedAtMs || packet.createdAtMs || now) > (command.retryPolicy?.staleAfterMs ?? STALE_ROUTE_MS);
@@ -947,7 +1070,7 @@ export function runJoseRetrySweep() {
   return { touched };
 }
 
-export function listJoseDeadLetters() {
+export function listJoseDeadLetters(): any[] {
   const commands = readCommands();
   return commands.flatMap((command) => (
     (command.assignments || [])
@@ -960,10 +1083,25 @@ export function listJoseDeadLetters() {
   ));
 }
 
-export function getJoseWorkflowObservability() {
+export interface WorkflowObservabilityTotals {
+  commands: number;
+  distributed: number;
+  inProgress: number;
+  reported: number;
+  pendingApprovals: number;
+  failedPackets: number;
+  deadLetters: number;
+}
+
+export interface WorkflowObservability {
+  totals: WorkflowObservabilityTotals;
+  receipts: any[];
+}
+
+export function getJoseWorkflowObservability(): WorkflowObservability {
   const commands = readCommands();
   const packets = listAgentPackets();
-  const totals = {
+  const totals: WorkflowObservabilityTotals = {
     commands: commands.length,
     distributed: commands.filter((command) => command.status === 'distributed').length,
     inProgress: commands.filter((command) => ['distributed', 'in_progress', 'retrying'].includes(command.status)).length,

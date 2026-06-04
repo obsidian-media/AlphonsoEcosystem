@@ -1,4 +1,4 @@
-const AGENTS = {
+const AGENTS: Record<string, string> = {
   ALPHONSO: 'alphonso',
   MIYA: 'miya',
   JOSE: 'jose',
@@ -10,7 +10,15 @@ const AGENTS = {
   NOVA: 'nova'
 };
 
-export const AGENT_EXECUTION_CONTRACTS = {
+export type AgentId = typeof AGENTS[keyof typeof AGENTS];
+
+export interface AgentExecutionContract {
+  role: string;
+  allowedActionPrefixes: string[];
+  blockedActionPrefixes: string[];
+}
+
+export const AGENT_EXECUTION_CONTRACTS: Record<string, AgentExecutionContract> = {
   [AGENTS.JOSE]: {
     role: 'orchestrator',
     allowedActionPrefixes: ['orchestration_', 'agent_report', 'research_review', 'remote_message_route', 'creative_package_review'],
@@ -58,15 +66,26 @@ export const AGENT_EXECUTION_CONTRACTS = {
   }
 };
 
-function startsWithAny(value, prefixes = []) {
+export interface AgentContractPacket {
+  toAgent?: string;
+  actionType?: string;
+  commandPreview?: string;
+}
+
+export interface ContractValidationResult {
+  ok: boolean;
+  reason: string | null;
+}
+
+function startsWithAny(value: string, prefixes: string[] = []): boolean {
   return prefixes.some((prefix) => value.startsWith(prefix));
 }
 
-export function validateAgentExecutionContract(packet) {
+export function validateAgentExecutionContract(packet: AgentContractPacket): ContractValidationResult {
   const toAgent = packet?.toAgent;
   const action = String(packet?.actionType || '').toLowerCase();
   const preview = String(packet?.commandPreview || '').toLowerCase();
-  const contract = AGENT_EXECUTION_CONTRACTS[toAgent];
+  const contract = AGENT_EXECUTION_CONTRACTS[toAgent || ''];
 
   if (!contract) {
     return { ok: true, reason: null };

@@ -2,15 +2,37 @@ import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 
 const CHAT_CATEGORY = 'chat_message';
-let durableAvailable = null;
+let durableAvailable: boolean | null = null;
 let durableCheckAtMs = 0;
-let writeQueue = Promise.resolve();
+let writeQueue: Promise<void> = Promise.resolve();
 
-async function isDurableAvailable() {
+export interface ChatMessage {
+  id: number;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  isError?: boolean;
+}
+
+export interface ChatMemoryRecord {
+  id: string;
+  title: string;
+  content: any;
+  category: string;
+  sourceAgent: string;
+  source: string;
+  timestampMs: number;
+  confidence: string;
+  verificationState: string;
+  projectReference: string;
+  expiresAt: null;
+  expiryRule: null;
+}
+
+async function isDurableAvailable(): Promise<boolean> {
   const now = timestampMs();
   if (durableAvailable !== null && now < durableCheckAtMs) return durableAvailable;
   try {
-    const status = await invoke('get_memory_store_status');
+    const status: any = await invoke('get_memory_store_status');
     durableAvailable = Boolean(status?.available);
   } catch {
     durableAvailable = false;
@@ -19,7 +41,7 @@ async function isDurableAvailable() {
   return durableAvailable;
 }
 
-function messageToRecord(chatId, msg) {
+function messageToRecord(chatId: string, msg: ChatMessage): ChatMemoryRecord {
   return {
     id: `chat-${chatId}-${msg.id}`,
     title: msg.role === 'user' ? `User: ${String(msg.content).slice(0, 60)}` : `Assistant: ${String(msg.content).slice(0, 60)}`,
@@ -36,7 +58,7 @@ function messageToRecord(chatId, msg) {
   };
 }
 
-function recordToMessage(record) {
+function recordToMessage(record: any): ChatMessage {
   const gov = record.content?.__governance || {};
   return {
     id: gov.msgId || record.id,
@@ -46,7 +68,7 @@ function recordToMessage(record) {
   };
 }
 
-export function persistChatMessages(chatId, messages) {
+export function persistChatMessages(chatId: string, messages: ChatMessage[]): void {
   writeQueue = writeQueue.then(async () => {
     try {
       const available = await isDurableAvailable();
@@ -60,23 +82,23 @@ export function persistChatMessages(chatId, messages) {
   });
 }
 
-export async function loadChatMessages(chatId) {
+export async function loadChatMessages(chatId: string): Promise<ChatMessage[] | null> {
   try {
     const available = await isDurableAvailable();
     if (!available) return null;
-    const records = await invoke('list_memory_records', {
+    const records: any[] = await invoke('list_memory_records', {
       filters: { category: CHAT_CATEGORY, projectReference: chatId }
     });
     if (!Array.isArray(records) || records.length === 0) return null;
     return records
-      .sort((a, b) => Number(a.timestampMs || 0) - Number(b.timestampMs || 0))
+      .sort((a: any, b: any) => Number(a.timestampMs || 0) - Number(b.timestampMs || 0))
       .map(recordToMessage);
   } catch {
     return null;
   }
 }
 
-export async function deleteChatMessages(chatId) {
+export async function deleteChatMessages(chatId: string): Promise<void> {
   try {
     const available = await isDurableAvailable();
     if (!available) return;

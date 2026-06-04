@@ -1,4 +1,4 @@
-export const TRUST_STATES = {
+export const TRUST_STATES: Record<string, string> = {
   VERIFIED: 'verified',
   INFERRED: 'inferred',
   PENDING: 'pending',
@@ -9,9 +9,11 @@ export const TRUST_STATES = {
   STALE: 'stale',
   EXPIRED: 'expired',
   PLACEHOLDER: 'placeholder'
-};
+} as const;
 
-export function trustColor(trust) {
+export type TrustState = typeof TRUST_STATES[keyof typeof TRUST_STATES];
+
+export function trustColor(trust: string): string {
   switch (trust) {
     case TRUST_STATES.VERIFIED:
       return 'green';
@@ -37,6 +39,6 @@ export function trustColor(trust) {
   }
 }
 
-export function timestampMs() {
+export function timestampMs(): number {
   return Date.now();
 }

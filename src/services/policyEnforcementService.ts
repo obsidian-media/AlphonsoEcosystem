@@ -2,7 +2,7 @@ import { TRUST_STATES } from './trustModel';
 
 const SETTINGS_KEY = 'alphonso_settings';
 
-const PAID_OR_METERED_CONNECTORS = new Set([
+const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
   'qwen',
@@ -14,7 +14,7 @@ const PAID_OR_METERED_CONNECTORS = new Set([
   'airtable'
 ]);
 
-const HIGH_RISK_ACTION_PATTERNS = [
+const HIGH_RISK_ACTION_PATTERNS: RegExp[] = [
   /upload/i,
   /publish/i,
   /post/i,
@@ -25,7 +25,39 @@ const HIGH_RISK_ACTION_PATTERNS = [
   /remove/i
 ];
 
-export function getRuntimePolicySettings() {
+export interface RuntimePolicySettings {
+  approvalMode: boolean;
+  zeroCostMode: boolean;
+  safeMode: boolean;
+  localOnlyMode: boolean;
+}
+
+export type ConnectorRiskLevel = 'high' | 'medium' | 'low';
+
+export interface PolicyGateAuth {
+  enabled: boolean;
+  isAuthorized: boolean;
+}
+
+export interface PolicyGateInput {
+  connectorId: string;
+  actionType?: string;
+  commandPreview?: string;
+  approved?: boolean;
+  auth?: PolicyGateAuth;
+}
+
+export interface PolicyGateResult {
+  ok: boolean;
+  blocked: boolean;
+  setupRequired: boolean;
+  reason: string | null;
+  riskLevel: ConnectorRiskLevel;
+  confidence: string;
+  verificationState: string;
+}
+
+export function getRuntimePolicySettings(): RuntimePolicySettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
@@ -45,7 +77,7 @@ export function getRuntimePolicySettings() {
   }
 }
 
-export function classifyConnectorRisk(connectorId, actionType = '') {
+export function classifyConnectorRisk(connectorId: string, actionType: string = ''): ConnectorRiskLevel {
   const id = String(connectorId || '').toLowerCase();
   const action = String(actionType || '').toLowerCase();
   if (id === 'youtube' || action.includes('publish') || action.includes('upload')) return 'high';
@@ -60,7 +92,7 @@ export function evaluatePolicyGate({
   commandPreview = '',
   approved = false,
   auth = { enabled: false, isAuthorized: false }
-}) {
+}: PolicyGateInput): PolicyGateResult {
   const policy = getRuntimePolicySettings();
   const id = String(connectorId || '').toLowerCase();
   const action = String(actionType || '').toLowerCase();
@@ -115,4 +147,3 @@ export function evaluatePolicyGate({
     verificationState: TRUST_STATES.VERIFIED
   };
 }
-

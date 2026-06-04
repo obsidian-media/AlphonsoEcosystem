@@ -4,7 +4,53 @@ import { persistScopeRows } from './runtimeLedgerService';
 const RECEIPT_KEY = 'alphonso_orchestration_receipts_v1';
 export const ORCHESTRATION_RECEIPT_SCOPE = 'orchestration_receipts_v1';
 
-function readReceipts() {
+export interface OrchestrationReceipt {
+  id: string;
+  workflowId: string | null;
+  commandId: string | null;
+  packetId: string | null;
+  eventType: string;
+  status: string;
+  agent: string;
+  connectorId: string | null;
+  actionType: string | null;
+  riskLevel: string;
+  approved: boolean;
+  blocked: boolean;
+  setupRequired: boolean;
+  details: Record<string, any>;
+  confidence: string;
+  verificationState: string;
+  timestampMs: number;
+}
+
+export interface ReceiptFilters {
+  workflowId?: string;
+  commandId?: string;
+  agent?: string;
+  status?: string;
+  eventType?: string;
+}
+
+export interface AppendReceiptInput {
+  workflowId?: string | null;
+  commandId?: string | null;
+  packetId?: string | null;
+  eventType?: string;
+  status?: string;
+  agent?: string;
+  connectorId?: string | null;
+  actionType?: string | null;
+  riskLevel?: string;
+  approved?: boolean;
+  blocked?: boolean;
+  setupRequired?: boolean;
+  details?: Record<string, any>;
+  confidence?: string;
+  verificationState?: string;
+}
+
+function readReceipts(): OrchestrationReceipt[] {
   try {
     const raw = localStorage.getItem(RECEIPT_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -14,10 +60,10 @@ function readReceipts() {
   }
 }
 
-function writeReceipts(rows) {
+function writeReceipts(rows: OrchestrationReceipt[]): void {
   const next = rows.slice(-3000);
   localStorage.setItem(RECEIPT_KEY, JSON.stringify(next));
-  persistScopeRows(ORCHESTRATION_RECEIPT_SCOPE, next, (row) => ({
+  persistScopeRows(ORCHESTRATION_RECEIPT_SCOPE, next, (row: OrchestrationReceipt) => ({
     id: row.id,
     data: row,
     status: row.status || row.eventType || 'recorded',
@@ -27,7 +73,7 @@ function writeReceipts(rows) {
   }));
 }
 
-export function listOrchestrationReceipts(filters = {}) {
+export function listOrchestrationReceipts(filters: ReceiptFilters = {}): OrchestrationReceipt[] {
   const rows = readReceipts().slice().reverse();
   return rows.filter((row) => {
     if (filters.workflowId && row.workflowId !== filters.workflowId) return false;
@@ -55,18 +101,18 @@ export function appendOrchestrationReceipt({
   details = {},
   confidence = TRUST_STATES.TEMPORARY,
   verificationState = TRUST_STATES.UNVERIFIED
-}) {
+}: AppendReceiptInput): OrchestrationReceipt {
   const rows = readReceipts();
-  const receipt = {
+  const receipt: OrchestrationReceipt = {
     id: `orx-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    workflowId,
-    commandId,
-    packetId,
+    workflowId: workflowId ?? null,
+    commandId: commandId ?? null,
+    packetId: packetId ?? null,
     eventType: eventType || 'event',
     status,
     agent,
-    connectorId,
-    actionType,
+    connectorId: connectorId ?? null,
+    actionType: actionType ?? null,
     riskLevel,
     approved: Boolean(approved),
     blocked: Boolean(blocked),
