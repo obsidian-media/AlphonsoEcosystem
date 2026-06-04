@@ -119,7 +119,7 @@ jobs:
               }
             }
           } | ConvertTo-Json -Depth 4
-          $manifestPath = "release-latest.json"
+          $manifestPath = "latest.json"
           Set-Content -Path $manifestPath -Value $manifest
           Write-Host "Manifest:"
           Get-Content $manifestPath
