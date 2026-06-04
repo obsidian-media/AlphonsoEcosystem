@@ -127,32 +127,6 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Start dev server
-        run: npm run dev
-        background: true
-
-      - name: Wait for dev server
-        run: |
-          $maxAttempts = 30
-          $attempt = 0
-          while ($attempt -lt $maxAttempts) {
-            try {
-              $response = Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 2 -ErrorAction Stop
-              if ($response.StatusCode -eq 200) {
-                Write-Host "Dev server is ready"
-                break
-              }
-            } catch {
-              $attempt++
-              Write-Host "Waiting for dev server... attempt $attempt/$maxAttempts"
-              Start-Sleep -Seconds 2
-            }
-          }
-          if ($attempt -ge $maxAttempts) {
-            Write-Host "Dev server failed to start"
-            exit 1
-          }
-
       - name: Run Playwright tests
         run: npx playwright test --reporter=list
         env:

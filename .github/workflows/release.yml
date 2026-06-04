@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v0.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify app (lint + test + build)
+        run: npm run verify:app
+
+      - name: Rust tests & clippy
+        working-directory: src-tauri
+        run: |
+          cargo test
+          cargo clippy -- -D warnings
+
+      - name: Determine release tag
+        id: tag
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}"
+          } else {
+            $tag = "${{ inputs.version }}"
+          }
+          if (-not $tag) {
+            Write-Error "No release tag provided"
+            exit 1
+          }
+          $version = $tag -replace '^v', ''
+          Write-Host "Release tag: $tag"
+          Write-Host "Version: $version"
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Build signed Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx.cmd tauri build
+
+      - name: Collect artifacts
+        id: collect
+        shell: pwsh
+        run: |
+          $version = "${{ steps.tag.outputs.version }}"
+          $nsisDir = "src-tauri/target/release/bundle/nsis"
+          $installer = Get-ChildItem -LiteralPath $nsisDir -Filter "*_x64-setup.exe" | Select-Object -First 1
+          if (-not $installer) {
+            Write-Error "NSIS installer not found in $nsisDir"
+            exit 1
+          }
+          $sig = Get-Item "$($installer.FullName).sig"
+          if (-not $sig) {
+            Write-Error "Signature file not found: $($installer.FullName).sig"
+            exit 1
+          }
+          Write-Host "Installer: $($installer.Name)"
+          Write-Host "Signature: $($sig.Name)"
+          "installer_path=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "sig_path=$($sig.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "installer_name=$($installer.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Generate updater manifest
+        id: manifest
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.tag.outputs.tag }}"
+          $version = "${{ steps.tag.outputs.version }}"
+          $installerName = "${{ steps.collect.outputs.installer_name }}"
+          $sigContent = Get-Content "${{ steps.collect.outputs.sig_path }}" -Raw
+          $sigContent = $sigContent.Trim()
+          $baseUrl = "https://github.com/Thatisshayan/AlphonsoEcosystem/releases/download/$tag"
+          $manifest = @{
+            version = $version
+            notes = "Alphonso $version release"
+            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = $sigContent
+                url = "$baseUrl/$installerName"
+              }
+            }
+          } | ConvertTo-Json -Depth 4
+          $manifestPath = "release-latest.json"
+          Set-Content -Path $manifestPath -Value $manifest
+          Write-Host "Manifest:"
+          Get-Content $manifestPath
+          "manifest_path=$manifestPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Alphonso ${{ steps.tag.outputs.version }}
+          body: |
+            ## Alphonso ${{ steps.tag.outputs.version }}
+
+            ### Installation
+            1. Download `Alphonso_${{ steps.tag.outputs.version }}_x64-setup.exe`
+            2. Run the installer
+            3. Launch Alphonso
+
+            ### Auto-Update
+            If you have a previous version installed, Alphonso will prompt you to update automatically.
+          draft: false
+          prerelease: false
+          files: |
+            ${{ steps.collect.outputs.installer_path }}
+            ${{ steps.collect.outputs.sig_path }}
+            ${{ steps.manifest.outputs.manifest_path }}
+
+      - name: Summary
+        shell: pwsh
+        run: |
+          Write-Host "Release published: Alphonso ${{ steps.tag.outputs.version }}"
+          Write-Host "Tag: ${{ steps.tag.outputs.tag }}"
+          Write-Host "Installer: ${{ steps.collect.outputs.installer_name }}"
+          Write-Host "Updater endpoint: https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json"
