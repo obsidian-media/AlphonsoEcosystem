@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const COACH_LABEL = 'coach';
@@ -23,10 +24,14 @@ export async function openCoachWindow(alwaysOnTop, coachAgent = 'alphonso') {
   try {
     const stored = localStorage.getItem('alphonso_settings');
     const parsed = stored ? JSON.parse(stored) : {};
-    localStorage.setItem('alphonso_settings', JSON.stringify({
+    const next = {
       ...parsed,
       coachAgent
-    }));
+    };
+    localStorage.setItem('alphonso_settings', JSON.stringify(next));
+    try {
+      await invoke('kv_set', { key: 'alphonso_settings', value: JSON.stringify(next) });
+    } catch { /* SQLite write best-effort */ }
   } catch {
     // Ignore storage failures in restricted runtimes.
   }

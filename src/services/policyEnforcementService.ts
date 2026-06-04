@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES } from './trustModel';
 
 const SETTINGS_KEY = 'alphonso_settings';
@@ -58,6 +59,12 @@ export interface PolicyGateResult {
 }
 
 export function getRuntimePolicySettings(): RuntimePolicySettings {
+  const defaults: RuntimePolicySettings = {
+    approvalMode: true,
+    zeroCostMode: true,
+    safeMode: true,
+    localOnlyMode: true
+  };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
@@ -68,13 +75,39 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
       localOnlyMode: parsed.localOnlyMode !== false
     };
   } catch {
-    return {
-      approvalMode: true,
-      zeroCostMode: true,
-      safeMode: true,
-      localOnlyMode: true
-    };
+    return defaults;
   }
+}
+
+export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySettings> {
+  const defaults: RuntimePolicySettings = {
+    approvalMode: true,
+    zeroCostMode: true,
+    safeMode: true,
+    localOnlyMode: true
+  };
+  try {
+    const raw = await invoke<string | null>('kv_get', { key: SETTINGS_KEY });
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        approvalMode: parsed.approvalMode !== false,
+        zeroCostMode: parsed.zeroCostMode !== false,
+        safeMode: parsed.safeMode !== false,
+        localOnlyMode: parsed.localOnlyMode !== false
+      };
+    }
+  } catch {}
+  return getRuntimePolicySettings();
+}
+
+export async function setRuntimePolicySettings(settings: Partial<RuntimePolicySettings>): Promise<void> {
+  const current = getRuntimePolicySettings();
+  const next = { ...current, ...settings };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+  try {
+    await invoke('kv_set', { key: SETTINGS_KEY, value: JSON.stringify(next) });
+  } catch {}
 }
 
 export function classifyConnectorRisk(connectorId: string, actionType: string = ''): ConnectorRiskLevel {

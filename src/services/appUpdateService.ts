@@ -36,8 +36,17 @@ export function getLastUpdateNotice(): UpdateNotice | null {
   }
 }
 
+export async function getLastUpdateNoticeAsync(): Promise<UpdateNotice | null> {
+  try {
+    const raw = await invoke<string | null>('kv_get', { key: UPDATE_NOTICE_KEY });
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return getLastUpdateNotice();
+}
+
 export function setLastUpdateNotice(payload: UpdateNotice): void {
   localStorage.setItem(UPDATE_NOTICE_KEY, JSON.stringify(payload));
+  invoke('kv_set', { key: UPDATE_NOTICE_KEY, value: JSON.stringify(payload) }).catch(() => {});
 }
 
 export async function checkAppUpdate({ endpoint, pubkey, target }: UpdateCheckInput = {}): Promise<UpdateCheckResult> {
