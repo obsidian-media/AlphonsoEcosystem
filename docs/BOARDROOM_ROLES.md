@@ -42,6 +42,7 @@
 2. **No direct agent-to-agent conversation** without Jose routing.
 3. **Approval required for:** publishing, sending, deleting, deploying, spending, credential/billing/account changes, database edits outside research scope, broad tool access expansions.
 4. **Auto-approve:** safe ops classified as low-risk by `missionRoomService` secret/risk classification.
+5. **ComposIO is opt-in only.** Jose may propose ComposIO integrations, but none execute without Shayan's explicit approval. Shayan holds the unlock key.
 5. **Session awareness:** every packet includes trace id, agent lineage, timestamp, and trust state.
 
 ## Tone & Activation
