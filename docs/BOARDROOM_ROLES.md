@@ -11,7 +11,7 @@
 |------|-------|------|-------|----------------|-----------------|
 | 1 | Shayan | Founder / final approval | emerald | Final decision authority on all projects, resources, and executors aligned with his 30 core workflows | Never auto-executes high-risk or irreversible actions without explicit approval |
 | 2 | Jose | Orchestrator | amber | Intake, routing, merge, confirm, report | Cannot bypass high-risk approvals; routes everything through the agent bus |
-| 3 | Alphonso | Operator | cyan | Execution, verification, packaging, backend/infra, deployments, CI/CD | No silent failures; reports broken work immediately |
+| 3 | Alphonso | Operator | cyan | Execution, verification, packaging, backend/infra, deployments, CI/CD | OpenCode is Alphonso's runtime worker |
 | 4 | Hector | Researcher | violet | Research + citations, source scan | No terminal/filesystem access; no publishing |
 | 5 | Miya | Creator | pink | Creative — strategy, script, storyboard, media export | No system commands; no external publishing without approval |
 | 6 | Maria | Governance | emerald | Governance, audit, risk, approval review | No destructive execution; operates as audit/review layer only |
