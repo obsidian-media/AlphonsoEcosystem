@@ -8,7 +8,7 @@ describe('devPacketService', () => {
       findings: [
         {
           id: 'finding-1',
-          path: 'src/components/AlphaReadinessPanel.jsx',
+          path: 'src/components/ProductionReadinessPanel.jsx',
           lineNumber: 42,
           surface: 'ui',
           kind: 'placeholder',
@@ -41,7 +41,7 @@ describe('devPacketService', () => {
     expect(packets[0].priority).toBe('P0');
     expect(packets[0].testCommands).toContain('npm.cmd run release:updater');
     expect(packets[1].priority).toBe('P1');
-    expect(packets[1].files).toContain('src/components/AlphaReadinessPanel.jsx');
+    expect(packets[1].files).toContain('src/components/ProductionReadinessPanel.jsx');
     expect(summarizeDevPackets(packets)).toEqual({ count: 2, p0: 1, p1: 1, p2: 0 });
   });
 });
