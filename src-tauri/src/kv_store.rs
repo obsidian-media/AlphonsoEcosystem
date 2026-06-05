@@ -12,7 +12,7 @@ pub(crate) fn ensure_kv_table(conn: &Connection) -> Result<(), String> {
 
 #[tauri::command]
 pub fn kv_set(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
-  let (conn, _) = crate::open_memory_db(&app)?;
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
   ensure_kv_table(&conn)?;
   let now = crate::now_ms() as i64;
   conn.execute(
@@ -25,7 +25,7 @@ pub fn kv_set(app: tauri::AppHandle, key: String, value: String) -> Result<(), S
 
 #[tauri::command]
 pub fn kv_get(app: tauri::AppHandle, key: String) -> Result<Option<String>, String> {
-  let (conn, _) = crate::open_memory_db(&app)?;
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
   ensure_kv_table(&conn)?;
   match conn.query_row(
     "SELECT value FROM kv_store WHERE key = ?1 LIMIT 1",
@@ -40,7 +40,7 @@ pub fn kv_get(app: tauri::AppHandle, key: String) -> Result<Option<String>, Stri
 
 #[tauri::command]
 pub fn save_settings(app: tauri::AppHandle, settings_json: String) -> Result<(), String> {
-  let (conn, _) = crate::open_memory_db(&app)?;
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
   ensure_kv_table(&conn)?;
   let now = crate::now_ms() as i64;
   conn.execute(
@@ -53,7 +53,7 @@ pub fn save_settings(app: tauri::AppHandle, settings_json: String) -> Result<(),
 
 #[tauri::command]
 pub fn load_settings(app: tauri::AppHandle) -> Result<Option<String>, String> {
-  let (conn, _) = crate::open_memory_db(&app)?;
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
   ensure_kv_table(&conn)?;
   let result = conn.query_row(
     "SELECT value FROM kv_store WHERE key = 'app_settings' LIMIT 1",
