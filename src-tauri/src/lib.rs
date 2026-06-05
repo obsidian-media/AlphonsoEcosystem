@@ -15,10 +15,12 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri_plugin_updater::UpdaterExt;
 mod kv_store;
 mod native_proof;
+mod policy_gate;
 mod runway;
 mod whatsapp_webhook;
 use kv_store::{kv_get, kv_set, load_settings, save_settings};
 use native_proof::{run_native_rc0_proof, start_native_rc0_proof_if_requested};
+use policy_gate::{allowed_program, check_env_vars_presence, ALPHONSO_RUNTIME_ENV_NAMES};
 use runway::{runway_generate_video, runway_list_pending_jobs, runway_resume_task};
 use whatsapp_webhook::{
   ConnectorInboundMessage,
@@ -627,11 +629,11 @@ pub(crate) fn to_hex(bytes: &[u8]) -> String {
   out
 }
 
-fn allowed_program(program: &str) -> bool {
-  matches!(
-    program.to_ascii_lowercase().as_str(),
-    "ollama" | "where" | "where.exe" | "tasklist" | "git" | "node" | "npm" | "npm.cmd"
-  )
+pub(crate) fn app_data_subdir(app: &tauri::AppHandle, subdir: &str) -> Result<PathBuf, String> {
+  let mut dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+  dir.push(subdir);
+  fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+  Ok(dir)
 }
 
 fn load_dotenv_file(path: &Path) -> usize {
@@ -788,13 +790,6 @@ fn append_plugin_audit_event(
   entry: Value,
 ) -> Result<(), String> {
   append_audit_log(app.clone(), event_type.to_string(), entry).map(|_| ())
-}
-
-fn app_data_subdir(app: &tauri::AppHandle, subdir: &str) -> Result<PathBuf, String> {
-  let mut dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
-  dir.push(subdir);
-  fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
-  Ok(dir)
 }
 
 fn connector_cursor_path(app: &tauri::AppHandle, connector_id: &str) -> Result<PathBuf, String> {
@@ -1395,22 +1390,6 @@ fn symbol_hits_from_counts(counts: [u64; 7]) -> Vec<SymbolHit> {
     SymbolHit { symbol: "import_or_use".to_string(), count: counts[5] },
     SymbolHit { symbol: "export_or_pub".to_string(), count: counts[6] },
   ]
-}
-
-#[tauri::command]
-fn check_env_vars_presence(names: Vec<String>) -> HashMap<String, bool> {
-  let mut result = HashMap::new();
-  for name in names.into_iter().take(80) {
-    let trimmed = name.trim().to_string();
-    if trimmed.is_empty() {
-      continue;
-    }
-    let present = std::env::var_os(&trimmed)
-      .map(|value| !value.is_empty())
-      .unwrap_or(false);
-    result.insert(trimmed, present);
-  }
-  result
 }
 
 fn is_allowed_webhook_url(webhook_url: &str) -> bool {
@@ -3952,14 +3931,7 @@ fn verify_paths(paths: Vec<String>) -> Vec<PathProof> {
 
 #[tauri::command]
 fn read_runtime_env_value(name: String) -> Result<RuntimeEnvValueProof, String> {
-  let allowed = matches!(
-    name.as_str(),
-    "ALPHONSO_SELFDEV_AUTORUN"
-      | "ALPHONSO_SELFDEV_EXIT_ON_COMPLETE"
-      | "ALPHONSO_WORKSPACE_ROOT"
-      | "ALPHONSO_PROOF_OUTPUT_DIR"
-  );
-  if !allowed {
+  if !ALPHONSO_RUNTIME_ENV_NAMES.contains(&name.as_str()) {
     return Err("Environment variable is not exposed through this command.".to_string());
   }
 
@@ -5250,88 +5222,6 @@ mod tests {
 
     let meta_version = read_memory_schema_version(&conn);
     assert_eq!(meta_version, MEMORY_SCHEMA_VERSION);
-  }
-
-  // ── allowed_program ────────────────────────────────────────────────────────
-
-  #[test]
-  fn allowed_program_accepts_known_safe_programs() {
-    assert!(allowed_program("ollama"), "ollama should be allowed");
-    assert!(allowed_program("git"), "git should be allowed");
-    assert!(allowed_program("node"), "node should be allowed");
-    assert!(allowed_program("npm"), "npm should be allowed");
-    assert!(allowed_program("npm.cmd"), "npm.cmd should be allowed");
-    assert!(allowed_program("tasklist"), "tasklist should be allowed");
-  }
-
-  #[test]
-  fn allowed_program_rejects_dangerous_programs() {
-    assert!(!allowed_program("cmd"), "cmd should not be allowed");
-    assert!(!allowed_program("cmd.exe"), "cmd.exe should not be allowed");
-    assert!(!allowed_program("powershell"), "powershell should not be allowed");
-    assert!(!allowed_program("bash"), "bash should not be allowed");
-    assert!(!allowed_program("sh"), "sh should not be allowed");
-    assert!(!allowed_program("rm"), "rm should not be allowed");
-  }
-
-  #[test]
-  fn allowed_program_is_case_insensitive() {
-    assert!(allowed_program("OLLAMA"), "OLLAMA (uppercase) should be allowed");
-    assert!(allowed_program("Git"), "Git (mixed case) should be allowed");
-    assert!(!allowed_program("CMD"), "CMD (uppercase) should not be allowed");
-  }
-
-  // ── plugin_blocked_token_present ──────────────────────────────────────────
-
-  #[test]
-  fn plugin_blocked_token_detects_shell_injection_tokens() {
-    assert_eq!(plugin_blocked_token_present("foo && bar"), Some("&&"));
-    assert_eq!(plugin_blocked_token_present("foo || bar"), Some("||"));
-    assert_eq!(plugin_blocked_token_present("foo; bar"), Some(";"));
-    assert_eq!(plugin_blocked_token_present("foo | bar"), Some("|"));
-    assert_eq!(plugin_blocked_token_present("foo > out.txt"), Some(">"));
-    assert_eq!(plugin_blocked_token_present("cat < file"), Some("<"));
-    assert_eq!(plugin_blocked_token_present("$(whoami)"), Some("$("));
-    assert_eq!(plugin_blocked_token_present("`id`"), Some("`"));
-  }
-
-  #[test]
-  fn plugin_blocked_token_allows_clean_args() {
-    assert_eq!(plugin_blocked_token_present("--output"), None);
-    assert_eq!(plugin_blocked_token_present("/path/to/file"), None);
-    assert_eq!(plugin_blocked_token_present("hello world"), None);
-    assert_eq!(plugin_blocked_token_present(""), None);
-  }
-
-  // ── validate_plugin_extra_args ────────────────────────────────────────────
-
-  #[test]
-  fn validate_plugin_extra_args_rejects_too_many_args() {
-    let args: Vec<String> = (0..9).map(|i| format!("arg{}", i)).collect();
-    let result = validate_plugin_extra_args(&args);
-    assert!(result.is_err(), "9 args should exceed the limit of 8");
-    assert!(result.unwrap_err().contains("exceed supervised limit"));
-  }
-
-  #[test]
-  fn validate_plugin_extra_args_rejects_oversized_arg() {
-    let long_arg = "x".repeat(121);
-    let result = validate_plugin_extra_args(&[long_arg]);
-    assert!(result.is_err(), "arg of 121 chars should exceed the 120-char limit");
-    assert!(result.unwrap_err().contains("exceeds supervised length limit"));
-  }
-
-  #[test]
-  fn validate_plugin_extra_args_rejects_injection_token() {
-    let result = validate_plugin_extra_args(&["--flag".to_string(), "foo && bar".to_string()]);
-    assert!(result.is_err(), "arg with && should be rejected");
-    assert!(result.unwrap_err().contains("blocked token"));
-  }
-
-  #[test]
-  fn validate_plugin_extra_args_accepts_clean_args() {
-    let args = vec!["--output".to_string(), "/tmp/out.txt".to_string(), "--verbose".to_string()];
-    assert!(validate_plugin_extra_args(&args).is_ok(), "clean args should pass validation");
   }
 
   // ── trim_trailing_slashes ─────────────────────────────────────────────────
