@@ -48,12 +48,6 @@ const WorkflowOperationsDashboard = lazy(() =>
   }))
 );
 
-const AgentWorkshop = lazy(() =>
-  import('./agentWorkshop/AgentWorkshop').then((module) => ({
-    default: module.AgentWorkshop
-  }))
-);
-
 export function EcosystemHub({ settings, setSettings, ollamaStatus, verificationLogs = [], voiceStatus, workspaceFoundation, updateCheckState, nativeSelfDevProof, setNativeSelfDevProof, nativeProofHooks }) {
   const [packets, setPackets] = useState(() => listAgentPackets());
   const [skills, setSkills] = useState(() => listSkillPacks());
@@ -243,7 +237,6 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
           }
         >
           <WorkflowOperationsDashboard settings={settings} />
-          <AgentWorkshop />
         </Suspense>
       )}
       <ConnectorSetupPanel />
