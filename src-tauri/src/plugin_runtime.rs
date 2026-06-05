@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -544,6 +543,3 @@ mod tests {
     assert!(plugin_blocked_token_present("safe_arg").is_none());
   }
 }
-
-#[allow(dead_code)]
-fn _unused_value_marker(_v: Value) {}
