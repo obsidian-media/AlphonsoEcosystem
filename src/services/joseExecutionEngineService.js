@@ -25,6 +25,7 @@ import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
+import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 
 export function isJoseIntakeCommand(text) {
@@ -43,6 +44,19 @@ function isBlockedByZeroCostMode(packet, assignment) {
   if (policy?.blockedByZeroCostMode) return true;
   const costClass = String(policy?.costClass || assignment?.costClass || '').toLowerCase();
   return costClass === 'paid_or_metered';
+}
+
+function checkSentinelGate(commandId, assignment) {
+  const risk = String(assignment?.riskLevel || '').toLowerCase();
+  if (risk !== 'high' && risk !== 'critical') {
+    return { blocked: false, reason: '' };
+  }
+  const sentinelAlerts = checkSentinelAlerts(commandId);
+  if (!sentinelAlerts.found) {
+    return { blocked: false, reason: '' };
+  }
+  const blockResult = sentinelShouldBlock(assignment, sentinelAlerts.output);
+  return blockResult;
 }
 
 export function draftPrompt(agent, task, context = {}) {
@@ -717,6 +731,56 @@ export async function runJoseCommandExecutionPipeline({
           blocked: true,
           setupRequired: false,
           details: { reason: 'risky_assignment' },
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        continue;
+      }
+
+      const sentinelGate = checkSentinelGate(command.id, assignment);
+      if (sentinelGate.blocked) {
+        pendingApprovalCount += 1;
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'sentinel_blocked',
+          reason: sentinelGate.reason
+        });
+        onProgress?.({
+          stage: 'sentinel_blocked',
+          assignment,
+          packetId: assignment.packetId,
+          reason: sentinelGate.reason
+        });
+        updatePacketStatus(assignment.packetId, 'pending_approval', {
+          sentinelBlocked: true,
+          sentinelReason: sentinelGate.reason,
+          verificationState: TRUST_STATES.PENDING
+        });
+        recordOrchestrationQueueTransition({
+          commandId: command.id,
+          packetId: assignment.packetId,
+          agent: AGENTS.JOSE,
+          fromStatus: packet.status || 'unknown',
+          toStatus: 'pending_approval',
+          reason: sentinelGate.reason,
+          retryCount: packet.retryCount || 0,
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'sentinel_gate_blocked',
+          status: 'pending_approval',
+          agent: AGENTS.JOSE,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'high',
+          approved: false,
+          blocked: true,
+          setupRequired: false,
+          details: { reason: sentinelGate.reason },
           confidence: TRUST_STATES.VERIFIED,
           verificationState: TRUST_STATES.PENDING
         });

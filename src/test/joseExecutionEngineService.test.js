@@ -72,6 +72,14 @@ const mockMemoryItems = [
   { id: 'mem-3', title: 'Research on local LLMs', category: 'research_memory', content: 'Ollama vs llama.cpp comparison' }
 ];
 
+const mockShouldBlock = vi.fn(() => ({ blocked: false, reason: '' }));
+const mockCheckSentinelAlerts = vi.fn(() => ({ found: false, alerts: [], output: null }));
+
+vi.mock('../services/sentinelGateService', () => ({
+  shouldBlock: (...args) => mockShouldBlock(...args),
+  checkSentinelAlerts: (...args) => mockCheckSentinelAlerts(...args)
+}));
+
 vi.mock('../services/memoryService', () => ({
   pushMemoryItem: vi.fn(),
   listMemoryItems: vi.fn(() => mockMemoryItems)
@@ -399,5 +407,119 @@ describe('dependency-aware execution', () => {
     for (const receipt of result.executionReceipts) {
       expect(receipt).toHaveProperty('agent');
     }
+  });
+});
+
+describe('sentinel gate integration', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    runtimeReachable = true;
+    ollamaAvailable = true;
+    mockShouldBlock.mockReset();
+    mockCheckSentinelAlerts.mockReset();
+    mockShouldBlock.mockReturnValue({ blocked: false, reason: '' });
+    mockCheckSentinelAlerts.mockReturnValue({ found: false, alerts: [], output: null });
+  });
+
+  it('routes sentinel-blocked assignments to pending_approval', async () => {
+    mockCheckSentinelAlerts.mockReturnValue({
+      found: true,
+      alerts: [{ type: 'summary_signal', signal: 'blocked' }],
+      output: { summary: 'Sentinel blocked the assignment', resultState: 'completed', artifacts: [] }
+    });
+    mockShouldBlock.mockReturnValue({
+      blocked: true,
+      reason: 'Sentinel flagged risk for marcus (external_publish): summary_signal — blocked'
+    });
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: publish content to external platform',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    const sentinelReceipts = result.executionReceipts.filter((r) => r.status === 'sentinel_blocked');
+    expect(sentinelReceipts.length).toBeGreaterThanOrEqual(1);
+    expect(result.pendingApprovalCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not block when sentinel gate returns not blocked', async () => {
+    mockCheckSentinelAlerts.mockReturnValue({
+      found: false,
+      alerts: [],
+      output: null
+    });
+    mockShouldBlock.mockReturnValue({ blocked: false, reason: '' });
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: verify local runtime package',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    const sentinelReceipts = result.executionReceipts.filter((r) => r.status === 'sentinel_blocked');
+    expect(sentinelReceipts).toHaveLength(0);
+  });
+
+  it('calls checkSentinelAlerts for each assignment', async () => {
+    mockCheckSentinelAlerts.mockReturnValue({
+      found: false,
+      alerts: [],
+      output: null
+    });
+    mockShouldBlock.mockReturnValue({ blocked: false, reason: '' });
+
+    await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: verify local runtime package',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(mockCheckSentinelAlerts).toHaveBeenCalled();
+  });
+
+  it('increments pendingApprovalCount for sentinel-blocked assignments', async () => {
+    mockCheckSentinelAlerts.mockReturnValue({
+      found: true,
+      alerts: [{ type: 'summary_signal', signal: 'blocked' }],
+      output: { summary: 'Sentinel blocked the action', resultState: 'completed', artifacts: [] }
+    });
+    mockShouldBlock.mockReturnValue({
+      blocked: true,
+      reason: 'Sentinel flagged risk'
+    });
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: publish content to external platform',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.pendingApprovalCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calls onProgress with sentinel_blocked stage when gate blocks', async () => {
+    mockCheckSentinelAlerts.mockReturnValue({
+      found: true,
+      alerts: [{ type: 'summary_signal', signal: 'blocked' }],
+      output: { summary: 'Sentinel blocked the action', resultState: 'completed', artifacts: [] }
+    });
+    mockShouldBlock.mockReturnValue({
+      blocked: true,
+      reason: 'Sentinel flagged risk'
+    });
+
+    const onProgress = vi.fn();
+    await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: publish content to external platform',
+      source: 'shayan',
+      zeroCostMode: true,
+      onProgress
+    });
+
+    const sentinelProgress = onProgress.mock.calls.filter((call) => call[0].stage === 'sentinel_blocked');
+    expect(sentinelProgress.length).toBeGreaterThanOrEqual(1);
   });
 });
