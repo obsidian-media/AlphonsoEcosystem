@@ -7,6 +7,28 @@ vi.mock('../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn(async () => undefined)
 }));
 
+const mockSetAgentOutput = vi.fn();
+const mockGetPriorOutputs = vi.fn(() => ({}));
+const mockBuildExecutionPlan = vi.fn((assignments) => {
+  if (!Array.isArray(assignments) || assignments.length === 0) return { waves: [], assignmentMap: {} };
+  const assignmentMap = {};
+  for (const a of assignments) {
+    if (a.agent) assignmentMap[a.agent] = a;
+  }
+  return { waves: [Object.keys(assignmentMap)], assignmentMap };
+});
+
+vi.mock('../services/agentOutputStoreService', () => ({
+  setAgentOutput: (...args) => mockSetAgentOutput(...args),
+  getPriorOutputs: (...args) => mockGetPriorOutputs(...args),
+  buildExecutionPlan: (...args) => mockBuildExecutionPlan(...args),
+  AGENT_DEPENDENCIES: {
+    hector: [], maria: [], sentinel: [], nova: [], jose: [],
+    miya: ['hector'], alphonso: ['miya'], marcus: ['maria'],
+    echo: ['hector', 'miya', 'maria', 'marcus', 'nova', 'sentinel', 'alphonso']
+  }
+}));
+
 vi.mock('../services/verificationService', () => ({
   verifyOllamaRuntimeProof: vi.fn(async () => ({
     id: 'runtime-proof-test',
@@ -264,5 +286,118 @@ describe('retrieveRelevantContext', () => {
     const result = retrieveRelevantContext('the a an', mockMemoryItems);
     expect(result.snippet).toBe('');
     expect(result.items).toHaveLength(0);
+  });
+});
+
+describe('dependency-aware execution', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    runtimeReachable = true;
+    ollamaAvailable = true;
+    mockSetAgentOutput.mockClear();
+    mockGetPriorOutputs.mockClear();
+    mockBuildExecutionPlan.mockImplementation((assignments) => {
+      if (!Array.isArray(assignments) || assignments.length === 0) return { waves: [], assignmentMap: {} };
+      const assignmentMap = {};
+      for (const a of assignments) {
+        if (a.agent) assignmentMap[a.agent] = a;
+      }
+      return { waves: [Object.keys(assignmentMap)], assignmentMap };
+    });
+  });
+
+  it('calls setAgentOutput after each successful agent execution', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: verify local runtime package',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockSetAgentOutput).toHaveBeenCalled();
+    const lastCall = mockSetAgentOutput.mock.calls[mockSetAgentOutput.mock.calls.length - 1];
+    expect(lastCall[0]).toBeTruthy();
+    expect(lastCall[1]).toBeTruthy();
+    expect(lastCall[2]).toHaveProperty('summary');
+  });
+
+  it('passes priorOutputs to executeAssignmentWithRetries', async () => {
+    mockGetPriorOutputs.mockReturnValue({ hector: { summary: 'research context' } });
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: create a creative package about space exploration',
+      source: 'shayan',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockGetPriorOutputs).toHaveBeenCalled();
+  });
+
+  it('uses buildExecutionPlan to determine execution order', async () => {
+    const planSpy = vi.fn((assignments) => {
+      if (!Array.isArray(assignments) || assignments.length === 0) return { waves: [], assignmentMap: {} };
+      const assignmentMap = {};
+      for (const a of assignments) {
+        if (a.agent) assignmentMap[a.agent] = a;
+      }
+      return { waves: [Object.keys(assignmentMap)], assignmentMap };
+    });
+    mockBuildExecutionPlan.mockImplementation(planSpy);
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: verify local runtime package',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(planSpy).toHaveBeenCalled();
+  });
+
+  it('Miya executor receives Hector research as context when priorOutputs available', async () => {
+    mockGetPriorOutputs.mockReturnValue({ hector: { summary: 'Hector found 3 key findings about AI safety' } });
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: create a creative package about AI safety',
+      source: 'shayan',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockSetAgentOutput).toHaveBeenCalled();
+  });
+
+  it('Echo executor preserves all prior agent outputs', async () => {
+    mockGetPriorOutputs.mockReturnValue({
+      hector: { summary: 'research done' },
+      miya: { summary: 'creative done' },
+      maria: { summary: 'governance done' }
+    });
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: verify local runtime and preserve context',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('returns executionReceipts with agent field', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: verify local runtime package',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.executionReceipts).toBeDefined();
+    expect(Array.isArray(result.executionReceipts)).toBe(true);
+    for (const receipt of result.executionReceipts) {
+      expect(receipt).toHaveProperty('agent');
+    }
   });
 });

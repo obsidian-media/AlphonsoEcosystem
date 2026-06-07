@@ -24,6 +24,7 @@ import { verifyOllamaRuntimeProof, verifyProcessProof } from './verificationServ
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
+import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 
 export function isJoseIntakeCommand(text) {
@@ -324,6 +325,7 @@ async function buildMiyaPackage(commandText, assignment, options = {}) {
 }
 
 async function executeAlphonsoAssignment(commandText, assignment, options = {}) {
+  const miyaContext = options.priorOutputs?.miya;
   const runtimeProof = await verifyOllamaRuntimeProof(options.endpoint);
   const processProof = await verifyProcessProof(['ollama']);
   const runtimeReachable = runtimeProof?.payload?.reachable === true;
@@ -333,13 +335,14 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
 
   return {
     summary: runtimeReachable
-      ? `Alphonso verified runtime and process state for "${commandText}".`
+      ? `Alphonso verified runtime and process state for "${commandText}".${miyaContext ? ` Miya creative package available: ${miyaContext.summary}.` : ''}`
       : `Alphonso found runtime degradation while executing "${commandText}".`,
     resultState: runtimeReachable ? 'verified' : 'failed',
     resultUrl: null,
     artifacts: [
       { type: 'runtime_proof', id: runtimeProof?.id || null },
-      { type: 'process_proof', id: processProof?.id || null }
+      { type: 'process_proof', id: processProof?.id || null },
+      ...(miyaContext ? [{ type: 'miya_creative_input', summary: miyaContext.summary }] : [])
     ],
     sources: [],
     contractAction: assignment?.actionType || 'local_operation',
@@ -349,7 +352,11 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
 }
 
 async function executeMiyaAssignment(commandText, assignment, options = {}) {
-  const creativePackage = await buildMiyaPackage(commandText, assignment, options);
+  const hectorContext = options.priorOutputs?.hector;
+  const enrichedOptions = hectorContext
+    ? { ...options, retrievedContext: { snippet: hectorContext.summary || '', items: [] } }
+    : options;
+  const creativePackage = await buildMiyaPackage(commandText, assignment, enrichedOptions);
   pushMiyaMemory({
     category: 'creative_memory',
     title: `Miya package: ${creativePackage.title}`,
@@ -466,13 +473,19 @@ async function executeMariaAssignment(commandText, assignment) {
   };
 }
 
-async function executeEchoAssignment(commandText, assignment) {
+async function executeEchoAssignment(commandText, assignment, options = {}) {
+  const priorOutputs = options.priorOutputs || {};
+  const preservedSummaries = Object.entries(priorOutputs)
+    .map(([agent, output]) => `[${agent}] ${output?.summary || 'no summary'}`)
+    .join('\n');
   pushMemoryItem({
     title: `Echo preserved workflow decision`,
     category: 'timeline_memory',
     content: {
       commandText,
-      assignmentAction: assignment?.actionType || 'memory_preservation'
+      assignmentAction: assignment?.actionType || 'memory_preservation',
+      agentSummaries: preservedSummaries || 'no prior agent outputs',
+      agentCount: Object.keys(priorOutputs).length
     },
     source: 'jose-execution-engine',
     sourceAgent: 'echo',
@@ -480,10 +493,10 @@ async function executeEchoAssignment(commandText, assignment) {
     verificationState: TRUST_STATES.UNVERIFIED
   });
   return {
-    summary: `Echo preserved command context and workflow output for "${commandText}".`,
+    summary: `Echo preserved command context and workflow output for "${commandText}". Prior agents: ${Object.keys(priorOutputs).join(', ') || 'none'}.`,
     resultState: 'completed',
     resultUrl: null,
-    artifacts: [{ type: 'memory_preservation', status: 'recorded' }],
+    artifacts: [{ type: 'memory_preservation', status: 'recorded', preservedAgents: Object.keys(priorOutputs) }],
     sources: [],
     contractAction: assignment?.actionType || 'memory_preservation'
   };
@@ -511,12 +524,19 @@ async function executeNovaAssignment(commandText, assignment) {
   };
 }
 
-async function executeMarcusAssignment(commandText, assignment) {
+async function executeMarcusAssignment(commandText, assignment, options = {}) {
+  const mariaContext = options.priorOutputs?.maria;
+  const governanceStatus = mariaContext?.resultState || 'unknown';
   return {
-    summary: `Marcus requires explicit approved external execution before distribution for "${commandText}".`,
-    resultState: 'pending_review',
+    summary: mariaContext
+      ? `Marcus reviewed governance approval (status: ${governanceStatus}) and prepared distribution execution for "${commandText}".`
+      : `Marcus requires explicit approved external execution before distribution for "${commandText}".`,
+    resultState: governanceStatus === 'completed' ? 'pending_review' : 'pending_review',
     resultUrl: null,
-    artifacts: [{ type: 'distribution_execution', status: 'approval_required' }],
+    artifacts: [
+      { type: 'distribution_execution', status: 'approval_required' },
+      ...(mariaContext ? [{ type: 'governance_review_input', agent: 'maria', resultState: governanceStatus }] : [])
+    ],
     sources: [],
     contractAction: assignment?.actionType || 'distribution_execution'
   };
@@ -587,281 +607,294 @@ export async function runJoseCommandExecutionPipeline({
   const executionReceipts = [];
   const draftDisabled = !(await checkOllamaAvailable(endpoint));
 
-  for (const assignment of command.assignments || []) {
-    const packet = getPacketById(assignment.packetId);
-    if (!packet) {
-      failedCount += 1;
-      continue;
-    }
+  const { waves, assignmentMap } = buildExecutionPlan(command.assignments || []);
 
-    if (isBlockedByZeroCostMode(packet, assignment)) {
-      pendingApprovalCount += 1;
-      updatePacketStatus(assignment.packetId, 'pending_approval', {
-        policyBlocked: true,
-        policyReason: 'Zero-Cost Mode blocks paid/metered connector route until explicit approval override.',
+  for (const wave of waves) {
+    const waveAssignments = wave.map((agent) => assignmentMap[agent]).filter(Boolean);
+    for (const assignment of waveAssignments) {
+      const packet = getPacketById(assignment.packetId);
+      if (!packet) {
+        failedCount += 1;
+        continue;
+      }
+
+      if (isBlockedByZeroCostMode(packet, assignment)) {
+        pendingApprovalCount += 1;
+        updatePacketStatus(assignment.packetId, 'pending_approval', {
+          policyBlocked: true,
+          policyReason: 'Zero-Cost Mode blocks paid/metered connector route until explicit approval override.',
+          verificationState: TRUST_STATES.PENDING
+        });
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'approval_required',
+          reason: 'zero_cost_policy_gate'
+        });
+        onProgress?.({
+          stage: 'approval_required',
+          assignment,
+          packetId: assignment.packetId,
+          reason: 'zero_cost_policy_gate'
+        });
+        recordOrchestrationQueueTransition({
+          commandId: command.id,
+          packetId: assignment.packetId,
+          agent: AGENTS.JOSE,
+          fromStatus: packet.status || 'unknown',
+          toStatus: 'pending_approval',
+          reason: 'Zero-Cost policy gate blocked route.',
+          retryCount: packet.retryCount || 0,
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'policy_gate_blocked',
+          status: 'pending_approval',
+          agent: AGENTS.JOSE,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'high',
+          approved: false,
+          blocked: true,
+          setupRequired: false,
+          details: { reason: 'zero_cost_policy_gate' },
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        continue;
+      }
+
+      if (isRiskyAssignment(assignment)) {
+        pendingApprovalCount += 1;
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'approval_required'
+        });
+        onProgress?.({
+          stage: 'approval_required',
+          assignment,
+          packetId: assignment.packetId
+        });
+        recordOrchestrationQueueTransition({
+          commandId: command.id,
+          packetId: assignment.packetId,
+          agent: AGENTS.JOSE,
+          fromStatus: packet.status || 'unknown',
+          toStatus: 'pending_approval',
+          reason: 'Risky assignment requires approval.',
+          retryCount: packet.retryCount || 0,
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'approval_required',
+          status: 'pending_approval',
+          agent: AGENTS.JOSE,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'high',
+          approved: false,
+          blocked: true,
+          setupRequired: false,
+          details: { reason: 'risky_assignment' },
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        continue;
+      }
+
+      const beforeQueueStatus = packet.status || 'unknown';
+      approvePacket(assignment.packetId, 'jose-auto-safe');
+      updatePacketStatus(assignment.packetId, 'queued', {
+        routedBy: AGENTS.JOSE,
+        routedAtMs: timestampMs(),
         verificationState: TRUST_STATES.PENDING
-      });
-      executionReceipts.push({
-        packetId: assignment.packetId,
-        agent: assignment.agent,
-        status: 'approval_required',
-        reason: 'zero_cost_policy_gate'
-      });
-      onProgress?.({
-        stage: 'approval_required',
-        assignment,
-        packetId: assignment.packetId,
-        reason: 'zero_cost_policy_gate'
       });
       recordOrchestrationQueueTransition({
         commandId: command.id,
         packetId: assignment.packetId,
         agent: AGENTS.JOSE,
-        fromStatus: packet.status || 'unknown',
-        toStatus: 'pending_approval',
-        reason: 'Zero-Cost policy gate blocked route.',
+        fromStatus: beforeQueueStatus,
+        toStatus: 'queued',
+        reason: 'Jose approved and queued safe assignment.',
         retryCount: packet.retryCount || 0,
-        confidence: TRUST_STATES.VERIFIED,
+        confidence: TRUST_STATES.TEMPORARY,
         verificationState: TRUST_STATES.PENDING
       });
       appendOrchestrationReceipt({
         workflowId: 'jose_execution_pipeline',
         commandId: command.id,
         packetId: assignment.packetId,
-        eventType: 'policy_gate_blocked',
-        status: 'pending_approval',
+        eventType: 'assignment_queued',
+        status: 'queued',
         agent: AGENTS.JOSE,
         actionType: assignment.actionType,
-        riskLevel: assignment.riskLevel || 'high',
-        approved: false,
-        blocked: true,
-        setupRequired: false,
-        details: { reason: 'zero_cost_policy_gate' },
-        confidence: TRUST_STATES.VERIFIED,
-        verificationState: TRUST_STATES.PENDING
-      });
-      continue;
-    }
-
-    if (isRiskyAssignment(assignment)) {
-      pendingApprovalCount += 1;
-      executionReceipts.push({
-        packetId: assignment.packetId,
-        agent: assignment.agent,
-        status: 'approval_required'
-      });
-      onProgress?.({
-        stage: 'approval_required',
-        assignment,
-        packetId: assignment.packetId
-      });
-      recordOrchestrationQueueTransition({
-        commandId: command.id,
-        packetId: assignment.packetId,
-        agent: AGENTS.JOSE,
-        fromStatus: packet.status || 'unknown',
-        toStatus: 'pending_approval',
-        reason: 'Risky assignment requires approval.',
-        retryCount: packet.retryCount || 0,
-        confidence: TRUST_STATES.VERIFIED,
-        verificationState: TRUST_STATES.PENDING
-      });
-      appendOrchestrationReceipt({
-        workflowId: 'jose_execution_pipeline',
-        commandId: command.id,
-        packetId: assignment.packetId,
-        eventType: 'approval_required',
-        status: 'pending_approval',
-        agent: AGENTS.JOSE,
-        actionType: assignment.actionType,
-        riskLevel: assignment.riskLevel || 'high',
-        approved: false,
-        blocked: true,
-        setupRequired: false,
-        details: { reason: 'risky_assignment' },
-        confidence: TRUST_STATES.VERIFIED,
-        verificationState: TRUST_STATES.PENDING
-      });
-      continue;
-    }
-
-    const beforeQueueStatus = packet.status || 'unknown';
-    approvePacket(assignment.packetId, 'jose-auto-safe');
-    updatePacketStatus(assignment.packetId, 'queued', {
-      routedBy: AGENTS.JOSE,
-      routedAtMs: timestampMs(),
-      verificationState: TRUST_STATES.PENDING
-    });
-    recordOrchestrationQueueTransition({
-      commandId: command.id,
-      packetId: assignment.packetId,
-      agent: AGENTS.JOSE,
-      fromStatus: beforeQueueStatus,
-      toStatus: 'queued',
-      reason: 'Jose approved and queued safe assignment.',
-      retryCount: packet.retryCount || 0,
-      confidence: TRUST_STATES.TEMPORARY,
-      verificationState: TRUST_STATES.PENDING
-    });
-    appendOrchestrationReceipt({
-      workflowId: 'jose_execution_pipeline',
-      commandId: command.id,
-      packetId: assignment.packetId,
-      eventType: 'assignment_queued',
-      status: 'queued',
-      agent: AGENTS.JOSE,
-      actionType: assignment.actionType,
-      riskLevel: assignment.riskLevel || 'low',
-      approved: true,
-      blocked: false,
-      setupRequired: false,
-      details: { queueReason: 'safe_auto_execution' },
-      confidence: TRUST_STATES.TEMPORARY,
-      verificationState: TRUST_STATES.PENDING
-    });
-    const gate = attemptPacketExecution(assignment.packetId, {
-      mode: 'jose_execution_engine',
-      actionType: assignment.actionType
-    });
-
-    if (!gate.ok) {
-      failedCount += 1;
-      executionReceipts.push({
-        packetId: assignment.packetId,
-        agent: assignment.agent,
-        status: 'failed',
-        reason: gate.reason
-      });
-      recordOrchestrationQueueTransition({
-        commandId: command.id,
-        packetId: assignment.packetId,
-        agent: AGENTS.JOSE,
-        fromStatus: 'queued',
-        toStatus: 'failed',
-        reason: gate.reason || 'Execution gate failed.',
-        retryCount: packet.retryCount || 0,
-        confidence: TRUST_STATES.FAILED,
-        verificationState: TRUST_STATES.FAILED
-      });
-      appendOrchestrationReceipt({
-        workflowId: 'jose_execution_pipeline',
-        commandId: command.id,
-        packetId: assignment.packetId,
-        eventType: 'execution_gate_failed',
-        status: 'failed',
-        agent: AGENTS.JOSE,
-        actionType: assignment.actionType,
-        riskLevel: assignment.riskLevel || 'medium',
+        riskLevel: assignment.riskLevel || 'low',
         approved: true,
-        blocked: true,
+        blocked: false,
         setupRequired: false,
-        details: { reason: gate.reason || 'unknown' },
-        confidence: TRUST_STATES.FAILED,
-        verificationState: TRUST_STATES.FAILED
+        details: { queueReason: 'safe_auto_execution' },
+        confidence: TRUST_STATES.TEMPORARY,
+        verificationState: TRUST_STATES.PENDING
       });
-      continue;
-    }
-
-    const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext });
-
-    if (!taskResult.ok) {
-      failedCount += 1;
-      updatePacketStatus(assignment.packetId, 'dead_letter', {
-        failureReason: taskResult.error,
-        deadLetterReason: taskResult.error,
-        deadLetterAtMs: timestampMs(),
-        retryCount: taskResult.attempts,
-        verificationState: TRUST_STATES.FAILED,
-        confidence: TRUST_STATES.FAILED
+      const gate = attemptPacketExecution(assignment.packetId, {
+        mode: 'jose_execution_engine',
+        actionType: assignment.actionType
       });
+
+      if (!gate.ok) {
+        failedCount += 1;
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'failed',
+          reason: gate.reason
+        });
+        recordOrchestrationQueueTransition({
+          commandId: command.id,
+          packetId: assignment.packetId,
+          agent: AGENTS.JOSE,
+          fromStatus: 'queued',
+          toStatus: 'failed',
+          reason: gate.reason || 'Execution gate failed.',
+          retryCount: packet.retryCount || 0,
+          confidence: TRUST_STATES.FAILED,
+          verificationState: TRUST_STATES.FAILED
+        });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'execution_gate_failed',
+          status: 'failed',
+          agent: AGENTS.JOSE,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'medium',
+          approved: true,
+          blocked: true,
+          setupRequired: false,
+          details: { reason: gate.reason || 'unknown' },
+          confidence: TRUST_STATES.FAILED,
+          verificationState: TRUST_STATES.FAILED
+        });
+        continue;
+      }
+
+      const priorOutputs = getPriorOutputs(command.id, assignment.agent);
+      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs });
+
+      if (!taskResult.ok) {
+        failedCount += 1;
+        updatePacketStatus(assignment.packetId, 'dead_letter', {
+          failureReason: taskResult.error,
+          deadLetterReason: taskResult.error,
+          deadLetterAtMs: timestampMs(),
+          retryCount: taskResult.attempts,
+          verificationState: TRUST_STATES.FAILED,
+          confidence: TRUST_STATES.FAILED
+        });
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'dead_letter',
+          reason: taskResult.error,
+          attempts: taskResult.attempts
+        });
+        recordOrchestrationQueueTransition({
+          commandId: command.id,
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          fromStatus: 'queued',
+          toStatus: 'dead_letter',
+          reason: taskResult.error,
+          retryCount: taskResult.attempts,
+          confidence: TRUST_STATES.FAILED,
+          verificationState: TRUST_STATES.FAILED
+        });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'assignment_dead_lettered',
+          status: 'dead_letter',
+          agent: assignment.agent,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'medium',
+          approved: true,
+          blocked: true,
+          setupRequired: false,
+          details: { error: taskResult.error, attempts: taskResult.attempts },
+          confidence: TRUST_STATES.FAILED,
+          verificationState: TRUST_STATES.FAILED
+        });
+        continue;
+      }
+
+      const result = taskResult.result;
+      setAgentOutput(command.id, assignment.agent, {
+        summary: result.summary,
+        resultState: result.resultState || 'pending_review',
+        artifacts: result.artifacts || [],
+        sources: result.sources || [],
+        contractAction: result.contractAction || assignment.actionType
+      });
+      createAgentReportToJose({
+        packetId: assignment.packetId,
+        reportingAgent: assignment.agent,
+        summary: result.summary,
+        resultState: result.resultState || 'pending_review',
+        resultUrl: result.resultUrl || null,
+        artifacts: result.artifacts || [],
+        sources: result.sources || []
+      });
+      executedCount += 1;
       executionReceipts.push({
         packetId: assignment.packetId,
         agent: assignment.agent,
-        status: 'dead_letter',
-        reason: taskResult.error,
+        status: 'executed',
+        resultState: result.resultState || 'pending_review',
         attempts: taskResult.attempts
       });
+      onProgress?.({
+        stage: 'executed',
+        assignment,
+        packetId: assignment.packetId,
+        result
+      });
       recordOrchestrationQueueTransition({
         commandId: command.id,
         packetId: assignment.packetId,
         agent: assignment.agent,
         fromStatus: 'queued',
-        toStatus: 'dead_letter',
-        reason: taskResult.error,
-        retryCount: taskResult.attempts,
-        confidence: TRUST_STATES.FAILED,
-        verificationState: TRUST_STATES.FAILED
+        toStatus: 'reported_to_jose',
+        reason: 'Assignment executed and reported back to Jose.',
+        retryCount: packet.retryCount || 0,
+        confidence: TRUST_STATES.VERIFIED,
+        verificationState: TRUST_STATES.VERIFIED
       });
       appendOrchestrationReceipt({
         workflowId: 'jose_execution_pipeline',
         commandId: command.id,
         packetId: assignment.packetId,
-        eventType: 'assignment_dead_lettered',
-        status: 'dead_letter',
+        eventType: 'assignment_executed_reported',
+        status: 'reported_to_jose',
         agent: assignment.agent,
         actionType: assignment.actionType,
-        riskLevel: assignment.riskLevel || 'medium',
+        riskLevel: assignment.riskLevel || 'low',
         approved: true,
-        blocked: true,
+        blocked: false,
         setupRequired: false,
-        details: { error: taskResult.error, attempts: taskResult.attempts },
-        confidence: TRUST_STATES.FAILED,
-        verificationState: TRUST_STATES.FAILED
+        details: { resultState: result.resultState || 'pending_review', attempts: taskResult.attempts },
+        confidence: TRUST_STATES.VERIFIED,
+        verificationState: TRUST_STATES.VERIFIED
       });
-      continue;
     }
-
-    const result = taskResult.result;
-    createAgentReportToJose({
-      packetId: assignment.packetId,
-      reportingAgent: assignment.agent,
-      summary: result.summary,
-      resultState: result.resultState || 'pending_review',
-      resultUrl: result.resultUrl || null,
-      artifacts: result.artifacts || [],
-      sources: result.sources || []
-    });
-    executedCount += 1;
-    executionReceipts.push({
-      packetId: assignment.packetId,
-      agent: assignment.agent,
-      status: 'executed',
-      resultState: result.resultState || 'pending_review',
-      attempts: taskResult.attempts
-    });
-    onProgress?.({
-      stage: 'executed',
-      assignment,
-      packetId: assignment.packetId,
-      result
-    });
-    recordOrchestrationQueueTransition({
-      commandId: command.id,
-      packetId: assignment.packetId,
-      agent: assignment.agent,
-      fromStatus: 'queued',
-      toStatus: 'reported_to_jose',
-      reason: 'Assignment executed and reported back to Jose.',
-      retryCount: packet.retryCount || 0,
-      confidence: TRUST_STATES.VERIFIED,
-      verificationState: TRUST_STATES.VERIFIED
-    });
-    appendOrchestrationReceipt({
-      workflowId: 'jose_execution_pipeline',
-      commandId: command.id,
-      packetId: assignment.packetId,
-      eventType: 'assignment_executed_reported',
-      status: 'reported_to_jose',
-      agent: assignment.agent,
-      actionType: assignment.actionType,
-      riskLevel: assignment.riskLevel || 'low',
-      approved: true,
-      blocked: false,
-      setupRequired: false,
-      details: { resultState: result.resultState || 'pending_review', attempts: taskResult.attempts },
-      confidence: TRUST_STATES.VERIFIED,
-      verificationState: TRUST_STATES.VERIFIED
-    });
   }
 
   const confirmationText = pendingApprovalCount > 0
