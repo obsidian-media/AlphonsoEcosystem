@@ -28,6 +28,7 @@ import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutp
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
+import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
 
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());
@@ -321,6 +322,51 @@ function buildMiyaFallbackPackage(commandText, assignment) {
   };
 }
 
+async function executeImageGeneration(prompts, options = {}) {
+  const results = [];
+  const promptList = Array.isArray(prompts) ? prompts.slice(0, 3) : [];
+  if (promptList.length === 0) return results;
+
+  for (const promptText of promptList) {
+    try {
+      const imageResult = await generateComfyUiImage({
+        prompt: promptText,
+        negativePrompt: 'blurry, low quality, watermark, text, deformed',
+        width: 512,
+        height: 512,
+        steps: 20,
+        cfgScale: 7
+      }, { endpoint: options.endpoint || 'http://127.0.0.1:8188' });
+      if (imageResult?.ok) {
+        results.push({
+          prompt: promptText,
+          status: 'generated',
+          imageUrls: imageResult.imageUrls || [],
+          previewBase64: imageResult.previewBase64 || null,
+          outputPaths: imageResult.outputPaths || [],
+          provider: imageResult.provider || 'comfyui',
+          checkpoint: imageResult.checkpoint || null
+        });
+      } else {
+        results.push({
+          prompt: promptText,
+          status: 'failed',
+          error: imageResult?.error || 'Generation failed',
+          provider: imageResult?.provider || 'comfyui'
+        });
+      }
+    } catch (error) {
+      results.push({
+        prompt: promptText,
+        status: 'error',
+        error: String(error?.message || error || 'Unknown error'),
+        provider: 'comfyui'
+      });
+    }
+  }
+  return results;
+}
+
 async function buildMiyaPackage(commandText, assignment, options = {}) {
   const fallback = buildMiyaFallbackPackage(commandText, assignment);
   if (options.draftDisabled) return fallback;
@@ -390,6 +436,14 @@ async function executeMiyaAssignment(commandText, assignment, options = {}) {
     enrichedOptions = { ...options, retrievedContext: { snippet: researchSnippet, items: [] } };
   }
   const creativePackage = await buildMiyaPackage(commandText, assignment, enrichedOptions);
+  const shouldGenerateImages = creativePackage.prompts?.length > 0
+    && !options.draftDisabled
+    && String(commandText || '').toLowerCase().match(/image|photo|picture|visual|generate|create.*(?:art|illustration|render|graphic)/);
+  let generatedImages = [];
+  if (shouldGenerateImages) {
+    options.onProgress?.({ stage: 'generating_images', agent: 'miya', promptCount: creativePackage.prompts.length });
+    generatedImages = await executeImageGeneration(creativePackage.prompts, { endpoint: options.endpoint });
+  }
   pushMiyaMemory({
     category: 'creative_memory',
     title: `Miya package: ${creativePackage.title}`,
@@ -411,8 +465,13 @@ async function executeMiyaAssignment(commandText, assignment, options = {}) {
     confidence: TRUST_STATES.INFERRED,
     verificationState: TRUST_STATES.UNVERIFIED
   });
+  const generatedCount = generatedImages.filter((g) => g.status === 'generated').length;
+  const summaryParts = [`Miya generated a structured creative package for "${creativePackage.title}".`];
+  if (generatedCount > 0) summaryParts.push(`${generatedCount} image(s) generated via ComfyUI.`);
+  const failedCount = generatedImages.filter((g) => g.status !== 'generated').length;
+  if (failedCount > 0) summaryParts.push(`${failedCount} image generation(s) failed.`);
   return {
-    summary: `Miya generated a structured creative package for "${creativePackage.title}".`,
+    summary: summaryParts.join(' '),
     resultState: 'completed',
     resultUrl: null,
     artifacts: [
@@ -428,7 +487,12 @@ async function executeMiyaAssignment(commandText, assignment, options = {}) {
           status: preset.status,
           description: preset.description
         }))
-      }
+      },
+      ...(generatedImages.length > 0 ? [{
+        type: 'generated_images',
+        images: generatedImages,
+        count: generatedImages.filter((g) => g.status === 'generated').length
+      }] : [])
     ],
     sources: [],
     contractAction: assignment?.actionType || 'creative_package'
@@ -652,8 +716,9 @@ export async function runJoseCommandExecutionPipeline({
 
   const { waves, assignmentMap } = buildExecutionPlan(command.assignments || []);
 
-  for (const wave of waves) {
+  for (const [waveIndex, wave] of waves.entries()) {
     const waveAssignments = wave.map((agent) => assignmentMap[agent]).filter(Boolean);
+    onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
       const packet = getPacketById(assignment.packetId);
       if (!packet) {
@@ -880,7 +945,7 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const priorOutputs = getPriorOutputs(command.id, assignment.agent);
-      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs });
+      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress });
 
       if (!taskResult.ok) {
         failedCount += 1;

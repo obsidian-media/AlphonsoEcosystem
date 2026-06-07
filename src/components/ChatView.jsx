@@ -49,6 +49,7 @@ export function ChatView({
   const [executionReceipts, setExecutionReceipts] = useState([]);
   const [pipelineResult, setPipelineResult] = useState(null);
   const [pipelineCommandText, setPipelineCommandText] = useState('');
+  const [liveProgress, setLiveProgress] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
@@ -146,11 +147,30 @@ export function ChatView({
           commandText: cleanInput,
           source: 'shayan',
           endpoint: settings.endpoint,
-          zeroCostMode: settings.zeroCostMode
+          zeroCostMode: settings.zeroCostMode,
+          onProgress: (progress) => {
+            setLiveProgress(progress);
+            onJoseExecutionState?.(
+              progress.stage === 'executed' ? 'task_complete'
+                : progress.stage === 'approval_required' ? 'approving'
+                  : progress.stage === 'generating_images' ? 'generating'
+                    : 'thinking',
+              progress.stage === 'wave_start'
+                ? `Wave ${progress.wave + 1}: ${progress.agents?.join(', ')}`
+                : progress.stage === 'executed'
+                  ? `${progress.assignment?.agent || 'Agent'} completed`
+                  : progress.stage === 'generating_images'
+                    ? `Generating ${progress.promptCount || 0} image(s)...`
+                    : progress.stage === 'approval_required'
+                      ? `${progress.assignment?.agent || 'Agent'} needs approval`
+                      : 'Processing...'
+            );
+          }
         });
 
         setPipelineResult(result);
         setPipelineCommandText(cleanInput);
+        setLiveProgress(null);
 
         const command = result?.command || {};
         const shayanReport = command?.shayanReport || null;
@@ -273,6 +293,7 @@ export function ChatView({
     setExecutionReceipts([]);
     setPipelineResult(null);
     setPipelineCommandText('');
+    setLiveProgress(null);
     localStorage.removeItem(`alphonso_messages_${activeChatId}`);
     void deleteChatMessages(activeChatId);
   };
@@ -445,7 +466,37 @@ export function ChatView({
               <Bot className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="flex-1">
-              <PipelineResultCard result={pipelineResult} commandText={pipelineCommandText} />
+              <PipelineResultCard
+                result={pipelineResult}
+                commandText={pipelineCommandText}
+                onRetryAgent={(receipt) => {
+                  setMessages((current) => [...current, {
+                    id: nextMsgId(),
+                    role: 'user',
+                    content: `/jose retry ${receipt.agent} for: ${pipelineCommandText}`
+                  }]);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {liveProgress && isGenerating && (
+          <div className="flex gap-4 max-w-3xl mx-auto w-full">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
+            </div>
+            <div className="flex-1 px-3 py-2 rounded-xl bg-zinc-900/40 border border-white/[0.04]">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
+                <span className="text-[11px] text-zinc-400 font-medium">
+                  {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
+                  {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
+                  {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
+                  {liveProgress.stage === 'approval_required' && `${liveProgress.assignment?.agent || 'Agent'} needs approval`}
+                  {!['wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
+                </span>
+              </div>
             </div>
           </div>
         )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, CheckCircle2, Clock, Copy, ExternalLink, Eye, FileText, AlertTriangle, XCircle } from 'lucide-react';
+import { Bot, CheckCircle2, Clock, Copy, ExternalLink, Eye, FileText, AlertTriangle, RefreshCw, XCircle } from 'lucide-react';
 
 const AGENT_ICONS = {
   hector: '🔬',
@@ -46,9 +46,10 @@ function StatusBadge({ status }) {
   );
 }
 
-function AgentCard({ receipt }) {
+function AgentCard({ receipt, onRetry }) {
   const icon = AGENT_ICONS[receipt.agent] || '🤖';
   const colorClass = AGENT_COLORS[receipt.agent] || AGENT_COLORS.jose;
+  const isFailed = receipt.status === 'failed' || receipt.status === 'dead_letter';
   return (
     <div className={`flex items-start gap-3 p-2.5 rounded-xl bg-gradient-to-br ${colorClass} border transition-all`}>
       <span className="text-lg mt-0.5 shrink-0">{icon}</span>
@@ -65,8 +66,21 @@ function AgentCard({ receipt }) {
               {receipt.riskLevel}
             </span>
           )}
+          {isFailed && onRetry && (
+            <button
+              onClick={() => onRetry(receipt)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+              title="Retry this agent"
+            >
+              <RefreshCw className="w-2.5 h-2.5" />
+              Retry
+            </button>
+          )}
         </div>
         <div className="text-[11px] text-zinc-400 mt-1 truncate">{receipt.actionType || receipt.eventType}</div>
+        {isFailed && receipt.reason && (
+          <div className="text-[10px] text-red-300/70 mt-0.5 truncate">Error: {receipt.reason}</div>
+        )}
       </div>
     </div>
   );
@@ -157,7 +171,7 @@ function ArtifactDisplay({ artifacts }) {
   );
 }
 
-export function PipelineResultCard({ result, commandText }) {
+export function PipelineResultCard({ result, commandText, onRetryAgent }) {
   if (!result) return null;
   const executedCount = result.executedCount || 0;
   const pendingCount = result.pendingApprovalCount || 0;
@@ -221,7 +235,7 @@ export function PipelineResultCard({ result, commandText }) {
           <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Agent Activity</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {receipts.map((receipt, idx) => (
-              <AgentCard key={receipt.packetId || idx} receipt={receipt} />
+              <AgentCard key={receipt.packetId || idx} receipt={receipt} onRetry={onRetryAgent} />
             ))}
           </div>
         </div>
@@ -233,6 +247,47 @@ export function PipelineResultCard({ result, commandText }) {
           <ArtifactDisplay artifacts={artifacts} />
         </div>
       )}
+
+      {artifacts.filter((a) => a.type === 'generated_images').map((imgArtifact, idx) => (
+        <div key={`gen-img-${idx}`} className="px-4 py-3 border-b border-white/[0.04]">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-2">
+            Generated Images ({imgArtifact.count || 0})
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {(imgArtifact.images || []).map((img, i) => (
+              <div key={i} className={`p-2 rounded-lg border ${
+                img.status === 'generated'
+                  ? 'bg-emerald-500/5 border-emerald-500/20'
+                  : 'bg-red-500/5 border-red-500/20'
+              }`}>
+                {img.status === 'generated' ? (
+                  <>
+                    {img.previewBase64 && (
+                      <img
+                        src={`data:image/png;base64,${img.previewBase64}`}
+                        alt={img.prompt}
+                        className="w-full h-32 object-cover rounded mb-1.5"
+                      />
+                    )}
+                    {img.imageUrls?.length > 0 && !img.previewBase64 && (
+                      <div className="text-[10px] text-emerald-400">
+                        {img.imageUrls.length} image(s) saved
+                      </div>
+                    )}
+                    <div className="text-[10px] text-zinc-400 truncate">{img.prompt}</div>
+                    <div className="text-[9px] text-zinc-600 mt-0.5">{img.provider} · {img.checkpoint || 'default'}</div>
+                  </>
+                ) : (
+                  <div className="text-[11px] text-red-300">
+                    <div className="font-medium">Failed: {img.prompt}</div>
+                    <div className="text-[10px] text-red-300/70 mt-0.5">{img.error}</div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {result.commandId && (
         <div className="px-4 py-2 flex items-center justify-between">
