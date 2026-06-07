@@ -17,6 +17,7 @@ import {
   dedupeEvents,
   aggregateEventsByType,
   aggregateEventsWeekly,
+  unifiedWeeklyReport,
   isEventsTableAvailable,
   getEventStoreStatus,
   recordEvent,
@@ -274,6 +275,73 @@ describe('eventsService — Tauri wrapper', () => {
   it('public API surface exposes all helpers', () => {
     expect(EVENTS_SERVICE_PUBLIC_API.buildEvent).toBe(buildEvent);
     expect(EVENTS_SERVICE_PUBLIC_API.aggregateEventsWeekly).toBe(aggregateEventsWeekly);
+    expect(EVENTS_SERVICE_PUBLIC_API.unifiedWeeklyReport).toBe(unifiedWeeklyReport);
     expect(EVENTS_SERVICE_PUBLIC_API.recordEvent).toBe(recordEvent);
+  });
+});
+
+describe('unifiedWeeklyReport', () => {
+  it('returns markdown with all sections', () => {
+    const result = unifiedWeeklyReport({});
+    expect(result.markdown).toContain('Unified Weekly Report');
+    expect(result.markdown).toContain('Commands Executed');
+    expect(result.markdown).toContain('Agent Activity');
+    expect(result.markdown).toContain('Connector Activity');
+    expect(result.markdown).toContain('Memory Changes');
+    expect(result.markdown).toContain('Notion Sync');
+  });
+
+  it('includes counts object', () => {
+    const result = unifiedWeeklyReport({});
+    expect(result.counts).toHaveProperty('receipts');
+    expect(result.counts).toHaveProperty('events');
+    expect(result.counts).toHaveProperty('memoryItems');
+    expect(result.counts).toHaveProperty('notionRecords');
+  });
+
+  it('aggregates orchestration receipts by status and agent', () => {
+    const receipts = [
+      { id: 'r1', status: 'reported_to_jose', agent: 'miya', timestampMs: Date.now() },
+      { id: 'r2', status: 'dead_letter', agent: 'hector', timestampMs: Date.now() },
+      { id: 'r3', status: 'reported_to_jose', agent: 'miya', timestampMs: Date.now() }
+    ];
+    const result = unifiedWeeklyReport({ orchestrationReceipts: receipts });
+    expect(result.counts.receiptByStatus.reported_to_jose).toBe(2);
+    expect(result.counts.receiptByStatus.dead_letter).toBe(1);
+    expect(result.counts.receiptByAgent.miya).toBe(2);
+    expect(result.counts.receiptByAgent.hector).toBe(1);
+  });
+
+  it('aggregates memory items by category', () => {
+    const items = [
+      { id: 'm1', category: 'creative_memory', timestampMs: Date.now() },
+      { id: 'm2', category: 'creative_memory', timestampMs: Date.now() },
+      { id: 'm3', category: 'research_memory', timestampMs: Date.now() }
+    ];
+    const result = unifiedWeeklyReport({ memoryItems: items });
+    expect(result.counts.memoryByCategory.creative_memory).toBe(2);
+    expect(result.counts.memoryByCategory.research_memory).toBe(1);
+  });
+
+  it('filters items outside the lookback window', () => {
+    const old = Date.now() - 10 * 24 * 60 * 60 * 1000;
+    const receipts = [{ id: 'r1', status: 'executed', agent: 'jose', timestampMs: old }];
+    const result = unifiedWeeklyReport({ orchestrationReceipts: receipts });
+    expect(result.counts.receipts).toBe(0);
+  });
+
+  it('handles empty data gracefully', () => {
+    const result = unifiedWeeklyReport({
+      eventsRecords: [],
+      notionSyncRecords: [],
+      orchestrationReceipts: [],
+      memoryItems: []
+    });
+    expect(result.markdown).toContain('(no receipts in window)');
+    expect(result.markdown).toContain('(no memory changes in window)');
+  });
+
+  it('exposed on public API surface', () => {
+    expect(EVENTS_SERVICE_PUBLIC_API.unifiedWeeklyReport).toBe(unifiedWeeklyReport);
   });
 });

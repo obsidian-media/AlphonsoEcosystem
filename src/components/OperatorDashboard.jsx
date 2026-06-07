@@ -637,6 +637,14 @@ export function OperatorDashboard({
         </Panel>
       </div>
       </OperatorSection>
+
+      <OperatorSection title="Unified Weekly Report" id="weekly-report" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+      <div className="grid grid-cols-1 gap-3">
+        <Panel icon={Download} title="Alphonso Weekly Report">
+          <UnifiedWeeklyReportPanel />
+        </Panel>
+      </div>
+      </OperatorSection>
     </div>
   );
 }
@@ -698,6 +706,77 @@ function ToggleTile({ label, enabled, onToggle }) {
           {enabled ? 'On' : 'Off'}
         </button>
       </div>
+    </div>
+  );
+}
+
+function UnifiedWeeklyReportPanel() {
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const generateReport = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { unifiedWeeklyReport } = await import('../services/eventsService');
+      const { listOrchestrationReceipts } = await import('../services/orchestrationReceiptService');
+      const { listMemoryItems } = await import('../services/memoryService');
+      const { listNotionSyncRecords } = await import('../services/notionSyncService');
+
+      const result = unifiedWeeklyReport({
+        eventsRecords: [],
+        notionSyncRecords: listNotionSyncRecords({ limit: 500 }),
+        orchestrationReceipts: listOrchestrationReceipts({}),
+        memoryItems: listMemoryItems()
+      });
+      setReport(result);
+    } catch (err) {
+      setError(String(err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyReport = () => {
+    if (!report?.markdown) return;
+    navigator.clipboard.writeText(report.markdown);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <button
+          onClick={generateReport}
+          disabled={loading}
+          className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+        >
+          {loading ? 'Generating...' : 'Generate Report'}
+        </button>
+        {report && (
+          <button
+            onClick={copyReport}
+            className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-white/10 transition-colors"
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        )}
+      </div>
+      {error && (
+        <div className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+          {error}
+        </div>
+      )}
+      {report && (
+        <div className="rounded-lg border border-white/10 bg-zinc-900/60 p-3">
+          <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap font-mono overflow-auto max-h-96">
+            {report.markdown}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

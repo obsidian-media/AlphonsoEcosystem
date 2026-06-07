@@ -14,7 +14,7 @@ import {
   createJoseCommandRoute,
   listJoseCommands
 } from './joseCommandRouterService';
-import { pushMemoryItem } from './memoryService';
+import { pushMemoryItem, listMemoryItems } from './memoryService';
 import { pushMiyaMemory } from './miyaMemoryService';
 import { listMiyaComfyWorkflowPresets } from './miyaComfyWorkflowPresetService';
 import { appendSessionEvent } from './sessionIntelligenceService';
@@ -85,6 +85,53 @@ export function parseJsonResponse(text) {
   const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
   const raw = fenceMatch ? fenceMatch[1] : trimmed;
   return JSON.parse(raw);
+}
+
+export function retrieveRelevantContext(text, memoryItems = []) {
+  const query = String(text || '').toLowerCase().trim();
+  if (!query || !Array.isArray(memoryItems) || memoryItems.length === 0) {
+    return { snippet: '', items: [] };
+  }
+
+  const queryWords = query.split(/\s+/).filter((w) => w.length > 3);
+  if (queryWords.length === 0) {
+    return { snippet: '', items: [] };
+  }
+
+  const scored = memoryItems
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => {
+      const title = String(item.title || '').toLowerCase();
+      const content = String(typeof item.content === 'string' ? item.content : '').toLowerCase();
+      const category = String(item.category || '').toLowerCase();
+      let score = 0;
+      for (const word of queryWords) {
+        if (title.includes(word)) score += 3;
+        if (content.includes(word)) score += 1;
+        if (category.includes(word)) score += 1;
+      }
+      return { item, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  if (scored.length === 0) {
+    return { snippet: '', items: [] };
+  }
+
+  const items = scored.map((entry) => ({
+    id: entry.item.id,
+    title: entry.item.title,
+    category: entry.item.category,
+    score: entry.score
+  }));
+
+  const snippet = scored
+    .map((entry) => `[${entry.item.category || 'memory'}] ${entry.item.title}`)
+    .join('\n');
+
+  return { snippet, items };
 }
 
 const JOSE_EXECUTION_DLQ_KEY = 'alphonso_jose_execution_dlq_v1';
@@ -251,7 +298,7 @@ async function buildMiyaPackage(commandText, assignment, options = {}) {
   if (options.draftDisabled) return fallback;
 
   try {
-    const prompt = draftPrompt('miya', commandText);
+    const prompt = draftPrompt('miya', commandText, { snippet: options.retrievedContext?.snippet || '' });
     const response = await generateOllamaResponse({
       endpoint: options.endpoint,
       model: options.model || PREFERRED_MODEL,
@@ -373,7 +420,8 @@ async function executeHectorAssignment(commandText, assignment, options = {}) {
   let summary = report?.summary || 'Hector research run completed.';
   if (!options.draftDisabled) {
     try {
-      const prompt = draftPrompt('hector', commandText, { snippet: summary });
+      const contextSnippet = [summary, options.retrievedContext?.snippet].filter(Boolean).join('\n');
+      const prompt = draftPrompt('hector', commandText, { snippet: contextSnippet });
       const response = await generateOllamaResponse({
         endpoint: options.endpoint,
         model: options.model || PREFERRED_MODEL,
@@ -519,6 +567,9 @@ export async function runJoseCommandExecutionPipeline({
   zeroCostMode,
   onProgress
 }) {
+  const memoryItems = listMemoryItems();
+  const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
+
   const command = await createJoseCommandRoute({ commandText, source, zeroCostMode });
   if (!command) {
     return {
@@ -527,6 +578,8 @@ export async function runJoseCommandExecutionPipeline({
       command: null
     };
   }
+
+  command.retrievedContext = retrievedContext;
 
   let executedCount = 0;
   let pendingApprovalCount = 0;
@@ -709,7 +762,7 @@ export async function runJoseCommandExecutionPipeline({
       continue;
     }
 
-    const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled });
+    const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext });
 
     if (!taskResult.ok) {
       failedCount += 1;

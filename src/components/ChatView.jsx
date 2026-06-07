@@ -14,6 +14,7 @@ import {
 import { ModelSwitcher } from './ModelSwitcher';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
+import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -44,6 +45,7 @@ export function ChatView({
   const [compactChat, setCompactChat] = useState(() => Boolean(getStorage('alphonso_chat_compact_v1', true)));
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [approvalCommandId, setApprovalCommandId] = useState(null);
+  const [executionReceipts, setExecutionReceipts] = useState([]);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
@@ -193,6 +195,11 @@ export function ChatView({
           }
         }
 
+        if (result?.commandId) {
+          const receipts = listOrchestrationReceipts({ commandId: result.commandId });
+          setExecutionReceipts(receipts);
+        }
+
         onJoseExecutionState?.(
           (result?.pendingApprovalCount || 0) > 0 ? 'approving' : 'task_complete',
           (result?.pendingApprovalCount || 0) > 0
@@ -283,6 +290,9 @@ export function ChatView({
   const clearChat = () => {
     setMessages([]);
     setAttachedFile(null);
+    setPendingApprovals([]);
+    setApprovalCommandId(null);
+    setExecutionReceipts([]);
     localStorage.removeItem(`alphonso_messages_${activeChatId}`);
     void deleteChatMessages(activeChatId);
   };
@@ -470,6 +480,43 @@ export function ChatView({
                   setApprovalCommandId(null);
                 }}
               />
+            </div>
+          </div>
+        )}
+
+        {executionReceipts.length > 0 && !isGenerating && (
+          <div className="flex gap-4 max-w-3xl mx-auto w-full">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-indigo-400" />
+            </div>
+            <div className="flex-1 border border-white/[0.05] rounded-xl bg-zinc-900/20 p-3 space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                Execution Receipts ({executionReceipts.length})
+              </div>
+              {executionReceipts.map((receipt) => (
+                <div key={receipt.id} className="flex items-center gap-2 text-[11px]">
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${
+                    receipt.status === 'reported_to_jose' || receipt.status === 'executed'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : receipt.status === 'pending_approval'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : receipt.status === 'dead_letter' || receipt.status === 'failed'
+                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          : 'bg-zinc-500/10 text-zinc-400 border border-white/10'
+                  }`}>
+                    {receipt.status}
+                  </span>
+                  <span className="text-zinc-300 font-medium">{receipt.agent}</span>
+                  <span className="text-zinc-500 truncate">{receipt.actionType || receipt.eventType}</span>
+                  {receipt.riskLevel && receipt.riskLevel !== 'low' && (
+                    <span className={`px-1 py-0.5 rounded text-[8px] font-bold uppercase ${
+                      receipt.riskLevel === 'high'
+                        ? 'bg-red-500/10 text-red-400'
+                        : 'bg-amber-500/10 text-amber-400'
+                    }`}>{receipt.riskLevel}</span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}

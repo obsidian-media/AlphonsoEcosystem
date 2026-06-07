@@ -289,6 +289,123 @@ export async function listEventDedup(limit = 200) {
   }
 }
 
+export function unifiedWeeklyReport({
+  eventsRecords = [],
+  notionSyncRecords = [],
+  orchestrationReceipts = [],
+  memoryItems = [],
+  generatedAtMs = null,
+  lookbackMs = null
+} = {}) {
+  const now = Number(generatedAtMs || timestampMs());
+  const lookback = Number(lookbackMs || 7 * 24 * 60 * 60 * 1000);
+  const cutoff = now - lookback;
+
+  const eventsReport = aggregateEventsWeekly({ records: eventsRecords, generatedAtMs: now, lookbackMs: lookback });
+
+  const recentReceipts = orchestrationReceipts.filter((r) => Number(r.timestampMs || 0) >= cutoff);
+  const receiptByStatus = {};
+  for (const r of recentReceipts) {
+    const s = r.status || 'unknown';
+    receiptByStatus[s] = (receiptByStatus[s] || 0) + 1;
+  }
+  const receiptByAgent = {};
+  for (const r of recentReceipts) {
+    const a = r.agent || 'unknown';
+    receiptByAgent[a] = (receiptByAgent[a] || 0) + 1;
+  }
+
+  const recentMemory = memoryItems.filter((m) => Number(m.timestampMs || 0) >= cutoff);
+  const memoryByCategory = {};
+  for (const m of recentMemory) {
+    const c = m.category || 'unknown';
+    memoryByCategory[c] = (memoryByCategory[c] || 0) + 1;
+  }
+
+  const lines = [];
+  lines.push('# Alphonso — Unified Weekly Report');
+  lines.push('');
+  lines.push(`- Window: last ${Math.round(lookback / (24 * 60 * 60 * 1000))} days`);
+  lines.push(`- Generated at: ${new Date(now).toISOString()}`);
+  lines.push('');
+
+  lines.push('## Commands Executed');
+  lines.push(`- Total orchestration receipts: ${recentReceipts.length}`);
+  const statusKeys = Object.keys(receiptByStatus).sort();
+  if (statusKeys.length === 0) {
+    lines.push('- (no receipts in window)');
+  } else {
+    for (const s of statusKeys) {
+      lines.push(`- ${s}: ${receiptByStatus[s]}`);
+    }
+  }
+  lines.push('');
+
+  lines.push('## Agent Activity');
+  const agentKeys = Object.keys(receiptByAgent).sort();
+  if (agentKeys.length === 0) {
+    lines.push('- (no agent activity in window)');
+  } else {
+    for (const a of agentKeys) {
+      lines.push(`- ${a}: ${receiptByAgent[a]} receipts`);
+    }
+  }
+  lines.push('');
+
+  lines.push('## Connector Activity');
+  lines.push(`- Total events: ${eventsReport.counts.total}`);
+  lines.push(`- Success: ${eventsReport.counts.byOutcome.success}, Failure: ${eventsReport.counts.byOutcome.failure}`);
+  const eventTypes = Object.keys(eventsReport.counts.byType).sort();
+  if (eventTypes.length === 0) {
+    lines.push('- (no events in window)');
+  } else {
+    for (const t of eventTypes) {
+      lines.push(`- ${t}: ${eventsReport.counts.byType[t].total}`);
+    }
+  }
+  lines.push('');
+
+  lines.push('## Memory Changes');
+  lines.push(`- New memory items: ${recentMemory.length}`);
+  const catKeys = Object.keys(memoryByCategory).sort();
+  if (catKeys.length === 0) {
+    lines.push('- (no memory changes in window)');
+  } else {
+    for (const c of catKeys) {
+      lines.push(`- ${c}: ${memoryByCategory[c]}`);
+    }
+  }
+  lines.push('');
+
+  lines.push('## Notion Sync');
+  const notionConflicts = notionSyncRecords.filter((r) => r?.sync?.conflict_status && r.sync.conflict_status !== 'clean');
+  const notionPending = notionSyncRecords.filter((r) => r?.sync?.approval_status === 'pending');
+  lines.push(`- Total sync records: ${notionSyncRecords.length}`);
+  lines.push(`- Conflicts: ${notionConflicts.length}`);
+  lines.push(`- Pending approvals: ${notionPending.length}`);
+  lines.push('');
+
+  lines.push(`Generated at ${new Date(now).toISOString()}.`);
+
+  return {
+    markdown: lines.join('\n'),
+    counts: {
+      receipts: recentReceipts.length,
+      receiptByStatus,
+      receiptByAgent,
+      events: eventsReport.counts,
+      memoryItems: recentMemory.length,
+      memoryByCategory,
+      notionRecords: notionSyncRecords.length,
+      notionConflicts: notionConflicts.length,
+      notionPending: notionPending.length
+    },
+    generatedAtMs: now,
+    windowStartMs: cutoff,
+    windowEndMs: now
+  };
+}
+
 export const EVENTS_SERVICE_PUBLIC_API = Object.freeze({
   outcomes: EVENT_OUTCOMES,
   trustStates: EVENT_TRUST_STATES,
@@ -301,6 +418,7 @@ export const EVENTS_SERVICE_PUBLIC_API = Object.freeze({
   dedupeEvents,
   aggregateEventsByType,
   aggregateEventsWeekly,
+  unifiedWeeklyReport,
   isEventsTableAvailable,
   getEventStoreStatus,
   recordEvent,

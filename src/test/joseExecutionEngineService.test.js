@@ -44,9 +44,21 @@ vi.mock('../lib/ollama', () => ({
   PREFERRED_MODEL: 'llama3.2:3b'
 }));
 
+const mockMemoryItems = [
+  { id: 'mem-1', title: 'Space exploration project plan', category: 'project_memory', content: 'Mars colony timeline' },
+  { id: 'mem-2', title: 'Creative video about AI', category: 'creative_memory', content: 'Script for AI documentary' },
+  { id: 'mem-3', title: 'Research on local LLMs', category: 'research_memory', content: 'Ollama vs llama.cpp comparison' }
+];
+
+vi.mock('../services/memoryService', () => ({
+  pushMemoryItem: vi.fn(),
+  listMemoryItems: vi.fn(() => mockMemoryItems)
+}));
+
 import {
   draftPrompt,
   parseJsonResponse,
+  retrieveRelevantContext,
   getDLQ,
   isJoseIntakeCommand,
   retryDLQ,
@@ -181,5 +193,76 @@ describe('LLM-powered agent drafting', () => {
     });
 
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('retrieveRelevantContext', () => {
+  it('returns empty snippet for empty query', () => {
+    const result = retrieveRelevantContext('', mockMemoryItems);
+    expect(result.snippet).toBe('');
+    expect(result.items).toHaveLength(0);
+  });
+
+  it('returns empty snippet for empty memory', () => {
+    const result = retrieveRelevantContext('space exploration', []);
+    expect(result.snippet).toBe('');
+    expect(result.items).toHaveLength(0);
+  });
+
+  it('returns empty snippet when no words match', () => {
+    const result = retrieveRelevantContext('xyzzy foobar', mockMemoryItems);
+    expect(result.snippet).toBe('');
+    expect(result.items).toHaveLength(0);
+  });
+
+  it('matches memory items by title substring', () => {
+    const result = retrieveRelevantContext('space exploration project', mockMemoryItems);
+    expect(result.items.length).toBeGreaterThan(0);
+    expect(result.items[0].title).toContain('Space exploration');
+  });
+
+  it('matches memory items by content substring', () => {
+    const result = retrieveRelevantContext('Mars colony timeline', mockMemoryItems);
+    expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  it('returns max 3 items', () => {
+    const manyItems = Array.from({ length: 10 }, (_, i) => ({
+      id: `mem-${i}`,
+      title: `Space project ${i}`,
+      category: 'project_memory',
+      content: 'space details'
+    }));
+    const result = retrieveRelevantContext('space project', manyItems);
+    expect(result.items.length).toBeLessThanOrEqual(3);
+  });
+
+  it('scores title matches higher than content matches', () => {
+    const items = [
+      { id: 'mem-1', title: 'Unrelated title', category: 'memory', content: 'space exploration details here' },
+      { id: 'mem-2', title: 'Space exploration project', category: 'memory', content: 'unrelated content' }
+    ];
+    const result = retrieveRelevantContext('space exploration', items);
+    expect(result.items[0].id).toBe('mem-2');
+  });
+
+  it('builds a snippet from matched items', () => {
+    const result = retrieveRelevantContext('space exploration', mockMemoryItems);
+    expect(result.snippet).toContain('[project_memory]');
+    expect(result.snippet).toContain('Space exploration');
+  });
+
+  it('returns items with id, title, category, score', () => {
+    const result = retrieveRelevantContext('space exploration', mockMemoryItems);
+    expect(result.items[0]).toHaveProperty('id');
+    expect(result.items[0]).toHaveProperty('title');
+    expect(result.items[0]).toHaveProperty('category');
+    expect(result.items[0]).toHaveProperty('score');
+  });
+
+  it('filters out short query words (<=3 chars)', () => {
+    const result = retrieveRelevantContext('the a an', mockMemoryItems);
+    expect(result.snippet).toBe('');
+    expect(result.items).toHaveLength(0);
   });
 });
