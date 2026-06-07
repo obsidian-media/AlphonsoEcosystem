@@ -133,3 +133,26 @@ export function buildExecutionPlan(assignments) {
   }
   return { waves, assignmentMap };
 }
+
+export function validateWiring(commandId, assignments) {
+  if (!commandId || !Array.isArray(assignments)) return { valid: true, warnings: [] };
+  const warnings = [];
+  const allOutputs = readAllOutputs();
+  const commandOutputs = allOutputs[commandId] || {};
+  const agentNames = assignments.map((a) => a?.agent).filter(Boolean);
+  for (const assignment of assignments) {
+    const agent = assignment?.agent;
+    if (!agent) continue;
+    const deps = AGENT_DEPENDENCIES[agent] || [];
+    for (const dep of deps) {
+      if (agentNames.includes(dep) && !commandOutputs[dep]) {
+        warnings.push({
+          agent,
+          missingDependency: dep,
+          message: `${agent} expects output from ${dep} but ${dep} has not stored output yet for command ${commandId}`
+        });
+      }
+    }
+  }
+  return { valid: warnings.length === 0, warnings };
+}

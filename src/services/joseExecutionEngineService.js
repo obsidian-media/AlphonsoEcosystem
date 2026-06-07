@@ -353,9 +353,15 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
 
 async function executeMiyaAssignment(commandText, assignment, options = {}) {
   const hectorContext = options.priorOutputs?.hector;
-  const enrichedOptions = hectorContext
-    ? { ...options, retrievedContext: { snippet: hectorContext.summary || '', items: [] } }
-    : options;
+  let enrichedOptions = options;
+  if (hectorContext) {
+    const researchSnippet = [
+      hectorContext.summary,
+      hectorContext.sources?.length ? `Sources: ${hectorContext.sources.join(', ')}` : '',
+      hectorContext.artifacts?.length ? `Research artifacts: ${hectorContext.artifacts.map((a) => a.type || a.reportId || 'report').join(', ')}` : ''
+    ].filter(Boolean).join('\n');
+    enrichedOptions = { ...options, retrievedContext: { snippet: researchSnippet, items: [] } };
+  }
   const creativePackage = await buildMiyaPackage(commandText, assignment, enrichedOptions);
   pushMiyaMemory({
     category: 'creative_memory',
@@ -527,15 +533,23 @@ async function executeNovaAssignment(commandText, assignment) {
 async function executeMarcusAssignment(commandText, assignment, options = {}) {
   const mariaContext = options.priorOutputs?.maria;
   const governanceStatus = mariaContext?.resultState || 'unknown';
+  const governanceArtifacts = mariaContext?.artifacts || [];
+  const governanceSummary = mariaContext?.summary || '';
   return {
     summary: mariaContext
-      ? `Marcus reviewed governance approval (status: ${governanceStatus}) and prepared distribution execution for "${commandText}".`
+      ? `Marcus reviewed governance approval (status: ${governanceStatus}) and prepared distribution execution for "${commandText}". Governance: ${governanceSummary}`
       : `Marcus requires explicit approved external execution before distribution for "${commandText}".`,
     resultState: governanceStatus === 'completed' ? 'pending_review' : 'pending_review',
     resultUrl: null,
     artifacts: [
       { type: 'distribution_execution', status: 'approval_required' },
-      ...(mariaContext ? [{ type: 'governance_review_input', agent: 'maria', resultState: governanceStatus }] : [])
+      ...(mariaContext ? [{
+        type: 'governance_review_input',
+        agent: 'maria',
+        resultState: governanceStatus,
+        governanceSummary,
+        governanceArtifacts
+      }] : [])
     ],
     sources: [],
     contractAction: assignment?.actionType || 'distribution_execution'

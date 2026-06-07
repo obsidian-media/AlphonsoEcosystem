@@ -273,4 +273,60 @@ describe('agentOutputStoreService', () => {
       expect(AGENT_DEPENDENCIES.echo).toContain('marcus');
     });
   });
+
+  describe('validateWiring', () => {
+    it('returns valid when no warnings', async () => {
+      const { setAgentOutput, validateWiring } = await loadService();
+      setAgentOutput('cmd-1', 'hector', { summary: 'research' });
+      const assignments = [
+        { agent: 'hector', actionType: 'research' },
+        { agent: 'miya', actionType: 'creative_package' }
+      ];
+      const result = validateWiring('cmd-1', assignments);
+      expect(result.valid).toBe(true);
+      expect(result.warnings).toHaveLength(0);
+    });
+
+    it('warns when dependency output is missing', async () => {
+      const { validateWiring } = await loadService();
+      const assignments = [
+        { agent: 'hector', actionType: 'research' },
+        { agent: 'miya', actionType: 'creative_package' }
+      ];
+      const result = validateWiring('cmd-1', assignments);
+      expect(result.valid).toBe(false);
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].agent).toBe('miya');
+      expect(result.warnings[0].missingDependency).toBe('hector');
+    });
+
+    it('returns valid for null inputs', async () => {
+      const { validateWiring } = await loadService();
+      expect(validateWiring(null, []).valid).toBe(true);
+      expect(validateWiring('cmd-1', null).valid).toBe(true);
+    });
+
+    it('returns valid when dependency agent is not in assignments', async () => {
+      const { validateWiring } = await loadService();
+      const assignments = [
+        { agent: 'miya', actionType: 'creative_package' }
+      ];
+      const result = validateWiring('cmd-1', assignments);
+      expect(result.valid).toBe(true);
+    });
+
+    it('warns for multiple missing dependencies', async () => {
+      const { validateWiring } = await loadService();
+      const assignments = [
+        { agent: 'hector', actionType: 'research' },
+        { agent: 'miya', actionType: 'creative_package' },
+        { agent: 'maria', actionType: 'governance_audit' },
+        { agent: 'marcus', actionType: 'distribution_execution' },
+        { agent: 'echo', actionType: 'memory_preservation' }
+      ];
+      const result = validateWiring('cmd-1', assignments);
+      expect(result.valid).toBe(false);
+      expect(result.warnings.length).toBeGreaterThanOrEqual(2);
+    });
+  });
 });

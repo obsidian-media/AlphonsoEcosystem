@@ -10,7 +10,7 @@
 *(tasks ready to start)*
 
 ### In Progress
-- [ ] **P1 — MVP loop hardening** — Owner: OpenCode — command → retrieval → approval → draft → execute/receipt → weekly report mapping, missing links identification, implementation cards creation
+- [ ] **P1 — Agent-to-agent wiring** — Owner: OpenCode — command-scoped output store + dependency-aware execution waves + context injection + wiring validation
 
 ### Needs Review
 - [x] **P0 — Read-only repo audit (both agents)** — Owner: OpenCode + Cline — `OPENCODE_READONLY_AUDIT.md` + `CLINE_KANBAN_READONLY_AUDIT.md` written 2026-06-07. `FINAL_REPO_AUDIT_AND_EXECUTION_PLAN.md` to be produced.
@@ -120,16 +120,113 @@
 ### Task 6: MVP loop hardening
 - **Priority**: P1
 - **Owner**: OpenCode
-- **Status**: In Progress
+- **Status**: Done
 - **Acceptance Criteria**:
-  - command → retrieval → approval → draft → execute/receipt → weekly report mapped
-  - Missing links identified
-  - Implementation cards created
+  - command → retrieval → approval → draft → execute/receipt → weekly report mapped ✓
+  - Missing links identified ✓
+  - Implementation cards created ✓
 - **Dependencies**: Task 2, Task 3
 - **Risk Level**: Medium
 - **Created**: 2026-06-07
+- **Completed**: 2026-06-07
+- **Acceptance Evidence**: MVP loop mapped across 6 links. 5 gaps identified and implementation cards (Tasks 9-13) created and completed. Pre-command retrieval, LLM-powered drafts, inline approval UI, receipt display in ChatView, unified weekly report all wired.
+
+### Task 9: Pre-command memory retrieval
+- **Priority**: P1
+- **Owner**: OpenCode
+- **Status**: Done
+- **Acceptance Criteria**:
+  - `retrieveRelevantContext(text, memoryItems)` pure function ✓
+  - Wired into `runJoseCommandExecutionPipeline()` before routing ✓
+  - 10 new tests ✓
+- **Dependencies**: Task 6
+- **Risk Level**: Low
+- **Created**: 2026-06-07
+- **Completed**: 2026-06-07
+- **Acceptance Evidence**: Committed `b956ed2`. Substring scoring (title 3pts, content 1pt, category 1pt), top 3 matches, snippet returned.
+
+### Task 10: LLM-powered agent drafts
+- **Priority**: P1
+- **Owner**: OpenCode
+- **Status**: Done
+- **Acceptance Criteria**:
+  - `draftPrompt(agent, task, context)` builds LLM prompts ✓
+  - `buildMiyaPackage()` async, calls Ollama, parses JSON, falls back to template ✓
+  - `executeHectorAssignment()` calls Ollama for summarization ✓
+  - `checkOllamaAvailable()` gates LLM drafting ✓
+  - 9 new tests ✓
+- **Dependencies**: Task 6
+- **Risk Level**: Medium
+- **Created**: 2026-06-07
+- **Completed**: 2026-06-07
+- **Acceptance Evidence**: Committed `0cc6961` + `b956ed2`. LLM failures always fall back to hardcoded templates.
+
+### Task 11: Inline approval UI
+- **Priority**: P1
+- **Owner**: OpenCode
+- **Status**: Done
+- **Acceptance Criteria**:
+  - `ApprovalPanel.jsx` with Approve/Deny per pending item ✓
+  - Risk badges (High/Medium/Low) ✓
+  - Continue button after all resolved ✓
+  - Wired into `ChatView.jsx` ✓
+  - 10 new tests ✓
+- **Dependencies**: Task 6
+- **Risk Level**: Medium
+- **Created**: 2026-06-07
+- **Completed**: 2026-06-07
+- **Acceptance Evidence**: Committed `0cc6961`. Reuses existing `approvePacket`/`rejectPacket` from `agentBusService`.
+
+### Task 12: Receipt display in ChatView
+- **Priority**: P2
+- **Owner**: OpenCode
+- **Status**: Done
+- **Acceptance Criteria**:
+  - Fetches `listOrchestrationReceipts({ commandId })` after pipeline ✓
+  - Renders compact receipt cards with status badge, agent, action type, risk level ✓
+  - Clears on chat clear ✓
+- **Dependencies**: Task 6
+- **Risk Level**: Low
+- **Created**: 2026-06-07
+- **Completed**: 2026-06-07
+- **Acceptance Evidence**: Committed `b956ed2`.
+
+### Task 13: Unified weekly report
+- **Priority**: P1
+- **Owner**: OpenCode
+- **Status**: Done
+- **Acceptance Criteria**:
+  - `unifiedWeeklyReport()` in `eventsService.js` ✓
+  - Sections: Commands, Agent Activity, Connector Activity, Memory Changes, Notion Sync ✓
+  - `UnifiedWeeklyReportPanel` in `OperatorDashboard.jsx` ✓
+  - 7 new tests ✓
+- **Dependencies**: Task 6
+- **Risk Level**: Medium
+- **Created**: 2026-06-07
+- **Completed**: 2026-06-07
+- **Acceptance Evidence**: Committed `b956ed2`. Pure function composing orchestration receipts, events, memory items, Notion sync records.
+
+### Task 14: Agent-to-agent wiring
+- **Priority**: P1
+- **Owner**: OpenCode
+- **Status**: In Progress
+- **Acceptance Criteria**:
+  - `agentOutputStoreService.js` — command-scoped output store ✓
+  - `AGENT_DEPENDENCIES` map defining wiring rules ✓
+  - `buildExecutionPlan()` — topological sort into execution waves ✓
+  - `validateWiring()` — warns on missing dependency outputs ✓
+  - Pipeline executes agents in dependency order ✓
+  - Miya reads Hector's research as creative context ✓
+  - Marcus reads Maria's governance approval ✓
+  - Alphonso reads Miya's creative proposals ✓
+  - Echo preserves all prior agent outputs ✓
+  - `agentPairingConstants.ts` updated with 9 new inter-agent pairings ✓
+  - 20+ new tests ✓
+- **Dependencies**: Task 9, Task 10, Task 11, Task 12, Task 13
+- **Risk Level**: Medium
+- **Created**: 2026-06-07
 - **Started**: 2026-06-07
-- **Current Step**: Mapping the MVP loop (command → retrieval → approval → draft → execute/receipt → weekly report) across existing services, identifying missing links, creating implementation cards.
+- **Current Step**: Phase 1+2 complete (output store + dependency execution). Phase 3 deeper context injection + wiring validation complete. Awaiting verification.
 
 ### Task 7: Reporting/dashboard baseline
 - **Priority**: P1
