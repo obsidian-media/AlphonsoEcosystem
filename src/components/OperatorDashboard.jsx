@@ -550,6 +550,34 @@ export function OperatorDashboard({
                     entryCount: Array.isArray(durableAuditLogs) ? durableAuditLogs.length : 0,
                     entries: durableAuditLogs || []
                   };
+
+  /* -------------------------------------------------------------
+   *  Render helper – a tiny reusable list for a given status group
+   * ------------------------------------------------------------- */
+  const TaskGroup = ({ title, tasks, status }) => {
+    if (!tasks || tasks.length === 0) return null;
+    return (
+      <div className="mb-4">
+        <h3 className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1">
+          {title}
+        </h3>
+        <div className="space-y-1">
+          {tasks.map((t, i) => (
+            <div key={i} className="flex items-center justify-between rounded px-2 py-1 bg-zinc-900/40">
+              {t.componentPath ? (
+                <a href={t.componentPath} className="text-sm text-zinc-200 hover:underline">
+                  {t.title}
+                </a>
+              ) : (
+                <span className="text-sm text-zinc-200">{t.title}</span>
+              )}
+              <span className={statusBadge(status)}>{status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
                   const body = JSON.stringify(payload, null, 2);
                   // Simple HMAC-style fingerprint using SubtleCrypto
                   const encoder = new TextEncoder();
