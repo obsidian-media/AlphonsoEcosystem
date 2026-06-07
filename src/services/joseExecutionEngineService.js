@@ -26,6 +26,7 @@ import { recordOrchestrationQueueTransition } from './orchestrationQueueService'
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
+import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 
 export function isJoseIntakeCommand(text) {
@@ -44,6 +45,18 @@ function isBlockedByZeroCostMode(packet, assignment) {
   if (policy?.blockedByZeroCostMode) return true;
   const costClass = String(policy?.costClass || assignment?.costClass || '').toLowerCase();
   return costClass === 'paid_or_metered';
+}
+
+function extractNovaScore(result) {
+  if (!result) return null;
+  const artifacts = Array.isArray(result.artifacts) ? result.artifacts : [];
+  const scoreArtifact = artifacts.find((a) => a?.type === 'opportunity_score');
+  if (scoreArtifact) {
+    const opportunity = Number(scoreArtifact.opportunityScore ?? scoreArtifact.score ?? 50);
+    const risk = Number(scoreArtifact.riskScore ?? 0);
+    return { opportunityScore: opportunity, riskScore: risk, score: opportunity };
+  }
+  return null;
 }
 
 function checkSentinelGate(commandId, assignment) {
@@ -635,6 +648,8 @@ export async function runJoseCommandExecutionPipeline({
   const executionReceipts = [];
   const draftDisabled = !(await checkOllamaAvailable(endpoint));
 
+  const novaHints = getDecompositionHints(command.id);
+
   const { waves, assignmentMap } = buildExecutionPlan(command.assignments || []);
 
   for (const wave of waves) {
@@ -922,6 +937,12 @@ export async function runJoseCommandExecutionPipeline({
         sources: result.sources || [],
         contractAction: result.contractAction || assignment.actionType
       });
+      if (assignment.agent === AGENTS.NOVA) {
+        const novaScore = extractNovaScore(result);
+        if (novaScore) {
+          storeNovaScore(command.id, novaScore);
+        }
+      }
       createAgentReportToJose({
         packetId: assignment.packetId,
         reportingAgent: assignment.agent,
@@ -1022,7 +1043,8 @@ export async function runJoseCommandExecutionPipeline({
     executedCount,
     pendingApprovalCount,
     failedCount,
-    executionReceipts
+    executionReceipts,
+    novaFeedback: novaHints
   };
 }
 

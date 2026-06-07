@@ -80,6 +80,14 @@ vi.mock('../services/sentinelGateService', () => ({
   checkSentinelAlerts: (...args) => mockCheckSentinelAlerts(...args)
 }));
 
+const mockStoreNovaScore = vi.fn();
+const mockGetDecompositionHints = vi.fn(() => ({ hints: [], score: null }));
+
+vi.mock('../services/novaFeedbackService', () => ({
+  storeNovaScore: (...args) => mockStoreNovaScore(...args),
+  getDecompositionHints: (...args) => mockGetDecompositionHints(...args)
+}));
+
 vi.mock('../services/memoryService', () => ({
   pushMemoryItem: vi.fn(),
   listMemoryItems: vi.fn(() => mockMemoryItems)
@@ -521,5 +529,70 @@ describe('sentinel gate integration', () => {
 
     const sentinelProgress = onProgress.mock.calls.filter((call) => call[0].stage === 'sentinel_blocked');
     expect(sentinelProgress.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('nova feedback integration', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    runtimeReachable = true;
+    ollamaAvailable = true;
+    mockStoreNovaScore.mockClear();
+    mockGetDecompositionHints.mockClear();
+    mockGetDecompositionHints.mockReturnValue({ hints: [], score: null });
+  });
+
+  it('calls storeNovaScore after Nova executes successfully', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: score opportunity for this task',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mockStoreNovaScore).toHaveBeenCalled();
+  });
+
+  it('includes novaFeedback in pipeline return value', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: score opportunity for this task',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.novaFeedback).toBeDefined();
+    expect(result.novaFeedback).toHaveProperty('hints');
+    expect(result.novaFeedback).toHaveProperty('score');
+  });
+
+  it('passes prior Nova decomposition hints into pipeline', async () => {
+    mockGetDecompositionHints.mockReturnValue({
+      hints: [{ type: 'opportunity_high', message: 'High opportunity — prioritize creative.' }],
+      score: { commandId: 'prev-cmd', score: 80 }
+    });
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: create a creative package about AI',
+      source: 'shayan',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.novaFeedback.hints).toHaveLength(1);
+    expect(result.novaFeedback.hints[0].type).toBe('opportunity_high');
+  });
+
+  it('calls getDecompositionHints with command id', async () => {
+    await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: verify local runtime package',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+
+    expect(mockGetDecompositionHints).toHaveBeenCalled();
+    const firstCall = mockGetDecompositionHints.mock.calls[0];
+    expect(firstCall[0]).toBeTruthy();
   });
 });
