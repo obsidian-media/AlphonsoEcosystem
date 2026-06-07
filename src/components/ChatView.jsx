@@ -14,6 +14,7 @@ import {
 import { ModelSwitcher } from './ModelSwitcher';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
+import { PipelineResultCard } from './PipelineResultCard';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
@@ -46,6 +47,8 @@ export function ChatView({
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [approvalCommandId, setApprovalCommandId] = useState(null);
   const [executionReceipts, setExecutionReceipts] = useState([]);
+  const [pipelineResult, setPipelineResult] = useState(null);
+  const [pipelineCommandText, setPipelineCommandText] = useState('');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
@@ -146,45 +149,20 @@ export function ChatView({
           zeroCostMode: settings.zeroCostMode
         });
 
+        setPipelineResult(result);
+        setPipelineCommandText(cleanInput);
+
         const command = result?.command || {};
         const shayanReport = command?.shayanReport || null;
         const summary = shayanReport?.summary || 'Jose processed the command.';
-        const urlLine = shayanReport?.resultUrl ? `\nVerified URL: ${shayanReport.resultUrl}` : '\nVerified URL: not available yet.';
-        const executionLine = `\nExecuted: ${result?.executedCount || 0} | Pending approval: ${result?.pendingApprovalCount || 0} | Failed: ${result?.failedCount || 0}`;
-        const commandLine = `\nCommand ID: ${result?.commandId || 'n/a'}`;
-        const assignmentLines = Array.isArray(shayanReport?.assignmentSummaries)
-          ? shayanReport.assignmentSummaries.map((item) => {
-            const artifacts = Array.isArray(item.artifacts) ? item.artifacts : [];
-            const artifactText = artifacts.map((artifact) => {
-              if (!artifact || typeof artifact !== 'object') return String(artifact);
-              if (artifact.script || artifact.prompts || artifact.scenes) {
-                const prompts = Array.isArray(artifact.prompts) ? artifact.prompts.map((prompt) => `    - ${prompt}`).join('\n') : '';
-                const scenes = Array.isArray(artifact.scenes) ? artifact.scenes.map((scene) => `    - ${scene}`).join('\n') : '';
-                return [
-                  artifact.title ? `  Output: ${artifact.title}` : null,
-                  artifact.hook ? `  Hook: ${artifact.hook}` : null,
-                  prompts ? `  Prompts:\n${prompts}` : null,
-                  scenes ? `  Scenes:\n${scenes}` : null
-                ].filter(Boolean).join('\n');
-              }
-              return `  Artifact: ${artifact.type || artifact.status || JSON.stringify(artifact)}`;
-            }).filter(Boolean).join('\n');
-            return [
-              `- ${item.agent}: ${item.reportStatus}`,
-              `  ${item.reportSummary}`,
-              artifactText
-            ].filter(Boolean).join('\n');
-          }).join('\n')
-          : '';
-        const outputLine = assignmentLines ? `\n\nAgent Outputs\n${assignmentLines}` : '';
         const hintLine = (result?.pendingApprovalCount || 0) > 0
-          ? '\nNext step: approve only the high-risk external/destructive tasks. Safe planning/delegation has already run.'
-          : '\nNext step: review outputs here or Jose receipts in Orchestrator view.';
+          ? '\nApprove the pending tasks below to continue.'
+          : '';
 
         setMessages((current) => [...current, {
           id: nextMsgId(),
           role: 'assistant',
-          content: `Jose Report\n\n${summary}${urlLine}${executionLine}${commandLine}${outputLine}\n${hintLine}`
+          content: summary + hintLine
         }]);
 
         if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
@@ -293,6 +271,8 @@ export function ChatView({
     setPendingApprovals([]);
     setApprovalCommandId(null);
     setExecutionReceipts([]);
+    setPipelineResult(null);
+    setPipelineCommandText('');
     localStorage.removeItem(`alphonso_messages_${activeChatId}`);
     void deleteChatMessages(activeChatId);
   };
@@ -455,6 +435,17 @@ export function ChatView({
               <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
               <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
               <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
+            </div>
+          </div>
+        )}
+
+        {pipelineResult && !isGenerating && (
+          <div className="flex gap-4 max-w-3xl mx-auto w-full">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-indigo-400" />
+            </div>
+            <div className="flex-1">
+              <PipelineResultCard result={pipelineResult} commandText={pipelineCommandText} />
             </div>
           </div>
         )}
