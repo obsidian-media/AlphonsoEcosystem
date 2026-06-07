@@ -13,6 +13,7 @@ import {
 } from '../lib/ollama';
 import { ModelSwitcher } from './ModelSwitcher';
 import { MarkdownMessage } from './MarkdownMessage';
+import { ApprovalPanel } from './ApprovalPanel';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -41,6 +42,8 @@ export function ChatView({
   const [searchOpen, setSearchOpen] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState(null);
   const [compactChat, setCompactChat] = useState(() => Boolean(getStorage('alphonso_chat_compact_v1', true)));
+  const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [approvalCommandId, setApprovalCommandId] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
@@ -181,6 +184,15 @@ export function ChatView({
           role: 'assistant',
           content: `Jose Report\n\n${summary}${urlLine}${executionLine}${commandLine}${outputLine}\n${hintLine}`
         }]);
+
+        if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
+          const pending = result.executionReceipts.filter((r) => r.status === 'approval_required');
+          if (pending.length > 0) {
+            setPendingApprovals(pending);
+            setApprovalCommandId(result.commandId);
+          }
+        }
+
         onJoseExecutionState?.(
           (result?.pendingApprovalCount || 0) > 0 ? 'approving' : 'task_complete',
           (result?.pendingApprovalCount || 0) > 0
@@ -436,6 +448,32 @@ export function ChatView({
             </div>
           </div>
         )}
+
+        {pendingApprovals.length > 0 && !isGenerating && (
+          <div className={`flex gap-4 max-w-3xl mx-auto w-full ${compactChat ? '' : ''}`}>
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <ApprovalPanel
+                pendingApprovals={pendingApprovals}
+                commandId={approvalCommandId}
+                onAllResolved={(cmdId, results) => {
+                  const approved = Object.values(results).filter((s) => s === 'approved').length;
+                  const denied = Object.values(results).filter((s) => s === 'rejected').length;
+                  setMessages((current) => [...current, {
+                    id: nextMsgId(),
+                    role: 'assistant',
+                    content: `Approval complete: ${approved} approved, ${denied} denied.\n\nCommand ID: ${cmdId}`
+                  }]);
+                  setPendingApprovals([]);
+                  setApprovalCommandId(null);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 

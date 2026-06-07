@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let runtimeReachable = true;
+let ollamaAvailable = true;
 
 vi.mock('../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn(async () => undefined)
@@ -27,7 +28,30 @@ vi.mock('../services/hectorResearchService', () => ({
   }))
 }));
 
-import { getDLQ, isJoseIntakeCommand, retryDLQ, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
+vi.mock('../lib/ollama', () => ({
+  generateOllamaResponse: vi.fn(async () => ({
+    response: JSON.stringify({
+      title: 'LLM Generated Title',
+      hook: 'LLM hook line',
+      script: 'Full LLM script',
+      scenes: ['Scene A from LLM', 'Scene B from LLM'],
+      prompts: ['Prompt 1 from LLM', 'Prompt 2 from LLM']
+    })
+  })),
+  fetchOllamaModels: vi.fn(async () => ({
+    models: ollamaAvailable ? [{ name: 'llama3.2:3b' }] : []
+  })),
+  PREFERRED_MODEL: 'llama3.2:3b'
+}));
+
+import {
+  draftPrompt,
+  parseJsonResponse,
+  getDLQ,
+  isJoseIntakeCommand,
+  retryDLQ,
+  runJoseCommandExecutionPipeline
+} from '../services/joseExecutionEngineService';
 
 describe('jose intake command detection', () => {
   it('matches jose-prefixed commands', () => {
@@ -82,5 +106,80 @@ describe('jose execution retries and dlq', () => {
 
     expect(retryResult.ok).toBe(true);
     expect(getDLQ()).toHaveLength(0);
+  });
+});
+
+describe('draftPrompt', () => {
+  it('builds a miya prompt with task and context', () => {
+    const prompt = draftPrompt('miya', 'Create a video about AI', { snippet: 'Prior work on AI topics' });
+    expect(prompt).toContain('Miya');
+    expect(prompt).toContain('Create a video about AI');
+    expect(prompt).toContain('Prior work on AI topics');
+    expect(prompt).toContain('JSON');
+  });
+
+  it('builds a hector prompt with task', () => {
+    const prompt = draftPrompt('hector', 'Research local LLMs');
+    expect(prompt).toContain('Hector');
+    expect(prompt).toContain('Research local LLMs');
+    expect(prompt).toContain('briefing');
+  });
+
+  it('builds a generic prompt for unknown agents', () => {
+    const prompt = draftPrompt('unknown', 'Do something');
+    expect(prompt).toContain('Do something');
+  });
+});
+
+describe('parseJsonResponse', () => {
+  it('parses plain JSON', () => {
+    const result = parseJsonResponse('{"title":"test"}');
+    expect(result).toEqual({ title: 'test' });
+  });
+
+  it('parses JSON wrapped in markdown fences', () => {
+    const result = parseJsonResponse('```json\n{"title":"fenced"}\n```');
+    expect(result).toEqual({ title: 'fenced' });
+  });
+
+  it('parses JSON wrapped in generic fences', () => {
+    const result = parseJsonResponse('```\n{"title":"generic"}\n```');
+    expect(result).toEqual({ title: 'generic' });
+  });
+
+  it('throws on invalid JSON', () => {
+    expect(() => parseJsonResponse('not json')).toThrow();
+  });
+});
+
+describe('LLM-powered agent drafting', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    runtimeReachable = true;
+    ollamaAvailable = true;
+  });
+
+  it('uses LLM-generated package when Ollama is available', async () => {
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: create a creative package about space exploration',
+      source: 'shayan',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('falls back to template when Ollama is unavailable', async () => {
+    ollamaAvailable = false;
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: create a creative package about space exploration',
+      source: 'shayan',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
   });
 });

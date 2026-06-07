@@ -24,6 +24,7 @@ import { verifyOllamaRuntimeProof, verifyProcessProof } from './verificationServ
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
+import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());
@@ -41,6 +42,49 @@ function isBlockedByZeroCostMode(packet, assignment) {
   if (policy?.blockedByZeroCostMode) return true;
   const costClass = String(policy?.costClass || assignment?.costClass || '').toLowerCase();
   return costClass === 'paid_or_metered';
+}
+
+export function draftPrompt(agent, task, context = {}) {
+  const taskText = String(task || '').trim();
+  const contextSnippet = String(context?.snippet || '').trim();
+
+  if (agent === 'miya') {
+    return [
+      'You are Miya, a creative director for a local AI desktop companion.',
+      'Generate a structured creative package as JSON with these keys:',
+      '"title" (string, max 120 chars), "hook" (string), "script" (multi-line string),',
+      '"scenes" (array of 2-4 scene strings), "prompts" (array of 2-3 image/video prompt strings).',
+      '',
+      'Task:',
+      taskText,
+      contextSnippet ? `Context: ${contextSnippet}` : '',
+      '',
+      'Return ONLY valid JSON, no markdown fences.'
+    ].filter(Boolean).join('\n');
+  }
+
+  if (agent === 'hector') {
+    return [
+      'You are Hector, a research analyst for a local AI desktop companion.',
+      'Summarize the following research task into a concise briefing.',
+      'Include: key findings, recommended sources, risk notes.',
+      '',
+      'Task:',
+      taskText,
+      contextSnippet ? `Prior context: ${contextSnippet}` : '',
+      '',
+      'Return plain text, 2-4 paragraphs.'
+    ].filter(Boolean).join('\n');
+  }
+
+  return `You are an AI assistant helping with: ${taskText}`;
+}
+
+export function parseJsonResponse(text) {
+  const trimmed = String(text || '').trim();
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const raw = fenceMatch ? fenceMatch[1] : trimmed;
+  return JSON.parse(raw);
 }
 
 const JOSE_EXECUTION_DLQ_KEY = 'alphonso_jose_execution_dlq_v1';
@@ -182,7 +226,7 @@ async function executeAssignmentWithRetries(packet, assignment, commandText, opt
   };
 }
 
-function buildMiyaPackage(commandText, assignment) {
+function buildMiyaFallbackPackage(commandText, assignment) {
   const topic = String(commandText || '').trim();
   const title = topic.slice(0, 120) || 'Untitled creative package';
   const hook = `Hook: ${title}`;
@@ -200,6 +244,36 @@ function buildMiyaPackage(commandText, assignment) {
     ],
     assignmentAction: assignment?.actionType || 'creative_package'
   };
+}
+
+async function buildMiyaPackage(commandText, assignment, options = {}) {
+  const fallback = buildMiyaFallbackPackage(commandText, assignment);
+  if (options.draftDisabled) return fallback;
+
+  try {
+    const prompt = draftPrompt('miya', commandText);
+    const response = await generateOllamaResponse({
+      endpoint: options.endpoint,
+      model: options.model || PREFERRED_MODEL,
+      prompt
+    });
+    const parsed = parseJsonResponse(response?.response);
+    if (parsed && typeof parsed.title === 'string') {
+      return {
+        title: parsed.title.slice(0, 120) || fallback.title,
+        hook: String(parsed.hook || fallback.hook),
+        script: String(parsed.script || fallback.script),
+        scenes: Array.isArray(parsed.scenes) && parsed.scenes.length > 0
+          ? parsed.scenes.map(String)
+          : fallback.scenes,
+        prompts: Array.isArray(parsed.prompts) && parsed.prompts.length > 0
+          ? parsed.prompts.map(String)
+          : fallback.prompts,
+        assignmentAction: assignment?.actionType || 'creative_package'
+      };
+    }
+  } catch { /* fall through to template */ }
+  return fallback;
 }
 
 async function executeAlphonsoAssignment(commandText, assignment, options = {}) {
@@ -227,8 +301,8 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
   };
 }
 
-async function executeMiyaAssignment(commandText, assignment) {
-  const creativePackage = buildMiyaPackage(commandText, assignment);
+async function executeMiyaAssignment(commandText, assignment, options = {}) {
+  const creativePackage = await buildMiyaPackage(commandText, assignment, options);
   pushMiyaMemory({
     category: 'creative_memory',
     title: `Miya package: ${creativePackage.title}`,
@@ -274,7 +348,7 @@ async function executeMiyaAssignment(commandText, assignment) {
   };
 }
 
-async function executeHectorAssignment(commandText, assignment) {
+async function executeHectorAssignment(commandText, assignment, options = {}) {
   const action = String(assignment?.actionType || '').toLowerCase();
   if (action.includes('external_publish_handoff')) {
     return {
@@ -295,8 +369,25 @@ async function executeHectorAssignment(commandText, assignment) {
   });
   const report = await runHectorLiveResearch(draft.id);
   const sourceRefs = Array.isArray(report?.sources) ? report.sources.map((item) => item?.url).filter(Boolean) : [];
+
+  let summary = report?.summary || 'Hector research run completed.';
+  if (!options.draftDisabled) {
+    try {
+      const prompt = draftPrompt('hector', commandText, { snippet: summary });
+      const response = await generateOllamaResponse({
+        endpoint: options.endpoint,
+        model: options.model || PREFERRED_MODEL,
+        prompt
+      });
+      const llmSummary = String(response?.response || '').trim();
+      if (llmSummary.length > 20) {
+        summary = llmSummary;
+      }
+    } catch { /* fall through to existing summary */ }
+  }
+
   return {
-    summary: report?.summary || 'Hector research run completed.',
+    summary,
     resultState: report?.confidenceLevel === TRUST_STATES.VERIFIED ? 'verified' : 'pending_review',
     resultUrl: null,
     artifacts: [{ type: 'hector_report', reportId: report?.id || draft.id }],
@@ -389,10 +480,10 @@ async function executeAssignment(packet, assignment, commandText, options = {}) 
     return executeAlphonsoAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.MIYA) {
-    return executeMiyaAssignment(commandText, assignment);
+    return executeMiyaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.HECTOR) {
-    return executeHectorAssignment(commandText, assignment);
+    return executeHectorAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.MARIA) {
     return executeMariaAssignment(commandText, assignment);
@@ -410,6 +501,15 @@ async function executeAssignment(packet, assignment, commandText, options = {}) 
     return executeMarcusAssignment(commandText, assignment);
   }
   return executeJoseAssignment(commandText, assignment);
+}
+
+async function checkOllamaAvailable(endpoint) {
+  try {
+    const { models } = await fetchOllamaModels(endpoint);
+    return Array.isArray(models) && models.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export async function runJoseCommandExecutionPipeline({
@@ -432,6 +532,7 @@ export async function runJoseCommandExecutionPipeline({
   let pendingApprovalCount = 0;
   let failedCount = 0;
   const executionReceipts = [];
+  const draftDisabled = !(await checkOllamaAvailable(endpoint));
 
   for (const assignment of command.assignments || []) {
     const packet = getPacketById(assignment.packetId);
@@ -608,7 +709,7 @@ export async function runJoseCommandExecutionPipeline({
       continue;
     }
 
-    const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint });
+    const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled });
 
     if (!taskResult.ok) {
       failedCount += 1;
@@ -811,8 +912,10 @@ export async function retryDLQ(taskId) {
     };
   }
 
+  const draftDisabledRetry = !(await checkOllamaAvailable(entry.endpoint || undefined));
   const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, {
-    endpoint: entry.endpoint || undefined
+    endpoint: entry.endpoint || undefined,
+    draftDisabled: draftDisabledRetry
   });
 
   if (!taskResult.ok) {
