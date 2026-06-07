@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Cloud,
   Command,
   Download,
   FolderTree,
@@ -18,6 +19,8 @@ import {
 import { trustColor } from '../services/trustModel';
 
 const TrustReceiptBrowser = lazy(() => import('./TrustReceiptBrowser').then((mod) => ({ default: mod.TrustReceiptBrowser })));
+const NotionSyncPanel = lazy(() => import('./NotionSyncPanel').then((mod) => ({ default: mod.NotionSyncPanel })));
+const OllamaPreflightPanel = lazy(() => import('./OllamaPreflightPanel').then((mod) => ({ default: mod.OllamaPreflightPanel })));
 
 function Badge({ children, color = 'zinc' }) {
   const colors = {
@@ -582,6 +585,26 @@ export function OperatorDashboard({
         <Panel icon={Shield} title="Trust Receipt Browser">
           <Suspense fallback={null}>
             <TrustReceiptBrowser />
+          </Suspense>
+        </Panel>
+      </div>
+      </OperatorSection>
+
+      <OperatorSection title="Notion Co-Source Sync" id="notion-sync" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+      <div className="grid grid-cols-1 gap-3">
+        <Panel icon={Cloud} title="Notion ↔ Alphonso Sync">
+          <Suspense fallback={<div className="text-[11px] text-zinc-500">Loading Notion sync panel…</div>}>
+            <NotionSyncPanel />
+          </Suspense>
+        </Panel>
+      </div>
+      </OperatorSection>
+
+      <OperatorSection title="Ollama Preflight Baseline" id="ollama-preflight" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+      <div className="grid grid-cols-1 gap-3">
+        <Panel icon={Activity} title="Ollama Preflight Events">
+          <Suspense fallback={<div className="text-[11px] text-zinc-500">Loading Ollama preflight panel…</div>}>
+            <OllamaPreflightPanel />
           </Suspense>
         </Panel>
       </div>

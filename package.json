@@ -20,6 +20,7 @@
     "updater:verify": "node scripts/verify-updater-readiness.mjs",
     "release:updater": "node scripts/release-updater.mjs",
     "verify:ollama": "node scripts/verify-ollama-runtime.mjs",
+    "export:ground-truth": "node scripts/export-ground-truth.mjs",
     "proof:native-selfdev": "node scripts/proof-native-selfdev.mjs",
     "proof:rc0": "node scripts/proof-native-selfdev.mjs --rc0",
     "auth:youtube": "node scripts/auth-youtube.mjs",

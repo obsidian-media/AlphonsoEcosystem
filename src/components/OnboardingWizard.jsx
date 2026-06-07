@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle, Download, RefreshCw, Sparkles, Zap } from 'lucide-react';
 import { checkOllama, fetchOllamaModels, normalizeEndpoint, pullOllamaModel } from '../lib/ollama';
 import { setStorage } from '../lib/appStorage';
+import { buildOllamaPreflightEvent, recordEvent as recordOllamaPreflightEvent } from '../services/eventsService';
 
 const DEFAULT_ENDPOINT = 'http://localhost:11434';
 const PREFERRED_PRESELECT = 'llama3.2:3b';
@@ -46,8 +47,23 @@ function CheckOllamaStep({ onNext }) {
     setStatus('checking');
     setMessage('Checking Ollama...');
     setIsRetrying(true);
+    const correlationId = `onboarding-ollama-preflight-${Date.now()}`;
     try {
       const result = await checkOllama(DEFAULT_ENDPOINT, '');
+      const okState = result.state === 'connected' || result.state === 'model_missing' || result.state === 'no_models';
+      const modelName = result.selectedModel || result.models?.[0]?.name || '';
+      try {
+        const ev = buildOllamaPreflightEvent({
+          endpoint: DEFAULT_ENDPOINT,
+          model: modelName,
+          ok: okState,
+          error: okState ? null : (result.error || result.message || result.state),
+          correlationId
+        });
+        await recordOllamaPreflightEvent(ev);
+      } catch {
+        // non-blocking — preflight event is observability, not a gate
+      }
       if (result.state === 'connected' || result.state === 'model_missing') {
         setStatus('connected');
         setMessage('Ollama is running and ready.');
@@ -59,6 +75,18 @@ function CheckOllamaStep({ onNext }) {
         setMessage(result.message || 'Ollama is not running. Start it with: ollama serve');
       }
     } catch {
+      try {
+        const ev = buildOllamaPreflightEvent({
+          endpoint: DEFAULT_ENDPOINT,
+          model: '',
+          ok: false,
+          error: 'preflight_threw',
+          correlationId
+        });
+        await recordOllamaPreflightEvent(ev);
+      } catch {
+        // non-blocking
+      }
       setStatus('error');
       setMessage('Could not reach Ollama. Make sure it is running.');
     } finally {
