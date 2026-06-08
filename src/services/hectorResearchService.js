@@ -924,3 +924,19 @@ export function createHectorApprovalPacket(reportId) {
   recordHectorActivity('jose_approval_handoff_created', { reportId, packetId: packet.id });
   return packet;
 }
+
+export function createResearchBrief(topic) {
+  return {
+    researchBackendStatus: 'not_wired',
+    liveResearchAvailable: false,
+    confidence: 'source_needed',
+    topic,
+    summary: `Research brief created for "${topic}".`,
+    whatNeedsResearch: [
+      'Official documentation references',
+      'Compliance and policy requirements',
+      'Integration constraints and limitations'
+    ],
+    sourceTypesNeeded: ['official_docs', 'provider_api_docs', 'compliance_guidance']
+  };
+}

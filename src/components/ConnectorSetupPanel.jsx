@@ -24,6 +24,7 @@ import {
   updateConnectorAuthProfile,
   verifyConnectorEnvironment
 } from '../services/connectorRegistryService';
+import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/telegramAutoPollService';
 
 export function ConnectorSetupPanel() {
   const [connectors, setConnectors] = useState(() => listConnectors());
@@ -48,6 +49,7 @@ export function ConnectorSetupPanel() {
   const [cloudWebhookChallenge, setCloudWebhookChallenge] = useState('challenge-123');
   const [transportBusy, setTransportBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [autoPollState, setAutoPollState] = useState(() => getTelegramAutoPollState());
   const pollAvailable = ['telegram', 'whatsapp'].includes(connectorId);
 
   useEffect(() => {
@@ -149,6 +151,26 @@ export function ConnectorSetupPanel() {
         setNotice(`${connectorId} poll failed: ${result.error}`);
       } else {
         setNotice(`${connectorId} poll complete: ${result.count} inbound, ${result.routed} routed, ${result.rejected} rejected, Jose distributed ${result.joseDistributed || 0}, failures ${result.joseFailures || 0}.`);
+      }
+      refresh();
+    } finally {
+      setTransportBusy(false);
+    }
+  };
+
+  const runAutoPoll = async () => {
+    if (connectorId !== 'telegram') {
+      setNotice('Auto-poll is only available for Telegram.');
+      return;
+    }
+    setTransportBusy(true);
+    try {
+      const result = await runSingleTelegramPoll({ limit: 12 });
+      setAutoPollState(getTelegramAutoPollState());
+      if (result.ok) {
+        setNotice(`Auto-poll complete: ${result.count} inbound, ${result.routed} routed, ${result.rejected} rejected.`);
+      } else {
+        setNotice(`Auto-poll failed: ${result.reason || 'unknown error'}.`);
       }
       refresh();
     } finally {
@@ -457,6 +479,16 @@ export function ConnectorSetupPanel() {
             className="rounded-xl bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-100 hover:bg-emerald-500/30 disabled:opacity-50"
           >
             Telegram Live Proof
+          </button>
+        )}
+        {connectorId === 'telegram' && (
+          <button
+            onClick={runAutoPoll}
+            disabled={transportBusy}
+            title="Run a single auto-poll cycle with state tracking and error counting."
+            className="rounded-xl bg-cyan-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-50"
+          >
+            Auto-Poll {autoPollState.errors > 0 ? `(${autoPollState.errors} errors)` : ''}
           </button>
         )}
       </div>

@@ -21,6 +21,7 @@ import {
   listConnectorAuthProfiles,
   verifyConnectorEnvironment
 } from '../services/connectorRegistryService';
+import { checkConnectorHealth } from '../services/connectorHealthCheckService';
 
 // Icons per connector id
 const CONNECTOR_ICONS = {
@@ -147,6 +148,10 @@ async function testConnector(connectorId) {
     } catch {
       return { ok: false, message: 'Ollama unreachable' };
     }
+  }
+
+  if (connectorId === 'telegram' || connectorId === 'whatsapp') {
+    return checkConnectorHealth(connectorId);
   }
 
   if (connectorId === 'sd_webui') {

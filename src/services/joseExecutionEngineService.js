@@ -17,6 +17,7 @@ import {
 import { pushMemoryItem, listMemoryItems } from './memoryService';
 import { pushMiyaMemory } from './miyaMemoryService';
 import { listMiyaComfyWorkflowPresets } from './miyaComfyWorkflowPresetService';
+import { listMiyaWorkflowTemplates, getMiyaWorkflowTemplate } from './miyaWorkflowTemplates';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { runHectorLiveResearch, createResearchDraft } from './hectorResearchService';
 import { TRUST_STATES, timestampMs } from './trustModel';
@@ -558,6 +559,11 @@ async function executeMiyaAssignment(commandText, assignment, options = {}) {
           mediaType: preset.mediaType,
           status: preset.status,
           description: preset.description
+        })),
+        templates: listMiyaWorkflowTemplates().map((tpl) => ({
+          name: tpl.name,
+          description: tpl.description,
+          required_inputs: tpl.required_inputs
         }))
       },
       ...(generatedImages.length > 0 ? [{

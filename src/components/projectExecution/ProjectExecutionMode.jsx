@@ -8,7 +8,7 @@ import { HECTOR_PERMISSIONS } from '../../agents/hector/hectorPermissions';
 import { MARCUS_PERMISSIONS } from '../../agents/marcus/marcusPermissions';
 import { MARIA_PERMISSIONS } from '../../agents/maria/mariaPermissions';
 import { auditProjectPlan } from '../../services/audit/marcusAuditService';
-import { createResearchBrief } from '../../services/research/hectorResearchService';
+import { createResearchBrief } from '../../services/hectorResearchService';
 import { runProjectWorkshop } from '../../services/agentWorkshop/agentRunnerService';
 import { addMemoryItem } from '../../services/memory/ecosystemMemoryService';
 import { AgentDock } from '../agents/AgentDock';
