@@ -139,9 +139,38 @@ export function ChatView({
   const [pipelineCommandText, setPipelineCommandText] = useState('');
   const [liveProgress, setLiveProgress] = useState(null);
   const [streamingText, setStreamingText] = useState('');
+  const [streamingTokens, setStreamingTokens] = useState(0);
+  const [streamingStartTime, setStreamingStartTime] = useState(null);
+  const [streamingElapsed, setStreamingElapsed] = useState(0);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
+  const streamControllerRef = useRef(null);
+
+  const handleAbortStream = () => {
+    if (streamControllerRef.current) {
+      streamControllerRef.current.abort();
+      streamControllerRef.current = null;
+    }
+    setIsGenerating(false);
+    onGenerationChange(false);
+    onJoseExecutionState?.('aborted', 'Generation cancelled');
+    setStreamingText('');
+    setStreamingTokens(0);
+    setStreamingStartTime(null);
+    setStreamingElapsed(0);
+  };
+
+  useEffect(() => {
+    if (!streamingStartTime) {
+      setStreamingElapsed(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setStreamingElapsed(Math.round((Date.now() - streamingStartTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [streamingStartTime]);
 
   const handleFileAttach = (event) => {
     const file = event.target.files?.[0];
@@ -234,6 +263,9 @@ export function ChatView({
       try {
         const conversationHistory = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
         setStreamingText('');
+        setStreamingTokens(0);
+        setStreamingStartTime(Date.now());
+        streamControllerRef.current = new AbortController();
         const result = await runJoseCommandExecutionPipeline({
           commandText: cleanInput,
           source: 'shayan',
@@ -260,10 +292,14 @@ export function ChatView({
           },
           onToken: (tokenData) => {
             setStreamingText(tokenData.fullText || '');
+            setStreamingTokens(tokenData.fullText?.length || 0);
             onJoseExecutionState?.('streaming', `Generating code... ${tokenData.fullText?.length || 0} tokens`);
           }
         });
+        streamControllerRef.current = null;
         setStreamingText('');
+        setStreamingTokens(0);
+        setStreamingStartTime(null);
 
         setPipelineResult(result);
         setPipelineCommandText(cleanInput);
@@ -551,15 +587,52 @@ export function ChatView({
             </div>
             <div className="bg-zinc-900/30 border border-white/[0.05] p-3 rounded-2xl rounded-tl-sm flex-1">
               {streamingText ? (
-                <div className="text-zinc-300 text-xs whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">
-                  {streamingText}
-                  <span className="inline-block w-1.5 h-4 bg-indigo-400 ml-0.5 animate-pulse" />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[10px] text-zinc-500 px-1">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                        Streaming
+                      </span>
+                      <span className="text-zinc-600">|</span>
+                      <span>{streamingTokens.toLocaleString()} tokens</span>
+                      {streamingStartTime && (
+                        <>
+                          <span className="text-zinc-600">|</span>
+                          <span>{streamingElapsed}s elapsed</span>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleAbortStream}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors"
+                      title="Stop generation"
+                    >
+                      <Square className="w-2.5 h-2.5" />
+                      Stop
+                    </button>
+                  </div>
+                  <div className="text-zinc-300 text-xs whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
+                    {streamingText}
+                    <span className="inline-block w-1.5 h-4 bg-indigo-400 ml-0.5 animate-pulse" />
+                  </div>
                 </div>
               ) : (
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
-                  <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
-                  <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
+                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
+                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
+                  </div>
+                  <span className="text-[10px] text-zinc-500">Initializing... {streamingElapsed}s</span>
+                  <button
+                    onClick={handleAbortStream}
+                    className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors"
+                    title="Cancel"
+                  >
+                    <Square className="w-2.5 h-2.5" />
+                    Cancel
+                  </button>
                 </div>
               )}
             </div>
