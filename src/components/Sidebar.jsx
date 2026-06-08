@@ -1,47 +1,52 @@
 import React from 'react';
 import {
-  Activity,
+  Bot,
   ChevronDown,
-  Clapperboard,
-  ClipboardList,
-  Cloud,
-  Crown,
-  FileText,
   FolderOpen,
   Home,
-  Layers,
-  ListChecks,
   MessageSquare,
   Moon,
   Plus,
-  RadioTower,
   Settings,
   Sun,
+  Shield,
+  Sparkles,
   Terminal,
-  Trash2,
-  UsersRound,
-  Zap
+  Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { ConnectorStatusStrip } from './ConnectorStatusIndicators';
 
-const NAV_ITEMS = [
-  { id: 'mission', icon: Home, label: 'Mission' },
-  { id: 'chat', icon: MessageSquare, label: 'Chat Hub' },
-  { id: 'mission_room', icon: UsersRound, label: 'Mission Room' },
-  { id: 'orchestrator', icon: Crown, label: 'Jose' },
-  { id: 'hector', icon: Cloud, label: 'Hector' },
-  { id: 'miya', icon: Clapperboard, label: 'Miya Studio' },
-  { id: 'content', icon: FileText, label: 'Content' },
-  { id: 'project_execution', icon: Terminal, label: 'Project Exec' },
-  { id: 'automation', icon: Zap, label: 'Automation' },
-  { id: 'files', icon: FolderOpen, label: 'Knowledge' },
-  { id: 'ecosystem', icon: Layers, label: 'Ecosystem' },
-  { id: 'operator', icon: Activity, label: 'Operator' },
-  { id: 'connectors', icon: RadioTower, label: 'Connectors', showStatusDot: true },
-  { id: 'activity', icon: ClipboardList, label: 'Activity' },
-  { id: 'workflows', icon: ListChecks, label: 'Workflows' }
+const NAV_SECTIONS = [
+  {
+    label: null,
+    items: [
+      { id: 'chat', icon: MessageSquare, label: 'Chat' },
+      { id: 'mission', icon: Home, label: 'Dashboard' },
+    ]
+  },
+  {
+    label: 'Build',
+    items: [
+      { id: 'project_execution', icon: Terminal, label: 'Projects' },
+      { id: 'miya', icon: Sparkles, label: 'Creative' },
+    ]
+  },
+  {
+    label: 'Agents',
+    items: [
+      { id: 'orchestrator', icon: Shield, label: 'Orchestrator' },
+      { id: 'ecosystem', icon: Bot, label: 'All Agents' },
+    ]
+  },
+  {
+    label: 'System',
+    items: [
+      { id: 'connectors', icon: FolderOpen, label: 'Connectors', showStatusDot: true },
+      { id: 'activity', icon: FolderOpen, label: 'Activity' },
+    ]
+  }
 ];
 
 export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings }) {
@@ -57,79 +62,74 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
   }, [isLight]);
 
   return (
-    <aside className={`${isOpen ? 'w-72' : 'w-20'} flex flex-col transition-all duration-300 ease-in-out bg-zinc-950 shrink-0 border-r border-white/[0.03]`}>
-      <div className="h-16 flex items-center px-4 border-b border-white/[0.05] shrink-0">
-        <div className="flex items-center gap-3 w-full">
-          <img src={alphonsoIcon} alt="Alphonso" className="w-8 h-8 rounded-lg shrink-0 shadow-[0_0_16px_rgba(59,130,246,0.35)]" />
-          {isOpen && <span className="font-bold text-sm tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">ALPHONSO</span>}
+    <aside className={`${isOpen ? 'w-60' : 'w-16'} flex flex-col transition-all duration-300 ease-in-out bg-surface-1 shrink-0 border-r border-white/[0.06]`}>
+      {/* Logo */}
+      <div className="h-14 flex items-center px-3 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center gap-2.5 w-full">
+          <img src={alphonsoIcon} alt="Alphonso" className="w-7 h-7 rounded-lg shrink-0 shadow-glow-sm" />
+          {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-white">ALPHONSO</span>}
           <button
             onClick={onToggle}
-            className="ml-auto p-1 rounded-md text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors shrink-0"
-            title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            className="ml-auto p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-3 transition-colors shrink-0"
           >
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
           </button>
         </div>
       </div>
 
+      {/* Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="py-4 px-3 flex flex-col gap-1 shrink-0">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              aria-label={item.label}
-              aria-current={activeTab === item.id ? 'page' : undefined}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 ${
-                activeTab === item.id ? 'bg-zinc-800 text-white ring-1 ring-white/10' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
-              }`}
-            >
-              <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-indigo-400' : ''}`} />
-              {isOpen && (
-                <span className="font-medium flex-1 truncate">{item.label}</span>
+        <div className="py-3 px-2 flex flex-col gap-0.5 shrink-0">
+          {NAV_SECTIONS.map((section, sIdx) => (
+            <React.Fragment key={sIdx}>
+              {isOpen && section.label && (
+                <div className="px-3 pt-4 pb-1.5 section-label">{section.label}</div>
               )}
-              {isOpen && item.showStatusDot && (
-                <ConnectorStatusStrip zeroCostMode={zeroCostMode} />
-              )}
-            </button>
+              {section.items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 ${
+                    activeTab === item.id
+                      ? 'bg-accent/10 text-white border border-accent/20'
+                      : 'text-zinc-400 hover:bg-surface-3 hover:text-zinc-200 border border-transparent'
+                  }`}
+                >
+                  <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-accent-light' : ''}`} />
+                  {isOpen && <span className="font-medium">{item.label}</span>}
+                  {isOpen && item.showStatusDot && (
+                    <ConnectorStatusStrip zeroCostMode={zeroCostMode} />
+                  )}
+                </button>
+              ))}
+            </React.Fragment>
           ))}
         </div>
 
+        {/* Chat list */}
         {isOpen && (
-          <div className="flex flex-col flex-1 px-3 mt-4 overflow-hidden">
+          <div className="flex flex-col flex-1 px-2 mt-2 overflow-hidden">
             <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recent Chats</span>
-              <button
-                onClick={onCreateChat}
-                className="p-1 hover:bg-zinc-800 rounded-md transition-colors text-zinc-400 hover:text-white"
-                title="New chat"
-              >
-                <Plus className="w-4 h-4" />
+              <span className="section-label">Recent Chats</span>
+              <button onClick={onCreateChat} className="p-1 hover:bg-surface-3 rounded-lg transition-colors text-zinc-500 hover:text-white">
+                <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto space-y-0.5 pr-1">
               {conversations.map((chat) => (
                 <div
                   key={chat.id}
-                  onClick={() => {
-                    setActiveChatId(chat.id);
-                    setActiveTab('chat');
-                  }}
-                  className={`group flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${
+                  onClick={() => { setActiveChatId(chat.id); setActiveTab('chat'); }}
+                  className={`group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all ${
                     activeChatId === chat.id && activeTab === 'chat'
-                      ? 'bg-indigo-500/10 text-indigo-300 ring-1 ring-indigo-500/20'
-                      : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'
+                      ? 'bg-accent/10 text-accent-light'
+                      : 'text-zinc-500 hover:bg-surface-3 hover:text-zinc-300'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <MessageSquare className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{chat.title}</span>
-                  </div>
+                  <span className="truncate">{chat.title}</span>
                   <button
-                    onClick={(event) => onDeleteChat(chat.id, event)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-                    title="Delete chat"
+                    onClick={(e) => onDeleteChat(chat.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-danger/20 hover:text-danger rounded transition-all"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -140,11 +140,12 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         )}
       </div>
 
-      <div className="p-4 border-t border-white/[0.05] space-y-2">
+      {/* Footer */}
+      <div className="p-2 border-t border-white/[0.06] space-y-0.5">
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all ${
-            activeTab === 'settings' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50'
+          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm transition-all ${
+            activeTab === 'settings' ? 'bg-surface-3 text-white' : 'text-zinc-400 hover:bg-surface-3'
           }`}
         >
           <Settings className="w-4 h-4" />
@@ -152,11 +153,10 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </button>
         <button
           onClick={() => setIsLight((v) => !v)}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all text-zinc-400 hover:bg-zinc-800/50"
-          title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm text-zinc-400 hover:bg-surface-3 transition-all"
         >
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          {isOpen && <span>{isLight ? 'Dark Mode' : 'Light Mode'}</span>}
+          {isOpen && <span>{isLight ? 'Dark' : 'Light'}</span>}
         </button>
       </div>
     </aside>

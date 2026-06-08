@@ -1,58 +1,59 @@
 import React from 'react';
-import { ArrowUpCircle, Globe, WifiOff } from 'lucide-react';
-import { normalizeEndpoint } from '../lib/ollama';
-import { Badge, StatusDot } from './ui/Badge';
+import { ArrowUpCircle, WifiOff } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 
-export function TopBar({ settings, ollamaStatus, selectedModelMissing, operatorMode, activeTab, updateAvailable, updateVersion, isOnline = true, onOpenSettings }) {
-  const modelLabel = selectedModelMissing
-    ? 'Model not found'
-    : settings.selectedModel || 'No model selected';
+const PAGE_TITLES = {
+  chat: 'Chat',
+  mission: 'Dashboard',
+  orchestrator: 'Orchestrator',
+  hector: 'Research',
+  miya: 'Creative Studio',
+  ecosystem: 'Ecosystem',
+  project_execution: 'Projects',
+  connectors: 'Connectors',
+  activity: 'Activity',
+  settings: 'Settings',
+  operator: 'Operator',
+  files: 'Knowledge',
+  automation: 'Automation',
+  content: 'Content',
+  mission_room: 'Mission Room',
+  workflows: 'Workflows',
+};
 
+export function TopBar({ settings, ollamaStatus, operatorMode, activeTab, updateAvailable, updateVersion, isOnline = true, onOpenSettings }) {
   return (
-    <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.05] bg-zinc-950/80 backdrop-blur-md z-20 sticky top-0">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 rounded-full border border-white/5 min-w-0">
-          <Globe className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-          <span className="text-[11px] font-mono text-zinc-400 truncate">{normalizeEndpoint(settings.endpoint)}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 rounded-full border border-white/5">
-          <StatusDot state={ollamaStatus.state} />
-          <span className="text-[11px] font-semibold text-zinc-300">{ollamaStatus.label}</span>
-        </div>
+    <header className="h-12 flex items-center justify-between px-5 border-b border-white/[0.06] bg-surface-0/80 backdrop-blur-sm z-20 sticky top-0">
+      <div className="flex items-center gap-3">
+        <h1 className="font-heading font-bold text-base text-white">
+          {PAGE_TITLES[activeTab] || 'Alphonso'}
+        </h1>
+
         {!isOnline && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 border border-zinc-600/40 rounded-full" title="No internet — Runway, Brave Search, and cloud features unavailable">
-            <WifiOff className="w-3 h-3 text-zinc-400" />
-            <span className="text-[11px] font-bold text-zinc-400">Offline</span>
+          <div className="badge-neutral">
+            <WifiOff className="w-3 h-3" />
+            Offline
           </div>
         )}
+
         {updateAvailable && (
-          <button
-            onClick={onOpenSettings}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-500/30 rounded-full text-emerald-300 transition-colors"
-            title={`Update ${updateVersion} available — open Settings to download`}
-          >
-            <ArrowUpCircle className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-bold">{updateVersion} ready</span>
+          <button onClick={onOpenSettings} className="badge-success cursor-pointer">
+            <ArrowUpCircle className="w-3 h-3" />
+            {updateVersion}
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
-        {activeTab === 'orchestrator' && <Badge color="amber">Jose</Badge>}
-        {activeTab === 'hector' && <Badge color="green">Hector</Badge>}
-        {activeTab === 'miya' && <Badge color="blue">Miya</Badge>}
-        {activeTab === 'content' && <Badge color="cyan">Content</Badge>}
-        {activeTab === 'mission_room' && <Badge color="cyan">Mission Room</Badge>}
-        {activeTab === 'ecosystem' && <Badge color="indigo">Ecosystem</Badge>}
-        {activeTab === 'project_execution' && <Badge color="indigo">Project Execution</Badge>}
-        {operatorMode && <Badge color="blue">Operator</Badge>}
-        {settings.approvalMode && <Badge color="amber">Approval</Badge>}
-        {settings.safeMode && <Badge color="green">Safe</Badge>}
-        {settings.localOnlyMode && <Badge color="indigo">Local Only</Badge>}
-        {settings.zeroCostMode && <Badge color="green">Zero Cost</Badge>}
-        <Badge color={selectedModelMissing ? 'amber' : 'indigo'}>{modelLabel}</Badge>
-        <img src={alphonsoIcon} alt="Alphonso" className="w-8 h-8 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.3)]" />
+      <div className="flex items-center gap-2">
+        {operatorMode && <span className="badge-neutral">Operator</span>}
+        {settings.zeroCostMode && <span className="badge-success">Free</span>}
+
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-2 border border-white/[0.06]">
+          <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-success' : 'bg-danger'}`} />
+          <span className="text-2xs text-zinc-400">{settings.selectedModel || 'No model'}</span>
+        </div>
+
+        <img src={alphonsoIcon} alt="" className="w-6 h-6 rounded-full opacity-80" />
       </div>
     </header>
   );

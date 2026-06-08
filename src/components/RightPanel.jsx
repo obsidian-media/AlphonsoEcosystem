@@ -1,274 +1,148 @@
-import React, { Suspense, useMemo, useState } from 'react';
-import { Activity, ChevronLeft, ChevronRight, Database, Mic, Monitor, RefreshCw, Terminal } from 'lucide-react';
-import { formatModelSize, OLLAMA_TROUBLESHOOTING_COMMAND } from '../lib/ollama';
-import { MicrophoneStatus } from './MicrophoneStatus';
+import React, { useMemo, useState } from 'react';
+import { Activity, ChevronLeft, ChevronRight, Cpu, Wifi, WifiOff } from 'lucide-react';
+import { formatModelSize } from '../lib/ollama';
+
+function StatusDot({ state }) {
+  const colors = {
+    connected: 'bg-success',
+    connecting: 'bg-accent',
+    warning: 'bg-warning',
+    disconnected: 'bg-danger',
+    idle: 'bg-zinc-500',
+    model_missing: 'bg-warning',
+    no_models: 'bg-warning',
+  };
+  return <span className={`h-2 w-2 rounded-full ${colors[state] || colors.idle}`} />;
+}
+
+function DiagnosticRow({ label, value, state }) {
+  return (
+    <div className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-surface-3/50 transition-colors">
+      <StatusDot state={state} />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-zinc-400">{label}</p>
+        <p className="text-xs font-medium text-zinc-200 truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
 
 export function RightPanel({
   settings,
   ollamaStatus,
   installedModels,
   desktopBridge,
-  voiceStatus,
   selectedModelMissing,
-  lastCheckedAt,
   onCheckOllama,
-  onCopyTroubleshootingCommand,
-  copyState,
-  onMinimizeToCoach,
   operatorMode,
-  approvalRequiredNotice,
-  miyaCompanionState,
-  joseCompanionState,
-  hectorCompanionState,
-  screenObserverState,
   updateCheckState,
-  onCheckUpdates
 }) {
-  const compact = (text, max = 42) => {
-    const value = String(text || '');
-    if (value.length <= max) return value;
-    return `${value.slice(0, max - 1)}...`;
-  };
-
-  const diagnostics = useMemo(() => [
-    { label: 'Ollama Runtime', value: ollamaStatus.label, state: ollamaStatus.state },
-    { label: 'Selected Model', value: selectedModelMissing ? 'Model not found' : settings.selectedModel || 'None', state: selectedModelMissing ? 'model_missing' : settings.selectedModel ? 'connected' : 'no_models' },
-    { label: 'Project Workspace', value: settings.workspaceRoot ? compact(settings.workspaceRoot, 34) : 'Workspace not configured', state: settings.workspaceRoot ? 'connected' : 'warning' },
-    { label: 'Desktop Bridge', value: desktopBridge.label, state: desktopBridge.state === 'connected' ? 'connected' : 'disconnected' },
-    { label: 'Microphone', value: voiceStatus.privacyLabel, state: voiceStatus.state },
-    { label: 'Miya Creative', value: compact(miyaCompanionState?.message || 'Not active', 36), state: miyaCompanionState?.state === 'warning' ? 'warning' : 'connected' },
-    { label: 'Jose Orchestrator', value: compact(joseCompanionState?.message || 'Not active', 36), state: joseCompanionState?.state === 'warning' ? 'warning' : 'connected' },
-    {
-      label: 'Hector Research',
-      value: compact(
-        hectorCompanionState?.currentSourceUrl
-          ? `Scanning ${hectorCompanionState.currentSourceUrl}`
-          : (hectorCompanionState?.message || 'Not active'),
-        36
-      ),
-      state: hectorCompanionState?.state === 'warning' ? 'warning' : hectorCompanionState?.state === 'researching' ? 'connecting' : 'connected'
-    },
-    {
-      label: 'Screen Observer',
-      value: screenObserverState?.enabled
-        ? `On (${screenObserverState.status})`
-        : `Off (${screenObserverState?.status || 'idle'})`,
-      state: screenObserverState?.enabled ? 'connected' : screenObserverState?.status === 'permission_denied' ? 'warning' : 'disconnected'
-    },
-    {
-      label: 'Updater',
-      value: updateCheckState?.available
-        ? `Update ${updateCheckState.latestVersion} available`
-        : updateCheckState?.configured
-          ? 'No update available'
-          : 'Not configured',
-      state: updateCheckState?.available ? 'warning' : updateCheckState?.configured ? 'connected' : 'idle'
-    }
-  ], [desktopBridge, voiceStatus, ollamaStatus, selectedModelMissing, settings.selectedModel, settings.workspaceRoot, miyaCompanionState, joseCompanionState, hectorCompanionState, screenObserverState, updateCheckState]);
-
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('alphonso_right_panel_collapsed_v1') === 'true');
   const setPanelCollapsed = (value) => {
     setCollapsed(value);
     localStorage.setItem('alphonso_right_panel_collapsed_v1', String(value));
   };
 
-  const coreSignals = diagnostics.slice(0, 4);
-  const supportSignals = diagnostics.slice(4);
-
-  const Badge = ({ children, color = 'zinc' }) => {
-    const colors = {
-      zinc: 'bg-zinc-800/60 text-zinc-300 border-zinc-600/30',
-      green: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-      blue: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-      amber: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-      red: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30',
-      indigo: 'bg-zinc-800/60 text-zinc-200 border-zinc-600/30'
-    };
-    return <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>{children}</span>;
+  const compact = (text, max = 36) => {
+    const v = String(text || '');
+    return v.length <= max ? v : `${v.slice(0, max - 1)}...`;
   };
+
+  const diagnostics = useMemo(() => [
+    {
+      label: 'Ollama',
+      value: ollamaStatus.label,
+      state: ollamaStatus.state
+    },
+    {
+      label: 'Model',
+      value: selectedModelMissing ? 'Not found' : compact(settings.selectedModel || 'None'),
+      state: selectedModelMissing ? 'model_missing' : settings.selectedModel ? 'connected' : 'no_models'
+    },
+    {
+      label: 'Workspace',
+      value: settings.workspaceRoot ? compact(settings.workspaceRoot, 30) : 'Not set',
+      state: settings.workspaceRoot ? 'connected' : 'idle'
+    },
+    {
+      label: 'Bridge',
+      value: desktopBridge.label,
+      state: desktopBridge.state === 'connected' ? 'connected' : 'disconnected'
+    },
+  ], [ollamaStatus, selectedModelMissing, settings.selectedModel, settings.workspaceRoot, desktopBridge]);
 
   if (collapsed) {
     return (
-      <aside className="w-11 bg-zinc-950 border-l border-white/[0.05] flex flex-col shrink-0 items-center py-3 gap-3">
+      <aside className="w-10 bg-surface-1 border-l border-white/[0.06] flex flex-col shrink-0 items-center py-3 gap-2">
         <button
-          type="button"
           onClick={() => setPanelCollapsed(false)}
-          className="rounded-lg border border-white/10 bg-zinc-900 p-2 text-zinc-400 hover:text-indigo-300"
+          className="rounded-lg p-1.5 text-zinc-500 hover:text-accent-light hover:bg-surface-3 transition-colors"
           title="Expand diagnostics"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <Activity className="h-4 w-4 text-indigo-400" />
-        {operatorMode && <span className="h-2 w-2 rounded-full bg-blue-400" title="Operator mode" />}
-        {approvalRequiredNotice && <span className="h-2 w-2 rounded-full bg-red-400" title="Approval required" />}
+        <div className="mt-2 space-y-2">
+          {diagnostics.map((d) => (
+            <div key={d.label} className="flex justify-center" title={`${d.label}: ${d.value}`}>
+              <StatusDot state={d.state} />
+            </div>
+          ))}
+        </div>
       </aside>
     );
   }
 
   return (
-    <aside className="w-56 bg-zinc-950 border-l border-white/[0.05] flex flex-col shrink-0">
-      <div className="h-12 flex items-center justify-between px-3 border-b border-white/[0.05]">
-        <h2 className="font-bold text-[10px] uppercase tracking-[0.18em] text-zinc-400 flex items-center gap-2">
-          <Activity className="w-3.5 h-3.5 text-indigo-400" />
-          System Diagnostics
-        </h2>
-        <button type="button" onClick={() => setPanelCollapsed(true)} className="rounded-md p-1 text-zinc-600 hover:bg-zinc-900 hover:text-zinc-300" title="Collapse diagnostics">
+    <aside className="w-52 bg-surface-1 border-l border-white/[0.06] flex flex-col shrink-0 overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06]">
+        <span className="section-label">System</span>
+        <button
+          onClick={() => setPanelCollapsed(true)}
+          className="p-1 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-3 transition-colors"
+          title="Collapse diagnostics"
+        >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        <div className="flex flex-wrap gap-1.5">
-          {operatorMode && <Badge color="blue">Operator</Badge>}
-          {settings.localOnlyMode && <Badge color="indigo">Local Only</Badge>}
-          {settings.zeroCostMode && <Badge color="green">Zero Cost Mode</Badge>}
-          {settings.approvalMode && <Badge color="amber">Approval Mode</Badge>}
-          {settings.safeMode && <Badge color="green">Safe Mode</Badge>}
-          {settings.privacyShieldActive && <Badge color="green">Privacy Shield</Badge>}
-          {settings.environmentTheme === 'orchestrator_gold' && <Badge color="amber">Jose Theme</Badge>}
-          {approvalRequiredNotice && <Badge color="red">Approval Required</Badge>}
-        </div>
-        <div className="space-y-2.5">
-          <StatusGroup title="Core Signals" items={coreSignals} />
-          <StatusGroup title="Support Systems" items={supportSignals} />
-        </div>
-        <div className="p-2.5 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            <Database className="w-3.5 h-3.5" /> Installed Models
-          </div>
-          {installedModels.length === 0 ? (
-            <p className="text-[10px] text-zinc-500 leading-relaxed">No models detected yet. Use Check Ollama after starting Ollama.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {installedModels.map((model) => (
-                <div key={model.name} className="flex items-center justify-between gap-2 text-[10px]">
-                  <span className="truncate text-zinc-300">{model.name}</span>
-                  <span className="font-mono text-zinc-600">{formatModelSize(model.size)}</span>
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        {diagnostics.map((d) => (
+          <DiagnosticRow key={d.label} {...d} />
+        ))}
+
+        {installedModels.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-white/[0.04]">
+            <p className="section-label px-3 mb-2">Models ({installedModels.length})</p>
+            <div className="space-y-0.5 max-h-32 overflow-y-auto">
+              {installedModels.map((m) => (
+                <div key={m.name} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-surface-3/50">
+                  <Cpu className="w-3 h-3 text-zinc-500 shrink-0" />
+                  <span className="text-xs text-zinc-300 truncate flex-1">{m.name}</span>
+                  <span className="text-2xs text-zinc-500">{formatModelSize(m.size)}</span>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-        <div className="p-2.5 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            <Mic className="w-3.5 h-3.5" /> Voice Feature
           </div>
-          <p className="text-[10px] text-zinc-400 leading-relaxed">{voiceStatus.message}</p>
-          <Suspense fallback={null}>
-            <MicrophoneStatus voiceStatus={voiceStatus} compact />
-          </Suspense>
-          <Badge color={colorForState(voiceStatus.state)}>{voiceStatus.state}</Badge>
-          <p className="text-[10px] text-zinc-600 leading-relaxed">{voiceStatus.transcription.message}</p>
-        </div>
-        <div className="p-2.5 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            <Terminal className="w-3.5 h-3.5" /> Ollama Startup
+        )}
+
+        {operatorMode && (
+          <div className="mt-3 pt-3 border-t border-white/[0.04] px-3">
+            <div className="badge-success text-2xs">
+              <Activity className="w-3 h-3" />
+              Operator Active
+            </div>
           </div>
-          <div className="rounded-xl bg-black/30 border border-white/5 px-2.5 py-2 font-mono text-[10px] text-zinc-400 whitespace-pre-wrap">
-            {OLLAMA_TROUBLESHOOTING_COMMAND}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={onCheckOllama} className="flex-1 rounded-lg bg-zinc-800 px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
-              Check Installed Models
-            </button>
-            <button onClick={onCopyTroubleshootingCommand} className="flex-1 rounded-lg bg-zinc-800 px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
-              {copyState === 'copied' ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-          {lastCheckedAt && <p className="text-[10px] text-zinc-600">Last checked: {lastCheckedAt.toLocaleTimeString()}</p>}
-        </div>
-        <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
-            <Monitor className="w-3.5 h-3.5" /> Desktop Bridge
-          </div>
-          <p className="mt-1.5 text-[10px] text-zinc-400 leading-relaxed">{desktopBridge.message}</p>
-          <button onClick={onMinimizeToCoach} className="mt-2.5 w-full rounded-lg bg-zinc-800 px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
-            Minimize to Coach Mode
-          </button>
-        </div>
-        <div className="p-2.5 bg-zinc-900/30 border border-white/5 rounded-xl space-y-2">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            <RefreshCw className="w-3.5 h-3.5" /> Auto Updater
-          </div>
-          <p className="text-[10px] text-zinc-400 leading-relaxed">
-            {updateCheckState?.available
-              ? `New version ${updateCheckState.latestVersion} is available.`
-              : updateCheckState?.error
-                ? updateCheckState.error
-                : updateCheckState?.configured
-                  ? 'No update available from configured endpoint.'
-                  : 'Updater endpoint and public key are not configured yet.'}
-          </p>
-          <button onClick={onCheckUpdates} className="w-full rounded-lg bg-zinc-800 px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
-            {updateCheckState?.checking ? 'Checking...' : 'Check for Updates'}
-          </button>
-        </div>
+        )}
+      </div>
+
+      <div className="p-3 border-t border-white/[0.06]">
+        <button
+          onClick={onCheckOllama}
+          className="w-full btn-secondary text-xs py-1.5"
+        >
+          Refresh Status
+        </button>
       </div>
     </aside>
   );
-}
-
-function StatusDot({ state }) {
-  const color = {
-    connected: 'bg-emerald-400',
-    listening: 'bg-emerald-400',
-    connecting: 'bg-blue-400',
-    requesting: 'bg-blue-400',
-    requesting_permission: 'bg-blue-400',
-    permission_granted: 'bg-emerald-400',
-    model_missing: 'bg-amber-400',
-    no_models: 'bg-amber-400',
-    no_microphone: 'bg-amber-400',
-    unsupported: 'bg-amber-400',
-    timeout: 'bg-amber-400',
-    warning: 'bg-amber-400',
-    cors: 'bg-red-400',
-    not_running: 'bg-red-400',
-    disconnected: 'bg-red-400',
-    permission_denied: 'bg-red-400',
-    error: 'bg-red-400',
-    observing: 'bg-emerald-400'
-  }[state] || 'bg-zinc-500';
-  return <span className={`h-2 w-2 rounded-full ${color}`} />;
-}
-
-function StatusGroup({ title, items }) {
-  return (
-    <div className="p-2.5 rounded-xl border border-white/5 bg-zinc-900/35 space-y-2">
-      <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{title}</div>
-      <div className="grid grid-cols-1 gap-1.5">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-2 py-1.5">
-            <div className="space-y-0.5 min-w-0">
-              <div className="text-[9px] uppercase tracking-widest text-zinc-600">{item.label}</div>
-              <div className="text-[10px] font-semibold text-zinc-200 truncate">{item.value}</div>
-            </div>
-            <StatusDot state={item.state} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function colorForState(state) {
-  return {
-    connected: 'green',
-    listening: 'green',
-    connecting: 'blue',
-    requesting: 'blue',
-    requesting_permission: 'blue',
-    permission_granted: 'green',
-    model_missing: 'amber',
-    no_models: 'amber',
-    no_microphone: 'amber',
-    unsupported: 'amber',
-    timeout: 'amber',
-    warning: 'amber',
-    cors: 'red',
-    not_running: 'red',
-    disconnected: 'red',
-    permission_denied: 'red',
-    error: 'red',
-    observing: 'green'
-  }[state] || 'zinc';
 }

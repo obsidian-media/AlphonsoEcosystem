@@ -1,4 +1,5 @@
 import React from 'react';
+
 export const statusColors = {
   connected: 'green',
   connecting: 'blue',
@@ -23,49 +24,49 @@ export const statusColors = {
 };
 
 export function Badge({ children, color = 'zinc' }) {
-  const colors = {
-    zinc: 'bg-zinc-800/60 text-zinc-400 border-zinc-600/30',
-    green: 'bg-emerald-900/40 text-emerald-300 border-emerald-600/30',
-    blue: 'bg-blue-900/40 text-blue-300 border-blue-600/30',
-    amber: 'bg-amber-900/40 text-amber-300 border-amber-600/30',
-    red: 'bg-red-900/40 text-red-300 border-red-600/30',
-    indigo: 'bg-indigo-900/40 text-indigo-300 border-indigo-600/30',
-    cyan: 'bg-cyan-900/40 text-cyan-300 border-cyan-600/30'
+  const colorMap = {
+    zinc: 'badge-neutral',
+    green: 'badge-success',
+    blue: 'bg-accent/10 text-accent-light border-accent/20',
+    amber: 'badge-warning',
+    red: 'badge-danger',
+    indigo: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20',
+    cyan: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
   };
   return (
-    <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>
+    <span className={`badge ${colorMap[color] || colorMap.zinc}`}>
       {children}
     </span>
   );
 }
 
 export function StatusDot({ state }) {
-  const color = {
-    connected: 'bg-emerald-400',
-    listening: 'bg-emerald-400',
-    connecting: 'bg-blue-400',
-    requesting: 'bg-blue-400',
-    requesting_permission: 'bg-blue-400',
-    permission_granted: 'bg-emerald-400',
-    model_missing: 'bg-amber-400',
-    no_models: 'bg-amber-400',
-    no_microphone: 'bg-amber-400',
-    unsupported: 'bg-amber-400',
-    timeout: 'bg-amber-400',
-    warning: 'bg-amber-400',
-    cors: 'bg-red-400',
-    not_running: 'bg-red-400',
-    disconnected: 'bg-red-400',
-    permission_denied: 'bg-red-400',
-    error: 'bg-red-400',
-    observing: 'bg-emerald-400'
-  }[state] || 'bg-zinc-500';
-  return <span className={`h-2 w-2 rounded-full ${color}`} />;
+  const colors = {
+    connected: 'bg-success',
+    listening: 'bg-success',
+    connecting: 'bg-accent',
+    requesting: 'bg-accent',
+    requesting_permission: 'bg-accent',
+    permission_granted: 'bg-success',
+    model_missing: 'bg-warning',
+    no_models: 'bg-warning',
+    no_microphone: 'bg-warning',
+    unsupported: 'bg-warning',
+    timeout: 'bg-warning',
+    warning: 'bg-warning',
+    cors: 'bg-danger',
+    not_running: 'bg-danger',
+    disconnected: 'bg-danger',
+    permission_denied: 'bg-danger',
+    error: 'bg-danger',
+    observing: 'bg-success'
+  };
+  return <span className={`h-2 w-2 rounded-full ${colors[state] || 'bg-zinc-500'}`} />;
 }
 
 export function SectionHeader({ icon: Icon, label }) {
   return (
-    <div className="flex items-center gap-2 text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em] border-b border-white/5 pb-2">
+    <div className="flex items-center gap-2 text-zinc-400 font-bold section-label border-b border-white/[0.04] pb-2">
       <Icon className="w-3.5 h-3.5" /> {label}
     </div>
   );
