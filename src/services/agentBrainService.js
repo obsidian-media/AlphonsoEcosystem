@@ -9,29 +9,33 @@ import { pushMemoryItem } from './memoryService';
 const PATTERN_MEMORY_KEY = 'alphonso_brain_patterns_v1';
 const MAX_PATTERNS = 200;
 const MAX_ITERATIONS = 3;
+const MAX_FILES_PER_STEP = 3;
 
 // ─── Brain 1: Context Reader ────────────────────────────────────────────────
 
 async function readProjectContext(projectDir) {
-  if (!projectDir) return { files: [], structure: '', packageJson: null };
+  if (!projectDir) return { files: [], structure: '', packageJson: null, readme: null, existingCode: {} };
 
   try {
     const scanResult = await invoke('scan_workspace_readiness', {
       root: projectDir,
-      maxFiles: 50,
-      maxFindings: 20
+      maxFiles: 80,
+      maxFindings: 40
     });
 
     const files = (scanResult?.findings || [])
       .map((f) => f.path || f.file)
       .filter(Boolean)
-      .slice(0, 30);
+      .slice(0, 60);
 
     const structure = files
       .map((f) => f.replace(projectDir, '').replace(/^[/\\]+/, ''))
       .join('\n');
 
     let packageJson = null;
+    let readme = null;
+    const existingCode = {};
+
     try {
       const pkgResult = await invoke('execute_command_verified', {
         program: 'node',
@@ -41,13 +45,118 @@ async function readProjectContext(projectDir) {
       if (pkgResult?.success && pkgResult?.stdout) {
         packageJson = JSON.parse(pkgResult.stdout);
       }
-    } catch {
-      // package.json doesn't exist or can't be read
+    } catch { /* no package.json */ }
+
+    try {
+      const readmeResult = await invoke('execute_command_verified', {
+        program: 'node',
+        args: ['-e', 'const fs=require("fs");const p=["README.md","readme.md","Readme.md"].find(f=>fs.existsSync(f));console.log(p?fs.readFileSync(p,"utf8"):"")'],
+        cwd: projectDir
+      });
+      if (readmeResult?.success && readmeResult?.stdout?.trim()) {
+        readme = readmeResult.stdout.trim().slice(0, 2000);
+      }
+    } catch { /* no readme */ }
+
+    const sourceExtensions = /\.(js|jsx|ts|tsx|py|rs|go)$/;
+    const importantFiles = files
+      .filter((f) => sourceExtensions.test(f) && !f.includes('node_modules') && !f.includes('.git'))
+      .slice(0, 5);
+
+    for (const filePath of importantFiles) {
+      try {
+        const relativePath = filePath.replace(projectDir, '').replace(/^[/\\]+/, '');
+        const readResult = await invoke('execute_command_verified', {
+          program: 'node',
+          args: ['-e', `const fs=require("fs");const c=fs.readFileSync("${relativePath.replace(/\\/g, '/')}","utf8");console.log(c.split("\\n").slice(0,500).join("\\n"))`],
+          cwd: projectDir
+        });
+        if (readResult?.success && readResult?.stdout) {
+          existingCode[relativePath] = readResult.stdout.slice(0, 3000);
+        }
+      } catch { /* skip unreadable files */ }
     }
 
-    return { files, structure, packageJson };
+    return { files, structure, packageJson, readme, existingCode };
   } catch {
-    return { files: [], structure: '', packageJson: null };
+    return { files: [], structure: '', packageJson: null, readme: null, existingCode: {} };
+  }
+}
+
+// ─── Brain 1b: Clarifying Questions ─────────────────────────────────────────
+
+function needsClarification(commandText) {
+  const lower = String(commandText).toLowerCase();
+  const vague = /\b(app|website|project|something|stuff|thing|page)\b/.test(lower)
+    && !/\b(full.?stack|dashboard|api|landing|blog|portfolio|ecommerce|chat|todo|weather|calculator|portfolio|resume|chat|messenger|weather|calculator|blog|article|ecommerce|shop|store|cart|product)\b/.test(lower);
+  const tooShort = commandText.trim().split(/\s+/).length < 4;
+  const noAction = !/\b(build|create|make|generate|write|scaffold|implement|develop|add|fix|update|refactor)\b/.test(lower);
+  return (vague || tooShort || noAction) && commandText.trim().length < 30;
+}
+
+async function generateClarifyingQuestions(commandText, endpoint) {
+  const prompt = [
+    'You are Alphonso, a coding assistant. The user gave a vague request.',
+    'Generate 2-4 short clarifying questions to understand what they want.',
+    'Questions should cover: what kind of app, what features, what tech stack.',
+    '',
+    'USER REQUEST: ' + commandText,
+    '',
+    'Return ONLY a JSON array of strings. Example:',
+    '["What kind of app do you want?", "What features should it have?"]',
+    '',
+    'Return ONLY the JSON array.'
+  ].join('\n');
+
+  try {
+    const response = await generateOllamaResponse({ endpoint, prompt });
+    const parsed = parseJsonResponse(response?.response);
+    if (Array.isArray(parsed)) return parsed.slice(0, 4);
+    if (parsed?.questions && Array.isArray(parsed.questions)) return parsed.questions.slice(0, 4);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Brain 2: Plan Preview ──────────────────────────────────────────────────
+
+async function generatePlanPreview(commandText, projectContext, endpoint) {
+  const contextSnippet = projectContext.structure
+    ? `\nEXISTING PROJECT STRUCTURE:\n${projectContext.structure.slice(0, 1000)}`
+    : '';
+
+  const pkgSnippet = projectContext.packageJson
+    ? `\nEXISTING DEPENDENCIES: ${Object.keys(projectContext.packageJson.dependencies || {}).join(', ') || 'none'}`
+    : '';
+
+  const existingCodeSnippet = Object.keys(projectContext.existingCode || {}).length > 0
+    ? `\nEXISTING SOURCE FILES:\n${Object.entries(projectContext.existingCode).map(([p, c]) => `--- ${p} ---\n${c.slice(0, 500)}`).join('\n\n')}`
+    : '';
+
+  const prompt = [
+    'You are Alphonso. Generate a plan for this coding task.',
+    'Return a JSON object with: { "plan": "1-2 sentence description", "files": ["list of files to create"], "reasoning": "why this approach" }',
+    '',
+    'TASK: ' + commandText,
+    contextSnippet,
+    pkgSnippet,
+    existingCodeSnippet,
+    '',
+    'RULES:',
+    '- List specific file paths (not vague)',
+    '- Max 10 files',
+    '- Keep plan concise',
+    '- If existing code is shown, build on it (don\'t recreate from scratch)',
+    '',
+    'Return ONLY the JSON object.'
+  ].join('\n');
+
+  try {
+    const response = await generateOllamaResponse({ endpoint, prompt });
+    return parseJsonResponse(response?.response);
+  } catch {
+    return null;
   }
 }
 
@@ -69,10 +178,20 @@ function writePatterns(patterns) {
   } catch { /* localStorage unavailable */ }
 }
 
+function extractKeywords(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 3)
+    .slice(0, 12);
+}
+
 function storePattern(task, result, success) {
   const patterns = readPatterns();
   patterns.push({
     task: String(task).slice(0, 200),
+    keywords: extractKeywords(task),
     success,
     filesCount: result?.filesCount || 0,
     errorSnippet: result?.error ? String(result.error).slice(0, 200) : null,
@@ -83,18 +202,21 @@ function storePattern(task, result, success) {
 
 function getRelevantPatterns(taskText) {
   const patterns = readPatterns();
-  const lower = String(taskText).toLowerCase();
+  if (patterns.length === 0) return [];
+  const keywords = extractKeywords(taskText);
   return patterns
-    .filter((p) => {
-      const pLower = String(p.task).toLowerCase();
-      return lower.split(/\s+/).some((word) => word.length > 3 && pLower.includes(word));
+    .map((p) => {
+      const overlap = (p.keywords || []).filter((k) => keywords.includes(k)).length;
+      return { ...p, relevance: overlap };
     })
-    .slice(-5);
+    .filter((p) => p.relevance > 0)
+    .sort((a, b) => b.relevance - a.relevance || b.timestampMs - a.timestampMs)
+    .slice(0, 5);
 }
 
-// ─── Brain 2: Thinking Loop ─────────────────────────────────────────────────
+// ─── Brain 3: Thinking Loop ─────────────────────────────────────────────────
 
-function buildThinkingPrompt(taskText, context, projectContext, patterns) {
+function buildThinkingPrompt(taskText, planPreview, projectContext, patterns) {
   const contextLines = [];
   if (projectContext.structure) {
     contextLines.push(`Existing project files:\n${projectContext.structure}`);
@@ -105,6 +227,12 @@ function buildThinkingPrompt(taskText, context, projectContext, patterns) {
     if (deps.length) contextLines.push(`Installed dependencies: ${deps.join(', ')}`);
     if (devDeps.length) contextLines.push(`Dev dependencies: ${devDeps.join(', ')}`);
   }
+  if (Object.keys(projectContext.existingCode || {}).length > 0) {
+    const codePreview = Object.entries(projectContext.existingCode)
+      .map(([path, content]) => `--- ${path} ---\n${content.slice(0, 800)}`)
+      .join('\n\n');
+    contextLines.push(`Existing source code:\n${codePreview}`);
+  }
   if (patterns.length > 0) {
     const lessons = patterns.map((p) =>
       p.success
@@ -112,6 +240,9 @@ function buildThinkingPrompt(taskText, context, projectContext, patterns) {
         : `- Similar task "${p.task.slice(0, 60)}" FAILED: ${p.errorSnippet || 'unknown error'}`
     ).join('\n');
     contextLines.push(`Lessons from past tasks:\n${lessons}`);
+  }
+  if (planPreview?.plan) {
+    contextLines.push(`Planned approach: ${planPreview.plan}`);
   }
 
   return [
@@ -204,6 +335,48 @@ function decomposeTask(taskText) {
       'Create CSS styles for the page',
       'Create the JavaScript for interactivity'
     );
+  } else if (/\b(todo|task|list|checklist)\b/.test(lower)) {
+    steps.push(
+      'Create the data model and storage for tasks',
+      'Create the main UI component with add/edit/delete',
+      'Create the styles and layout'
+    );
+  } else if (/\b(portfolio|resume|cv)\b/.test(lower)) {
+    steps.push(
+      'Create the hero/header section with name and intro',
+      'Create the projects/experience showcase section',
+      'Create the contact section and styles'
+    );
+  } else if (/\b(chat|messenger|message)\b/.test(lower)) {
+    steps.push(
+      'Create the message data model and state management',
+      'Create the chat UI with message list and input',
+      'Create the message sending/receiving logic'
+    );
+  } else if (/\b(weather|forecast)\b/.test(lower)) {
+    steps.push(
+      'Create the weather API integration',
+      'Create the UI to display weather data',
+      'Create the search/input for location'
+    );
+  } else if (/\b(calculator|calc)\b/.test(lower)) {
+    steps.push(
+      'Create the calculation engine/logic',
+      'Create the calculator UI with buttons and display',
+      'Create history/memory features'
+    );
+  } else if (/\b(blog|article|cms)\b/.test(lower)) {
+    steps.push(
+      'Create the post/article data model',
+      'Create the list view and detail view',
+      'Create the editor/creation form'
+    );
+  } else if (/\b(ecommerce|shop|store|cart|product)\b/.test(lower)) {
+    steps.push(
+      'Create the product data model and listing',
+      'Create the shopping cart with add/remove',
+      'Create the checkout flow'
+    );
   } else {
     steps.push(
       'Create the main entry point file',
@@ -215,27 +388,74 @@ function decomposeTask(taskText) {
   return steps;
 }
 
+// ─── Brain 7: Git Operations ────────────────────────────────────────────────
+
+async function gitAutoCommit(projectDir, message) {
+  if (!projectDir) return null;
+  try {
+    await verifyCommandExecution('git', ['add', '-A'], projectDir);
+    const result = await verifyCommandExecution('git', ['commit', '-m', message], projectDir);
+    const payload = result?.payload || {};
+    return { success: payload.success || payload.exitCode === 0, output: payload.stdout || payload.stderr || '' };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Main Brain Execution ───────────────────────────────────────────────────
 
 export async function executeWithBrain(commandText, options = {}) {
-  const { endpoint, projectDirectory, onProgress } = options;
+  const { endpoint, projectDirectory, onProgress, previewOnly } = options;
   const results = [];
   const filesWritten = [];
   const artifacts = [];
   let lastError = null;
 
-  // Step 1: Read project context
-  onProgress?.({ stage: 'reading_context', agent: 'alphonso', detail: 'Reading project structure' });
+  onProgress?.({ stage: 'reading_context', agent: 'alphonso', detail: 'Reading project structure and existing code' });
   const projectContext = await readProjectContext(projectDirectory);
 
-  // Step 2: Get relevant patterns from memory
+  if (needsClarification(commandText)) {
+    onProgress?.({ stage: 'clarifying', agent: 'alphonso', detail: 'Request is vague — generating questions' });
+    const questions = await generateClarifyingQuestions(commandText, endpoint);
+    if (questions && questions.length > 0) {
+      return {
+        results: [],
+        filesWritten: [],
+        artifacts: [{ type: 'clarifying_questions', questions }],
+        steps: 0,
+        success: false,
+        clarificationNeeded: true,
+        questions
+      };
+    }
+  }
+
+  onProgress?.({ stage: 'planning', agent: 'alphonso', detail: 'Generating execution plan' });
+  const planPreview = await generatePlanPreview(commandText, projectContext, endpoint);
+  if (planPreview) {
+    artifacts.push({
+      type: 'plan_preview',
+      plan: planPreview.plan,
+      files: planPreview.files,
+      reasoning: planPreview.reasoning
+    });
+    results.push(`Plan: ${planPreview.plan}`);
+  }
+
+  if (previewOnly) {
+    return {
+      results,
+      filesWritten: [],
+      artifacts,
+      steps: 0,
+      success: true,
+      plan: planPreview
+    };
+  }
+
   const patterns = getRelevantPatterns(commandText);
-
-  // Step 3: Decompose into steps
   const steps = decomposeTask(commandText);
-  onProgress?.({ stage: 'planning', agent: 'alphonso', detail: `Plan: ${steps.join(' → ')}` });
 
-  // Step 4: Execute each step with thinking loop
   for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
     const step = steps[stepIdx];
     onProgress?.({ stage: 'generating', agent: 'alphonso', detail: `Step ${stepIdx + 1}/${steps.length}: ${step}` });
@@ -247,7 +467,7 @@ export async function executeWithBrain(commandText, options = {}) {
       iteration++;
       const stepPrompt = buildThinkingPrompt(
         `${commandText}\n\nSub-task: ${step}`,
-        null,
+        planPreview,
         projectContext,
         patterns
       );
@@ -261,8 +481,7 @@ export async function executeWithBrain(commandText, options = {}) {
           continue;
         }
 
-        // Write files (max 3 per step)
-        const stepFiles = parsed.files.slice(0, 3);
+        const stepFiles = parsed.files.slice(0, MAX_FILES_PER_STEP);
         for (const file of stepFiles) {
           if (file.path && file.content) {
             const safePath = String(file.path).replace(/^[/\\]+/, '').replace(/\.\.[/\\]/g, '');
@@ -280,7 +499,6 @@ export async function executeWithBrain(commandText, options = {}) {
           }
         }
 
-        // Execute commands
         if (Array.isArray(parsed.commands)) {
           for (const cmd of parsed.commands) {
             if (cmd.program && Array.isArray(cmd.args)) {
@@ -311,7 +529,6 @@ export async function executeWithBrain(commandText, options = {}) {
       }
     }
 
-    // Step 5: Error feedback loop — if step failed all iterations, try fix
     if (!stepSuccess && lastError && filesWritten.length > 0) {
       onProgress?.({ stage: 'fixing', agent: 'alphonso', detail: 'Attempting error correction' });
       try {
@@ -338,10 +555,17 @@ export async function executeWithBrain(commandText, options = {}) {
     }
   }
 
-  // Step 6: Store pattern for future learning
+  if (filesWritten.length > 0 && projectDirectory) {
+    onProgress?.({ stage: 'committing', agent: 'alphonso', detail: 'Auto-committing changes' });
+    const commitResult = await gitAutoCommit(projectDirectory, `Alphonso: ${commandText.slice(0, 72)}`);
+    if (commitResult?.success) {
+      results.push(`Git commit: ${commitResult.output.slice(0, 100)}`);
+      artifacts.push({ type: 'git_commit', message: `Alphonso: ${commandText.slice(0, 72)}`, output: commitResult.output });
+    }
+  }
+
   storePattern(commandText, { filesCount: filesWritten.length, error: lastError }, filesWritten.length > 0);
 
-  // Step 7: Persist to memory
   if (filesWritten.length > 0) {
     pushMemoryItem({
       title: `Alphonso built: ${commandText.slice(0, 80)}`,
@@ -368,4 +592,4 @@ export async function executeWithBrain(commandText, options = {}) {
   };
 }
 
-export { readProjectContext, getRelevantPatterns, decomposeTask };
+export { readProjectContext, getRelevantPatterns, decomposeTask, needsClarification, gitAutoCommit, generatePlanPreview };
