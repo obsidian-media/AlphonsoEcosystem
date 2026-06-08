@@ -29,9 +29,47 @@ import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './senti
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
+import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());
+}
+
+function isContentCatalystRequest(text) {
+  const lower = String(text || '').toLowerCase();
+  return /(?:create|make|generate|build|write|design)\s+(?:a\s+)?(?:content|post|social|marketing|campaign|ad|advertisement|promo|blog|article|newsletter)/i.test(lower)
+    || /(?:instagram|facebook|twitter|tiktok|linkedin|youtube)\s+(?:post|content|video|reel|story)/i.test(lower)
+    || /(?:content\s+catalyst|content\s+pipeline)/i.test(lower);
+}
+
+function parseContentCatalystRequest(commandText) {
+  const text = String(commandText || '').trim();
+  const platformMatch = text.match(/(instagram|facebook|twitter|tiktok|linkedin|youtube)/i);
+  const platform = platformMatch ? platformMatch[1].toLowerCase() : 'instagram';
+  const formatMatch = text.match(/(post|reel|story|video|blog|article|newsletter|ad|campaign)/i);
+  const format = formatMatch ? formatMatch[1].toLowerCase() : 'post';
+  const needsVideo = /video|reel|animation|motion/i.test(text);
+  const needsNarration = /narrat|voiceover|speak|audio/i.test(text);
+  const needsPublish = /publish|post|upload|go\s*live/i.test(text);
+  const idea = text
+    .replace(/(?:create|make|generate|build|write|design)\s+(?:a\s+)?/i, '')
+    .replace(/(?:content|post|social|marketing|campaign|ad|advertisement|promo|blog|article|newsletter)\s*(?:for|about|on|regarding)?\s*/i, '')
+    .replace(/(instagram|facebook|twitter|tiktok|linkedin|youtube)\s*/i, '')
+    .replace(/(post|reel|story|video|blog|article|newsletter|ad|campaign)\s*/i, '')
+    .trim()
+    .slice(0, 200) || text.slice(0, 200);
+  return {
+    idea,
+    platform,
+    format,
+    tone: 'confident and polished',
+    needs: {
+      image: true,
+      video: needsVideo,
+      narration: needsNarration,
+      publish: needsPublish
+    }
+  };
 }
 
 function isRiskyAssignment(assignment) {
@@ -425,6 +463,39 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
 }
 
 async function executeMiyaAssignment(commandText, assignment, options = {}) {
+  if (isContentCatalystRequest(commandText)) {
+    options.onProgress?.({ stage: 'content_catalyst', agent: 'miya', detail: 'Running full content pipeline' });
+    try {
+      const ccRequest = parseContentCatalystRequest(commandText);
+      const ccJob = await runContentCatalystJob(ccRequest, { endpoint: options.endpoint });
+      const jobStatus = ccJob?.status || 'unknown';
+      const hasDraft = Boolean(ccJob?.draft);
+      const hasAssets = Boolean(ccJob?.assets?.image);
+      const hasPreview = Boolean(ccJob?.preview);
+      return {
+        summary: `Miya completed full content catalyst pipeline for "${ccRequest.idea.slice(0, 60)}". Status: ${jobStatus}. Draft: ${hasDraft ? 'yes' : 'no'}. Image: ${hasAssets ? 'yes' : 'no'}. Preview: ${hasPreview ? 'yes' : 'no'}.`,
+        resultState: jobStatus === 'ready_for_review' ? 'completed' : jobStatus === 'failed' ? 'failed' : 'pending_review',
+        resultUrl: ccJob?.preview?.url || null,
+        artifacts: [
+          { type: 'content_catalyst_job', jobId: ccJob?.id, status: jobStatus },
+          ...(ccJob?.draft ? [{ type: 'content_draft', draft: ccJob.draft }] : []),
+          ...(ccJob?.assets?.image ? [{ type: 'content_image', asset: ccJob.assets.image }] : []),
+          ...(ccJob?.preview ? [{ type: 'content_preview', preview: ccJob.preview }] : [])
+        ],
+        sources: [],
+        contractAction: assignment?.actionType || 'creative_package'
+      };
+    } catch (error) {
+      return {
+        summary: `Content catalyst pipeline failed: ${String(error?.message || error)}`,
+        resultState: 'failed',
+        resultUrl: null,
+        artifacts: [{ type: 'content_catalyst_error', error: String(error?.message || error) }],
+        sources: [],
+        contractAction: assignment?.actionType || 'creative_package'
+      };
+    }
+  }
   const hectorContext = options.priorOutputs?.hector;
   let enrichedOptions = options;
   if (hectorContext) {
