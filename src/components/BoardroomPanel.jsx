@@ -42,7 +42,7 @@ import { setProjectDirectory, getProjectDirectoryPath } from '../services/projec
 function Panel({ icon: Icon, title, children }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-zinc-400 font-bold mb-2">
+      <div className="flex items-center gap-2 section-label mb-2">
         <Icon className="w-4 h-4 text-indigo-400" /> {title}
       </div>
       {children}
@@ -61,7 +61,7 @@ function StatCard({ label, value, icon: Icon, color = 'indigo' }) {
     <div className={`rounded-xl border ${colorMap[color]} p-3`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono">{label}</p>
+          <p className="text-2xs text-zinc-500 uppercase tracking-widest font-mono">{label}</p>
           <p className="text-xl font-bold text-zinc-100 mt-0.5">{value}</p>
         </div>
         <Icon className="w-4 h-4 opacity-60" />
@@ -121,16 +121,16 @@ function TaskRow({ task }) {
             {expanded ? <ChevronDown className="w-3 h-3 text-zinc-500" /> : <ChevronRight className="w-3 h-3 text-zinc-500" />}
           </span>
         )}
-        <span className={`text-[9px] font-bold uppercase w-12 ${priorityColors[task.priority] || 'text-zinc-500'}`}>
+        <span className={`text-2xs font-bold uppercase w-12 ${priorityColors[task.priority] || 'text-zinc-500'}`}>
           {task.priority}
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-zinc-200 truncate">{task.title}</p>
-          <p className="text-[9px] text-zinc-500 font-mono">{task.agent}</p>
+          <p className="text-2xs text-zinc-500 font-mono">{task.agent}</p>
         </div>
         <div className="flex items-center gap-1.5">
           {statusIcon}
-          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded border ${statusColors[task.status] || statusColors.pending}`}>
+          <span className={`text-2xs font-bold uppercase px-2 py-0.5 rounded border ${statusColors[task.status] || statusColors.pending}`}>
             {task.status.replace('_', ' ')}
           </span>
         </div>
@@ -138,7 +138,7 @@ function TaskRow({ task }) {
       {expanded && hasArtifacts && (
         <div className="px-3 pb-2 space-y-1.5 border-t border-white/5 pt-2">
           {task.summary && (
-            <p className="text-[10px] text-zinc-400 leading-relaxed">{task.summary}</p>
+            <p className="text-2xs text-zinc-400 leading-relaxed">{task.summary}</p>
           )}
           {task.artifacts?.map((artifact, i) => {
             const IconComponent = artifactIcons[artifact.type] || artifactIcons.default;
@@ -146,23 +146,23 @@ function TaskRow({ task }) {
               <div key={i} className="rounded-md bg-white/[0.03] border border-white/5 px-2.5 py-1.5">
                 <div className="flex items-center gap-1.5 mb-1">
                   <IconComponent className="w-3 h-3 text-indigo-400" />
-                  <span className="text-[9px] font-bold text-zinc-300 uppercase tracking-wider">
+                  <span className="text-2xs font-bold text-zinc-300 uppercase tracking-wider">
                     {artifact.type?.replace(/_/g, ' ')}
                   </span>
                   {artifact.riskScore != null && (
-                    <span className={`text-[9px] font-mono ml-auto ${
+                    <span className={`text-2xs font-mono ml-auto ${
                       artifact.riskScore >= 70 ? 'text-red-400' : artifact.riskScore >= 40 ? 'text-amber-400' : 'text-emerald-400'
                     }`}>
                       Risk: {artifact.riskScore}/100
                     </span>
                   )}
                   {artifact.combinedScore != null && (
-                    <span className="text-[9px] font-mono ml-auto text-indigo-400">
+                    <span className="text-2xs font-mono ml-auto text-indigo-400">
                       Score: {artifact.combinedScore}/100
                     </span>
                   )}
                   {artifact.success != null && (
-                    <span className={`text-[9px] font-mono ml-auto ${artifact.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <span className={`text-2xs font-mono ml-auto ${artifact.success ? 'text-emerald-400' : 'text-red-400'}`}>
                       {artifact.success ? 'OK' : 'FAIL'} (exit {artifact.exitCode ?? '?'})
                     </span>
                   )}
@@ -170,7 +170,7 @@ function TaskRow({ task }) {
                 {artifact.findings?.length > 0 && (
                   <div className="space-y-0.5 mt-1">
                     {artifact.findings.map((f, j) => (
-                      <p key={j} className={`text-[9px] ${
+                      <p key={j} className={`text-2xs ${
                         f.severity === 'critical' ? 'text-red-400' : f.severity === 'high' ? 'text-amber-400' : 'text-zinc-400'
                       }`}>
                         [{f.severity}] {f.detail}
@@ -181,49 +181,49 @@ function TaskRow({ task }) {
                 {artifact.hints?.length > 0 && (
                   <div className="space-y-0.5 mt-1">
                     {artifact.hints.map((h, j) => (
-                      <p key={j} className="text-[9px] text-zinc-400">{h}</p>
+                      <p key={j} className="text-2xs text-zinc-400">{h}</p>
                     ))}
                   </div>
                 )}
                 {artifact.opportunitySignals?.length > 0 && (
-                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                  <p className="text-2xs text-zinc-500 mt-1 font-mono">
                     Opportunity: {artifact.opportunitySignals.join(', ')}
                   </p>
                 )}
                 {artifact.riskSignals?.length > 0 && (
-                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                  <p className="text-2xs text-zinc-500 mt-1 font-mono">
                     Risk: {artifact.riskSignals.join(', ')}
                   </p>
                 )}
                 {artifact.type === 'auto_run' && artifact.url && (
-                  <p className="text-[9px] text-emerald-400 mt-1 font-mono">
+                  <p className="text-2xs text-emerald-400 mt-1 font-mono">
                     Dev server: {artifact.url}
                   </p>
                 )}
                 {artifact.type === 'plan_preview' && artifact.plan && (
-                  <p className="text-[9px] text-zinc-400 mt-1">
+                  <p className="text-2xs text-zinc-400 mt-1">
                     Plan: {artifact.plan}
                   </p>
                 )}
                 {artifact.type === 'plan_preview' && artifact.files?.length > 0 && (
-                  <p className="text-[9px] text-zinc-500 mt-0.5 font-mono">
+                  <p className="text-2xs text-zinc-500 mt-0.5 font-mono">
                     Files: {artifact.files.join(', ')}
                   </p>
                 )}
                 {artifact.type === 'clarifying_questions' && artifact.questions?.length > 0 && (
                   <div className="space-y-0.5 mt-1">
                     {artifact.questions.map((q, j) => (
-                      <p key={j} className="text-[9px] text-amber-400">? {q}</p>
+                      <p key={j} className="text-2xs text-amber-400">? {q}</p>
                     ))}
                   </div>
                 )}
                 {artifact.type === 'git_commit' && (
-                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                  <p className="text-2xs text-zinc-500 mt-1 font-mono">
                     Committed: {artifact.message}
                   </p>
                 )}
                 {artifact.type === 'brain_generation' && artifact.filesGenerated?.length > 0 && (
-                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                  <p className="text-2xs text-zinc-500 mt-1 font-mono">
                     Step {artifact.step}: {artifact.filesGenerated.join(', ')}
                   </p>
                 )}
@@ -358,7 +358,7 @@ export default function BoardroomPanel() {
             <button
               onClick={handleCreateGoal}
               disabled={isGenerating || !goalInput.trim()}
-              className="w-full rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+              className="w-full rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-4 py-2 text-2xs font-bold uppercase tracking-widest text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
             >
               {isGenerating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
               {isGenerating ? 'GENERATING...' : 'SET GOAL & GENERATE BATCH'}
@@ -375,20 +375,20 @@ export default function BoardroomPanel() {
         <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono">Project Objective</p>
+              <p className="text-2xs text-zinc-500 uppercase tracking-widest font-mono">Project Objective</p>
               <p className="text-sm font-bold text-zinc-200 mt-0.5 truncate">{goal.goal}</p>
             </div>
             <div className="flex gap-1 shrink-0">
               <button
                 onClick={() => completeGoal(goal.id)}
-                className="text-[9px] text-zinc-500 hover:text-emerald-400 transition-colors px-2 py-1"
+                className="text-2xs text-zinc-500 hover:text-emerald-400 transition-colors px-2 py-1"
               >
                 COMPLETE
               </button>
             </div>
           </div>
           {goal.directory && (
-            <div className="flex items-center gap-1.5 mt-2 text-[9px] text-zinc-500 font-mono">
+            <div className="flex items-center gap-1.5 mt-2 text-2xs text-zinc-500 font-mono">
               <FolderOpen className="w-3 h-3" />
               {goal.directory}
             </div>
@@ -409,12 +409,12 @@ export default function BoardroomPanel() {
               value={directoryInput}
               onChange={(e) => setDirectoryInput(e.target.value)}
               placeholder="Set project folder path"
-              className="flex-1 bg-white/[0.03] border border-white/10 rounded-lg px-3 py-1.5 text-[10px] text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+              className="flex-1 bg-white/[0.03] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
             />
             <button
               onClick={handleSetDirectory}
               disabled={!directoryInput.trim()}
-              className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:bg-white/[0.06] disabled:opacity-40 transition-colors"
+              className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-2xs font-bold uppercase tracking-widest text-zinc-400 hover:bg-white/[0.06] disabled:opacity-40 transition-colors"
             >
               SET
             </button>
@@ -424,10 +424,10 @@ export default function BoardroomPanel() {
         {batchProgress && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono">
+              <p className="text-2xs text-zinc-500 uppercase tracking-widest font-mono">
                 Batch #{activeBatch?.batchNumber} — {batchProgress.completed}/{batchProgress.total} tasks
               </p>
-              <span className="text-[9px] font-bold text-indigo-400">{batchProgress.percent}%</span>
+              <span className="text-2xs font-bold text-indigo-400">{batchProgress.percent}%</span>
             </div>
             <div className="h-1.5 w-full bg-white/[0.05] rounded-full overflow-hidden">
               <div
@@ -439,7 +439,7 @@ export default function BoardroomPanel() {
               <button
                 onClick={handleExecuteBatch}
                 disabled={isExecuting || !activeBatch || activeBatch.status === 'completed'}
-                className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-2xs font-bold uppercase tracking-widest text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
               >
                 {isExecuting ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlayCircle className="w-3 h-3" />}
                 {isExecuting ? 'EXECUTING...' : 'EXECUTE BATCH'}
@@ -447,7 +447,7 @@ export default function BoardroomPanel() {
               <button
                 onClick={handleGenerateNext}
                 disabled={isGenerating || (activeBatch && batchProgress.percent < 100)}
-                className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-2xs font-bold uppercase tracking-widest text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
               >
                 {isGenerating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
                 NEXT
@@ -458,7 +458,7 @@ export default function BoardroomPanel() {
 
         {executionProgress && executionProgress.stage !== 'complete' && executionProgress.stage !== 'error' && (
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-1">
-            <div className="flex items-center gap-2 text-[10px] text-amber-300 font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-2xs text-amber-300 font-bold uppercase tracking-widest">
               <Loader2 className="w-3 h-3 animate-spin" />
               {executionProgress.stage === 'task_start' && `Running: ${executionProgress.task?.title || '...'}`}
               {executionProgress.stage === 'task_complete' && `Completed: ${executionProgress.task?.title || '...'}`}
@@ -471,14 +471,14 @@ export default function BoardroomPanel() {
         )}
 
         {executionProgress?.stage === 'error' && (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-[10px] text-red-300">
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-300">
             Execution error: {executionProgress.error}
           </div>
         )}
 
         {activeBatch && (
           <div className="space-y-1.5">
-            <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono">Current Tasks</p>
+            <p className="text-2xs text-zinc-500 uppercase tracking-widest font-mono">Current Tasks</p>
             <div className="max-h-64 overflow-y-auto pr-1 space-y-1">
               {activeBatch.tasks.map((task) => (
                 <TaskRow key={task.id} task={task} />
@@ -489,7 +489,7 @@ export default function BoardroomPanel() {
 
         {batches.length > 1 && (
           <div className="space-y-1.5">
-            <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono">Batch History</p>
+            <p className="text-2xs text-zinc-500 uppercase tracking-widest font-mono">Batch History</p>
             <div className="max-h-36 overflow-y-auto pr-1 space-y-1">
               {batches.slice(1).map((b) => {
                 const isExpanded = expandedBatchId === b.id;
@@ -501,7 +501,7 @@ export default function BoardroomPanel() {
                       className="flex items-center gap-2 w-full py-1.5 px-2 rounded-lg hover:bg-white/[0.03] transition-colors text-left"
                     >
                       {isExpanded ? <ChevronDown className="w-3 h-3 text-zinc-500" /> : <ChevronRight className="w-3 h-3 text-zinc-500" />}
-                      <span className="text-[10px] text-zinc-400 font-mono">
+                      <span className="text-xs text-zinc-400 font-mono">
                         Batch #{b.batchNumber} — {done}/{b.tasks.length} completed ({b.generationMode})
                       </span>
                     </button>
@@ -519,7 +519,7 @@ export default function BoardroomPanel() {
           </div>
         )}
 
-        <div className="text-[9px] text-zinc-600 font-mono flex items-center gap-2">
+        <div className="text-2xs text-zinc-600 font-mono flex items-center gap-2">
           <Cpu className="w-3 h-3" />
           Generation: {activeBatch?.generationMode || 'N/A'} | Goal ID: {goal.id.slice(0, 16)}...
         </div>

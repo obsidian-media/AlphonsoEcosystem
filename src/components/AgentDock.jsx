@@ -135,13 +135,13 @@ export function AgentDock({ companions }) {
           <GripHorizontal className="h-3 w-3" />
         </button>
         <div
-          className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 flex-1 cursor-grab select-none active:cursor-grabbing"
+          className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 flex-1 cursor-grab select-none active:cursor-grabbing"
           onPointerDown={startDrag}
           title="Drag to move agent dock"
         >Agent Dock</div>
 
         {/* Ollama connectivity pill */}
-        <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border ${
+        <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold uppercase tracking-wider border ${
           ollamaOnline === null
             ? 'border-zinc-700 bg-zinc-900/60 text-zinc-500'
             : ollamaOnline
@@ -177,8 +177,8 @@ export function AgentDock({ companions }) {
               ))}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{summary}</div>
-              <div className="text-[8px] text-zinc-400 truncate">Active companions</div>
+              <div className="text-2xs font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{summary}</div>
+              <div className="text-2xs text-zinc-400 truncate">Active companions</div>
             </div>
           </div>
 
@@ -191,8 +191,8 @@ export function AgentDock({ companions }) {
                     <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{item.name}</div>
-                    <div className="text-[8px] text-zinc-500 truncate">{item.state}</div>
+                    <div className="text-2xs font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{item.name}</div>
+                    <div className="text-2xs text-zinc-500 truncate">{item.state}</div>
                   </div>
                 </div>
               </div>
@@ -202,12 +202,12 @@ export function AgentDock({ companions }) {
           {/* Other (inactive) agents */}
           {otherAgents.length > 0 && (
             <div className="rounded-lg border border-white/8 bg-zinc-900/35 p-2">
-              <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.14em] text-zinc-500">Other agents</div>
+              <div className="mb-1 text-2xs font-bold uppercase tracking-[0.14em] text-zinc-500">Other agents</div>
               <div className="flex flex-wrap gap-1">
                 {otherAgents.map((agent) => (
                   <div key={agent.id} className="flex items-center gap-1 rounded-full border border-white/8 bg-zinc-950/60 px-1.5 py-1">
                     <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-4 w-4" />
-                    <span className="max-w-[4.5rem] truncate text-[8px] font-semibold uppercase tracking-[0.12em] text-zinc-300">{agent.name}</span>
+                    <span className="max-w-[4.5rem] truncate text-2xs font-semibold uppercase tracking-[0.12em] text-zinc-300">{agent.name}</span>
                   </div>
                 ))}
               </div>

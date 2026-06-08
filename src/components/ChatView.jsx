@@ -425,7 +425,7 @@ export function ChatView({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <History className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="text-[11px] text-zinc-500 font-medium">CHAT SESSION: {activeChatId}</span>
+              <span className="text-xs text-zinc-500 font-medium">CHAT SESSION: {activeChatId}</span>
             </div>
             <ModelSwitcher
               initialModel={settings.selectedModel}
@@ -435,13 +435,13 @@ export function ChatView({
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setSearchOpen((o) => !o); setSearchQuery(''); }}
-              className={`text-[10px] flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold ${searchOpen ? 'text-indigo-400' : 'text-zinc-500 hover:text-indigo-400'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold ${searchOpen ? 'text-indigo-400' : 'text-zinc-500 hover:text-indigo-400'}`}
             >
               <Search className="w-3 h-3" />
             </button>
             <button
               onClick={() => setCompactChat((current) => !current)}
-              className={`text-[10px] flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold ${compactChat ? 'text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold ${compactChat ? 'text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'}`}
               title={compactChat ? 'Expand chat spacing' : 'Compact chat spacing'}
             >
               {compactChat ? <ChevronsUp className="w-3 h-3" /> : <ChevronsDown className="w-3 h-3" />}
@@ -450,13 +450,13 @@ export function ChatView({
             <button
               onClick={exportChat}
               disabled={messages.length === 0}
-              className="text-[10px] text-zinc-500 hover:text-indigo-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+              className="text-2xs text-zinc-500 hover:text-indigo-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Download className="w-3 h-3" /> Export
             </button>
             <button
               onClick={clearChat}
-              className="text-[10px] text-zinc-500 hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold"
+              className="text-2xs text-zinc-500 hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold"
             >
               <Trash2 className="w-3 h-3" /> Clear
             </button>
@@ -473,7 +473,7 @@ export function ChatView({
               className="flex-1 bg-transparent text-sm text-zinc-200 placeholder-zinc-600 outline-none"
             />
             {searchQuery && (
-              <span className="text-[10px] text-zinc-500">{visibleMessages.length} of {messages.length}</span>
+              <span className="text-2xs text-zinc-500">{visibleMessages.length} of {messages.length}</span>
             )}
             <button onClick={() => setSearchQuery('')} className="text-zinc-600 hover:text-zinc-400">
               <X className="w-3.5 h-3.5" />
@@ -503,7 +503,7 @@ export function ChatView({
         )}
 
         {searchQuery && visibleMessages.length === 0 && (
-          <div className="text-center text-[11px] text-zinc-600 py-8">No messages match "{searchQuery}"</div>
+          <div className="text-center text-xs text-zinc-600 py-8">No messages match "{searchQuery}"</div>
         )}
         {visibleMessages.map((message) => (
           <div key={message.id} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
@@ -531,9 +531,7 @@ export function ChatView({
                   </button>
                 </div>
               ) : (
-                <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3 text-[13px]'} rounded-2xl leading-relaxed whitespace-pre-wrap border shadow-sm bg-zinc-800 text-zinc-100 border-white/5 rounded-tr-sm`}>
-                  {message.content}
-                </div>
+                    <div className={`px-3 py-2 text-xs ${compactChat ? '' : ''}`}>{message.content}</div>
               )}
             </div>
           </div>
@@ -581,7 +579,7 @@ export function ChatView({
             <div className="flex-1 px-3 py-2 rounded-xl bg-zinc-900/40 border border-white/[0.04]">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-                <span className="text-[11px] text-zinc-400 font-medium">
+                <span className="text-xs text-zinc-400 font-medium">
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
@@ -624,12 +622,12 @@ export function ChatView({
               <Bot className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="flex-1 border border-white/[0.05] rounded-xl bg-zinc-900/20 p-3 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              <div className="text-2xs font-bold uppercase tracking-widest text-zinc-500">
                 Execution Receipts ({executionReceipts.length})
               </div>
               {executionReceipts.map((receipt) => (
-                <div key={receipt.id} className="flex items-center gap-2 text-[11px]">
-                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${
+                <div key={receipt.id} className="flex items-center gap-2 text-xs">
+                  <span className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase tracking-widest ${
                     receipt.status === 'reported_to_jose' || receipt.status === 'executed'
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       : receipt.status === 'pending_approval'
@@ -643,7 +641,7 @@ export function ChatView({
                   <span className="text-zinc-300 font-medium">{receipt.agent}</span>
                   <span className="text-zinc-500 truncate">{receipt.actionType || receipt.eventType}</span>
                   {receipt.riskLevel && receipt.riskLevel !== 'low' && (
-                    <span className={`px-1 py-0.5 rounded text-[8px] font-bold uppercase ${
+                    <span className={`px-1 py-0.5 rounded text-2xs font-bold uppercase ${
                       receipt.riskLevel === 'high'
                         ? 'bg-red-500/10 text-red-400'
                         : 'bg-amber-500/10 text-amber-400'
@@ -670,7 +668,7 @@ export function ChatView({
           <div className="absolute -top-10 left-0 flex gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border rounded-t-lg text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border rounded-t-lg text-2xs font-bold uppercase tracking-widest transition-colors ${
                 attachedFile?.error
                   ? 'border-red-500/30 text-red-400'
                   : attachedFile?.name
@@ -697,7 +695,7 @@ export function ChatView({
             }}
             className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
           />
-          <div className="mt-1 text-[10px] text-zinc-500">
+          <div className="mt-1 text-2xs text-zinc-500">
             {ollamaStatus.state === 'connected' && !selectedModelMissing
               ? `Message ${settings.selectedModel || 'local model'}`
               : 'Ollama is setup_required. Check runtime, then choose a local model.'}

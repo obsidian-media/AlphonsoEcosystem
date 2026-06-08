@@ -1157,17 +1157,17 @@ export default function App() {
       <div data-alphonso-shell-ready="true" className={`h-screen w-screen bg-zinc-950 text-zinc-100 flex p-4 ${coachMiniMode ? cornerClass : 'items-center justify-center'}`}>
         <div className={`${coachMiniMode ? 'w-[22rem] rounded-2xl border border-cyan-300/20 bg-zinc-900/85 p-3' : 'w-full h-full rounded-2xl border border-white/10 bg-zinc-900/70 p-4'}`}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Coach Mode</div>
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500 font-bold">Coach Mode</div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCoachMiniMode((current) => !current)}
-                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
               >
                 {coachMiniMode ? 'Full' : 'Mini'}
               </button>
               <button
                 onClick={() => setCoachSnapCorner((current) => nextCoachCorner(current))}
-                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
               >
                 Snap: {coachSnapCorner}
               </button>
@@ -1198,7 +1198,7 @@ export default function App() {
                 <CoachSkillGrid skills={coachSkills} />
               </div>
               <div className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
-                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Agent status</div>
+                <div className="mb-2 text-2xs font-bold uppercase tracking-[0.16em] text-zinc-500">Agent status</div>
                 <div className="space-y-2">
                   <CoachMissionBadge agent="alphonso" state={companionStateFromVoice(voice.voiceStatus)} message={coachMessageFromVoice(voice.voiceStatus)} />
                   <CoachMissionBadge agent="hector" state={hectorCompanionState.state} message={hectorCompanionState.message} />
@@ -1209,11 +1209,11 @@ export default function App() {
             </div>
           )}
           {coachMiniMode && (
-            <div className="mt-2 text-[10px] text-zinc-500">
+            <div className="mt-2 text-2xs text-zinc-500">
               Mini mode is always-on-top friendly and corner-snapped for fast glance monitoring.
             </div>
           )}
-          <div className="mt-2 text-[10px] text-zinc-600">
+          <div className="mt-2 text-2xs text-zinc-600">
             Desktop coach card is local-only and supervised.
           </div>
         </div>
