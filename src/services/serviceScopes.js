@@ -71,6 +71,12 @@ export const WORKFLOW_RECEIPT_SCOPE    = 'workflow_receipts_v1';
 /** Workflow telemetry — per-step timing, resource, and error telemetry for workflow runs. Owned by workflowTelemetryService. */
 export const WORKFLOW_TELEMETRY_SCOPE  = 'workflow_telemetry_v1';
 
+/** Agent output store — per-command agent execution outputs (summaries, artifacts, scores). Owned by agentOutputStoreService. */
+export const AGENT_OUTPUT_SCOPE        = 'agent_outputs_v1';
+
+/** Nova scoring store — opportunity/risk scores computed by Nova for decomposition routing. Owned by novaFeedbackService. */
+export const NOVA_SCORE_SCOPE          = 'nova_scores_v1';
+
 /** Proof authority identifiers — discriminate whether a proof was produced by the Rust engine or the JS bridge. */
 export const PROOF_AUTHORITY = {
   RUST_ENGINE: 'rust_engine',

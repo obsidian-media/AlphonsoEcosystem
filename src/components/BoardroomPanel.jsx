@@ -16,7 +16,10 @@ import {
   Cpu,
   FolderOpen,
   Loader2,
-  PlayCircle
+  PlayCircle,
+  FileText,
+  Shield,
+  Sparkles
 } from 'lucide-react';
 import {
   createProjectGoal,
@@ -68,6 +71,7 @@ function StatCard({ label, value, icon: Icon, color = 'indigo' }) {
 }
 
 function TaskRow({ task }) {
+  const [expanded, setExpanded] = useState(false);
   const statusColors = {
     pending: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
     in_progress: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -89,21 +93,107 @@ function TaskRow({ task }) {
         ? <AlertCircle className="w-3 h-3" />
         : null;
 
+  const hasArtifacts = Boolean(task.artifacts?.length || task.summary);
+  const artifactIcons = {
+    security_assessment: Shield,
+    opportunity_score: Sparkles,
+    command_execution: Cpu,
+    content_catalyst_job: FileText,
+    creative_package: FileText,
+    research_report: FileText,
+    default: FileText
+  };
+
   return (
-    <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
-      <span className={`text-[9px] font-bold uppercase w-12 ${priorityColors[task.priority] || 'text-zinc-500'}`}>
-        {task.priority}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold text-zinc-200 truncate">{task.title}</p>
-        <p className="text-[9px] text-zinc-500 font-mono">{task.agent}</p>
-      </div>
-      <div className="flex items-center gap-1.5">
-        {statusIcon}
-        <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded border ${statusColors[task.status] || statusColors.pending}`}>
-          {task.status.replace('_', ' ')}
+    <div className="rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+      <div
+        className="flex items-center gap-3 py-2 px-3 cursor-pointer"
+        onClick={() => hasArtifacts && setExpanded(!expanded)}
+      >
+        {hasArtifacts && (
+          <span className="shrink-0">
+            {expanded ? <ChevronDown className="w-3 h-3 text-zinc-500" /> : <ChevronRight className="w-3 h-3 text-zinc-500" />}
+          </span>
+        )}
+        <span className={`text-[9px] font-bold uppercase w-12 ${priorityColors[task.priority] || 'text-zinc-500'}`}>
+          {task.priority}
         </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-zinc-200 truncate">{task.title}</p>
+          <p className="text-[9px] text-zinc-500 font-mono">{task.agent}</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {statusIcon}
+          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded border ${statusColors[task.status] || statusColors.pending}`}>
+            {task.status.replace('_', ' ')}
+          </span>
+        </div>
       </div>
+      {expanded && hasArtifacts && (
+        <div className="px-3 pb-2 space-y-1.5 border-t border-white/5 pt-2">
+          {task.summary && (
+            <p className="text-[10px] text-zinc-400 leading-relaxed">{task.summary}</p>
+          )}
+          {task.artifacts?.map((artifact, i) => {
+            const IconComponent = artifactIcons[artifact.type] || artifactIcons.default;
+            return (
+              <div key={i} className="rounded-md bg-white/[0.03] border border-white/5 px-2.5 py-1.5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <IconComponent className="w-3 h-3 text-indigo-400" />
+                  <span className="text-[9px] font-bold text-zinc-300 uppercase tracking-wider">
+                    {artifact.type?.replace(/_/g, ' ')}
+                  </span>
+                  {artifact.riskScore != null && (
+                    <span className={`text-[9px] font-mono ml-auto ${
+                      artifact.riskScore >= 70 ? 'text-red-400' : artifact.riskScore >= 40 ? 'text-amber-400' : 'text-emerald-400'
+                    }`}>
+                      Risk: {artifact.riskScore}/100
+                    </span>
+                  )}
+                  {artifact.combinedScore != null && (
+                    <span className="text-[9px] font-mono ml-auto text-indigo-400">
+                      Score: {artifact.combinedScore}/100
+                    </span>
+                  )}
+                  {artifact.success != null && (
+                    <span className={`text-[9px] font-mono ml-auto ${artifact.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {artifact.success ? 'OK' : 'FAIL'} (exit {artifact.exitCode ?? '?'})
+                    </span>
+                  )}
+                </div>
+                {artifact.findings?.length > 0 && (
+                  <div className="space-y-0.5 mt-1">
+                    {artifact.findings.map((f, j) => (
+                      <p key={j} className={`text-[9px] ${
+                        f.severity === 'critical' ? 'text-red-400' : f.severity === 'high' ? 'text-amber-400' : 'text-zinc-400'
+                      }`}>
+                        [{f.severity}] {f.detail}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {artifact.hints?.length > 0 && (
+                  <div className="space-y-0.5 mt-1">
+                    {artifact.hints.map((h, j) => (
+                      <p key={j} className="text-[9px] text-zinc-400">{h}</p>
+                    ))}
+                  </div>
+                )}
+                {artifact.opportunitySignals?.length > 0 && (
+                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                    Opportunity: {artifact.opportunitySignals.join(', ')}
+                  </p>
+                )}
+                {artifact.riskSignals?.length > 0 && (
+                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                    Risk: {artifact.riskSignals.join(', ')}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

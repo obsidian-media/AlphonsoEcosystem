@@ -47,7 +47,9 @@ import {
   WORKFLOW_OPS_SCOPE,
   WORKFLOW_RUN_SCOPE,
   WORKFLOW_RECEIPT_SCOPE,
-  WORKFLOW_TELEMETRY_SCOPE
+  WORKFLOW_TELEMETRY_SCOPE,
+  AGENT_OUTPUT_SCOPE,
+  NOVA_SCORE_SCOPE
 } from '../services/serviceScopes';
 import { runSelfDevelopmentCycle } from '../services/selfDevelopmentService';
 import { getStorage, setStorage } from '../lib/appStorage';
@@ -659,7 +661,9 @@ export function useAppEffects({
         { scope: WORKFLOW_OPS_SCOPE, storageKey: 'alphonso_workflow_operations_registry_v1' },
         { scope: WORKFLOW_RUN_SCOPE, storageKey: 'alphonso_workflow_runs_v1' },
         { scope: WORKFLOW_RECEIPT_SCOPE, storageKey: 'alphonso_workflow_receipts_v1' },
-        { scope: WORKFLOW_TELEMETRY_SCOPE, storageKey: 'alphonso_workflow_telemetry_v1' }
+        { scope: WORKFLOW_TELEMETRY_SCOPE, storageKey: 'alphonso_workflow_telemetry_v1' },
+        { scope: AGENT_OUTPUT_SCOPE, storageKey: 'alphonso_agent_outputs_v1' },
+        { scope: NOVA_SCORE_SCOPE, storageKey: 'alphonso_nova_scores_v1' }
       ]);
       if (cancelled || !proof?.available) return;
       setVerificationLogs(getVerificationLogs());

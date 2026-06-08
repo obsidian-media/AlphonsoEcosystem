@@ -21,7 +21,8 @@ import { listMiyaWorkflowTemplates, getMiyaWorkflowTemplate } from './miyaWorkfl
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { runHectorLiveResearch, createResearchDraft } from './hectorResearchService';
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { verifyOllamaRuntimeProof, verifyProcessProof } from './verificationService';
+import { verifyOllamaRuntimeProof, verifyProcessProof, verifyCommandExecution } from './verificationService';
+import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoomService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { recordOrchestrationQueueTransition } from './orchestrationQueueService';
 import { persistScopeRows } from './runtimeLedgerService';
@@ -439,6 +440,70 @@ async function buildMiyaPackage(commandText, assignment, options = {}) {
 
 async function executeAlphonsoAssignment(commandText, assignment, options = {}) {
   const miyaContext = options.priorOutputs?.miya;
+  const lower = String(commandText || '').toLowerCase();
+  const artifacts = [];
+  const results = [];
+
+  // 1. Determine what Alphonso should actually execute based on intent
+  const isBuildIntent = /\b(build|compile|bundle|package)\b/.test(lower);
+  const isTestIntent = /\b(test|verify|check|lint)\b/.test(lower);
+  const isInstallIntent = /\b(install|setup|add)\b/.test(lower);
+  const isRunIntent = /\b(run|start|launch|serve|dev)\b/.test(lower);
+  const hasCodeContext = isBuildIntent || isTestIntent || isInstallIntent || isRunIntent;
+
+  // 2. Execute real commands when intent is detected
+  if (hasCodeContext) {
+    let program = 'npm';
+    let args = ['run', 'build'];
+    let intentLabel = 'build';
+
+    if (isTestIntent) {
+      args = ['run', 'test'];
+      intentLabel = 'test';
+    } else if (isInstallIntent) {
+      const pkgMatch = commandText.match(/install\s+(\S+)/i);
+      args = pkgMatch ? ['install', pkgMatch[1]] : ['install'];
+      intentLabel = 'install';
+    } else if (isRunIntent) {
+      if (/dev|serve|start/.test(lower)) {
+        args = ['run', 'dev'];
+        intentLabel = 'dev server';
+      } else {
+        args = ['run', 'start'];
+        intentLabel = 'start';
+      }
+    } else {
+      args = ['run', 'build'];
+      intentLabel = 'build';
+    }
+
+    options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${intentLabel}: ${program} ${args.join(' ')}` });
+
+    const executionProof = await verifyCommandExecution(program, args, options.projectDirectory || null);
+    const payload = executionProof?.payload || {};
+    const exitCode = payload.exitCode ?? null;
+    const stdout = payload.stdout || '';
+    const stderr = payload.stderr || '';
+    const success = payload.success === true || exitCode === 0;
+
+    results.push(`Command: ${program} ${args.join(' ')}`);
+    results.push(`Exit code: ${exitCode}`);
+    if (stdout) results.push(`stdout: ${stdout.slice(0, 500)}`);
+    if (stderr) results.push(`stderr: ${stderr.slice(0, 500)}`);
+
+    artifacts.push({
+      type: 'command_execution',
+      program,
+      args,
+      exitCode,
+      success,
+      stdout: stdout.slice(0, 2000),
+      stderr: stderr.slice(0, 2000),
+      trust: executionProof?.trust || 'unverified'
+    });
+  }
+
+  // 3. Always verify runtime state as baseline proof
   const runtimeProof = await verifyOllamaRuntimeProof(options.endpoint);
   const processProof = await verifyProcessProof(['ollama']);
   const runtimeReachable = runtimeProof?.payload?.reachable === true;
@@ -446,17 +511,39 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
     ? processProof.payload.some((item) => item?.running)
     : false;
 
+  artifacts.push({ type: 'runtime_proof', id: runtimeProof?.id || null });
+  artifacts.push({ type: 'process_proof', id: processProof?.id || null });
+
+  if (miyaContext) {
+    artifacts.push({ type: 'miya_creative_input', summary: miyaContext.summary });
+    results.push(`Miya creative package available: ${miyaContext.summary}`);
+  }
+
+  // 4. Determine final state based on actual execution results
+  const commandResult = artifacts.find((a) => a.type === 'command_execution');
+  let resultState;
+  if (commandResult) {
+    resultState = commandResult.success ? 'verified' : 'failed';
+  } else {
+    resultState = runtimeReachable ? 'verified' : 'failed';
+  }
+
+  const summaryParts = [];
+  if (commandResult) {
+    summaryParts.push(`Alphonso executed ${commandResult.program} ${commandResult.args.join(' ')} (exit ${commandResult.exitCode ?? 'unknown'}). ${commandResult.success ? 'Succeeded.' : 'Failed.'}`);
+  }
+  summaryParts.push(runtimeReachable
+    ? `Runtime reachable.`
+    : `Runtime unreachable.`);
+  if (results.length > 0) {
+    summaryParts.push(results.join(' | '));
+  }
+
   return {
-    summary: runtimeReachable
-      ? `Alphonso verified runtime and process state for "${commandText}".${miyaContext ? ` Miya creative package available: ${miyaContext.summary}.` : ''}`
-      : `Alphonso found runtime degradation while executing "${commandText}".`,
-    resultState: runtimeReachable ? 'verified' : 'failed',
+    summary: summaryParts.join(' ') || `Alphonso completed execution for "${commandText}".`,
+    resultState,
     resultUrl: null,
-    artifacts: [
-      { type: 'runtime_proof', id: runtimeProof?.id || null },
-      { type: 'process_proof', id: processProof?.id || null },
-      ...(miyaContext ? [{ type: 'miya_creative_input', summary: miyaContext.summary }] : [])
-    ],
+    artifacts,
     sources: [],
     contractAction: assignment?.actionType || 'local_operation',
     runtimeReachable,
@@ -737,23 +824,222 @@ async function executeEchoAssignment(commandText, assignment, options = {}) {
   };
 }
 
-async function executeSentinelAssignment(commandText, assignment) {
+async function executeSentinelAssignment(commandText, assignment, options = {}) {
+  const priorOutputs = options.priorOutputs || {};
+  const allTextToScan = [commandText, ...Object.values(priorOutputs).map((o) => o?.summary || '')].filter(Boolean).join('\n');
+
+  // 1. Classify risk using missionRoomService regex patterns
+  const riskClassification = classifyMissionRoomRisk(allTextToScan);
+
+  // 2. Compute weighted risk score (0-100)
+  let riskScore = 0;
+  const findings = [];
+
+  // Secret detection = high weight
+  if (riskClassification.secretDetected) {
+    riskScore += 40;
+    findings.push({ severity: 'critical', type: 'secret_detected', detail: 'Potential API key, token, or secret found in command or prior agent outputs.' });
+  }
+
+  // Count high-risk pattern matches
+  const highRiskCount = riskClassification.flags.filter((f) => f.startsWith('high_risk_')).length;
+  riskScore += highRiskCount * 12;
+  if (highRiskCount > 0) {
+    findings.push({ severity: 'high', type: 'high_risk_patterns', detail: `${highRiskCount} high-risk keyword pattern(s) matched (publish, delete, deploy, etc.).` });
+  }
+
+  // Count medium-risk pattern matches
+  const mediumRiskCount = riskClassification.flags.filter((f) => f.startsWith('medium_risk_')).length;
+  riskScore += mediumRiskCount * 5;
+  if (mediumRiskCount > 0) {
+    findings.push({ severity: 'medium', type: 'medium_risk_patterns', detail: `${mediumRiskCount} medium-risk keyword pattern(s) matched (install, edit, write, etc.).` });
+  }
+
+  // Prior agent trust analysis
+  const failedPriorAgents = Object.entries(priorOutputs)
+    .filter(([, output]) => output?.resultState === 'failed' || output?.resultState === 'rejected')
+    .map(([agent]) => agent);
+  if (failedPriorAgents.length > 0) {
+    riskScore += failedPriorAgents.length * 8;
+    findings.push({ severity: 'medium', type: 'prior_failure', detail: `Prior agent(s) failed or were rejected: ${failedPriorAgents.join(', ')}.` });
+  }
+
+  // Clamp score
+  riskScore = Math.min(100, Math.max(0, riskScore));
+
+  // 3. Determine severity classification
+  let severity;
+  if (riskScore >= 70) severity = 'critical';
+  else if (riskScore >= 45) severity = 'high';
+  else if (riskScore >= 20) severity = 'medium';
+  else severity = 'low';
+
+  // 4. Determine if execution should be blocked
+  const shouldBlock = riskScore >= 70 || riskClassification.secretDetected;
+  const resultState = shouldBlock ? 'pending_review' : 'completed';
+
+  // 5. Log security event
+  try {
+    const { appendMissionSecurityEvent } = await import('./missionRoomService');
+    appendMissionSecurityEvent({
+      type: 'sentinel_scan',
+      actor: 'sentinel',
+      riskLevel: severity,
+      summary: `Sentinel scanned command: ${redactMissionRoomSecrets(commandText).slice(0, 200)} | Risk: ${riskScore}/100 | Blocked: ${shouldBlock}`,
+      metadata: { riskScore, findings: findings.length, blocked: shouldBlock }
+    });
+  } catch { /* security event logging is best-effort */ }
+
   return {
-    summary: `Sentinel completed safety review for "${commandText}" and kept execution under approval governance.`,
-    resultState: 'completed',
+    summary: `Sentinel security scan: risk ${riskScore}/100 (${severity}). ${findings.length} finding(s). ${shouldBlock ? 'BLOCKED — requires approval.' : 'Cleared for execution.'}`,
+    resultState,
     resultUrl: null,
-    artifacts: [{ type: 'security_monitor', status: 'reviewed' }],
+    artifacts: [
+      {
+        type: 'security_assessment',
+        riskScore,
+        severity,
+        blocked: shouldBlock,
+        findings,
+        flags: riskClassification.flags,
+        secretDetected: riskClassification.secretDetected,
+        approvalRequired: riskClassification.approvalRequired
+      }
+    ],
     sources: [],
     contractAction: assignment?.actionType || 'security_monitor'
   };
 }
 
-async function executeNovaAssignment(commandText, assignment) {
+async function executeNovaAssignment(commandText, assignment, options = {}) {
+  const priorOutputs = options.priorOutputs || {};
+  const lower = String(commandText || '').toLowerCase();
+
+  // 1. Compute Opportunity Score (0-100) based on signal analysis
+  let opportunityScore = 0;
+  const opportunitySignals = [];
+
+  // Scope/impact signals — broader scope = higher opportunity
+  if (/\b(build|create|launch|ship|deploy)\b/.test(lower)) {
+    opportunityScore += 15;
+    opportunitySignals.push('execution_intent');
+  }
+  if (/\b(design|creative|content|visual|story|script)\b/.test(lower)) {
+    opportunityScore += 12;
+    opportunitySignals.push('creative_potential');
+  }
+  if (/\b(research|analyze|study|investigate)\b/.test(lower)) {
+    opportunityScore += 10;
+    opportunitySignals.push('research_potential');
+  }
+  if (/\b(saas|app|dashboard|platform|product)\b/.test(lower)) {
+    opportunityScore += 14;
+    opportunitySignals.push('product_scope');
+  }
+  if (/\b(market|audience|user|customer|growth)\b/.test(lower)) {
+    opportunityScore += 10;
+    opportunitySignals.push('market_relevance');
+  }
+  if (/\b(automation|workflow|pipeline|system)\b/.test(lower)) {
+    opportunityScore += 8;
+    opportunitySignals.push('automation_value');
+  }
+  if (/\b(revenue|monetize|pricing|subscription)\b/.test(lower)) {
+    opportunityScore += 10;
+    opportunitySignals.push('revenue_potential');
+  }
+
+  // Prior agent context bonus — if Miya or Hector already provided input, opportunity increases
+  if (priorOutputs?.miya?.resultState === 'completed') {
+    opportunityScore += 8;
+    opportunitySignals.push('miya_creative_ready');
+  }
+  if (priorOutputs?.hector?.resultState === 'completed') {
+    opportunityScore += 8;
+    opportunitySignals.push('hector_research_ready');
+  }
+
+  opportunityScore = Math.min(100, Math.max(0, opportunityScore));
+
+  // 2. Compute Risk Score (0-100) based on risk signals
+  let riskScore = 0;
+  const riskSignals = [];
+
+  if (/\b(delete|remove|drop|destroy|rm)\b/.test(lower)) {
+    riskScore += 20;
+    riskSignals.push('destructive_action');
+  }
+  if (/\b(publish|post|deploy|push|send|email|dm)\b/.test(lower)) {
+    riskScore += 15;
+    riskSignals.push('external_action');
+  }
+  if (/\b(pay|buy|purchase|subscribe|stripe|payment)\b/.test(lower)) {
+    riskScore += 18;
+    riskSignals.push('financial_action');
+  }
+  if (/\b(secret|token|password|api.?key|credential|auth)\b/.test(lower)) {
+    riskScore += 22;
+    riskSignals.push('credential_exposure');
+  }
+  if (/\b(production|live|real|actual)\b/.test(lower)) {
+    riskScore += 12;
+    riskSignals.push('production_risk');
+  }
+  if (/\b(database|sql|migration|schema)\b/.test(lower)) {
+    riskScore += 10;
+    riskSignals.push('data_risk');
+  }
+  if (/\b(install|npm|pip|cargo)\b/.test(lower)) {
+    riskScore += 5;
+    riskSignals.push('dependency_risk');
+  }
+
+  // Failed prior agents increase risk
+  const failedPriorCount = Object.values(priorOutputs).filter((o) => o?.resultState === 'failed').length;
+  if (failedPriorCount > 0) {
+    riskScore += failedPriorCount * 8;
+    riskSignals.push('prior_failures');
+  }
+
+  riskScore = Math.min(100, Math.max(0, riskScore));
+
+  // 3. Compute combined score
+  const combinedScore = Math.round((opportunityScore * 0.6) + ((100 - riskScore) * 0.4));
+
+  // 4. Store score for decomposition hints
+  const scoreEntry = storeNovaScore(assignment?.commandId || `nova_${Date.now()}`, {
+    opportunityScore,
+    riskScore,
+    score: combinedScore
+  });
+
+  // 5. Generate decomposition hints
+  const { hints } = getDecompositionHints(scoreEntry?.commandId);
+
+  // 6. Determine priority tier
+  let priorityTier;
+  if (combinedScore >= 75) priorityTier = 'critical';
+  else if (combinedScore >= 55) priorityTier = 'high';
+  else if (combinedScore >= 35) priorityTier = 'medium';
+  else priorityTier = 'low';
+
   return {
-    summary: `Nova scored opportunity/risk for "${commandText}" and returned prioritization guidance.`,
-    resultState: 'pending_review',
+    summary: `Nova scored opportunity ${opportunityScore}/100, risk ${riskScore}/100, combined ${combinedScore}/100 (${priorityTier} priority). ${hints.length} decomposition hint(s).`,
+    resultState: 'completed',
     resultUrl: null,
-    artifacts: [{ type: 'opportunity_score', status: 'scored' }],
+    artifacts: [
+      {
+        type: 'opportunity_score',
+        opportunityScore,
+        riskScore,
+        combinedScore,
+        priorityTier,
+        opportunitySignals,
+        riskSignals,
+        hints: hints.map((h) => h.message),
+        scoreId: scoreEntry?.commandId || null
+      }
+    ],
     sources: [],
     contractAction: assignment?.actionType || 'opportunity_analysis'
   };
