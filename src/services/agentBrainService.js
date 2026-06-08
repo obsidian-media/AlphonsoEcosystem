@@ -8,6 +8,7 @@ import { pushMemoryItem } from './memoryService';
 import { getModelForTask } from './modelSelectionService';
 import { autoRunDevServer, getAutoRunEnabled } from './autoRunService';
 import { isComposioEnabled, executeViaComposio } from './composioService';
+import { recordAgentExecution } from './agentMetricsService';
 
 const PATTERN_MEMORY_KEY = 'alphonso_brain_patterns_v1';
 const MAX_PATTERNS = 200;
@@ -540,6 +541,7 @@ export async function executeWithBrain(commandText, options = {}) {
   let lastError = null;
   let streamingText = '';
   let lastValidation = null;
+  const startTimeMs = timestampMs();
 
   onProgress?.({ stage: 'reading_context', agent: 'alphonso', detail: 'Reading project structure and existing code' });
   const projectContext = await readProjectContext(projectDirectory);
@@ -867,6 +869,20 @@ export async function executeWithBrain(commandText, options = {}) {
       verificationState: TRUST_STATES.UNVERIFIED
     });
   }
+
+  // Record metrics
+  const durationMs = timestampMs() - startTimeMs;
+  recordAgentExecution({
+    agent: 'alphonso',
+    command: commandText,
+    success: filesWritten.length > 0,
+    confidence,
+    filesWritten: filesWritten.length,
+    validationPassed: validationArtifacts.length > 0,
+    iterations: Math.round(avgIterations * 10) / 10,
+    durationMs,
+    error: lastError
+  });
 
   return {
     results,
