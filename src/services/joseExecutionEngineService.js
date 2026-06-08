@@ -29,6 +29,10 @@ import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
+import { loadAgentSkillGuidance } from './skillPackService';
+import { writeWorkspaceArtifact } from './workspaceArtifactService';
+import { getProjectDirectoryPath } from './projectDirectoryService';
+import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
@@ -117,6 +121,10 @@ function checkSentinelGate(commandId, assignment) {
 export function draftPrompt(agent, task, context = {}) {
   const taskText = String(task || '').trim();
   const contextSnippet = String(context?.snippet || '').trim();
+  const skillGuidance = loadAgentSkillGuidance(agent);
+  const skillContext = skillGuidance.recommendedSteps.length > 0
+    ? `\nActive skill workflow: ${skillGuidance.recommendedSteps.join(' → ')}.\nSkill guidance: ${skillGuidance.guidance.map((g) => g.guidance).join(' ')}`
+    : '';
 
   if (agent === 'miya') {
     return [
@@ -128,6 +136,7 @@ export function draftPrompt(agent, task, context = {}) {
       'Task:',
       taskText,
       contextSnippet ? `Context: ${contextSnippet}` : '',
+      skillContext,
       '',
       'Return ONLY valid JSON, no markdown fences.'
     ].filter(Boolean).join('\n');
@@ -142,12 +151,34 @@ export function draftPrompt(agent, task, context = {}) {
       'Task:',
       taskText,
       contextSnippet ? `Prior context: ${contextSnippet}` : '',
+      skillContext,
       '',
       'Return plain text, 2-4 paragraphs.'
     ].filter(Boolean).join('\n');
   }
 
-  return `You are an AI assistant helping with: ${taskText}`;
+  if (agent === 'alphonso') {
+    return [
+      'You are Alphonso, the local operator agent for a desktop AI companion.',
+      'You can execute commands (npm, git, node), write files, and build projects.',
+      'When asked to build something, plan the file structure, generate the code, and write each file.',
+      '',
+      'Task:',
+      taskText,
+      contextSnippet ? `Context: ${contextSnippet}` : '',
+      skillContext,
+      '',
+      'Return a JSON object with:',
+      '"plan" (string — what you will do),',
+      '"files" (array of {path, content} objects to write),',
+      '"commands" (array of {program, args} objects to execute),',
+      '"summary" (string — what was accomplished).',
+      '',
+      'Return ONLY valid JSON, no markdown fences.'
+    ].filter(Boolean).join('\n');
+  }
+
+  return `You are an AI assistant helping with: ${taskText}${skillContext}`;
 }
 
 export function parseJsonResponse(text) {
@@ -443,15 +474,110 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
   const lower = String(commandText || '').toLowerCase();
   const artifacts = [];
   const results = [];
+  const filesWritten = [];
 
-  // 1. Determine what Alphonso should actually execute based on intent
+  // 1. Determine project directory
+  const projectDir = options.projectDirectory || getProjectDirectoryPath(assignment?.commandId) || null;
+
+  // 2. Intent detection
   const isBuildIntent = /\b(build|compile|bundle|package)\b/.test(lower);
   const isTestIntent = /\b(test|verify|check|lint)\b/.test(lower);
   const isInstallIntent = /\b(install|setup|add)\b/.test(lower);
   const isRunIntent = /\b(run|start|launch|serve|dev)\b/.test(lower);
+  const isCodeGeneration = /\b(create|build|make|generate|scaffold|write|code|app|full stack|project|implement|develop)\b/.test(lower);
   const hasCodeContext = isBuildIntent || isTestIntent || isInstallIntent || isRunIntent;
 
-  // 2. Execute real commands when intent is detected
+  // 3. If code generation intent, use LLM to generate files + plan
+  if (isCodeGeneration && !hasCodeContext) {
+    // 3a. Scaffold project structure first if a stack template matches
+    const stackTemplate = detectStackTemplate(commandText);
+    if (stackTemplate && projectDir) {
+      options.onProgress?.({ stage: 'scaffolding', agent: 'alphonso', detail: `Scaffolding ${stackTemplate.name}` });
+      const scaffoldResult = await scaffoldProject(commandText, projectDir);
+      if (scaffoldResult && scaffoldResult.filesWritten.length > 0) {
+        filesWritten.push(...scaffoldResult.filesWritten);
+        results.push(`Scaffolded ${scaffoldResult.templateName}: ${scaffoldResult.filesWritten.length} files`);
+        artifacts.push({
+          type: 'project_scaffold',
+          template: scaffoldResult.templateName,
+          files: scaffoldResult.filesWritten
+        });
+
+        // Execute scaffold install commands
+        for (const cmd of scaffoldResult.commands || []) {
+          options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${cmd.program} ${cmd.args.join(' ')}` });
+          const execProof = await verifyCommandExecution(cmd.program, cmd.args, projectDir);
+          const payload = execProof?.payload || {};
+          results.push(`Scaffold install: ${cmd.program} ${cmd.args.join(' ')} — exit ${payload.exitCode ?? '?'}`);
+        }
+      }
+    }
+
+    // 3b. Use LLM to generate/enhance code
+    options.onProgress?.({ stage: 'generating_code', agent: 'alphonso', detail: 'Generating code plan and files via LLM' });
+
+    try {
+      const prompt = draftPrompt('alphonso', commandText, {
+        snippet: miyaContext ? `Miya creative input: ${miyaContext.summary}` : ''
+      });
+      const response = await generateOllamaResponse(prompt, { endpoint: options.endpoint });
+      const parsed = parseJsonResponse(response?.response);
+
+      if (parsed && Array.isArray(parsed.files) && parsed.files.length > 0) {
+        // Write each generated file
+        for (const file of parsed.files) {
+          if (file.path && file.content) {
+            const safePath = String(file.path).replace(/^[/\\]+/, '').replace(/\.\.[/\\]/g, '');
+            try {
+              await writeWorkspaceArtifact({
+                workspaceRoot: projectDir || '',
+                relativePath: safePath,
+                content: String(file.content)
+              });
+              filesWritten.push(safePath);
+              results.push(`Wrote: ${safePath}`);
+            } catch (writeErr) {
+              results.push(`Failed to write ${safePath}: ${String(writeErr?.message || writeErr)}`);
+            }
+          }
+        }
+
+        artifacts.push({
+          type: 'code_generation',
+          filesCount: filesWritten.length,
+          files: filesWritten,
+          plan: parsed.plan || null,
+          summary: parsed.summary || null
+        });
+      }
+
+      // Execute any commands the LLM specified
+      if (Array.isArray(parsed?.commands)) {
+        for (const cmd of parsed.commands) {
+          if (cmd.program && Array.isArray(cmd.args)) {
+            options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${cmd.program} ${cmd.args.join(' ')}` });
+            const execProof = await verifyCommandExecution(cmd.program, cmd.args, projectDir);
+            const payload = execProof?.payload || {};
+            results.push(`Command: ${cmd.program} ${cmd.args.join(' ')} — exit ${payload.exitCode ?? '?'}`);
+            artifacts.push({
+              type: 'command_execution',
+              program: cmd.program,
+              args: cmd.args,
+              exitCode: payload.exitCode ?? null,
+              success: payload.success === true,
+              stdout: String(payload.stdout || '').slice(0, 2000),
+              stderr: String(payload.stderr || '').slice(0, 2000),
+              trust: execProof?.trust || 'unverified'
+            });
+          }
+        }
+      }
+    } catch (llmError) {
+      results.push(`LLM generation failed: ${String(llmError?.message || llmError)}. Falling back to command execution.`);
+    }
+  }
+
+  // 4. Execute direct commands when build/test/install/run intent detected
   if (hasCodeContext) {
     let program = 'npm';
     let args = ['run', 'build'];
@@ -472,14 +598,11 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
         args = ['run', 'start'];
         intentLabel = 'start';
       }
-    } else {
-      args = ['run', 'build'];
-      intentLabel = 'build';
     }
 
     options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${intentLabel}: ${program} ${args.join(' ')}` });
 
-    const executionProof = await verifyCommandExecution(program, args, options.projectDirectory || null);
+    const executionProof = await verifyCommandExecution(program, args, projectDir);
     const payload = executionProof?.payload || {};
     const exitCode = payload.exitCode ?? null;
     const stdout = payload.stdout || '';
@@ -503,7 +626,7 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
     });
   }
 
-  // 3. Always verify runtime state as baseline proof
+  // 5. Always verify runtime state
   const runtimeProof = await verifyOllamaRuntimeProof(options.endpoint);
   const processProof = await verifyProcessProof(['ollama']);
   const runtimeReachable = runtimeProof?.payload?.reachable === true;
@@ -519,22 +642,27 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
     results.push(`Miya creative package available: ${miyaContext.summary}`);
   }
 
-  // 4. Determine final state based on actual execution results
+  // 6. Determine final state
   const commandResult = artifacts.find((a) => a.type === 'command_execution');
+  const codeGenResult = artifacts.find((a) => a.type === 'code_generation');
   let resultState;
   if (commandResult) {
     resultState = commandResult.success ? 'verified' : 'failed';
+  } else if (codeGenResult) {
+    resultState = filesWritten.length > 0 ? 'verified' : 'failed';
   } else {
     resultState = runtimeReachable ? 'verified' : 'failed';
   }
 
   const summaryParts = [];
-  if (commandResult) {
-    summaryParts.push(`Alphonso executed ${commandResult.program} ${commandResult.args.join(' ')} (exit ${commandResult.exitCode ?? 'unknown'}). ${commandResult.success ? 'Succeeded.' : 'Failed.'}`);
+  if (codeGenResult) {
+    summaryParts.push(`Alphonso generated ${filesWritten.length} file(s): ${filesWritten.join(', ')}.`);
+    if (codeGenResult.plan) summaryParts.push(`Plan: ${codeGenResult.plan}`);
   }
-  summaryParts.push(runtimeReachable
-    ? `Runtime reachable.`
-    : `Runtime unreachable.`);
+  if (commandResult) {
+    summaryParts.push(`Executed ${commandResult.program} ${commandResult.args.join(' ')} (exit ${commandResult.exitCode ?? 'unknown'}). ${commandResult.success ? 'Succeeded.' : 'Failed.'}`);
+  }
+  summaryParts.push(runtimeReachable ? 'Runtime reachable.' : 'Runtime unreachable.');
   if (results.length > 0) {
     summaryParts.push(results.join(' | '));
   }

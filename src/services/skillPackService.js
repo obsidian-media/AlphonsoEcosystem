@@ -321,3 +321,66 @@ export function uninstallSkillPack(packId) {
   audit('uninstall', packId);
   return packs;
 }
+
+const SKILL_WORKFLOW_GUIDANCE = {
+  'pack.codex-professional-coding': {
+    guidance: 'Apply code review best practices. Plan before coding. Verify with tests. Use clear variable names and modular structure.',
+    steps: ['Analyze requirements', 'Plan architecture', 'Write modular code', 'Add tests', 'Review and refactor']
+  },
+  'pack.developer-core': {
+    guidance: 'Follow standard development workflow: plan, implement, test, verify.',
+    steps: ['Understand task', 'Plan approach', 'Implement', 'Test', 'Verify']
+  },
+  'pack.workflow.writing-plans': {
+    guidance: 'Write a structured implementation plan before starting. Break into milestones with checkpoints.',
+    steps: ['Decompose into milestones', 'Define checkpoints', 'Sequence dependencies', 'Set acceptance criteria']
+  },
+  'pack.workflow.executing-plans': {
+    guidance: 'Execute step-by-step with verification at each checkpoint. Do not skip verification.',
+    steps: ['Execute step 1', 'Verify checkpoint', 'Execute step 2', 'Verify checkpoint', 'Final verification']
+  },
+  'pack.workflow.test-driven-development': {
+    guidance: 'Write tests first, then implement minimally to pass, then refactor.',
+    steps: ['Write failing test', 'Implement minimally', 'Verify test passes', 'Refactor', 'Repeat']
+  },
+  'pack.workflow.systematic-debugging': {
+    guidance: 'Debug by hypothesis: observe, hypothesize, test, verify. Do not make random changes.',
+    steps: ['Observe symptoms', 'Form hypothesis', 'Test hypothesis', 'Verify fix', 'Document root cause']
+  },
+  'pack.workflow.brainstorming': {
+    guidance: 'Use structured ideation. Generate multiple approaches before committing to one.',
+    steps: ['Generate options', 'Evaluate feasibility', 'Select best approach', 'Validate assumptions']
+  },
+  'pack.workflow.verification-before-completion': {
+    guidance: 'Force a verification pass before marking any task complete. Check all criteria.',
+    steps: ['Run all tests', 'Verify acceptance criteria', 'Check edge cases', 'Confirm completion']
+  },
+  'pack.workflow.skill-creator': {
+    guidance: 'When creating new skills, define clear permissions, test in isolation, then publish.',
+    steps: ['Define skill manifest', 'Implement permissions', 'Test skill', 'Publish to registry']
+  }
+};
+
+export function loadAgentSkillGuidance(agentName) {
+  const packs = listSkillPacks().filter((p) => p.enabled);
+  const agentPacks = packs.filter((p) => p.ownerAgent === agentName || p.category === 'agent_workflow');
+  const guidance = [];
+  const activeSteps = [];
+
+  for (const pack of agentPacks) {
+    const loaded = SKILL_WORKFLOW_GUIDANCE[pack.id];
+    if (loaded) {
+      guidance.push({ skillId: pack.id, name: pack.name, guidance: loaded.guidance });
+      activeSteps.push(...loaded.steps);
+    } else if (pack.permissions?.length > 0) {
+      guidance.push({ skillId: pack.id, name: pack.name, guidance: `Active permissions: ${pack.permissions.join(', ')}` });
+    }
+  }
+
+  return {
+    agent: agentName,
+    activeSkills: agentPacks.map((p) => p.id),
+    guidance,
+    recommendedSteps: [...new Set(activeSteps)].slice(0, 8)
+  };
+}

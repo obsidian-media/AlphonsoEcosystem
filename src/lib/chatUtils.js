@@ -18,7 +18,26 @@ export function shouldRouteThroughJose(text) {
     'folder', 'file', 'desktop', 'rename', 'create ', 'make ', 'generate ', 'image',
     'picture', 'visual', 'miya', 'maia', 'jose', 'agent', 'delegate', 'task',
     'move ', 'delete ', 'remove ', 'open ', 'save ', 'install ', 'write ', 'edit ', 'copy ', 'path',
-    'command', 'system', 'plan', 'roadmap', 'batch', 'boardroom'
+    'command', 'system', 'plan', 'roadmap', 'batch', 'boardroom',
+    'build', 'app', 'code', 'deploy', 'test', 'run ', 'start', 'scaffold', 'stack',
+    'frontend', 'backend', 'api', 'database', 'server', 'cli', 'tool', 'project',
+    'setup', 'configure', 'compile', 'bundle', 'package', 'npm', 'yarn', 'git ',
+    'docker', 'compose', 'react', 'next', 'vue', 'angular', 'node', 'python',
+    'flask', 'django', 'express', 'fastapi', 'typescript', 'javascript', 'html', 'css',
+    'tailwind', 'prisma', 'postgres', 'mysql', 'mongo', 'redis', 'graphql', 'rest',
+    'auth', 'login', 'dashboard', 'admin', 'panel', 'settings', 'config',
+    'migration', 'schema', 'model', 'controller', 'route', 'component', 'page',
+    'layout', 'theme', 'prototype', 'architecture', 'ci', 'cd', 'pipeline',
+    'workflow', 'automation', 'script', 'lib', 'library', 'module', 'dependency',
+    'plugin', 'extension', 'integration', 'connector', 'gateway', 'proxy',
+    'cache', 'queue', 'worker', 'job', 'debug', 'log', 'monitor', 'metric',
+    'analytics', 'chart', 'form', 'input', 'validation', 'encrypt', 'hash',
+    'permission', 'access', 'security', 'backup', 'restore', 'upgrade',
+    'release', 'version', 'documentation', 'tutorial', 'guide', 'reference',
+    'sdk', 'web', 'mobile', 'desktop', 'cloud', 'machine learning', 'ai ',
+    'deep learning', 'neural', 'data', 'insight', 'predict', 'recommend',
+    'automate', 'orchestrat', 'integrat', 'optimi', 'perform', 'scalab',
+    'reliab', 'resili', 'fault', 'disaster', 'monitor', 'observ'
   ].some((term) => lower.includes(term));
 }
 
