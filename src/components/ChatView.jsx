@@ -21,6 +21,94 @@ const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ defa
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
 const VoiceInputButton = lazy(() => import('./VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
 
+function buildProjectSummary(result, commandText, baseSummary) {
+  const receipts = result?.executionReceipts || [];
+  const allArtifacts = receipts.flatMap((r) => r.artifacts || []);
+  const brainArtifacts = allArtifacts.filter((a) => a.type === 'brain_generation' || a.type === 'project_scaffold');
+  const gitArtifact = allArtifacts.find((a) => a.type === 'git_commit');
+  const autoRunArtifact = allArtifacts.find((a) => a.type === 'auto_run');
+  const planArtifact = allArtifacts.find((a) => a.type === 'plan_preview');
+  const securityArtifacts = allArtifacts.filter((a) => a.type === 'security_assessment');
+  const commandArtifacts = allArtifacts.filter((a) => a.type === 'command_execution');
+
+  const files = brainArtifacts.flatMap((a) => a.filesGenerated || []);
+  const scaffoldArtifact = allArtifacts.find((a) => a.type === 'project_scaffold');
+  const scaffoldFiles = scaffoldArtifact?.files || [];
+  const allFiles = [...new Set([...scaffoldFiles, ...files])];
+
+  if (allFiles.length === 0 && commandArtifacts.length === 0) {
+    return baseSummary;
+  }
+
+  const lines = [];
+
+  if (planArtifact?.plan) {
+    lines.push(`**What I built:** ${planArtifact.plan}`);
+    lines.push('');
+  }
+
+  if (allFiles.length > 0) {
+    lines.push('**Files created:**');
+    const grouped = {};
+    for (const f of allFiles) {
+      const parts = f.split('/');
+      const dir = parts.length > 1 ? parts.slice(0, -1).join('/') : '.';
+      if (!grouped[dir]) grouped[dir] = [];
+      grouped[dir].push(parts[parts.length - 1]);
+    }
+    for (const [dir, fileNames] of Object.entries(grouped)) {
+      if (dir === '.') {
+        lines.push(`  ${fileNames.join(', ')}`);
+      } else {
+        lines.push(`  ${dir}/ → ${fileNames.join(', ')}`);
+      }
+    }
+    lines.push('');
+  }
+
+  if (scaffoldArtifact?.template) {
+    lines.push(`**Stack:** ${scaffoldArtifact.template}`);
+    lines.push('');
+  }
+
+  const hasDevScript = commandArtifacts.some((a) => a.args?.includes('dev'));
+  if (autoRunArtifact?.success) {
+    lines.push(`**Running:** Dev server started${autoRunArtifact.url ? ` at ${autoRunArtifact.url}` : ''}`);
+    lines.push('');
+  } else if (hasDevScript || allFiles.some((f) => f === 'package.json' || f.endsWith('/package.json'))) {
+    lines.push('**To run:** `npm run dev`');
+    lines.push('');
+  }
+
+  if (gitArtifact?.message) {
+    lines.push(`**Git:** Committed as "${gitArtifact.message}"`);
+    lines.push('');
+  }
+
+  if (securityArtifacts.length > 0) {
+    const findings = securityArtifacts.flatMap((a) => a.findings || []);
+    if (findings.length > 0) {
+      lines.push('**Security notes:**');
+      for (const f of findings.slice(0, 3)) {
+        lines.push(`  - [${f.severity}] ${f.detail}`);
+      }
+      lines.push('');
+    }
+  }
+
+  lines.push('**Next steps:**');
+  if (autoRunArtifact?.url) {
+    lines.push(`  Open ${autoRunArtifact.url} in your browser`);
+  } else if (allFiles.some((f) => f.includes('src/') || f.includes('client/'))) {
+    lines.push('  Run `npm run dev` and open the URL shown');
+  } else {
+    lines.push('  Run the app and test it');
+  }
+  lines.push('  Tell me if you want changes: "add dark mode", "make it responsive", etc.');
+
+  return lines.join('\n');
+}
+
 export function ChatView({
   activeChatId,
   settings,
@@ -176,15 +264,17 @@ export function ChatView({
 
         const command = result?.command || {};
         const shayanReport = command?.shayanReport || null;
-        const summary = shayanReport?.summary || 'Jose processed the command.';
+        const baseSummary = shayanReport?.summary || 'Jose processed the command.';
         const hintLine = (result?.pendingApprovalCount || 0) > 0
           ? '\nApprove the pending tasks below to continue.'
           : '';
 
+        const richSummary = buildProjectSummary(result, cleanInput, baseSummary);
+
         setMessages((current) => [...current, {
           id: nextMsgId(),
           role: 'assistant',
-          content: summary + hintLine
+          content: richSummary + hintLine
         }]);
 
         if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
