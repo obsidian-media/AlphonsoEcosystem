@@ -1,9 +1,10 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2 } from 'lucide-react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
+import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
 
 function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
   return (
@@ -186,6 +187,35 @@ export function SettingsView({
 }) {
   const resolvedNormalizeEndpoint = normalizeEndpoint || _normalizeEndpoint;
   const folderPickerRef = useRef(null);
+
+  const [composioApiKey, setComposioApiKey] = useState(() => getComposioConfig().apiKey || '');
+  const [composioUserId, setComposioUserId] = useState(() => getComposioConfig().userId || 'alphonso-user');
+  const [composioHealth, setComposioHealth] = useState(null);
+  const [composioChecking, setComposioChecking] = useState(false);
+  const [composioToolkits, setComposioToolkits] = useState([]);
+
+  useEffect(() => {
+    const status = getComposioStatus();
+    if (status.enabled && status.hasApiKey) {
+      checkComposioHealth().then(setComposioHealth);
+      const cached = JSON.parse(localStorage.getItem('alphonso_composio_tools_v1') || 'null');
+      if (cached) setComposioToolkits(cached.toolkits || []);
+    }
+  }, []);
+
+  const handleComposioSave = () => {
+    const config = setComposioConfig({ apiKey: composioApiKey, userId: composioUserId, enabled: !!composioApiKey });
+    if (config.enabled) {
+      setComposioChecking(true);
+      checkComposioHealth().then((health) => {
+        setComposioHealth(health);
+        setComposioChecking(false);
+        fetchComposioToolkits().then((result) => {
+          if (result.toolkits) setComposioToolkits(result.toolkits);
+        });
+      });
+    }
+  };
 
   const handleFolderPick = (e) => {
     const files = e.target.files;
@@ -476,6 +506,66 @@ export function SettingsView({
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.joseCompanionPinned ? 'right-1' : 'left-1'}`} />
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Plug} label="External Tools (Composio)" />
+        <div className="space-y-4">
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="text-sm font-semibold text-white">Composio API Key</div>
+            <div className="text-xs text-zinc-500">Connect agents to 1000+ external services (GitHub, Slack, Notion, Jira, etc.). Get your key at <a href="https://app.composio.dev" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">app.composio.dev</a>.</div>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={composioApiKey}
+                onChange={(e) => setComposioApiKey(e.target.value)}
+                placeholder="Enter Composio API key"
+                className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              />
+              <button
+                onClick={handleComposioSave}
+                disabled={composioChecking || !composioApiKey}
+                className="px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-medium rounded-xl transition-colors"
+              >
+                {composioChecking ? 'Checking...' : 'Save'}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="text-sm font-semibold text-white">User ID</div>
+            <div className="text-xs text-zinc-500">Identifies your agent sessions in Composio.</div>
+            <input
+              type="text"
+              value={composioUserId}
+              onChange={(e) => setComposioUserId(e.target.value)}
+              placeholder="alphonso-user"
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+          </div>
+
+          {composioHealth && (
+            <div className={`flex items-center gap-2 p-3 rounded-xl border ${composioHealth.status === 'healthy' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
+              {composioHealth.status === 'healthy' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+              <span className="text-xs">{composioHealth.message}</span>
+            </div>
+          )}
+
+          {isComposioEnabled() && composioToolkits.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-zinc-400">Available Toolkits ({composioToolkits.length})</div>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                {composioToolkits.slice(0, 20).map((tk) => (
+                  <span key={tk.key} className="px-2 py-1 bg-zinc-800 border border-white/5 rounded-lg text-[10px] text-zinc-300">{tk.name}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="text-[11px] text-zinc-500">
+            When enabled, agents can use Composio tools for external task management. Zero-cost mode still requires approval for paid actions.
           </div>
         </div>
       </section>
