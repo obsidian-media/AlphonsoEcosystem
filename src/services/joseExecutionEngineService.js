@@ -33,6 +33,7 @@ import { loadAgentSkillGuidance } from './skillPackService';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
+import { executeWithBrain } from './agentBrainService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
@@ -159,22 +160,14 @@ export function draftPrompt(agent, task, context = {}) {
 
   if (agent === 'alphonso') {
     return [
-      'You are Alphonso, the local operator agent for a desktop AI companion.',
-      'You can execute commands (npm, git, node), write files, and build projects.',
-      'When asked to build something, plan the file structure, generate the code, and write each file.',
+      'You are Alphonso. You write working JavaScript/React code.',
+      'RULES: Max 3 files. Each file must be complete. No placeholders.',
       '',
-      'Task:',
-      taskText,
+      'TASK: ' + taskText,
       contextSnippet ? `Context: ${contextSnippet}` : '',
-      skillContext,
       '',
-      'Return a JSON object with:',
-      '"plan" (string — what you will do),',
-      '"files" (array of {path, content} objects to write),',
-      '"commands" (array of {program, args} objects to execute),',
-      '"summary" (string — what was accomplished).',
-      '',
-      'Return ONLY valid JSON, no markdown fences.'
+      'Return JSON: {"plan":"...", "files":[{"path":"src/App.jsx","content":"..."}], "commands":[{"program":"npm","args":["install","pkg"]}], "summary":"..."}',
+      'Return ONLY the JSON object, no markdown fences.'
     ].filter(Boolean).join('\n');
   }
 
@@ -513,68 +506,18 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
       }
     }
 
-    // 3b. Use LLM to generate/enhance code
-    options.onProgress?.({ stage: 'generating_code', agent: 'alphonso', detail: 'Generating code plan and files via LLM' });
+    // 3b. Use brain-based execution: context → plan → generate → validate → fix
+    const brainResult = await executeWithBrain(commandText, {
+      endpoint: options.endpoint,
+      projectDirectory: projectDir,
+      onProgress: options.onProgress
+    });
 
-    try {
-      const prompt = draftPrompt('alphonso', commandText, {
-        snippet: miyaContext ? `Miya creative input: ${miyaContext.summary}` : ''
-      });
-      const response = await generateOllamaResponse(prompt, { endpoint: options.endpoint });
-      const parsed = parseJsonResponse(response?.response);
-
-      if (parsed && Array.isArray(parsed.files) && parsed.files.length > 0) {
-        // Write each generated file
-        for (const file of parsed.files) {
-          if (file.path && file.content) {
-            const safePath = String(file.path).replace(/^[/\\]+/, '').replace(/\.\.[/\\]/g, '');
-            try {
-              await writeWorkspaceArtifact({
-                workspaceRoot: projectDir || '',
-                relativePath: safePath,
-                content: String(file.content)
-              });
-              filesWritten.push(safePath);
-              results.push(`Wrote: ${safePath}`);
-            } catch (writeErr) {
-              results.push(`Failed to write ${safePath}: ${String(writeErr?.message || writeErr)}`);
-            }
-          }
-        }
-
-        artifacts.push({
-          type: 'code_generation',
-          filesCount: filesWritten.length,
-          files: filesWritten,
-          plan: parsed.plan || null,
-          summary: parsed.summary || null
-        });
-      }
-
-      // Execute any commands the LLM specified
-      if (Array.isArray(parsed?.commands)) {
-        for (const cmd of parsed.commands) {
-          if (cmd.program && Array.isArray(cmd.args)) {
-            options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${cmd.program} ${cmd.args.join(' ')}` });
-            const execProof = await verifyCommandExecution(cmd.program, cmd.args, projectDir);
-            const payload = execProof?.payload || {};
-            results.push(`Command: ${cmd.program} ${cmd.args.join(' ')} — exit ${payload.exitCode ?? '?'}`);
-            artifacts.push({
-              type: 'command_execution',
-              program: cmd.program,
-              args: cmd.args,
-              exitCode: payload.exitCode ?? null,
-              success: payload.success === true,
-              stdout: String(payload.stdout || '').slice(0, 2000),
-              stderr: String(payload.stderr || '').slice(0, 2000),
-              trust: execProof?.trust || 'unverified'
-            });
-          }
-        }
-      }
-    } catch (llmError) {
-      results.push(`LLM generation failed: ${String(llmError?.message || llmError)}. Falling back to command execution.`);
+    if (brainResult.filesWritten.length > 0) {
+      filesWritten.push(...brainResult.filesWritten);
+      results.push(`Brain generated ${brainResult.filesWritten.length} files across ${brainResult.steps} steps`);
     }
+    artifacts.push(...brainResult.artifacts);
   }
 
   // 4. Execute direct commands when build/test/install/run intent detected
