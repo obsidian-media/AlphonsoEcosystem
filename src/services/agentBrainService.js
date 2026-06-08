@@ -416,6 +416,120 @@ async function gitAutoCommit(projectDir, message) {
   }
 }
 
+// ─── Brain 8: Post-Write Validation ─────────────────────────────────────────
+
+const VALIDATION_COMMANDS = {
+  'react-vite': [
+    { program: 'node', args: ['-e', 'try{require("./package.json")}catch(e){process.exit(1)}'], label: 'package.json check' },
+    { program: 'npm', args: ['run', 'build'], label: 'Vite build' },
+    { program: 'npm', args: ['run', 'lint'], label: 'ESLint' }
+  ],
+  'node-express': [
+    { program: 'node', args: ['-e', 'try{require("./package.json")}catch(e){process.exit(1)}'], label: 'package.json check' },
+    { program: 'node', args: ['-c', 'src/index.js'], label: 'Syntax check' }
+  ],
+  'nextjs': [
+    { program: 'npm', args: ['run', 'build'], label: 'Next.js build' },
+    { program: 'npm', args: ['run', 'lint'], label: 'ESLint' }
+  ],
+  'python': [
+    { program: 'python', args: ['-m', 'py_compile', '.'], label: 'Python syntax' }
+  ],
+  'typescript': [
+    { program: 'npx', args: ['tsc', '--noEmit'], label: 'TypeScript check' }
+  ]
+};
+
+function detectProjectType(projectDir, packageJson) {
+  if (!packageJson) return null;
+  const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+  const scripts = packageJson.scripts || {};
+
+  if (deps.vite && (deps.react || deps['@vitejs/plugin-react'])) return 'react-vite';
+  if (deps.next) return 'nextjs';
+  if (deps.express || deps.fastify || deps.hono) return 'node-express';
+  if (deps.typescript && !deps.vite && !deps.next) return 'typescript';
+
+  // Check for Python
+  try {
+    const fs = require('fs');
+    const hasPy = fs.existsSync('requirements.txt') || fs.existsSync('pyproject.toml') || fs.existsSync('setup.py');
+    if (hasPy) return 'python';
+  } catch { /* ignore */ }
+
+  return null;
+}
+
+async function validateGeneratedFiles(projectDir, packageJson, writtenFiles) {
+  if (!projectDir || !writtenFiles.length) return { valid: true, errors: [], warnings: [] };
+
+  const projectType = detectProjectType(projectDir, packageJson);
+  if (!projectType) return { valid: true, errors: [], warnings: ['No project type detected — skipping validation'] };
+
+  const commands = VALIDATION_COMMANDS[projectType] || [];
+  if (!commands.length) return { valid: true, errors: [], warnings: [`No validation commands for ${projectType}`] };
+
+  const errors = [];
+  const warnings = [];
+
+  for (const cmd of commands) {
+    try {
+      const result = await verifyCommandExecution(cmd.program, cmd.args, projectDir);
+      const payload = result?.payload || {};
+      const success = payload.success === true || payload.exitCode === 0;
+
+      if (!success) {
+        const errorOutput = (payload.stderr || payload.stdout || '').slice(0, 2000);
+        errors.push({ command: `${cmd.program} ${cmd.args.join(' ')}`, label: cmd.label, output: errorOutput, exitCode: payload.exitCode });
+        // Stop on first build failure — no need to run lint if build failed
+        if (cmd.label.includes('build') || cmd.label.includes('TypeScript')) {
+          return { valid: false, errors, warnings, projectType };
+        }
+      } else {
+        warnings.push(`${cmd.label}: passed`);
+      }
+    } catch (err) {
+      warnings.push(`${cmd.label}: command not found (${err.message || err})`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings, projectType };
+}
+
+function buildValidationPrompt(commandText, validationErrors, writtenFiles) {
+  const errorDetails = validationErrors
+    .map((e) => `--- ${e.label} (${e.command}) ---\nExit code: ${e.exitCode}\n${e.output.slice(0, 1000)}`)
+    .join('\n\n');
+
+  return [
+    'You are Alphonso. The code you generated failed validation.',
+    '',
+    'ORIGINAL TASK: ' + commandText,
+    '',
+    'FILES YOU WROTE:',
+    ...writtenFiles.map((f) => `- ${f}`),
+    '',
+    'VALIDATION ERRORS:',
+    errorDetails,
+    '',
+    'RULES:',
+    '1. Fix ONLY the errors shown — do not rewrite working code',
+    '2. Return the complete corrected file content (not a diff)',
+    '3. Return at most 3 files',
+    '4. Return ONLY valid JSON — no markdown',
+    '',
+    'OUTPUT SCHEMA:',
+    '{',
+    '  "plan": "what you fixed",',
+    '  "files": [{"path": "src/App.jsx", "content": "...corrected content..."}],',
+    '  "commands": [],',
+    '  "summary": "what was fixed"',
+    '}',
+    '',
+    'Return ONLY the JSON object.'
+  ].join('\n');
+}
+
 // ─── Main Brain Execution ───────────────────────────────────────────────────
 
 export async function executeWithBrain(commandText, options = {}) {
@@ -425,6 +539,7 @@ export async function executeWithBrain(commandText, options = {}) {
   const artifacts = [];
   let lastError = null;
   let streamingText = '';
+  let lastValidation = null;
 
   onProgress?.({ stage: 'reading_context', agent: 'alphonso', detail: 'Reading project structure and existing code' });
   const projectContext = await readProjectContext(projectDirectory);
@@ -576,6 +691,34 @@ export async function executeWithBrain(commandText, options = {}) {
           }
         }
 
+        // ─── Post-Write Validation ──────────────────────────────────────────
+        if (filesWritten.length > 0 && projectDirectory) {
+          onProgress?.({ stage: 'validating', agent: 'alphonso', detail: `Running build/lint validation on ${filesWritten.length} files` });
+          lastValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten);
+
+          if (!lastValidation.valid && lastValidation.errors.length > 0) {
+            onProgress?.({ stage: 'validation_failed', agent: 'alphonso', detail: `Build failed — ${lastValidation.errors.length} error(s)` });
+            const validationErrorText = lastValidation.errors.map((e) => `${e.label}: ${e.output.slice(0, 500)}`).join('\n');
+            results.push(`Validation failed: ${validationErrorText.slice(0, 300)}`);
+            lastError = validationErrorText;
+            stepSuccess = false;
+            artifacts.push({
+              type: 'validation_failed',
+              projectType: lastValidation.projectType,
+              errors: lastValidation.errors.map((e) => ({ label: e.label, exitCode: e.exitCode })),
+              iteration
+            });
+            continue; // Retry with error context
+          } else {
+            results.push(`Validation passed (${lastValidation.projectType})`);
+            artifacts.push({
+              type: 'validation_passed',
+              projectType: lastValidation.projectType,
+              warnings: lastValidation.warnings
+            });
+          }
+        }
+
         if (Array.isArray(parsed.commands)) {
           for (const cmd of parsed.commands) {
             if (cmd.program && Array.isArray(cmd.args)) {
@@ -609,7 +752,10 @@ export async function executeWithBrain(commandText, options = {}) {
     if (!stepSuccess && lastError && filesWritten.length > 0) {
       onProgress?.({ stage: 'fixing', agent: 'alphonso', detail: 'Attempting error correction' });
       try {
-        const fixPrompt = buildFixPrompt(commandText, lastError, filesWritten.map((p) => ({ path: p })));
+        const isValidationError = artifacts.some((a) => a.type === 'validation_failed' && a.iteration === iteration - 1);
+        const fixPrompt = isValidationError
+          ? buildValidationPrompt(commandText, lastValidation?.errors || [{ label: 'Build failed', output: lastError, exitCode: 1 }], filesWritten)
+          : buildFixPrompt(commandText, lastError, filesWritten.map((p) => ({ path: p })));
         const handleToken = onToken
           ? (token, full) => { onToken({ step: 'fix', token, fullText: full }); }
           : undefined;
@@ -632,6 +778,19 @@ export async function executeWithBrain(commandText, options = {}) {
       } catch {
         // fix attempt failed, continue
       }
+    }
+  }
+
+  // ─── Final Validation Pass ────────────────────────────────────────────────
+  if (filesWritten.length > 0 && projectDirectory) {
+    onProgress?.({ stage: 'final_validation', agent: 'alphonso', detail: 'Running final build validation' });
+    const finalValidation = await validateGeneratedFiles(projectDirectory, projectContext.packageJson, filesWritten);
+    if (!finalValidation.valid) {
+      results.push(`Final validation failed: ${finalValidation.errors.length} error(s)`);
+      artifacts.push({ type: 'final_validation_failed', errors: finalValidation.errors, projectType: finalValidation.projectType });
+    } else {
+      results.push(`Final validation passed (${finalValidation.projectType})`);
+      artifacts.push({ type: 'final_validation_passed', projectType: finalValidation.projectType });
     }
   }
 
@@ -660,6 +819,36 @@ export async function executeWithBrain(commandText, options = {}) {
 
   storePattern(commandText, { filesCount: filesWritten.length, error: lastError }, filesWritten.length > 0);
 
+  // ─── Self-Evaluation ──────────────────────────────────────────────────────
+  const validationArtifacts = artifacts.filter((a) => a.type === 'validation_passed' || a.type === 'final_validation_passed');
+  const failedArtifacts = artifacts.filter((a) => a.type === 'validation_failed' || a.type === 'final_validation_failed');
+  const totalIterations = artifacts.reduce((sum, a) => sum + (a.iteration || 0), 0);
+  const avgIterations = artifacts.length > 0 ? totalIterations / artifacts.length : 1;
+
+  let confidence = 50;
+  if (validationArtifacts.length > 0) confidence += 25;
+  if (failedArtifacts.length === 0) confidence += 15;
+  if (avgIterations <= 1.5) confidence += 10;
+  if (filesWritten.length > 0) confidence += 10;
+  if (lastError) confidence -= 20;
+  confidence = Math.max(0, Math.min(100, confidence));
+
+  const selfEvaluation = {
+    confidence,
+    filesGenerated: filesWritten.length,
+    stepsCompleted: steps.length,
+    validationPassed: validationArtifacts.length > 0,
+    validationFailed: failedArtifacts.length > 0,
+    avgIterationsPerStep: Math.round(avgIterations * 10) / 10,
+    projectType: validationArtifacts[0]?.projectType || null,
+    notes: []
+  };
+
+  if (failedArtifacts.length > 0) selfEvaluation.notes.push(`${failedArtifacts.length} validation attempt(s) failed`);
+  if (avgIterations > 2) selfEvaluation.notes.push('High iteration count — task may be complex or prompt needs refinement');
+  if (validationArtifacts.length === 0 && filesWritten.length > 0) selfEvaluation.notes.push('No validation ran — project type not detected');
+  if (lastError) selfEvaluation.notes.push(`Last error: ${lastError.slice(0, 100)}`);
+
   if (filesWritten.length > 0) {
     pushMemoryItem({
       title: `Alphonso built: ${commandText.slice(0, 80)}`,
@@ -668,11 +857,13 @@ export async function executeWithBrain(commandText, options = {}) {
         task: commandText.slice(0, 200),
         files: filesWritten,
         steps: steps.length,
-        success: filesWritten.length > 0
+        success: filesWritten.length > 0,
+        confidence,
+        validationPassed: validationArtifacts.length > 0
       },
       source: 'agent-brain',
       sourceAgent: 'alphonso',
-      confidence: TRUST_STATES.INFERRED,
+      confidence: confidence > 70 ? TRUST_STATES.VERIFIED : TRUST_STATES.INFERRED,
       verificationState: TRUST_STATES.UNVERIFIED
     });
   }
@@ -684,7 +875,8 @@ export async function executeWithBrain(commandText, options = {}) {
     steps: steps.length,
     success: filesWritten.length > 0,
     autoRunUrl: autoRunResult?.url || null,
-    error: lastError
+    error: lastError,
+    selfEvaluation
   };
 }
 
