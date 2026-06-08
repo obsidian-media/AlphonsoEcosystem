@@ -1,5 +1,3 @@
-import { appendSessionEvent } from './sessionIntelligenceService';
-import { appendConnectorAudit } from './connectorRegistryService';
 import { timestampMs } from './trustModel';
 
 const TELEGRAM_POLL_KEY = 'alphonso_telegram_poll_cursor_v1';
