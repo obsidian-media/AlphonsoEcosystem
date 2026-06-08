@@ -16,6 +16,7 @@ import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
 import { PipelineResultCard } from './PipelineResultCard';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -146,6 +147,18 @@ export function ChatView({
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
   const streamControllerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useKeyboardShortcuts({
+    new_chat: () => {
+      setMessages([]);
+      setPipelineResult(null);
+      setLiveProgress(null);
+    },
+    focus_input: () => inputRef.current?.focus(),
+    abort_generation: handleAbortStream,
+    toggle_search: () => setSearchOpen((prev) => !prev)
+  });
 
   const handleAbortStream = () => {
     if (streamControllerRef.current) {
@@ -774,6 +787,7 @@ export function ChatView({
             </Suspense>
           </div>
           <textarea
+            ref={inputRef}
             value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}
             onKeyDown={(event) => {
