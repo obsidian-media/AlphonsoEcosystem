@@ -1,7 +1,7 @@
 # Alphonso User Manual
 
 **Version**: 0.1.0
-**Last Updated**: 2026-06-07
+**Last Updated**: 2026-06-08
 
 ---
 
@@ -155,7 +155,7 @@ Wave 3: Echo (needs all)
 
 ## 6. Boardroom Orchestrator
 
-The Boardroom is Alphonso's **autonomous project planning system**. It breaks high-level goals into concrete tasks, then executes them in iterative batches.
+The Boardroom is Alphonso's **autonomous project execution system**. It breaks high-level goals into concrete tasks, assigns them to specialized agents, and executes them in iterative batches — with Maria governance reviewing each batch.
 
 ### How to Use
 
@@ -180,44 +180,59 @@ roadmap Design a React Native mobile app
 #### Via Dashboard
 
 1. Open the **Boardroom Panel** in the operator dashboard
-2. Enter your project goal in the input field
-3. Click **SET GOAL**
-4. The system generates Batch #1 with ~7-10 tasks
-5. Tasks are assigned to agents and executed via the wave pipeline
-6. When all tasks complete, click **GENERATE NEXT BATCH**
-7. The LLM analyzes progress and generates the next set of tasks
-8. Repeat until the goal is achieved
+2. Enter your project goal and optionally a project folder path
+3. Click **SET GOAL & GENERATE BATCH**
+4. Batch #1 is generated with ~7-10 tasks assigned to agents by specialty
+5. Click **EXECUTE BATCH** to run all tasks through the agent pipeline
+6. Watch real-time progress as each task executes (hector researches, miya designs, alphonso codes)
+7. When batch completes, Maria reviews outputs for governance
+8. Click **NEXT** to generate the next batch
+9. Repeat until the goal is achieved
 
-### What Happens
+### What Happens (Autonomous Flow)
 
-1. **Goal Creation**: Your text becomes a tracked project goal
+1. **Goal Creation**: Your text becomes a tracked project goal with an optional project directory
 2. **Batch Generation**: System generates task batches using:
    - **LLM-powered** (when Ollama is available): Context-aware, analyzes progress
    - **Rule-based** (fallback): Template-based, instant, always works
-3. **Task Execution**: Each task goes through Jose's full pipeline with all safety gates
-4. **Progress Tracking**: Dashboard shows batch %, completed tasks, and history
-5. **Iterative Batches**: After completing a batch, the system generates the next one
+3. **Batch Execution**: Each task is dispatched to its assigned agent through the full pipeline:
+   - **Hector** researches documentation and sources
+   - **Maria** defines requirements and data models
+   - **Miya** creates UI/UX designs and creative packages
+   - **Alphonso** implements code, builds, and tests
+   - **Marcus** performs security audits
+   - **Sentinel** monitors for safety issues
+   - **Nova** scores and prioritizes
+   - **Echo** preserves knowledge
+4. **Maria Governance Review**: After batch completion, Maria reviews all outputs for:
+   - Risk classification (low/medium/high/critical)
+   - Compliance issues
+   - Approval requirements
+   - Agent trust state verification
+5. **Next Batch**: System generates the next set of tasks based on completed work
+6. **Repeat**: Continues until all batches are complete
 
-### Templates
+### Project Directories
 
-The system detects project types and uses appropriate task templates:
+Each project can have its own working directory:
 
-| Detected Keywords | Template | Tasks |
-|---|---|---|
-| dashboard, analytics, chart | Dashboard | 10 tasks (research, data model, UI, security, tests) |
-| api, backend, server, endpoint | API | 8 tasks (spec, endpoints, auth, tests, docs) |
-| mobile, app, react native | Mobile | 8 tasks (research, design, navigation, tests) |
-| content, social, marketing | Content | 8 tasks (strategy, drafts, visuals, publish) |
-| *(anything else)* | General | 7 tasks (research, scope, design, implement, review) |
+1. Set the directory when creating a goal: "plan Build a dashboard in /path/to/project"
+2. Or set it via the Boardroom Panel input field
+3. Agents receive directory context in their task assignments
+4. File operations reference the project directory
 
 ### Commands
 
 | Chat Command | What It Does |
 |---|---|
 | `plan <goal>` | Create goal + generate first batch |
-| `batch` | Show current batch progress |
+| `execute batch` | Run all pending tasks in the active batch |
+| `run batch` | Same as execute batch |
 | `next batch` | Generate next batch (if current is complete) |
+| `advance batch` | Same as next batch |
+| `batch` | Show current batch progress |
 | `boardroom` | Show boardroom status |
+| `set project folder to <path>` | Set project directory for current goal |
 
 ---
 
@@ -393,12 +408,16 @@ Navigate to the Project Execution panel in the dashboard, or use:
 | `ask jose <task>` | Natural language Jose invocation |
 | `jose: <task>` | Colon-prefix variant |
 | `plan <goal>` | Create project goal + generate batch |
-| `batch` | Show current batch status |
+| `execute batch` | Run all pending tasks in the active batch |
+| `run batch` | Same as execute batch |
 | `next batch` | Generate next batch of tasks |
+| `advance batch` | Same as next batch |
+| `batch` | Show current batch status |
 | `boardroom` | Show boardroom status |
 | `roadmap <goal>` | Create roadmap for a goal |
 | `decompose <task>` | Break down a complex task |
 | `milestones <project>` | Define project milestones |
+| `set project folder to <path>` | Set project directory for current goal |
 
 ### Agent-Specific Commands
 
@@ -534,9 +553,12 @@ src-tauri/
 Key Services:
   joseCommandRouterService.ts    Command parsing & decomposition
   joseExecutionEngineService.js  Wave execution engine
-  batchOrchestratorService.js    Boardroom batch planning
+  batchOrchestratorService.js    Boardroom batch planning + auto-execution
+  projectDirectoryService.js     Per-project directory mapping
   agentBusService.js             Inter-agent messaging
   agentContractService.ts        Per-agent execution contracts
   policyEnforcementService.js    Safety gate for all outbound calls
+  hectorResearchService.js       Live research pipeline (DuckDuckGo + Ollama)
+  connectorHealthCheckService.js Live Telegram/WhatsApp health probes
   connectorRegistryService.js    11 connector registry
 ```
