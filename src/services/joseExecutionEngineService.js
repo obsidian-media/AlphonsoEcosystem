@@ -511,6 +511,7 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
       endpoint: options.endpoint,
       projectDirectory: projectDir,
       onProgress: options.onProgress,
+      onToken: options.onToken,
       conversationHistory: options.conversationHistory
     });
 
@@ -1372,6 +1373,7 @@ export async function runJoseCommandExecutionPipeline({
   endpoint,
   zeroCostMode,
   onProgress,
+  onToken,
   conversationHistory
 }) {
   const memoryItems = listMemoryItems();
@@ -1627,7 +1629,7 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const priorOutputs = getPriorOutputs(command.id, assignment.agent);
-      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, conversationHistory });
+      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory });
 
       if (!taskResult.ok) {
         failedCount += 1;

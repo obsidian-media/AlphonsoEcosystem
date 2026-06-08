@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { generateOllamaResponse } from '../lib/ollama';
+import { generateOllamaResponse, generateOllamaStream } from '../lib/ollama';
 import { parseJsonResponse } from './joseExecutionEngineService';
 import { verifyCommandExecution } from './verificationService';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
@@ -310,8 +310,11 @@ function buildFixPrompt(taskText, errorOutput, failedFiles) {
 
 // ─── Brain 5: Better Ollama Params ──────────────────────────────────────────
 
-async function generateWithOptimizedParams(prompt, endpoint, taskType) {
+async function generateWithOptimizedParams(prompt, endpoint, taskType, onToken) {
   const model = getModelForTask(taskType || 'code');
+  if (onToken) {
+    return generateOllamaStream({ endpoint, model, prompt, onToken });
+  }
   return generateOllamaResponse({ endpoint, prompt, model });
 }
 
@@ -415,11 +418,12 @@ async function gitAutoCommit(projectDir, message) {
 // ─── Main Brain Execution ───────────────────────────────────────────────────
 
 export async function executeWithBrain(commandText, options = {}) {
-  const { endpoint, projectDirectory, onProgress, previewOnly, conversationHistory } = options;
+  const { endpoint, projectDirectory, onProgress, previewOnly, conversationHistory, onToken } = options;
   const results = [];
   const filesWritten = [];
   const artifacts = [];
   let lastError = null;
+  let streamingText = '';
 
   onProgress?.({ stage: 'reading_context', agent: 'alphonso', detail: 'Reading project structure and existing code' });
   const projectContext = await readProjectContext(projectDirectory);
@@ -484,8 +488,15 @@ export async function executeWithBrain(commandText, options = {}) {
       );
 
       try {
-        const response = await generateWithOptimizedParams(stepPrompt, endpoint, 'code');
-        const parsed = parseJsonResponse(response?.response);
+        const handleToken = onToken
+          ? (token, full) => {
+              streamingText = full;
+              onToken({ step: stepIdx + 1, iteration, token, fullText: full });
+            }
+          : undefined;
+        const response = await generateWithOptimizedParams(stepPrompt, endpoint, 'code', handleToken);
+        streamingText = '';
+        const parsed = parseJsonResponse(response?.response || response);
 
         if (!parsed || !Array.isArray(parsed.files) || parsed.files.length === 0) {
           results.push(`Step ${stepIdx + 1} iteration ${iteration}: No valid JSON response`);
@@ -544,8 +555,11 @@ export async function executeWithBrain(commandText, options = {}) {
       onProgress?.({ stage: 'fixing', agent: 'alphonso', detail: 'Attempting error correction' });
       try {
         const fixPrompt = buildFixPrompt(commandText, lastError, filesWritten.map((p) => ({ path: p })));
-        const fixResponse = await generateWithOptimizedParams(fixPrompt, endpoint, 'code');
-        const fixParsed = parseJsonResponse(fixResponse?.response);
+        const handleToken = onToken
+          ? (token, full) => { onToken({ step: 'fix', token, fullText: full }); }
+          : undefined;
+        const fixResponse = await generateWithOptimizedParams(fixPrompt, endpoint, 'code', handleToken);
+        const fixParsed = parseJsonResponse(fixResponse?.response || fixResponse);
 
         if (fixParsed && Array.isArray(fixParsed.files)) {
           for (const file of fixParsed.files.slice(0, 2)) {

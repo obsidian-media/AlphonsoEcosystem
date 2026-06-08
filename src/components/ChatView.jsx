@@ -138,6 +138,7 @@ export function ChatView({
   const [pipelineResult, setPipelineResult] = useState(null);
   const [pipelineCommandText, setPipelineCommandText] = useState('');
   const [liveProgress, setLiveProgress] = useState(null);
+  const [streamingText, setStreamingText] = useState('');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
@@ -232,6 +233,7 @@ export function ChatView({
 
       try {
         const conversationHistory = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
+        setStreamingText('');
         const result = await runJoseCommandExecutionPipeline({
           commandText: cleanInput,
           source: 'shayan',
@@ -255,8 +257,13 @@ export function ChatView({
                       ? `${progress.assignment?.agent || 'Agent'} needs approval`
                       : 'Processing...'
             );
+          },
+          onToken: (tokenData) => {
+            setStreamingText(tokenData.fullText || '');
+            onJoseExecutionState?.('streaming', `Generating code... ${tokenData.fullText?.length || 0} tokens`);
           }
         });
+        setStreamingText('');
 
         setPipelineResult(result);
         setPipelineCommandText(cleanInput);
@@ -542,10 +549,19 @@ export function ChatView({
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
               <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
             </div>
-            <div className="bg-zinc-900/30 border border-white/[0.05] p-3 rounded-2xl rounded-tl-sm flex gap-1">
-              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
-              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
-              <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
+            <div className="bg-zinc-900/30 border border-white/[0.05] p-3 rounded-2xl rounded-tl-sm flex-1">
+              {streamingText ? (
+                <div className="text-zinc-300 text-xs whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">
+                  {streamingText}
+                  <span className="inline-block w-1.5 h-4 bg-indigo-400 ml-0.5 animate-pulse" />
+                </div>
+              ) : (
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
+                  <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
+                  <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
+                </div>
+              )}
             </div>
           </div>
         )}
