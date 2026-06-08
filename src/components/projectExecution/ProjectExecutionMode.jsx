@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { listAgentProfiles } from '../../agents/agentRegistry';
 import { JOSE_PERMISSIONS } from '../../agents/jose/josePermissions';
@@ -94,6 +94,8 @@ export function ProjectExecutionMode() {
   const [opMode, setOpMode] = useState(getOperationalMode());
   const [focusMode, setFocusMode] = useState(() => localStorage.getItem('alphonso_project_execution_density_v1') !== 'full');
   const [openSections, setOpenSections] = useState(() => new Set(['intake', 'modes', 'generate', 'outputs']));
+  const [researchBrief, setResearchBrief] = useState(null);
+  const [researchLoading, setResearchLoading] = useState(false);
 
   const allProfiles = useMemo(() => listAgentProfiles().filter((agent) => ALL_AGENT_IDS.includes(agent.id)), []);
   const selectedAgent = useMemo(() => allProfiles.find((agent) => agent.id === selectedAgentId) || null, [allProfiles, selectedAgentId]);
@@ -166,7 +168,24 @@ export function ProjectExecutionMode() {
     });
   };
 
-  const researchBrief = result ? createResearchBrief(result.project.projectName) : null;
+  useEffect(() => {
+    if (!result?.project?.projectName) {
+      setResearchBrief(null);
+      return;
+    }
+    let cancelled = false;
+    setResearchLoading(true);
+    createResearchBrief(result.project.projectName).then((brief) => {
+      if (!cancelled) {
+        setResearchBrief(brief);
+        setResearchLoading(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setResearchLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [result?.project?.projectName]);
+
   const auditReport = result ? auditProjectPlan(result.project) : null;
 
   return (
@@ -416,7 +435,7 @@ export function ProjectExecutionMode() {
       <ExecutionSection title="Audit + Research" id="audit-research" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <MarcusAuditPanel auditReport={auditReport} />
-          <HectorResearchPanel researchBrief={researchBrief} />
+          <HectorResearchPanel researchBrief={researchBrief} loading={researchLoading} />
         </div>
       </ExecutionSection>
     </div>

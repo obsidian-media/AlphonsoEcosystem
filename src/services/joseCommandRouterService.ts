@@ -48,6 +48,8 @@ export interface JoseCommandParserIntents {
   connector: boolean;
   paidConnector: boolean;
   planning: boolean;
+  boardroomExecute: boolean;
+  boardroomAdvance: boolean;
   [key: string]: boolean;
 }
 
@@ -293,7 +295,9 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     riskyLocal: matchesAny(lower, ['delete', 'remove', 'deploy', 'write', 'modify']),
     connector: matchesAny(lower, ['telegram', 'whatsapp', 'youtube', 'connector', 'api key', 'token']),
     paidConnector: connectorCost.class === 'paid_or_metered',
-    planning: matchesAny(lower, ['plan', 'roadmap', 'batch', 'decompose', 'break down', 'milestones', 'sprint', 'backlog', 'boardroom'])
+    planning: matchesAny(lower, ['plan', 'roadmap', 'batch', 'decompose', 'break down', 'milestones', 'sprint', 'backlog', 'boardroom']),
+    boardroomExecute: matchesAny(lower, ['execute batch', 'run batch', 'start batch', 'begin batch', 'dispatch batch']),
+    boardroomAdvance: matchesAny(lower, ['next batch', 'advance batch', 'continue batch', 'proceed batch'])
   };
   const fragments = clean
     .split(/(?:\band\b|,|->|then|\.)/i)
@@ -460,6 +464,32 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       riskLevel: 'low',
       requiresApproval: false,
       commandPreview: 'Boardroom planning: generate tasks, analyze progress, create next batch.',
+      fragments
+    });
+  }
+
+  if (intents.boardroomExecute && !assignments.some((a) => a.actionType === 'boardroom_execute')) {
+    assignments.push({
+      agent: AGENTS.JOSE,
+      title: `Execute batch: ${shorten(clean)}`,
+      rationale: 'Batch execution requested. Jose should execute all pending tasks in the active batch through the agent pipeline.',
+      actionType: 'boardroom_execute',
+      riskLevel: 'medium',
+      requiresApproval: false,
+      commandPreview: 'Execute all pending tasks in the active batch.',
+      fragments
+    });
+  }
+
+  if (intents.boardroomAdvance && !assignments.some((a) => a.actionType === 'boardroom_advance')) {
+    assignments.push({
+      agent: AGENTS.JOSE,
+      title: `Advance batch: ${shorten(clean)}`,
+      rationale: 'Batch advancement requested. Jose should review the current batch with Maria, then advance to the next batch.',
+      actionType: 'boardroom_advance',
+      riskLevel: 'low',
+      requiresApproval: false,
+      commandPreview: 'Review current batch and advance to next.',
       fragments
     });
   }

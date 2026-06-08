@@ -31,7 +31,7 @@ import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
-import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress } from './batchOrchestratorService';
+import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
 
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());
@@ -637,14 +637,74 @@ async function executeJoseAssignment(commandText, assignment) {
   };
 }
 
-async function executeMariaAssignment(commandText, assignment) {
+async function executeMariaAssignment(commandText, assignment, options = {}) {
+  const priorOutputs = options.priorOutputs || {};
+  const risks = [];
+  const issues = [];
+  const approvals = [];
+
+  const riskLevel = String(assignment?.riskLevel || 'low').toLowerCase();
+  if (riskLevel === 'high' || riskLevel === 'critical') {
+    risks.push({ level: riskLevel, reason: `Assignment risk level is ${riskLevel}.` });
+  }
+
+  const actionType = String(assignment?.actionType || '').toLowerCase();
+  if (actionType.includes('delete') || actionType.includes('remove') || actionType.includes('destroy')) {
+    risks.push({ level: 'high', reason: 'Destructive action detected in action type.' });
+    approvals.push({ required: true, reason: 'Destructive action requires operator approval.' });
+  }
+  if (actionType.includes('publish') || actionType.includes('deploy') || actionType.includes('send') || actionType.includes('post')) {
+    risks.push({ level: 'medium', reason: 'Public/external action detected.' });
+    approvals.push({ required: true, reason: 'External action requires operator approval.' });
+  }
+  if (actionType.includes('file_write') || actionType.includes('filesystem')) {
+    risks.push({ level: 'medium', reason: 'Filesystem modification detected.' });
+    approvals.push({ required: true, reason: 'File system changes require approval.' });
+  }
+
+  for (const [agent, output] of Object.entries(priorOutputs)) {
+    const agentTrust = String(output?.trust || output?.verificationState || '').toLowerCase();
+    if (agentTrust === 'failed' || agentTrust === 'unverified') {
+      issues.push({ agent, issue: `${agent} output has trust state: ${agentTrust}.` });
+    }
+    if (output?.resultState === 'failed') {
+      issues.push({ agent, issue: `${agent} execution failed.` });
+    }
+    if (output?.blocked) {
+      issues.push({ agent, issue: `${agent} output was blocked.` });
+    }
+  }
+
+  const overallRisk = risks.some((r) => r.level === 'critical') ? 'critical'
+    : risks.some((r) => r.level === 'high') ? 'high'
+    : risks.some((r) => r.level === 'medium') ? 'medium'
+    : 'low';
+
+  const approved = issues.length === 0 && !approvals.some((a) => a.required);
+
+  const summary = [
+    `Maria governance audit for "${(commandText || '').slice(0, 80)}".`,
+    `Overall risk: ${overallRisk}.`,
+    `Risks identified: ${risks.length}.`,
+    `Issues: ${issues.length}.`,
+    `Approvals required: ${approvals.length}.`,
+    approved ? 'Audit passed. Safe to proceed.' : 'Audit flagged. Review required before execution.'
+  ].join(' ');
+
   return {
-    summary: `Maria completed governance audit for "${commandText}" and flagged approval requirements where needed.`,
-    resultState: 'completed',
+    summary,
+    resultState: approved ? 'completed' : 'pending_review',
     resultUrl: null,
-    artifacts: [{ type: 'governance_audit', action: assignment?.actionType || 'governance_audit' }],
+    artifacts: [
+      { type: 'governance_audit', action: assignment?.actionType || 'governance_audit' },
+      { type: 'risk_assessment', risks, overallRisk },
+      { type: 'compliance_issues', issues },
+      { type: 'approval_requirements', approvals }
+    ],
     sources: [],
-    contractAction: assignment?.actionType || 'governance_audit'
+    contractAction: assignment?.actionType || 'governance_audit',
+    trust: approved ? TRUST_STATES.VERIFIED : TRUST_STATES.PENDING,
+    verificationState: approved ? TRUST_STATES.VERIFIED : TRUST_STATES.PENDING
   };
 }
 
@@ -797,10 +857,120 @@ async function executeBoardroomPlanning(assignment, commandText, options = {}) {
   };
 }
 
+async function executeBoardroomBatch(assignment, commandText, options = {}) {
+  const activeGoal = getActiveGoal();
+  if (!activeGoal) {
+    return {
+      summary: 'No active project goal. Use "plan <goal>" to create one first.',
+      resultState: 'completed',
+      artifacts: [],
+      sources: [],
+      contractAction: 'boardroom_execute'
+    };
+  }
+
+  const activeBatch = getActiveBatch(activeGoal.id);
+  if (!activeBatch) {
+    return {
+      summary: `No active batch for "${activeGoal.goal}". Use "plan" to generate the next batch.`,
+      resultState: 'completed',
+      artifacts: [],
+      sources: [],
+      contractAction: 'boardroom_execute'
+    };
+  }
+
+  if (activeBatch.status === 'completed') {
+    return {
+      summary: `Batch #${activeBatch.batchNumber} is already completed. Use "next batch" to advance.`,
+      resultState: 'completed',
+      artifacts: [],
+      sources: [],
+      contractAction: 'boardroom_execute'
+    };
+  }
+
+  try {
+    const result = await executeBatch(activeBatch.id, {
+      endpoint: options.endpoint,
+      zeroCostMode: options.zeroCostMode,
+      onProgress: options.onProgress
+    });
+
+    return {
+      summary: `Batch #${activeBatch.batchNumber} execution complete. ${result.executedCount} executed, ${result.failedCount} failed.`,
+      resultState: result.ok ? 'completed' : 'failed',
+      artifacts: [
+        { type: 'batch_execution', batchId: activeBatch.id, ...result }
+      ],
+      sources: [],
+      contractAction: 'boardroom_execute'
+    };
+  } catch (error) {
+    return {
+      summary: `Batch execution failed: ${String(error?.message || error)}`,
+      resultState: 'failed',
+      artifacts: [],
+      sources: [],
+      contractAction: 'boardroom_execute'
+    };
+  }
+}
+
+async function executeBoardroomAdvance(assignment, commandText, options = {}) {
+  const activeGoal = getActiveGoal();
+  if (!activeGoal) {
+    return {
+      summary: 'No active project goal. Use "plan <goal>" to create one first.',
+      resultState: 'completed',
+      artifacts: [],
+      sources: [],
+      contractAction: 'boardroom_advance'
+    };
+  }
+
+  const activeBatch = getActiveBatch(activeGoal.id);
+  if (activeBatch) {
+    const progress = getBatchProgress(activeGoal.id, activeBatch.batchNumber);
+    return {
+      summary: `Batch #${activeBatch.batchNumber} still has ${progress.pending + progress.inProgress} pending/in-progress tasks (${progress.percent}% complete). Complete all tasks before advancing.`,
+      resultState: 'completed',
+      artifacts: [{ type: 'batch_progress', batchNumber: activeBatch.batchNumber, ...progress }],
+      sources: [],
+      contractAction: 'boardroom_advance'
+    };
+  }
+
+  try {
+    const nextBatch = await advanceToNextBatch(activeGoal.id, options.endpoint);
+    return {
+      summary: `Batch #${nextBatch.batchNumber} generated for "${activeGoal.goal}" with ${nextBatch.tasks.length} tasks (${nextBatch.generationMode}). Use "execute batch" to run them.`,
+      resultState: 'completed',
+      artifacts: [{ type: 'batch', batchId: nextBatch.id, batchNumber: nextBatch.batchNumber, taskCount: nextBatch.tasks.length, mode: nextBatch.generationMode }],
+      sources: [],
+      contractAction: 'boardroom_advance'
+    };
+  } catch (error) {
+    return {
+      summary: `Could not advance batch: ${String(error?.message || error)}`,
+      resultState: 'failed',
+      artifacts: [],
+      sources: [],
+      contractAction: 'boardroom_advance'
+    };
+  }
+}
+
 async function executeAssignment(packet, assignment, commandText, options = {}) {
   appendAgentActivity({ agent: assignment?.agent || 'jose', action: 'execute', detail: (commandText || '').slice(0, 80) });
   if (assignment?.actionType === 'boardroom_planning') {
     return executeBoardroomPlanning(assignment, commandText, options);
+  }
+  if (assignment?.actionType === 'boardroom_execute') {
+    return executeBoardroomBatch(assignment, commandText, options);
+  }
+  if (assignment?.actionType === 'boardroom_advance') {
+    return executeBoardroomAdvance(assignment, commandText, options);
   }
   if (assignment?.agent === AGENTS.ALPHONSO) {
     return executeAlphonsoAssignment(commandText, assignment, options);

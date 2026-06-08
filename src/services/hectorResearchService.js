@@ -925,18 +925,47 @@ export function createHectorApprovalPacket(reportId) {
   return packet;
 }
 
-export function createResearchBrief(topic) {
-  return {
-    researchBackendStatus: 'not_wired',
-    liveResearchAvailable: false,
-    confidence: 'source_needed',
-    topic,
-    summary: `Research brief created for "${topic}".`,
-    whatNeedsResearch: [
-      'Official documentation references',
-      'Compliance and policy requirements',
-      'Integration constraints and limitations'
-    ],
-    sourceTypesNeeded: ['official_docs', 'provider_api_docs', 'compliance_guidance']
-  };
+export async function createResearchBrief(topic, onProgress) {
+  const draft = createResearchDraft({
+    researchQuestion: topic,
+    sourceUrls: [],
+    sourceType: 'official_docs',
+    riskLevel: 'medium'
+  });
+  try {
+    const report = await runHectorLiveResearch(draft.id, onProgress);
+    return {
+      researchBackendStatus: 'live',
+      liveResearchAvailable: true,
+      confidence: report.confidenceLevel || 'inferred',
+      topic,
+      message: report.summary || `Research completed for "${topic}".`,
+      summary: report.summary || `Research completed for "${topic}".`,
+      sources: report.sources || [],
+      urls: report.urls || [],
+      reportId: report.id,
+      status: report.status || 'completed',
+      inferredPoints: report.inferredPoints || [],
+      verifiedFacts: report.verifiedFacts || [],
+      whatNeedsResearch: [],
+      sourceTypesNeeded: []
+    };
+  } catch (error) {
+    return {
+      researchBackendStatus: 'error',
+      liveResearchAvailable: false,
+      confidence: 'source_needed',
+      topic,
+      message: `Research failed: ${String(error?.message || error)}`,
+      summary: `Research failed: ${String(error?.message || error)}`,
+      sources: [],
+      urls: [],
+      reportId: draft.id,
+      status: 'failed',
+      inferredPoints: [],
+      verifiedFacts: [],
+      whatNeedsResearch: ['Retry research when network is available'],
+      sourceTypesNeeded: ['official_docs']
+    };
+  }
 }

@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL, normalizeEndpoint } from '../lib/ollama';
+import { runJoseCommandExecutionPipeline } from './joseExecutionEngineService';
+import { getProjectDirectoryPath } from './projectDirectoryService';
 
 const GOALS_KEY = 'alphonso_boardroom_goals_v1';
 const BATCHES_KEY = 'alphonso_boardroom_batches_v1';
@@ -46,7 +48,7 @@ function dispatchBoardroomEvent() {
   try { window.dispatchEvent(new CustomEvent('alphonso:boardroom_updated')); } catch { /* noop */ }
 }
 
-export function createProjectGoal(goal, description = '') {
+export function createProjectGoal(goal, description = '', directory = '') {
   const goals = readGoals();
   const existingActive = goals.find((g) => g.status === 'active');
   if (existingActive) {
@@ -56,6 +58,7 @@ export function createProjectGoal(goal, description = '') {
     id: newId('goal'),
     goal: String(goal || '').trim(),
     description: String(description || '').trim(),
+    directory: String(directory || '').trim() || null,
     createdAtMs: Date.now(),
     currentBatchNumber: 0,
     status: 'active',
@@ -430,4 +433,73 @@ export async function advanceToNextBatch(goalId, endpoint) {
   const activeBatch = getActiveBatch(goalId);
   if (activeBatch) throw new Error('Current batch is still active. Complete all tasks before advancing.');
   return generateBatch(goalId, endpoint);
+}
+
+export function getGoalById(goalId) {
+  return readGoals().find((g) => g.id === goalId) || null;
+}
+
+export function updateBatchStatus(batchId, status) {
+  const batches = readBatches();
+  const batch = batches.find((b) => b.id === batchId);
+  if (!batch) return null;
+  batch.status = status;
+  if (status === 'completed') batch.completedAtMs = Date.now();
+  writeBatches(batches);
+  dispatchBoardroomEvent();
+  return batch;
+}
+
+export async function executeBatch(batchId, { endpoint, zeroCostMode, onProgress, onComplete } = {}) {
+  const batch = getBatchById(batchId);
+  if (!batch) throw new Error(`Batch ${batchId} not found`);
+  if (batch.status === 'completed') throw new Error('Batch is already completed.');
+  if (batch.status === 'executing') throw new Error('Batch is already executing.');
+
+  updateBatchStatus(batchId, 'executing');
+  const goal = getGoalById(batch.goalId);
+  const projectDir = goal?.directory || getProjectDirectoryPath(batch.goalId) || null;
+
+  let executedCount = 0;
+  let failedCount = 0;
+
+  for (const task of batch.tasks) {
+    if (task.status === 'completed' || task.status === 'failed') continue;
+
+    updateTaskStatus(task.id, 'in_progress');
+    onProgress?.({ stage: 'task_start', task, batchId, goalId: batch.goalId });
+
+    const dirContext = projectDir ? ` Work in directory: ${projectDir}.` : '';
+    const commandText = `${task.agent}: ${task.title} — ${task.description}${dirContext}`;
+
+    try {
+      const result = await runJoseCommandExecutionPipeline({
+        commandText,
+        source: 'boardroom',
+        endpoint,
+        zeroCostMode,
+        onProgress
+      });
+
+      if (result?.ok) {
+        updateTaskStatus(task.id, 'completed', result.executionReceipts || []);
+        executedCount += 1;
+      } else {
+        updateTaskStatus(task.id, 'failed', []);
+        failedCount += 1;
+      }
+    } catch (error) {
+      updateTaskStatus(task.id, 'failed', []);
+      failedCount += 1;
+    }
+
+    onProgress?.({ stage: 'task_complete', task, batchId, goalId: batch.goalId });
+  }
+
+  updateBatchStatus(batchId, 'completed');
+  onProgress?.({ stage: 'batch_complete', batchId, goalId: batch.goalId, executedCount, failedCount });
+
+  onComplete?.({ batchId, goalId: batch.goalId, executedCount, failedCount });
+
+  return { ok: true, batchId, executedCount, failedCount };
 }
