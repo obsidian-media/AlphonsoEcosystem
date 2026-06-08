@@ -47,6 +47,7 @@ export interface JoseCommandParserIntents {
   riskyLocal: boolean;
   connector: boolean;
   paidConnector: boolean;
+  planning: boolean;
   [key: string]: boolean;
 }
 
@@ -291,7 +292,8 @@ export function parseJoseCommand(commandText: string): ParsedJoseCommand {
     publishing: matchesAny(lower, ['upload', 'publish', 'post', 'youtube', 'tiktok', 'instagram']),
     riskyLocal: matchesAny(lower, ['delete', 'remove', 'deploy', 'write', 'modify']),
     connector: matchesAny(lower, ['telegram', 'whatsapp', 'youtube', 'connector', 'api key', 'token']),
-    paidConnector: connectorCost.class === 'paid_or_metered'
+    paidConnector: connectorCost.class === 'paid_or_metered',
+    planning: matchesAny(lower, ['plan', 'roadmap', 'batch', 'decompose', 'break down', 'milestones', 'sprint', 'backlog', 'boardroom'])
   };
   const fragments = clean
     .split(/(?:\band\b|,|->|then|\.)/i)
@@ -445,6 +447,19 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       riskLevel: 'low',
       requiresApproval: false,
       commandPreview: 'Planning only.',
+      fragments
+    });
+  }
+
+  if (intents.planning && !assignments.some((a) => a.actionType === 'boardroom_planning')) {
+    assignments.push({
+      agent: AGENTS.JOSE,
+      title: `Boardroom planning: ${shorten(clean)}`,
+      rationale: 'Planning language detected. Jose should generate or advance a batch of tasks via the Boardroom Orchestrator.',
+      actionType: 'boardroom_planning',
+      riskLevel: 'low',
+      requiresApproval: false,
+      commandPreview: 'Boardroom planning: generate tasks, analyze progress, create next batch.',
       fragments
     });
   }

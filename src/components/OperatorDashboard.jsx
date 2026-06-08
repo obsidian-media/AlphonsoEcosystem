@@ -21,6 +21,7 @@ import { trustColor } from '../services/trustModel';
 const TrustReceiptBrowser = lazy(() => import('./TrustReceiptBrowser').then((mod) => ({ default: mod.TrustReceiptBrowser })));
 const NotionSyncPanel = lazy(() => import('./NotionSyncPanel').then((mod) => ({ default: mod.NotionSyncPanel })));
 const OllamaPreflightPanel = lazy(() => import('./OllamaPreflightPanel').then((mod) => ({ default: mod.OllamaPreflightPanel })));
+const BoardroomPanel = lazy(() => import('./BoardroomPanel'));
 
 function Badge({ children, color = 'zinc' }) {
   const colors = {
@@ -635,6 +636,14 @@ export function OperatorDashboard({
             <OllamaPreflightPanel />
           </Suspense>
         </Panel>
+      </div>
+      </OperatorSection>
+
+      <OperatorSection title="Boardroom Orchestrator" id="boardroom" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
+      <div className="grid grid-cols-1 gap-3">
+        <Suspense fallback={<div className="text-[11px] text-zinc-500">Loading boardroom panel…</div>}>
+          <BoardroomPanel />
+        </Suspense>
       </div>
       </OperatorSection>
 

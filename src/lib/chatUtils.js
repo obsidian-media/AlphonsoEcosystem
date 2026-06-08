@@ -18,7 +18,7 @@ export function shouldRouteThroughJose(text) {
     'folder', 'file', 'desktop', 'rename', 'create ', 'make ', 'generate ', 'image',
     'picture', 'visual', 'miya', 'maia', 'jose', 'agent', 'delegate', 'task',
     'move ', 'delete ', 'remove ', 'open ', 'save ', 'install ', 'write ', 'edit ', 'copy ', 'path',
-    'command', 'system'
+    'command', 'system', 'plan', 'roadmap', 'batch', 'boardroom'
   ].some((term) => lower.includes(term));
 }
 

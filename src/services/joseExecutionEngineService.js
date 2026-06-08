@@ -30,6 +30,7 @@ import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
+import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress } from './batchOrchestratorService';
 
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());
@@ -718,8 +719,83 @@ async function executeMarcusAssignment(commandText, assignment, options = {}) {
   };
 }
 
+async function executeBoardroomPlanning(assignment, commandText, options = {}) {
+  const goalText = String(commandText || '')
+    .replace(/^(\/jose\s+|ask\s+jose\s+|jose:\s*)/i, '')
+    .replace(/\b(plan|roadmap|batch|boardroom|decompose|break down|milestones|sprint|backlog)\b/gi, '')
+    .trim();
+
+  const activeGoal = getActiveGoal();
+
+  if (!activeGoal && !goalText) {
+    return {
+      summary: 'No active project goal and no goal text provided. Please specify a goal: "plan Build a SaaS dashboard".',
+      resultState: 'completed',
+      artifacts: [],
+      sources: [],
+      contractAction: 'boardroom_planning'
+    };
+  }
+
+  if (!activeGoal && goalText) {
+    const goal = createProjectGoal(goalText);
+    const batch = await generateBatch(goal.id, options.endpoint);
+    return {
+      summary: `Project goal created: "${goal.goal}". Batch #${batch.batchNumber} generated with ${batch.tasks.length} tasks (${batch.generationMode}). Tasks are ready for execution.`,
+      resultState: 'completed',
+      artifacts: [{ type: 'batch', batchId: batch.id, batchNumber: batch.batchNumber, taskCount: batch.tasks.length, mode: batch.generationMode }],
+      sources: [],
+      contractAction: 'boardroom_planning'
+    };
+  }
+
+  if (activeGoal) {
+    const activeBatch = getActiveBatch(activeGoal.id);
+    if (activeBatch) {
+      const progress = getBatchProgress(activeGoal.id, activeBatch.batchNumber);
+      return {
+        summary: `Active project: "${activeGoal.goal}". Batch #${activeBatch.batchNumber} is in progress: ${progress.completed}/${progress.total} tasks completed (${progress.percent}%). Complete all tasks before generating the next batch.`,
+        resultState: 'completed',
+        artifacts: [{ type: 'batch_progress', goalId: activeGoal.id, batchNumber: activeBatch.batchNumber, ...progress }],
+        sources: [],
+        contractAction: 'boardroom_planning'
+      };
+    }
+
+    try {
+      const nextBatch = await advanceToNextBatch(activeGoal.id, options.endpoint);
+      return {
+        summary: `Batch #${nextBatch.batchNumber} generated for "${activeGoal.goal}" with ${nextBatch.tasks.length} tasks (${nextBatch.generationMode}). Tasks are ready for execution.`,
+        resultState: 'completed',
+        artifacts: [{ type: 'batch', batchId: nextBatch.id, batchNumber: nextBatch.batchNumber, taskCount: nextBatch.tasks.length, mode: nextBatch.generationMode }],
+        sources: [],
+        contractAction: 'boardroom_planning'
+      };
+    } catch (err) {
+      return {
+        summary: `Could not generate next batch: ${err.message}`,
+        resultState: 'failed',
+        artifacts: [],
+        sources: [],
+        contractAction: 'boardroom_planning'
+      };
+    }
+  }
+
+  return {
+    summary: 'Boardroom planning: no action taken.',
+    resultState: 'completed',
+    artifacts: [],
+    sources: [],
+    contractAction: 'boardroom_planning'
+  };
+}
+
 async function executeAssignment(packet, assignment, commandText, options = {}) {
   appendAgentActivity({ agent: assignment?.agent || 'jose', action: 'execute', detail: (commandText || '').slice(0, 80) });
+  if (assignment?.actionType === 'boardroom_planning') {
+    return executeBoardroomPlanning(assignment, commandText, options);
+  }
   if (assignment?.agent === AGENTS.ALPHONSO) {
     return executeAlphonsoAssignment(commandText, assignment, options);
   }
