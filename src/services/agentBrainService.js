@@ -7,6 +7,7 @@ import { timestampMs, TRUST_STATES } from './trustModel';
 import { pushMemoryItem } from './memoryService';
 import { getModelForTask } from './modelSelectionService';
 import { autoRunDevServer, getAutoRunEnabled } from './autoRunService';
+import { isComposioEnabled, executeViaComposio } from './composioService';
 
 const PATTERN_MEMORY_KEY = 'alphonso_brain_patterns_v1';
 const MAX_PATTERNS = 200;
@@ -465,6 +466,60 @@ export async function executeWithBrain(commandText, options = {}) {
       success: true,
       plan: planPreview
     };
+  }
+
+  // ─── Composio External Tool Execution ─────────────────────────────────────
+  // Detect external tool intent before falling back to code generation
+  const externalToolKeywords = /\b(github|slack|notion|jira|linear|clickup|email|calendar|sheets|docs|drive|figura|twitter|x\.com|linkedin|discord|telegram|whatsapp|stripe|vercel|netlify|heroku|aws|gcp|cloudflare|sendgrid|twilio|shopify|wordpress|medium|substack|youtube|twitch|reddit|hacker.?news|product.?hunt|figma|canva|dropbox|box|evernote|airtable|asana|trello|monday|basecamp|zendesk|intercom|hubspot|salesforce|pipedrive|zapier|make|n8n|webhook|api|create.*(issue|ticket|task|pr|pull request|branch|release|deployment|notification|message|post|comment|review))\b/i;
+  const isExternalToolIntent = externalToolKeywords.test(commandText);
+
+  if (isExternalToolIntent && isComposioEnabled()) {
+    onProgress?.({ stage: 'composio_lookup', agent: 'alphonso', detail: 'Checking Composio for external tool actions' });
+    const composioResult = await executeViaComposio(commandText, 'alphonso', { endpoint });
+
+    if (composioResult.success) {
+      onProgress?.({ stage: 'composio_executed', agent: 'alphonso', detail: `Composio action: ${composioResult.tool}` });
+      const resultText = composioResult.data
+        ? JSON.stringify(composioResult.data, null, 2).slice(0, 2000)
+        : 'Action completed successfully';
+      results.push(`Composio executed ${composioResult.tool} via ${composioResult.toolkit}`);
+      results.push(resultText);
+      artifacts.push({
+        type: 'composio_action',
+        tool: composioResult.tool,
+        toolkit: composioResult.toolkit,
+        reasoning: composioResult.reasoning,
+        data: composioResult.data
+      });
+
+      // If Composio handled it fully, return early
+      if (!composioResult.fallback) {
+        pushMemoryItem({
+          title: `Composio: ${composioResult.tool}`,
+          category: 'orchestration_memory',
+          content: { command: commandText.slice(0, 200), tool: composioResult.tool, success: true },
+          source: 'composio-connector',
+          sourceAgent: 'alphonso',
+          confidence: TRUST_STATES.VERIFIED
+        });
+        return {
+          results,
+          filesWritten: [],
+          artifacts,
+          steps: 1,
+          success: true,
+          composioUsed: true
+        };
+      }
+    } else if (composioResult.error && !composioResult.fallback) {
+      results.push(`Composio attempt failed: ${composioResult.error}`);
+      artifacts.push({
+        type: 'composio_failed',
+        error: composioResult.error,
+        reasoning: composioResult.reasoning
+      });
+      // Fall through to code generation
+    }
   }
 
   const patterns = getRelevantPatterns(commandText);
