@@ -101,6 +101,12 @@ function TaskRow({ task }) {
     content_catalyst_job: FileText,
     creative_package: FileText,
     research_report: FileText,
+    brain_generation: Brain,
+    project_scaffold: Layers,
+    git_commit: CheckCircle2,
+    auto_run: Play,
+    plan_preview: FileText,
+    clarifying_questions: AlertCircle,
     default: FileText
   };
 
@@ -187,6 +193,38 @@ function TaskRow({ task }) {
                 {artifact.riskSignals?.length > 0 && (
                   <p className="text-[9px] text-zinc-500 mt-1 font-mono">
                     Risk: {artifact.riskSignals.join(', ')}
+                  </p>
+                )}
+                {artifact.type === 'auto_run' && artifact.url && (
+                  <p className="text-[9px] text-emerald-400 mt-1 font-mono">
+                    Dev server: {artifact.url}
+                  </p>
+                )}
+                {artifact.type === 'plan_preview' && artifact.plan && (
+                  <p className="text-[9px] text-zinc-400 mt-1">
+                    Plan: {artifact.plan}
+                  </p>
+                )}
+                {artifact.type === 'plan_preview' && artifact.files?.length > 0 && (
+                  <p className="text-[9px] text-zinc-500 mt-0.5 font-mono">
+                    Files: {artifact.files.join(', ')}
+                  </p>
+                )}
+                {artifact.type === 'clarifying_questions' && artifact.questions?.length > 0 && (
+                  <div className="space-y-0.5 mt-1">
+                    {artifact.questions.map((q, j) => (
+                      <p key={j} className="text-[9px] text-amber-400">? {q}</p>
+                    ))}
+                  </div>
+                )}
+                {artifact.type === 'git_commit' && (
+                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                    Committed: {artifact.message}
+                  </p>
+                )}
+                {artifact.type === 'brain_generation' && artifact.filesGenerated?.length > 0 && (
+                  <p className="text-[9px] text-zinc-500 mt-1 font-mono">
+                    Step {artifact.step}: {artifact.filesGenerated.join(', ')}
                   </p>
                 )}
               </div>

@@ -143,11 +143,13 @@ export function ChatView({
       onJoseExecutionState?.('thinking', 'Jose is decomposing and distributing the command.');
 
       try {
+        const conversationHistory = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
         const result = await runJoseCommandExecutionPipeline({
           commandText: cleanInput,
           source: 'shayan',
           endpoint: settings.endpoint,
           zeroCostMode: settings.zeroCostMode,
+          conversationHistory,
           onProgress: (progress) => {
             setLiveProgress(progress);
             onJoseExecutionState?.(

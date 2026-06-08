@@ -5,6 +5,8 @@ import { verifyCommandExecution } from './verificationService';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { timestampMs, TRUST_STATES } from './trustModel';
 import { pushMemoryItem } from './memoryService';
+import { getModelForTask } from './modelSelectionService';
+import { autoRunDevServer, getAutoRunEnabled } from './autoRunService';
 
 const PATTERN_MEMORY_KEY = 'alphonso_brain_patterns_v1';
 const MAX_PATTERNS = 200;
@@ -109,7 +111,7 @@ async function generateClarifyingQuestions(commandText, endpoint) {
   ].join('\n');
 
   try {
-    const response = await generateOllamaResponse({ endpoint, prompt });
+    const response = await generateOllamaResponse({ endpoint, prompt, model: getModelForTask('reason') });
     const parsed = parseJsonResponse(response?.response);
     if (Array.isArray(parsed)) return parsed.slice(0, 4);
     if (parsed?.questions && Array.isArray(parsed.questions)) return parsed.questions.slice(0, 4);
@@ -153,7 +155,7 @@ async function generatePlanPreview(commandText, projectContext, endpoint) {
   ].join('\n');
 
   try {
-    const response = await generateOllamaResponse({ endpoint, prompt });
+    const response = await generateOllamaResponse({ endpoint, prompt, model: getModelForTask('reason') });
     return parseJsonResponse(response?.response);
   } catch {
     return null;
@@ -216,7 +218,7 @@ function getRelevantPatterns(taskText) {
 
 // ─── Brain 3: Thinking Loop ─────────────────────────────────────────────────
 
-function buildThinkingPrompt(taskText, planPreview, projectContext, patterns) {
+function buildThinkingPrompt(taskText, planPreview, projectContext, patterns, conversationContext) {
   const contextLines = [];
   if (projectContext.structure) {
     contextLines.push(`Existing project files:\n${projectContext.structure}`);
@@ -243,6 +245,13 @@ function buildThinkingPrompt(taskText, planPreview, projectContext, patterns) {
   }
   if (planPreview?.plan) {
     contextLines.push(`Planned approach: ${planPreview.plan}`);
+  }
+  if (conversationContext && conversationContext.length > 0) {
+    const recentMessages = conversationContext.slice(-6);
+    const contextStr = recentMessages
+      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${String(m.content || m.text || '').slice(0, 200)}`)
+      .join('\n');
+    contextLines.push(`Recent conversation:\n${contextStr}`);
   }
 
   return [
@@ -301,8 +310,9 @@ function buildFixPrompt(taskText, errorOutput, failedFiles) {
 
 // ─── Brain 5: Better Ollama Params ──────────────────────────────────────────
 
-async function generateWithOptimizedParams(prompt, endpoint) {
-  return generateOllamaResponse({ endpoint, prompt });
+async function generateWithOptimizedParams(prompt, endpoint, taskType) {
+  const model = getModelForTask(taskType || 'code');
+  return generateOllamaResponse({ endpoint, prompt, model });
 }
 
 // ─── Brain 6: Multi-step Decomposition ──────────────────────────────────────
@@ -405,7 +415,7 @@ async function gitAutoCommit(projectDir, message) {
 // ─── Main Brain Execution ───────────────────────────────────────────────────
 
 export async function executeWithBrain(commandText, options = {}) {
-  const { endpoint, projectDirectory, onProgress, previewOnly } = options;
+  const { endpoint, projectDirectory, onProgress, previewOnly, conversationHistory } = options;
   const results = [];
   const filesWritten = [];
   const artifacts = [];
@@ -469,11 +479,12 @@ export async function executeWithBrain(commandText, options = {}) {
         `${commandText}\n\nSub-task: ${step}`,
         planPreview,
         projectContext,
-        patterns
+        patterns,
+        conversationHistory
       );
 
       try {
-        const response = await generateWithOptimizedParams(stepPrompt, endpoint);
+        const response = await generateWithOptimizedParams(stepPrompt, endpoint, 'code');
         const parsed = parseJsonResponse(response?.response);
 
         if (!parsed || !Array.isArray(parsed.files) || parsed.files.length === 0) {
@@ -533,7 +544,7 @@ export async function executeWithBrain(commandText, options = {}) {
       onProgress?.({ stage: 'fixing', agent: 'alphonso', detail: 'Attempting error correction' });
       try {
         const fixPrompt = buildFixPrompt(commandText, lastError, filesWritten.map((p) => ({ path: p })));
-        const fixResponse = await generateWithOptimizedParams(fixPrompt, endpoint);
+        const fixResponse = await generateWithOptimizedParams(fixPrompt, endpoint, 'code');
         const fixParsed = parseJsonResponse(fixResponse?.response);
 
         if (fixParsed && Array.isArray(fixParsed.files)) {
@@ -564,6 +575,20 @@ export async function executeWithBrain(commandText, options = {}) {
     }
   }
 
+  let autoRunResult = null;
+  if (filesWritten.length > 0 && projectDirectory && getAutoRunEnabled()) {
+    const hasPackageJson = filesWritten.some((f) => f === 'package.json' || f.endsWith('/package.json'));
+    const hasDevScript = projectContext.packageJson?.scripts?.dev;
+    if (hasPackageJson || hasDevScript) {
+      onProgress?.({ stage: 'auto_run', agent: 'alphonso', detail: 'Auto-running dev server' });
+      autoRunResult = await autoRunDevServer(projectDirectory);
+      if (autoRunResult) {
+        results.push(autoRunResult.success ? `Dev server started${autoRunResult.url ? ` at ${autoRunResult.url}` : ''}` : 'Dev server failed to start');
+        artifacts.push({ type: 'auto_run', success: autoRunResult.success, url: autoRunResult.url, output: autoRunResult.output?.slice(0, 500) });
+      }
+    }
+  }
+
   storePattern(commandText, { filesCount: filesWritten.length, error: lastError }, filesWritten.length > 0);
 
   if (filesWritten.length > 0) {
@@ -588,8 +613,10 @@ export async function executeWithBrain(commandText, options = {}) {
     filesWritten,
     artifacts,
     steps: steps.length,
-    success: filesWritten.length > 0
+    success: filesWritten.length > 0,
+    autoRunUrl: autoRunResult?.url || null,
+    error: lastError
   };
 }
 
-export { readProjectContext, getRelevantPatterns, decomposeTask, needsClarification, gitAutoCommit, generatePlanPreview };
+export { readProjectContext, getRelevantPatterns, decomposeTask, needsClarification, gitAutoCommit, generatePlanPreview, buildThinkingPrompt };

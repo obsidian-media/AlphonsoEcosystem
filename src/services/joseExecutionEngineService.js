@@ -510,7 +510,8 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
     const brainResult = await executeWithBrain(commandText, {
       endpoint: options.endpoint,
       projectDirectory: projectDir,
-      onProgress: options.onProgress
+      onProgress: options.onProgress,
+      conversationHistory: options.conversationHistory
     });
 
     if (brainResult.filesWritten.length > 0) {
@@ -1370,7 +1371,8 @@ export async function runJoseCommandExecutionPipeline({
   source = 'shayan',
   endpoint,
   zeroCostMode,
-  onProgress
+  onProgress,
+  conversationHistory
 }) {
   const memoryItems = listMemoryItems();
   const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
@@ -1625,7 +1627,7 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const priorOutputs = getPriorOutputs(command.id, assignment.agent);
-      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress });
+      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, conversationHistory });
 
       if (!taskResult.ok) {
         failedCount += 1;

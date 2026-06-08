@@ -1,7 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 
 export const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
-export const PREFERRED_MODEL = 'llama3.2:3b';
+export const PREFERRED_MODEL = 'qwen2.5-coder:7b';
 export const OLLAMA_TROUBLESHOOTING_COMMAND = '$env:OLLAMA_ORIGINS="*"\nollama serve';
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -133,6 +133,55 @@ export function chooseDefaultModel(models, currentModel) {
   if (currentModel && names.includes(currentModel)) return currentModel;
   if (names.includes(PREFERRED_MODEL)) return PREFERRED_MODEL;
   return names[0] || '';
+}
+
+const MODEL_TIERS = {
+  code_large: ['qwen2.5-coder:7b', 'qwen2.5-coder:14b', 'qwen2.5-coder:32b', 'deepseek-coder:6.7b', 'codellama:7b', 'codellama:13b'],
+  code_small: ['qwen2.5-coder:3b', 'qwen2.5-coder:1.5b', 'deepseek-coder:1.3b', 'starcoder:3b'],
+  general_large: ['qwen2.5:7b', 'llama3.1:8b', 'mistral:7b', 'gemma2:9b', 'phi3:3.8b'],
+  general_small: ['qwen2.5:3b', 'qwen2.5:1.5b', 'llama3.2:3b', 'llama3.2:1b', 'mistral:latest', 'phi2'],
+  creative: ['mistral:latest', 'llama3.2:3b', 'qwen2.5:3b']
+};
+
+export function classifyModelTier(modelName) {
+  const name = String(modelName).toLowerCase();
+  for (const [tier, models] of Object.entries(MODEL_TIERS)) {
+    if (models.some((m) => name.includes(m.split(':')[0]))) return tier;
+  }
+  if (/coder|code|starcoder|codellama/i.test(name)) return name.includes('3b') || name.includes('1.5b') ? 'code_small' : 'code_large';
+  if (/7b|8b|9b|13b|14b|32b/i.test(name)) return 'general_large';
+  if (/1b|3b/i.test(name)) return 'general_small';
+  return 'general_small';
+}
+
+export function chooseBestModelForTask(models, taskType) {
+  const available = models.map((m) => m.name);
+  if (taskType === 'code' || taskType === 'generate' || taskType === 'build') {
+    const codeModels = [...(MODEL_TIERS.code_large || []), ...(MODEL_TIERS.code_small || [])];
+    const match = codeModels.find((m) => available.includes(m));
+    if (match) return match;
+  }
+  if (taskType === 'reason' || taskType === 'plan' || taskType === 'analyze') {
+    const largeModels = MODEL_TIERS.general_large || [];
+    const match = largeModels.find((m) => available.includes(m));
+    if (match) return match;
+  }
+  if (taskType === 'creative' || taskType === 'write' || taskType === 'draft') {
+    const creativeModels = MODEL_TIERS.creative || [];
+    const match = creativeModels.find((m) => available.includes(m));
+    if (match) return match;
+  }
+  return chooseDefaultModel(models, '');
+}
+
+export function listAvailableModels(models) {
+  return models.map((m) => ({
+    name: m.name,
+    size: m.size,
+    tier: classifyModelTier(m.name),
+    isCodeModel: /coder|code|starcoder|codellama/i.test(m.name),
+    isLarge: /7b|8b|9b|13b|14b|32b/i.test(m.name)
+  }));
 }
 
 export async function checkOllama(endpoint, selectedModel) {
