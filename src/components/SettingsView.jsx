@@ -1,10 +1,11 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
+import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
 
 function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
   return (
@@ -223,6 +224,49 @@ export function SettingsView({
     const path = files[0].path || files[0].webkitRelativePath?.split('/')[0] || '';
     if (path) setSettings({ ...settings, workspaceRoot: path });
     e.target.value = '';
+  };
+
+  // Backup/restore state
+  const [backupSize, setBackupSize] = useState(() => getBackupSizeEstimate());
+  const [backupCreating, setBackupCreating] = useState(false);
+  const [backupRestoring, setBackupRestoring] = useState(false);
+  const [backupResult, setBackupResult] = useState(null);
+  const backupFileRef = useRef(null);
+
+  const handleCreateBackup = async () => {
+    setBackupCreating(true);
+    setBackupResult(null);
+    try {
+      const data = await createBackup();
+      exportBackupToFile(data);
+      setBackupResult({ type: 'success', message: `Backup created — ${backupSize.kb} KB exported` });
+    } catch (err) {
+      setBackupResult({ type: 'error', message: `Backup failed: ${err.message || err}` });
+    } finally {
+      setBackupCreating(false);
+    }
+  };
+
+  const handleImportBackup = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBackupRestoring(true);
+    setBackupResult(null);
+    try {
+      const data = await importBackupFromFile(file);
+      const result = await restoreBackup(data);
+      setBackupResult({
+        type: 'success',
+        message: `Restored ${result.localStorageRestored} localStorage keys, ${result.sqliteRestored} SQLite records${result.errors.length > 0 ? `, ${result.errors.length} errors` : ''}`
+      });
+      // Reload page to apply restored settings
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      setBackupResult({ type: 'error', message: `Restore failed: ${err.message || err}` });
+    } finally {
+      setBackupRestoring(false);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -566,6 +610,65 @@ export function SettingsView({
 
           <div className="text-[11px] text-zinc-500">
             When enabled, agents can use Composio tools for external task management. Zero-cost mode still requires approval for paid actions.
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Database} label="Backup & Restore" />
+        <div className="space-y-4">
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-white">Export Backup</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Download all settings, memory, chats, and agent data as a JSON file.</div>
+              </div>
+              <button
+                onClick={handleCreateBackup}
+                disabled={backupCreating}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-medium rounded-xl transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                {backupCreating ? 'Creating...' : `Export (${backupSize.kb} KB)`}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-white">Import Backup</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Restore from a previously exported backup file. Page will reload after restore.</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={backupFileRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportBackup}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => backupFileRef.current?.click()}
+                  disabled={backupRestoring}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm font-medium rounded-xl transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  {backupRestoring ? 'Restoring...' : 'Import'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {backupResult && (
+            <div className={`flex items-center gap-2 p-3 rounded-xl border ${backupResult.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
+              {backupResult.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+              <span className="text-xs">{backupResult.message}</span>
+            </div>
+          )}
+
+          <div className="text-[11px] text-zinc-500">
+            Backup includes: memory items, chat history, agent patterns, Composio config, settings, project goals/batches, and SQLite records.
           </div>
         </div>
       </section>
