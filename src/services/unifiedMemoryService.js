@@ -27,6 +27,102 @@ const STORAGE_KEYS = {
 
 const CAPS = { shared: 1000, miya: 700, ecosystem: 1500, workflow: 2000 };
 
+const QUOTA_WARNING_THRESHOLD = 0.85;
+
+const DEFAULT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+const TTL_CONFIG = {
+  project_memory: DEFAULT_TTL_MS,
+  task_memory: 14 * 24 * 60 * 60 * 1000,
+  runtime_memory: 7 * 24 * 60 * 60 * 1000,
+  workspace_memory: DEFAULT_TTL_MS,
+  creative_memory: 90 * 24 * 60 * 60 * 1000,
+  orchestration_memory: 7 * 24 * 60 * 60 * 1000,
+  research_memory: DEFAULT_TTL_MS,
+  source_memory: DEFAULT_TTL_MS,
+  citation_memory: DEFAULT_TTL_MS,
+  preference_memory: 180 * 24 * 60 * 60 * 1000,
+  code_symbol_memory: DEFAULT_TTL_MS,
+  timeline_memory: 14 * 24 * 60 * 60 * 1000,
+  brand_memory: 365 * 24 * 60 * 60 * 1000,
+  aesthetic_memory: 365 * 24 * 60 * 60 * 1000,
+  campaign_memory: 180 * 24 * 60 * 60 * 1000,
+  story_memory: 90 * 24 * 60 * 60 * 1000,
+  agent_memory: DEFAULT_TTL_MS,
+  audit_memory: 365 * 24 * 60 * 60 * 1000,
+  decision_memory: 90 * 24 * 60 * 60 * 1000,
+  build_memory: DEFAULT_TTL_MS,
+  approval_memory: 90 * 24 * 60 * 60 * 1000,
+  workflow_timeline_memory: 90 * 24 * 60 * 60 * 1000,
+  workflow_artifact_memory: 180 * 24 * 60 * 60 * 1000,
+  workflow_governance_memory: 365 * 24 * 60 * 60 * 1000,
+  workflow_receipt_memory: 365 * 24 * 60 * 60 * 1000
+};
+
+function logMemory(level, message, data) {
+  const prefix = '[unifiedMemoryService]';
+  if (level === 'error') {
+    console.error(prefix, message, data || '');
+  } else if (level === 'warn') {
+    console.warn(prefix, message, data || '');
+  } else {
+    console.log(prefix, message, data || '');
+  }
+}
+
+const CONTENT_HASH_CACHE = new Map();
+
+function contentHash(item) {
+  if (!item || !item.content) return '';
+  const raw = typeof item.content === 'string' ? item.content : JSON.stringify(item.content);
+  const key = `${item.title || ''}|${raw}`;
+  if (CONTENT_HASH_CACHE.has(key)) return CONTENT_HASH_CACHE.get(key);
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    const chr = key.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  CONTENT_HASH_CACHE.set(key, String(hash));
+  return String(hash);
+}
+
+export function clearContentHashCache() {
+  CONTENT_HASH_CACHE.clear();
+}
+
+const AUTO_TAG_KEYWORDS = [
+  { pattern: /\b(urgent|critical|blocker|p0|p1)\b/i, tags: ['high-priority'] },
+  { pattern: /\b(bug|error|crash|fail|exception)\b/i, tags: ['bug'] },
+  { pattern: /\b(feature|enhancement|request)\b/i, tags: ['feature'] },
+  { pattern: /\b(refactor|cleanup|tech-debt)\b/i, tags: ['refactor'] },
+  { pattern: /\b(doc|documentation|readme|guide)\b/i, tags: ['documentation'] },
+  { pattern: /\b(test|coverage|spec)\b/i, tags: ['testing'] },
+  { pattern: /\b(security|vuln|cve|exploit)\b/i, tags: ['security'] },
+  { pattern: /\b(perf|performance|optimize|slow)\b/i, tags: ['performance'] },
+  { pattern: /\b(deploy|release|ci|cd)\b/i, tags: ['devops'] },
+  { pattern: /\b(ui|ux|design|style|css)\b/i, tags: ['ui'] },
+  { pattern: /\b(api|endpoint|route)\b/i, tags: ['api'] },
+  { pattern: /\b(db|database|migration|schema|query)\b/i, tags: ['database'] },
+  { pattern: /\b(auth|login|permission|rbac|oauth)\b/i, tags: ['auth'] },
+  { pattern: /\b(backup|recovery|snapshot|restore)\b/i, tags: ['backup'] },
+  { pattern: /\b(config|configur|setting|env)\b/i, tags: ['configuration'] },
+  { pattern: /\b(monitor|observability|logging|tracing)\b/i, tags: ['observability'] },
+  { pattern: /\b(workflow|orchestrat|pipeline)\b/i, tags: ['workflow'] },
+  { pattern: /\b(agent|llm|model|ai|ml)\b/i, tags: ['ai'] }
+];
+
+function computeAutoTags(item) {
+  const tags = new Set(Array.isArray(item.tags) ? item.tags : []);
+  const haystack = `${item.title || ''} ${typeof item.content === 'string' ? item.content : JSON.stringify(item.content || '')}`;
+  for (const rule of AUTO_TAG_KEYWORDS) {
+    if (rule.pattern.test(haystack)) {
+      for (const tag of rule.tags) tags.add(tag);
+    }
+  }
+  return [...tags];
+}
+
 const durableMemoryProbe = { checked: false, available: false, nextCheckAtMs: 0 };
 let durableWriteQueue = Promise.resolve();
 
@@ -46,6 +142,39 @@ function writeLocal(namespace, items) {
   const key = STORAGE_KEYS[namespace] || STORAGE_KEYS.shared;
   const cap = CAPS[namespace] || CAPS.shared;
   localStorage.setItem(key, JSON.stringify(items.slice(-cap)));
+}
+
+// ── TTL / Garbage Collection ───────────────────────────────────────────
+
+const _tickLog = { warned: false };
+
+export function tickExpiry(now = Date.now()) {
+  let removed = 0;
+  let expiredCategories = {};
+  for (const ns of MEMORY_NAMESPACES) {
+    const rows = readLocal(ns);
+    const before = rows.length;
+    const kept = rows.filter((item) => {
+      if (item.expiresAt && Number(new Date(item.expiresAt).getTime()) <= now) return false;
+      const ttl = TTL_CONFIG[item.category] || DEFAULT_TTL_MS;
+      const age = now - Number(item.timestampMs || 0);
+      if (age > ttl) {
+        const cat = item.category || 'unknown';
+        expiredCategories[cat] = (expiredCategories[cat] || 0) + 1;
+        return false;
+      }
+      return true;
+    });
+    if (kept.length < before) {
+      writeLocal(ns, kept);
+      removed += before - kept.length;
+    }
+  }
+  if (removed > 0 && !_tickLog.warned) {
+    logMemory('info', `tickExpiry: removed ${removed} expired items`, expiredCategories);
+    if (removed > 100) _tickLog.warned = true;
+  }
+  return removed;
 }
 
 // ── SQLite durable layer ──────────────────────────────────────────────
@@ -99,7 +228,8 @@ function queueDurableWrite(record) {
       if (!(await checkDurableAvailable())) return;
       await invoke('upsert_memory_records', { records: [toDurableRecord(record)] });
     })
-    .catch(() => {
+    .catch((err) => {
+      logMemory('error', 'queueDurableWrite failed', err);
       durableMemoryProbe.available = false;
       durableMemoryProbe.nextCheckAtMs = timestampMs() + 10_000;
     });
@@ -145,6 +275,7 @@ function withExpiryState(item) {
  * @param {'shared'|'miya'|'ecosystem'|'workflow'} [partial.namespace='shared']
  */
 export function pushMemory(partial) {
+  tickExpiry();
   const namespace = partial.namespace || 'shared';
   const now = timestampMs();
 
@@ -175,9 +306,11 @@ export function pushMemory(partial) {
     tags: Array.isArray(partial.tags) ? partial.tags : []
   };
 
+  const tagged = autoTagMemoryItem(item);
+
   // Write to localStorage namespace
   const items = readLocal(namespace);
-  items.push(item);
+  items.push(tagged);
   writeLocal(namespace, items);
 
   // Miya-specific: agent activity + runtime ledger
@@ -193,16 +326,17 @@ export function pushMemory(partial) {
 
   // Queue SQLite write for shared/workflow namespaces
   if (namespace === 'shared' || namespace === 'workflow') {
-    queueDurableWrite(item);
+    queueDurableWrite(tagged);
   }
 
-  return item;
+  return tagged;
 }
 
 /**
  * List memory items across all namespaces with optional filters.
  */
 export function listMemory(filters = {}) {
+  tickExpiry();
   const results = [];
 
   // Collect from all namespaces
@@ -243,6 +377,7 @@ export function listMemory(filters = {}) {
  * List items from a specific namespace (backward compat).
  */
 export function listMemoryByNamespace(namespace) {
+  tickExpiry();
   return readLocal(namespace).map(withExpiryState);
 }
 
@@ -451,10 +586,156 @@ export function clearExpiredMemory(now = Date.now()) {
   return { removed, remaining: listMemory().length };
 }
 
+// ── Size tracking ─────────────────────────────────────────────────────
+
+export function getMemorySize(namespace) {
+  const key = STORAGE_KEYS[namespace];
+  if (!key) return 0;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? new Blob([raw]).size : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function getAllMemorySizes() {
+  const sizes = {};
+  for (const ns of MEMORY_NAMESPACES) {
+    sizes[ns] = getMemorySize(ns);
+  }
+  return sizes;
+}
+
+// ── Quota warnings ───────────────────────────────────────────────────
+
+export function checkQuota() {
+  const warnings = [];
+  for (const ns of MEMORY_NAMESPACES) {
+    const rows = readLocal(ns);
+    const cap = CAPS[ns] || CAPS.shared;
+    const usage = rows.length;
+    const ratio = usage / cap;
+    if (ratio >= QUOTA_WARNING_THRESHOLD) {
+      const pct = Math.round(ratio * 100);
+      warnings.push({ namespace: ns, usage, cap, ratio, message: `${ns}: ${usage}/${cap} (${pct}%)` });
+      logMemory('warn', `Quota warning for namespace "${ns}": ${usage}/${cap} (${pct}%)`);
+    }
+  }
+  return warnings;
+}
+
+// ── Deduplication by content hash ────────────────────────────────────
+
+export function deduplicateMemory(namespace) {
+  tickExpiry();
+  const rows = readLocal(namespace);
+  const seen = new Map();
+  const deduped = [];
+  let removedCount = 0;
+  for (const item of rows) {
+    const hash = contentHash(item);
+    const existing = seen.get(hash);
+    if (existing) {
+      const existingTs = Number(existing.timestampMs || 0);
+      const itemTs = Number(item.timestampMs || 0);
+      if (itemTs > existingTs) {
+        seen.set(hash, item);
+      }
+      removedCount++;
+    } else {
+      seen.set(hash, item);
+    }
+  }
+  for (const item of seen.values()) {
+    deduped.push(item);
+  }
+  deduped.sort((a, b) => Number(a.timestampMs || 0) - Number(b.timestampMs || 0));
+  if (removedCount > 0) {
+    writeLocal(namespace, deduped);
+    logMemory('info', `deduplicateMemory[${namespace}]: removed ${removedCount} duplicates`);
+  }
+  return { originalCount: rows.length, dedupedCount: deduped.length, removedCount };
+}
+
+export function deduplicateAllNamespaces() {
+  const results = {};
+  for (const ns of MEMORY_NAMESPACES) {
+    results[ns] = deduplicateMemory(ns);
+  }
+  return results;
+}
+
+// ── Auto-tagging ─────────────────────────────────────────────────────
+
+export function autoTagMemoryItem(item) {
+  if (!item) return item;
+  const autoTags = computeAutoTags(item);
+  const existing = new Set(Array.isArray(item.tags) ? item.tags : []);
+  for (const tag of autoTags) existing.add(tag);
+  return { ...item, tags: [...existing] };
+}
+
+// ── Export / Import ───────────────────────────────────────────────────
+
+export function exportMemoryItems(namespace, filters = {}) {
+  tickExpiry();
+  const items = namespace
+    ? listMemoryByNamespace(namespace).filter((item) => {
+        if (filters.category && item.category !== filters.category) return false;
+        if (filters.sourceAgent && item.sourceAgent !== filters.sourceAgent) return false;
+        return true;
+      })
+    : listMemory(filters);
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    namespace: namespace || 'all',
+    count: items.length,
+    items: items.map(({ tags, ...rest }) => ({ ...rest, tags: tags || [] }))
+  };
+  return payload;
+}
+
+export function importMemoryItems(json, namespace) {
+  if (!json || !Array.isArray(json.items)) {
+    logMemory('error', 'importMemoryItems: invalid payload');
+    return { imported: 0, errors: 1 };
+  }
+  const targetNs = namespace || json.namespace || 'shared';
+  if (!MEMORY_NAMESPACES.includes(targetNs)) {
+    logMemory('error', `importMemoryItems: invalid namespace "${targetNs}"`);
+    return { imported: 0, errors: 1 };
+  }
+  const existing = readLocal(targetNs);
+  const existingIds = new Set(existing.map((i) => i.id));
+  let imported = 0;
+  let skipped = 0;
+  for (const item of json.items) {
+    if (existingIds.has(item.id)) {
+      skipped++;
+      continue;
+    }
+    const tagged = autoTagMemoryItem({
+      ...item,
+      namespace: targetNs,
+      timestampMs: Number(item.timestampMs || Date.now()),
+      tags: Array.isArray(item.tags) ? item.tags : []
+    });
+    existing.push(tagged);
+    existingIds.add(tagged.id);
+    imported++;
+  }
+  writeLocal(targetNs, existing);
+  logMemory('info', `importMemoryItems[${targetNs}]: imported ${imported}, skipped ${skipped}`);
+  return { imported, skipped, total: imported + skipped };
+}
+
 // ── Memory summary for diagnostics ────────────────────────────────────
 
 export function getMemorySummary() {
-  const summary = { total: 0, byNamespace: {}, byCategory: {}, oldest: null, newest: null };
+  tickExpiry();
+  const summary = { total: 0, byNamespace: {}, byCategory: {}, oldest: null, newest: null, quotaWarnings: checkQuota() };
   const all = listMemory();
   summary.total = all.length;
 
