@@ -29,6 +29,9 @@ const ZERO_COST_FREE_TERMS: string[] = [
 ];
 
 export interface AgentContract {
+  role: string;
+  allowedActionPrefixes: string[];
+  blockedActionPrefixes: string[];
   requiredFields: string[];
   allowedResultStates: string[];
   requiresUrlForVerified: boolean;
@@ -237,11 +240,17 @@ function classifyCommandCost(lower: string): ConnectorCostClassification {
 }
 
 function defaultContractsForAssignments(assignments: JoseCommandAssignment[]): AgentContract[] {
-  return assignments.map((assignment) => ({
-    agent: assignment.agent,
-    actionType: assignment.actionType,
-    ...AGENT_CONTRACTS[assignment.agent]
-  }));
+  return assignments.map((assignment) => {
+    const base = AGENT_CONTRACTS[assignment.agent] || { role: '', allowedActionPrefixes: [], blockedActionPrefixes: [] };
+    return {
+      agent: assignment.agent,
+      actionType: assignment.actionType,
+      ...base,
+      requiredFields: [],
+      allowedResultStates: [],
+      requiresUrlForVerified: false
+    };
+  });
 }
 
 function dedupeAssignments(assignments: JoseCommandAssignment[]): JoseCommandAssignment[] {
@@ -509,6 +518,7 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       riskLevel: 'high',
       requiresApproval: true,
       commandPreview: 'Blocked by Zero-Cost Mode default policy until explicit approval override.',
+      fragments: [],
       decomposition: [clean],
       costClass: connectorCost?.class || 'paid_or_metered',
       blockedByZeroCostMode: true
@@ -532,6 +542,7 @@ async function decomposeViaBackend(parsed: ParsedJoseCommand): Promise<JoseComma
       riskLevel: row.riskLevel,
       requiresApproval: Boolean(row.requiresApproval),
       commandPreview: row.commandPreview,
+      fragments: Array.isArray(row.fragments) ? row.fragments : [],
       decomposition: Array.isArray(row.decomposition) ? row.decomposition : [parsed.clean]
     }));
   } catch {
@@ -686,14 +697,14 @@ interface ContractValidation {
 }
 
 function validateReportContract(assignment: JoseCommandAssignment, reportPayload: any): ContractValidation {
-  const contract = AGENT_CONTRACTS[assignment?.agent] || AGENT_CONTRACTS[AGENTS.JOSE];
+  const contract = (AGENT_CONTRACTS[assignment?.agent] || AGENT_CONTRACTS[AGENTS.JOSE]) as AgentContract;
   const payload = reportPayload || {};
-  const missing = contract.requiredFields.filter((field) => {
+  const missing = (contract.requiredFields || []).filter((field) => {
     const value = payload[field];
     return value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
   });
   const state = String(payload.resultState || 'pending_review');
-  const invalidState = !contract.allowedResultStates.includes(state);
+  const invalidState = !(contract.allowedResultStates || []).includes(state);
   const urlMissing = contract.requiresUrlForVerified && state === 'verified' && !payload.resultUrl;
   return {
     valid: missing.length === 0 && !invalidState && !urlMissing,
@@ -928,7 +939,7 @@ export function createJoseReportToShayan(
     pendingCount: pendingAssignments.length,
     contractFailures: assignments.filter((assignment) => assignment.status === 'contract_invalid').map((assignment) => ({
       agent: assignment.agent,
-      packetId: assignment.packetId,
+      packetId: assignment.packetId || '',
       issues: assignment.contractIssues || []
     })),
     assignmentSummaries: assignments.map((assignment) => {
@@ -936,12 +947,12 @@ export function createJoseReportToShayan(
       return {
         agent: assignment.agent,
         title: assignment.title,
-        assignmentStatus: assignment.status,
+        assignmentStatus: assignment.status || 'unknown',
         reportStatus: report?.payload?.resultState || 'not_reported',
         reportSummary: report?.payload?.summary || 'No agent report received yet.',
         artifacts: Array.isArray(report?.payload?.artifacts) ? report.payload.artifacts : [],
         resultUrl: report?.payload?.resultUrl || null,
-        packetId: assignment.packetId,
+        packetId: assignment.packetId || '',
         reportPacketId: report?.id || null
       };
     }),

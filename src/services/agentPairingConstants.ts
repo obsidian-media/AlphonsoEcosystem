@@ -44,7 +44,7 @@ export const AGENT_PAIRINGS_V1: Record<string, AgentPairingKey> = Object.freeze(
   NOVA_ECHO: 'nova->echo'
 });
 
-export const AGENT_PAIRING_ROUTES: Record<AgentPairingKey, AgentPairingRoute> = Object.freeze({
+export const AGENT_PAIRING_ROUTES = Object.freeze({
   [AGENT_PAIRINGS_V1.MIYA_COMFYUI]: {
     from: 'miya',
     to: 'comfyui',
