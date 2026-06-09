@@ -43,7 +43,7 @@ export function MemorySearch({ onClose, onSelect }) {
   const agents = ['alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-label="Memory search">
       <div
         className="w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -58,8 +58,9 @@ export function MemorySearch({ onClose, onSelect }) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search memory, projects, agent outputs..."
             className="flex-1 bg-transparent text-zinc-100 text-sm focus:outline-none placeholder-zinc-600"
+            aria-label="Search memory"
           />
-          <button onClick={onClose} className="p-1 rounded hover:bg-zinc-800 text-zinc-500">
+          <button onClick={onClose} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50" aria-label="Close memory search">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -69,7 +70,8 @@ export function MemorySearch({ onClose, onSelect }) {
           <Tag className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
           <button
             onClick={() => setSelectedCategory('')}
-            className={`px-2 py-1 rounded-md text-[10px] transition-colors ${!selectedCategory ? 'bg-indigo-500/20 text-indigo-300' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`px-2 py-1 rounded-md text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${!selectedCategory ? 'bg-indigo-500/20 text-indigo-300' : 'text-zinc-500 hover:text-zinc-300'}`}
+            aria-pressed={selectedCategory === ''}
           >
             All
           </button>
@@ -77,7 +79,8 @@ export function MemorySearch({ onClose, onSelect }) {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-              className={`px-2 py-1 rounded-md text-[10px] transition-colors whitespace-nowrap ${selectedCategory === cat ? 'bg-indigo-500/20 text-indigo-300' : 'text-zinc-500 hover:text-zinc-300'}`}
+              className={`px-2 py-1 rounded-md text-[10px] transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${selectedCategory === cat ? 'bg-indigo-500/20 text-indigo-300' : 'text-zinc-500 hover:text-zinc-300'}`}
+              aria-pressed={selectedCategory === cat}
             >
               {cat.replace(/_/g, ' ')}
             </button>

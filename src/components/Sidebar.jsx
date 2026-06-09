@@ -71,7 +71,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-white">ALPHONSO</span>}
           <button
             onClick={onToggle}
-            className="ml-auto p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-3 transition-colors shrink-0"
+            className="ml-auto p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-3 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
           </button>
@@ -90,11 +91,12 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 ${
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                     activeTab === item.id
                       ? 'bg-accent/10 text-white border border-accent/20'
                       : 'text-zinc-400 hover:bg-surface-3 hover:text-zinc-200 border border-transparent'
                   }`}
+                  aria-current={activeTab === item.id ? 'page' : undefined}
                 >
                   <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-accent-light' : ''}`} />
                   {isOpen && <span className="font-medium">{item.label}</span>}
@@ -112,7 +114,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           <div className="flex flex-col flex-1 px-2 mt-2 overflow-hidden">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="section-label">Recent Chats</span>
-              <button onClick={onCreateChat} className="p-1 hover:bg-surface-3 rounded-lg transition-colors text-zinc-500 hover:text-white">
+              <button onClick={onCreateChat} className="p-1 hover:bg-surface-3 rounded-lg transition-colors text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50" aria-label="Create new chat">
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -130,7 +132,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                   <span className="truncate">{chat.title}</span>
                   <button
                     onClick={(e) => onDeleteChat(chat.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-danger/20 hover:text-danger rounded transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-danger/20 hover:text-danger rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:opacity-100"
+                    aria-label={`Delete chat: ${chat.title}`}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -145,16 +148,18 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       <div className="p-2 border-t border-white/[0.06] space-y-0.5">
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm transition-all ${
+          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
             activeTab === 'settings' ? 'bg-surface-3 text-white' : 'text-zinc-400 hover:bg-surface-3'
           }`}
+          aria-label="Open settings"
         >
           <Settings className="w-4 h-4" />
           {isOpen && <span>Settings</span>}
         </button>
         <button
           onClick={() => setIsLight((v) => !v)}
-          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm text-zinc-400 hover:bg-surface-3 transition-all"
+          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm text-zinc-400 hover:bg-surface-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          aria-label={isLight ? 'Switch to dark theme' : 'Switch to light theme'}
         >
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           {isOpen && <span>{isLight ? 'Dark' : 'Light'}</span>}
