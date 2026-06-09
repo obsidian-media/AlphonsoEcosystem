@@ -45,6 +45,7 @@ const NAV_SECTIONS = [
     items: [
       { id: 'connectors', icon: FolderOpen, label: 'Connectors', showStatusDot: true },
       { id: 'activity', icon: FolderOpen, label: 'Activity' },
+      { id: 'workflows', icon: FolderOpen, label: 'Workflows' },
     ]
   }
 ];

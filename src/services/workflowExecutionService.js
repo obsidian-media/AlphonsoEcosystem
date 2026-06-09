@@ -2,6 +2,8 @@ import { AGENTS, listAgentPackets, updatePacketStatus } from './agentBusService'
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
+import { appendWorkflowReceipt } from './workflowReceiptService';
+import { listWorkflowOperations } from './workflowOperationsRegistryService';
 
 async function webSearch({ query = '', limit = 5 } = {}) {
   return { ok: false, data: { web: [] }, error: 'Web search not available in workflow engine.', query, limit };
@@ -470,22 +472,228 @@ export function listSupportedExecutors() {
   return Object.keys(EXECUTORS);
 }
 
-export function listWorkflowRuns() {
-  return [];
+const WORKFLOW_RUNS_KEY = 'alphonso_workflow_runs_v1';
+const WORKFLOW_TIMELINE_KEY = 'alphonso_workflow_run_timelines_v1';
+
+function readRuns() {
+  try {
+    const raw = localStorage.getItem(WORKFLOW_RUNS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }
 
-export function startWorkflowRun() {
-  return { ok: false, error: 'Workflow run engine is not yet wired.' };
+function writeRuns(runs) {
+  localStorage.setItem(WORKFLOW_RUNS_KEY, JSON.stringify(runs));
 }
 
-export function executeWorkflowRun() {
-  return { ok: false, error: 'Workflow run execution is not yet wired.' };
+function readTimelines() {
+  try {
+    const raw = localStorage.getItem(WORKFLOW_TIMELINE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
 }
 
-export function approveWorkflowRun() {
-  return { ok: false, error: 'Workflow run approval is not yet wired.' };
+function writeTimelines(timelines) {
+  localStorage.setItem(WORKFLOW_TIMELINE_KEY, JSON.stringify(timelines));
 }
 
-export function listWorkflowRunTimeline() {
-  return [];
+function appendTimeline(runId, entry) {
+  const timelines = readTimelines();
+  if (!timelines[runId]) timelines[runId] = [];
+  timelines[runId].push({ ...entry, timestamp: new Date().toISOString() });
+  writeTimelines(timelines);
+}
+
+function generateRunId() {
+  return `wf-run-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function hasRealConnectors(connectorRequirements) {
+  if (!Array.isArray(connectorRequirements)) return false;
+  return connectorRequirements.length > 0 && !connectorRequirements.includes('none_required') && !connectorRequirements.includes('depends_on_automation_target');
+}
+
+function buildStages(operation) {
+  const actions = operation.allowedActions || [];
+  if (actions.length === 0) return [];
+  return actions.map((action) => ({
+    id: `${operation.id}-${action}-${Date.now()}`,
+    name: action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    actionType: action,
+    state: 'pending',
+    result: null,
+    error: null
+  }));
+}
+
+function computeInitialStatus(operation, options) {
+  const zeroCostMode = options.zeroCostMode !== false;
+  const needsApproval = operation.riskLevel === 'high' || operation.riskLevel === 'critical';
+  if (needsApproval && zeroCostMode) return 'approval_required';
+  if (hasRealConnectors(operation.connectorRequirements)) return 'setup_required';
+  return 'queued';
+}
+
+export function startWorkflowRun(operationId, options = {}) {
+  const ops = listWorkflowOperations();
+  const operation = ops.find((o) => o.id === operationId);
+  if (!operation) {
+    return { ok: false, error: `Workflow operation '${operationId}' not found.` };
+  }
+
+  const stages = buildStages(operation);
+  const status = computeInitialStatus(operation, options);
+
+  const run = {
+    id: generateRunId(),
+    workflowId: operationId,
+    status,
+    input: options.input || '',
+    triggerType: options.triggerType || 'manual_command',
+    zeroCostMode: options.zeroCostMode !== false,
+    stages: stages.map((s) => ({ ...s })),
+    progress: { totalStages: stages.length, completedStages: 0, blockedStages: 0, approvalRequiredStages: 0 },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const runs = readRuns();
+  runs.push(run);
+  writeRuns(runs);
+
+  appendTimeline(run.id, { event: 'started', status });
+
+  appendWorkflowReceipt({
+    workflowId: operationId,
+    workflowRunId: run.id,
+    actionType: 'workflow_started',
+    status,
+    riskLevel: operation.riskLevel || 'low',
+    details: { triggerType: options.triggerType, input: options.input }
+  });
+
+  return { ok: true, run };
+}
+
+export function approveWorkflowRun(runId, approver = 'user') {
+  const runs = readRuns();
+  const run = runs.find((r) => r.id === runId);
+  if (!run) return { ok: false, error: `Run '${runId}' not found.` };
+
+  run.status = 'approved';
+  run.approvedBy = approver;
+  run.updatedAt = new Date().toISOString();
+  writeRuns(runs);
+
+  appendTimeline(run.id, { event: 'approved', approver });
+
+  appendWorkflowReceipt({
+    workflowId: run.workflowId,
+    workflowRunId: run.id,
+    actionType: 'workflow_approved',
+    status: 'approved',
+    details: { approver }
+  });
+
+  return { ok: true, run };
+}
+
+function connectorMatch(stageActionType, connectorRequirements) {
+  if (!Array.isArray(connectorRequirements)) return false;
+  return connectorRequirements.some((req) => {
+    const clean = req.replace(/\?.*$/, '').toLowerCase();
+    return stageActionType.toLowerCase().includes(clean) || clean.includes(stageActionType.toLowerCase());
+  });
+}
+
+export function executeWorkflowRun(runId) {
+  const runs = readRuns();
+  const run = runs.find((r) => r.id === runId);
+  if (!run) return { ok: false, error: `Run '${runId}' not found.` };
+
+  run.status = 'in_progress';
+  run.updatedAt = new Date().toISOString();
+  appendTimeline(run.id, { event: 'execution_started' });
+
+  const ops = listWorkflowOperations();
+  const operation = ops.find((o) => o.id === run.workflowId);
+  const connectorReqs = operation?.connectorRequirements || [];
+
+  let completedStages = 0;
+  let blockedStages = 0;
+  let approvalRequiredStages = 0;
+
+  for (const stage of run.stages) {
+    stage.state = 'in_progress';
+
+    const hasConnectorMatch = connectorMatch(stage.actionType || stage.name, connectorReqs);
+
+    if (hasConnectorMatch) {
+      stage.state = 'setup_required';
+      stage.error = 'Connector setup required for this stage.';
+      blockedStages++;
+      appendTimeline(run.id, { event: 'stage_blocked', stage: stage.name, reason: 'connector_setup' });
+      continue;
+    }
+
+    const executor = getWorkflowExecutor(stage.actionType || stage.name);
+    if (executor) {
+      try {
+        const result = executor({ ...run, currentStage: stage });
+        stage.state = 'completed';
+        stage.result = result;
+        completedStages++;
+        appendTimeline(run.id, { event: 'stage_completed', stage: stage.name });
+      } catch (err) {
+        stage.state = 'blocked';
+        stage.error = String(err);
+        blockedStages++;
+        appendTimeline(run.id, { event: 'stage_failed', stage: stage.name, error: String(err) });
+      }
+    } else {
+      stage.state = 'completed';
+      stage.result = { ok: true, result: 'No specific executor — stage skipped.' };
+      completedStages++;
+      appendTimeline(run.id, { event: 'stage_skipped', stage: stage.name });
+    }
+  }
+
+  run.status = blockedStages > 0 ? 'partial' : 'completed';
+  run.progress = { totalStages: run.stages.length, completedStages, blockedStages, approvalRequiredStages };
+  run.updatedAt = new Date().toISOString();
+  writeRuns(runs);
+
+  appendTimeline(run.id, { event: 'execution_finished', status: run.status });
+
+  appendWorkflowReceipt({
+    workflowId: run.workflowId,
+    workflowRunId: run.id,
+    actionType: 'workflow_executed',
+    status: run.status,
+    riskLevel: operation?.riskLevel || 'low',
+    details: { progress: run.progress }
+  });
+
+  return { ok: true, run };
+}
+
+export function getWorkflowRun(runId) {
+  const runs = readRuns();
+  return runs.find((r) => r.id === runId) || null;
+}
+
+export function listWorkflowRuns(filter = {}) {
+  let runs = readRuns();
+  if (filter.workflowId) runs = runs.filter((r) => r.workflowId === filter.workflowId);
+  if (filter.status) runs = runs.filter((r) => r.status === filter.status);
+  return runs;
+}
+
+export function listWorkflowRunTimeline(runId) {
+  const timelines = readTimelines();
+  return timelines[runId] || [];
 }
