@@ -483,6 +483,36 @@ struct WorkspaceDirectoryProof {
   trust: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UrlOpenProof {
+  url: String,
+  opened: bool,
+  opened_at_ms: u64,
+  trust: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UrlFetchProof {
+  url: String,
+  status: u16,
+  content: String,
+  title: String,
+  fetched_at_ms: u64,
+  trust: String,
+  error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClipboardProof {
+  action: String,
+  content: String,
+  performed_at_ms: u64,
+  trust: String,
+}
+
 pub(crate) fn now_ms() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)
@@ -4937,6 +4967,131 @@ fn list_workspace_directory(workspace_root: String, relative_path: String, recur
   })
 }
 
+#[tauri::command]
+fn open_url(url: String) -> Result<UrlOpenProof, String> {
+  if !url.starts_with("http://") && !url.starts_with("https://") {
+    return Err("URL must start with http:// or https://".to_string());
+  }
+  if cfg!(target_os = "windows") {
+    Command::new("cmd").args(["/C", "start", &url]).spawn().map_err(|e| e.to_string())?;
+  } else if cfg!(target_os = "macos") {
+    Command::new("open").arg(&url).spawn().map_err(|e| e.to_string())?;
+  } else {
+    Command::new("xdg-open").arg(&url).spawn().map_err(|e| e.to_string())?;
+  }
+  Ok(UrlOpenProof {
+    url,
+    opened: true,
+    opened_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
+}
+
+#[tauri::command]
+async fn fetch_url_content(state: tauri::State<'_, reqwest::Client>, url: String) -> Result<UrlFetchProof, String> {
+  if !url.starts_with("http://") && !url.starts_with("https://") {
+    return Err("URL must start with http:// or https://".to_string());
+  }
+  let response = state.get(&url)
+    .header(reqwest::header::USER_AGENT, "Alphonso/1.0")
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+  let status = response.status().as_u16();
+  let html = response.text().await.map_err(|e| e.to_string())?;
+
+  // Extract title
+  let title = html
+    .lines()
+    .find(|line| line.to_lowercase().contains("<title>"))
+    .and_then(|line| {
+      let start = line.to_lowercase().find("<title>")? + 7;
+      let end = line.to_lowercase().find("</title>")?;
+      Some(line[start..end].trim().to_string())
+    })
+    .unwrap_or_default();
+
+  // Strip HTML tags (basic)
+  let mut content = String::new();
+  let mut in_tag = false;
+  for ch in html.chars() {
+    if ch == '<' { in_tag = true; continue; }
+    if ch == '>' { in_tag = false; continue; }
+    if !in_tag { content.push(ch); }
+  }
+  let content = content
+    .lines()
+    .map(|l| l.trim())
+    .filter(|l| !l.is_empty())
+    .take(200)
+    .collect::<Vec<_>>()
+    .join("\n")
+    .chars()
+    .take(10000)
+    .collect();
+
+  Ok(UrlFetchProof {
+    url,
+    status,
+    content,
+    title,
+    fetched_at_ms: now_ms(),
+    trust: "verified".to_string(),
+    error: None,
+  })
+}
+
+#[tauri::command]
+fn read_clipboard() -> Result<ClipboardProof, String> {
+  #[cfg(target_os = "windows")]
+  {
+    use std::process::Command;
+    let output = Command::new("powershell")
+      .args(["-Command", "Get-Clipboard"])
+      .output()
+      .map_err(|e| e.to_string())?;
+    let content = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(ClipboardProof {
+      action: "read".to_string(),
+      content,
+      performed_at_ms: now_ms(),
+      trust: "verified".to_string(),
+    })
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    Err("Clipboard read not supported on this platform".to_string())
+  }
+}
+
+#[tauri::command]
+fn write_clipboard(content: String) -> Result<ClipboardProof, String> {
+  #[cfg(target_os = "windows")]
+  {
+    use std::process::Command;
+    let mut child = Command::new("powershell")
+      .args(["-Command", "Set-Clipboard"])
+      .stdin(std::process::Stdio::piped())
+      .spawn()
+      .map_err(|e| e.to_string())?;
+    if let Some(mut stdin) = child.stdin.take() {
+      use std::io::Write;
+      stdin.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
+    }
+    child.wait().map_err(|e| e.to_string())?;
+    Ok(ClipboardProof {
+      action: "write".to_string(),
+      content: content.chars().take(100).collect(),
+      performed_at_ms: now_ms(),
+      trust: "verified".to_string(),
+    })
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    Err("Clipboard write not supported on this platform".to_string())
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   load_dotenv();
@@ -5353,7 +5508,11 @@ pub fn run() {
       delete_workspace_file,
       move_workspace_file,
       search_workspace_files,
-      list_workspace_directory
+      list_workspace_directory,
+      open_url,
+      fetch_url_content,
+      read_clipboard,
+      write_clipboard
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

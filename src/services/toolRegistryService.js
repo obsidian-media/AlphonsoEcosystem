@@ -96,14 +96,47 @@ const TOOLS = {
   // Web operations
   fetch_url: {
     name: 'fetch_url',
-    description: 'Fetch content from a URL',
+    description: 'Fetch and extract text content from a URL',
     parameters: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'URL to fetch' },
-        method: { type: 'string', enum: ['GET', 'POST'], description: 'HTTP method' }
+        url: { type: 'string', description: 'URL to fetch' }
       },
       required: ['url']
+    }
+  },
+
+  open_url: {
+    name: 'open_url',
+    description: 'Open a URL in the default browser',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to open' }
+      },
+      required: ['url']
+    }
+  },
+
+  read_clipboard: {
+    name: 'read_clipboard',
+    description: 'Read text content from the system clipboard',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+
+  write_clipboard: {
+    name: 'write_clipboard',
+    description: 'Write text content to the system clipboard',
+    parameters: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Text to copy to clipboard' }
+      },
+      required: ['content']
     }
   },
 
@@ -257,9 +290,23 @@ export async function executeTool(name, args, context = {}) {
     }
 
     case 'fetch_url': {
-      const response = await fetch(args.url, { method: args.method || 'GET' });
-      const text = await response.text();
-      return { success: response.ok, status: response.status, content: text.slice(0, 10000) };
+      const { fetchUrlContent } = await import('./browserAutomationService');
+      return fetchUrlContent(args.url);
+    }
+
+    case 'open_url': {
+      const { openUrl } = await import('./browserAutomationService');
+      return openUrl(args.url);
+    }
+
+    case 'read_clipboard': {
+      const { readClipboard } = await import('./browserAutomationService');
+      return readClipboard();
+    }
+
+    case 'write_clipboard': {
+      const { writeClipboard } = await import('./browserAutomationService');
+      return writeClipboard(args.content);
     }
 
     case 'use_composio_tool': {
