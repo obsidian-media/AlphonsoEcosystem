@@ -1,3 +1,16 @@
+/**
+ * Workflow execution engine — runs both visual builder workflows AND operations registry workflows.
+ * This is the bridge between the two parallel workflow systems:
+ *   - visual workflows (workflowBuilderService) — user-created graphs executed via runVisualWorkflow
+ *   - operation workflows (workflowOperationsRegistryService) — predefined governed templates executed via startWorkflowRun
+ *   - agent-chain workflows (workflowRegistryService) — Jose-routed chains (external to this file's run cycle)
+ *
+ * @see ./workflowBuilderService — visual/node-based workflow builder (source for runVisualWorkflow)
+ * @see ./workflowOperationsRegistryService — governance-enriched operations (source for startWorkflowRun)
+ * @see ./workflowRegistryService — agent-chain workflow definitions (uses executeWorkflowStep from this file)
+ * @see ./workflowGovernanceService — governance evaluation for operations
+ */
+
 import { AGENTS, listAgentPackets, updatePacketStatus } from './agentBusService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { appendSessionEvent } from './sessionIntelligenceService';
@@ -599,6 +612,9 @@ function computeInitialStatus(operation, options) {
 }
 
 export function startWorkflowRun(operationId, options = {}) {
+  if (!operationId || typeof operationId !== 'string') {
+    return { ok: false, error: 'operationId must be a non-empty string.' };
+  }
   const ops = listWorkflowOperations();
   const operation = ops.find((o) => o.id === operationId);
   if (!operation) {
@@ -671,6 +687,7 @@ function connectorMatch(stageActionType, connectorRequirements) {
 }
 
 export async function executeWorkflowRun(runId) {
+  if (!runId || typeof runId !== 'string') return { ok: false, error: 'runId must be a non-empty string.' };
   const runs = readRuns();
   const run = runs.find((r) => r.id === runId);
   if (!run) return { ok: false, error: `Run '${runId}' not found.` };
@@ -763,6 +780,7 @@ export async function executeWorkflowRun(runId) {
 }
 
 export function retryWorkflowRun(runId) {
+  if (!runId || typeof runId !== 'string') return { ok: false, error: 'runId must be a non-empty string.' };
   const runs = readRuns();
   const run = runs.find((r) => r.id === runId);
   if (!run) return { ok: false, error: `Run '${runId}' not found.` };
@@ -801,6 +819,7 @@ export function retryWorkflowRun(runId) {
 }
 
 export function runVisualWorkflow(workflowId, options = {}) {
+  if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'workflowId must be a non-empty string.' };
   const visualWorkflows = listVisualWorkflows();
   const workflow = visualWorkflows.find((w) => w.id === workflowId);
   if (!workflow) return { ok: false, error: `Visual workflow '${workflowId}' not found.` };
@@ -850,11 +869,13 @@ export function runVisualWorkflow(workflowId, options = {}) {
 }
 
 export function getWorkflowRun(runId) {
+  if (!runId) return null;
   const runs = readRuns();
   return runs.find((r) => r.id === runId) || null;
 }
 
 export function listWorkflowRuns(filter = {}) {
+  if (typeof filter !== 'object' || filter === null || Array.isArray(filter)) filter = {};
   let runs = readRuns();
   if (filter.workflowId) runs = runs.filter((r) => r.workflowId === filter.workflowId);
   if (filter.status) runs = runs.filter((r) => r.status === filter.status);
@@ -862,6 +883,7 @@ export function listWorkflowRuns(filter = {}) {
 }
 
 export function listWorkflowRunTimeline(runId) {
+  if (!runId) return [];
   const timelines = readTimelines();
   return timelines[runId] || [];
 }

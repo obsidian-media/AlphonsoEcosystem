@@ -1,3 +1,18 @@
+/**
+ * Agent-chain workflow registry — 25+ predefined workflows routed through Jose.
+ * Each workflow defines an agent chain, task list, and expected outputs.
+ * These workflows are simpler than ops-registry workflows — they focus on agent orchestration
+ * rather than governance metadata.
+ *
+ * @see ./workflowOperationsRegistryService — governance-enriched operations with risk/approval/connector metadata
+ * @see ./workflowBuilderService — visual/node-based workflow builder (user-created, stored as nodes+edges)
+ * @see ./workflowExecutionService — execution engine for operations and visual workflows
+ *
+ * DIFFERENCE: workflowRegistryService = 25+ static agent-chain workflows (routed through Jose).
+ *             workflowOperationsRegistryService = 16 governed operations with rich metadata.
+ *             workflowBuilderService = user-built visual graphs.
+ */
+
 import { AGENTS, createAgentPacket } from './agentBusService';
 import { createJoseCommandRoute } from './joseCommandRouterService';
 import { TRUST_STATES, timestampMs } from './trustModel';
@@ -409,6 +424,7 @@ function lastInChain(chain) {
 }
 
 export async function runWorkflow(workflowId, context = {}) {
+  if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'Invalid workflowId.' };
   const workflow = getWorkflow(workflowId);
   if (!workflow) return { ok: false, error: 'Unknown workflow.' };
 
@@ -464,6 +480,7 @@ export async function runWorkflow(workflowId, context = {}) {
 }
 
 export async function runWorkflowChain(workflowId, context = {}) {
+  if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'Invalid workflowId.' };
   const workflow = getWorkflow(workflowId);
   if (!workflow) return { ok: false, error: 'Unknown workflow.' };
 
@@ -517,6 +534,7 @@ export async function runWorkflowChain(workflowId, context = {}) {
 }
 
 export async function executeWorkflowTasks(workflowId, context = {}) {
+  if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'Invalid workflowId.' };
   const workflow = getWorkflow(workflowId);
   if (!workflow) return { ok: false, error: 'Unknown workflow.' };
 

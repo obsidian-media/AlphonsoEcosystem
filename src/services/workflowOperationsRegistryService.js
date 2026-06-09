@@ -1,3 +1,19 @@
+/**
+ * Operations registry — 16 predefined workflow operations with full governance metadata.
+ * Each operation defines an agent sequence, risk level, allowed/blocked actions,
+ * connector requirements, approval gates, receipt types, and memory behavior.
+ * These are governed templates, not visual graphs.
+ *
+ * @see ./workflowBuilderService — visual/node-based workflow builder (user-created, stored as nodes+edges in localStorage)
+ * @see ./workflowRegistryService — predefined agent-chain workflows (25+ workflows routed through Jose)
+ * @see ./workflowExecutionService — execution engine that runs operations AND visual workflows
+ * @see ./workflowGovernanceService — evaluates governance for these operations
+ *
+ * DIFFERENCE: workflowOperationsRegistryService = 16 predefined governed operations with rich metadata.
+ *             workflowBuilderService = user-built visual workflows (nodes/edges) for arbitrary automation graphs.
+ *             They are complementary — templates vs free-form graphs.
+ */
+
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
@@ -331,6 +347,8 @@ export function listWorkflowOperations() {
 }
 
 export function updateWorkflowOperationStatus(workflowId, status, patch = {}) {
+  if (!workflowId || !status) return null;
+  if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) patch = {};
   const rows = listWorkflowOperations().map((item) => (
     item.id === workflowId
       ? {

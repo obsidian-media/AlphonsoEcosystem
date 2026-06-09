@@ -1,3 +1,16 @@
+/**
+ * Governance evaluation for workflow operations.
+ * Checks connector availability, risk levels, zero-cost mode blocking,
+ * and agent participation for the operations registry.
+ *
+ * @see ./workflowOperationsRegistryService — operations whose governance this service evaluates
+ * @see ./workflowExecutionService — execution engine that gates runs through evaluateWorkflowGovernance
+ * @see ./workflowBuilderService — visual builder workflows (not governed by this service)
+ *
+ * DIFFERENCE: This service evaluates governance for operations-registry workflows only.
+ *             Visual builder workflows are executed directly without governance pre-checks.
+ */
+
 import { TRUST_STATES } from './trustModel';
 import { listConnectors } from './connectorRegistryService';
 
@@ -27,6 +40,8 @@ const CONNECTOR_ID_MAP = {
 };
 
 export function evaluateWorkflowGovernance(workflow, options = {}) {
+  if (!workflow || typeof workflow !== 'object' || Array.isArray(workflow)) workflow = {};
+  if (typeof options !== 'object' || options === null) options = {};
   const connectors = listConnectors();
   const connectorStatus = Object.fromEntries(connectors.map((connector) => [connector.id, connector.status]));
   const requiredConnectors = parseConnectorRequirements(workflow?.connectorRequirements || []);
