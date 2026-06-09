@@ -1,11 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3 } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
+import { AgentMetricsPanel } from './AgentMetricsPanel';
 
 function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
   return (
@@ -671,6 +672,11 @@ export function SettingsView({
             Backup includes: memory items, chat history, agent patterns, Composio config, settings, project goals/batches, and SQLite records.
           </div>
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={BarChart3} label="Agent Performance" />
+        <AgentMetricsPanel />
       </section>
 
       <section className="space-y-4">

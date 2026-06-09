@@ -1,7 +1,7 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Bot, ChevronsDown, ChevronsUp, Copy, Download, History, Paperclip, Search, Send, Square, Trash2, X } from 'lucide-react';
+import { Bot, ChevronsDown, ChevronsUp, Copy, Download, History, Paperclip, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
 import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
@@ -16,7 +16,9 @@ import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
 import { PipelineResultCard } from './PipelineResultCard';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
+import { startProactiveWatcher } from '../services/proactiveAgentService';
+import { MemorySearch } from './MemorySearch';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -143,6 +145,9 @@ export function ChatView({
   const [streamingTokens, setStreamingTokens] = useState(0);
   const [streamingStartTime, setStreamingStartTime] = useState(null);
   const [streamingElapsed, setStreamingElapsed] = useState(0);
+  const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
+  const [showMemorySearch, setShowMemorySearch] = useState(false);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
@@ -157,8 +162,17 @@ export function ChatView({
     },
     focus_input: () => inputRef.current?.focus(),
     abort_generation: handleAbortStream,
-    toggle_search: () => setSearchOpen((prev) => !prev)
+    toggle_search: () => setShowMemorySearch((prev) => !prev),
+    show_shortcuts: () => setShowShortcutHelp((prev) => !prev)
   });
+
+  // Proactive agent watcher
+  useEffect(() => {
+    const cleanup = startProactiveWatcher((suggestion) => {
+      setProactiveSuggestion(suggestion);
+    });
+    return cleanup;
+  }, []);
 
   const handleAbortStream = () => {
     if (streamControllerRef.current) {
@@ -836,6 +850,89 @@ export function ChatView({
           </div>
         )}
       </div>
+
+      {/* Proactive suggestion banner */}
+      {proactiveSuggestion && !isGenerating && (
+        <div className="max-w-3xl mx-auto w-full mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <Lightbulb className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-amber-200">{proactiveSuggestion.title}</div>
+                <div className="text-xs text-zinc-400 mt-1">{proactiveSuggestion.message}</div>
+                {proactiveSuggestion.actions && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {proactiveSuggestion.actions.map((action, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (action.command) {
+                            setInputValue(action.command);
+                            inputRef.current?.focus();
+                          }
+                          setProactiveSuggestion(null);
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg text-amber-300 text-xs transition-colors"
+                      >
+                        {action.label}
+                        {action.command && <ArrowRight className="w-3 h-3" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setProactiveSuggestion(null)}
+                className="p-1 rounded hover:bg-zinc-800 text-zinc-600 shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Memory search modal */}
+      {showMemorySearch && (
+        <MemorySearch
+          onClose={() => setShowMemorySearch(false)}
+          onSelect={(item) => {
+            setInputValue(`Tell me about: ${item.title}`);
+            setShowMemorySearch(false);
+          }}
+        />
+      )}
+
+      {/* Keyboard shortcut help modal */}
+      {showShortcutHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutHelp(false)}>
+          <div
+            className="w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-zinc-400" />
+                <div className="text-sm font-semibold text-white">Keyboard Shortcuts</div>
+              </div>
+              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-zinc-800 text-zinc-500">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+              {getShortcutList().map((shortcut, i) => (
+                <div key={i} className="flex items-center justify-between py-1">
+                  <span className="text-xs text-zinc-300">{shortcut.label}</span>
+                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{shortcut.keys}</span>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t border-white/5 text-[10px] text-zinc-600 text-center">
+              Press ? to toggle this help
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
