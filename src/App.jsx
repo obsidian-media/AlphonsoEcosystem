@@ -32,6 +32,7 @@ import { listAgentProfiles } from './agents/agentRegistry';
 import { OLLAMA_TROUBLESHOOTING_COMMAND, normalizeEndpoint } from './lib/ollama';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { getStorage, setStorage } from './lib/appStorage';
+import { handleAsyncError } from './lib/errorHandler';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
@@ -269,15 +270,12 @@ export default function App() {
     };
 
     try {
-      void invoke('alphonso-native-proof-stage', {
-        fileName: stageFileName,
-        ...content
-      }).catch(() => {});
-      void invoke('write_workspace_text_file', {
-        workspaceRoot: proofWorkspaceRoot,
-        relativePath: `release/rc0/proof/${stageFileName}`,
-        content: JSON.stringify(content, null, 2)
-      }).catch(() => {});
+      invoke('alphonso-native-proof-stage', { fileName: stageFileName, ...content }).catch((err) => {
+        console.warn('[Alphonso] proof stage write failed:', err);
+      });
+      invoke('write_workspace_text_file', { workspaceRoot: proofWorkspaceRoot, relativePath: `release/rc0/proof/${stageFileName}`, content: JSON.stringify(content, null, 2) }).catch((err) => {
+        console.warn('[Alphonso] proof file write failed:', err);
+      });
       return content;
     } catch {
       return null;
@@ -439,54 +437,74 @@ export default function App() {
   };
 
   const verifyOllamaWithProof = async () => {
-    if (!await requestApproval('Run Ollama runtime verification')) return;
-    await runOllamaCheck();
-    const proof = await verifyOllamaRuntimeProof(settings.endpoint);
-    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    try {
+      if (!await requestApproval('Run Ollama runtime verification')) return;
+      await runOllamaCheck();
+      const proof = await verifyOllamaRuntimeProof(settings.endpoint);
+      setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    } catch (error) {
+      handleAsyncError(error, 'verifyOllamaWithProof');
+    }
   };
 
   const verifyProcesses = async (names) => {
-    if (!await requestApproval(`Check process state: ${names.join(', ')}`)) return;
-    const proof = await verifyProcessProof(names);
-    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    try {
+      if (!await requestApproval(`Check process state: ${names.join(', ')}`)) return;
+      const proof = await verifyProcessProof(names);
+      setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    } catch (error) {
+      handleAsyncError(error, 'verifyProcesses');
+    }
   };
 
   const verifyPaths = async (paths) => {
-    if (!await requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
-    const proof = await verifyPathProof(paths);
-    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    try {
+      if (!await requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
+      const proof = await verifyPathProof(paths);
+      setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    } catch (error) {
+      handleAsyncError(error, 'verifyPaths');
+    }
   };
 
   const verifyAuditChain = async () => {
-    if (!await requestApproval('Verify durable audit chain integrity')) return;
-    const proof = await verifyDurableAuditChain();
-    setAuditChainProof(proof?.payload || null);
-    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
-    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
+    try {
+      if (!await requestApproval('Verify durable audit chain integrity')) return;
+      const proof = await verifyDurableAuditChain();
+      setAuditChainProof(proof?.payload || null);
+      setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+      setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
+    } catch (error) {
+      handleAsyncError(error, 'verifyAuditChain');
+    }
   };
 
   const verifyCommand = async (program, args) => {
-    if (!program) return;
-    if (settings.safeMode) {
-      const safePrograms = ['ollama', 'where', 'where.exe', 'tasklist', 'npm', 'npm.cmd'];
-      if (!safePrograms.includes(program.toLowerCase())) {
-        const log = appendVerificationLog({
-          type: 'command_blocked_safe_mode',
-          source: 'frontend-policy',
-          trust: TRUST_STATES.VERIFIED,
-          payload: {
-            program,
-            reason: 'Blocked by safe mode policy'
-          }
-        });
-        setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
-        setApprovalRequiredNotice(true);
-        return;
+    try {
+      if (!program) return;
+      if (settings.safeMode) {
+        const safePrograms = ['ollama', 'where', 'where.exe', 'tasklist', 'npm', 'npm.cmd'];
+        if (!safePrograms.includes(program.toLowerCase())) {
+          const log = appendVerificationLog({
+            type: 'command_blocked_safe_mode',
+            source: 'frontend-policy',
+            trust: TRUST_STATES.VERIFIED,
+            payload: {
+              program,
+              reason: 'Blocked by safe mode policy'
+            }
+          });
+          setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+          setApprovalRequiredNotice(true);
+          return;
+        }
       }
+      if (!await requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
+      const proof = await verifyCommandExecution(program, args, null);
+      setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    } catch (error) {
+      handleAsyncError(error, 'verifyCommand');
     }
-    if (!await requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
-    const proof = await verifyCommandExecution(program, args, null);
-    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   };
 
   const handleTogglePlugin = async (pluginId, enabled) => {
@@ -886,57 +904,73 @@ export default function App() {
   };
 
   const handleCreateSnapshot = async () => {
-    if (!await requestApproval('Create restore point snapshot')) return;
-    const snapshot = await createSnapshot({
-      settings,
-      ollamaStatus,
-      activeChatId,
-      verificationLogCount: verificationLogs.length,
-      memoryCount: memoryItems.length
-    });
-    setSnapshots((current) => [...current, snapshot].slice(-SNAPSHOT_HISTORY_CAP));
+    try {
+      if (!await requestApproval('Create restore point snapshot')) return;
+      const snapshot = await createSnapshot({
+        settings,
+        ollamaStatus,
+        activeChatId,
+        verificationLogCount: verificationLogs.length,
+        memoryCount: memoryItems.length
+      });
+      setSnapshots((current) => [...current, snapshot].slice(-SNAPSHOT_HISTORY_CAP));
+    } catch (error) {
+      handleAsyncError(error, 'handleCreateSnapshot');
+    }
   };
 
   const handleRestoreSnapshot = async (snapshotId) => {
-    if (!await requestApproval(`Restore snapshot: ${snapshotId}`)) return;
-    const payload = restoreSnapshotById(snapshotId);
-    if (!payload) return;
+    try {
+      if (!await requestApproval(`Restore snapshot: ${snapshotId}`)) return;
+      const payload = restoreSnapshotById(snapshotId);
+      if (!payload) return;
 
-    if (payload.settings) {
-      setSettings(payload.settings);
-    }
-    if (payload.activeChatId) {
-      setActiveChatId(payload.activeChatId);
-    }
-    if (payload.ollamaStatus) {
-      setOllamaStatus(payload.ollamaStatus);
-    }
+      if (payload.settings) {
+        setSettings(payload.settings);
+      }
+      if (payload.activeChatId) {
+        setActiveChatId(payload.activeChatId);
+      }
+      if (payload.ollamaStatus) {
+        setOllamaStatus(payload.ollamaStatus);
+      }
 
-    const log = appendVerificationLog({
-      type: 'restore_snapshot',
-      source: 'local-recovery',
-      trust: TRUST_STATES.VERIFIED,
-      payload: { snapshotId }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
-    setLastTaskCompletedAt(Date.now());
+      const log = appendVerificationLog({
+        type: 'restore_snapshot',
+        source: 'local-recovery',
+        trust: TRUST_STATES.VERIFIED,
+        payload: { snapshotId }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+      setLastTaskCompletedAt(Date.now());
+    } catch (error) {
+      handleAsyncError(error, 'handleRestoreSnapshot');
+    }
   };
 
   const handleBackupMemory = async () => {
-    if (!await requestApproval('Create memory backup')) return;
-    const backup = backupMemoryLedger(memoryItems);
-    const log = appendVerificationLog({
-      type: 'memory_backup',
-      source: 'local-recovery',
-      trust: TRUST_STATES.VERIFIED,
-      payload: { backupId: backup.id, count: backup.items.length }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+    try {
+      if (!await requestApproval('Create memory backup')) return;
+      const backup = backupMemoryLedger(memoryItems);
+      const log = appendVerificationLog({
+        type: 'memory_backup',
+        source: 'local-recovery',
+        trust: TRUST_STATES.VERIFIED,
+        payload: { backupId: backup.id, count: backup.items.length }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+    } catch (error) {
+      handleAsyncError(error, 'handleBackupMemory');
+    }
   };
 
   const handleRunReleasePreflight = async () => {
-    if (!await requestApproval('Run release preflight: test + build + tauri build')) return;
-    await verifyCommand('npm.cmd', ['run', 'verify:desktop']);
+    try {
+      if (!await requestApproval('Run release preflight: test + build + tauri build')) return;
+      await verifyCommand('npm.cmd', ['run', 'verify:desktop']);
+    } catch (error) {
+      handleAsyncError(error, 'handleRunReleasePreflight');
+    }
   };
 
   const handleRequestScreenObserverPermission = async () => {
@@ -1079,33 +1113,45 @@ export default function App() {
   };
 
   const handleRuntimeRepair = async () => {
-    if (!await requestApproval('Run supervised runtime repair checks')) return;
-    await runOllamaCheck();
-    await verifyProcesses(['ollama']);
-    const log = appendVerificationLog({
-      type: 'runtime_repair',
-      source: 'supervised-repair',
-      trust: TRUST_STATES.TEMPORARY,
-      payload: { status: 'repair checks completed' }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+    try {
+      if (!await requestApproval('Run supervised runtime repair checks')) return;
+      await runOllamaCheck();
+      await verifyProcesses(['ollama']);
+      const log = appendVerificationLog({
+        type: 'runtime_repair',
+        source: 'supervised-repair',
+        trust: TRUST_STATES.TEMPORARY,
+        payload: { status: 'repair checks completed' }
+      });
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+    } catch (error) {
+      handleAsyncError(error, 'handleRuntimeRepair');
+    }
   };
 
   const handleToggleCoachMode = async () => {
-    if (coachMode) {
-      await closeCoachWindow();
-      setCoachMode(false);
-      return;
+    try {
+      if (coachMode) {
+        await closeCoachWindow();
+        setCoachMode(false);
+        return;
+      }
+      await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
+      setCoachMode(true);
+    } catch (error) {
+      handleAsyncError(error, 'handleToggleCoachMode');
     }
-    await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
-    setCoachMode(true);
   };
 
   const handleToggleCoachTop = async () => {
-    const next = !coachAlwaysOnTop;
-    setCoachAlwaysOnTop(next);
-    if (coachMode) {
-      await openCoachWindow(next, settings.coachAgent || 'alphonso');
+    try {
+      const next = !coachAlwaysOnTop;
+      setCoachAlwaysOnTop(next);
+      if (coachMode) {
+        await openCoachWindow(next, settings.coachAgent || 'alphonso');
+      }
+    } catch (error) {
+      handleAsyncError(error, 'handleToggleCoachTop');
     }
   };
 

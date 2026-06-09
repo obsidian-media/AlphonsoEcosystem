@@ -29,7 +29,7 @@
       "showMenuOnLeftClick": false
     },
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:* https://api.anthropic.com https://api.openai.com https://api.telegram.org https://graph.facebook.com https://api.clickup.com https://api.notion.com https://www.googleapis.com https:; img-src 'self' data: blob: https:; media-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:* https://api.anthropic.com https://api.openai.com https://api.telegram.org https://graph.facebook.com https://api.clickup.com https://api.notion.com https://www.googleapis.com https://openrouter.ai https://generativelanguage.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;"
     }
   },
   "bundle": {
