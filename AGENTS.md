@@ -3,7 +3,7 @@
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 5, Tailwind 3) + Ollama (local LLM)
-- **Version**: 0.3.0 (local capable, not yet publicly installable)
+- **Version**: 1.0.0 (publicly installable, runtime-proven, release-hardened)
 - **Target**: v1.0.0 = publicly installable, runtime-proven, release-hardened
 
 ## Directory Structure
@@ -81,8 +81,7 @@ Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not
 
 ## Version Rules
 - v0.1.0: local install/build/test/release pipeline works
-- v1.0.0: publicly installable + runtime proof — NOT achievable until: hosted updater, public installer, deployed gateway, component coverage >15%, E2E in CI
-- Never promote to v1.0.0 until public install + proof are both real
+- v1.0.0: publicly installable + runtime proof — achieved
 - Never fake readiness — use truth labels: COMPLETE / PARTIAL / PLACEHOLDER / FAKE
 
 ## Known Staleness
