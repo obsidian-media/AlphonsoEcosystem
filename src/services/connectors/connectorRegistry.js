@@ -128,6 +128,74 @@ export const DEFAULT_CONNECTORS = [
   }
 ];
 
+export const CIRCUIT_BREAKER_THRESHOLD = 5;
+export const CIRCUIT_BREAKER_RESET_MS = 300000;
+
+const circuitBreakerState = {};
+
+function getCircuitBreakerKey(connectorId, actionType) {
+  return `${connectorId}::${actionType || 'default'}`;
+}
+
+export function recordConnectorFailure(connectorId, actionType = 'default') {
+  const key = getCircuitBreakerKey(connectorId, actionType);
+  const now = Date.now();
+  const state = circuitBreakerState[key] || { failures: 0, disabledUntil: null };
+  if (state.disabledUntil && now < state.disabledUntil) {
+    state.failures += 1;
+  } else if (state.disabledUntil && now >= state.disabledUntil) {
+    state.failures = 1;
+    state.disabledUntil = null;
+  } else {
+    state.failures += 1;
+  }
+  if (state.failures >= CIRCUIT_BREAKER_THRESHOLD) {
+    state.disabledUntil = now + CIRCUIT_BREAKER_RESET_MS;
+    appendConnectorAudit(connectorId, 'circuit_breaker_opened', {
+      failures: state.failures,
+      disabledUntil: state.disabledUntil,
+      actionType
+    });
+  }
+  circuitBreakerState[key] = state;
+}
+
+export function recordConnectorSuccess(connectorId, actionType = 'default') {
+  const key = getCircuitBreakerKey(connectorId, actionType);
+  const state = circuitBreakerState[key];
+  if (state) {
+    if (!state.disabledUntil || Date.now() >= state.disabledUntil) {
+      delete circuitBreakerState[key];
+    } else {
+      state.failures = Math.max(0, state.failures - 1);
+      circuitBreakerState[key] = state;
+    }
+  }
+}
+
+export function getConnectorCircuitState(connectorId, actionType = 'default') {
+  const key = getCircuitBreakerKey(connectorId, actionType);
+  const state = circuitBreakerState[key];
+  if (!state) {
+    return { ok: true, failures: 0, disabledUntil: null, open: false };
+  }
+  const now = Date.now();
+  if (state.disabledUntil && now < state.disabledUntil) {
+    return {
+      ok: false,
+      failures: state.failures,
+      disabledUntil: state.disabledUntil,
+      open: true,
+      remainingMs: state.disabledUntil - now
+    };
+  }
+  if (state.disabledUntil && now >= state.disabledUntil) {
+    delete circuitBreakerState[key];
+    return { ok: true, failures: 0, disabledUntil: null, open: false };
+  }
+  return { ok: true, failures: state.failures, disabledUntil: null, open: false };
+}
+
 export function readRows(key) {
   try {
     const raw = localStorage.getItem(key);
