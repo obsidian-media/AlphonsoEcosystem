@@ -3,6 +3,26 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
+function delayMs(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function streamWithReconnect(fn, maxRetries = 3) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await delayMs(backoffMs);
+      }
+    }
+  }
+  throw lastError;
+}
+
 function getApiKey() {
   try {
     const raw = localStorage.getItem('alphonso_connector_auth_profiles_v1');
@@ -134,7 +154,7 @@ async function sendChatGPTOneShot({ apiKey, model, maxTokens, messages }) {
 
 async function sendChatGPTStreaming({ apiKey, model, maxTokens, messages, onChunk }) {
   const startTime = timestampMs();
-  try {
+  const attemptStream = async () => {
     const response = await fetch(OPENAI_API_URL, {
       method: 'POST',
       headers: buildHeaders(apiKey),
@@ -144,13 +164,16 @@ async function sendChatGPTStreaming({ apiKey, model, maxTokens, messages, onChun
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
       const errorMsg = errorBody?.error?.message || `HTTP ${response.status}`;
-      appendConnectorAudit('chatgpt', 'stream_failed', { error: errorMsg, httpStatus: response.status });
-      return { success: false, ok: false, connectorId: 'chatgpt', error: errorMsg, trust: TRUST_STATES.FAILED };
+      throw new Error(errorMsg);
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    const fullText = await readSSEStream(reader, decoder, onChunk);
+    return await readSSEStream(reader, decoder, onChunk);
+  };
+
+  try {
+    const fullText = await streamWithReconnect(attemptStream);
     const latencyMs = timestampMs() - startTime;
 
     appendConnectorAudit('chatgpt', 'stream_success', { model, latencyMs });

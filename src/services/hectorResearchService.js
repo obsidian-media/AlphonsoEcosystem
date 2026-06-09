@@ -11,6 +11,22 @@ import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceSe
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
 
+async function retryWithBackoff(fn, maxRetries = 3) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 function readRows(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -65,13 +81,13 @@ async function discoverResearchSources({
   providerLabel = 'duckduckgo_html',
   queryLabel = null
 }) {
-  const results = await invoke('search_research_sources', {
+  const results = await retryWithBackoff(() => invoke('search_research_sources', {
     request: {
       query: queryLabel || researchQuestion,
       sourceType,
       limit
     }
-  });
+  }));
 
   if (!Array.isArray(results)) return [];
   return results
@@ -281,7 +297,7 @@ export async function searchBrave(query, count = 10) {
     return { success: false, error: 'BRAVE_SEARCH_API_KEY not configured', results: [] };
   }
   try {
-    const resp = await fetch(
+    const resp = await retryWithBackoff(() => fetch(
       `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}`,
       {
         headers: {
@@ -289,7 +305,7 @@ export async function searchBrave(query, count = 10) {
           'X-Subscription-Token': apiKey
         }
       }
-    );
+    ));
     if (!resp.ok) {
       const errText = await resp.text().catch(() => '');
       return {
@@ -313,14 +329,13 @@ export async function searchBrave(query, count = 10) {
 }
 
 async function discoverResearchSourcesBrave({ researchQuestion, sourceType, limit = 8 }) {
-  // Try the Rust backend path first (uses server-side BRAVE_SEARCH_API_KEY)
   let results = null;
   try {
-    results = await invoke('search_brave_sources', {
+    results = await retryWithBackoff(() => invoke('search_brave_sources', {
       query: researchQuestion,
       limit,
       sourceType
-    });
+    }));
   } catch {
     // Rust path failed — fall through to frontend path below
   }
