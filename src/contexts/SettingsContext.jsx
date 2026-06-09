@@ -23,8 +23,8 @@ const DEFAULT_SETTINGS = {
   autoScroll: true,
   coachAgent: 'alphonso',
   autoUpdateEnabled: true,
-  updaterEndpoint: '',
-  updaterPubkey: '',
+  updaterEndpoint: 'https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json',
+  updaterPubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY2MTIzRDQ1NjQ5RTAyNUIKUldSYkFwNWtSVDBTOXV3b2U2ekFSUWV0UE9DRlpJQ0Z2WFY2Y0g0WGhYc2gybStiaUZjcVVDdkQK',
   updaterTarget: '',
   idleTimeoutMinutes: 15
 };
