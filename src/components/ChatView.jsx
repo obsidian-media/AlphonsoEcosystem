@@ -154,6 +154,20 @@ export function ChatView({
   const streamControllerRef = useRef(null);
   const inputRef = useRef(null);
 
+  const handleAbortStream = () => {
+    if (streamControllerRef.current) {
+      streamControllerRef.current.abort();
+      streamControllerRef.current = null;
+    }
+    setIsGenerating(false);
+    onGenerationChange(false);
+    onJoseExecutionState?.('aborted', 'Generation cancelled');
+    setStreamingText('');
+    setStreamingTokens(0);
+    setStreamingStartTime(null);
+    setStreamingElapsed(0);
+  };
+
   useKeyboardShortcuts({
     new_chat: () => {
       setMessages([]);
@@ -173,20 +187,6 @@ export function ChatView({
     });
     return cleanup;
   }, []);
-
-  const handleAbortStream = () => {
-    if (streamControllerRef.current) {
-      streamControllerRef.current.abort();
-      streamControllerRef.current = null;
-    }
-    setIsGenerating(false);
-    onGenerationChange(false);
-    onJoseExecutionState?.('aborted', 'Generation cancelled');
-    setStreamingText('');
-    setStreamingTokens(0);
-    setStreamingStartTime(null);
-    setStreamingElapsed(0);
-  };
 
   useEffect(() => {
     if (!streamingStartTime) {
