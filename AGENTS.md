@@ -11,29 +11,40 @@
 src/                   React frontend (.jsx, not .tsx)
   agents/              9 agent profiles, permissions, schemas
   components/          76+ UI components
-  services/            89+ services (policy-gated, not stubs)
+  services/            123 services (policy-gated, not stubs)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                47 test files, 180+ tests (Vitest)
+  test/                72 test files, 952 tests (Vitest)
 src-tauri/             Rust backend
-  src/lib.rs           ~7,078 lines, 63 Tauri commands
+  src/lib.rs           ~1,455 lines, 63 Tauri commands
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
   src/native_proof.rs  Native proof/RC0 engine
   src/runway.rs        Runway video generation
+  src/connector_commands.rs  Connector Rust backend (12 commands)
+  src/telegram.rs      Telegram connector
+  src/youtube.rs       YouTube upload
+  src/workspace.rs     Workspace file ops
+  src/search.rs        Research search
+  src/plugin_runtime.rs Plugin runtime engine
+  src/policy_gate.rs   Policy enforcement backend
+  src/audit_log.rs     Audit chain
+  src/ollama.rs        Ollama backend
+  src/memory_store.rs  Memory persistence
+  src/meta_publish.rs  Meta publishing
 scripts/               Build, release, auth, verification scripts
 e2e/                   Playwright E2E tests
 gateway/               WhatsApp Cloud gateway (Railway-ready, not deployed)
-docs/                  46+ documentation files
+docs/                  52+ documentation files
 ```
 
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # All 180+ tests across 47 files
+npm run test             # All 952 tests across 72 files
 npm run lint             # ESLint on src/
 npm run build            # Vite production build
 npm run verify:app       # lint + test + build in one command
-npm run test:coverage    # Coverage report (actual: 27.83%, threshold: 12%)
+npm run test:coverage    # Coverage report (actual: 27.97%, threshold: 20%)
 npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
 
 # From src-tauri/
@@ -63,7 +74,7 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 - `externalAgentAdapter.js` is the only intentional placeholder (returns "not_wired" for all providers)
 
 ## Do Not Duplicate
-Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 65+ services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 123 services already exist.
 
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.

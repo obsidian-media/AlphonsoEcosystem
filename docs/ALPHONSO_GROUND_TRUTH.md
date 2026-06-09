@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-08 — Session 10 complete (proactive agent, tool framework, browser automation, file ops, policy expansion, streaming, metrics, backup, search, shortcuts)  
-**Verified by:** OpenCode agent (72 test files, 951+ tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 0.1.1 (was 0.1.0)  
+**Last verified:** 2026-06-09 — Session 11 complete (workflow run engine, auto-updater provisioning, accessibility, vitest config isolation, test fixes)  
+**Verified by:** OpenCode agent (72 test files, 952 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
+**Version:** 0.3.0  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -27,7 +27,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | App name | Alphonso |
 | Version | 0.1.0 |
 | Type | Tauri v2 desktop app (Windows) |
-| Project root | `C:\Users\Shaya\OneDrive\Desktop\ALPHONSO\FILES\local-agent-ui-v2` |
+| Project root | `C:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
 | Frontend | React 18, Vite 5, Tailwind 3, Lucide React — currently `.jsx` (not `.tsx`) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
@@ -55,7 +55,7 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 
 ---
 
-## 3. Service Layer — 65+ Services in `src/services/`
+## 3. Service Layer — 123 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
@@ -299,7 +299,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **Tauri capability scoping** — DONE (2026-06-01, Session 3). Findings: `src-tauri/capabilities/default.json` grants only `core:default`, `notification:default`, `global-shortcut:default`. All file-write commands include path-traversal guards. One mild finding: `check_env_vars_presence` accepts arbitrary env var names (probes presence only, no value leakage). No action required; document for awareness.
 
 ### RUST BACKEND
-- [x] **`lib.rs` modular split started** — Phase 1 extraction done (2026-06-01, Session 3): `src-tauri/src/whatsapp_webhook.rs` created (~220 lines). Moved: `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs (`ConnectorInboundMessage`, `WhatsAppWebhookVerifyProof`, `WhatsAppWebhookSignatureProof`, `WhatsAppCloudInboundNormalizeProof`). `now_ms`/`to_hex` marked `pub(crate)`. **lib.rs is now ~4,638 lines** (down from 7,100 — 2,462 lines extracted across 9 modules).
+- [x] **`lib.rs` modular split completed** — Phases 1+2 extraction done (2026-06-09): `lib.rs` is now ~1,455 lines, down from 7,078 (5,623 lines extracted across 16 modules: whatsapp_webhook, kv_store, native_proof, plugin_runtime, policy_gate, audit_log, ollama, memory_store, meta_publish, connector_commands, search, telegram, workspace, youtube, runway, main).
 - [x] **lib.rs KV store split** — `src-tauri/src/kv_store.rs` created (2026-06-01, Session 4): `ensure_kv_table`, `kv_set`, `kv_get`, `save_settings`, `load_settings` extracted. `open_memory_db` marked `pub(crate)`.
 - [x] **lib.rs continued splitting + plugins extracted** — DONE (2026-06-07, OpenCode): `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `runway.rs`, `native_proof.rs` now own their own modules. `cargo check` clean, `cargo clippy -- -D warnings` clean, `cargo test` clean (14 Rust unit tests passing).
 - [x] **Policy gate expanded** — `policy_gate.rs` whitelist expanded from 8 to 40+ programs: python, pip, cargo, npx, yarn, pnpm, curl, wget, ffmpeg, docker, pwsh, explorer, chrome, copy, xcopy, robocopy, mkdir, del, and more. Still blocks: cmd, rm, shutdown, format, net, reg.
@@ -462,6 +462,6 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-08 — Session 11 complete. 72 test files, 951+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB — 44% reduction from code splitting), `cargo clippy -- -D warnings` clean (passes on CI ubuntu-latest). `lib.rs` is ~4,638 lines. Coverage 27.83% (threshold 12%, src/ scoped). Version 0.1.1. Run `npm run verify:app` and `npm run export:ground-truth` to re-verify._
+_Last verified: 2026-06-09 — Session 12 complete. 72 test files, 952 tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB — 44% reduction from code splitting), `cargo clippy -- -D warnings` clean (passes on CI ubuntu-latest). `lib.rs` ~1,455 lines (16 extracted modules, 9,968 total Rust lines). Coverage 27.97% (threshold 20%, src/ scoped). Version 0.3.0. Run `npm run verify:app` and `npm run export:ground-truth` to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
