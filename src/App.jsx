@@ -1,23 +1,11 @@
 import React, { Suspense, lazy, useCallback, useMemo, useRef, useState, useTransition } from 'react';
-import { Mic } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useVoiceInput } from './hooks/useVoiceInput';
-import { openCoachWindow, closeCoachWindow } from './services/coachModeService';
-import { listCoachSkills } from './services/coachSkillService';
-import {
-  COACH_INTERVENTION_LEVELS,
-  buildDemoSlotIntervention,
-  getLatestSessionGuardBridgeIntervention,
-  recordCoachInterventionAction
-} from './services/coachInterventionService';
 import { listMemoryItems, pushMemoryItem } from './services/memoryService';
-import { appendPluginAuditEntry, discoverDiskPluginManifests, executePluginToolRun, listPluginAudit, listPlugins, togglePlugin, validatePluginManifestDisk } from './services/pluginRegistryService';
 import { listSnapshots, createSnapshot, restoreSnapshotById, backupMemoryLedger } from './services/recoveryService';
-import { TRUST_STATES, timestampMs } from './services/trustModel';
-import { appendVerificationLog, getVerificationLogs, readDurableAuditLog, verifyCommandExecution, verifyDurableAuditChain, verifyOllamaRuntimeProof, verifyPathProof, verifyProcessProof } from './services/verificationService';
-import { buildWorkspaceSymbolIndex, checkOcrCapability, collectWorkspaceProof, getWorkspaceFoundation, runOcrAdapter, updateWorkspaceFoundation } from './services/workspaceIntelligenceService';
-import { evaluatePluginExecutionPolicy, getPluginSandboxPolicy, updatePluginSandboxPolicy } from './services/pluginSandboxService';
+import { TRUST_STATES } from './services/trustModel';
+import { appendVerificationLog, getVerificationLogs, readDurableAuditLog } from './services/verificationService';
+import { updateWorkspaceFoundation } from './services/workspaceIntelligenceService';
 import {
   getScreenObserverLogs,
   getScreenObserverState,
@@ -27,47 +15,47 @@ import {
   updateScreenObserverState
 } from './services/screenIntelligenceService';
 import { sendNativeNotification } from './services/notificationService';
-import { isConnectorAuthenticated } from './services/connectorRegistryService';
-import { getDefaultWorkspaceRoot } from './services/workspaceRootService';
 import { listAgentProfiles } from './agents/agentRegistry';
-import { OLLAMA_TROUBLESHOOTING_COMMAND, normalizeEndpoint } from './lib/ollama';
 import { needsHighRiskApproval } from './lib/chatUtils';
-import { getStorage, setStorage } from './lib/appStorage';
+import { getStorage } from './lib/appStorage';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
-const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ default: mod.ChatView })));
-const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
-const CoachMissionBadge = lazy(() => import('./components/CoachMissionBadge').then((mod) => ({ default: mod.CoachMissionBadge })));
-const CoachInterventionCard = lazy(() => import('./components/CoachInterventionCard').then((mod) => ({ default: mod.CoachInterventionCard })));
-const CoachHardInterruptOverlay = lazy(() => import('./components/CoachHardInterruptOverlay').then((mod) => ({ default: mod.CoachHardInterruptOverlay })));
-const CoachSkillGrid = lazy(() => import('./components/CoachSkillGrid').then((mod) => ({ default: mod.CoachSkillGrid })));
+import { CoachWindow } from './components/CoachWindow';
 import { ViewLoadingState } from './components/ViewLoadingState';
 import { useAppKeyboardShortcuts } from './hooks/useAppKeyboardShortcuts';
 import { useIdleLock } from './hooks/useIdleLock';
-import { useOllamaHealth } from './hooks/useOllamaHealth';
 import { useAppEffects } from './hooks/useAppEffects';
 import {
   INITIAL_CONVERSATION_ID,
-  COACH_LAYOUT_KEY,
-  COACH_CORNERS,
+  VERIFICATION_LOG_CAP,
+  AUDIT_LOG_FETCH_LIMIT,
+  SNAPSHOT_HISTORY_CAP,
+  SCREEN_OBSERVER_INTERVAL_MS,
+  MEMORY_EXPIRY_MS,
   themeClassFromSettings,
   getCompanionState,
   companionStateFromVoice,
-  coachMessageFromVoice,
-  nextCoachCorner
+  coachMessageFromVoice
 } from './constants/appConstants';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { OllamaProvider, useOllama } from './contexts/OllamaContext';
+import { PluginProvider, usePlugins } from './contexts/PluginContext';
+import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
+import { VerificationProvider, useVerification } from './contexts/VerificationContext';
+import { CoachProvider, useCoach } from './contexts/CoachContext';
 
+const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ default: mod.ChatView })));
+const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
+const CoachHardInterruptOverlay = lazy(() => import('./components/CoachHardInterruptOverlay').then((mod) => ({ default: mod.CoachHardInterruptOverlay })));
 const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod) => ({ default: mod.ApprovalModal })));
 const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
 const ConnectorHealthPanel = lazy(() => import('./components/ConnectorHealthPanel').then((mod) => ({ default: mod.ConnectorHealthPanel })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
-
 const AutomationView = lazy(() => import('./components/AutomationView').then((mod) => ({ default: mod.AutomationView })));
 const FilesView = lazy(() => import('./components/FilesView').then((mod) => ({ default: mod.FilesView })));
-
 const EcosystemHub = lazy(() => import('./components/EcosystemHub').then((mod) => ({ default: mod.EcosystemHub })));
 const HectorResearchDesk = lazy(() => import('./components/dashboard/HectorResearchDesk').then((mod) => ({ default: mod.HectorResearchDesk })));
 const MiyaStudio = lazy(() => import('./components/MiyaStudio').then((mod) => ({ default: mod.MiyaStudio })));
@@ -82,137 +70,54 @@ const SettingsView = lazy(() => import('./components/SettingsView').then((mod) =
 const RightPanel = lazy(() => import('./components/RightPanel').then((mod) => ({ default: mod.RightPanel })));
 const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then((mod) => ({ default: mod.AgentActivityLog })));
 
-export default function App() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const isCoachWindow = searchParams.get('coach') === '1';
-  const coachAgentFromQuery = searchParams.get('coachAgent');
+const parsedSearchParams = new URLSearchParams(window.location.search);
+const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
+const COACH_AGENT_FROM_QUERY = parsedSearchParams.get('coachAgent');
+
+function AppShell() {
+  const isCoachWindow = IS_COACH_WINDOW;
+  const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
+  const { settings, setSettings, operatorMode, setOperatorMode } = useSettings();
+  const { ollamaStatus, desktopBridge, lastCheckedAt, installedModels, selectedModelMissing, runOllamaCheck, copyTroubleshootingCommand, copyState, ollamaCheckRunRef } = useOllama();
+  const { plugins, pluginAudit, pluginSandboxPolicy, diskPluginManifests, lastPluginToolRun, lastManifestValidation, handleTogglePlugin, handleExecutePluginTool, handleValidatePluginManifest, handleDiscoverPlugins, handleUpdatePluginSandboxPolicy } = usePlugins();
+  const { workspaceFoundation, workspaceProof, ocrCapability, workspaceSymbolIndex, lastOcrAdapterRun, handleRunWorkspaceProof, handleCheckOcrCapability, handleBuildSymbolIndex, handleRunOcrAdapter, handleToggleWorkspaceFeature } = useWorkspace();
+  const { verificationLogs, durableAuditLogs, auditChainProof, setVerificationLogs, setDurableAuditLogs, verifyOllamaWithProof, verifyProcesses, verifyPaths, verifyAuditChain, verifyCommand, handleRunReleasePreflight, handleRuntimeRepair } = useVerification();
+  const { coachMode, coachAlwaysOnTop, coachMiniMode, coachSnapCorner, coachIntervention, coachPauseUntilMs, setCoachMode, setCoachMiniMode, setCoachAlwaysOnTop, handleToggleCoachMode, handleToggleCoachTop, handleCoachInterventionAction, minimizeToCoach } = useCoach();
+
   const [activeTab, setActiveTab] = useState('mission');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [settings, setSettings] = useState(() => getStorage('alphonso_settings', {
-    endpoint: 'http://localhost:11434',
-    selectedModel: '',
-    workspaceRoot: getDefaultWorkspaceRoot(),
-    ocrEnginePath: '',
-    miyaCompanionPinned: true,
-    joseCompanionPinned: true,
-    hectorCompanionPinned: true,
-    focusMode: 'mission_control',
-    environmentTheme: 'minimal_runtime',
-    desktopMode: true,
-    localOnlyMode: true,
-    zeroCostMode: true,
-    approvalMode: true,
-    safeMode: true,
-    privacyShieldActive: false,
-    autoScroll: true,
-    coachAgent: 'alphonso',
-    autoUpdateEnabled: true,
-    updaterEndpoint: '',
-    updaterPubkey: '',
-    updaterTarget: ''
-  }));
   const [conversations, setConversations] = useState(() => getStorage('alphonso_conversations', [
     { id: INITIAL_CONVERSATION_ID, title: 'New Chat Session', timestamp: Date.now() }
   ]));
   const [activeChatId, setActiveChatId] = useState(conversations[0]?.id || INITIAL_CONVERSATION_ID);
-  const [ollamaStatus, setOllamaStatus] = useState({
-    state: 'connecting',
-    label: 'Connecting',
-    message: 'Checking Ollama...',
-    models: [],
-    trust: TRUST_STATES.TEMPORARY
-  });
-  const [desktopBridge, setDesktopBridge] = useState({
-    state: 'checking',
-    label: 'Checking',
-    message: 'Checking Tauri runtime bridge...'
-  });
-  const [lastCheckedAt, setLastCheckedAt] = useState(null);
-  const [copyState, setCopyState] = useState('idle');
-  const [updateCheckState, setUpdateCheckState] = useState({
-    checking: false,
-    configured: false,
-    available: false,
-    latestVersion: null,
-    currentVersion: '',
-    notes: null,
-    pubDate: null,
-    downloadUrl: null,
-    checkedAtMs: null,
-    trust: TRUST_STATES.UNVERIFIED,
-    error: null,
-    notificationSent: false
-  });
-  const [braveSearchConfigured, setBraveSearchConfigured] = useState(false);
+  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
+  const [lastTaskCompletedAt, setLastTaskCompletedAt] = useState(null);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isLocked, setIsLocked] = useState(false);
+  const idleTimerRef = useRef(null);
+  const [memoryItems, setMemoryItems] = useState(() => listMemoryItems());
+  const [screenObserverState, setScreenObserverState] = useState(() => getScreenObserverState());
+  const [screenObserverLogs, setScreenObserverLogs] = useState(() => getScreenObserverLogs());
+  const [miyaCompanionState, setMiyaCompanionState] = useState({ state: 'idle', message: 'Miya is ready.' });
+  const [joseCompanionState, setJoseCompanionState] = useState({ state: 'idle', message: 'Jose is coordinating quietly.' });
+  const [hectorCompanionState, setHectorCompanionState] = useState({ state: 'idle', message: 'Hector is standing by.', currentSourceUrl: null, lastRunSummary: '' });
+  const [snapshots, setSnapshots] = useState(() => listSnapshots());
+  const [showWorkflowPanel, setShowWorkflowPanel] = useState(false);
+  const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
+  const [approvalPending, setApprovalPending] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => !getStorage('alphonso_onboarding_complete_v1', false));
   const [nativeSelfDevProof, setNativeSelfDevProof] = useState(() => {
     const stored = getStorage('alphonso_native_selfdev_proof', null);
     return stored && typeof stored === 'object' ? stored : null;
   });
-  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
-  const [lastTaskCompletedAt, setLastTaskCompletedAt] = useState(null);
-  const [operatorMode, setOperatorModeState] = useState(() => Boolean(getStorage('alphonso_operator_mode_v1', false)));
-  const setOperatorMode = useCallback((value) => {
-    setOperatorModeState((current) => {
-      const next = typeof value === 'function' ? value(current) : Boolean(value);
-      setStorage('alphonso_operator_mode_v1', next);
-      return next;
-    });
-  }, []);
-  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
-  const [isLocked, setIsLocked] = useState(false);
-  const idleTimerRef = useRef(null);
-  const [verificationLogs, setVerificationLogs] = useState(() => getVerificationLogs());
-  const [durableAuditLogs, setDurableAuditLogs] = useState([]);
-  const [auditChainProof, setAuditChainProof] = useState(null);
-  const [pluginSandboxPolicy, setPluginSandboxPolicy] = useState(() => getPluginSandboxPolicy());
-  const [memoryItems, setMemoryItems] = useState(() => listMemoryItems());
-  const [plugins, setPlugins] = useState(() => listPlugins());
-  const [pluginAudit, setPluginAudit] = useState(() => listPluginAudit());
-  const [diskPluginManifests, setDiskPluginManifests] = useState([]);
-  const [workspaceFoundation, setWorkspaceFoundation] = useState(() => getWorkspaceFoundation());
-  const [workspaceProof, setWorkspaceProof] = useState(null);
-  const [ocrCapability, setOcrCapability] = useState(null);
-  const [workspaceSymbolIndex, setWorkspaceSymbolIndex] = useState(null);
-  const [screenObserverState, setScreenObserverState] = useState(() => getScreenObserverState());
-  const [screenObserverLogs, setScreenObserverLogs] = useState(() => getScreenObserverLogs());
-  const [coachIntervention, setCoachIntervention] = useState(() => getLatestSessionGuardBridgeIntervention());
-  const [coachPauseUntilMs, setCoachPauseUntilMs] = useState(0);
-  const [lastPluginToolRun, setLastPluginToolRun] = useState(null);
-  const [lastManifestValidation, setLastManifestValidation] = useState(null);
-  const [lastOcrAdapterRun, setLastOcrAdapterRun] = useState(null);
-  const [miyaCompanionState, setMiyaCompanionState] = useState({
-    state: 'idle',
-    message: 'Miya is ready.'
+  const [updateCheckState, setUpdateCheckState] = useState({
+    checking: false, configured: false, available: false, latestVersion: null,
+    currentVersion: '', notes: null, pubDate: null, downloadUrl: null,
+    checkedAtMs: null, trust: TRUST_STATES.UNVERIFIED, error: null, notificationSent: false
   });
-  const [joseCompanionState, setJoseCompanionState] = useState({
-    state: 'idle',
-    message: 'Jose is coordinating quietly.'
-  });
-  const [hectorCompanionState, setHectorCompanionState] = useState({
-    state: 'idle',
-    message: 'Hector is standing by.',
-    currentSourceUrl: null,
-    lastRunSummary: ''
-  });
-  const [snapshots, setSnapshots] = useState(() => listSnapshots());
-  const [coachMode, setCoachMode] = useState(false);
-  const [coachAlwaysOnTop, setCoachAlwaysOnTop] = useState(true);
-  const [coachMiniMode, setCoachMiniMode] = useState(() => {
-    const layout = getStorage(COACH_LAYOUT_KEY, { mini: false, corner: 'bottom-right' });
-    return Boolean(layout?.mini);
-  });
-  const [coachSnapCorner, setCoachSnapCorner] = useState(() => {
-    const layout = getStorage(COACH_LAYOUT_KEY, { mini: false, corner: 'bottom-right' });
-    return COACH_CORNERS.includes(layout?.corner) ? layout.corner : 'bottom-right';
-  });
-  const [showWorkflowPanel, setShowWorkflowPanel] = useState(false);
-  const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
-  const [approvalPending, setApprovalPending] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !getStorage('alphonso_onboarding_complete_v1', false)
-  );
+  const [braveSearchConfigured, setBraveSearchConfigured] = useState(false);
+
   const approvalResolveRef = useRef(null);
-  const ollamaCheckRunRef = useRef(0);
   const screenObserverRunRef = useRef(false);
   const workspaceRootBootstrapRef = useRef(false);
   const nativeSelfDevAutorunRef = useRef(false);
@@ -224,83 +129,41 @@ export default function App() {
 
   const mergedAgentDockCompanions = useMemo(() => {
     const activeStates = {
-      alphonso: {
-        state: companionStateFromVoice(voice.voiceStatus),
-        message: coachMessageFromVoice(voice.voiceStatus)
-      },
-      hector: hectorCompanionState,
-      jose: joseCompanionState,
-      miya: miyaCompanionState
+      alphonso: { state: companionStateFromVoice(voice.voiceStatus), message: coachMessageFromVoice(voice.voiceStatus) },
+      hector: hectorCompanionState, jose: joseCompanionState, miya: miyaCompanionState
     };
     return listAgentProfiles().map((agent) => ({
-      agentId: agent.id,
-      name: agent.name,
+      agentId: agent.id, name: agent.name,
       state: activeStates[agent.id]?.state || 'idle',
       message: activeStates[agent.id]?.message || agent.title || agent.role
     }));
   }, [hectorCompanionState, joseCompanionState, miyaCompanionState, voice.voiceStatus]);
 
   const writeNativeProofStage = useCallback(async (stageFileName, payload = {}) => {
-    const proofWorkspaceRoot = String(payload.workspaceRoot || settings.workspaceRoot || getDefaultWorkspaceRoot() || '').trim();
+    const proofWorkspaceRoot = String(payload.workspaceRoot || settings.workspaceRoot || '').trim();
     if (!proofWorkspaceRoot) return null;
-
     const stage = String(stageFileName || '').replace(/\.json$/i, '');
     const content = {
-      timestamp: new Date().toISOString(),
-      stage,
-      status: payload.status || 'recorded',
-      processId: payload.processId ?? null,
-      workspaceRoot: proofWorkspaceRoot,
-      error: payload.error ?? null,
-      durationMs: payload.durationMs ?? null,
-      ...payload
+      timestamp: new Date().toISOString(), stage, status: payload.status || 'recorded',
+      processId: payload.processId ?? null, workspaceRoot: proofWorkspaceRoot,
+      error: payload.error ?? null, durationMs: payload.durationMs ?? null, ...payload
     };
-
     try {
-      void invoke('alphonso-native-proof-stage', {
-        fileName: stageFileName,
-        ...content
-      }).catch(() => {});
+      void invoke('alphonso-native-proof-stage', { fileName: stageFileName, ...content }).catch(() => {});
       void invoke('write_workspace_text_file', {
-        workspaceRoot: proofWorkspaceRoot,
-        relativePath: `release/rc0/proof/${stageFileName}`,
+        workspaceRoot: proofWorkspaceRoot, relativePath: `release/rc0/proof/${stageFileName}`,
         content: JSON.stringify(content, null, 2)
       }).catch(() => {});
       return content;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }, [settings.workspaceRoot]);
 
-  const nativeProofHooks = useMemo(() => ({
-    writeStage: writeNativeProofStage
-  }), [writeNativeProofStage]);
+  const nativeProofHooks = useMemo(() => ({ writeStage: writeNativeProofStage }), [writeNativeProofStage]);
 
-  const runOllamaCheck = useOllamaHealth({
-    settings,
-    setSettings,
-    desktopBridge,
-    setOllamaStatus,
-    setLastCheckedAt,
-    setVerificationLogs,
-    setMemoryItems,
-    ollamaCheckRunRef
-  });
-
-  const installedModels = ollamaStatus.models || [];
-  const selectedModelMissing = Boolean(
-    settings.selectedModel &&
-    installedModels.length > 0 &&
-    !installedModels.some((model) => model.name === settings.selectedModel)
-  );
   const companion = getCompanionState({
-    ollamaStatus,
-    voiceStatus: voice.voiceStatus,
-    isGeneratingResponse,
-    lastTaskCompletedAt,
-    selectedModelMissing,
-    privacyModeActive: settings.privacyShieldActive,
-    approvalModeActive: settings.approvalMode,
+    ollamaStatus, voiceStatus: voice.voiceStatus, isGeneratingResponse,
+    lastTaskCompletedAt, selectedModelMissing,
+    privacyModeActive: settings.privacyShieldActive, approvalModeActive: settings.approvalMode,
     approvalRequiredNotice
   });
 
@@ -321,88 +184,30 @@ export default function App() {
     switchTab('chat');
   }, [setConversations, setActiveChatId, switchTab]);
 
-  useAppKeyboardShortcuts({
-    approvalPending,
-    setApprovalPending,
-    setApprovalRequiredNotice,
-    approvalResolveRef,
-    switchTab
-  });
-
-  useIdleLock({
-    idleTimeoutMinutes: settings.idleTimeoutMinutes,
-    setIsLocked,
-    idleTimerRef
-  });
+  useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab });
+  useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
 
   useAppEffects({
-    settings,
-    setSettings,
-    conversations,
-    setConversations,
-    activeChatId,
-    setActiveChatId,
-    activeTab,
-    ollamaStatus,
-    desktopBridge,
-    setDesktopBridge,
-    coachMode,
-    setCoachMode,
-    coachMiniMode,
-    setCoachMiniMode,
-    coachAlwaysOnTop,
-    coachSnapCorner,
-    setIsLocked,
-    setIsOnline,
-    isCoachWindow,
-    verificationLogs,
-    setVerificationLogs,
-    nativeSelfDevProof,
-    setNativeSelfDevProof,
-    workspaceFoundation,
-    setWorkspaceFoundation,
-    updateCheckState,
-    setUpdateCheckState,
-    setLastCheckedAt,
-    joseCompanionState,
-    setJoseCompanionState,
-    hectorCompanionState,
-    setHectorCompanionState,
-    approvalRequiredNotice,
-    setApprovalRequiredNotice,
-    approvalPending,
-    setApprovalPending,
-    setBraveSearchConfigured,
-    setDurableAuditLogs,
-    setDiskPluginManifests,
-    setMemoryItems,
-    setPlugins,
-    setPluginAudit,
-    setScreenObserverState,
-    setScreenObserverLogs,
-    setCoachIntervention,
-    setLastTaskCompletedAt,
-    operatorMode,
-    voice,
-    toast,
-    writeNativeProofStage,
-    nativeProofHooks,
-    runOllamaCheck,
-    createNewChat,
-    switchTab,
-    approvalResolveRef,
-    idleTimerRef,
-    ollamaCheckRunRef,
-    screenObserverRunRef,
-    workspaceRootBootstrapRef,
-    nativeSelfDevAutorunRef,
+    settings, setSettings, conversations, setConversations, activeChatId, setActiveChatId,
+    activeTab, ollamaStatus, desktopBridge, setDesktopBridge: () => {},
+    coachMode, setCoachMode, coachMiniMode, setCoachMiniMode, coachAlwaysOnTop, coachSnapCorner,
+    setIsLocked, setIsOnline, isCoachWindow, verificationLogs, setVerificationLogs,
+    nativeSelfDevProof, setNativeSelfDevProof, workspaceFoundation, setWorkspaceFoundation: () => {},
+    updateCheckState, setUpdateCheckState, setLastCheckedAt: () => {},
+    joseCompanionState, setJoseCompanionState, hectorCompanionState, setHectorCompanionState,
+    approvalRequiredNotice, setApprovalRequiredNotice, approvalPending, setApprovalPending,
+    setBraveSearchConfigured, setDurableAuditLogs, setDiskPluginManifests: () => {},
+    setMemoryItems, setPlugins: () => {}, setPluginAudit: () => {},
+    setScreenObserverState, setScreenObserverLogs, setCoachIntervention: () => {},
+    setLastTaskCompletedAt, operatorMode, voice, toast, writeNativeProofStage, nativeProofHooks,
+    runOllamaCheck, createNewChat, switchTab, approvalResolveRef, idleTimerRef,
+    ollamaCheckRunRef, screenObserverRunRef, workspaceRootBootstrapRef, nativeSelfDevAutorunRef,
     prevOllamaStateRef
   });
 
-  const deleteChat = (id, event) => {
+  const deleteChat = useCallback((id, event) => {
     event.stopPropagation();
     const filtered = conversations.filter((conversation) => conversation.id !== id);
-
     if (filtered.length === 0) {
       const resetId = INITIAL_CONVERSATION_ID;
       setConversations([{ id: resetId, title: 'New Chat Session', timestamp: Date.now() }]);
@@ -411,540 +216,51 @@ export default function App() {
       setConversations(filtered);
       if (activeChatId === id) setActiveChatId(filtered[0].id);
     }
-
     localStorage.removeItem(`alphonso_messages_${id}`);
-  };
+  }, [conversations, activeChatId]);
 
-  const copyTroubleshootingCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(OLLAMA_TROUBLESHOOTING_COMMAND);
-      setCopyState('copied');
-      window.setTimeout(() => setCopyState('idle'), 1600);
-    } catch {
-      setCopyState('failed');
-      window.setTimeout(() => setCopyState('idle'), 1600);
-    }
-  };
-
-  const verifyOllamaWithProof = async () => {
-    if (!await requestApproval('Run Ollama runtime verification')) return;
-    await runOllamaCheck();
-    const proof = await verifyOllamaRuntimeProof(settings.endpoint);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
-  };
-
-  const verifyProcesses = async (names) => {
-    if (!await requestApproval(`Check process state: ${names.join(', ')}`)) return;
-    const proof = await verifyProcessProof(names);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
-  };
-
-  const verifyPaths = async (paths) => {
-    if (!await requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
-    const proof = await verifyPathProof(paths);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
-  };
-
-  const verifyAuditChain = async () => {
-    if (!await requestApproval('Verify durable audit chain integrity')) return;
-    const proof = await verifyDurableAuditChain();
-    setAuditChainProof(proof?.payload || null);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const verifyCommand = async (program, args) => {
-    if (!program) return;
-    if (settings.safeMode) {
-      const safePrograms = ['ollama', 'where', 'where.exe', 'tasklist', 'npm', 'npm.cmd'];
-      if (!safePrograms.includes(program.toLowerCase())) {
-        const log = appendVerificationLog({
-          type: 'command_blocked_safe_mode',
-          source: 'frontend-policy',
-          trust: TRUST_STATES.VERIFIED,
-          payload: {
-            program,
-            reason: 'Blocked by safe mode policy'
-          }
-        });
-        setVerificationLogs((current) => [...current, log].slice(-250));
-        setApprovalRequiredNotice(true);
-        return;
-      }
-    }
-    if (!await requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
-    const proof = await verifyCommandExecution(program, args, null);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
-  };
-
-  const handleTogglePlugin = async (pluginId, enabled) => {
-    if (!await requestApproval(`${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}`)) return;
-    setPlugins(togglePlugin(pluginId, enabled));
-    setPluginAudit(listPluginAudit());
-  };
-
-  const handleToggleWorkspaceFeature = (featureKey, enabled) => {
-    const feature = workspaceFoundation[featureKey] || {};
-    setWorkspaceFoundation(updateWorkspaceFoundation({
-      [featureKey]: {
-        ...feature,
-        enabled,
-        verificationState: enabled ? TRUST_STATES.TEMPORARY : TRUST_STATES.UNVERIFIED
-      }
-    }));
-  };
-
-  const handleDiscoverPlugins = async () => {
-    if (!await requestApproval('Discover plugin manifests from disk')) return;
-    const manifests = await discoverDiskPluginManifests(settings.workspaceRoot);
-    setDiskPluginManifests(manifests);
-    const log = appendVerificationLog({
-      type: 'plugin_manifest_scan',
-      source: 'tauri-command',
-      trust: TRUST_STATES.VERIFIED,
-      payload: {
-        workspaceRoot: settings.workspaceRoot || null,
-        count: manifests.length
-      }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-250));
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const handleRunWorkspaceProof = async () => {
-    if (!settings.workspaceRoot) {
-      const log = appendVerificationLog({
-        type: 'workspace_proof',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: 'Workspace root is not set.'
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      return;
-    }
-    if (!await requestApproval(`Collect workspace proof for ${settings.workspaceRoot}`)) return;
-    try {
-      const proof = await collectWorkspaceProof(settings.workspaceRoot, 1200);
-      setWorkspaceProof(proof);
-      const log = appendVerificationLog({
-        type: 'workspace_proof',
-        source: 'tauri-command',
-        trust: proof?.trust || TRUST_STATES.TEMPORARY,
-        payload: proof
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      setWorkspaceFoundation(updateWorkspaceFoundation({
-        workspaceProof: {
-          lastRunAt: Date.now(),
-          trust: proof?.trust || TRUST_STATES.UNVERIFIED
-        }
-      }));
-    } catch (error) {
-      const log = appendVerificationLog({
-        type: 'workspace_proof',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: String(error)
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-    }
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const handleCheckOcrCapability = async () => {
-    if (!await requestApproval('Check OCR engine capability')) return;
-    try {
-      const proof = await checkOcrCapability(settings.ocrEnginePath);
-      setOcrCapability(proof);
-      const log = appendVerificationLog({
-        type: 'ocr_capability_check',
-        source: 'tauri-command',
-        trust: proof?.trust || TRUST_STATES.UNVERIFIED,
-        payload: proof
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      setWorkspaceFoundation(updateWorkspaceFoundation({
-        ocrCapability: {
-          available: Boolean(proof?.available),
-          engine: proof?.engine || 'unconfigured',
-          message: proof?.message || '',
-          checkedAtMs: proof?.checked_at_ms || Date.now(),
-          verificationState: proof?.trust || TRUST_STATES.UNVERIFIED
-        }
-      }));
-    } catch (error) {
-      const log = appendVerificationLog({
-        type: 'ocr_capability_check',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: String(error)
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-    }
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const handleBuildSymbolIndex = async () => {
-    if (!settings.workspaceRoot) {
-      const log = appendVerificationLog({
-        type: 'symbol_index_build',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: 'Workspace root is not set.'
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      return;
-    }
-    if (!await requestApproval(`Build workspace symbol index for ${settings.workspaceRoot}`)) return;
-    try {
-      const index = await buildWorkspaceSymbolIndex(settings.workspaceRoot, 500);
-      setWorkspaceSymbolIndex(index);
-      const log = appendVerificationLog({
-        type: 'symbol_index_build',
-        source: 'tauri-command',
-        trust: index?.trust || TRUST_STATES.TEMPORARY,
-        payload: {
-          root: index?.root,
-          filesIndexed: index?.files_indexed,
-          totals: index?.totals
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-    } catch (error) {
-      const log = appendVerificationLog({
-        type: 'symbol_index_build',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: String(error)
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-    }
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const handleExecutePluginTool = async ({ manifestPath, pluginId, toolId, extraArgs }) => {
-    const policyCheck = evaluatePluginExecutionPolicy({
-      manifestPath,
-      pluginId,
-      toolId,
-      extraArgs
-    });
-    if (!policyCheck.allowed) {
-      const log = appendVerificationLog({
-        type: 'plugin_tool_execution_blocked',
-        source: 'plugin-sandbox-policy',
-        trust: TRUST_STATES.FAILED,
-        payload: policyCheck
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      appendPluginAuditEntry({
-        pluginId: pluginId || 'unknown',
-        action: 'tool_execution_blocked_local_policy',
-        trust: TRUST_STATES.FAILED,
-        details: {
-          toolId: toolId || '',
-          violations: policyCheck?.violations || []
-        }
-      });
-      setPluginAudit(listPluginAudit());
-      setApprovalRequiredNotice(true);
-      return;
-    }
-
-    if (pluginSandboxPolicy.requireManifestValidation) {
-      try {
-        const validation = await validatePluginManifestDisk(manifestPath);
-        setLastManifestValidation(validation);
-        if (!validation.valid) {
-          const log = appendVerificationLog({
-            type: 'plugin_manifest_validation_blocked',
-            source: 'plugin-sandbox-policy',
-            trust: TRUST_STATES.FAILED,
-            payload: validation
-          });
-          setVerificationLogs((current) => [...current, log].slice(-250));
-          appendPluginAuditEntry({
-            pluginId: pluginId || 'unknown',
-            action: 'manifest_validation_blocked',
-            trust: TRUST_STATES.FAILED,
-            details: {
-              toolId: toolId || '',
-              errors: validation?.errors || [],
-              warnings: validation?.warnings || []
-            }
-          });
-          setPluginAudit(listPluginAudit());
-          setApprovalRequiredNotice(true);
-          return;
-        }
-      } catch (error) {
-        const log = appendVerificationLog({
-          type: 'plugin_manifest_validation_blocked',
-          source: 'plugin-sandbox-policy',
-          trust: TRUST_STATES.FAILED,
-          payload: { error: String(error) }
-        });
-        setVerificationLogs((current) => [...current, log].slice(-250));
-        appendPluginAuditEntry({
-          pluginId: pluginId || 'unknown',
-          action: 'manifest_validation_failed',
-          trust: TRUST_STATES.FAILED,
-          details: {
-            toolId: toolId || '',
-            error: String(error)
-          }
-        });
-        setPluginAudit(listPluginAudit());
-        setApprovalRequiredNotice(true);
-        return;
-      }
-    }
-
-    if (!await requestApproval(`Execute plugin tool ${pluginId}:${toolId}`)) return;
-    try {
-      const proof = await executePluginToolRun({
-        manifestPath,
-        pluginId,
-        toolId,
-        extraArgs,
-        workspaceRoot: settings.workspaceRoot
-      });
-      setLastPluginToolRun(proof);
-      const log = appendVerificationLog({
-        type: 'plugin_tool_execution',
-        source: 'tauri-command',
-        trust: proof?.trust || TRUST_STATES.TEMPORARY,
-        payload: {
-          pluginId: proof?.plugin_id,
-          toolId: proof?.tool_id,
-          success: proof?.success,
-          exitCode: proof?.exit_code
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      appendPluginAuditEntry({
-        pluginId: proof?.plugin_id || pluginId || 'unknown',
-        action: proof?.success ? 'tool_execution_success' : 'tool_execution_failed',
-        trust: proof?.trust || TRUST_STATES.TEMPORARY,
-        details: {
-          toolId: proof?.tool_id || toolId || '',
-          exitCode: proof?.exit_code ?? null
-        }
-      });
-      setPluginAudit(listPluginAudit());
-    } catch (error) {
-      const log = appendVerificationLog({
-        type: 'plugin_tool_execution',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: String(error)
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      appendPluginAuditEntry({
-        pluginId: pluginId || 'unknown',
-        action: 'tool_execution_error',
-        trust: TRUST_STATES.FAILED,
-        details: {
-          toolId: toolId || '',
-          error: String(error)
-        }
-      });
-      setPluginAudit(listPluginAudit());
-    }
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const handleUpdatePluginSandboxPolicy = (patch) => {
-    const next = updatePluginSandboxPolicy(patch);
-    setPluginSandboxPolicy(next);
-    const log = appendVerificationLog({
-      type: 'plugin_sandbox_policy_update',
-      source: 'operator-dashboard',
-      trust: TRUST_STATES.VERIFIED,
-      payload: next
-    });
-    setVerificationLogs((current) => [...current, log].slice(-250));
-  };
-
-  const handleValidatePluginManifest = async (manifestPath) => {
-    if (!manifestPath) return;
-    if (!await requestApproval(`Validate plugin manifest ${manifestPath}`)) return;
-    try {
-      const validation = await validatePluginManifestDisk(manifestPath);
-      setLastManifestValidation(validation);
-      const log = appendVerificationLog({
-        type: 'plugin_manifest_validation',
-        source: 'tauri-command',
-        trust: validation?.trust || TRUST_STATES.TEMPORARY,
-        payload: validation
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      appendPluginAuditEntry({
-        pluginId: 'manifest_validation',
-        action: validation?.valid ? 'manifest_valid' : 'manifest_invalid',
-        trust: validation?.trust || TRUST_STATES.TEMPORARY,
-        details: {
-          manifestPath,
-          errors: validation?.errors || [],
-          warnings: validation?.warnings || []
-        }
-      });
-      setPluginAudit(listPluginAudit());
-    } catch (error) {
-      const log = appendVerificationLog({
-        type: 'plugin_manifest_validation',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: String(error)
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      appendPluginAuditEntry({
-        pluginId: 'manifest_validation',
-        action: 'manifest_validation_error',
-        trust: TRUST_STATES.FAILED,
-        details: {
-          manifestPath,
-          error: String(error)
-        }
-      });
-      setPluginAudit(listPluginAudit());
-    }
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const handleRunOcrAdapter = async ({ adapter, imagePath, extraArgs }) => {
-    if (!settings.ocrEnginePath) {
-      const log = appendVerificationLog({
-        type: 'ocr_adapter_run',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: 'OCR engine path is not set.'
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-      return;
-    }
-    if (!await requestApproval(`Run OCR adapter ${adapter}`)) return;
-    try {
-      const proof = await runOcrAdapter({
-        adapter,
-        enginePath: settings.ocrEnginePath,
-        imagePath: imagePath || null,
-        extraArgs
-      });
-      setLastOcrAdapterRun(proof);
-      const log = appendVerificationLog({
-        type: 'ocr_adapter_run',
-        source: 'tauri-command',
-        trust: proof?.trust || TRUST_STATES.TEMPORARY,
-        payload: {
-          adapter: proof?.adapter,
-          success: proof?.success,
-          exitCode: proof?.exit_code
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-    } catch (error) {
-      const log = appendVerificationLog({
-        type: 'ocr_adapter_run',
-        source: 'tauri-command',
-        trust: TRUST_STATES.FAILED,
-        payload: {
-          error: String(error)
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-    }
-    setDurableAuditLogs(await readDurableAuditLog(200));
-  };
-
-  const handleCreateSnapshot = async () => {
+  const handleCreateSnapshot = useCallback(async () => {
     if (!await requestApproval('Create restore point snapshot')) return;
-    const snapshot = await createSnapshot({
-      settings,
-      ollamaStatus,
-      activeChatId,
-      verificationLogCount: verificationLogs.length,
-      memoryCount: memoryItems.length
-    });
-    setSnapshots((current) => [...current, snapshot].slice(-40));
-  };
+    const snapshot = await createSnapshot({ settings, ollamaStatus, activeChatId, verificationLogCount: verificationLogs.length, memoryCount: memoryItems.length });
+    setSnapshots((current) => [...current, snapshot].slice(-SNAPSHOT_HISTORY_CAP));
+  }, [requestApproval, settings, ollamaStatus, activeChatId, verificationLogs.length, memoryItems.length]);
 
-  const handleRestoreSnapshot = async (snapshotId) => {
+  const handleRestoreSnapshot = useCallback(async (snapshotId) => {
     if (!await requestApproval(`Restore snapshot: ${snapshotId}`)) return;
     const payload = restoreSnapshotById(snapshotId);
     if (!payload) return;
-
-    if (payload.settings) {
-      setSettings(payload.settings);
-    }
-    if (payload.activeChatId) {
-      setActiveChatId(payload.activeChatId);
-    }
+    if (payload.settings) setSettings(payload.settings);
+    if (payload.activeChatId) setActiveChatId(payload.activeChatId);
     if (payload.ollamaStatus) {
-      setOllamaStatus(payload.ollamaStatus);
+      const proof = appendVerificationLog({ type: 'restore_snapshot', source: 'local-recovery', trust: TRUST_STATES.VERIFIED, payload: { snapshotId } });
+      setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
     }
-
-    const log = appendVerificationLog({
-      type: 'restore_snapshot',
-      source: 'local-recovery',
-      trust: TRUST_STATES.VERIFIED,
-      payload: { snapshotId }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-250));
     setLastTaskCompletedAt(Date.now());
-  };
+  }, [requestApproval, setSettings, setActiveChatId, setVerificationLogs]);
 
-  const handleBackupMemory = async () => {
+  const handleBackupMemory = useCallback(async () => {
     if (!await requestApproval('Create memory backup')) return;
     const backup = backupMemoryLedger(memoryItems);
-    const log = appendVerificationLog({
-      type: 'memory_backup',
-      source: 'local-recovery',
-      trust: TRUST_STATES.VERIFIED,
-      payload: { backupId: backup.id, count: backup.items.length }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-250));
-  };
+    const log = appendVerificationLog({ type: 'memory_backup', source: 'local-recovery', trust: TRUST_STATES.VERIFIED, payload: { backupId: backup.id, count: backup.items.length } });
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+  }, [requestApproval, memoryItems, setVerificationLogs]);
 
-  const handleRunReleasePreflight = async () => {
-    if (!await requestApproval('Run release preflight: test + build + tauri build')) return;
-    await verifyCommand('npm.cmd', ['run', 'verify:desktop']);
-  };
-
-  const handleRequestScreenObserverPermission = async () => {
+  const handleRequestScreenObserverPermission = useCallback(async () => {
     if (!await requestApproval('Request desktop notification permission for screen alerts')) return;
     const permission = await requestScreenNotificationPermission();
     const next = updateScreenObserverState({
-      currentSummary: permission === 'granted'
-        ? 'Notification permission granted.'
-        : permission === 'unsupported'
-          ? 'Notifications are unsupported in this runtime.'
+      currentSummary: permission === 'granted' ? 'Notification permission granted.'
+        : permission === 'unsupported' ? 'Notifications are unsupported in this runtime.'
           : 'Notification permission not granted.'
     });
     setScreenObserverState(next);
-  };
+  }, [requestApproval]);
 
-  const handleStartScreenObserver = async () => {
+  const handleStartScreenObserver = useCallback(async () => {
     if (!await requestApproval('Start visible screen observer (manual permission prompt)')) return;
     const current = getScreenObserverState();
     const result = await startScreenObserver({
-      sampleEveryMs: current.sampleEveryMs || 5000,
+      sampleEveryMs: current.sampleEveryMs || SCREEN_OBSERVER_INTERVAL_MS,
       notificationsEnabled: current.notificationsEnabled !== false,
       audioAlertEnabled: current.audioAlertEnabled === true,
       onUpdate: (nextState, event) => {
@@ -952,101 +268,46 @@ export default function App() {
         if (event) {
           setScreenObserverLogs(getScreenObserverLogs());
           pushMemoryItem({
-            title: `Screen observer: ${event.status}`,
-            category: 'workspace_memory',
-            content: `${event.summary} (change ${event.changeLevel})`,
-            source: 'screen-observer',
-            sourceAgent: 'alphonso',
-            confidence: TRUST_STATES.INFERRED,
+            title: `Screen observer: ${event.status}`, category: 'workspace_memory',
+            content: `${event.summary} (change ${event.changeLevel})`, source: 'screen-observer',
+            sourceAgent: 'alphonso', confidence: TRUST_STATES.INFERRED,
             verificationState: TRUST_STATES.INFERRED,
-            expiresAt: timestampMs() + 7 * 24 * 60 * 60 * 1000,
-            expiryRule: 'visual_pattern_7d'
+            expiresAt: Date.now() + MEMORY_EXPIRY_MS, expiryRule: 'visual_pattern_7d'
           });
           if (event.status === 'high_change_detected' || event.status === 'pattern_repeated') {
-            setHectorCompanionState({
-              state: 'warning',
-              message: event.summary,
-              currentSourceUrl: null,
-              lastRunSummary: event.summary
-            });
+            setHectorCompanionState({ state: 'warning', message: event.summary, currentSourceUrl: null, lastRunSummary: event.summary });
           }
         }
       }
     });
     screenObserverRunRef.current = Boolean(result?.ok);
     if (result?.ok) {
-      setWorkspaceFoundation(updateWorkspaceFoundation({
-        screenCapture: {
-          ...(workspaceFoundation.screenCapture || {}),
-          enabled: true,
-          verificationState: TRUST_STATES.INFERRED
-        }
-      }));
+      setScreenObserverLogs(getScreenObserverLogs());
     }
-    setScreenObserverLogs(getScreenObserverLogs());
-  };
+  }, [requestApproval, setHectorCompanionState]);
 
-  const handleStopScreenObserver = () => {
+  const handleStopScreenObserver = useCallback(() => {
     const next = stopScreenObserver();
     screenObserverRunRef.current = false;
-    setWorkspaceFoundation(updateWorkspaceFoundation({
-      screenCapture: {
-        ...(workspaceFoundation.screenCapture || {}),
-        enabled: false,
-        verificationState: TRUST_STATES.TEMPORARY
-      }
-    }));
     setScreenObserverState(next);
     setScreenObserverLogs(getScreenObserverLogs());
-  };
+  }, []);
 
-  const handleUpdateScreenObserverSettings = (patch) => {
+  const handleUpdateScreenObserverSettings = useCallback((patch) => {
     const next = updateScreenObserverState(patch);
     setScreenObserverState(next);
-  };
+  }, []);
 
-  const handleExportDiagnostics = () => {
+  const handleExportDiagnostics = useCallback(() => {
     const payload = {
       exportedAt: new Date().toISOString(),
-      modes: {
-        operatorMode,
-        localOnlyMode: settings.localOnlyMode,
-        zeroCostMode: settings.zeroCostMode,
-        approvalMode: settings.approvalMode,
-        safeMode: settings.safeMode,
-        privacyShieldActive: settings.privacyShieldActive
-      },
-      runtime: {
-        ollamaStatus,
-        desktopBridge,
-        selectedModel: settings.selectedModel,
-        endpoint: settings.endpoint,
-        lastCheckedAt: lastCheckedAt ? new Date(lastCheckedAt).toISOString() : null
-      },
-      counts: {
-        verificationLogs: verificationLogs.length,
-        memoryItems: memoryItems.length,
-        plugins: plugins.length,
-        snapshots: snapshots.length
-      },
-      verificationLogs,
-      durableAuditLogs,
-      memoryItems,
-      plugins,
-      diskPluginManifests,
-      pluginAudit,
-      snapshots,
-      workspaceFoundation,
-      workspaceProof,
-      ocrCapability,
-      workspaceSymbolIndex,
-      lastPluginToolRun,
-      lastManifestValidation,
-      lastOcrAdapterRun,
-      auditChainProof,
-      pluginSandboxPolicy
+      modes: { operatorMode, localOnlyMode: settings.localOnlyMode, zeroCostMode: settings.zeroCostMode, approvalMode: settings.approvalMode, safeMode: settings.safeMode, privacyShieldActive: settings.privacyShieldActive },
+      runtime: { ollamaStatus, desktopBridge, selectedModel: settings.selectedModel, endpoint: settings.endpoint, lastCheckedAt: lastCheckedAt ? new Date(lastCheckedAt).toISOString() : null },
+      counts: { verificationLogs: verificationLogs.length, memoryItems: memoryItems.length, plugins: plugins.length, snapshots: snapshots.length },
+      verificationLogs, durableAuditLogs, memoryItems, plugins, diskPluginManifests, pluginAudit, snapshots,
+      workspaceFoundation, workspaceProof, ocrCapability, workspaceSymbolIndex,
+      lastPluginToolRun, lastManifestValidation, lastOcrAdapterRun, auditChainProof, pluginSandboxPolicy
     };
-
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -1056,186 +317,18 @@ export default function App() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-
-    const log = appendVerificationLog({
-      type: 'diagnostics_export',
-      source: 'operator-dashboard',
-      trust: TRUST_STATES.VERIFIED,
-      payload: { bytes: blob.size }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-250));
-  };
-
-  const handleRuntimeRepair = async () => {
-    if (!await requestApproval('Run supervised runtime repair checks')) return;
-    await runOllamaCheck();
-    await verifyProcesses(['ollama']);
-    const log = appendVerificationLog({
-      type: 'runtime_repair',
-      source: 'supervised-repair',
-      trust: TRUST_STATES.TEMPORARY,
-      payload: { status: 'repair checks completed' }
-    });
-    setVerificationLogs((current) => [...current, log].slice(-250));
-  };
-
-  const handleToggleCoachMode = async () => {
-    if (coachMode) {
-      await closeCoachWindow();
-      setCoachMode(false);
-      return;
-    }
-    await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
-    setCoachMode(true);
-  };
-
-  const handleToggleCoachTop = async () => {
-    const next = !coachAlwaysOnTop;
-    setCoachAlwaysOnTop(next);
-    if (coachMode) {
-      await openCoachWindow(next, settings.coachAgent || 'alphonso');
-    }
-  };
-
-  const minimizeToCoach = async () => {
-    try {
-      await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
-      setCoachMode(true);
-      await getCurrentWindow().minimize();
-    } catch {
-      // Ignore when not in Tauri runtime.
-    }
-  };
-
-  const openAlphonsoDesktopCard = async () => {
-    try {
-      await openCoachWindow(coachAlwaysOnTop, 'alphonso');
-      setCoachMode(true);
-    } catch {
-      // Ignore when not in Tauri runtime.
-    }
-  };
-
-  const handleCoachInterventionAction = (action) => {
-    if (!coachIntervention) return;
-
-    const details = action === 'pause_60_seconds' ? { durationMs: 60000 } : {};
-    recordCoachInterventionAction(coachIntervention, action, details);
-
-    if (action === 'pause_60_seconds') {
-      setCoachPauseUntilMs(Date.now() + 60000);
-      return;
-    }
-
-    if (['end_session', 'continue', 'continue_anyway'].includes(action)) {
-      setCoachIntervention(null);
-    }
-  };
+    const log = appendVerificationLog({ type: 'diagnostics_export', source: 'operator-dashboard', trust: TRUST_STATES.VERIFIED, payload: { bytes: blob.size } });
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+  }, [operatorMode, settings, ollamaStatus, desktopBridge, lastCheckedAt, verificationLogs, memoryItems, plugins, snapshots, durableAuditLogs, diskPluginManifests, pluginAudit, workspaceFoundation, workspaceProof, ocrCapability, workspaceSymbolIndex, lastPluginToolRun, lastManifestValidation, lastOcrAdapterRun, auditChainProof, pluginSandboxPolicy, setVerificationLogs]);
 
   if (isCoachWindow) {
-    const coachAgent = coachAgentFromQuery || settings.coachAgent || 'alphonso';
-    const coachState = coachAgent === 'miya'
-      ? miyaCompanionState
-      : coachAgent === 'jose'
-        ? joseCompanionState
-        : coachAgent === 'hector'
-          ? hectorCompanionState
-          : {
-            state: companionStateFromVoice(voice.voiceStatus),
-            message: coachMessageFromVoice(voice.voiceStatus)
-          };
-    const coachSkills = listCoachSkills();
-    const showDemoIntervention = () => setCoachIntervention(buildDemoSlotIntervention());
-    const cornerClass = {
-      'bottom-right': 'items-end justify-end',
-      'bottom-left': 'items-end justify-start',
-      'top-right': 'items-start justify-end',
-      'top-left': 'items-start justify-start'
-    }[coachSnapCorner] || 'items-end justify-end';
-
     return (
-      <div data-alphonso-shell-ready="true" className={`h-screen w-screen bg-zinc-950 text-zinc-100 flex p-4 ${coachMiniMode ? cornerClass : 'items-center justify-center'}`}>
-        <div className={`${coachMiniMode ? 'w-[22rem] rounded-2xl border border-cyan-300/20 bg-zinc-900/85 p-3' : 'w-full h-full rounded-2xl border border-white/10 bg-zinc-900/70 p-4'}`}>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500 font-bold">Coach Mode</div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCoachMiniMode((current) => !current)}
-                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
-              >
-                {coachMiniMode ? 'Full' : 'Mini'}
-              </button>
-              <button
-                onClick={() => setCoachSnapCorner((current) => nextCoachCorner(current))}
-                className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
-              >
-                Snap: {coachSnapCorner}
-              </button>
-            </div>
-          </div>
-
-          {coachMiniMode ? (
-            <div className="space-y-3">
-              <Suspense fallback={<ViewLoadingState label="Coach interventions" />}>
-                <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
-              </Suspense>
-              <Suspense fallback={<ViewLoadingState label="Mission badge" />}>
-                <CoachMissionBadge agent={coachAgent} state={coachState.state} message={coachState.message} />
-              </Suspense>
-              <Suspense fallback={<ViewLoadingState label="Skills" />}>
-                <CoachSkillGrid skills={coachSkills.slice(0, 4)} compact />
-              </Suspense>
-              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-2">
-                <Suspense fallback={null}>
-                  <MicrophoneStatus voiceStatus={voice.voiceStatus} />
-                </Suspense>
-              </div>
-            </div>
-          ) : (
-            <div className="grid h-[calc(100%-2.5rem)] grid-cols-[minmax(0,1fr)_17rem] gap-4">
-              <div className="space-y-4 overflow-auto pr-1">
-                <Suspense fallback={<ViewLoadingState label="Coach interventions" />}>
-                  <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
-                </Suspense>
-                <div className="rounded-2xl border border-cyan-300/15 bg-cyan-500/5 p-4">
-                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">Coach skills</div>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-                    Coach Mode is for guidance, focus, handoffs, rehearsal, and safety checks — not just agent status.
-                  </p>
-                </div>
-                <Suspense fallback={<ViewLoadingState label="Skills" />}>
-                  <CoachSkillGrid skills={coachSkills} />
-                </Suspense>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
-                <div className="mb-2 text-2xs font-bold uppercase tracking-[0.16em] text-zinc-500">Agent status</div>
-                <div className="space-y-2">
-                  <Suspense fallback={<ViewLoadingState label="Alphonso" />}>
-                    <CoachMissionBadge agent="alphonso" state={companionStateFromVoice(voice.voiceStatus)} message={coachMessageFromVoice(voice.voiceStatus)} />
-                  </Suspense>
-                  <Suspense fallback={<ViewLoadingState label="Hector" />}>
-                    <CoachMissionBadge agent="hector" state={hectorCompanionState.state} message={hectorCompanionState.message} />
-                  </Suspense>
-                  <Suspense fallback={<ViewLoadingState label="Jose" />}>
-                    <CoachMissionBadge agent="jose" state={joseCompanionState.state} message={joseCompanionState.message} />
-                  </Suspense>
-                  <Suspense fallback={<ViewLoadingState label="Miya" />}>
-                    <CoachMissionBadge agent="miya" state={miyaCompanionState.state} message={miyaCompanionState.message} />
-                  </Suspense>
-                </div>
-              </div>
-            </div>
-          )}
-          {coachMiniMode && (
-            <div className="mt-2 text-2xs text-zinc-500">
-              Mini mode is always-on-top friendly and corner-snapped for fast glance monitoring.
-            </div>
-          )}
-          <div className="mt-2 text-2xs text-zinc-600">
-            Desktop coach card is local-only and supervised.
-          </div>
-        </div>
-      </div>
+      <CoachWindow
+        coachAgentFromQuery={coachAgentFromQuery}
+        miyaCompanionState={miyaCompanionState}
+        joseCompanionState={joseCompanionState}
+        hectorCompanionState={hectorCompanionState}
+      />
     );
   }
 
@@ -1244,9 +337,7 @@ export default function App() {
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
         <OnboardingWizard
           onComplete={(chosenModel) => {
-            if (chosenModel) {
-              setSettings((current) => ({ ...current, selectedModel: chosenModel }));
-            }
+            if (chosenModel) setSettings((current) => ({ ...current, selectedModel: chosenModel }));
             setShowOnboarding(false);
           }}
         />
@@ -1289,7 +380,6 @@ export default function App() {
         onDeleteChat={deleteChat}
         settings={settings}
       />
-
       <div className="flex flex-col flex-1 relative min-w-0 border-x border-white/[0.05]">
         <TopBar
           settings={settings}
@@ -1303,16 +393,8 @@ export default function App() {
           onOpenSettings={() => switchTab('settings')}
         />
         <Suspense fallback={null}>
-          <CommandRib
-            activeTab={activeTab}
-            setActiveTab={switchTab}
-            settings={settings}
-            setSettings={setSettings}
-            ollamaStatus={ollamaStatus}
-            operatorMode={operatorMode}
-          />
+          <CommandRib activeTab={activeTab} setActiveTab={switchTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} />
         </Suspense>
-
         <main className="flex-1 overflow-y-auto relative bg-zinc-950/50">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
           <div className="absolute left-4 top-4 z-20">
@@ -1320,266 +402,188 @@ export default function App() {
               <AgentDock companions={mergedAgentDockCompanions} />
             </Suspense>
           </div>
-
           <div className="h-full relative z-10">
             <ViewErrorBoundary label={activeTab} key={activeTab}>
-            <Suspense fallback={<ViewLoadingState activeTab={activeTab} />}>
-              {activeTab === 'mission' && (
-                <MissionControlHome
-                  settings={settings}
-                  ollamaStatus={ollamaStatus}
-                  operatorMode={operatorMode}
-                  coachMode={coachMode}
-                  coachIntervention={coachIntervention}
-                  verificationLogs={verificationLogs}
-                  memoryItems={memoryItems}
-                  updateCheckState={updateCheckState}
-                  onNavigate={switchTab}
-                />
-              )}
-              {activeTab === 'mission_room' && (
-                <MissionRoom
-                  onCreateApprovalRequest={() => setApprovalRequiredNotice(true)}
-                />
-              )}
-              {activeTab === 'chat' && (
-                <Suspense fallback={<ViewLoadingState label="Chat" />}>
-                  <ChatView
-                    activeChatId={activeChatId}
-                    settings={settings}
-                    setConversations={setConversations}
-                    ollamaStatus={ollamaStatus}
-                    installedModels={installedModels}
-                    selectedModelMissing={selectedModelMissing}
-                    voice={voice}
-                    onGenerationChange={setIsGeneratingResponse}
-                    onTaskComplete={() => setLastTaskCompletedAt(Date.now())}
-                    onRetryOllama={runOllamaCheck}
-                    onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })}
-                    onOpenSettings={() => switchTab('settings')}
-                    onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))}
-                  />
-                </Suspense>
-              )}
-              {activeTab === 'miya' && (
-                <MiyaStudio
-                  settings={settings}
-                  ollamaStatus={ollamaStatus}
-                  onStudioStateChange={(state, message) => setMiyaCompanionState({ state, message })}
-                  onPacketCreated={() => {
-                    const log = appendVerificationLog({
-                      type: 'miya_handoff_packet_created',
-                      source: 'miya-studio',
-                      trust: TRUST_STATES.TEMPORARY,
-                      payload: {
-                        selectedModel: settings.selectedModel || null
-                      }
-                    });
-                    setVerificationLogs((current) => [...current, log].slice(-250));
-                  }}
-                />
-              )}
-              {activeTab === 'content' && (
-                <ContentCatalystWorkspace
-                  settings={settings}
-                  onJobChange={(job) => {
-                    if (!job) return;
-                    const log = appendVerificationLog({
-                      type: 'content_catalyst_job_update',
-                      source: 'content-catalyst',
-                      trust: TRUST_STATES.TEMPORARY,
-                      payload: {
-                        jobId: job.id,
-                        status: job.status,
-                        currentStep: job.currentStep
-                      }
-                    });
-                    setVerificationLogs((current) => [...current, log].slice(-250));
-                  }}
-                  onApprovalRequest={(approval) => {
-                    if (!approval) return;
-                    const log = appendVerificationLog({
-                      type: 'content_catalyst_publish_approval',
-                      source: 'content-catalyst',
-                      trust: TRUST_STATES.TEMPORARY,
-                      payload: approval
-                    });
-                    setVerificationLogs((current) => [...current, log].slice(-250));
-                  }}
-                />
-              )}
-              {activeTab === 'hector' && (
-                <HectorResearchDesk
-                  onHectorStateChange={(payload) => {
-                    if (!payload) return;
-                    setHectorCompanionState((current) => ({
-                      ...current,
-                      ...payload
-                    }));
-                  }}
-                />
-              )}
-              {activeTab === 'automation' && <AutomationView />}
-              {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
-              {activeTab === 'ecosystem' && (
-                <EcosystemHub
-                  settings={settings}
-                  setSettings={setSettings}
-                  ollamaStatus={ollamaStatus}
-                  verificationLogs={verificationLogs}
-                  memoryItems={memoryItems}
-                  voiceStatus={voice.voiceStatus}
-                  workspaceFoundation={workspaceFoundation}
-                  updateCheckState={updateCheckState}
-                  nativeSelfDevProof={nativeSelfDevProof}
-                  setNativeSelfDevProof={setNativeSelfDevProof}
-                  nativeProofHooks={nativeProofHooks}
-                />
-              )}
-              {activeTab === 'project_execution' && <ProjectExecutionMode />}
-              {activeTab === 'orchestrator' && (
-                <OrchestratorView
-                  settings={settings}
-                  ollamaStatus={ollamaStatus}
-                  onJoseStateChange={(state, message) => setJoseCompanionState({ state, message })}
-                />
-              )}
-              {activeTab === 'workflows' && (
-                <div className="flex items-center justify-between p-4">
-                  <div>
-                    <div className="text-sm font-semibold text-zinc-200">Workflows</div>
-                    <div className="text-xs text-zinc-500">Trigger and review workflows from this panel.</div>
+              <Suspense fallback={<ViewLoadingState activeTab={activeTab} />}>
+                {activeTab === 'mission' && (
+                  <MissionControlHome settings={settings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} coachMode={coachMode} coachIntervention={coachIntervention} verificationLogs={verificationLogs} memoryItems={memoryItems} updateCheckState={updateCheckState} onNavigate={switchTab} />
+                )}
+                {activeTab === 'mission_room' && (
+                  <MissionRoom onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} />
+                )}
+                {activeTab === 'chat' && (
+                  <Suspense fallback={<ViewLoadingState label="Chat" />}>
+                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))} />
+                  </Suspense>
+                )}
+                {activeTab === 'miya' && (
+                  <MiyaStudio settings={settings} ollamaStatus={ollamaStatus} onStudioStateChange={(state, message) => setMiyaCompanionState({ state, message })} onPacketCreated={() => { const log = appendVerificationLog({ type: 'miya_handoff_packet_created', source: 'miya-studio', trust: TRUST_STATES.TEMPORARY, payload: { selectedModel: settings.selectedModel || null } }); setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
+                )}
+                {activeTab === 'content' && (
+                  <ContentCatalystWorkspace settings={settings} onJobChange={(job) => { if (!job) return; const log = appendVerificationLog({ type: 'content_catalyst_job_update', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: { jobId: job.id, status: job.status, currentStep: job.currentStep } }); setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} onApprovalRequest={(approval) => { if (!approval) return; const log = appendVerificationLog({ type: 'content_catalyst_publish_approval', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: approval }); setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
+                )}
+                {activeTab === 'hector' && (
+                  <HectorResearchDesk onHectorStateChange={(payload) => { if (!payload) return; setHectorCompanionState((current) => ({ ...current, ...payload })); }} />
+                )}
+                {activeTab === 'automation' && <AutomationView />}
+                {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
+                {activeTab === 'ecosystem' && (
+                  <EcosystemHub settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} memoryItems={memoryItems} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
+                )}
+                {activeTab === 'project_execution' && <ProjectExecutionMode />}
+                {activeTab === 'orchestrator' && (
+                  <OrchestratorView settings={settings} ollamaStatus={ollamaStatus} onJoseStateChange={(state, message) => setJoseCompanionState({ state, message })} />
+                )}
+                {activeTab === 'workflows' && (
+                  <div className="flex items-center justify-between p-4">
+                    <div>
+                      <div className="text-sm font-semibold text-zinc-200">Workflows</div>
+                      <div className="text-xs text-zinc-500">Trigger and review workflows from this panel.</div>
+                    </div>
+                    <button onClick={() => setShowWorkflowPanel(true)} className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-zinc-200 hover:border-white/20">Open Workflows</button>
                   </div>
-                  <button
-                    onClick={() => setShowWorkflowPanel(true)}
-                    className="flex items-center gap-1 rounded-lg border border-white/10 bg-zinc-900/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-zinc-200 hover:border-white/20"
-                  >
-                    Open Workflows
-                  </button>
-                </div>
-              )}
-              {activeTab === 'operator' && (
-                <OperatorDashboard
-                  operatorMode={operatorMode}
-                  setOperatorMode={setOperatorMode}
-                  ollamaStatus={ollamaStatus}
-                  lastCheckedAt={lastCheckedAt}
-                  verificationLogs={verificationLogs}
-                  onVerifyOllama={verifyOllamaWithProof}
-                  onVerifyAuditChain={verifyAuditChain}
-                  onVerifyProcess={verifyProcesses}
-                  onVerifyPaths={verifyPaths}
-                  onVerifyCommand={verifyCommand}
-                  memoryItems={memoryItems}
-                  plugins={plugins}
-                  diskPluginManifests={diskPluginManifests}
-                  pluginAudit={pluginAudit}
-                  onTogglePlugin={handleTogglePlugin}
-                  onDiscoverPlugins={handleDiscoverPlugins}
-                  workspaceFoundation={workspaceFoundation}
-                  onToggleWorkspaceFeature={handleToggleWorkspaceFeature}
-                  workspaceProof={workspaceProof}
-                  ocrCapability={ocrCapability}
-                  onRunWorkspaceProof={handleRunWorkspaceProof}
-                  onCheckOcrCapability={handleCheckOcrCapability}
-                  workspaceSymbolIndex={workspaceSymbolIndex}
-                  onBuildSymbolIndex={handleBuildSymbolIndex}
-                  onExecutePluginTool={handleExecutePluginTool}
-                  onValidatePluginManifest={handleValidatePluginManifest}
-                  lastPluginToolRun={lastPluginToolRun}
-                  lastManifestValidation={lastManifestValidation}
-                  pluginSandboxPolicy={pluginSandboxPolicy}
-                  onUpdatePluginSandboxPolicy={handleUpdatePluginSandboxPolicy}
-                  auditChainProof={auditChainProof}
-                  onRunOcrAdapter={handleRunOcrAdapter}
-                  lastOcrAdapterRun={lastOcrAdapterRun}
-                  snapshots={snapshots}
-                  onCreateSnapshot={handleCreateSnapshot}
-                  onRestoreSnapshot={handleRestoreSnapshot}
-                  onBackupMemory={handleBackupMemory}
-                  onRunRuntimeRepair={handleRuntimeRepair}
-                  onRunReleasePreflight={handleRunReleasePreflight}
-                  onExportDiagnostics={handleExportDiagnostics}
-                  durableAuditLogs={durableAuditLogs}
-                  coachMode={coachMode}
-                  coachAlwaysOnTop={coachAlwaysOnTop}
-                  onToggleCoachMode={handleToggleCoachMode}
-                  onToggleCoachTop={handleToggleCoachTop}
-                  screenObserverState={screenObserverState}
-                  screenObserverLogs={screenObserverLogs}
-                  onRequestScreenObserverPermission={handleRequestScreenObserverPermission}
-                  onStartScreenObserver={handleStartScreenObserver}
-                  onStopScreenObserver={handleStopScreenObserver}
-                  onUpdateScreenObserverSettings={handleUpdateScreenObserverSettings}
-                  modes={settings}
-                />
-              )}
-              {activeTab === 'settings' && (
-                <Suspense fallback={null}>
-                  <SettingsView
-                    settings={settings}
-                    setSettings={setSettings}
-                    ollamaStatus={ollamaStatus}
-                    installedModels={installedModels}
-                    selectedModelMissing={selectedModelMissing}
-                    onCheckOllama={runOllamaCheck}
-                    onCopyTroubleshootingCommand={copyTroubleshootingCommand}
-                    copyState={copyState}
-                    updateCheckState={updateCheckState}
-                    onCheckUpdates={() => runOllamaCheck()}
-                    normalizeEndpoint={normalizeEndpoint}
-                    ollamaTroubleshootingCommand={OLLAMA_TROUBLESHOOTING_COMMAND}
-                    braveSearchConfigured={braveSearchConfigured}
-                  />
-                </Suspense>
-              )}
-              {activeTab === 'connectors' && (
-                <div className="p-6">
-                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading...</div>}>
-                    <ConnectorHealthPanel zeroCostMode={settings.zeroCostMode} />
-                  </React.Suspense>
-                </div>
-              )}
-              {activeTab === 'activity' && (
-                <Suspense fallback={null}>
-                  <AgentActivityLog />
-                </Suspense>
-              )}
-            </Suspense>
+                )}
+                {activeTab === 'operator' && (
+                  <OperatorDashboard operatorMode={operatorMode} setOperatorMode={setOperatorMode} ollamaStatus={ollamaStatus} lastCheckedAt={lastCheckedAt} verificationLogs={verificationLogs} onVerifyOllama={verifyOllamaWithProof} onVerifyAuditChain={verifyAuditChain} onVerifyProcess={verifyProcesses} onVerifyPaths={verifyPaths} onVerifyCommand={verifyCommand} memoryItems={memoryItems} plugins={plugins} diskPluginManifests={diskPluginManifests} pluginAudit={pluginAudit} onTogglePlugin={handleTogglePlugin} onDiscoverPlugins={handleDiscoverPlugins} workspaceFoundation={workspaceFoundation} onToggleWorkspaceFeature={handleToggleWorkspaceFeature} workspaceProof={workspaceProof} ocrCapability={ocrCapability} onRunWorkspaceProof={handleRunWorkspaceProof} onCheckOcrCapability={handleCheckOcrCapability} workspaceSymbolIndex={workspaceSymbolIndex} onBuildSymbolIndex={handleBuildSymbolIndex} onExecutePluginTool={handleExecutePluginTool} onValidatePluginManifest={handleValidatePluginManifest} lastPluginToolRun={lastPluginToolRun} lastManifestValidation={lastManifestValidation} pluginSandboxPolicy={pluginSandboxPolicy} onUpdatePluginSandboxPolicy={handleUpdatePluginSandboxPolicy} auditChainProof={auditChainProof} onRunOcrAdapter={handleRunOcrAdapter} lastOcrAdapterRun={lastOcrAdapterRun} snapshots={snapshots} onCreateSnapshot={handleCreateSnapshot} onRestoreSnapshot={handleRestoreSnapshot} onBackupMemory={handleBackupMemory} onRunRuntimeRepair={handleRuntimeRepair} onRunReleasePreflight={handleRunReleasePreflight} onExportDiagnostics={handleExportDiagnostics} durableAuditLogs={durableAuditLogs} coachMode={coachMode} coachAlwaysOnTop={coachAlwaysOnTop} onToggleCoachMode={handleToggleCoachMode} onToggleCoachTop={handleToggleCoachTop} screenObserverState={screenObserverState} screenObserverLogs={screenObserverLogs} onRequestScreenObserverPermission={handleRequestScreenObserverPermission} onStartScreenObserver={handleStartScreenObserver} onStopScreenObserver={handleStopScreenObserver} onUpdateScreenObserverSettings={handleUpdateScreenObserverSettings} modes={settings} />
+                )}
+                {activeTab === 'settings' && (
+                  <Suspense fallback={null}>
+                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} normalizeEndpoint={(e) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} />
+                  </Suspense>
+                )}
+                {activeTab === 'connectors' && (
+                  <div className="p-6">
+                    <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading...</div>}>
+                      <ConnectorHealthPanel zeroCostMode={settings.zeroCostMode} />
+                    </React.Suspense>
+                  </div>
+                )}
+                {activeTab === 'activity' && (
+                  <Suspense fallback={null}>
+                    <AgentActivityLog />
+                  </Suspense>
+                )}
+              </Suspense>
             </ViewErrorBoundary>
           </div>
         </main>
       </div>
-
       <Suspense fallback={null}>
-        <RightPanel
-          settings={settings}
-          ollamaStatus={ollamaStatus}
-          installedModels={installedModels}
-          desktopBridge={desktopBridge}
-          voiceStatus={voice.voiceStatus}
-          selectedModelMissing={selectedModelMissing}
-          lastCheckedAt={lastCheckedAt}
-          onCheckOllama={runOllamaCheck}
-          onCopyTroubleshootingCommand={copyTroubleshootingCommand}
-          copyState={copyState}
-          onMinimizeToCoach={minimizeToCoach}
-          operatorMode={operatorMode}
-          approvalRequiredNotice={approvalRequiredNotice}
-          miyaCompanionState={miyaCompanionState}
-          joseCompanionState={joseCompanionState}
-          hectorCompanionState={hectorCompanionState}
-          screenObserverState={screenObserverState}
-          updateCheckState={updateCheckState}
-          onCheckUpdates={() => runOllamaCheck()}
-        />
+        <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} />
       </Suspense>
-
-      {showWorkflowPanel ? (
+      {showWorkflowPanel && (
         <Suspense fallback={<ViewLoadingState label="Workflows" />}>
           <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(workflowId) => switchTab('activity')} />
         </Suspense>
-      ) : null}
+      )}
     </div>
+  );
+}
+
+function VerificationLogsProvider({ children }) {
+  const [verificationLogs, setVerificationLogs] = useState(() => getVerificationLogs());
+  const [durableAuditLogs, setDurableAuditLogs] = useState([]);
+  const [auditChainProof, setAuditChainProof] = useState(null);
+  const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
+
+  return (
+    <VerificationLogsBridge value={{ verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice }}>
+      {children}
+    </VerificationLogsBridge>
+  );
+}
+
+const VerificationLogsBridge = React.createContext(null);
+export function useVerificationLogsBridge() { return React.useContext(VerificationLogsBridge); }
+
+function RequestApprovalProvider({ children }) {
+  const [approvalPending, setApprovalPending] = useState(null);
+  const approvalResolveRef = useRef(null);
+
+  const requestApproval = useCallback((actionLabel) => {
+    return new Promise((resolve) => {
+      approvalResolveRef.current = resolve;
+      setApprovalPending(actionLabel);
+    });
+  }, []);
+
+  return (
+    <RequestApprovalBridge value={{ approvalPending, setApprovalPending, requestApproval, approvalResolveRef }}>
+      {children}
+    </RequestApprovalBridge>
+  );
+}
+
+const RequestApprovalBridge = React.createContext(null);
+export function useRequestApprovalBridge() { return React.useContext(RequestApprovalBridge); }
+
+export default function App() {
+  return (
+    <VerificationLogsProvider>
+      <RequestApprovalProvider>
+        <SettingsProvider>
+          <OllamaProviderInner>
+            <PluginProviderInner>
+              <WorkspaceProviderInner>
+                <VerificationProviderInner>
+                  <CoachProvider>
+                    <AppShell />
+                  </CoachProvider>
+                </VerificationProviderInner>
+              </WorkspaceProviderInner>
+            </PluginProviderInner>
+          </OllamaProviderInner>
+        </SettingsProvider>
+      </RequestApprovalProvider>
+    </VerificationLogsProvider>
+  );
+}
+
+function OllamaProviderInner({ children }) {
+  const bridge = useVerificationLogsBridge();
+  const approval = useRequestApprovalBridge();
+  return (
+    <OllamaProvider setVerificationLogs={bridge.setVerificationLogs} setMemoryItems={() => {}}>
+      {children}
+    </OllamaProvider>
+  );
+}
+
+function PluginProviderInner({ children }) {
+  const bridge = useVerificationLogsBridge();
+  const approval = useRequestApprovalBridge();
+  return (
+    <PluginProvider requestApproval={approval.requestApproval} setVerificationLogs={bridge.setVerificationLogs} setDurableAuditLogs={bridge.setDurableAuditLogs} setApprovalRequiredNotice={bridge.setApprovalRequiredNotice}>
+      {children}
+    </PluginProvider>
+  );
+}
+
+function WorkspaceProviderInner({ children }) {
+  const bridge = useVerificationLogsBridge();
+  const approval = useRequestApprovalBridge();
+  return (
+    <WorkspaceProvider requestApproval={approval.requestApproval} setVerificationLogs={bridge.setVerificationLogs} setDurableAuditLogs={bridge.setDurableAuditLogs}>
+      {children}
+    </WorkspaceProvider>
+  );
+}
+
+function VerificationProviderInner({ children }) {
+  const bridge = useVerificationLogsBridge();
+  const approval = useRequestApprovalBridge();
+  return (
+    <VerificationProvider
+      requestApproval={approval.requestApproval}
+      setApprovalRequiredNotice={bridge.setApprovalRequiredNotice}
+      verificationLogs={bridge.verificationLogs}
+      setVerificationLogs={bridge.setVerificationLogs}
+      durableAuditLogs={bridge.durableAuditLogs}
+      setDurableAuditLogs={bridge.setDurableAuditLogs}
+      auditChainProof={bridge.auditChainProof}
+      setAuditChainProof={bridge.setAuditChainProof}
+    >
+      {children}
+    </VerificationProvider>
   );
 }

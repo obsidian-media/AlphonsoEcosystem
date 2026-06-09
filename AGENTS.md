@@ -3,7 +3,7 @@
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 5, Tailwind 3) + Ollama (local LLM)
-- **Version**: 0.1.0 (local capable, not yet publicly installable)
+- **Version**: 0.3.0 (local capable, not yet publicly installable)
 - **Target**: v1.0.0 = publicly installable, runtime-proven, release-hardened
 
 ## Directory Structure

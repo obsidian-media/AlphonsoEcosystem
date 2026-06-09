@@ -39,3 +39,6 @@ release/rc0/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# OpenCode agent config
+.opencode/
