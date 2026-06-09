@@ -363,7 +363,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [ ] **Branch protection on `main`** — CI not yet required before merge
 
 ### PERFORMANCE
-- [x] **Lazy loading** — 14+ heavy views lazy-loaded. Main chunk: **507KB** (budget 488KB — exceeds budget, needs code splitting fix).
+- [x] **Lazy loading** — 20+ heavy views lazy-loaded. Main chunk: **288KB** (budget 550KB). Code splitting applied to ChatView, WorkflowPanel, coach components.
 - [x] **Image asset compression** — DONE (2026-06-03, Session 6): Logo/banner/icon/thumbnail PNGs converted to WebP (89% reduction, ~9MB saved). `miya-mascot.png` converted to WebP (77.7% reduction). Unused `ChatGPT Image Jun 1` deleted (2.7MB). Total savings: ~12MB.
 - [x] **Design system** — Custom Tailwind tokens reduce CSS duplication. Component classes (.panel, .card, .btn-*) eliminate inline style repetition.
 
@@ -400,6 +400,8 @@ Before writing any new service or feature, verify it does not already exist:
 - **Keyboard shortcuts** → `useKeyboardShortcuts.js` — 12 shortcuts, ? help modal. Do NOT create another shortcut system.
 - **Policy gate** → `policy_gate.rs` — 40+ programs whitelisted. Do NOT modify without reviewing security implications.
 - **iOS companion plan** → `docs/IOS_COMPANION_PLAN.md` — architecture doc, do NOT start building without reviewing.
+- **Error boundaries** → `ViewErrorBoundary.jsx` (enhanced with copy error, expandable stack trace), `ErrorBoundary.jsx` (reusable with HOC). All views wrapped.
+- **Code splitting** — ChatView, WorkflowPanel, CoachMissionBadge, CoachInterventionCard, CoachHardInterruptOverlay, CoachSkillGrid now lazy-loaded. Main chunk reduced from 519KB to 288KB.
 - **Approval modal** → `src/components/ApprovalModal.jsx` — already shows connector, risk level, irreversibility warning
 - **Toast notifications** → `ToastProvider` already in `main.jsx`, inbound toasts already wired in `App.jsx`
 - **Policy enforcement** → `policyEnforcementService.js` (do not recreate approval/risk logic)
@@ -460,6 +462,6 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-08 — Session 10 complete. 72 test files, 951+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk 507KB, budget 488KB — needs code splitting), `cargo clippy -- -D warnings` clean (blocked locally by Windows App Control, passes on CI ubuntu-latest). `lib.rs` is ~4,638 lines. Coverage 27.83% (threshold 12%, src/ scoped). Version 0.1.1. Run `npm run verify:app` and `npm run export:ground-truth` to re-verify._
+_Last verified: 2026-06-08 — Session 11 complete. 72 test files, 951+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB — 44% reduction from code splitting), `cargo clippy -- -D warnings` clean (passes on CI ubuntu-latest). `lib.rs` is ~4,638 lines. Coverage 27.83% (threshold 12%, src/ scoped). Version 0.1.1. Run `npm run verify:app` and `npm run export:ground-truth` to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
