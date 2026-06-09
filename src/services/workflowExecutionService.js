@@ -10,7 +10,7 @@ import { executeMarcusPublish } from './marcusPublishService';
 import { appendWorkflowTelemetryEvent } from './workflowTelemetryService';
 import { buildMiyaExportPacket } from './miyaExportPacketService';
 import { listMiyaMemory } from './miyaMemoryService';
-import { listWorkflows as listVisualWorkflows, getWorkflow as getVisualWorkflow, WORKFLOW_NODE_LIBRARY } from './workflowBuilderService';
+import { listWorkflows as listVisualWorkflows, WORKFLOW_NODE_LIBRARY } from './workflowBuilderService';
 
 async function webSearch({ query = '', limit = 5 } = {}) {
   try {
@@ -802,7 +802,7 @@ export function retryWorkflowRun(runId) {
 
 export function runVisualWorkflow(workflowId, options = {}) {
   const visualWorkflows = listVisualWorkflows();
-  const workflow = visualWorkflows.find((w) => w.id === workflowId) || getVisualWorkflow(workflowId);
+  const workflow = visualWorkflows.find((w) => w.id === workflowId);
   if (!workflow) return { ok: false, error: `Visual workflow '${workflowId}' not found.` };
 
   const nodes = workflow.nodes || workflow.steps || [];
