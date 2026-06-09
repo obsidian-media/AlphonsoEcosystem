@@ -404,6 +404,85 @@ struct LocalRuntimeHealthProof {
   error: Option<String>,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceFileReadProof {
+  file_path: String,
+  relative_path: String,
+  content: String,
+  bytes: usize,
+  read_at_ms: u64,
+  trust: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceFileDeleteProof {
+  file_path: String,
+  relative_path: String,
+  deleted: bool,
+  deleted_at_ms: u64,
+  trust: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceFileMoveProof {
+  from_path: String,
+  to_path: String,
+  from_relative: String,
+  to_relative: String,
+  moved: bool,
+  moved_at_ms: u64,
+  trust: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceSearchResultItem {
+  file_path: String,
+  relative_path: String,
+  line_number: usize,
+  line_content: String,
+  match_count: usize,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceSearchProof {
+  query: String,
+  case_sensitive: bool,
+  results: Vec<WorkspaceSearchResultItem>,
+  total_matches: usize,
+  files_scanned: usize,
+  searched_at_ms: u64,
+  trust: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceDirEntry {
+  name: String,
+  path: String,
+  relative_path: String,
+  is_dir: bool,
+  is_file: bool,
+  size_bytes: u64,
+  modified_ms: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceDirectoryProof {
+  directory_path: String,
+  relative_path: String,
+  entries: Vec<WorkspaceDirEntry>,
+  total_files: usize,
+  total_dirs: usize,
+  listed_at_ms: u64,
+  trust: String,
+}
+
 pub(crate) fn now_ms() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)
@@ -4599,6 +4678,265 @@ fn inspect_updater_release(bundle_dir: String, manifest_dir: String) -> Result<R
   })
 }
 
+#[tauri::command]
+fn read_workspace_file(workspace_root: String, relative_path: String) -> Result<WorkspaceFileReadProof, String> {
+  let root = PathBuf::from(workspace_root.trim());
+  if root.as_os_str().is_empty() {
+    return Err("Workspace root is required.".to_string());
+  }
+  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let rel = Path::new(relative_path.trim());
+  if rel.as_os_str().is_empty() {
+    return Err("Relative path is required.".to_string());
+  }
+  if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+    return Err("Unsafe relative path rejected.".to_string());
+  }
+  let file_path = root_abs.join(rel);
+  if !file_path.exists() {
+    return Err(format!("File not found: {}", rel.display()));
+  }
+  if !file_path.is_file() {
+    return Err("Path is not a file.".to_string());
+  }
+  let content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
+  let bytes = content.len();
+  Ok(WorkspaceFileReadProof {
+    file_path: file_path.to_string_lossy().to_string(),
+    relative_path: rel.to_string_lossy().to_string(),
+    content,
+    bytes,
+    read_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
+}
+
+#[tauri::command]
+fn delete_workspace_file(workspace_root: String, relative_path: String) -> Result<WorkspaceFileDeleteProof, String> {
+  let root = PathBuf::from(workspace_root.trim());
+  if root.as_os_str().is_empty() {
+    return Err("Workspace root is required.".to_string());
+  }
+  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let rel = Path::new(relative_path.trim());
+  if rel.as_os_str().is_empty() {
+    return Err("Relative path is required.".to_string());
+  }
+  if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+    return Err("Unsafe relative path rejected.".to_string());
+  }
+  let file_path = root_abs.join(rel);
+  if !file_path.exists() {
+    return Err(format!("File not found: {}", rel.display()));
+  }
+  fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+  Ok(WorkspaceFileDeleteProof {
+    file_path: file_path.to_string_lossy().to_string(),
+    relative_path: rel.to_string_lossy().to_string(),
+    deleted: true,
+    deleted_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
+}
+
+#[tauri::command]
+fn move_workspace_file(workspace_root: String, from_relative: String, to_relative: String) -> Result<WorkspaceFileMoveProof, String> {
+  let root = PathBuf::from(workspace_root.trim());
+  if root.as_os_str().is_empty() {
+    return Err("Workspace root is required.".to_string());
+  }
+  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let from_rel = Path::new(from_relative.trim());
+  let to_rel = Path::new(to_relative.trim());
+  if from_rel.as_os_str().is_empty() || to_rel.as_os_str().is_empty() {
+    return Err("Both from and to paths are required.".to_string());
+  }
+  for rel in [&from_rel, &to_rel] {
+    if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+      return Err("Unsafe relative path rejected.".to_string());
+    }
+  }
+  let from_path = root_abs.join(from_rel);
+  let to_path = root_abs.join(to_rel);
+  if !from_path.exists() {
+    return Err(format!("Source file not found: {}", from_rel.display()));
+  }
+  if let Some(parent) = to_path.parent() {
+    fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+  }
+  fs::rename(&from_path, &to_path).map_err(|e| e.to_string())?;
+  Ok(WorkspaceFileMoveProof {
+    from_path: from_path.to_string_lossy().to_string(),
+    to_path: to_path.to_string_lossy().to_string(),
+    from_relative: from_rel.to_string_lossy().to_string(),
+    to_relative: to_rel.to_string_lossy().to_string(),
+    moved: true,
+    moved_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
+}
+
+#[tauri::command]
+fn search_workspace_files(workspace_root: String, query: String, case_sensitive: bool, max_results: Option<usize>) -> Result<WorkspaceSearchProof, String> {
+  let root = PathBuf::from(workspace_root.trim());
+  if root.as_os_str().is_empty() {
+    return Err("Workspace root is required.".to_string());
+  }
+  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let max_results = max_results.unwrap_or(200);
+  let mut results = Vec::new();
+  let mut files_scanned = 0;
+  let skip_dirs = ["node_modules", ".git", "target", "dist", "build", "__pycache__", ".next"];
+
+  fn walk_dir(dir: &Path, query: &str, case_sensitive: bool, max_results: usize, results: &mut Vec<WorkspaceSearchResultItem>, files_scanned: &mut usize, skip_dirs: &[&str]) -> Result<(), String> {
+    if results.len() >= max_results {
+      return Ok(());
+    }
+    for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+      let entry = entry.map_err(|e| e.to_string())?;
+      let path = entry.path();
+      if path.is_dir() {
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+          if skip_dirs.contains(&name) {
+            continue;
+          }
+        }
+        walk_dir(&path, query, case_sensitive, max_results, results, files_scanned, skip_dirs)?;
+      } else if path.is_file() {
+        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+          if !["js", "jsx", "ts", "tsx", "rs", "py", "go", "json", "md", "txt", "yml", "yaml", "toml", "css", "html", "sh", "bat", "ps1"].contains(&ext) {
+            continue;
+          }
+        } else {
+          continue;
+        }
+        *files_scanned += 1;
+        if let Ok(content) = fs::read_to_string(&path) {
+          let rel = path.strip_prefix(dir.parent().unwrap_or(dir)).unwrap_or(&path);
+          for (line_idx, line) in content.lines().enumerate() {
+            let search_line = if case_sensitive { line.to_string() } else { line.to_lowercase() };
+            let search_query = if case_sensitive { query.to_string() } else { query.to_lowercase() };
+            if search_line.contains(&search_query) {
+              let match_count = search_line.matches(&search_query).count();
+              results.push(WorkspaceSearchResultItem {
+                file_path: path.to_string_lossy().to_string(),
+                relative_path: rel.to_string_lossy().to_string(),
+                line_number: line_idx + 1,
+                line_content: line.chars().take(300).collect(),
+                match_count,
+              });
+              if results.len() >= max_results {
+                return Ok(());
+              }
+            }
+          }
+        }
+      }
+    }
+    Ok(())
+  }
+
+  walk_dir(&root_abs, &query, case_sensitive, max_results, &mut results, &mut files_scanned, &skip_dirs)?;
+  let total_matches: usize = results.iter().map(|r| r.match_count).sum();
+
+  Ok(WorkspaceSearchProof {
+    query,
+    case_sensitive,
+    results,
+    total_matches,
+    files_scanned,
+    searched_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
+}
+
+#[tauri::command]
+fn list_workspace_directory(workspace_root: String, relative_path: String, recursive: Option<bool>) -> Result<WorkspaceDirectoryProof, String> {
+  let root = PathBuf::from(workspace_root.trim());
+  if root.as_os_str().is_empty() {
+    return Err("Workspace root is required.".to_string());
+  }
+  let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
+  let rel = Path::new(relative_path.trim());
+  let dir_path = if rel.as_os_str().is_empty() { root_abs.clone() } else {
+    if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+      return Err("Unsafe relative path rejected.".to_string());
+    }
+    root_abs.join(rel)
+  };
+  if !dir_path.exists() {
+    return Err(format!("Directory not found: {}", dir_path.display()));
+  }
+  if !dir_path.is_dir() {
+    return Err("Path is not a directory.".to_string());
+  }
+  let recursive = recursive.unwrap_or(false);
+  let mut entries = Vec::new();
+  let mut total_files = 0;
+  let mut total_dirs = 0;
+  let skip_dirs = ["node_modules", ".git", "target", "dist", "build", "__pycache__", ".next"];
+
+  fn walk_dir_entries(dir: &Path, root: &Path, recursive: bool, entries: &mut Vec<WorkspaceDirEntry>, total_files: &mut usize, total_dirs: &mut usize, skip_dirs: &[&str]) -> Result<(), String> {
+    for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+      let entry = entry.map_err(|e| e.to_string())?;
+      let path = entry.path();
+      let rel = path.strip_prefix(root).unwrap_or(&path);
+      let metadata = entry.metadata().ok();
+      let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+      let modified_ms = metadata.as_ref().and_then(|m| m.modified().ok()).map(|t| {
+        t.duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+      });
+      let is_dir = path.is_dir();
+      let is_file = path.is_file();
+
+      if is_dir {
+        *total_dirs += 1;
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+          if skip_dirs.contains(&name) {
+            continue;
+          }
+        }
+        entries.push(WorkspaceDirEntry {
+          name: entry.file_name().to_string_lossy().to_string(),
+          path: path.to_string_lossy().to_string(),
+          relative_path: rel.to_string_lossy().to_string(),
+          is_dir: true,
+          is_file: false,
+          size_bytes,
+          modified_ms,
+        });
+        if recursive {
+          walk_dir_entries(&path, root, recursive, entries, total_files, total_dirs, skip_dirs)?;
+        }
+      } else if is_file {
+        *total_files += 1;
+        entries.push(WorkspaceDirEntry {
+          name: entry.file_name().to_string_lossy().to_string(),
+          path: path.to_string_lossy().to_string(),
+          relative_path: rel.to_string_lossy().to_string(),
+          is_dir: false,
+          is_file: true,
+          size_bytes,
+          modified_ms,
+        });
+      }
+    }
+    Ok(())
+  }
+
+  walk_dir_entries(&dir_path, &root_abs, recursive, &mut entries, &mut total_files, &mut total_dirs, &skip_dirs)?;
+
+  Ok(WorkspaceDirectoryProof {
+    directory_path: dir_path.to_string_lossy().to_string(),
+    relative_path: rel.to_string_lossy().to_string(),
+    entries,
+    total_files,
+    total_dirs,
+    listed_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   load_dotenv();
@@ -5010,7 +5348,12 @@ pub fn run() {
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,
       connector_get_comfyui_history,
-      connector_check_local_runtime_health
+      connector_check_local_runtime_health,
+      read_workspace_file,
+      delete_workspace_file,
+      move_workspace_file,
+      search_workspace_files,
+      list_workspace_directory
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
