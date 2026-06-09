@@ -10,12 +10,71 @@ import {
   requireConnectorReady,
   requireConnectorApproval,
   verifyConnectorEnvironment,
-  appendConnectorAudit
+  appendConnectorAudit,
+  getConnectorCircuitState,
+  recordConnectorFailure,
+  recordConnectorSuccess
 } from './connectorRegistry.js';
 import {
   isConnectorAuthenticated,
   logUnauthenticatedConnectorRequest
 } from './connectorAuth.js';
+
+const RATE_LIMIT_DEFAULTS = {
+  telegram: { maxPerMinute: 30 },
+  whatsapp: { maxPerMinute: 60 },
+  youtube: { maxPerMinute: 10 },
+  notion: { maxPerMinute: 30 },
+  clickup: { maxPerMinute: 30 },
+  sd_webui: { maxPerMinute: 60 },
+  comfyui_video: { maxPerMinute: 30 },
+  chatgpt: { maxPerMinute: 60 },
+  claude: { maxPerMinute: 60 },
+  qwen: { maxPerMinute: 30 }
+};
+
+const rateLimitBuckets = {};
+
+function getRateLimitBucket(connectorId) {
+  if (!rateLimitBuckets[connectorId]) {
+    rateLimitBuckets[connectorId] = [];
+  }
+  return rateLimitBuckets[connectorId];
+}
+
+function checkConnectorRateLimit(connectorId) {
+  const config = RATE_LIMIT_DEFAULTS[connectorId];
+  if (!config) return { ok: true };
+  const bucket = getRateLimitBucket(connectorId);
+  const now = Date.now();
+  const windowMs = 60000;
+  const cutoff = now - windowMs;
+  const recent = bucket.filter((t) => t > cutoff);
+  rateLimitBuckets[connectorId] = recent;
+  if (recent.length >= config.maxPerMinute) {
+    const oldest = recent[0] || now;
+    const waitMs = oldest + windowMs - now;
+    return { ok: false, waitMs: Math.max(waitMs, 100), remaining: config.maxPerMinute - recent.length };
+  }
+  return { ok: true, remaining: config.maxPerMinute - recent.length };
+}
+
+function trackConnectorSend(connectorId) {
+  const bucket = getRateLimitBucket(connectorId);
+  bucket.push(Date.now());
+  rateLimitBuckets[connectorId] = bucket;
+}
+
+async function guardConnectorRateLimit(connectorId) {
+  const check = checkConnectorRateLimit(connectorId);
+  if (!check.ok) {
+    appendConnectorAudit(connectorId, 'rate_limit_delayed', {
+      waitMs: check.waitMs,
+      remaining: check.remaining
+    });
+    await new Promise((resolve) => setTimeout(resolve, check.waitMs));
+  }
+}
 
 function getConnectorEnvironment() {
   try {
@@ -38,6 +97,18 @@ export async function sendTelegramConnectorMessage(chatId, text, options = {}) {
       ...options,
       target: chatId
     });
+  }
+  const circuit = getConnectorCircuitState('telegram', 'external_send');
+  if (!circuit.ok) {
+    appendConnectorAudit('telegram', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'telegram', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
   }
   const approval = await requireConnectorApproval('telegram', 'external_send', text, {
     ...options,
@@ -88,21 +159,30 @@ export async function sendTelegramConnectorMessage(chatId, text, options = {}) {
     };
   }
 
+  await guardConnectorRateLimit('telegram');
   let result;
   try {
     result = await browserSendTelegram({ botToken: token, chatId: target, text: body });
   } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('telegram', 'external_send');
     appendConnectorAudit('telegram', 'send_failed', {
       target,
-      error: String(error)
+      error: errMsg
     });
     return {
       ok: false,
       connectorId: 'telegram',
-      error: String(error)
+      error: errMsg
     };
   }
 
+  if (result?.ok) {
+    recordConnectorSuccess('telegram', 'external_send');
+    trackConnectorSend('telegram');
+  } else {
+    recordConnectorFailure('telegram', 'external_send');
+  }
   appendConnectorAudit('telegram', result?.ok ? 'send_success' : 'send_failed', {
     target,
     externalId: result?.externalId || null,
@@ -171,6 +251,18 @@ export async function sendWhatsAppConnectorMessage(to, text, options = {}) {
       target: to
     });
   }
+  const circuit = getConnectorCircuitState('whatsapp', 'external_send');
+  if (!circuit.ok) {
+    appendConnectorAudit('whatsapp', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'whatsapp', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
+  }
   const approval = await requireConnectorApproval('whatsapp', 'external_send', text, {
     ...options,
     target: to
@@ -188,7 +280,35 @@ export async function sendWhatsAppConnectorMessage(to, text, options = {}) {
       error: gate.reason || 'WhatsApp policy gate blocked the action.'
     };
   }
-  const result = await invoke('connector_send_whatsapp', { to, text });
+  let envCheck = null;
+  try {
+    envCheck = await invoke('check_env_vars_presence', { names: ['WHATSAPP_ACCESS_TOKEN'] });
+  } catch {
+    envCheck = null;
+  }
+  if (envCheck && !envCheck.WHATSAPP_ACCESS_TOKEN) {
+    appendConnectorAudit('whatsapp', 'send_blocked_missing_key', { text: String(text || '').slice(0, 80) });
+    return {
+      ok: false, connectorId: 'whatsapp', blocked: true,
+      error: 'WhatsApp access token missing — configure WHATSAPP_ACCESS_TOKEN',
+      code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
+    };
+  }
+  await guardConnectorRateLimit('whatsapp');
+  let result;
+  try {
+    result = await invoke('connector_send_whatsapp', { to, text });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('whatsapp', 'external_send');
+    appendConnectorAudit('whatsapp', 'send_failed', { target: to, error: errMsg });
+    return {
+      ok: false, connectorId: 'whatsapp', blocked: false,
+      error: `WhatsApp connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
+  recordConnectorSuccess('whatsapp', 'external_send');
+  trackConnectorSend('whatsapp');
   appendConnectorAudit('whatsapp', result?.ok ? 'send_success' : 'send_failed', {
     target: to,
     externalId: result?.externalId || null,
@@ -201,6 +321,19 @@ export async function sendChatGptConnectorMessage(text, options = {}) {
   const auth = isConnectorAuthenticated('chatgpt');
   if (!auth.ok) {
     return logUnauthenticatedConnectorRequest('chatgpt', 'paid_connector_send', text, options);
+  }
+
+  const circuit = getConnectorCircuitState('chatgpt', 'paid_connector_send');
+  if (!circuit.ok) {
+    appendConnectorAudit('chatgpt', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'chatgpt', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
   }
 
   let envCheck = null;
@@ -231,13 +364,44 @@ export async function sendChatGptConnectorMessage(text, options = {}) {
     };
   }
 
-  return sendChatGPTMessage(text, options);
+  await guardConnectorRateLimit('chatgpt');
+  try {
+    const result = await sendChatGPTMessage(text, options);
+    if (result?.ok) {
+      recordConnectorSuccess('chatgpt', 'paid_connector_send');
+      trackConnectorSend('chatgpt');
+    } else {
+      recordConnectorFailure('chatgpt', 'paid_connector_send');
+    }
+    return result;
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('chatgpt', 'paid_connector_send');
+    appendConnectorAudit('chatgpt', 'send_failed', { error: errMsg });
+    return {
+      ok: false, connectorId: 'chatgpt', blocked: false,
+      error: `ChatGPT connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
 }
 
 export async function sendClaudeConnectorMessage(text, options = {}) {
   const auth = isConnectorAuthenticated('claude');
   if (!auth.ok) {
     return logUnauthenticatedConnectorRequest('claude', 'paid_connector_send', text, options);
+  }
+
+  const circuit = getConnectorCircuitState('claude', 'paid_connector_send');
+  if (!circuit.ok) {
+    appendConnectorAudit('claude', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'claude', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
   }
 
   let envCheck = null;
@@ -268,13 +432,44 @@ export async function sendClaudeConnectorMessage(text, options = {}) {
     };
   }
 
-  return sendClaudeMessage(text, options);
+  await guardConnectorRateLimit('claude');
+  try {
+    const result = await sendClaudeMessage(text, options);
+    if (result?.ok) {
+      recordConnectorSuccess('claude', 'paid_connector_send');
+      trackConnectorSend('claude');
+    } else {
+      recordConnectorFailure('claude', 'paid_connector_send');
+    }
+    return result;
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('claude', 'paid_connector_send');
+    appendConnectorAudit('claude', 'send_failed', { error: errMsg });
+    return {
+      ok: false, connectorId: 'claude', blocked: false,
+      error: `Claude connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
 }
 
 export async function sendQwenConnectorMessage(text, options = {}) {
   const auth = isConnectorAuthenticated('qwen');
   if (!auth.ok) {
     return logUnauthenticatedConnectorRequest('qwen', 'paid_connector_send', text, options);
+  }
+
+  const circuit = getConnectorCircuitState('qwen', 'paid_connector_send');
+  if (!circuit.ok) {
+    appendConnectorAudit('qwen', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'qwen', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
   }
 
   let envCheck = null;
@@ -311,6 +506,7 @@ export async function sendQwenConnectorMessage(text, options = {}) {
     };
   }
 
+  await guardConnectorRateLimit('qwen');
   let result;
   try {
     const timeoutMs = options.timeoutMs || 30000;
@@ -333,6 +529,7 @@ export async function sendQwenConnectorMessage(text, options = {}) {
         : isMissingKey
           ? 'API key missing — configure DASHSCOPE_API_KEY in the backend environment'
           : `Qwen connector error: ${errMsg}`;
+    recordConnectorFailure('qwen', 'paid_connector_send');
     appendConnectorAudit('qwen', 'send_failed', { error: errMsg, code });
     return { success: false, ok: false, connectorId: 'qwen', blocked: false, error: userError, code, trust: TRUST_STATES.FAILED };
   }
@@ -346,10 +543,13 @@ export async function sendQwenConnectorMessage(text, options = {}) {
       : code === 'MISSING_KEY'
         ? 'API key missing — configure DASHSCOPE_API_KEY in the backend environment'
         : result.error || 'Qwen connector returned an error.';
+    recordConnectorFailure('qwen', 'paid_connector_send');
     appendConnectorAudit('qwen', 'send_failed', { error: userError, code, httpStatus });
     return { success: false, ok: false, connectorId: 'qwen', error: userError, code, httpStatus, trust: TRUST_STATES.FAILED };
   }
 
+  recordConnectorSuccess('qwen', 'paid_connector_send');
+  trackConnectorSend('qwen');
   appendConnectorAudit('qwen', 'send_success', {
     target: result?.target || 'qwen',
     externalId: result?.externalId || null,
@@ -366,6 +566,18 @@ export async function sendNotionConnectorEntry({ title, content = '', parentPage
       ...options,
       target: parentPageId || 'env:NOTION_PARENT_PAGE_ID'
     });
+  }
+  const circuit = getConnectorCircuitState('notion', 'external_write');
+  if (!circuit.ok) {
+    appendConnectorAudit('notion', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'notion', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
   }
   const approval = await requireConnectorApproval('notion', 'external_write', title, {
     ...options,
@@ -384,11 +596,39 @@ export async function sendNotionConnectorEntry({ title, content = '', parentPage
       error: gate.reason || 'Notion connector policy gate blocked the action.'
     };
   }
-  const result = await invoke('connector_send_notion', {
-    title,
-    content,
-    parentPageId: parentPageId || null
-  });
+  let envCheck = null;
+  try {
+    envCheck = await invoke('check_env_vars_presence', { names: ['NOTION_API_KEY'] });
+  } catch {
+    envCheck = null;
+  }
+  if (envCheck && !envCheck.NOTION_API_KEY) {
+    appendConnectorAudit('notion', 'send_blocked_missing_key', { title: String(title || '').slice(0, 80) });
+    return {
+      ok: false, connectorId: 'notion', blocked: true,
+      error: 'Notion API key missing — configure NOTION_API_KEY',
+      code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
+    };
+  }
+  await guardConnectorRateLimit('notion');
+  let result;
+  try {
+    result = await invoke('connector_send_notion', {
+      title,
+      content,
+      parentPageId: parentPageId || null
+    });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('notion', 'external_write');
+    appendConnectorAudit('notion', 'send_failed', { title, error: errMsg });
+    return {
+      ok: false, connectorId: 'notion', blocked: false,
+      error: `Notion connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
+  recordConnectorSuccess('notion', 'external_write');
+  trackConnectorSend('notion');
   appendConnectorAudit('notion', result?.ok ? 'send_success' : 'send_failed', {
     target: parentPageId || 'env:NOTION_PARENT_PAGE_ID',
     externalId: result?.externalId || null,
@@ -404,6 +644,18 @@ export async function sendClickUpConnectorTask({ title, content = '', listId = '
       ...options,
       target: listId || 'env:CLICKUP_LIST_ID'
     });
+  }
+  const circuit = getConnectorCircuitState('clickup', 'external_write');
+  if (!circuit.ok) {
+    appendConnectorAudit('clickup', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'clickup', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
   }
   const approval = await requireConnectorApproval('clickup', 'external_write', title, {
     ...options,
@@ -422,11 +674,39 @@ export async function sendClickUpConnectorTask({ title, content = '', listId = '
       error: gate.reason || 'ClickUp connector policy gate blocked the action.'
     };
   }
-  const result = await invoke('connector_send_clickup', {
-    title,
-    content,
-    listId: listId || null
-  });
+  let envCheck = null;
+  try {
+    envCheck = await invoke('check_env_vars_presence', { names: ['CLICKUP_API_KEY'] });
+  } catch {
+    envCheck = null;
+  }
+  if (envCheck && !envCheck.CLICKUP_API_KEY) {
+    appendConnectorAudit('clickup', 'send_blocked_missing_key', { title: String(title || '').slice(0, 80) });
+    return {
+      ok: false, connectorId: 'clickup', blocked: true,
+      error: 'ClickUp API key missing — configure CLICKUP_API_KEY',
+      code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
+    };
+  }
+  await guardConnectorRateLimit('clickup');
+  let result;
+  try {
+    result = await invoke('connector_send_clickup', {
+      title,
+      content,
+      listId: listId || null
+    });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('clickup', 'external_write');
+    appendConnectorAudit('clickup', 'send_failed', { title, error: errMsg });
+    return {
+      ok: false, connectorId: 'clickup', blocked: false,
+      error: `ClickUp connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
+  recordConnectorSuccess('clickup', 'external_write');
+  trackConnectorSend('clickup');
   appendConnectorAudit('clickup', result?.ok ? 'send_success' : 'send_failed', {
     target: listId || 'env:CLICKUP_LIST_ID',
     externalId: result?.externalId || null,
@@ -449,6 +729,18 @@ export async function uploadYouTubeConnectorVideo({
       target: filePath
     });
   }
+  const circuit = getConnectorCircuitState('youtube', 'external_publish');
+  if (!circuit.ok) {
+    appendConnectorAudit('youtube', 'upload_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'youtube', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
+  }
   const approval = await requireConnectorApproval('youtube', 'external_publish', title, {
     ...options,
     target: filePath
@@ -466,13 +758,41 @@ export async function uploadYouTubeConnectorVideo({
       error: gate.reason || 'YouTube connector policy gate blocked the action.'
     };
   }
-  const result = await invoke('connector_upload_youtube', {
-    filePath,
-    title,
-    description,
-    tags,
-    privacyStatus
-  });
+  let envCheck = null;
+  try {
+    envCheck = await invoke('check_env_vars_presence', { names: ['YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET'] });
+  } catch {
+    envCheck = null;
+  }
+  if (envCheck && (!envCheck.YOUTUBE_CLIENT_ID || !envCheck.YOUTUBE_CLIENT_SECRET)) {
+    appendConnectorAudit('youtube', 'upload_blocked_missing_key', { title: String(title || '').slice(0, 80) });
+    return {
+      ok: false, connectorId: 'youtube', blocked: true,
+      error: 'YouTube OAuth credentials missing — configure YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET',
+      code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
+    };
+  }
+  await guardConnectorRateLimit('youtube');
+  let result;
+  try {
+    result = await invoke('connector_upload_youtube', {
+      filePath,
+      title,
+      description,
+      tags,
+      privacyStatus
+    });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('youtube', 'external_publish');
+    appendConnectorAudit('youtube', 'upload_failed', { filePath, title, error: errMsg });
+    return {
+      ok: false, connectorId: 'youtube', blocked: false,
+      error: `YouTube connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
+  recordConnectorSuccess('youtube', 'external_publish');
+  trackConnectorSend('youtube');
   appendConnectorAudit('youtube', result?.ok ? 'upload_success' : 'upload_failed', {
     filePath,
     title,

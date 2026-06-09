@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES } from '../trustModel';
-import { appendConnectorAudit } from './connectorRegistry.js';
+import { appendConnectorAudit, getConnectorCircuitState, recordConnectorFailure, recordConnectorSuccess } from './connectorRegistry.js';
 import { gateConnectorAction } from './connectorRegistry.js';
 
 export async function generateSdWebUiImage({
@@ -11,6 +11,18 @@ export async function generateSdWebUiImage({
   steps = 24,
   cfgScale = 7
 }, options = {}) {
+  const circuit = getConnectorCircuitState('sd_webui', 'local_image_generation');
+  if (!circuit.ok) {
+    appendConnectorAudit('sd_webui', 'image_generation_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'sd_webui', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
+  }
   const gate = gateConnectorAction('sd_webui', 'local_image_generation', prompt, { ...options, approved: true });
   if (!gate.ok) {
     return {
@@ -21,14 +33,33 @@ export async function generateSdWebUiImage({
       error: gate.reason || 'SD WebUI policy gate blocked the action.'
     };
   }
-  const result = await invoke('connector_generate_sdwebui_image', {
-    prompt,
-    negativePrompt: negativePrompt || null,
-    width,
-    height,
-    steps,
-    cfgScale
-  });
+  let result;
+  try {
+    result = await invoke('connector_generate_sdwebui_image', {
+      prompt,
+      negativePrompt: negativePrompt || null,
+      width,
+      height,
+      steps,
+      cfgScale
+    });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('sd_webui', 'local_image_generation');
+    appendConnectorAudit('sd_webui', 'image_generation_failed', {
+      provider: 'automatic1111',
+      error: errMsg
+    });
+    return {
+      ok: false, connectorId: 'sd_webui', blocked: false,
+      error: `SD WebUI error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
+  if (result?.ok) {
+    recordConnectorSuccess('sd_webui', 'local_image_generation');
+  } else {
+    recordConnectorFailure('sd_webui', 'local_image_generation');
+  }
   appendConnectorAudit('sd_webui', result?.ok ? 'image_generation_success' : 'image_generation_failed', {
     provider: result?.provider || 'automatic1111',
     error: result?.error || null,
@@ -161,17 +192,55 @@ export async function generateComfyUiImage({
   steps = 20,
   cfgScale = 7
 }, options = {}) {
+  const circuit = getConnectorCircuitState('comfyui_video', 'local_image_generation');
+  if (!circuit.ok) {
+    appendConnectorAudit('comfyui_video', 'image_generation_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return { ok: false, connectorId: 'comfyui_video', blocked: true, error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`, trust: TRUST_STATES.FAILED };
+  }
   const gate = gateConnectorAction('comfyui_video', 'local_image_generation', prompt, { ...options, approved: true });
   if (!gate.ok) {
     return { ok: false, connectorId: 'comfyui_video', blocked: true, trust: gate.verificationState || TRUST_STATES.PENDING, error: gate.reason || 'ComfyUI policy gate blocked the action.' };
   }
-  const workflow = createMiyaSd15ComfyWorkflow({ prompt, negativePrompt, width, height, steps, cfgScale });
-  const queued = await queueComfyUiPrompt({ workflow });
+  let workflow;
+  try {
+    workflow = createMiyaSd15ComfyWorkflow({ prompt, negativePrompt, width, height, steps, cfgScale });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('comfyui_video', 'local_image_generation');
+    appendConnectorAudit('comfyui_video', 'image_generation_failed', { provider: 'comfyui', error: `Workflow creation failed: ${errMsg}` });
+    return { ok: false, connectorId: 'comfyui_video', blocked: false, error: `ComfyUI workflow error: ${errMsg}`, trust: TRUST_STATES.FAILED };
+  }
+  let queued;
+  try {
+    queued = await queueComfyUiPrompt({ workflow });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('comfyui_video', 'local_image_generation');
+    appendConnectorAudit('comfyui_video', 'image_generation_failed', { provider: 'comfyui', error: `Queue failed: ${errMsg}` });
+    return { ok: false, connectorId: 'comfyui_video', blocked: false, error: `ComfyUI queue error: ${errMsg}`, trust: TRUST_STATES.FAILED };
+  }
   if (!queued.ok) {
+    recordConnectorFailure('comfyui_video', 'local_image_generation');
     appendConnectorAudit('comfyui_video', 'image_generation_failed', { provider: 'comfyui', error: queued.error || null });
     return queued;
   }
-  const result = await pollComfyUiHistory(queued.promptId, options);
+  let result;
+  try {
+    result = await pollComfyUiHistory(queued.promptId, options);
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('comfyui_video', 'local_image_generation');
+    appendConnectorAudit('comfyui_video', 'image_generation_failed', { provider: 'comfyui', jobId: queued.promptId, error: `Poll failed: ${errMsg}` });
+    return { ok: false, connectorId: 'comfyui_video', blocked: false, jobId: queued.promptId, error: `ComfyUI poll error: ${errMsg}`, trust: TRUST_STATES.FAILED };
+  }
+  if (result?.ok) {
+    recordConnectorSuccess('comfyui_video', 'local_image_generation');
+  } else {
+    recordConnectorFailure('comfyui_video', 'local_image_generation');
+  }
   const finalResult = { ...result, provider: 'comfyui', checkpoint: DEFAULT_COMFYUI_CHECKPOINT, prompt, width, height, steps, cfgScale };
   appendConnectorAudit('comfyui_video', finalResult?.ok ? 'image_generation_success' : 'image_generation_failed', {
     provider: 'comfyui', jobId: finalResult?.jobId || queued.promptId,
@@ -187,6 +256,18 @@ export async function queueComfyUiWorkflow({
   mediaType = 'video'
 }, options = {}) {
   const permission = mediaType === 'image' ? 'local_image_generation' : 'local_video_generation';
+  const circuit = getConnectorCircuitState('comfyui_video', permission);
+  if (!circuit.ok) {
+    appendConnectorAudit('comfyui_video', `${mediaType}_queue_blocked_circuit_open`, {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'comfyui_video', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
+  }
   const gate = gateConnectorAction('comfyui_video', permission, prompt, { ...options, approved: true });
   if (!gate.ok) {
     return {
@@ -204,7 +285,25 @@ export async function queueComfyUiWorkflow({
       workflowJson
     });
   } catch {
-    result = await queueComfyUiPrompt({ workflow: parseAndInjectComfyWorkflow(workflowJson, prompt) });
+    try {
+      result = await queueComfyUiPrompt({ workflow: parseAndInjectComfyWorkflow(workflowJson, prompt) });
+    } catch (fallbackError) {
+      const errMsg = String(fallbackError || '');
+      recordConnectorFailure('comfyui_video', permission);
+      appendConnectorAudit('comfyui_video', `${mediaType}_queue_failed`, {
+        provider: 'comfyui',
+        error: errMsg
+      });
+      return {
+        ok: false, connectorId: 'comfyui_video', blocked: false,
+        error: `ComfyUI queue error: ${errMsg}`, trust: TRUST_STATES.FAILED
+      };
+    }
+  }
+  if (result?.ok) {
+    recordConnectorSuccess('comfyui_video', permission);
+  } else {
+    recordConnectorFailure('comfyui_video', permission);
   }
   appendConnectorAudit('comfyui_video', result?.ok ? `${mediaType}_queue_success` : `${mediaType}_queue_failed`, {
     provider: result?.provider || 'comfyui',
@@ -222,13 +321,37 @@ export async function queueComfyUiVideo({
 }
 
 export async function getComfyUiVideoHistory(promptId) {
+  const circuit = getConnectorCircuitState('comfyui_video', 'video_history');
+  if (!circuit.ok) {
+    appendConnectorAudit('comfyui_video', 'video_history_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return { ok: false, connectorId: 'comfyui_video', blocked: true, error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`, trust: TRUST_STATES.FAILED };
+  }
   let result;
   try {
     result = await invoke('connector_get_comfyui_history', {
       promptId
     });
   } catch {
-    result = await fetchComfyUiHistory(promptId);
+    try {
+      result = await fetchComfyUiHistory(promptId);
+    } catch (fallbackError) {
+      const errMsg = String(fallbackError || '');
+      recordConnectorFailure('comfyui_video', 'video_history');
+      appendConnectorAudit('comfyui_video', 'video_history_failed', {
+        provider: 'comfyui',
+        jobId: promptId || null,
+        error: errMsg
+      });
+      return { ok: false, connectorId: 'comfyui_video', blocked: false, jobId: promptId, error: `ComfyUI history error: ${errMsg}`, trust: TRUST_STATES.FAILED };
+    }
+  }
+  if (result?.ok) {
+    recordConnectorSuccess('comfyui_video', 'video_history');
+  } else {
+    recordConnectorFailure('comfyui_video', 'video_history');
   }
   appendConnectorAudit('comfyui_video', result?.ok ? 'video_history_success' : 'video_history_failed', {
     provider: result?.provider || 'comfyui',
