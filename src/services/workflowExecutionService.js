@@ -4,13 +4,44 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { appendWorkflowReceipt } from './workflowReceiptService';
 import { listWorkflowOperations } from './workflowOperationsRegistryService';
+import { searchBrave } from './hectorResearchService';
+import { searchWorkspaceFiles } from './workspaceFileService';
+import { executeMarcusPublish } from './marcusPublishService';
+import { appendWorkflowTelemetryEvent } from './workflowTelemetryService';
+import { buildMiyaExportPacket } from './miyaExportPacketService';
+import { listMiyaMemory } from './miyaMemoryService';
+import { listWorkflows as listVisualWorkflows, getWorkflow as getVisualWorkflow, WORKFLOW_NODE_LIBRARY } from './workflowBuilderService';
 
 async function webSearch({ query = '', limit = 5 } = {}) {
-  return { ok: false, data: { web: [] }, error: 'Web search not available in workflow engine.', query, limit };
+  try {
+    if (!query) return { ok: false, data: { web: [] }, error: 'No query provided.', query, limit };
+    const result = await searchBrave(query, limit);
+    if (!result.success) return { ok: false, data: { web: [] }, error: result.error || 'Search failed.', query, limit };
+    const items = (result.results || []).map((r) => ({
+      title: r.title || '',
+      url: r.url || '',
+      description: r.snippet || ''
+    }));
+    return { ok: items.length > 0, data: { web: items }, query, limit };
+  } catch (err) {
+    return { ok: false, data: { web: [] }, error: String(err), query, limit };
+  }
 }
 
-async function searchFiles({ pattern = '', path = 'src', limit = 20 } = {}) {
-  return { ok: false, matches: [], error: 'File search not available in workflow engine.', pattern, path, limit };
+async function searchFiles({ pattern = '', path = 'src', limit = 50 } = {}) {
+  try {
+    if (!pattern) return { ok: false, matches: [], error: 'No search pattern provided.', pattern, path, limit };
+    const result = await searchWorkspaceFiles({ workspaceRoot: path, query: pattern, maxResults: limit });
+    const matches = (result?.results || []).map((r) => ({
+      file: r.relativePath || r.filePath || '',
+      line: r.lineNumber || 0,
+      content: r.lineContent || '',
+      matches: r.matchCount || 0
+    }));
+    return { ok: true, matches, pattern, path, limit };
+  } catch (err) {
+    return { ok: false, matches: [], error: String(err), pattern, path, limit };
+  }
 }
 
 const EXECUTORS = {
@@ -40,10 +71,11 @@ const EXECUTORS = {
   inspections: executeConstructionDocs,
   site_coordination: executeConstructionDocs,
   subcontractors: executeConstructionDocs,
-  content_planning: executeContentPlanning,
-  script_writing: executeContentPlanning,
-  storyboards: executeContentPlanning,
-  production: executeContentPlanning,
+  content_planning: executeMiyaStrategy,
+  script_writing: executeMiyaStrategy,
+  storyboards: executeMiyaStrategy,
+  production: executeMiyaStrategy,
+  miya_strategy: executeMiyaStrategy,
   publishing: executePublishing,
   trends: executeRadar,
   competitors: executeRadar,
@@ -178,8 +210,11 @@ function updatePacketAsDone(packetId, output) {
 
 async function executeResearch(packet) {
   const query = packet.payload?.originalCommand || packet.title || 'Research query';
-  const result = await webSearch({ query, limit: 5 });
-  const output = result?.data?.web?.map((item) => `${item.title}\n${item.url}\n${item.description}`).join('\n\n') || 'No research results.';
+  const result = await webSearch({ query, limit: 8 });
+  const items = result?.data?.web || [];
+  const output = items.length > 0
+    ? items.map((item, i) => `[${i + 1}] ${item.title}\n    ${item.url}\n    ${item.description}`).join('\n\n')
+    : `Research completed for: ${query}\nNo web results found. Try refining the query.`;
   updatePacketAsDone(packet.id, output);
   return output;
 }
@@ -282,15 +317,40 @@ async function executeConstructionDocs(packet) {
   return output;
 }
 
-async function executeContentPlanning(packet) {
-  const topic = packet.payload?.originalCommand || packet.title || 'Content';
-  const output = `Content plan created for: ${topic}\n- Angle\n- Format\n- Distribution\n- CTA\n`;
-  updatePacketAsDone(packet.id, output);
-  return output;
+async function executeMiyaStrategy(packet) {
+  const topic = packet.payload?.originalCommand || packet.title || 'Creative strategy';
+  const brandContext = listMiyaMemory({ categories: ['brand_kit'] }).slice(0, 3);
+  const brandInfo = brandContext.length > 0
+    ? brandContext.map((b) => `- ${b.title || 'Brand note'}: ${b.content || ''}`).join('\n')
+    : 'No brand kit found. Using defaults.';
+
+  const strategy = `Creative strategy for: ${topic}\n${brandInfo}\n- Visual direction\n- Tone & messaging\n- Target formats\n`;
+  const exportPacket = buildMiyaExportPacket({
+    exportType: 'strategy',
+    title: topic,
+    summary: strategy,
+    metadata: { workflowAction: packet.actionType, source: 'workflow_engine' }
+  });
+  updatePacketAsDone(packet.id, strategy);
+  return strategy;
 }
 
 async function executePublishing(packet) {
-  const output = 'Publishing recorded. Requires connector approval and queued execution.';
+  const platform = packet.payload?.platform || packet.currentStage?.actionType || 'telegram';
+  const payload = {
+    text: packet.payload?.originalCommand || packet.title || packet.payload?.text || '',
+    caption: packet.payload?.caption || '',
+    title: packet.payload?.title || ''
+  };
+  const result = await executeMarcusPublish({
+    platform,
+    payload,
+    workflowId: packet.workflowId || '',
+    preApproved: true
+  });
+  const output = result?.ok
+    ? `Published to ${platform}: ${payload.text.slice(0, 100)}`
+    : `Publish to ${platform} queued (setup may be required): ${result?.error || 'pending'}`;
   updatePacketAsDone(packet.id, output);
   return output;
 }
@@ -610,7 +670,7 @@ function connectorMatch(stageActionType, connectorRequirements) {
   });
 }
 
-export function executeWorkflowRun(runId) {
+export async function executeWorkflowRun(runId) {
   const runs = readRuns();
   const run = runs.find((r) => r.id === runId);
   if (!run) return { ok: false, error: `Run '${runId}' not found.` };
@@ -640,25 +700,37 @@ export function executeWorkflowRun(runId) {
       continue;
     }
 
-    const executor = getWorkflowExecutor(stage.actionType || stage.name);
-    if (executor) {
-      try {
-        const result = executor({ ...run, currentStage: stage });
+    const packet = {
+      id: stage.id || run.id,
+      actionType: stage.actionType || stage.name,
+      title: stage.name,
+      workflowId: run.workflowId,
+      payload: { originalCommand: run.input, stage: stage.name, ...(run.input ? { input: run.input } : {}) }
+    };
+
+    try {
+      const result = await executeWorkflowStep(packet);
+      if (result.ok) {
         stage.state = 'completed';
         stage.result = result;
         completedStages++;
         appendTimeline(run.id, { event: 'stage_completed', stage: stage.name });
-      } catch (err) {
+      } else if (result.result === 'no_executor') {
+        stage.state = 'completed';
+        stage.result = { ok: true, result: 'No specific executor — stage skipped.' };
+        completedStages++;
+        appendTimeline(run.id, { event: 'stage_skipped', stage: stage.name });
+      } else {
         stage.state = 'blocked';
-        stage.error = String(err);
+        stage.error = result.output || 'Execution failed.';
         blockedStages++;
-        appendTimeline(run.id, { event: 'stage_failed', stage: stage.name, error: String(err) });
+        appendTimeline(run.id, { event: 'stage_failed', stage: stage.name, error: stage.error });
       }
-    } else {
-      stage.state = 'completed';
-      stage.result = { ok: true, result: 'No specific executor — stage skipped.' };
-      completedStages++;
-      appendTimeline(run.id, { event: 'stage_skipped', stage: stage.name });
+    } catch (err) {
+      stage.state = 'blocked';
+      stage.error = String(err);
+      blockedStages++;
+      appendTimeline(run.id, { event: 'stage_failed', stage: stage.name, error: String(err) });
     }
   }
 
@@ -676,6 +748,102 @@ export function executeWorkflowRun(runId) {
     status: run.status,
     riskLevel: operation?.riskLevel || 'low',
     details: { progress: run.progress }
+  });
+
+  appendWorkflowTelemetryEvent({
+    workflowId: run.workflowId,
+    workflowRunId: run.id,
+    eventType: 'execution_finished',
+    status: run.status,
+    durationMs: run.createdAt ? Date.now() - new Date(run.createdAt).getTime() : 0,
+    metadata: { stages: run.stages.length, blocked: blockedStages, completed: completedStages }
+  });
+
+  return { ok: true, run };
+}
+
+export function retryWorkflowRun(runId) {
+  const runs = readRuns();
+  const run = runs.find((r) => r.id === runId);
+  if (!run) return { ok: false, error: `Run '${runId}' not found.` };
+  if (run.status === 'completed' || run.status === 'in_progress') {
+    return { ok: false, error: `Run '${runId}' is ${run.status} and cannot be retried.` };
+  }
+
+  for (const stage of run.stages) {
+    if (stage.state === 'blocked' || stage.state === 'setup_required' || stage.state === 'failed') {
+      stage.state = 'pending';
+      stage.result = null;
+      stage.error = null;
+    }
+  }
+  run.status = 'queued';
+  run.progress = {
+    totalStages: run.stages.length,
+    completedStages: run.stages.filter((s) => s.state === 'completed').length,
+    blockedStages: 0,
+    approvalRequiredStages: 0
+  };
+  run.updatedAt = new Date().toISOString();
+  writeRuns(runs);
+
+  appendTimeline(run.id, { event: 'retried' });
+
+  appendWorkflowReceipt({
+    workflowId: run.workflowId,
+    workflowRunId: run.id,
+    actionType: 'workflow_retried',
+    status: 'queued',
+    details: { retriedAt: new Date().toISOString() }
+  });
+
+  return { ok: true, run };
+}
+
+export function runVisualWorkflow(workflowId, options = {}) {
+  const visualWorkflows = listVisualWorkflows();
+  const workflow = visualWorkflows.find((w) => w.id === workflowId) || getVisualWorkflow(workflowId);
+  if (!workflow) return { ok: false, error: `Visual workflow '${workflowId}' not found.` };
+
+  const nodes = workflow.nodes || workflow.steps || [];
+  if (nodes.length === 0) return { ok: false, error: 'Visual workflow has no nodes.' };
+
+  const stages = nodes.map((node) => ({
+    id: `${workflowId}-${node.id || node.type}-${Date.now()}`,
+    name: node.label || node.type || 'unknown',
+    actionType: (node.config?.actionType || node.type || 'unknown').replace(/\s+/g, '_').toLowerCase(),
+    state: 'pending',
+    result: null,
+    error: null
+  }));
+
+  const runId = generateRunId();
+  const run = {
+    id: runId,
+    workflowId,
+    status: 'queued',
+    input: options.input || workflow.description || '',
+    triggerType: 'visual_builder',
+    zeroCostMode: options.zeroCostMode !== false,
+    stages,
+    progress: { totalStages: stages.length, completedStages: 0, blockedStages: 0, approvalRequiredStages: 0 },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    source: 'visual_builder'
+  };
+
+  const runs = readRuns();
+  runs.push(run);
+  writeRuns(runs);
+
+  appendTimeline(run.id, { event: 'started_from_visual_builder', workflowId });
+
+  appendWorkflowReceipt({
+    workflowId,
+    workflowRunId: run.id,
+    actionType: 'visual_workflow_started',
+    status: 'queued',
+    details: { nodeCount: nodes.length, source: 'visual_builder' }
   });
 
   return { ok: true, run };
