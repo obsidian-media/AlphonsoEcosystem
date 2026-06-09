@@ -1,9 +1,11 @@
 # Alphonso
 
-> Local-first AI desktop companion powered by Ollama
+> Local-first AI desktop companion powered by Ollama — **v1.0.0**
 
 [![CI](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Tests](https://img.shields.io/badge/tests-952%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 
 Alphonso is a privacy-first desktop AI assistant that runs entirely on your machine. It orchestrates 9 specialized agents, connects to 11 external services, and uses Ollama for local LLM inference — keeping your data off the cloud.
 
@@ -16,37 +18,116 @@ Alphonso is a privacy-first desktop AI assistant that runs entirely on your mach
 - **Durable Orchestration** — Queue with state transitions, dead-letter replay, and approval workflows
 - **Memory** — SQLite-backed durable memory with governance metadata and retention policies
 - **Desktop Native** — Tauri v2 (Rust backend) + React 18 frontend; NSIS/MSI installers
+- **952 Unit Tests** — 72 test files, all passing; 27.97% code coverage
 
-## Quick Start
+## Installation
 
 ### Prerequisites
 
-- **Node.js** 20+
-- **Rust** 1.77+ (with `cargo`)
-- **Ollama** — [install & start](https://ollama.com), pull a model: `ollama pull llama3.2:3b`
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| **Node.js** | 20+ | Frontend dev server & build |
+| **npm** | 10+ | Package management |
+| **Rust** | 1.77+ (`cargo`) | Tauri desktop backend |
+| **Ollama** | Latest | Local LLM engine |
+| **Git** | Any | Version control |
 
-### Install & Run
+### Desktop App (Windows)
 
 ```bash
 git clone https://github.com/AlphonsoEcosystem/local-agent-ui-v2.git
 cd local-agent-ui-v2
 npm install
-npm run dev          # Vite dev server on http://localhost:5173
+
+# Install Ollama and pull a model
+# https://ollama.com — then:
+ollama pull llama3.2:3b
+
+# Start development
+npm run dev          # Web-only mode at http://localhost:5173
+
+# Or full native desktop
+npm run desktop:dev  # Tauri dev window
 ```
 
-For the native desktop app:
+### Web-Only Mode
 
 ```bash
-npm run desktop:dev  # Tauri dev window (requires Rust toolchain)
+npm install
+npm run dev          # http://localhost:5173
 ```
+
+### Production Build
+
+```bash
+npm run build                    # Web build (dist/)
+npm run tauri build              # Native installer (src-tauri/target/release/bundle/)
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    React 18 (Vite 5, Tailwind 3)                │
+│                                                                 │
+│   ┌─────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│   │  9 Agents    │  │ 76+ UI       │  │ 123 Services         │  │
+│   │ (profiles,   │  │ Components   │  │ (policy-gated,      │  │
+│   │  contracts)  │  │              │  │  orchestrated)       │  │
+│   └──────┬───────┘  └──────────────┘  └──────────┬───────────┘  │
+│          │                                        │             │
+│          └─────────────┬──────────────────────────┘             │
+│                        ▼                                       │
+│            ┌──────────────────────┐                             │
+│            │  policyEnforcement   │  ← fail-closed gate         │
+│            │    Service.js        │                             │
+│            └──────────┬───────────┘                             │
+│                       │                                         │
+├───────────────────────┼─────────────────────────────────────────┤
+│            Tauri v2 (Rust 1.77)   │                             │
+│                       ▼                                         │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  lib.rs  ~1,455 lines · 63 Tauri commands               │    │
+│  │  ├── kv_store.rs        SQLite-backed KV store          │    │
+│  │  ├── policy_gate.rs     Policy enforcement backend      │    │
+│  │  ├── audit_log.rs       Audit chain                     │    │
+│  │  ├── ollama.rs          Ollama inference backend        │    │
+│  │  ├── memory_store.rs    Memory persistence              │    │
+│  │  ├── telegram.rs        Telegram connector              │    │
+│  │  ├── youtube.rs         YouTube upload                  │    │
+│  │  ├── whatsapp_webhook.rs WhatsApp webhook               │    │
+│  │  ├── connector_commands.rs 12 connector commands        │    │
+│  │  ├── native_proof.rs    Native proof engine             │    │
+│  │  ├── plugin_runtime.rs  Plugin runtime                  │    │
+│  │  ├── meta_publish.rs    Meta publishing                 │    │
+│  │  ├── search.rs          Research search                 │    │
+│  │  ├── workspace.rs       Workspace ops                   │    │
+│  │  └── runway.rs          Video generation                │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Ollama (local)  ←→  Connectors  (Telegram, WhatsApp,   │   │
+│  │                        Claude, ChatGPT, Notion, ClickUp, │   │
+│  │                        SD WebUI, ComfyUI, Brave Search)  │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Architecture Rules
+
+- **Fail-closed**: Every outbound connector call goes through `policyEnforcementService.js` — if credentials are missing or the action is ambiguous, it is blocked, not allowed.
+- **Agent contracts**: `agentContractService.js` enforces per-agent allowed/blocked action prefixes.
+- **Durable queue**: `orchestrationQueueService.js` manages state transitions, dead-letter replay, and approval workflows.
+- **Memory**: SQLite-backed via `kv_store.rs` with governance metadata and retention policies.
+- **Security**: CSP enforced at Tauri level; updater signatures via `tauri-plugin-updater`.
 
 ## Development
 
 ```bash
 npm run dev            # Start Vite dev server
 npm run lint           # ESLint on src/
-npm run test           # Run all tests
-npm run test:coverage  # Coverage report
+npm run test           # Run all 952 tests across 72 files
+npm run test:coverage  # Coverage report (threshold 20%)
 npm run build          # Production build
 npm run verify:app     # lint + test + build in one command
 ```
@@ -56,7 +137,7 @@ npm run verify:app     # lint + test + build in one command
 ```bash
 cd src-tauri
 cargo check                        # Verify compilation
-cargo test                         # Run 14 unit tests
+cargo test                         # Run 14 Rust unit tests
 cargo clippy -- -D warnings        # Lint (CI enforces zero warnings)
 ```
 
@@ -67,18 +148,6 @@ npx playwright install chromium    # One-time browser install
 npm run dev                        # Dev server must be running
 npm run test:e2e                   # Playwright smoke tests
 ```
-
-## Architecture
-
-```
-React 18 (Vite 5, Tailwind 3)        Tauri v2 (Rust 1.77)
-├── 76+ UI components                 ├── lib.rs (~7K lines, 63 commands)
-├── 89+ services (policy-gated)       ├── kv_store.rs (SQLite)
-├── 9 agent profiles                  ├── whatsapp_webhook.rs
-└── Ollama local inference            └── native_proof.rs
-```
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full stack diagram, agent roster, orchestration flow, and security model.
 
 ## Connectors
 

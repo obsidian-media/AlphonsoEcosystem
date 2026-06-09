@@ -158,4 +158,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-09 — Session 12 complete. 72 test files, 952 tests, all passing. Coverage 27.97% (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. Version 0.3.0 tagged. Auto-updater keypair generated (TAURI_SIGNING_PRIVATE_KEY needs GitHub Secrets). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-09 — v1.0.0. 72 test files, 952 tests, all passing. Coverage 27.97% (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. Auto-updater keypair generated (TAURI_SIGNING_PRIVATE_KEY needs GitHub Secrets). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

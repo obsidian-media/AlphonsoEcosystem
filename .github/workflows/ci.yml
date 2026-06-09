@@ -116,7 +116,6 @@ jobs:
     name: Playwright E2E Smoke Test
     needs: [test]
     runs-on: windows-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
