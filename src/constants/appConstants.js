@@ -4,6 +4,16 @@ export const INITIAL_CONVERSATION_ID = 'default-session';
 export const COACH_LAYOUT_KEY = 'alphonso_coach_layout_v1';
 export const COACH_CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
 
+export const VERIFICATION_LOG_CAP = 250;
+export const AUDIT_LOG_FETCH_LIMIT = 200;
+export const SNAPSHOT_HISTORY_CAP = 40;
+export const COPY_RESET_MS = 1600;
+export const WORKSPACE_PROOF_TIMEOUT_MS = 1200;
+export const SYMBOL_INDEX_FILE_LIMIT = 500;
+export const SCREEN_OBSERVER_INTERVAL_MS = 5000;
+export const MEMORY_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+export const COACH_PAUSE_MS = 60000;
+
 export const themeClassFromSettings = (settings) => {
   if (settings.environmentTheme === 'orchestrator_gold') return 'theme-orchestrator-gold';
   if (settings.environmentTheme === 'neon_studio') return 'theme-neon-studio';

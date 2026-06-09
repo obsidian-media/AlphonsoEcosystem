@@ -1,5 +1,4 @@
 import React, { Suspense, lazy, useCallback, useMemo, useRef, useState, useTransition } from 'react';
-import { Mic } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useVoiceInput } from './hooks/useVoiceInput';
@@ -52,6 +51,15 @@ import {
   INITIAL_CONVERSATION_ID,
   COACH_LAYOUT_KEY,
   COACH_CORNERS,
+  VERIFICATION_LOG_CAP,
+  AUDIT_LOG_FETCH_LIMIT,
+  SNAPSHOT_HISTORY_CAP,
+  COPY_RESET_MS,
+  WORKSPACE_PROOF_TIMEOUT_MS,
+  SYMBOL_INDEX_FILE_LIMIT,
+  SCREEN_OBSERVER_INTERVAL_MS,
+  MEMORY_EXPIRY_MS,
+  COACH_PAUSE_MS,
   themeClassFromSettings,
   getCompanionState,
   companionStateFromVoice,
@@ -82,10 +90,13 @@ const SettingsView = lazy(() => import('./components/SettingsView').then((mod) =
 const RightPanel = lazy(() => import('./components/RightPanel').then((mod) => ({ default: mod.RightPanel })));
 const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then((mod) => ({ default: mod.AgentActivityLog })));
 
+const parsedSearchParams = new URLSearchParams(window.location.search);
+const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
+const COACH_AGENT_FROM_QUERY = parsedSearchParams.get('coachAgent');
+
 export default function App() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const isCoachWindow = searchParams.get('coach') === '1';
-  const coachAgentFromQuery = searchParams.get('coachAgent');
+  const isCoachWindow = IS_COACH_WINDOW;
+  const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
   const [activeTab, setActiveTab] = useState('mission');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [settings, setSettings] = useState(() => getStorage('alphonso_settings', {
@@ -109,7 +120,8 @@ export default function App() {
     autoUpdateEnabled: true,
     updaterEndpoint: '',
     updaterPubkey: '',
-    updaterTarget: ''
+    updaterTarget: '',
+    idleTimeoutMinutes: 15
   }));
   const [conversations, setConversations] = useState(() => getStorage('alphonso_conversations', [
     { id: INITIAL_CONVERSATION_ID, title: 'New Chat Session', timestamp: Date.now() }
@@ -399,7 +411,7 @@ export default function App() {
     prevOllamaStateRef
   });
 
-  const deleteChat = (id, event) => {
+  const deleteChat = useCallback((id, event) => {
     event.stopPropagation();
     const filtered = conversations.filter((conversation) => conversation.id !== id);
 
@@ -413,16 +425,16 @@ export default function App() {
     }
 
     localStorage.removeItem(`alphonso_messages_${id}`);
-  };
+  }, [conversations, activeChatId]);
 
   const copyTroubleshootingCommand = async () => {
     try {
       await navigator.clipboard.writeText(OLLAMA_TROUBLESHOOTING_COMMAND);
       setCopyState('copied');
-      window.setTimeout(() => setCopyState('idle'), 1600);
+      window.setTimeout(() => setCopyState('idle'), COPY_RESET_MS);
     } catch {
       setCopyState('failed');
-      window.setTimeout(() => setCopyState('idle'), 1600);
+      window.setTimeout(() => setCopyState('idle'), COPY_RESET_MS);
     }
   };
 
@@ -430,27 +442,27 @@ export default function App() {
     if (!await requestApproval('Run Ollama runtime verification')) return;
     await runOllamaCheck();
     const proof = await verifyOllamaRuntimeProof(settings.endpoint);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
+    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   };
 
   const verifyProcesses = async (names) => {
     if (!await requestApproval(`Check process state: ${names.join(', ')}`)) return;
     const proof = await verifyProcessProof(names);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
+    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   };
 
   const verifyPaths = async (paths) => {
     if (!await requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
     const proof = await verifyPathProof(paths);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
+    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   };
 
   const verifyAuditChain = async () => {
     if (!await requestApproval('Verify durable audit chain integrity')) return;
     const proof = await verifyDurableAuditChain();
     setAuditChainProof(proof?.payload || null);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const verifyCommand = async (program, args) => {
@@ -467,14 +479,14 @@ export default function App() {
             reason: 'Blocked by safe mode policy'
           }
         });
-        setVerificationLogs((current) => [...current, log].slice(-250));
+        setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
         setApprovalRequiredNotice(true);
         return;
       }
     }
     if (!await requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
     const proof = await verifyCommandExecution(program, args, null);
-    setVerificationLogs((current) => [...current, proof].slice(-250));
+    setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   };
 
   const handleTogglePlugin = async (pluginId, enabled) => {
@@ -507,8 +519,8 @@ export default function App() {
         count: manifests.length
       }
     });
-    setVerificationLogs((current) => [...current, log].slice(-250));
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const handleRunWorkspaceProof = async () => {
@@ -521,7 +533,7 @@ export default function App() {
           error: 'Workspace root is not set.'
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       return;
     }
     if (!await requestApproval(`Collect workspace proof for ${settings.workspaceRoot}`)) return;
@@ -534,7 +546,7 @@ export default function App() {
         trust: proof?.trust || TRUST_STATES.TEMPORARY,
         payload: proof
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       setWorkspaceFoundation(updateWorkspaceFoundation({
         workspaceProof: {
           lastRunAt: Date.now(),
@@ -550,9 +562,9 @@ export default function App() {
           error: String(error)
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
     }
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const handleCheckOcrCapability = async () => {
@@ -566,7 +578,7 @@ export default function App() {
         trust: proof?.trust || TRUST_STATES.UNVERIFIED,
         payload: proof
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       setWorkspaceFoundation(updateWorkspaceFoundation({
         ocrCapability: {
           available: Boolean(proof?.available),
@@ -585,9 +597,9 @@ export default function App() {
           error: String(error)
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
     }
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const handleBuildSymbolIndex = async () => {
@@ -600,12 +612,12 @@ export default function App() {
           error: 'Workspace root is not set.'
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       return;
     }
     if (!await requestApproval(`Build workspace symbol index for ${settings.workspaceRoot}`)) return;
     try {
-      const index = await buildWorkspaceSymbolIndex(settings.workspaceRoot, 500);
+      const index = await buildWorkspaceSymbolIndex(settings.workspaceRoot, SYMBOL_INDEX_FILE_LIMIT);
       setWorkspaceSymbolIndex(index);
       const log = appendVerificationLog({
         type: 'symbol_index_build',
@@ -617,7 +629,7 @@ export default function App() {
           totals: index?.totals
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
     } catch (error) {
       const log = appendVerificationLog({
         type: 'symbol_index_build',
@@ -627,9 +639,9 @@ export default function App() {
           error: String(error)
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
     }
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const handleExecutePluginTool = async ({ manifestPath, pluginId, toolId, extraArgs }) => {
@@ -646,7 +658,7 @@ export default function App() {
         trust: TRUST_STATES.FAILED,
         payload: policyCheck
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       appendPluginAuditEntry({
         pluginId: pluginId || 'unknown',
         action: 'tool_execution_blocked_local_policy',
@@ -672,7 +684,7 @@ export default function App() {
             trust: TRUST_STATES.FAILED,
             payload: validation
           });
-          setVerificationLogs((current) => [...current, log].slice(-250));
+          setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
           appendPluginAuditEntry({
             pluginId: pluginId || 'unknown',
             action: 'manifest_validation_blocked',
@@ -694,7 +706,7 @@ export default function App() {
           trust: TRUST_STATES.FAILED,
           payload: { error: String(error) }
         });
-        setVerificationLogs((current) => [...current, log].slice(-250));
+        setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
         appendPluginAuditEntry({
           pluginId: pluginId || 'unknown',
           action: 'manifest_validation_failed',
@@ -731,7 +743,7 @@ export default function App() {
           exitCode: proof?.exit_code
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       appendPluginAuditEntry({
         pluginId: proof?.plugin_id || pluginId || 'unknown',
         action: proof?.success ? 'tool_execution_success' : 'tool_execution_failed',
@@ -751,7 +763,7 @@ export default function App() {
           error: String(error)
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       appendPluginAuditEntry({
         pluginId: pluginId || 'unknown',
         action: 'tool_execution_error',
@@ -763,7 +775,7 @@ export default function App() {
       });
       setPluginAudit(listPluginAudit());
     }
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const handleUpdatePluginSandboxPolicy = (patch) => {
@@ -775,7 +787,7 @@ export default function App() {
       trust: TRUST_STATES.VERIFIED,
       payload: next
     });
-    setVerificationLogs((current) => [...current, log].slice(-250));
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
   };
 
   const handleValidatePluginManifest = async (manifestPath) => {
@@ -790,7 +802,7 @@ export default function App() {
         trust: validation?.trust || TRUST_STATES.TEMPORARY,
         payload: validation
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       appendPluginAuditEntry({
         pluginId: 'manifest_validation',
         action: validation?.valid ? 'manifest_valid' : 'manifest_invalid',
@@ -811,7 +823,7 @@ export default function App() {
           error: String(error)
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       appendPluginAuditEntry({
         pluginId: 'manifest_validation',
         action: 'manifest_validation_error',
@@ -823,7 +835,7 @@ export default function App() {
       });
       setPluginAudit(listPluginAudit());
     }
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const handleRunOcrAdapter = async ({ adapter, imagePath, extraArgs }) => {
@@ -836,7 +848,7 @@ export default function App() {
           error: 'OCR engine path is not set.'
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       return;
     }
     if (!await requestApproval(`Run OCR adapter ${adapter}`)) return;
@@ -858,7 +870,7 @@ export default function App() {
           exitCode: proof?.exit_code
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
     } catch (error) {
       const log = appendVerificationLog({
         type: 'ocr_adapter_run',
@@ -868,9 +880,9 @@ export default function App() {
           error: String(error)
         }
       });
-      setVerificationLogs((current) => [...current, log].slice(-250));
+      setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
     }
-    setDurableAuditLogs(await readDurableAuditLog(200));
+    setDurableAuditLogs(await readDurableAuditLog(AUDIT_LOG_FETCH_LIMIT));
   };
 
   const handleCreateSnapshot = async () => {
@@ -882,7 +894,7 @@ export default function App() {
       verificationLogCount: verificationLogs.length,
       memoryCount: memoryItems.length
     });
-    setSnapshots((current) => [...current, snapshot].slice(-40));
+    setSnapshots((current) => [...current, snapshot].slice(-SNAPSHOT_HISTORY_CAP));
   };
 
   const handleRestoreSnapshot = async (snapshotId) => {
@@ -906,7 +918,7 @@ export default function App() {
       trust: TRUST_STATES.VERIFIED,
       payload: { snapshotId }
     });
-    setVerificationLogs((current) => [...current, log].slice(-250));
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
     setLastTaskCompletedAt(Date.now());
   };
 
@@ -919,7 +931,7 @@ export default function App() {
       trust: TRUST_STATES.VERIFIED,
       payload: { backupId: backup.id, count: backup.items.length }
     });
-    setVerificationLogs((current) => [...current, log].slice(-250));
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
   };
 
   const handleRunReleasePreflight = async () => {
@@ -944,7 +956,7 @@ export default function App() {
     if (!await requestApproval('Start visible screen observer (manual permission prompt)')) return;
     const current = getScreenObserverState();
     const result = await startScreenObserver({
-      sampleEveryMs: current.sampleEveryMs || 5000,
+      sampleEveryMs: current.sampleEveryMs || SCREEN_OBSERVER_INTERVAL_MS,
       notificationsEnabled: current.notificationsEnabled !== false,
       audioAlertEnabled: current.audioAlertEnabled === true,
       onUpdate: (nextState, event) => {
@@ -959,7 +971,7 @@ export default function App() {
             sourceAgent: 'alphonso',
             confidence: TRUST_STATES.INFERRED,
             verificationState: TRUST_STATES.INFERRED,
-            expiresAt: timestampMs() + 7 * 24 * 60 * 60 * 1000,
+            expiresAt: timestampMs() + MEMORY_EXPIRY_MS,
             expiryRule: 'visual_pattern_7d'
           });
           if (event.status === 'high_change_detected' || event.status === 'pattern_repeated') {
@@ -1063,7 +1075,7 @@ export default function App() {
       trust: TRUST_STATES.VERIFIED,
       payload: { bytes: blob.size }
     });
-    setVerificationLogs((current) => [...current, log].slice(-250));
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
   };
 
   const handleRuntimeRepair = async () => {
@@ -1076,7 +1088,7 @@ export default function App() {
       trust: TRUST_STATES.TEMPORARY,
       payload: { status: 'repair checks completed' }
     });
-    setVerificationLogs((current) => [...current, log].slice(-250));
+    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
   };
 
   const handleToggleCoachMode = async () => {
@@ -1119,11 +1131,11 @@ export default function App() {
   const handleCoachInterventionAction = (action) => {
     if (!coachIntervention) return;
 
-    const details = action === 'pause_60_seconds' ? { durationMs: 60000 } : {};
+    const details = action === 'pause_60_seconds' ? { durationMs: COACH_PAUSE_MS } : {};
     recordCoachInterventionAction(coachIntervention, action, details);
 
     if (action === 'pause_60_seconds') {
-      setCoachPauseUntilMs(Date.now() + 60000);
+      setCoachPauseUntilMs(Date.now() + COACH_PAUSE_MS);
       return;
     }
 
@@ -1375,7 +1387,7 @@ export default function App() {
                         selectedModel: settings.selectedModel || null
                       }
                     });
-                    setVerificationLogs((current) => [...current, log].slice(-250));
+                    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
                   }}
                 />
               )}
@@ -1394,7 +1406,7 @@ export default function App() {
                         currentStep: job.currentStep
                       }
                     });
-                    setVerificationLogs((current) => [...current, log].slice(-250));
+                    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
                   }}
                   onApprovalRequest={(approval) => {
                     if (!approval) return;
@@ -1404,7 +1416,7 @@ export default function App() {
                       trust: TRUST_STATES.TEMPORARY,
                       payload: approval
                     });
-                    setVerificationLogs((current) => [...current, log].slice(-250));
+                    setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
                   }}
                 />
               )}
