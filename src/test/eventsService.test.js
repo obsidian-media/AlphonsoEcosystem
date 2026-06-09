@@ -80,7 +80,8 @@ describe('eventsService — pure helpers', () => {
 
   it('buildEvent forces a deterministic id when occurredAtMs is given', () => {
     const ev = buildEvent({ eventType: 't', occurredAtMs: 7 });
-    expect(ev.id).toBe('evt::7');
+    expect(ev.id).toBe('evt:t:global:7:7');
+    expect(ev.dedupKey).toBe('t:global:7');
   });
 
   it('buildOllamaPreflightEvent produces success/failure correctly', () => {
