@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
 
 const RISK_BADGE = {
@@ -107,6 +107,14 @@ export function ApprovalModal({
 
   const risk = RISK_BADGE[resolvedRisk] || RISK_BADGE.medium;
   const RiskIcon = resolvedRisk === 'high' ? ShieldAlert : Shield;
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onCancel?.();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm">

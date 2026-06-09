@@ -403,6 +403,9 @@ export function SettingsView({
                 <div className="text-[11px] text-zinc-500 mt-0.5">Check update endpoint periodically and notify when a new version is available.</div>
               </div>
               <button
+                role="switch"
+                aria-checked={settings.autoUpdateEnabled}
+                aria-label="Toggle auto update checks"
                 onClick={() => setSettings({ ...settings, autoUpdateEnabled: !settings.autoUpdateEnabled })}
                 className={`w-10 h-5 rounded-full transition-colors relative ${settings.autoUpdateEnabled ? 'bg-emerald-500' : 'bg-zinc-800'}`}
               >
@@ -462,6 +465,9 @@ export function SettingsView({
               <div className="text-[11px] text-amber-200/80 mt-1">On Windows, verify:desktop needs WiX 3.14 binaries locally or a permitted wix314-binaries.zip download.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.desktopMode}
+              aria-label="Toggle native desktop mode"
               onClick={() => setSettings({ ...settings, desktopMode: !settings.desktopMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.desktopMode ? 'bg-indigo-500' : 'bg-zinc-800'}`}
             >
@@ -474,6 +480,9 @@ export function SettingsView({
               <div className="text-[11px] text-zinc-500 mt-0.5">Show explicit local-only identity and disable cloud assumptions.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.localOnlyMode}
+              aria-label="Toggle local-only runtime"
               onClick={() => setSettings({ ...settings, localOnlyMode: !settings.localOnlyMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.localOnlyMode ? 'bg-indigo-500' : 'bg-zinc-800'}`}
             >
@@ -486,6 +495,9 @@ export function SettingsView({
               <div className="text-[11px] text-zinc-500 mt-0.5">Prefer local/free connectors first. Paid or metered connector routes are held for explicit approval.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.zeroCostMode}
+              aria-label="Toggle zero-cost mode"
               onClick={() => setSettings({ ...settings, zeroCostMode: !settings.zeroCostMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.zeroCostMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
             >
@@ -498,6 +510,9 @@ export function SettingsView({
               <div className="text-[11px] text-zinc-500 mt-0.5">Require explicit confirmation for supervised actions.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.approvalMode}
+              aria-label="Toggle approval mode"
               onClick={() => setSettings({ ...settings, approvalMode: !settings.approvalMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode ? 'bg-amber-500' : 'bg-zinc-800'}`}
             >
@@ -510,6 +525,9 @@ export function SettingsView({
               <div className="text-[11px] text-zinc-500 mt-0.5">Conservative runtime behavior with repair-first posture.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.safeMode}
+              aria-label="Toggle safe mode"
               onClick={() => setSettings({ ...settings, safeMode: !settings.safeMode })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.safeMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
             >
@@ -522,6 +540,9 @@ export function SettingsView({
               <div className="text-[11px] text-zinc-500 mt-0.5">Show Alphonso in privacy-shield mode for local-only work.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.privacyShieldActive}
+              aria-label="Toggle privacy shield indicator"
               onClick={() => setSettings({ ...settings, privacyShieldActive: !settings.privacyShieldActive })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.privacyShieldActive ? 'bg-emerald-500' : 'bg-zinc-800'}`}
             >
@@ -534,6 +555,9 @@ export function SettingsView({
               <div className="text-[11px] text-zinc-500 mt-0.5">Show Miya pinned creative assistant widget.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.miyaCompanionPinned}
+              aria-label="Toggle Miya creative companion"
               onClick={() => setSettings({ ...settings, miyaCompanionPinned: !settings.miyaCompanionPinned })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.miyaCompanionPinned ? 'bg-fuchsia-500' : 'bg-zinc-800'}`}
             >
@@ -546,6 +570,9 @@ export function SettingsView({
               <div className="text-[11px] text-zinc-500 mt-0.5">Show Jose pinned governance and routing assistant widget.</div>
             </div>
             <button
+              role="switch"
+              aria-checked={settings.joseCompanionPinned}
+              aria-label="Toggle Jose orchestrator companion"
               onClick={() => setSettings({ ...settings, joseCompanionPinned: !settings.joseCompanionPinned })}
               className={`w-10 h-5 rounded-full transition-colors relative ${settings.joseCompanionPinned ? 'bg-amber-500' : 'bg-zinc-800'}`}
             >

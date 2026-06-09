@@ -608,7 +608,7 @@ export function ChatView({
         ))}
 
         {isGenerating && (
-          <div className="flex gap-4 max-w-3xl mx-auto w-full">
+          <div className="flex gap-4 max-w-3xl mx-auto w-full" aria-live="polite" aria-label="Streaming response">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
               <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
             </div>
@@ -810,7 +810,7 @@ export function ChatView({
                 handleSend();
               }
             }}
-            className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
+            className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
           />
           <div className="mt-1 text-2xs text-zinc-500">
             {ollamaStatus.state === 'connected' && !selectedModelMissing
