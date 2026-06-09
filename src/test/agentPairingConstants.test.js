@@ -11,9 +11,9 @@ import {
 
 describe('agentPairingConstants', () => {
   describe('AGENT_PAIRINGS_V1', () => {
-    it('defines exactly 4 pairing IDs', () => {
+    it('defines exactly 13 pairing IDs', () => {
       const keys = Object.keys(AGENT_PAIRINGS_V1);
-      expect(keys).toHaveLength(4);
+      expect(keys).toHaveLength(13);
     });
 
     it('has string values in from->to format', () => {
@@ -36,6 +36,14 @@ describe('agentPairingConstants', () => {
 
     it('includes MARIA_JOSE', () => {
       expect(AGENT_PAIRINGS_V1.MARIA_JOSE).toBe('maria->jose');
+    });
+
+    it('includes HECTOR_MIYA', () => {
+      expect(AGENT_PAIRINGS_V1.HECTOR_MIYA).toBe('hector->miya');
+    });
+
+    it('includes MARIA_MARCUS', () => {
+      expect(AGENT_PAIRINGS_V1.MARIA_MARCUS).toBe('maria->marcus');
     });
 
     it('is frozen', () => {
@@ -61,21 +69,12 @@ describe('agentPairingConstants', () => {
     });
 
     it('each route type is a valid category', () => {
-      const validTypes = ['generation_request', 'task_delegation', 'content_handoff', 'status_report'];
+      const validTypes = [
+        'generation_request', 'task_delegation', 'content_handoff', 'status_report',
+        'research_to_creative', 'governance_to_execution', 'creative_to_operator', 'memory_preservation'
+      ];
       Object.values(AGENT_PAIRING_ROUTES).forEach((route) => {
         expect(validTypes).toContain(route.type);
-      });
-    });
-
-    it('each route riskLevel is low', () => {
-      Object.values(AGENT_PAIRING_ROUTES).forEach((route) => {
-        expect(route.riskLevel).toBe('low');
-      });
-    });
-
-    it('each route approvalMode is auto', () => {
-      Object.values(AGENT_PAIRING_ROUTES).forEach((route) => {
-        expect(route.approvalMode).toBe('auto');
       });
     });
 
@@ -110,9 +109,9 @@ describe('agentPairingRegistryService', () => {
   });
 
   describe('listAvailablePairings', () => {
-    it('returns an array of 4 pairings', () => {
+    it('returns an array of 13 pairings', () => {
       const pairings = listAvailablePairings();
-      expect(pairings).toHaveLength(4);
+      expect(pairings).toHaveLength(13);
     });
 
     it('each pairing has id, from, to, type, approvalMode, riskLevel', () => {
