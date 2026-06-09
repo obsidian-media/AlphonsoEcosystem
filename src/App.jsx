@@ -37,12 +37,12 @@ import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
-import { ChatView } from './components/ChatView';
-import { WorkflowPanel } from './components/WorkflowPanel';
-import { CoachMissionBadge } from './components/CoachMissionBadge';
-import { CoachInterventionCard } from './components/CoachInterventionCard';
-import { CoachHardInterruptOverlay } from './components/CoachHardInterruptOverlay';
-import { CoachSkillGrid } from './components/CoachSkillGrid';
+const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ default: mod.ChatView })));
+const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
+const CoachMissionBadge = lazy(() => import('./components/CoachMissionBadge').then((mod) => ({ default: mod.CoachMissionBadge })));
+const CoachInterventionCard = lazy(() => import('./components/CoachInterventionCard').then((mod) => ({ default: mod.CoachInterventionCard })));
+const CoachHardInterruptOverlay = lazy(() => import('./components/CoachHardInterruptOverlay').then((mod) => ({ default: mod.CoachHardInterruptOverlay })));
+const CoachSkillGrid = lazy(() => import('./components/CoachSkillGrid').then((mod) => ({ default: mod.CoachSkillGrid })));
 import { ViewLoadingState } from './components/ViewLoadingState';
 import { useAppKeyboardShortcuts } from './hooks/useAppKeyboardShortcuts';
 import { useIdleLock } from './hooks/useIdleLock';
@@ -1176,9 +1176,15 @@ export default function App() {
 
           {coachMiniMode ? (
             <div className="space-y-3">
-              <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
-              <CoachMissionBadge agent={coachAgent} state={coachState.state} message={coachState.message} />
-              <CoachSkillGrid skills={coachSkills.slice(0, 4)} compact />
+              <Suspense fallback={<ViewLoadingState label="Coach interventions" />}>
+                <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
+              </Suspense>
+              <Suspense fallback={<ViewLoadingState label="Mission badge" />}>
+                <CoachMissionBadge agent={coachAgent} state={coachState.state} message={coachState.message} />
+              </Suspense>
+              <Suspense fallback={<ViewLoadingState label="Skills" />}>
+                <CoachSkillGrid skills={coachSkills.slice(0, 4)} compact />
+              </Suspense>
               <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-2">
                 <Suspense fallback={null}>
                   <MicrophoneStatus voiceStatus={voice.voiceStatus} />
@@ -1188,22 +1194,34 @@ export default function App() {
           ) : (
             <div className="grid h-[calc(100%-2.5rem)] grid-cols-[minmax(0,1fr)_17rem] gap-4">
               <div className="space-y-4 overflow-auto pr-1">
-                <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
+                <Suspense fallback={<ViewLoadingState label="Coach interventions" />}>
+                  <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
+                </Suspense>
                 <div className="rounded-2xl border border-cyan-300/15 bg-cyan-500/5 p-4">
                   <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">Coach skills</div>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-300">
                     Coach Mode is for guidance, focus, handoffs, rehearsal, and safety checks — not just agent status.
                   </p>
                 </div>
-                <CoachSkillGrid skills={coachSkills} />
+                <Suspense fallback={<ViewLoadingState label="Skills" />}>
+                  <CoachSkillGrid skills={coachSkills} />
+                </Suspense>
               </div>
               <div className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
                 <div className="mb-2 text-2xs font-bold uppercase tracking-[0.16em] text-zinc-500">Agent status</div>
                 <div className="space-y-2">
-                  <CoachMissionBadge agent="alphonso" state={companionStateFromVoice(voice.voiceStatus)} message={coachMessageFromVoice(voice.voiceStatus)} />
-                  <CoachMissionBadge agent="hector" state={hectorCompanionState.state} message={hectorCompanionState.message} />
-                  <CoachMissionBadge agent="jose" state={joseCompanionState.state} message={joseCompanionState.message} />
-                  <CoachMissionBadge agent="miya" state={miyaCompanionState.state} message={miyaCompanionState.message} />
+                  <Suspense fallback={<ViewLoadingState label="Alphonso" />}>
+                    <CoachMissionBadge agent="alphonso" state={companionStateFromVoice(voice.voiceStatus)} message={coachMessageFromVoice(voice.voiceStatus)} />
+                  </Suspense>
+                  <Suspense fallback={<ViewLoadingState label="Hector" />}>
+                    <CoachMissionBadge agent="hector" state={hectorCompanionState.state} message={hectorCompanionState.message} />
+                  </Suspense>
+                  <Suspense fallback={<ViewLoadingState label="Jose" />}>
+                    <CoachMissionBadge agent="jose" state={joseCompanionState.state} message={joseCompanionState.message} />
+                  </Suspense>
+                  <Suspense fallback={<ViewLoadingState label="Miya" />}>
+                    <CoachMissionBadge agent="miya" state={miyaCompanionState.state} message={miyaCompanionState.message} />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -1238,7 +1256,9 @@ export default function App() {
 
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30 ${themeClassFromSettings(settings)}`}>
-      <CoachHardInterruptOverlay intervention={coachIntervention} pauseUntilMs={coachPauseUntilMs} onAction={handleCoachInterventionAction} />
+      <Suspense fallback={null}>
+        <CoachHardInterruptOverlay intervention={coachIntervention} pauseUntilMs={coachPauseUntilMs} onAction={handleCoachInterventionAction} />
+      </Suspense>
       {approvalPending && (
         <Suspense fallback={null}>
           <ApprovalModal
@@ -1323,21 +1343,23 @@ export default function App() {
                 />
               )}
               {activeTab === 'chat' && (
-                <ChatView
-                  activeChatId={activeChatId}
-                  settings={settings}
-                  setConversations={setConversations}
-                  ollamaStatus={ollamaStatus}
-                  installedModels={installedModels}
-                  selectedModelMissing={selectedModelMissing}
-                  voice={voice}
-                  onGenerationChange={setIsGeneratingResponse}
-                  onTaskComplete={() => setLastTaskCompletedAt(Date.now())}
-                  onRetryOllama={runOllamaCheck}
-                  onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })}
-                  onOpenSettings={() => switchTab('settings')}
-                  onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))}
-                />
+                <Suspense fallback={<ViewLoadingState label="Chat" />}>
+                  <ChatView
+                    activeChatId={activeChatId}
+                    settings={settings}
+                    setConversations={setConversations}
+                    ollamaStatus={ollamaStatus}
+                    installedModels={installedModels}
+                    selectedModelMissing={selectedModelMissing}
+                    voice={voice}
+                    onGenerationChange={setIsGeneratingResponse}
+                    onTaskComplete={() => setLastTaskCompletedAt(Date.now())}
+                    onRetryOllama={runOllamaCheck}
+                    onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })}
+                    onOpenSettings={() => switchTab('settings')}
+                    onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))}
+                  />
+                </Suspense>
               )}
               {activeTab === 'miya' && (
                 <MiyaStudio
@@ -1554,7 +1576,9 @@ export default function App() {
       </Suspense>
 
       {showWorkflowPanel ? (
-        <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(workflowId) => switchTab('activity')} />
+        <Suspense fallback={<ViewLoadingState label="Workflows" />}>
+          <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(workflowId) => switchTab('activity')} />
+        </Suspense>
       ) : null}
     </div>
   );
