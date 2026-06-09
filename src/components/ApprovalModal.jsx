@@ -171,17 +171,19 @@ export function ApprovalModal({
         <div className="flex gap-3 justify-end pt-1">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-zinc-400 bg-zinc-800 border border-white/10 hover:bg-zinc-700 transition-colors"
+            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-zinc-400 bg-zinc-800 border border-white/10 hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            aria-label="Deny action"
           >
             Deny
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-colors shadow-lg ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-colors shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
               resolvedRisk === 'high'
                 ? 'bg-red-700 hover:bg-red-600'
                 : 'bg-amber-600 hover:bg-amber-500'
             }`}
+            aria-label="Approve action"
           >
             Approve
           </button>
