@@ -69,7 +69,8 @@ export function evaluateWorkflowGovernance(workflow, options = {}) {
 }
 
 export function getAgentWorkflowParticipation(workflow) {
-  const sequence = Array.isArray(workflow?.agentSequence) ? workflow.agentSequence : [];
+  if (!workflow || typeof workflow !== 'object' || Array.isArray(workflow)) return [];
+  const sequence = Array.isArray(workflow.agentSequence) ? workflow.agentSequence : [];
   return sequence.map((agent, index) => ({
     agent,
     order: index + 1,
