@@ -9,7 +9,7 @@
     "build": "node scripts/run-vite-build.mjs",
     "start": "node scripts/run-vite-preview.mjs",
     "test": "node scripts/run-vitest-programmatic.mjs src",
-    "test:coverage": "npx vitest run --coverage src --pool=forks",
+    "test:coverage": "vitest run --coverage src --pool=forks",
     "test:watch": "node scripts/run-vitest-programmatic.mjs --watch src",
     "lint": "eslint src",
     "verify:app": "npm run lint && npm run test && npm run build",
