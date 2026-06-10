@@ -24,10 +24,10 @@ log = "0.4"
 tauri = { version = "2.11.1", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-sha2 = "0.10"
+sha2 = "0.11"
 rusqlite = { version = "0.32", features = ["bundled"] }
 tauri-plugin-updater = "2"
-hmac = "0.12"
+hmac = "0.13"
 tokio = { version = "1", features = ["time"] }
 subtle = "2"
 dotenvy = "0.15"
