@@ -40,13 +40,15 @@ function writeAllScores(scores) {
 
 export function storeNovaScore(commandId, score) {
   if (!commandId || score == null) return null;
-  const numericScore = Number(score);
-  if (Number.isNaN(numericScore)) return null;
+  const opportunityScore = Number(score?.opportunityScore ?? score);
+  const riskScore = Number(score?.riskScore ?? 0);
+  if (Number.isNaN(opportunityScore) && Number.isNaN(riskScore)) return null;
+  const numericScore = Number.isNaN(opportunityScore) ? 0 : opportunityScore;
   const entry = {
     commandId,
     score: numericScore,
-    opportunityScore: Number(score?.opportunityScore ?? numericScore),
-    riskScore: Number(score?.riskScore ?? 0),
+    opportunityScore: Number.isNaN(opportunityScore) ? 0 : opportunityScore,
+    riskScore: Number.isNaN(riskScore) ? 0 : riskScore,
     timestampMs: timestampMs()
   };
   const allScores = readAllScores();

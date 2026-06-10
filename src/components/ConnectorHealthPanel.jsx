@@ -14,7 +14,8 @@ import {
   Wifi,
   WifiOff,
   Youtube,
-  ZapOff
+  ZapOff,
+  Key
 } from 'lucide-react';
 import {
   listConnectors,
@@ -197,9 +198,41 @@ async function testConnector(connectorId) {
   return { ok: false, message: 'Unknown connector' };
 }
 
+async function validateConnectorCredentials(connectorId) {
+  if (['sd_webui', 'comfyui_video', 'mobile_bridge', 'ollama'].includes(connectorId)) {
+    return { ok: true, message: 'Local connector — no cloud credentials required' };
+  }
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const requiredEnv = [];
+    if (connectorId === 'telegram') requiredEnv.push('TELEGRAM_BOT_TOKEN');
+    if (connectorId === 'whatsapp') requiredEnv.push('WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID');
+    if (connectorId === 'youtube') requiredEnv.push('YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET');
+    if (connectorId === 'claude') requiredEnv.push('ANTHROPIC_API_KEY');
+    if (connectorId === 'chatgpt') requiredEnv.push('OPENAI_API_KEY');
+    if (connectorId === 'qwen') requiredEnv.push('DASHSCOPE_API_KEY');
+    if (connectorId === 'notion') requiredEnv.push('NOTION_API_KEY');
+    if (connectorId === 'clickup') requiredEnv.push('CLICKUP_API_KEY');
+    if (connectorId === 'runway') requiredEnv.push('RUNWAYML_API_SECRET');
+    if (requiredEnv.length === 0) {
+      return { ok: true, message: 'No credential validation required' };
+    }
+    const presence = await invoke('check_env_vars_presence', { names: requiredEnv });
+    const missing = requiredEnv.filter((k) => !presence[k]);
+    if (missing.length === 0) {
+      return { ok: true, message: `All ${requiredEnv.length} credential(s) present` };
+    }
+    return { ok: false, message: `Missing: ${missing.join(', ')}` };
+  } catch (error) {
+    return { ok: false, message: `Validation error: ${String(error)}` };
+  }
+}
+
 function ConnectorCard({ connector, zeroCostMode }) {
-  const [testState, setTestState] = useState('idle'); // 'idle' | 'loading' | 'ok' | 'fail'
+  const [testState, setTestState] = useState('idle');
   const [testMessage, setTestMessage] = useState('');
+  const [validateState, setValidateState] = useState('idle');
+  const [validateResult, setValidateResult] = useState(null);
 
   const handleTest = async () => {
     if (testState === 'loading') return;
@@ -212,6 +245,15 @@ function ConnectorCard({ connector, zeroCostMode }) {
       setTestState('idle');
       setTestMessage('');
     }, 3000);
+  };
+
+  const handleValidate = async () => {
+    if (validateState === 'loading') return;
+    setValidateState('loading');
+    setValidateResult(null);
+    const result = await validateConnectorCredentials(connector.id);
+    setValidateResult(result);
+    setValidateState('idle');
   };
 
   const status = deriveStatus(connector);
@@ -306,27 +348,51 @@ function ConnectorCard({ connector, zeroCostMode }) {
         </div>
       )}
 
-      {/* Test connection button */}
+      {/* Test connection + Validate buttons */}
       <div className="mt-auto flex flex-col gap-1">
-        <button
-          onClick={handleTest}
-          disabled={testState === 'loading'}
-          title="Test connector connectivity"
-          className={`w-full rounded-lg border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
-            testState === 'loading'
-              ? 'border-zinc-600/40 bg-zinc-800/60 text-zinc-500 cursor-wait'
-              : testState === 'ok'
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 cursor-default'
-                : testState === 'fail'
-                  ? 'border-red-500/40 bg-red-500/10 text-red-400 cursor-default'
+        <div className="flex gap-1.5">
+          <button
+            onClick={handleTest}
+            disabled={testState === 'loading'}
+            title="Test connector connectivity"
+            className={`flex-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
+              testState === 'loading'
+                ? 'border-zinc-600/40 bg-zinc-800/60 text-zinc-500 cursor-wait'
+                : testState === 'ok'
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 cursor-default'
+                  : testState === 'fail'
+                    ? 'border-red-500/40 bg-red-500/10 text-red-400 cursor-default'
+                    : 'border-white/[0.08] bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200 cursor-pointer'
+            }`}
+          >
+            {testState === 'loading' ? '…testing' : testState === 'ok' ? 'OK' : testState === 'fail' ? 'FAIL' : 'Test'}
+          </button>
+          <button
+            onClick={handleValidate}
+            disabled={validateState === 'loading'}
+            title="Validate credentials via Tauri env check"
+            className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
+              validateState === 'loading'
+                ? 'border-zinc-600/40 bg-zinc-800/60 text-zinc-500 cursor-wait'
+                : validateResult
+                  ? validateResult.ok
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 cursor-default'
+                    : 'border-red-500/40 bg-red-500/10 text-red-400 cursor-default'
                   : 'border-white/[0.08] bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200 cursor-pointer'
-          }`}
-        >
-          {testState === 'loading' ? '…testing' : testState === 'ok' ? 'OK' : testState === 'fail' ? 'FAIL' : 'Test Connection'}
-        </button>
+            }`}
+          >
+            <Key className="w-2.5 h-2.5" />
+            {validateState === 'loading' ? '…' : validateResult ? (validateResult.ok ? 'OK' : 'FAIL') : 'Validate'}
+          </button>
+        </div>
         {testMessage ? (
           <div className={`text-[9px] text-center truncate ${testState === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>
             {testMessage}
+          </div>
+        ) : null}
+        {validateResult ? (
+          <div className={`text-[9px] text-center truncate ${validateResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+            {validateResult.message}
           </div>
         ) : null}
       </div>

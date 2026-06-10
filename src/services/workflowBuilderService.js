@@ -1,3 +1,17 @@
+/**
+ * Visual/node-based workflow builder.
+ * Workflows are stored in localStorage as nodes+edges arrays intended for a drag-and-drop UI.
+ * Each workflow has typed nodes (trigger, ocr, analysis, condition, etc.) and edges between them.
+ *
+ * @see ./workflowOperationsRegistryService — predefined governance-enriched operations (16 workflows with agentSequence, riskLevel, connectorRequirements)
+ * @see ./workflowRegistryService — predefined agent-chain workflows (25+ workflows routed through Jose)
+ * @see ./workflowExecutionService — execution engine that runs visual workflows from this builder AND operations from the ops registry
+ *
+ * DIFFERENCE: workflowBuilderService = user-built visual/node-based workflows (stored in localStorage as nodes+edges).
+ *             workflowOperationsRegistryService = 16 predefined operations with governance metadata (risk, approvals, etc.).
+ *             They are complementary — the builder creates arbitrary graphs; the ops registry provides governed templates.
+ */
+
 import { TRUST_STATES, timestampMs } from './trustModel';
 
 const WORKFLOW_KEY = 'alphonso_visual_workflows_v1';
@@ -33,10 +47,12 @@ export function listWorkflows() {
 }
 
 export function createWorkflow(name, agentScope = 'shared') {
+  if (!name || typeof name !== 'string' || !name.trim()) return null;
+  if (typeof agentScope !== 'string' || !agentScope) agentScope = 'shared';
   const workflows = readWorkflows();
   const workflow = {
     id: `wf-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    name,
+    name: name.trim(),
     agentScope,
     nodes: [],
     edges: [],
@@ -50,6 +66,7 @@ export function createWorkflow(name, agentScope = 'shared') {
 }
 
 export function updateWorkflow(workflowId, updates) {
+  if (!workflowId || !updates || typeof updates !== 'object' || Array.isArray(updates)) return null;
   const workflows = readWorkflows().map((workflow) => (
     workflow.id === workflowId ? { ...workflow, ...updates, updatedAtMs: timestampMs() } : workflow
   ));
@@ -58,6 +75,9 @@ export function updateWorkflow(workflowId, updates) {
 }
 
 export function addWorkflowNode(workflowId, type, position = { x: 0, y: 0 }, config = {}) {
+  if (!workflowId || !type) return null;
+  if (!position || typeof position !== 'object') position = { x: 0, y: 0 };
+  if (typeof config !== 'object' || config === null) config = {};
   const workflows = readWorkflows().map((workflow) => {
     if (workflow.id !== workflowId) return workflow;
     const node = {
@@ -79,13 +99,14 @@ export function addWorkflowNode(workflowId, type, position = { x: 0, y: 0 }, con
 }
 
 export function addWorkflowEdge(workflowId, fromNode, toNode, condition = 'always') {
+  if (!workflowId || !fromNode || !toNode) return null;
   const workflows = readWorkflows().map((workflow) => {
     if (workflow.id !== workflowId) return workflow;
     const edge = {
       id: `edge-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
       fromNode,
       toNode,
-      condition
+      condition: condition || 'always'
     };
     return {
       ...workflow,

@@ -1101,7 +1101,7 @@ fn read_clipboard() -> Result<ClipboardProof, String> {
 }
 
 #[tauri::command]
-fn write_clipboard(content: String) -> Result<ClipboardProof, String> {
+fn write_clipboard(_content: String) -> Result<ClipboardProof, String> {
   #[cfg(target_os = "windows")]
   {
     use std::process::Command;
@@ -1112,12 +1112,12 @@ fn write_clipboard(content: String) -> Result<ClipboardProof, String> {
       .map_err(|e| e.to_string())?;
     if let Some(mut stdin) = child.stdin.take() {
       use std::io::Write;
-      stdin.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
+      stdin.write_all(_content.as_bytes()).map_err(|e| e.to_string())?;
     }
     child.wait().map_err(|e| e.to_string())?;
     Ok(ClipboardProof {
       action: "write".to_string(),
-      content: content.chars().take(100).collect(),
+      content: _content.chars().take(100).collect(),
       performed_at_ms: now_ms(),
       trust: "verified".to_string(),
     })

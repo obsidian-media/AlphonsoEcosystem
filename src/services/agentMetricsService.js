@@ -148,3 +148,79 @@ export function clearAgentMetrics() {
 export function exportAgentMetrics() {
   return readMetrics();
 }
+
+export function getAgentSuccessRate(agentName, days = 7) {
+  if (!agentName || typeof agentName !== 'string') {
+    return { ok: false, error: 'Agent name is required.', successRate: 0, total: 0, successful: 0 };
+  }
+  const entries = readMetrics();
+  const since = days > 0 ? Date.now() - days * 86_400_000 : 0;
+  const filtered = entries.filter((e) => {
+    if (e.agent !== agentName) return false;
+    if (since > 0 && e.timestampMs < since) return false;
+    return true;
+  });
+  if (filtered.length === 0) {
+    return { ok: true, agentName, days, successRate: 0, total: 0, successful: 0 };
+  }
+  const successful = filtered.filter((e) => e.success === true).length;
+  return {
+    ok: true,
+    agentName,
+    days,
+    successRate: Math.round((successful / filtered.length) * 100),
+    total: filtered.length,
+    successful,
+    failed: filtered.length - successful
+  };
+}
+
+export function getAgentLatency(agentName) {
+  if (!agentName || typeof agentName !== 'string') {
+    return { ok: false, error: 'Agent name is required.', avgDurationMs: 0, medianDurationMs: 0, samples: 0 };
+  }
+  const entries = readMetrics();
+  const filtered = entries.filter((e) => e.agent === agentName && typeof e.durationMs === 'number' && e.durationMs > 0);
+  if (filtered.length === 0) {
+    return { ok: true, agentName, avgDurationMs: 0, medianDurationMs: 0, samples: 0 };
+  }
+  const durations = filtered.map((e) => e.durationMs).sort((a, b) => a - b);
+  const avg = Math.round(durations.reduce((s, v) => s + v, 0) / durations.length);
+  const mid = Math.floor(durations.length / 2);
+  const median = durations.length % 2 === 0
+    ? Math.round((durations[mid - 1] + durations[mid]) / 2)
+    : durations[mid];
+  return {
+    ok: true,
+    agentName,
+    avgDurationMs: avg,
+    medianDurationMs: median,
+    minDurationMs: durations[0],
+    maxDurationMs: durations[durations.length - 1],
+    samples: durations.length
+  };
+}
+
+export function getAgentApprovalRate(agentName) {
+  if (!agentName || typeof agentName !== 'string') {
+    return { ok: false, error: 'Agent name is required.', approvalRate: 0, approvalRequired: 0, approved: 0 };
+  }
+  const entries = readMetrics();
+  const filtered = entries.filter((e) => e.agent === agentName);
+  if (filtered.length === 0) {
+    return { ok: true, agentName, approvalRate: 0, approvalRequired: 0, approved: 0 };
+  }
+  const totalWithApprovalData = filtered.filter((e) => e.validationPassed === true || e.validationPassed === false).length;
+  const approved = filtered.filter((e) => e.validationPassed === true).length;
+  const required = filtered.filter((e) => e.validationPassed === false).length;
+  const approvalRate = totalWithApprovalData > 0 ? Math.round((approved / totalWithApprovalData) * 100) : 0;
+  return {
+    ok: true,
+    agentName,
+    approvalRate,
+    approvalRequired: required,
+    approved,
+    pending: filtered.length - totalWithApprovalData,
+    totalExecutions: filtered.length
+  };
+}

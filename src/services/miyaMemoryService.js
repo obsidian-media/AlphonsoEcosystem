@@ -6,6 +6,16 @@ export {
   pushMemory,
   listMemory,
   listMemoryByNamespace,
+  tickExpiry,
+  getMemorySize,
+  getAllMemorySizes,
+  checkQuota,
+  deduplicateMemory,
+  deduplicateAllNamespaces,
+  autoTagMemoryItem,
+  exportMemoryItems,
+  importMemoryItems,
+  clearContentHashCache,
   MEMORY_CATEGORIES,
   MEMORY_NAMESPACES
 } from './unifiedMemoryService';

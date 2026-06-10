@@ -11,6 +11,22 @@ import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceSe
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
 
+async function retryWithBackoff(fn, maxRetries = 3) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 function readRows(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -65,13 +81,13 @@ async function discoverResearchSources({
   providerLabel = 'duckduckgo_html',
   queryLabel = null
 }) {
-  const results = await invoke('search_research_sources', {
+  const results = await retryWithBackoff(() => invoke('search_research_sources', {
     request: {
       query: queryLabel || researchQuestion,
       sourceType,
       limit
     }
-  });
+  }));
 
   if (!Array.isArray(results)) return [];
   return results
@@ -281,7 +297,7 @@ export async function searchBrave(query, count = 10) {
     return { success: false, error: 'BRAVE_SEARCH_API_KEY not configured', results: [] };
   }
   try {
-    const resp = await fetch(
+    const resp = await retryWithBackoff(() => fetch(
       `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}`,
       {
         headers: {
@@ -289,7 +305,7 @@ export async function searchBrave(query, count = 10) {
           'X-Subscription-Token': apiKey
         }
       }
-    );
+    ));
     if (!resp.ok) {
       const errText = await resp.text().catch(() => '');
       return {
@@ -313,14 +329,13 @@ export async function searchBrave(query, count = 10) {
 }
 
 async function discoverResearchSourcesBrave({ researchQuestion, sourceType, limit = 8 }) {
-  // Try the Rust backend path first (uses server-side BRAVE_SEARCH_API_KEY)
   let results = null;
   try {
-    results = await invoke('search_brave_sources', {
+    results = await retryWithBackoff(() => invoke('search_brave_sources', {
       query: researchQuestion,
       limit,
       sourceType
-    });
+    }));
   } catch {
     // Rust path failed — fall through to frontend path below
   }
@@ -968,4 +983,126 @@ export async function createResearchBrief(topic, onProgress) {
       sourceTypesNeeded: ['official_docs']
     };
   }
+}
+
+export async function runMultiSourceResearch(query) {
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    return { ok: false, error: 'No query provided.', sources: [], citations: [], providerChain: [] };
+  }
+
+  const providerChain = [];
+  const allSources = [];
+  const citations = [];
+  let preferredProvider = null;
+
+  // 1. Try Brave Search (frontend)
+  try {
+    const braveConfig = await isBraveSearchConfigured();
+    if (braveConfig) {
+      const braveResult = await searchBrave(query, 10);
+      if (braveResult.success && Array.isArray(braveResult.results)) {
+        providerChain.push('brave_search');
+        preferredProvider = 'brave_search';
+        for (const r of braveResult.results) {
+          const source = {
+            url: r.url || '',
+            title: r.title || '',
+            snippet: r.snippet || '',
+            provider: 'brave_search',
+            sourceType: 'public_web'
+          };
+          allSources.push(source);
+          citations.push({
+            url: source.url,
+            title: source.title,
+            source: 'brave_search',
+            confidence: 'inferred'
+          });
+        }
+      }
+    }
+  } catch { /* Brave unavailable — fall through */ }
+
+  // 2. Try Rust backend search_research_sources
+  try {
+    const rustSources = await discoverResearchSources({
+      researchQuestion: query,
+      sourceType: 'public_web',
+      limit: 8,
+      providerLabel: 'rust_backend',
+      queryLabel: query
+    });
+    if (Array.isArray(rustSources) && rustSources.length > 0) {
+      providerChain.push('rust_backend');
+      if (!preferredProvider) preferredProvider = 'rust_backend';
+      for (const src of rustSources) {
+        if (!allSources.some((s) => s.url === src.url)) {
+          allSources.push(src);
+          citations.push({
+            url: src.url,
+            title: src.title || '',
+            source: 'rust_backend',
+            confidence: src.confidence || 'temporary'
+          });
+        }
+      }
+    }
+  } catch { /* Rust backend unavailable */ }
+
+  // 3. Try DuckDuckGo via Rust
+  if (allSources.length < 3) {
+    try {
+      const ddgSources = await discoverResearchSources({
+        researchQuestion: query,
+        sourceType: 'public_web',
+        limit: 8,
+        providerLabel: 'duckduckgo_html',
+        queryLabel: query
+      });
+      if (Array.isArray(ddgSources) && ddgSources.length > 0) {
+        providerChain.push('duckduckgo_html');
+        if (!preferredProvider) preferredProvider = 'duckduckgo_html';
+        for (const src of ddgSources) {
+          if (!allSources.some((s) => s.url === src.url)) {
+            allSources.push(src);
+            citations.push({
+              url: src.url,
+              title: src.title || '',
+              source: 'duckduckgo_html',
+              confidence: src.confidence || 'temporary'
+            });
+          }
+        }
+      }
+    } catch { /* DDG unavailable */ }
+  }
+
+  // 4. Persist results to memory
+  if (allSources.length > 0) {
+    persistResearchResult(query, allSources);
+  }
+
+  recordHectorActivity('multi_source_research', {
+    query,
+    sourceCount: allSources.length,
+    citationCount: citations.length,
+    providerChain,
+    preferredProvider
+  });
+
+  const ok = allSources.length > 0;
+
+  return {
+    ok,
+    query,
+    sources: allSources,
+    citations,
+    providerChain,
+    preferredProvider,
+    summary: ok
+      ? `Found ${allSources.length} source(s) via ${providerChain.join(' -> ')} with ${citations.length} citation(s).`
+      : 'No sources found from any provider. Try refining the query.',
+    totalSources: allSources.length,
+    totalCitations: citations.length
+  };
 }
