@@ -13,7 +13,6 @@ import {
   Video,
   Wifi,
   WifiOff,
-  Youtube,
   ZapOff,
   Key
 } from 'lucide-react';
@@ -28,7 +27,7 @@ import { checkConnectorHealth } from '../services/connectorHealthCheckService';
 const CONNECTOR_ICONS = {
   telegram: MessageCircle,
   whatsapp: MessageCircle,
-  youtube: Youtube,
+  youtube: Video,
   claude: Bot,
   chatgpt: Bot,
   qwen: Bot,
