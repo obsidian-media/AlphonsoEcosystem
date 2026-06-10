@@ -55,7 +55,7 @@ jobs:
           workspaces: src-tauri -> target
 
       - name: Security audit (cargo)
-        run: cargo install cargo-audit && cargo audit --manifest-path src-tauri/Cargo.toml
+        run: cargo install cargo-audit && cargo audit --file src-tauri/Cargo.lock
         continue-on-error: true
 
       - name: Install Tauri Linux dependencies
