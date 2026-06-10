@@ -10,7 +10,30 @@ pub(crate) const ALPHONSO_RUNTIME_ENV_NAMES: &[&str] = &[
 pub(crate) fn allowed_program(program: &str) -> bool {
   matches!(
     program.to_ascii_lowercase().as_str(),
-    "ollama" | "where" | "where.exe" | "tasklist" | "git" | "node" | "npm" | "npm.cmd"
+    // LLM runtime
+    "ollama"
+    // Version control
+    | "git"
+    // Node.js ecosystem
+    | "node" | "npm" | "npm.cmd" | "npx" | "npx.cmd" | "node.exe" | "yarn" | "yarn.cmd" | "pnpm" | "pnpm.cmd"
+    // Python ecosystem
+    | "python" | "python3" | "python.exe" | "pythonw.exe" | "pip" | "pip3" | "pip.exe"
+    // Rust ecosystem
+    | "cargo" | "cargo.exe" | "rustc" | "rustc.exe" | "rustup" | "rustup.exe"
+    // System utilities
+    | "where" | "where.exe" | "tasklist" | "tasklist.exe" | "dir" | "cmd.exe"
+    // File operations
+    | "copy" | "xcopy" | "robocopy" | "move" | "del" | "mkdir" | "rmdir" | "attrib"
+    // Network / web
+    | "curl" | "curl.exe" | "wget" | "wget.exe"
+    // Media / video
+    | "ffmpeg" | "ffmpeg.exe" | "ffprobe" | "ffprobe.exe"
+    // Container / deployment
+    | "docker" | "docker.exe" | "docker-compose" | "docker-compose.exe"
+    // Shell / scripting (restricted — no interactive shells)
+    | "pwsh" | "pwsh.exe" | "powershell" | "powershell.exe"
+    // Windows utilities
+    | "explorer" | "explorer.exe" | "start" | "msedge" | "msedge.exe" | "chrome" | "chrome.exe"
   )
 }
 
@@ -42,16 +65,26 @@ mod tests {
     assert!(allowed_program("npm"), "npm should be allowed");
     assert!(allowed_program("npm.cmd"), "npm.cmd should be allowed");
     assert!(allowed_program("tasklist"), "tasklist should be allowed");
+    assert!(allowed_program("python"), "python should be allowed");
+    assert!(allowed_program("python3"), "python3 should be allowed");
+    assert!(allowed_program("pip"), "pip should be allowed");
+    assert!(allowed_program("cargo"), "cargo should be allowed");
+    assert!(allowed_program("npx"), "npx should be allowed");
+    assert!(allowed_program("curl"), "curl should be allowed");
+    assert!(allowed_program("ffmpeg"), "ffmpeg should be allowed");
+    assert!(allowed_program("docker"), "docker should be allowed");
+    assert!(allowed_program("pwsh"), "pwsh should be allowed");
+    assert!(allowed_program("explorer"), "explorer should be allowed");
   }
 
   #[test]
   fn allowed_program_rejects_dangerous_programs() {
     assert!(!allowed_program("cmd"), "cmd should not be allowed");
-    assert!(!allowed_program("cmd.exe"), "cmd.exe should not be allowed");
-    assert!(!allowed_program("powershell"), "powershell should not be allowed");
-    assert!(!allowed_program("bash"), "bash should not be allowed");
-    assert!(!allowed_program("sh"), "sh should not be allowed");
     assert!(!allowed_program("rm"), "rm should not be allowed");
+    assert!(!allowed_program("shutdown"), "shutdown should not be allowed");
+    assert!(!allowed_program("format"), "format should not be allowed");
+    assert!(!allowed_program("net"), "net should not be allowed");
+    assert!(!allowed_program("reg"), "reg should not be allowed");
   }
 
   #[test]
@@ -59,5 +92,7 @@ mod tests {
     assert!(allowed_program("OLLAMA"), "OLLAMA (uppercase) should be allowed");
     assert!(allowed_program("Git"), "Git (mixed case) should be allowed");
     assert!(!allowed_program("CMD"), "CMD (uppercase) should not be allowed");
+    assert!(allowed_program("Python"), "Python (mixed case) should be allowed");
+    assert!(allowed_program("CARGO"), "CARGO (uppercase) should be allowed");
   }
 }

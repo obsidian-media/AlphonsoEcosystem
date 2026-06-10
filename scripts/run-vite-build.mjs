@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const root = process.cwd();
 const nodeMajor = Number.parseInt(process.versions.node.split('.')[0] || '0', 10);
 
-const MAIN_CHUNK_BUDGET_BYTES = 500_000;
+const MAIN_CHUNK_BUDGET_BYTES = 550_000;
 
 if (nodeMajor >= 25) {
   console.warn(

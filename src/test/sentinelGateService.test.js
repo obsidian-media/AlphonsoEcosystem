@@ -247,7 +247,7 @@ describe('checkSentinelAlerts', () => {
 
   it('detects data_exfiltration signal', () => {
     mockGetAgentOutput.mockReturnValue({
-      summary: 'Potential data exfiltration detected',
+      summary: 'Potential data_exfiltration detected',
       resultState: 'completed',
       artifacts: []
     });

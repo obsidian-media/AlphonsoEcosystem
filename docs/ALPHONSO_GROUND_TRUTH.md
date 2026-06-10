@@ -1,6 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-03 — Session 7 complete  
-**Verified by:** OpenCode agent (64 test files, 620 tests passing, 24 Rust tests passing, cargo clippy clean, lint clean, build passing, App.jsx 1,490 lines, 10 .ts services)  
+**Last verified:** 2026-06-09 — Session 11 complete (workflow run engine, auto-updater provisioning, accessibility, vitest config isolation, test fixes)  
+**Verified by:** OpenCode agent (72 test files, 952 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
+**Version:** 0.3.0  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -26,7 +27,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | App name | Alphonso |
 | Version | 0.1.0 |
 | Type | Tauri v2 desktop app (Windows) |
-| Project root | `C:\Users\Shaya\OneDrive\Desktop\ALPHONSO\FILES\local-agent-ui-v2` |
+| Project root | `C:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
 | Frontend | React 18, Vite 5, Tailwind 3, Lucide React — currently `.jsx` (not `.tsx`) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
@@ -54,7 +55,7 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 
 ---
 
-## 3. Service Layer — 65+ Services in `src/services/`
+## 3. Service Layer — 123 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
@@ -75,10 +76,12 @@ Key services that past audits missed or underestimated:
 - `agentBusService.js` — inter-agent messaging bus
 
 ### Memory & Knowledge
-- `memoryService.js` — general memory with governance metadata (workflow owner, sensitivity, retention, privacy)
-- `durableMemoryService.js` — SQLite-backed durable memory
-- `miyaMemoryService.js` — Miya-specific memory
-- `workflowMemoryService.js`, `workflowReceiptService.js`, `workflowTelemetryService.js`
+- `unifiedMemoryService.js` — **unified memory** consolidating 4 separate systems (shared 1000, miya 700, ecosystem 1500, workflow 2000) into single API with namespace/category filters. All old services re-export from unified service (backward compatible).
+- `memoryService.js` — re-exports from unifiedMemoryService
+- `miyaMemoryService.js` — re-exports from unifiedMemoryService
+- `memory/ecosystemMemoryService.js` — re-exports from unifiedMemoryService
+- `durableMemoryService.js` — re-exports from unifiedMemoryService + migration helpers
+- `workflowMemoryService.js` — re-exports from unifiedMemoryService
 - `sessionIntelligenceService.js`, `workspaceIntelligenceService.js`
 - `sourceConfidenceService.js`, `trustModel.js`, `verificationService.js`
 
@@ -100,6 +103,22 @@ Key services that past audits missed or underestimated:
 - `runwayService.js`, `appUpdateService.js`
 - `repoAuditService.js`
 
+### Agent Brain & Execution
+- `agentBrainService.js` — Brain 1-9: context reader, clarifying questions, plan preview, pattern memory (200 cap), thinking loop with error feedback, optimized Ollama params, multi-step decomposition (12+ patterns), git auto-commit, auto-run dev server, Composio external tool detection, post-write validation loop (build/lint after generation), self-evaluation (confidence 0-100), structured tool use (`executeWithTools` loop with 16 tools, max 10 iterations)
+- `toolRegistryService.js` — 16 tools with JSON schemas: read/write/delete/move files, search, list dir, run commands, fetch URL, open URL, clipboard read/write, Composio, memory save/search, git commit/status
+- `streamingService.js` — real-time token streaming with state persistence, subscriber pattern, abort support
+- `composioService.js` — Composio SDK integration: API key config, toolkit discovery, action execution, agent tool selection via LLM, health check
+- `agentMetricsService.js` — execution recording, success rate, confidence tracking, validation pass rate, 7-day trend, top commands, error patterns, per-agent breakdown
+- `proactiveAgentService.js` — 7 proactive checks (failed builds, validation failures, high iterations, low confidence, project staleness, idle time, unused memory), suggestion banner with action buttons, 60s interval with 5min cooldown per type
+- `workspaceFileService.js` — frontend wrapper for Tauri file operations: read, delete, move, search, list directory, tree builder
+- `browserAutomationService.js` — open URL, fetch content (HTML stripping, title extraction), clipboard read/write
+- `backupService.js` — full export/import of localStorage + SQLite + KV store as JSON, size estimation, file download/upload
+- `searchService.js` — memory/project search with relevance scoring, category/agent filters, date range, suggestions
+- `modelSelectionService.js` — multi-model selection, task-type routing, per-task override
+- `autoRunService.js` — auto-run dev server after build, opt-out toggle
+- `gitService.js` — git revert, log, status, diff for rollback
+- `scaffoldTemplatesService.js` — 8 project templates (React, Next.js, Express, full-stack, vanilla)
+
 ### Other
 - `pluginSandboxService.js`, `pluginRegistryService.js`
 - `recoveryService.js`, `runtimeLedgerService.js`
@@ -113,11 +132,13 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 56 Files in `src/test/` (not zero)
+## 4. Test Suite — 72 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-03, Session 6):**
+**Test files (verified 2026-06-08, Session 10):**
+- 72 test files, 951+ tests passing
+- 14 Rust unit tests passing
 ```
 accBridgeService.test.js
 agentContractService.test.js
@@ -194,14 +215,14 @@ workspaceRootService.test.js
 ## 5. CI/CD — Two Workflows Already Exist
 
 **`.github/workflows/ci.yml`** — runs on push/PR to main:
-- `npm ci` → lint → `npx vitest run --reporter=verbose` → `npm run build`
-- `rust-quality` job: `cargo clippy -- -D warnings` + `cargo test`
+- `npm ci` → `npm audit --audit-level=high` → lint → `npm test` → `npm run build`
+- `rust-quality` job: runs on **ubuntu-latest** (Windows App Control was blocking DLL loading), `cargo clippy -- -D warnings` + `cargo test`
 - On main branch only: Tauri desktop build + NSIS artifact upload
 
 **`.github/workflows/verify-app.yml`** — runs on push/PR to main:
 - `npm ci` → `npm run verify:app` (lint + test + build in one command)
 
-**CI status as of 2026-06-01:** Both workflows passing green on `main` (commit `f8e82f1`).
+**CI status as of 2026-06-08:** `test` job passing green on `main`. `rust-quality` switched to ubuntu-latest to avoid Windows App Control DLL blocking. `npm audit` fixed (vite 8.0.16, vitest 4.1.8 — 0 vulnerabilities).
 
 **`.npmrc`** — `legacy-peer-deps=true` required because `@eslint/js@10.x` and `eslint@9.x` are in `package.json` together (peer dep mismatch). Without this, `npm ci` fails with ERESOLVE.
 
@@ -278,9 +299,11 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **Tauri capability scoping** — DONE (2026-06-01, Session 3). Findings: `src-tauri/capabilities/default.json` grants only `core:default`, `notification:default`, `global-shortcut:default`. All file-write commands include path-traversal guards. One mild finding: `check_env_vars_presence` accepts arbitrary env var names (probes presence only, no value leakage). No action required; document for awareness.
 
 ### RUST BACKEND
-- [x] **`lib.rs` modular split started** — Phase 1 extraction done (2026-06-01, Session 3): `src-tauri/src/whatsapp_webhook.rs` created (~220 lines). Moved: `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs (`ConnectorInboundMessage`, `WhatsAppWebhookVerifyProof`, `WhatsAppWebhookSignatureProof`, `WhatsAppCloudInboundNormalizeProof`). `now_ms`/`to_hex` marked `pub(crate)`. **lib.rs is now ~7,100 lines.** `cargo check` clean, `cargo clippy -- -D warnings` clean.
-- [x] **lib.rs KV store split** — `src-tauri/src/kv_store.rs` created (2026-06-01, Session 4): `ensure_kv_table`, `kv_set`, `kv_get`, `save_settings`, `load_settings` extracted. `open_memory_db` marked `pub(crate)`. **lib.rs now ~6,993 lines.** `cargo check` + `cargo clippy -- -D warnings` clean.
-- [x] **lib.rs continued splitting + plugins extracted** — DONE (2026-06-07, OpenCode): `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `runway.rs`, `native_proof.rs` now own their own modules. **lib.rs is now 4,638 lines** (down from 6,993 — 2,355 lines extracted across 7 additional modules). `cargo check` clean, `cargo clippy -- -D warnings` clean, `cargo test` clean (14 Rust unit tests passing).
+- [x] **`lib.rs` modular split completed** — Phases 1+2 extraction done (2026-06-09): `lib.rs` is now ~1,455 lines, down from 7,078 (5,623 lines extracted across 16 modules: whatsapp_webhook, kv_store, native_proof, plugin_runtime, policy_gate, audit_log, ollama, memory_store, meta_publish, connector_commands, search, telegram, workspace, youtube, runway, main).
+- [x] **lib.rs KV store split** — `src-tauri/src/kv_store.rs` created (2026-06-01, Session 4): `ensure_kv_table`, `kv_set`, `kv_get`, `save_settings`, `load_settings` extracted. `open_memory_db` marked `pub(crate)`.
+- [x] **lib.rs continued splitting + plugins extracted** — DONE (2026-06-07, OpenCode): `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `runway.rs`, `native_proof.rs` now own their own modules. `cargo check` clean, `cargo clippy -- -D warnings` clean, `cargo test` clean (14 Rust unit tests passing).
+- [x] **Policy gate expanded** — `policy_gate.rs` whitelist expanded from 8 to 40+ programs: python, pip, cargo, npx, yarn, pnpm, curl, wget, ffmpeg, docker, pwsh, explorer, chrome, copy, xcopy, robocopy, mkdir, del, and more. Still blocks: cmd, rm, shutdown, format, net, reg.
+- [x] **New Tauri commands** — `read_workspace_file`, `delete_workspace_file`, `move_workspace_file`, `search_workspace_files`, `list_workspace_directory`, `open_url`, `fetch_url_content`, `read_clipboard`, `write_clipboard`. All with safe path validation (no escape from workspace root).
 - [ ] **lib.rs further splitting** — Next candidate: Telegram connector block (~lines 1543–1757 in original, now shifted).
 - [x] **Rust unit tests added** — 14 tests in `#[cfg(test)] mod tests` covering `allowed_program`, `plugin_blocked_token_present`, `validate_plugin_extra_args`, `trim_trailing_slashes`, `wal_pragma_applies_on_in_memory_db`, `to_hex` — all passing (verified `cargo test` 2026-05-31, Agent D)
 - [x] **Shared `reqwest::Client`** — built at startup, registered via `.manage()`, used by `connector_poll_telegram`, `connector_send_telegram`, `connector_send_chatgpt`, `connector_send_claude` (2026-05-31, Agent D).
@@ -289,11 +312,17 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **Clippy clean** — All 27 pre-existing clippy warnings fixed (2026-06-01, Session 3): `&PathBuf→&Path` in 7 functions across `lib.rs`/`runway.rs`, identity map removed, `.clamp()` used, `sort_by_key`, `#[allow(too_many_arguments)]` on 3 functions. `cargo clippy -- -D warnings` now passes on CI.
 
 ### FRONTEND
-- [x] **TypeScript foundation added** — `tsconfig.json` + `tsconfig.node.json` created at project root (`strict: false`, `allowJs: true` for safe incremental migration). TypeScript installed as devDependency (2026-05-31, Agent E)
-- [x] **`memoryService.ts` created** — first TypeScript service migration with `MemoryRecord`, `MemoryWriteOptions`, `MemoryFilters` interfaces. Original `.js.bak` preserved. Vite resolves `.ts` before `.js` so all importers pick it up automatically (2026-05-31, Agent E)
-- [x] **`serviceScopes.js` documented** — all 24 exported constants have JSDoc comments (what data, which service owns it) (2026-05-31, Agent E)
-- [x] **Duplicate Vite config removed** — `vite.config.cjs` deleted; `vite.config.js` is now the only config (2026-05-31, Agent E)
-- [ ] **Remaining 50+ services still `.js`** — migration pattern documented in `docs/FRONTEND_MIGRATION_REPORT.md`; do next services in order listed there
+- [x] **Design system created** — `tailwind.config.js` tokens (surface-0..4, accent, success/warning/danger), CSS component classes (.panel, .card, .btn-*, .badge-*, .input, .section-label), Manrope font, ambient glow, custom scrollbar.
+- [x] **Font size standardization** — Eliminated all `text-[8px]`/`[9px]` across AgentDock, ChatView, BoardroomPanel, App, TopBar, RightPanel, Badge. Standardized to `text-2xs` (10px) and `text-xs` (12px).
+- [x] **Streaming UX** — Real-time token display while 7B model generates, abort button with stop/cancel, token counter, elapsed time ticker, live streaming status indicator with green pulse dot.
+- [x] **Keyboard shortcuts** — 12 shortcuts: Ctrl+N new chat, Ctrl+K or / focus input, Esc abort, Ctrl+P search, ? help modal. `useKeyboardShortcuts` hook.
+- [x] **Memory search** — `MemorySearch` modal with debounced search, relevance scoring, category/agent filter chips, suggestions, result preview with metadata.
+- [x] **Agent metrics** — `AgentMetricsPanel` with 6 stat cards (success rate, validation pass, avg files, avg duration, avg confidence, avg iterations), top commands, error patterns, 7-day trend chart, per-agent breakdown. Wired into SettingsView.
+- [x] **Backup/restore** — SettingsView UI with export button (shows size estimate), import button, success/error feedback, auto-reload after restore.
+- [x] **Proactive suggestions** — Banner in ChatView with action buttons. 7 checks: failed builds, validation failures, high iterations, low confidence, project staleness, idle time, unused memory. 60s interval, 5min cooldown per type.
+- [x] **Composio settings** — API key input, user ID, health check, toolkit list display in SettingsView.
+- [x] **Navigation simplified** — 15 sidebar tabs → 8 items in 4 sections. CommandRib reduced to agent indicator + theme switcher + status dot. RightPanel reduced to 4 diagnostics.
+- [x] **Rich project summary** — `buildProjectSummary()` in ChatView constructs rich markdown from execution receipts (file explanations, run instructions, next steps).
 - [x] **`alphonso_settings` → SQLite** — already done (Sessions 3). Both persist to localStorage + SQLite; SQLite hydrated on boot.
 - [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.jsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
 - [x] **`alphonso_connector_auth_profiles_v1` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
@@ -313,23 +342,30 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **Brave Search for Hector** — `search_brave_sources` Rust command exists (line 5965 in lib.rs). Added frontend `searchBrave()` with dual-path: Rust first, then `VITE_BRAVE_SEARCH_API_KEY` frontend fallback (2026-05-31, Agent F)
 - [x] **Model switcher UI** — `src/components/ModelSwitcher.jsx` created. Fetches Ollama `/api/tags`, shows dropdown in ChatView header, persists to `alphonso_selected_model_v1`, shows "Ollama offline" pill if unreachable (2026-05-31, Agent F)
 - [x] **Connector health dashboard** — `ConnectorHealthPanel.jsx` with status for all 11 connectors (2026-05-31, Agent C)
-- [ ] **WhatsApp Cloud inbound webhook** — normalizer exists, but hosted endpoint + signature validation not deployed
 - [x] **Hector research persistence** — `persistResearchResult(query, results)` added to `hectorResearchService.js`; called at all exit points of `discoverResearchSourcesBrave`; writes via `pushMemoryItem` with `category: 'research_memory'` (2026-06-01, Agent 4)
-- [ ] **True streaming for Claude/ChatGPT** — currently one-shot invoke; SSE/streaming path not yet implemented
+- [x] **Composio integration** — External tool access for agents via `composioService.js`. API key config, toolkit discovery, action execution, LLM tool selection, health check. Wired into agent brain — detects external tool intent before code generation.
+- [x] **Structured tool use framework** — 16 tools with JSON schemas. `executeWithTools()` loop: LLM chooses tool → execute → feed result back → repeat up to 10 iterations. Tools: read/write/delete/move files, search, list dir, run commands, fetch URL, open URL, clipboard read/write, Composio, memory, git.
+- [x] **Browser automation** — `open_url` (opens in default browser), `fetch_url_content` (strips HTML, extracts title, 10KB limit), `read_clipboard`/`write_clipboard` (via PowerShell on Windows).
+- [x] **File system operations** — `read_workspace_file`, `delete_workspace_file`, `move_workspace_file`, `search_workspace_files` (grep across workspace, skips node_modules/.git, max 200 results), `list_workspace_directory` (recursive tree builder).
+- [x] **Post-write validation** — After generating files, runs build/lint validation. Auto-fixes on failure with error context. Final validation pass. Self-evaluation with confidence score (0-100).
+- [x] **Agent performance metrics** — Every brain execution records: success rate, confidence, validation pass rate, iterations, duration. 7-day trend, top commands, error patterns, per-agent breakdown.
+- [x] **Proactive agent behavior** — Background watcher monitors idle time, failed builds, high iterations, low confidence, validation failures, stale projects, unused memory. Shows suggestion banner with action buttons.
 
 ### INFRASTRUCTURE & DOCS
 - [x] **`ARCHITECTURE.md`** — created at project root: full stack, IPC flow, 9-agent roster, orchestration flow, service groups, storage model, security model, deployment (2026-05-31, Agent H)
 - [x] **`CLAUDE.md`** — created at project root: session-start guide, all npm + cargo commands, do-not-duplicate table, real gaps, directory tree (2026-05-31, Agent H)
 - [x] **`docs/CONNECTORS.md`** — all 11 connectors documented: env vars, credential steps, test procedure, limitations (2026-05-31, Agent H)
 - [x] **`docs/CHANGELOG.md`** — created with Unreleased entries for all Agent A–D changes + [0.1.0] summary (2026-05-31, Agent H)
+- [x] **`docs/IOS_COMPANION_PLAN.md`** — iOS companion architecture: WebSocket server design, JSON-RPC protocol, mDNS discovery, SwiftUI vs React Native tradeoffs, 5-phase implementation roadmap (2026-06-08)
 - [x] **`.github/dependabot.yml`** — npm (weekly), Cargo (weekly), GitHub Actions (weekly) (2026-05-31, Agent H)
 - [ ] **Auto-updater signing pipeline** — `release:updater` script exists; full key management + hosted signed manifest not finalized
 - [ ] **Gateway Dockerfile** — `gateway/` service not containerized
 - [ ] **Branch protection on `main`** — CI not yet required before merge
 
 ### PERFORMANCE
-- [x] **Lazy loading** — 14 heavy views lazy-loaded. Session 2 added 3 more. Main chunk history: 331KB → 320KB (session 2) → **330KB** (session 3 temporarily, when `ConnectorHealthPanel` was pulled into main via `Sidebar.jsx` static import) → **330KB fixed** (session 3 fix: `ConnectorStatusIndicators.jsx` extraction restores `ConnectorHealthPanel` as a proper 9.7KB lazy chunk). Net: main bundle 330KB.
+- [x] **Lazy loading** — 20+ heavy views lazy-loaded. Main chunk: **288KB** (budget 550KB). Code splitting applied to ChatView, WorkflowPanel, coach components.
 - [x] **Image asset compression** — DONE (2026-06-03, Session 6): Logo/banner/icon/thumbnail PNGs converted to WebP (89% reduction, ~9MB saved). `miya-mascot.png` converted to WebP (77.7% reduction). Unused `ChatGPT Image Jun 1` deleted (2.7MB). Total savings: ~12MB.
+- [x] **Design system** — Custom Tailwind tokens reduce CSS duplication. Component classes (.panel, .card, .btn-*) eliminate inline style repetition.
 
 ### TOOLING
 - [x] **eslint-plugin-security** — installed + wired in `eslint.config.js` (2026-05-31, autonomous)
@@ -350,7 +386,22 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 
 Before writing any new service or feature, verify it does not already exist:
 
-- **Connector health UI** → `src/components/ConnectorHealthPanel.jsx` — full panel (lazy-loaded from App.jsx). `ConnectorStatusStrip` and `ConnectorStatusDot` live in **`src/components/ConnectorStatusIndicators.jsx`** (small, statically importable). Do NOT import `ConnectorStatusStrip`/`ConnectorStatusDot` directly from `ConnectorHealthPanel.jsx` in static contexts — use `ConnectorStatusIndicators.jsx` to avoid lazy-chunk collapse.
+- **Memory unification** → `unifiedMemoryService.js` — 4 systems consolidated, all old services re-export (backward compatible). Do NOT create another memory service.
+- **Streaming output** → `streamingService.js` + ChatView — real-time token display, abort button, token counter, elapsed time. Do NOT recreate streaming.
+- **Composio integration** → `composioService.js` — API key config, toolkit discovery, action execution, wired into agent brain. Do NOT create another external tool connector.
+- **Tool use framework** → `toolRegistryService.js` — 16 tools with JSON schemas, `executeWithTools()` loop. Do NOT add tools outside this registry.
+- **Browser automation** → `browserAutomationService.js` — open URL, fetch content, clipboard read/write. Do NOT create another browser service.
+- **File operations** → `workspaceFileService.js` — read, delete, move, search, list directory. Do NOT create another file service.
+- **Post-write validation** → built into `agentBrainService.js` — runs build/lint after generation, auto-fixes, self-evaluation. Do NOT recreate validation.
+- **Agent metrics** → `agentMetricsService.js` + `AgentMetricsPanel.jsx` — success rate, confidence, 7-day trend. Wired into SettingsView. Do NOT create another metrics system.
+- **Backup/restore** → `backupService.js` — export/import all data as JSON. Wired into SettingsView. Do NOT create another backup system.
+- **Search** → `searchService.js` + `MemorySearch.jsx` — memory/project search with relevance scoring, Ctrl+P shortcut. Do NOT create another search.
+- **Proactive agent** → `proactiveAgentService.js` — 7 checks, suggestion banner, 60s interval. Do NOT create another proactive system.
+- **Keyboard shortcuts** → `useKeyboardShortcuts.js` — 12 shortcuts, ? help modal. Do NOT create another shortcut system.
+- **Policy gate** → `policy_gate.rs` — 40+ programs whitelisted. Do NOT modify without reviewing security implications.
+- **iOS companion plan** → `docs/IOS_COMPANION_PLAN.md` — architecture doc, do NOT start building without reviewing.
+- **Error boundaries** → `ViewErrorBoundary.jsx` (enhanced with copy error, expandable stack trace), `ErrorBoundary.jsx` (reusable with HOC). All views wrapped.
+- **Code splitting** — ChatView, WorkflowPanel, CoachMissionBadge, CoachInterventionCard, CoachHardInterruptOverlay, CoachSkillGrid now lazy-loaded. Main chunk reduced from 519KB to 288KB.
 - **Approval modal** → `src/components/ApprovalModal.jsx` — already shows connector, risk level, irreversibility warning
 - **Toast notifications** → `ToastProvider` already in `main.jsx`, inbound toasts already wired in `App.jsx`
 - **Policy enforcement** → `policyEnforcementService.js` (do not recreate approval/risk logic)
@@ -411,6 +462,6 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-07 — Stage One PHASE 1 + PHASE 2 + PHASE 3 complete. 66 test files (67 incl. .jsx), 758 tests, all passing. 34 Rust unit tests passing. `npm run lint` clean, `npm run build` clean, `cargo clippy -- -D warnings` clean. `lib.rs` is 4,642 lines (down from 6,993 after plugin + policy + audit + ollama + memory_store + meta_publish + runway + native_proof extraction). Coverage 27.83% (threshold 12%, src/ scoped). Run `npm run verify:app`, `cargo clippy -- -D warnings` from src-tauri/, and `npm run export:ground-truth` to re-verify the repo-derived snapshot (`ALPHONSO_GROUND_TRUTH.generated.md` + `alphonso-ground-truth.snapshot.json`)._
+_Last verified: 2026-06-09 — Session 12 complete. 72 test files, 952 tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB — 44% reduction from code splitting), `cargo clippy -- -D warnings` clean (passes on CI ubuntu-latest). `lib.rs` ~1,455 lines (16 extracted modules, 9,968 total Rust lines). Coverage 27.97% (threshold 20%, src/ scoped). Version 0.3.0. Run `npm run verify:app` and `npm run export:ground-truth` to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.

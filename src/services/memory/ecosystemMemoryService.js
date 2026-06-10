@@ -1,6 +1,6 @@
 // ecosystemMemoryService.js — re-exports from unifiedMemoryService for backward compatibility
 // Re-export listMemoryItems as-is for backward compat (consumers import this name)
-export { addMemoryItem, addFailureMemory, listMemoryItems, clearExpiredMemory, MEMORY_CATEGORIES as ECOSYSTEM_MEMORY_CATEGORIES, MEMORY_NAMESPACES } from '../unifiedMemoryService';
+export { addMemoryItem, addFailureMemory, listMemoryItems, clearExpiredMemory, tickExpiry, getMemorySize, getAllMemorySizes, checkQuota, deduplicateMemory, deduplicateAllNamespaces, autoTagMemoryItem, exportMemoryItems, importMemoryItems, clearContentHashCache, MEMORY_CATEGORIES as ECOSYSTEM_MEMORY_CATEGORIES, MEMORY_NAMESPACES } from '../unifiedMemoryService';
 
 // Also export unified API for new consumers
 export { listMemory, pushMemory } from '../unifiedMemoryService';

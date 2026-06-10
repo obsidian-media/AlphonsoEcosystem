@@ -1,7 +1,7 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Bot, ChevronsDown, ChevronsUp, Copy, Download, History, Paperclip, Search, Send, Square, Trash2, X } from 'lucide-react';
+import { Bot, ChevronsDown, ChevronsUp, Copy, Download, History, Paperclip, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
 import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
@@ -16,7 +16,9 @@ import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
 import { PipelineResultCard } from './PipelineResultCard';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
+import { startProactiveWatcher } from '../services/proactiveAgentService';
+import { MemorySearch } from './MemorySearch';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -143,22 +145,14 @@ export function ChatView({
   const [streamingTokens, setStreamingTokens] = useState(0);
   const [streamingStartTime, setStreamingStartTime] = useState(null);
   const [streamingElapsed, setStreamingElapsed] = useState(0);
+  const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
+  const [showMemorySearch, setShowMemorySearch] = useState(false);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
   const streamControllerRef = useRef(null);
   const inputRef = useRef(null);
-
-  useKeyboardShortcuts({
-    new_chat: () => {
-      setMessages([]);
-      setPipelineResult(null);
-      setLiveProgress(null);
-    },
-    focus_input: () => inputRef.current?.focus(),
-    abort_generation: handleAbortStream,
-    toggle_search: () => setSearchOpen((prev) => !prev)
-  });
 
   const handleAbortStream = () => {
     if (streamControllerRef.current) {
@@ -173,6 +167,26 @@ export function ChatView({
     setStreamingStartTime(null);
     setStreamingElapsed(0);
   };
+
+  useKeyboardShortcuts({
+    new_chat: () => {
+      setMessages([]);
+      setPipelineResult(null);
+      setLiveProgress(null);
+    },
+    focus_input: () => inputRef.current?.focus(),
+    abort_generation: handleAbortStream,
+    toggle_search: () => setShowMemorySearch((prev) => !prev),
+    show_shortcuts: () => setShowShortcutHelp((prev) => !prev)
+  });
+
+  // Proactive agent watcher
+  useEffect(() => {
+    const cleanup = startProactiveWatcher((suggestion) => {
+      setProactiveSuggestion(suggestion);
+    });
+    return cleanup;
+  }, []);
 
   useEffect(() => {
     if (!streamingStartTime) {
@@ -491,14 +505,15 @@ export function ChatView({
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setSearchOpen((o) => !o); setSearchQuery(''); }}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold ${searchOpen ? 'text-indigo-400' : 'text-zinc-500 hover:text-indigo-400'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${searchOpen ? 'text-indigo-400' : 'text-zinc-500 hover:text-indigo-400'}`}
+              aria-label={searchOpen ? 'Close search' : 'Open search'}
             >
               <Search className="w-3 h-3" />
             </button>
             <button
               onClick={() => setCompactChat((current) => !current)}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold ${compactChat ? 'text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'}`}
-              title={compactChat ? 'Expand chat spacing' : 'Compact chat spacing'}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${compactChat ? 'text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'}`}
+              aria-label={compactChat ? 'Expand chat spacing' : 'Compact chat spacing'}
             >
               {compactChat ? <ChevronsUp className="w-3 h-3" /> : <ChevronsDown className="w-3 h-3" />}
               {compactChat ? 'Focus' : 'Full'}
@@ -506,13 +521,15 @@ export function ChatView({
             <button
               onClick={exportChat}
               disabled={messages.length === 0}
-              className="text-2xs text-zinc-500 hover:text-indigo-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+              className="text-2xs text-zinc-500 hover:text-indigo-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded"
+              aria-label="Export chat as Markdown"
             >
               <Download className="w-3 h-3" /> Export
             </button>
             <button
               onClick={clearChat}
-              className="text-2xs text-zinc-500 hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold"
+              className="text-2xs text-zinc-500 hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded"
+              aria-label="Clear chat"
             >
               <Trash2 className="w-3 h-3" /> Clear
             </button>
@@ -531,7 +548,7 @@ export function ChatView({
             {searchQuery && (
               <span className="text-2xs text-zinc-500">{visibleMessages.length} of {messages.length}</span>
             )}
-            <button onClick={() => setSearchQuery('')} className="text-zinc-600 hover:text-zinc-400">
+            <button onClick={() => setSearchQuery('')} className="text-zinc-600 hover:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded" aria-label="Clear search query">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -580,8 +597,8 @@ export function ChatView({
                       setCopiedMsgId(message.id);
                       setTimeout(() => setCopiedMsgId((id) => id === message.id ? null : id), 1500);
                     }}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800"
-                    title={copiedMsgId === message.id ? 'Copied!' : 'Copy message'}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                    aria-label={copiedMsgId === message.id ? 'Copied' : 'Copy message to clipboard'}
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
@@ -594,7 +611,7 @@ export function ChatView({
         ))}
 
         {isGenerating && (
-          <div className="flex gap-4 max-w-3xl mx-auto w-full">
+          <div className="flex gap-4 max-w-3xl mx-auto w-full" aria-live="polite" aria-label="Streaming response">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
               <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
             </div>
@@ -618,8 +635,8 @@ export function ChatView({
                     </div>
                     <button
                       onClick={handleAbortStream}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors"
-                      title="Stop generation"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                      aria-label="Stop generation"
                     >
                       <Square className="w-2.5 h-2.5" />
                       Stop
@@ -640,8 +657,8 @@ export function ChatView({
                   <span className="text-[10px] text-zinc-500">Initializing... {streamingElapsed}s</span>
                   <button
                     onClick={handleAbortStream}
-                    className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors"
-                    title="Cancel"
+                    className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                    aria-label="Cancel generation"
                   >
                     <Square className="w-2.5 h-2.5" />
                     Cancel
@@ -770,14 +787,14 @@ export function ChatView({
           <div className="absolute -top-10 left-0 flex gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border rounded-t-lg text-2xs font-bold uppercase tracking-widest transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border rounded-t-lg text-2xs font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
                 attachedFile?.error
                   ? 'border-red-500/30 text-red-400'
                   : attachedFile?.name
                     ? 'border-emerald-500/30 text-emerald-400'
                     : 'border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10'
               }`}
-              title="Attach a file to your message"
+              aria-label="Attach a file to your message"
             >
               <Paperclip className="w-3 h-3" />
               {attachedFile?.error ? attachedFile.error : attachedFile?.name ? attachedFile.name : 'ATTACH FILE'}
@@ -796,7 +813,7 @@ export function ChatView({
                 handleSend();
               }
             }}
-            className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
+            className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
           />
           <div className="mt-1 text-2xs text-zinc-500">
             {ollamaStatus.state === 'connected' && !selectedModelMissing
@@ -808,7 +825,8 @@ export function ChatView({
             {isGenerating && (
               <button
                 onClick={() => abortRef.current?.abort()}
-                className="h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest bg-zinc-800 text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all"
+                className="h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest bg-zinc-800 text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                aria-label="Abort and stop"
               >
                 <Square className="w-3.5 h-3.5" />
                 Stop
@@ -817,11 +835,12 @@ export function ChatView({
             <button
               onClick={handleSend}
               disabled={isGenerating || !inputValue.trim()}
-              className={`h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${
+              className={`h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
                 isGenerating || !inputValue.trim()
                   ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
                   : 'bg-white text-zinc-950 hover:bg-indigo-400 hover:text-white shadow-lg'
               }`}
+              aria-label="Send message"
             >
               {isGenerating ? 'Computing...' : 'Run Prompt'}
               <Send className="w-3.5 h-3.5" />
@@ -836,6 +855,90 @@ export function ChatView({
           </div>
         )}
       </div>
+
+      {/* Proactive suggestion banner */}
+      {proactiveSuggestion && !isGenerating && (
+        <div className="max-w-3xl mx-auto w-full mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <Lightbulb className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-amber-200">{proactiveSuggestion.title}</div>
+                <div className="text-xs text-zinc-400 mt-1">{proactiveSuggestion.message}</div>
+                {proactiveSuggestion.actions && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {proactiveSuggestion.actions.map((action, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (action.command) {
+                            setInputValue(action.command);
+                            inputRef.current?.focus();
+                          }
+                          setProactiveSuggestion(null);
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg text-amber-300 text-xs transition-colors"
+                      >
+                        {action.label}
+                        {action.command && <ArrowRight className="w-3 h-3" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setProactiveSuggestion(null)}
+                className="p-1 rounded hover:bg-zinc-800 text-zinc-600 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                aria-label="Dismiss suggestion"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Memory search modal */}
+      {showMemorySearch && (
+        <MemorySearch
+          onClose={() => setShowMemorySearch(false)}
+          onSelect={(item) => {
+            setInputValue(`Tell me about: ${item.title}`);
+            setShowMemorySearch(false);
+          }}
+        />
+      )}
+
+      {/* Keyboard shortcut help modal */}
+      {showShortcutHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutHelp(false)} role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+          <div
+            className="w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-zinc-400" />
+                <div className="text-sm font-semibold text-white">Keyboard Shortcuts</div>
+              </div>
+              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50" aria-label="Close keyboard shortcuts">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+              {getShortcutList().map((shortcut, i) => (
+                <div key={i} className="flex items-center justify-between py-1">
+                  <span className="text-xs text-zinc-300">{shortcut.label}</span>
+                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{shortcut.keys}</span>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t border-white/5 text-[10px] text-zinc-600 text-center">
+              Press ? to toggle this help
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

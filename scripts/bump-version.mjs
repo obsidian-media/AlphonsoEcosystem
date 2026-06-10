@@ -7,6 +7,9 @@
  * - package.json
  * - src-tauri/Cargo.toml
  * - src-tauri/tauri.conf.json
+ * - AGENTS.md
+ * - CLAUDE.md
+ * - ARCHITECTURE.md
  * 
  * Usage:
  *   node scripts/bump-version.mjs patch    # 0.1.0 -> 0.1.1
@@ -62,6 +65,7 @@ console.log('\nFiles to update:');
 console.log('  - package.json');
 console.log('  - src-tauri/Cargo.toml');
 console.log('  - src-tauri/tauri.conf.json');
+console.log('  - AGENTS.md, CLAUDE.md, ARCHITECTURE.md');
 
 // Update package.json
 packageJson.version = newVersion;
@@ -80,6 +84,24 @@ console.log('✓ Updated src-tauri/Cargo.toml');
 tauriConf.version = newVersion;
 writeFileSync(join(ROOT, 'src-tauri', 'tauri.conf.json'), JSON.stringify(tauriConf, null, 2) + '\n');
 console.log('✓ Updated src-tauri/tauri.conf.json');
+
+// Update AGENTS.md, CLAUDE.md, ARCHITECTURE.md (replace old version strings)
+const docsToUpdate = ['AGENTS.md', 'CLAUDE.md', 'ARCHITECTURE.md'];
+for (const doc of docsToUpdate) {
+  try {
+    const docPath = join(ROOT, doc);
+    let docContent = readFileSync(docPath, 'utf-8');
+    // Replace version patterns like "Version: 0.1.0" or "version = "0.1.1""
+    const versionRegex = /(?:(?:Version|version)\s*[=:]\s*["']?)(\d+\.\d+\.\d+)(?:["']?)/g;
+    const newContent = docContent.replace(versionRegex, (match, ver) => match.replace(ver, newVersion));
+    if (newContent !== docContent) {
+      writeFileSync(docPath, newContent);
+      console.log(`✓ Updated ${doc}`);
+    }
+  } catch {
+    // Doc may not exist, skip silently
+  }
+}
 
 console.log(`\nVersion bumped: ${currentVersion} → ${newVersion}`);
 console.log('\nNext steps:');

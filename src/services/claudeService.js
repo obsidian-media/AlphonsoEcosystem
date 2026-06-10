@@ -3,6 +3,26 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
+function delayMs(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function streamWithReconnect(fn, maxRetries = 3) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await delayMs(backoffMs);
+      }
+    }
+  }
+  throw lastError;
+}
+
 function getApiKey() {
   try {
     const raw = localStorage.getItem('alphonso_connector_auth_profiles_v1');
@@ -137,7 +157,7 @@ async function sendClaudeOneShot({ apiKey, model, maxTokens, messages, systemPro
 
 async function sendClaudeStreaming({ apiKey, model, maxTokens, messages, systemPrompt, onChunk }) {
   const startTime = timestampMs();
-  try {
+  const attemptStream = async () => {
     const body = { model, max_tokens: maxTokens, messages, stream: true };
     if (systemPrompt) body.system = systemPrompt;
 
@@ -150,13 +170,16 @@ async function sendClaudeStreaming({ apiKey, model, maxTokens, messages, systemP
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
       const errorMsg = errorBody?.error?.message || `HTTP ${response.status}`;
-      appendConnectorAudit('claude', 'stream_failed', { error: errorMsg, httpStatus: response.status });
-      return { success: false, ok: false, connectorId: 'claude', error: errorMsg, trust: TRUST_STATES.FAILED };
+      throw new Error(errorMsg);
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    const fullText = await readSSEStream(reader, decoder, onChunk);
+    return await readSSEStream(reader, decoder, onChunk);
+  };
+
+  try {
+    const fullText = await streamWithReconnect(attemptStream);
     const latencyMs = timestampMs() - startTime;
 
     appendConnectorAudit('claude', 'stream_success', { model, latencyMs });

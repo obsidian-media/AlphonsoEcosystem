@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Alphonso",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "identifier": "com.shayan.alphonso",
   "build": {
     "frontendDist": "../dist",
@@ -29,15 +29,14 @@
       "showMenuOnLeftClick": false
     },
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:* https://api.anthropic.com https://api.openai.com https://api.telegram.org https://graph.facebook.com https://api.clickup.com https://api.notion.com https://www.googleapis.com https:; img-src 'self' data: blob: https:; media-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:* https://api.anthropic.com https://api.openai.com https://api.telegram.org https://graph.facebook.com https://api.clickup.com https://api.notion.com https://www.googleapis.com https://openrouter.ai https://generativelanguage.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;"
     }
   },
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
     "targets": [
-      "nsis",
-      "msi"
+      "nsis"
     ],
     "icon": [
       "icons/32x32.png",
@@ -46,13 +45,24 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "displayLanguageSelector": false
+      }
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUyN0I0OUQ0RTE1MTdBNEUKUldST2VsSGgxRWw3NHN6OERzd004Zk1NOUs0R1puL2tmd1FUUWVpOXIrdnczbmxPYTllVC9WMlAK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY2MTIzRDQ1NjQ5RTAyNUIKUldSYkFwNWtSVDBTOXV3b2U2ekFSUWV0UE9DRlpJQ0Z2WFY2Y0g0WGhYc2gybStiaUZjcVVDdkQK",
       "endpoints": [
         "https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json"
       ]

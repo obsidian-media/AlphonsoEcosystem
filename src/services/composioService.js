@@ -5,7 +5,7 @@ const COMPOSIO_CONFIG_KEY = 'alphonso_composio_config_v1';
 const COMPOSIO_TOOLS_CACHE_KEY = 'alphonso_composio_tools_v1';
 const COMPOSIO_CACHE_TTL_MS = 300_000; // 5 minutes
 
-const COMPOSIO_API_BASE = 'https://backend.composio.dev/api';
+const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v3';
 
 // ── Configuration ───────────────────────────────────────────────────────────
 

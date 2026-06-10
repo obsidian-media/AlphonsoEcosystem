@@ -6,11 +6,25 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-use super::{
-  inspect_updater_release, now_ms, verify_paths, write_native_proof_stage,
-  NativeProofStageProof,
-  WorkspaceReadinessFinding, WorkspaceReadinessScan,
-};
+use super::{now_ms};
+use crate::workspace::{inspect_updater_release, WorkspaceReadinessFinding, WorkspaceReadinessScan};
+use crate::{verify_paths, write_native_proof_stage};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeProofStageProof {
+  pub stage: String,
+  pub status: String,
+  pub timestamp: String,
+  pub process_id: u32,
+  pub workspace_root: String,
+  pub output_dir: String,
+  pub proof_request_found: bool,
+  pub window_label: Option<String>,
+  pub note: Option<String>,
+  pub error: Option<String>,
+  pub duration_ms: Option<u64>,
+}
 
 const DEFAULT_OUTPUT_DIR: &str = "release/rc0";
 const REQUIRED_ENTRIES: [&str; 4] = ["package.json", "src", "src-tauri", "docs"];

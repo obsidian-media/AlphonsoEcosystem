@@ -1,8 +1,9 @@
 use crate::{now_ms, to_hex};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde::Serialize;
 use serde_json::Value;
 use sha2::Sha256;
+use subtle::ConstantTimeEq;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -168,7 +169,8 @@ pub(crate) fn verify_whatsapp_cloud_webhook_signature(
   mac.update(raw_body.as_bytes());
   let digest = mac.finalize().into_bytes();
   let expected = format!("sha256={}", to_hex(&digest));
-  let valid = expected.eq_ignore_ascii_case(received_header.as_str());
+  let valid = expected.len() == received_header.len()
+    && expected.as_bytes().ct_eq(received_header.as_bytes()).into();
 
   WhatsAppWebhookSignatureProof {
     ok: valid,

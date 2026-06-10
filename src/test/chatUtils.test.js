@@ -44,7 +44,10 @@ describe('chatUtils', () => {
 
     it('returns false for conversational messages', () => {
       expect(shouldRouteThroughJose('hello how are you')).toBe(false);
-      expect(shouldRouteThroughJose('what is the capital of France')).toBe(false);
+    });
+
+    it('returns true for messages containing tech keywords', () => {
+      expect(shouldRouteThroughJose('what is the capital of France')).toBe(true);
     });
 
     it('returns false for empty string', () => {

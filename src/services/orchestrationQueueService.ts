@@ -86,7 +86,7 @@ function writeTransitions(rows: QueueTransition[]): void {
   persistScopeRows(ORCHESTRATION_QUEUE_SCOPE, next, (row: QueueTransition) => ({
     id: row.id,
     data: row,
-    status: row.toStatus || row.status || 'recorded',
+    status: row.toStatus || (row as unknown as Record<string, string>).status || 'recorded',
     confidence: row.confidence || TRUST_STATES.TEMPORARY,
     verificationState: row.verificationState || TRUST_STATES.UNVERIFIED,
     timestampMs: Number(row.timestampMs || timestampMs())

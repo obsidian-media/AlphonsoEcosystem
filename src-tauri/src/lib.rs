@@ -1,15 +1,16 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
 use std::fs;
-use std::io::{BufRead, BufReader};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Listener, Manager, WindowEvent};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_updater::UpdaterExt;
+
 mod audit_log;
+mod connector_commands;
 mod kv_store;
 mod memory_store;
 mod meta_publish;
@@ -18,22 +19,49 @@ mod ollama;
 mod plugin_runtime;
 mod policy_gate;
 mod runway;
+mod search;
+mod telegram;
 mod whatsapp_webhook;
+mod workspace;
+mod youtube;
+
 pub(crate) use audit_log::*;
+pub(crate) use connector_commands::*;
 pub(crate) use kv_store::{kv_get, kv_set, load_settings, save_settings};
 pub(crate) use memory_store::*;
 pub(crate) use meta_publish::*;
-pub(crate) use native_proof::{run_native_rc0_proof, start_native_rc0_proof_if_requested};
+pub(crate) use native_proof::{run_native_rc0_proof, start_native_rc0_proof_if_requested, NativeProofStageProof};
 pub(crate) use ollama::*;
 pub(crate) use plugin_runtime::*;
 pub(crate) use policy_gate::*;
 pub(crate) use runway::{runway_generate_video, runway_list_pending_jobs, runway_resume_task};
-use whatsapp_webhook::{
-  ConnectorInboundMessage,
-  normalize_whatsapp_cloud_inbound,
-  verify_whatsapp_cloud_webhook_challenge,
-  verify_whatsapp_cloud_webhook_signature,
-};
+pub(crate) use workspace::*;
+pub(crate) use youtube::connector_upload_youtube;
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ConnectorInboundMessage {
+  pub(crate) update_id: i64,
+  pub(crate) chat_id: String,
+  pub(crate) from_id: Option<String>,
+  pub(crate) text: String,
+  pub(crate) date_unix: Option<i64>,
+  pub(crate) received_at_ms: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct YouTubeUploadProof {
+  pub(crate) connector_id: String,
+  pub(crate) ok: bool,
+  pub(crate) video_id: Option<String>,
+  pub(crate) url: Option<String>,
+  pub(crate) privacy_status: String,
+  pub(crate) file_path: String,
+  pub(crate) uploaded_at_ms: u64,
+  pub(crate) trust: String,
+  pub(crate) error: Option<String>,
+}
 
 #[derive(Serialize)]
 struct CommandProof {
@@ -104,225 +132,6 @@ struct HandoffExportProof {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct NativeProofStageProof {
-  stage: String,
-  status: String,
-  timestamp: String,
-  process_id: u32,
-  workspace_root: String,
-  output_dir: String,
-  proof_request_found: bool,
-  window_label: Option<String>,
-  note: Option<String>,
-  error: Option<String>,
-  duration_ms: Option<u64>,
-}
-
-#[derive(Serialize)]
-struct WorkspaceWriteProof {
-  file_path: String,
-  relative_path: String,
-  written: bool,
-  written_at_ms: u64,
-  bytes: usize,
-  trust: String,
-}
-
-#[derive(Serialize)]
-struct SymbolHit {
-  symbol: String,
-  count: u64,
-}
-
-#[derive(Serialize)]
-struct WorkspaceProof {
-  root: String,
-  exists: bool,
-  file_count: u64,
-  dir_count: u64,
-  total_bytes: u64,
-  sampled_files: Vec<String>,
-  symbol_hits: Vec<SymbolHit>,
-  checked_at_ms: u64,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize)]
-struct OcrCapabilityProof {
-  available: bool,
-  engine: String,
-  message: String,
-  checked_at_ms: u64,
-  trust: String,
-}
-
-#[derive(Serialize)]
-struct OcrAdapterProof {
-  adapter: String,
-  engine_path: String,
-  image_path: Option<String>,
-  started_at_ms: u64,
-  finished_at_ms: u64,
-  success: bool,
-  exit_code: Option<i32>,
-  stdout: String,
-  stderr: String,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize)]
-struct FileSymbolSummary {
-  path: String,
-  language: String,
-  bytes: u64,
-  symbol_hits: Vec<SymbolHit>,
-  dependencies: Vec<String>,
-  trust: String,
-}
-
-#[derive(Serialize)]
-struct WorkspaceSymbolIndex {
-  root: String,
-  generated_at_ms: u64,
-  max_files: u64,
-  files_indexed: u64,
-  totals: Vec<SymbolHit>,
-  dependency_edges: usize,
-  files: Vec<FileSymbolSummary>,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct WorkspaceReadinessFinding {
-  id: String,
-  path: String,
-  line_number: u64,
-  surface: String,
-  kind: String,
-  priority: String,
-  severity: String,
-  message: String,
-  excerpt: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct WorkspaceReadinessScan {
-  root: String,
-  generated_at_ms: u64,
-  files_scanned: u64,
-  findings: Vec<WorkspaceReadinessFinding>,
-  placeholder_count: u64,
-  todo_count: u64,
-  setup_required_count: u64,
-  blocked_count: u64,
-  failed_count: u64,
-  partial_count: u64,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ReleaseArtifactProof {
-  bundle_dir: String,
-  manifest_dir: String,
-  installer_path: Option<String>,
-  installer_found: bool,
-  signature_path: Option<String>,
-  signature_found: bool,
-  latest_json_path: Option<String>,
-  latest_json_found: bool,
-  manifest_valid: bool,
-  manifest_version: Option<String>,
-  manifest_url: Option<String>,
-  manifest_signature: Option<String>,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ResearchSourceInput {
-  url: String,
-  source_type: Option<String>,
-  official: Option<bool>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ResearchSourceProof {
-  url: String,
-  source_type: String,
-  official: bool,
-  fetched_at_ms: u64,
-  http_status: Option<u16>,
-  ok: bool,
-  title: Option<String>,
-  snippet: Option<String>,
-  date_checked: String,
-  confidence: String,
-  risk_level: String,
-  verification_state: String,
-  error: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ResearchSearchInput {
-  query: String,
-  source_type: Option<String>,
-  limit: Option<u8>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ResearchSearchResult {
-  url: String,
-  title: String,
-  snippet: Option<String>,
-  source_type: String,
-  provider: String,
-  date_checked: String,
-  confidence: String,
-  risk_level: String,
-  verification_state: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AppUpdateCheckProof {
-  configured: bool,
-  available: bool,
-  current_version: String,
-  latest_version: Option<String>,
-  notes: Option<String>,
-  pub_date: Option<String>,
-  download_url: Option<String>,
-  checked_at_ms: u64,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct JoseAssignmentProof {
-  agent: String,
-  title: String,
-  rationale: String,
-  action_type: String,
-  risk_level: String,
-  requires_approval: bool,
-  command_preview: String,
-  decomposition: Vec<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 struct ConnectorPollProof {
   connector_id: String,
   ok: bool,
@@ -348,60 +157,86 @@ struct ConnectorSendProof {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct WebhookPostProof {
-  ok: bool,
-  platform: String,
-  connection_name: Option<String>,
-  webhook_host: Option<String>,
-  http_status: Option<u16>,
-  response_preview: Option<String>,
-  sent_at_ms: u64,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct YouTubeUploadProof {
-  connector_id: String,
-  ok: bool,
-  video_id: Option<String>,
-  url: Option<String>,
-  privacy_status: String,
-  file_path: String,
-  uploaded_at_ms: u64,
-  trust: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct MediaGenerationProof {
-  connector_id: String,
-  ok: bool,
-  provider: String,
-  job_id: Option<String>,
-  output_paths: Vec<String>,
-  preview_base64: Option<String>,
-  queued_at_ms: u64,
-  trust: String,
+struct OcrCapabilityProof {
+  available: bool,
+  engine: String,
   message: String,
-  error: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct LocalRuntimeHealthProof {
-  connector_id: String,
-  provider: String,
-  ok: bool,
-  endpoint: String,
-  probe_path: String,
-  http_status: Option<u16>,
   checked_at_ms: u64,
   trust: String,
-  message: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OcrAdapterProof {
+  adapter: String,
+  engine_path: String,
+  image_path: Option<String>,
+  started_at_ms: u64,
+  finished_at_ms: u64,
+  success: bool,
+  exit_code: Option<i32>,
+  stdout: String,
+  stderr: String,
+  trust: String,
   error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct JoseAssignmentProof {
+  agent: String,
+  title: String,
+  rationale: String,
+  action_type: String,
+  risk_level: String,
+  requires_approval: bool,
+  command_preview: String,
+  decomposition: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppUpdateCheckProof {
+  configured: bool,
+  available: bool,
+  current_version: String,
+  latest_version: Option<String>,
+  notes: Option<String>,
+  pub_date: Option<String>,
+  download_url: Option<String>,
+  checked_at_ms: u64,
+  trust: String,
+  error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UrlOpenProof {
+  url: String,
+  opened: bool,
+  opened_at_ms: u64,
+  trust: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UrlFetchProof {
+  url: String,
+  status: u16,
+  content: String,
+  title: String,
+  fetched_at_ms: u64,
+  trust: String,
+  error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClipboardProof {
+  action: String,
+  content: String,
+  performed_at_ms: u64,
+  trust: String,
 }
 
 pub(crate) fn now_ms() -> u64 {
@@ -419,6 +254,14 @@ pub(crate) fn to_hex(bytes: &[u8]) -> String {
   out
 }
 
+pub(crate) fn unix_now_iso() -> String {
+  let seconds = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map(|duration| duration.as_secs())
+    .unwrap_or(0);
+  format!("unix:{}", seconds)
+}
+
 pub(crate) fn app_data_subdir(app: &tauri::AppHandle, subdir: &str) -> Result<PathBuf, String> {
   let mut dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
   dir.push(subdir);
@@ -426,54 +269,14 @@ pub(crate) fn app_data_subdir(app: &tauri::AppHandle, subdir: &str) -> Result<Pa
   Ok(dir)
 }
 
-fn load_dotenv_file(path: &Path) -> usize {
-  let file = match fs::File::open(path) {
-    Ok(f) => f,
-    Err(_) => return 0,
-  };
-  let mut loaded = 0usize;
-  for line in BufReader::new(file).lines().map_while(Result::ok) {
-    let trimmed = line.trim().to_string();
-    if trimmed.is_empty() || trimmed.starts_with('#') {
-      continue;
-    }
-    if let Some((key, val)) = trimmed.split_once('=') {
-      let k = key.trim();
-      let v = val.trim().trim_matches('"').trim_matches('\'');
-      if !k.is_empty() && std::env::var_os(k).is_none() {
-        unsafe { std::env::set_var(k, v) };
-        loaded += 1;
-      }
-    }
-  }
-  loaded
+pub(crate) fn dedup_strings(mut values: Vec<String>) -> Vec<String> {
+  values.sort();
+  values.dedup();
+  values
 }
 
 fn load_dotenv() {
-  let exe_dir = std::env::current_exe()
-    .ok()
-    .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-    .unwrap_or_default();
-
-  let candidates = [
-    std::env::current_dir().unwrap_or_default().join(".env"),
-    exe_dir.join(".env"),
-    dirs_home().join(".alphonso").join(".env"),
-  ];
-  for path in &candidates {
-    let n = load_dotenv_file(path);
-    if n > 0 {
-      eprintln!("[alphonso] loaded {} var(s) from {}", n, path.display());
-      return;
-    }
-  }
-}
-
-fn dirs_home() -> PathBuf {
-  std::env::var("USERPROFILE")
-    .or_else(|_| std::env::var("HOME"))
-    .map(PathBuf::from)
-    .unwrap_or_else(|_| PathBuf::from("."))
+  dotenvy::dotenv().ok();
 }
 
 fn native_proof_output_dir() -> PathBuf {
@@ -543,2070 +346,522 @@ fn write_native_proof_event(output_dir: &Path, payload: &Value) -> Result<(), St
   Ok(())
 }
 
-fn connector_cursor_path(app: &tauri::AppHandle, connector_id: &str) -> Result<PathBuf, String> {
-  let mut dir = app_data_subdir(app, "connectors")?;
-  dir.push(format!("{connector_id}_cursor.json"));
-  Ok(dir)
-}
-
-fn read_connector_cursor(app: &tauri::AppHandle, connector_id: &str) -> Option<i64> {
-  let path = connector_cursor_path(app, connector_id).ok()?;
-  let raw = fs::read_to_string(path).ok()?;
-  let parsed: Value = serde_json::from_str(&raw).ok()?;
-  parsed.get("cursor").and_then(|value| value.as_i64())
-}
-
-fn write_connector_cursor(app: &tauri::AppHandle, connector_id: &str, cursor: i64) -> Result<(), String> {
-  let path = connector_cursor_path(app, connector_id)?;
-  let payload = serde_json::json!({
-    "connectorId": connector_id,
-    "cursor": cursor,
-    "updatedAtMs": now_ms()
-  });
-  fs::write(path, payload.to_string()).map_err(|error| error.to_string())
-}
-
-fn unix_now_iso() -> String {
-  let seconds = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .map(|duration| duration.as_secs())
-    .unwrap_or(0);
-  format!("unix:{}", seconds)
-}
-
-fn clean_ws(input: &str) -> String {
-  input.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-fn extract_title(html: &str) -> Option<String> {
-  let lower = html.to_ascii_lowercase();
-  let start = lower.find("<title")?;
-  let start_close = lower[start..].find('>')? + start + 1;
-  let end = lower[start_close..].find("</title>")? + start_close;
-  let title = clean_ws(&html[start_close..end]);
-  if title.is_empty() { None } else { Some(title.chars().take(180).collect()) }
-}
-
-fn strip_html_tags(input: &str) -> String {
-  let mut output = String::new();
-  let mut in_tag = false;
-  for ch in input.chars() {
-    match ch {
-      '<' => {
-        in_tag = true;
-        output.push(' ');
-      }
-      '>' => {
-        in_tag = false;
-        output.push(' ');
-      }
-      _ if !in_tag => output.push(ch),
-      _ => {}
-    }
-  }
-  clean_ws(&output)
-}
-
-fn decode_html_entities(input: &str) -> String {
-  input
-    .replace("&amp;", "&")
-    .replace("&lt;", "<")
-    .replace("&gt;", ">")
-    .replace("&quot;", "\"")
-    .replace("&#39;", "'")
-    .replace("&#x2F;", "/")
-    .replace("&nbsp;", " ")
-}
-
-fn extract_attr(tag_html: &str, attr_name: &str) -> Option<String> {
-  let needle = format!("{attr_name}=");
-  let start = tag_html.find(&needle)? + needle.len();
-  let rest = &tag_html[start..];
-  let quote = rest.chars().next()?;
-  if quote != '"' && quote != '\'' {
-    return None;
-  }
-  let value_start = start + quote.len_utf8();
-  let value_rest = &tag_html[value_start..];
-  let value_end = value_rest.find(quote)?;
-  Some(tag_html[value_start..value_start + value_end].to_string())
-}
-
-fn decode_ddg_result_url(raw_href: &str) -> Option<String> {
-  let clean = decode_html_entities(raw_href.trim());
-  if let Ok(parsed) = reqwest::Url::parse(&clean) {
-    if parsed.scheme() == "http" || parsed.scheme() == "https" {
-      if let Some(uddg) = parsed
-        .query_pairs()
-        .find(|(key, _)| key == "uddg")
-        .map(|(_, value)| value.to_string())
-      {
-        if let Ok(decoded) = reqwest::Url::parse(&uddg) {
-          if decoded.scheme() == "http" || decoded.scheme() == "https" {
-            return Some(decoded.to_string());
-          }
-        }
-      }
-      return Some(parsed.to_string());
-    }
-  }
-
-  let prefixed = if clean.starts_with("//") {
-    format!("https:{clean}")
-  } else if clean.starts_with('/') {
-    format!("https://duckduckgo.com{clean}")
+fn normalize_bridge_path_prefix(raw: &str) -> String {
+  let trimmed = raw.trim();
+  if trimmed.is_empty() {
+    "/api/alphonso-bridge".to_string()
+  } else if trimmed.starts_with('/') {
+    trimmed.to_string()
   } else {
-    clean
-  };
-
-  if let Ok(parsed) = reqwest::Url::parse(&prefixed) {
-    if let Some(uddg) = parsed
-      .query_pairs()
-      .find(|(key, _)| key == "uddg")
-      .map(|(_, value)| value.to_string())
-    {
-      if let Ok(decoded) = reqwest::Url::parse(&uddg) {
-        if decoded.scheme() == "http" || decoded.scheme() == "https" {
-          return Some(decoded.to_string());
-        }
-      }
-    }
-    if parsed.scheme() == "http" || parsed.scheme() == "https" {
-      return Some(parsed.to_string());
-    }
+    format!("/{}", trimmed)
   }
-  None
 }
 
-fn json_value_to_plain_string(value: &Value) -> String {
-  if let Some(text) = value.as_str() {
-    return text.to_string();
-  }
-  if let Some(number) = value.as_i64() {
-    return number.to_string();
-  }
-  if let Some(number) = value.as_u64() {
-    return number.to_string();
-  }
-  value.to_string()
-}
-
-fn mime_for_video_path(path: &Path) -> String {
-  let extension = path
-    .extension()
-    .and_then(|value| value.to_str())
-    .map(|value| value.to_ascii_lowercase())
-    .unwrap_or_default();
-  match extension.as_str() {
-    "mp4" => "video/mp4",
-    "mov" => "video/quicktime",
-    "mkv" => "video/x-matroska",
-    "avi" => "video/x-msvideo",
-    "webm" => "video/webm",
-    "mpeg" | "mpg" => "video/mpeg",
-    _ => "application/octet-stream",
-  }
-  .to_string()
-}
-
-#[allow(dead_code)]
-fn mime_for_image_path(path: &Path) -> String {
-  let extension = path
-    .extension()
-    .and_then(|value| value.to_str())
-    .map(|value| value.to_ascii_lowercase())
-    .unwrap_or_default();
-  match extension.as_str() {
-    "png" => "image/png",
-    "jpg" | "jpeg" => "image/jpeg",
-    "gif" => "image/gif",
-    "webp" => "image/webp",
-    "bmp" => "image/bmp",
-    "tif" | "tiff" => "image/tiff",
-    _ => "application/octet-stream",
-  }
-  .to_string()
-}
-
-#[allow(dead_code)]
-fn looks_like_video_path(path: &Path) -> bool {
-  matches!(
-    path.extension()
-      .and_then(|value| value.to_str())
-      .map(|value| value.to_ascii_lowercase())
-      .as_deref(),
-    Some("mp4" | "mov" | "mkv" | "avi" | "webm" | "mpeg" | "mpg" | "m4v")
-  )
-}
-
-#[allow(dead_code)]
-fn looks_like_image_path(path: &Path) -> bool {
-  matches!(
-    path.extension()
-      .and_then(|value| value.to_str())
-      .map(|value| value.to_ascii_lowercase())
-      .as_deref(),
-    Some("png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tif" | "tiff")
-  )
-}
-
-async fn youtube_access_token() -> Result<String, String> {
-  let client_id = std::env::var("YOUTUBE_CLIENT_ID").unwrap_or_default();
-  let client_secret = std::env::var("YOUTUBE_CLIENT_SECRET").unwrap_or_default();
-  let refresh_token = std::env::var("YOUTUBE_REFRESH_TOKEN").unwrap_or_default();
-  if client_id.trim().is_empty() || client_secret.trim().is_empty() || refresh_token.trim().is_empty() {
-    return Err("YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, or YOUTUBE_REFRESH_TOKEN is missing.".to_string());
-  }
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(20))
-    .user_agent("Alphonso-YouTube-Connector/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-  let response = client
-    .post("https://oauth2.googleapis.com/token")
-    .form(&[
-      ("client_id", client_id.trim()),
-      ("client_secret", client_secret.trim()),
-      ("refresh_token", refresh_token.trim()),
-      ("grant_type", "refresh_token"),
-    ])
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let payload: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_text = payload
-      .get("error_description")
-      .and_then(|value| value.as_str())
-      .or_else(|| payload.get("error").and_then(|value| value.as_str()))
-      .unwrap_or("OAuth token refresh failed.");
-    return Err(error_text.to_string());
-  }
-  let token = payload
-    .get("access_token")
-    .and_then(|value| value.as_str())
-    .unwrap_or("")
-    .trim()
-    .to_string();
-  if token.is_empty() {
-    return Err("OAuth token refresh succeeded but access_token was missing.".to_string());
-  }
-  Ok(token)
-}
-
-fn parse_ddg_results(html: &str, source_type: &str, limit: usize) -> Vec<ResearchSearchResult> {
-  let mut results: Vec<ResearchSearchResult> = vec![];
-  let mut cursor = 0usize;
-  let max_results = limit.clamp(1, 12);
-  let lower = html.to_ascii_lowercase();
-
-  while cursor < lower.len() && results.len() < max_results {
-    let Some(anchor_rel) = lower[cursor..].find("result__a") else {
-      break;
-    };
-    let anchor_hint = cursor + anchor_rel;
-    let Some(tag_start_rel) = lower[..anchor_hint].rfind("<a") else {
-      cursor = anchor_hint + "result__a".len();
-      continue;
-    };
-    let Some(tag_end_rel) = lower[anchor_hint..].find("</a>") else {
-      break;
-    };
-    let tag_end = anchor_hint + tag_end_rel + "</a>".len();
-    let anchor_html = &html[tag_start_rel..tag_end];
-
-    let href_raw = match extract_attr(anchor_html, "href") {
-      Some(href) => href,
-      None => {
-        cursor = tag_end;
-        continue;
-      }
-    };
-    let Some(url) = decode_ddg_result_url(&href_raw) else {
-      cursor = tag_end;
-      continue;
-    };
-
-    if results.iter().any(|item| item.url == url) {
-      cursor = tag_end;
-      continue;
-    }
-
-    let title_raw = strip_html_tags(anchor_html);
-    let title = decode_html_entities(&title_raw);
-
-    let search_window_end = (tag_end + 3000).min(html.len());
-    let window_lower = &lower[tag_end..search_window_end];
-    let snippet = window_lower
-      .find("result__snippet")
-      .and_then(|snippet_rel| {
-        let snippet_hint = tag_end + snippet_rel;
-        let snippet_start = lower[..snippet_hint].rfind('<')?;
-        let snippet_tail = &lower[snippet_hint..search_window_end];
-        let close_rel = snippet_tail.find("</a>").or_else(|| snippet_tail.find("</div>"))?;
-        let snippet_end = snippet_hint + close_rel + 4;
-        let snippet_html = &html[snippet_start..snippet_end];
-        let plain = decode_html_entities(&strip_html_tags(snippet_html));
-        if plain.is_empty() {
-          None
-        } else {
-          Some(plain.chars().take(320).collect::<String>())
-        }
-      });
-
-    results.push(ResearchSearchResult {
-      url,
-      title: if title.is_empty() { "Untitled result".to_string() } else { title.chars().take(180).collect() },
-      snippet,
-      source_type: source_type.to_string(),
-      provider: "duckduckgo_html".to_string(),
-      date_checked: unix_now_iso(),
-      confidence: "inferred".to_string(),
-      risk_level: "medium".to_string(),
-      verification_state: "inferred".to_string(),
-    });
-    cursor = tag_end;
-  }
-
-  results
-}
-
-fn symbol_counts_for_text(content: &str) -> [u64; 7] {
-  let mut counts = [0_u64; 7];
-  for line in content.lines() {
-    let trimmed = line.trim_start();
-    if trimmed.starts_with("fn ") {
-      counts[0] += 1;
-    }
-    if trimmed.starts_with("function ") || trimmed.contains(" function ") {
-      counts[1] += 1;
-    }
-    if trimmed.starts_with("class ") {
-      counts[2] += 1;
-    }
-    if trimmed.starts_with("const ") || trimmed.starts_with("let ") {
-      counts[3] += 1;
-    }
-    if trimmed.starts_with("async fn ") || trimmed.starts_with("async function ") {
-      counts[4] += 1;
-    }
-    if trimmed.starts_with("import ") || trimmed.starts_with("use ") {
-      counts[5] += 1;
-    }
-    if trimmed.starts_with("export ") || trimmed.starts_with("pub ") {
-      counts[6] += 1;
-    }
-  }
-  counts
-}
-
-fn language_for_extension(extension: &str) -> String {
-  match extension {
-    "rs" => "rust",
-    "js" => "javascript",
-    "jsx" => "react-jsx",
-    "ts" => "typescript",
-    "tsx" => "react-tsx",
-    "py" => "python",
-    _ => "unknown",
-  }.to_string()
-}
-
-fn symbol_hits_from_counts(counts: [u64; 7]) -> Vec<SymbolHit> {
-  vec![
-    SymbolHit { symbol: "rust_fn".to_string(), count: counts[0] },
-    SymbolHit { symbol: "js_function".to_string(), count: counts[1] },
-    SymbolHit { symbol: "class".to_string(), count: counts[2] },
-    SymbolHit { symbol: "const_or_let".to_string(), count: counts[3] },
-    SymbolHit { symbol: "async_decl".to_string(), count: counts[4] },
-    SymbolHit { symbol: "import_or_use".to_string(), count: counts[5] },
-    SymbolHit { symbol: "export_or_pub".to_string(), count: counts[6] },
-  ]
-}
-
-fn is_allowed_webhook_url(webhook_url: &str) -> bool {
-  let normalized = webhook_url.trim().to_ascii_lowercase();
-  normalized.starts_with("https://")
-    || normalized.starts_with("http://localhost")
-    || normalized.starts_with("http://127.0.0.1")
-    || normalized.starts_with("http://[::1]")
-}
-
-fn webhook_host_from_url(webhook_url: &str) -> Option<String> {
-  let trimmed = webhook_url.trim();
-  let after_scheme = trimmed.split_once("://")?.1;
-  let host = after_scheme.split('/').next()?.trim();
-  if host.is_empty() {
-    None
-  } else {
-    Some(host.to_string())
-  }
+fn trim_trailing_slashes(raw: &str) -> String {
+  raw.trim().trim_end_matches('/').to_string()
 }
 
 #[tauri::command]
-async fn connector_poll_telegram(
-  http_client: tauri::State<'_, reqwest::Client>,
-  app: tauri::AppHandle,
-  limit: Option<u8>,
-) -> Result<ConnectorPollProof, String> {
-  let checked_at_ms = now_ms();
-  let token = std::env::var("TELEGRAM_BOT_TOKEN")
-    .map(|value| value.trim().to_string())
-    .unwrap_or_default();
-  if token.is_empty() {
-    return Ok(ConnectorPollProof {
-      connector_id: "telegram".to_string(),
-      ok: false,
-      count: 0,
-      cursor: read_connector_cursor(&app, "telegram"),
-      messages: vec![],
-      checked_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("TELEGRAM_BOT_TOKEN is not configured.".to_string()),
-    });
+fn execute_command_verified(program: String, args: Vec<String>, cwd: Option<String>) -> Result<CommandProof, String> {
+  let started = now_ms();
+
+  if !allowed_program(&program) {
+    return Err("Program is not allowed by Alphonso supervised command policy.".to_string());
   }
 
-  let current_cursor = read_connector_cursor(&app, "telegram");
-  let max_limit = limit.unwrap_or(10).clamp(1, 50);
-  let client = http_client.inner();
-  let endpoint = format!("https://api.telegram.org/bot{}/getUpdates", token);
+  let mut command = Command::new(&program);
+  command.args(&args);
 
-  let mut query: Vec<(String, String)> = vec![
-    ("limit".to_string(), max_limit.to_string()),
-    ("timeout".to_string(), "0".to_string()),
-    ("allowed_updates".to_string(), "[\"message\"]".to_string()),
-  ];
-  if let Some(cursor) = current_cursor {
-    query.push(("offset".to_string(), (cursor + 1).to_string()));
+  if let Some(path) = &cwd {
+    command.current_dir(path);
   }
 
-  let response = client
-    .get(endpoint)
-    .query(&query)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let payload: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    return Ok(ConnectorPollProof {
-      connector_id: "telegram".to_string(),
-      ok: false,
-      count: 0,
-      cursor: current_cursor,
-      messages: vec![],
-      checked_at_ms,
-      trust: "failed".to_string(),
-      error: Some(format!("Telegram getUpdates returned HTTP {}", status.as_u16())),
-    });
-  }
-  if !payload.get("ok").and_then(|value| value.as_bool()).unwrap_or(false) {
-    let description = payload
-      .get("description")
-      .and_then(|value| value.as_str())
-      .unwrap_or("Telegram API returned ok=false.");
-    return Ok(ConnectorPollProof {
-      connector_id: "telegram".to_string(),
-      ok: false,
-      count: 0,
-      cursor: current_cursor,
-      messages: vec![],
-      checked_at_ms,
-      trust: "failed".to_string(),
-      error: Some(description.to_string()),
-    });
-  }
+  let output = command.output().map_err(|error| error.to_string())?;
+  let finished = now_ms();
+  let success = output.status.success();
 
-  let mut next_cursor = current_cursor;
-  let mut messages: Vec<ConnectorInboundMessage> = vec![];
-  if let Some(rows) = payload.get("result").and_then(|value| value.as_array()) {
-    for row in rows {
-      let update_id = row.get("update_id").and_then(|value| value.as_i64()).unwrap_or(0);
-      if update_id > 0 {
-        next_cursor = Some(next_cursor.map(|cursor| cursor.max(update_id)).unwrap_or(update_id));
-      }
-      let message = row.get("message").or_else(|| row.get("edited_message"));
-      let Some(message_value) = message else { continue };
-
-      let chat_id = message_value
-        .get("chat")
-        .and_then(|chat| chat.get("id"))
-        .map(json_value_to_plain_string)
-        .unwrap_or_else(|| "unknown".to_string());
-      let from_id = message_value
-        .get("from")
-        .and_then(|from| from.get("id"))
-        .map(json_value_to_plain_string);
-      let text = message_value
-        .get("text")
-        .and_then(|value| value.as_str())
-        .or_else(|| message_value.get("caption").and_then(|value| value.as_str()))
-        .unwrap_or("")
-        .trim()
-        .to_string();
-      if text.is_empty() {
-        continue;
-      }
-      let date_unix = message_value.get("date").and_then(|value| value.as_i64());
-      messages.push(ConnectorInboundMessage {
-        update_id,
-        chat_id,
-        from_id,
-        text,
-        date_unix,
-        received_at_ms: checked_at_ms,
-      });
-    }
-  }
-
-  if let Some(cursor) = next_cursor {
-    let _ = write_connector_cursor(&app, "telegram", cursor);
-  }
-
-  Ok(ConnectorPollProof {
-    connector_id: "telegram".to_string(),
-    ok: true,
-    count: messages.len(),
-    cursor: next_cursor,
-    messages,
-    checked_at_ms,
-    trust: "verified".to_string(),
-    error: None,
+  Ok(CommandProof {
+    program,
+    args,
+    cwd,
+    started_at_ms: started,
+    finished_at_ms: finished,
+    success,
+    exit_code: output.status.code(),
+    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+    trust: if success { "verified".to_string() } else { "failed".to_string() },
   })
 }
 
 #[tauri::command]
-async fn connector_send_telegram(
-  http_client: tauri::State<'_, reqwest::Client>,
-  chat_id: String,
-  text: String,
-) -> Result<ConnectorSendProof, String> {
-  let sent_at_ms = now_ms();
-  let token = std::env::var("TELEGRAM_BOT_TOKEN")
-    .map(|value| value.trim().to_string())
-    .unwrap_or_default();
-  if token.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "telegram".to_string(),
-      ok: false,
-      target: chat_id,
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("TELEGRAM_BOT_TOKEN is not configured.".to_string()),
-    });
-  }
-
-  let clean_target = chat_id.trim().to_string();
-  let clean_text = text.trim().to_string();
-  if clean_target.is_empty() || clean_text.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "telegram".to_string(),
-      ok: false,
-      target: clean_target,
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("chat_id and text are required.".to_string()),
-    });
-  }
-
-  let client = http_client.inner();
-  let endpoint = format!("https://api.telegram.org/bot{}/sendMessage", token);
-  let payload = serde_json::json!({
-    "chat_id": clean_target,
-    "text": clean_text,
-    "disable_web_page_preview": true
-  });
-
-  let response = client
-    .post(endpoint)
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() || !body.get("ok").and_then(|value| value.as_bool()).unwrap_or(false) {
-    let description = body
-      .get("description")
-      .and_then(|value| value.as_str())
-      .unwrap_or("Telegram sendMessage failed.");
-    return Ok(ConnectorSendProof {
-      connector_id: "telegram".to_string(),
-      ok: false,
-      target: payload.get("chat_id").map(json_value_to_plain_string).unwrap_or_default(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(description.to_string()),
-    });
-  }
-
-  let external_id = body
-    .get("result")
-    .and_then(|result| result.get("message_id"))
-    .map(json_value_to_plain_string);
-
-  Ok(ConnectorSendProof {
-    connector_id: "telegram".to_string(),
-    ok: true,
-    target: payload.get("chat_id").map(json_value_to_plain_string).unwrap_or_default(),
-    external_id,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_send_whatsapp(to: String, text: String) -> Result<ConnectorSendProof, String> {
-  let sent_at_ms = now_ms();
-  let provider = std::env::var("WHATSAPP_PROVIDER")
-    .map(|value| value.trim().to_ascii_lowercase())
-    .unwrap_or_else(|_| "cloud_api".to_string());
-  let clean_to = to.trim().to_string();
-  let clean_text = text.trim().to_string();
-  if clean_to.is_empty() || clean_text.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      target: clean_to,
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("target and text are required.".to_string()),
-    });
-  }
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(20))
-    .user_agent("Alphonso-WhatsApp-Bridge/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  if provider == "twilio" {
-    let account_sid = std::env::var("WHATSAPP_TWILIO_ACCOUNT_SID").unwrap_or_default();
-    let auth_token = std::env::var("WHATSAPP_TWILIO_AUTH_TOKEN").unwrap_or_default();
-    let from_number = std::env::var("WHATSAPP_TWILIO_FROM").unwrap_or_default();
-    if account_sid.trim().is_empty() || auth_token.trim().is_empty() || from_number.trim().is_empty() {
-      return Ok(ConnectorSendProof {
-        connector_id: "whatsapp".to_string(),
-        ok: false,
-        target: clean_to,
-        external_id: None,
-        sent_at_ms,
-        trust: "unverified".to_string(),
-        error: Some("Twilio provider is selected, but WHATSAPP_TWILIO_ACCOUNT_SID, WHATSAPP_TWILIO_AUTH_TOKEN, or WHATSAPP_TWILIO_FROM is missing.".to_string()),
-      });
-    }
-
-    let endpoint = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid.trim());
-    let formatted_to = if clean_to.starts_with("whatsapp:") { clean_to.clone() } else { format!("whatsapp:{clean_to}") };
-    let formatted_from = if from_number.trim().starts_with("whatsapp:") {
-      from_number.trim().to_string()
-    } else {
-      format!("whatsapp:{}", from_number.trim())
-    };
-    let form = [
-      ("To", formatted_to.clone()),
-      ("From", formatted_from),
-      ("Body", clean_text.clone()),
-    ];
-
-    let response = client
-      .post(endpoint)
-      .basic_auth(account_sid.trim(), Some(auth_token.trim()))
-      .form(&form)
-      .send()
-      .await
-      .map_err(|error| error.to_string())?;
-    let status = response.status();
-    let body: Value = response.json().await.map_err(|error| error.to_string())?;
-    if !status.is_success() {
-      let error_message = body
-        .get("message")
-        .and_then(|value| value.as_str())
-        .unwrap_or("Twilio WhatsApp send failed.");
-      return Ok(ConnectorSendProof {
-        connector_id: "whatsapp".to_string(),
-        ok: false,
-        target: formatted_to,
-        external_id: None,
-        sent_at_ms,
-        trust: "failed".to_string(),
-        error: Some(error_message.to_string()),
-      });
-    }
-    let external_id = body.get("sid").and_then(|value| value.as_str()).map(|value| value.to_string());
-    return Ok(ConnectorSendProof {
-      connector_id: "whatsapp".to_string(),
-      ok: true,
-      target: formatted_to,
-      external_id,
-      sent_at_ms,
-      trust: "verified".to_string(),
-      error: None,
-    });
-  }
-
-  let access_token = std::env::var("WHATSAPP_ACCESS_TOKEN").unwrap_or_default();
-  let phone_number_id = std::env::var("WHATSAPP_PHONE_NUMBER_ID").unwrap_or_default();
-  if access_token.trim().is_empty() || phone_number_id.trim().is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      target: clean_to,
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("Cloud API provider is selected, but WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID is missing.".to_string()),
-    });
-  }
-
-  let endpoint = format!(
-    "https://graph.facebook.com/v20.0/{}/messages",
-    phone_number_id.trim()
-  );
-  let payload = serde_json::json!({
-    "messaging_product": "whatsapp",
-    "to": clean_to,
-    "type": "text",
-    "text": { "body": clean_text, "preview_url": false }
-  });
-
-  let response = client
-    .post(endpoint)
-    .bearer_auth(access_token.trim())
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = body
-      .get("error")
-      .and_then(|value| value.get("message"))
-      .and_then(|value| value.as_str())
-      .unwrap_or("WhatsApp Cloud API send failed.");
-    return Ok(ConnectorSendProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      target: payload.get("to").and_then(|value| value.as_str()).unwrap_or_default().to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(error_message.to_string()),
-    });
-  }
-  let external_id = body
-    .get("messages")
-    .and_then(|value| value.as_array())
-    .and_then(|rows| rows.first())
-    .and_then(|first| first.get("id"))
-    .and_then(|value| value.as_str())
-    .map(|value| value.to_string());
-  Ok(ConnectorSendProof {
-    connector_id: "whatsapp".to_string(),
-    ok: true,
-    target: payload.get("to").and_then(|value| value.as_str()).unwrap_or_default().to_string(),
-    external_id,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_send_notion(title: String, content: String, parent_page_id: Option<String>) -> Result<ConnectorSendProof, String> {
-  let sent_at_ms = now_ms();
-  let token = std::env::var("NOTION_API_KEY").unwrap_or_default();
-  if token.trim().is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "notion".to_string(),
-      ok: false,
-      target: "notion".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("NOTION_API_KEY is not configured.".to_string()),
-    });
-  }
-
-  let clean_title = title.trim().to_string();
-  let clean_content = content.trim().to_string();
-  if clean_title.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "notion".to_string(),
-      ok: false,
-      target: "notion".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("title is required.".to_string()),
-    });
-  }
-
-  let env_parent = std::env::var("NOTION_PARENT_PAGE_ID").unwrap_or_default();
-  let target_parent = parent_page_id
-    .unwrap_or_default()
-    .trim()
-    .to_string();
-  let parent = if !target_parent.is_empty() {
-    target_parent
-  } else {
-    env_parent.trim().to_string()
-  };
-  if parent.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "notion".to_string(),
-      ok: false,
-      target: "notion".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("NOTION_PARENT_PAGE_ID is missing and no parent_page_id override was provided.".to_string()),
-    });
-  }
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(20))
-    .user_agent("Alphonso-Notion-Bridge/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  let payload = serde_json::json!({
-    "parent": { "page_id": parent },
-    "properties": {
-      "title": {
-        "title": [
-          {
-            "type": "text",
-            "text": { "content": clean_title }
-          }
-        ]
-      }
-    },
-    "children": [
-      {
-        "object": "block",
-        "type": "paragraph",
-        "paragraph": {
-          "rich_text": [
-            {
-              "type": "text",
-              "text": { "content": if clean_content.is_empty() { "Created by Alphonso connector." } else { &clean_content } }
-            }
-          ]
-        }
-      }
-    ]
-  });
-
-  let response = client
-    .post("https://api.notion.com/v1/pages")
-    .bearer_auth(token.trim())
-    .header("Notion-Version", "2022-06-28")
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = body
-      .get("message")
-      .and_then(|value| value.as_str())
-      .or_else(|| body.get("error").and_then(|value| value.as_str()))
-      .unwrap_or("Notion create page failed.");
-    return Ok(ConnectorSendProof {
-      connector_id: "notion".to_string(),
-      ok: false,
-      target: "notion".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(error_message.to_string()),
-    });
-  }
-
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
-  Ok(ConnectorSendProof {
-    connector_id: "notion".to_string(),
-    ok: true,
-    target: "notion".to_string(),
-    external_id,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_send_clickup(title: String, content: String, list_id: Option<String>) -> Result<ConnectorSendProof, String> {
-  let sent_at_ms = now_ms();
-  let token = std::env::var("CLICKUP_API_KEY").unwrap_or_default();
-  if token.trim().is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "clickup".to_string(),
-      ok: false,
-      target: "clickup".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("CLICKUP_API_KEY is not configured.".to_string()),
-    });
-  }
-
-  let clean_title = title.trim().to_string();
-  let clean_content = content.trim().to_string();
-  if clean_title.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "clickup".to_string(),
-      ok: false,
-      target: "clickup".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("title is required.".to_string()),
-    });
-  }
-
-  let env_list = std::env::var("CLICKUP_LIST_ID").unwrap_or_default();
-  let target_list = list_id.unwrap_or_default().trim().to_string();
-  let effective_list = if !target_list.is_empty() { target_list } else { env_list.trim().to_string() };
-  if effective_list.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "clickup".to_string(),
-      ok: false,
-      target: "clickup".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("CLICKUP_LIST_ID is missing and no list_id override was provided.".to_string()),
-    });
-  }
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(20))
-    .user_agent("Alphonso-ClickUp-Bridge/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  let endpoint = format!("https://api.clickup.com/api/v2/list/{}/task", effective_list);
-  let payload = serde_json::json!({
-    "name": clean_title,
-    "description": if clean_content.is_empty() { "Created by Alphonso connector." } else { clean_content.as_str() },
-    "status": "to do"
-  });
-
-  let response = client
-    .post(endpoint)
-    .header("Authorization", token.trim())
-    .header("Content-Type", "application/json")
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = body
-      .get("err")
-      .and_then(|value| value.as_str())
-      .or_else(|| body.get("error").and_then(|value| value.as_str()))
-      .unwrap_or("ClickUp create task failed.");
-    return Ok(ConnectorSendProof {
-      connector_id: "clickup".to_string(),
-      ok: false,
-      target: effective_list,
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(error_message.to_string()),
-    });
-  }
-
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
-  Ok(ConnectorSendProof {
-    connector_id: "clickup".to_string(),
-    ok: true,
-    target: effective_list,
-    external_id,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn tool_connection_post_webhook(
-  webhook_url: String,
-  payload: Value,
-  platform: Option<String>,
-  connection_name: Option<String>,
-) -> Result<WebhookPostProof, String> {
-  let sent_at_ms = now_ms();
-  let clean_url = webhook_url.trim().to_string();
-  if clean_url.is_empty() {
-    return Ok(WebhookPostProof {
-      ok: false,
-      platform: platform.unwrap_or_else(|| "custom".to_string()),
-      connection_name,
-      webhook_host: None,
-      http_status: None,
-      response_preview: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("webhook_url is required.".to_string()),
-    });
-  }
-
-  if !is_allowed_webhook_url(&clean_url) {
-    return Ok(WebhookPostProof {
-      ok: false,
-      platform: platform.unwrap_or_else(|| "custom".to_string()),
-      connection_name,
-      webhook_host: webhook_host_from_url(&clean_url),
-      http_status: None,
-      response_preview: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("Webhook URLs must use https or localhost/http loopback for local testing.".to_string()),
-    });
-  }
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(20))
-    .user_agent("Alphonso-Webhook-Bridge/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  let response = client
-    .post(&clean_url)
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body = response.text().await.map_err(|error| error.to_string())?;
-  let preview = {
-    let trimmed = body.trim();
-    if trimmed.is_empty() {
-      None
-    } else {
-      Some(trimmed.chars().take(240).collect::<String>())
-    }
-  };
-
-  if !status.is_success() {
-    return Ok(WebhookPostProof {
-      ok: false,
-      platform: platform.unwrap_or_else(|| "custom".to_string()),
-      connection_name,
-      webhook_host: webhook_host_from_url(&clean_url),
-      http_status: Some(status.as_u16()),
-      response_preview: preview,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(format!("Webhook POST returned HTTP {}", status.as_u16())),
-    });
-  }
-
-  Ok(WebhookPostProof {
-    ok: true,
-    platform: platform.unwrap_or_else(|| "custom".to_string()),
-    connection_name,
-    webhook_host: webhook_host_from_url(&clean_url),
-    http_status: Some(status.as_u16()),
-    response_preview: preview,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_poll_whatsapp(limit: Option<u16>) -> Result<ConnectorPollProof, String> {
-  let checked_at_ms = now_ms();
-  let provider = std::env::var("WHATSAPP_PROVIDER")
-    .map(|value| value.trim().to_ascii_lowercase())
-    .unwrap_or_else(|_| "cloud_api".to_string());
-  if provider != "twilio" {
-    return Ok(ConnectorPollProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      count: 0,
-      cursor: None,
-      messages: vec![],
-      checked_at_ms,
-      trust: "placeholder".to_string(),
-      error: Some("Inbound polling is only supported for WHATSAPP_PROVIDER=twilio. Cloud API inbound requires webhook wiring.".to_string()),
-    });
-  }
-
-  let account_sid = std::env::var("WHATSAPP_TWILIO_ACCOUNT_SID").unwrap_or_default();
-  let auth_token = std::env::var("WHATSAPP_TWILIO_AUTH_TOKEN").unwrap_or_default();
-  let from_number = std::env::var("WHATSAPP_TWILIO_FROM").unwrap_or_default();
-  if account_sid.trim().is_empty() || auth_token.trim().is_empty() || from_number.trim().is_empty() {
-    return Ok(ConnectorPollProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      count: 0,
-      cursor: None,
-      messages: vec![],
-      checked_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("Twilio inbound polling requires WHATSAPP_TWILIO_ACCOUNT_SID, WHATSAPP_TWILIO_AUTH_TOKEN, and WHATSAPP_TWILIO_FROM.".to_string()),
-    });
-  }
-
-  let max = limit.unwrap_or(15).clamp(1, 50);
-  let formatted_from = if from_number.trim().starts_with("whatsapp:") {
-    from_number.trim().to_string()
-  } else {
-    format!("whatsapp:{}", from_number.trim())
-  };
-
-  let endpoint = format!(
-    "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
-    account_sid.trim()
-  );
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(20))
-    .user_agent("Alphonso-WhatsApp-Bridge/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  let response = client
-    .get(endpoint)
-    .basic_auth(account_sid.trim(), Some(auth_token.trim()))
-    .query(&[
-      ("PageSize", max.to_string()),
-      ("To", formatted_from.clone()),
-    ])
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = body
-      .get("message")
-      .and_then(|value| value.as_str())
-      .unwrap_or("Twilio message poll failed.");
-    return Ok(ConnectorPollProof {
-      connector_id: "whatsapp".to_string(),
-      ok: false,
-      count: 0,
-      cursor: None,
-      messages: vec![],
-      checked_at_ms,
-      trust: "failed".to_string(),
-      error: Some(error_message.to_string()),
-    });
-  }
-
-  let mut messages: Vec<ConnectorInboundMessage> = vec![];
-  if let Some(rows) = body.get("messages").and_then(|value| value.as_array()) {
-    for row in rows {
-      let direction = row.get("direction").and_then(|value| value.as_str()).unwrap_or("");
-      if direction != "inbound" {
-        continue;
-      }
-      let from = row.get("from").and_then(|value| value.as_str()).unwrap_or("").to_string();
-      let to = row.get("to").and_then(|value| value.as_str()).unwrap_or("").to_string();
-      if to != formatted_from {
-        continue;
-      }
-      let text = row.get("body").and_then(|value| value.as_str()).unwrap_or("").trim().to_string();
-      if text.is_empty() {
-        continue;
-      }
-      let sid = row.get("sid").and_then(|value| value.as_str()).unwrap_or("0");
-      messages.push(ConnectorInboundMessage {
-        update_id: 0,
-        chat_id: from.clone(),
-        from_id: Some(from),
-        text,
-        date_unix: None,
-        received_at_ms: checked_at_ms,
-      });
-      if messages.len() >= usize::from(max) {
-        break;
-      }
-      if sid.is_empty() {
-        continue;
-      }
-    }
-  }
-
-  Ok(ConnectorPollProof {
-    connector_id: "whatsapp".to_string(),
-    ok: true,
-    count: messages.len(),
-    cursor: None,
-    messages,
-    checked_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_send_chatgpt(
-  http_client: tauri::State<'_, reqwest::Client>,
-  text: String,
-) -> Result<ConnectorSendProof, String> {
-  let sent_at_ms = now_ms();
-  let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
-  if key.trim().is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "chatgpt".to_string(),
-      ok: false,
-      target: "chatgpt".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("OPENAI_API_KEY is not configured.".to_string()),
-    });
-  }
-
-  let clean_text = text.trim().to_string();
-  if clean_text.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "chatgpt".to_string(),
-      ok: false,
-      target: "chatgpt".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("text is required.".to_string()),
-    });
-  }
-
-  let model = std::env::var("OPENAI_CONNECTOR_MODEL").unwrap_or_else(|_| "gpt-4.1-mini".to_string());
-  let client = http_client.inner();
-  let payload = serde_json::json!({
-    "model": model,
-    "input": clean_text
-  });
-  let response = client
-    .post("https://api.openai.com/v1/responses")
-    .bearer_auth(key.trim())
-    .header("Content-Type", "application/json")
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let message = body
-      .get("error")
-      .and_then(|value| value.get("message"))
-      .and_then(|value| value.as_str())
-      .unwrap_or("OpenAI responses API call failed.");
-    return Ok(ConnectorSendProof {
-      connector_id: "chatgpt".to_string(),
-      ok: false,
-      target: model,
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(message.to_string()),
-    });
-  }
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
-  Ok(ConnectorSendProof {
-    connector_id: "chatgpt".to_string(),
-    ok: true,
-    target: model,
-    external_id,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_send_claude(
-  http_client: tauri::State<'_, reqwest::Client>,
-  text: String,
-) -> Result<ConnectorSendProof, String> {
-  let sent_at_ms = now_ms();
-  let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
-  if key.trim().is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "claude".to_string(),
-      ok: false,
-      target: "claude".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("ANTHROPIC_API_KEY is not configured.".to_string()),
-    });
-  }
-
-  let clean_text = text.trim().to_string();
-  if clean_text.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "claude".to_string(),
-      ok: false,
-      target: "claude".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("text is required.".to_string()),
-    });
-  }
-
-  let model = std::env::var("CLAUDE_CONNECTOR_MODEL").unwrap_or_else(|_| "claude-3-5-sonnet-latest".to_string());
-  let client = http_client.inner();
-  let payload = serde_json::json!({
-    "model": model,
-    "max_tokens": 512,
-    "messages": [
-      { "role": "user", "content": clean_text }
-    ]
-  });
-  let response = client
-    .post("https://api.anthropic.com/v1/messages")
-    .header("x-api-key", key.trim())
-    .header("anthropic-version", "2023-06-01")
-    .header("content-type", "application/json")
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let message = body
-      .get("error")
-      .and_then(|value| value.get("message"))
-      .and_then(|value| value.as_str())
-      .unwrap_or("Anthropic messages API call failed.");
-    return Ok(ConnectorSendProof {
-      connector_id: "claude".to_string(),
-      ok: false,
-      target: model,
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(message.to_string()),
-    });
-  }
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
-  Ok(ConnectorSendProof {
-    connector_id: "claude".to_string(),
-    ok: true,
-    target: model,
-    external_id,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_send_qwen(
-  http_client: tauri::State<'_, reqwest::Client>,
-  text: String,
-) -> Result<ConnectorSendProof, String> {
-  let sent_at_ms = now_ms();
-  let key = std::env::var("DASHSCOPE_API_KEY").unwrap_or_default();
-  if key.trim().is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "qwen".to_string(),
-      ok: false,
-      target: "qwen".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "unverified".to_string(),
-      error: Some("DASHSCOPE_API_KEY is not configured.".to_string()),
-    });
-  }
-
-  let clean_text = text.trim().to_string();
-  if clean_text.is_empty() {
-    return Ok(ConnectorSendProof {
-      connector_id: "qwen".to_string(),
-      ok: false,
-      target: "qwen".to_string(),
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some("text is required.".to_string()),
-    });
-  }
-
-  let model = std::env::var("QWEN_CONNECTOR_MODEL").unwrap_or_else(|_| "qwen-plus".to_string());
-  let base_url = std::env::var("QWEN_CONNECTOR_BASE_URL")
-    .unwrap_or_else(|_| "https://dashscope-intl.aliyuncs.com/compatible-mode/v1".to_string())
-    .trim_end_matches('/')
-    .to_string();
-  let endpoint = format!("{}/chat/completions", base_url);
-  let client = http_client.inner();
-  let payload = serde_json::json!({
-    "model": model,
-    "messages": [
-      { "role": "user", "content": clean_text }
-    ]
-  });
-  let response = client
-    .post(endpoint)
-    .bearer_auth(key.trim())
-    .header("Content-Type", "application/json")
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let message = body
-      .get("error")
-      .and_then(|value| value.get("message"))
-      .and_then(|value| value.as_str())
-      .or_else(|| body.get("message").and_then(|value| value.as_str()))
-      .unwrap_or("Qwen chat completions API call failed.");
-    return Ok(ConnectorSendProof {
-      connector_id: "qwen".to_string(),
-      ok: false,
-      target: model,
-      external_id: None,
-      sent_at_ms,
-      trust: "failed".to_string(),
-      error: Some(message.to_string()),
-    });
-  }
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
-  Ok(ConnectorSendProof {
-    connector_id: "qwen".to_string(),
-    ok: true,
-    target: model,
-    external_id,
-    sent_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_upload_youtube(
-  file_path: String,
-  title: String,
-  description: Option<String>,
-  tags: Option<Vec<String>>,
-  privacy_status: Option<String>,
-) -> Result<YouTubeUploadProof, String> {
-  let uploaded_at_ms = now_ms();
-  let path = PathBuf::from(file_path.trim());
-  let clean_title = title.trim().to_string();
-  let clean_description = description.unwrap_or_default().trim().to_string();
-  let clean_privacy = privacy_status
-    .unwrap_or_else(|| "private".to_string())
-    .trim()
-    .to_ascii_lowercase();
-  let privacy = match clean_privacy.as_str() {
-    "private" | "unlisted" | "public" => clean_privacy,
-    _ => "private".to_string(),
-  };
-
-  if clean_title.is_empty() {
-    return Ok(YouTubeUploadProof {
-      connector_id: "youtube".to_string(),
-      ok: false,
-      video_id: None,
-      url: None,
-      privacy_status: privacy,
-      file_path: file_path.trim().to_string(),
-      uploaded_at_ms,
-      trust: "failed".to_string(),
-      error: Some("title is required.".to_string()),
-    });
-  }
-  if !path.exists() || !path.is_file() {
-    return Ok(YouTubeUploadProof {
-      connector_id: "youtube".to_string(),
-      ok: false,
-      video_id: None,
-      url: None,
-      privacy_status: privacy,
-      file_path: file_path.trim().to_string(),
-      uploaded_at_ms,
-      trust: "failed".to_string(),
-      error: Some("video file path does not exist.".to_string()),
-    });
-  }
-
-  let access_token = match youtube_access_token().await {
-    Ok(token) => token,
-    Err(error) => {
-      return Ok(YouTubeUploadProof {
-        connector_id: "youtube".to_string(),
-        ok: false,
-        video_id: None,
-        url: None,
-        privacy_status: privacy,
-        file_path: path.to_string_lossy().to_string(),
-        uploaded_at_ms,
-        trust: "unverified".to_string(),
-        error: Some(error),
-      });
-    }
-  };
-
-  let file_bytes = fs::read(&path).map_err(|error| error.to_string())?;
-  let tags = tags
-    .unwrap_or_default()
+fn verify_paths(paths: Vec<String>) -> Vec<PathProof> {
+  paths
     .into_iter()
-    .map(|value| value.trim().to_string())
-    .filter(|value| !value.is_empty())
-    .take(25)
-    .collect::<Vec<_>>();
-  let metadata = serde_json::json!({
-    "snippet": {
-      "title": clean_title,
-      "description": clean_description,
-      "tags": tags
-    },
-    "status": {
-      "privacyStatus": privacy
-    }
-  });
-  let metadata_bytes = serde_json::to_vec(&metadata).map_err(|error| error.to_string())?;
-  let boundary = format!("alphonso-youtube-{}", uploaded_at_ms);
-  let mime = mime_for_video_path(&path);
+    .map(|path| {
+      let path_buf = PathBuf::from(&path);
+      let metadata = fs::metadata(&path_buf).ok();
+      let modified_at_ms = metadata
+        .as_ref()
+        .and_then(|meta| meta.modified().ok())
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis() as u64);
 
-  let mut body: Vec<u8> = Vec::with_capacity(metadata_bytes.len() + file_bytes.len() + 1024);
-  body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
-  body.extend_from_slice(b"Content-Type: application/json; charset=UTF-8\r\n\r\n");
-  body.extend_from_slice(&metadata_bytes);
-  body.extend_from_slice(b"\r\n");
-  body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
-  body.extend_from_slice(format!("Content-Type: {}\r\n", mime).as_bytes());
-  body.extend_from_slice(b"Content-Transfer-Encoding: binary\r\n\r\n");
-  body.extend_from_slice(&file_bytes);
-  body.extend_from_slice(b"\r\n");
-  body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(300))
-    .user_agent("Alphonso-YouTube-Connector/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-  let response = client
-    .post("https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&uploadType=multipart")
-    .bearer_auth(access_token)
-    .header("Content-Type", format!("multipart/related; boundary={}", boundary))
-    .body(body)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let payload: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = payload
-      .get("error")
-      .and_then(|value| value.get("message"))
-      .and_then(|value| value.as_str())
-      .unwrap_or("YouTube upload failed.");
-    return Ok(YouTubeUploadProof {
-      connector_id: "youtube".to_string(),
-      ok: false,
-      video_id: None,
-      url: None,
-      privacy_status: privacy,
-      file_path: path.to_string_lossy().to_string(),
-      uploaded_at_ms,
-      trust: "failed".to_string(),
-      error: Some(error_message.to_string()),
-    });
-  }
-
-  let video_id = payload
-    .get("id")
-    .and_then(|value| value.as_str())
-    .map(|value| value.to_string());
-  let url = video_id
-    .as_ref()
-    .map(|value| format!("https://www.youtube.com/watch?v={}", value));
-  Ok(YouTubeUploadProof {
-    connector_id: "youtube".to_string(),
-    ok: true,
-    video_id,
-    url,
-    privacy_status: privacy,
-    file_path: path.to_string_lossy().to_string(),
-    uploaded_at_ms,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-
-fn inject_prompt_into_comfy_workflow(workflow: &mut Value, prompt: &str) -> usize {
-  let mut replaced = 0_usize;
-  let Some(map) = workflow.as_object_mut() else {
-    return replaced;
-  };
-
-  for node in map.values_mut() {
-    let Some(node_obj) = node.as_object_mut() else {
-      continue;
-    };
-    let class_type = node_obj
-      .get("class_type")
-      .and_then(|value| value.as_str())
-      .unwrap_or("")
-      .to_string();
-    let Some(inputs) = node_obj.get_mut("inputs").and_then(|value| value.as_object_mut()) else {
-      continue;
-    };
-
-    if class_type.to_ascii_lowercase().contains("cliptextencode") {
-      if let Some(text_value) = inputs.get_mut("text") {
-        if text_value.is_string() {
-          *text_value = Value::String(prompt.to_string());
-          replaced += 1;
-        }
+      PathProof {
+        path,
+        exists: metadata.is_some(),
+        is_file: metadata.as_ref().map(|meta| meta.is_file()).unwrap_or(false),
+        is_dir: metadata.as_ref().map(|meta| meta.is_dir()).unwrap_or(false),
+        modified_at_ms,
+        trust: if metadata.is_some() { "verified".to_string() } else { "failed".to_string() },
       }
-    }
-  }
-
-  replaced
+    })
+    .collect()
 }
 
 #[tauri::command]
-async fn connector_generate_sdwebui_image(
-  prompt: String,
-  negative_prompt: Option<String>,
-  width: Option<u32>,
-  height: Option<u32>,
-  steps: Option<u16>,
-  cfg_scale: Option<f32>,
-) -> Result<MediaGenerationProof, String> {
-  let queued_at_ms = now_ms();
-  let clean_prompt = prompt.trim().to_string();
-  if clean_prompt.is_empty() {
-    return Ok(MediaGenerationProof {
-      connector_id: "sd_webui".to_string(),
-      ok: false,
-      provider: "automatic1111".to_string(),
-      job_id: None,
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "failed".to_string(),
-      message: "Prompt is required.".to_string(),
-      error: Some("Prompt is required.".to_string()),
-    });
+fn read_runtime_env_value(name: String) -> Result<RuntimeEnvValueProof, String> {
+  if !ALPHONSO_RUNTIME_ENV_NAMES.contains(&name.as_str()) {
+    return Err("Environment variable is not exposed through this command.".to_string());
   }
 
-  let endpoint = std::env::var("LOCAL_SDWEBUI_ENDPOINT")
-    .unwrap_or_else(|_| "http://127.0.0.1:7860".to_string())
-    .trim_end_matches('/')
-    .to_string();
-  let width = width.unwrap_or(768).clamp(256, 1536);
-  let height = height.unwrap_or(768).clamp(256, 1536);
-  let steps = steps.unwrap_or(24).clamp(6, 60);
-  let cfg_scale = cfg_scale.unwrap_or(7.0).clamp(1.0, 20.0);
-  let clean_negative = negative_prompt.unwrap_or_default().trim().to_string();
-  let auth = std::env::var("LOCAL_SDWEBUI_BASIC_AUTH").unwrap_or_default();
-  let mut auth_parts = auth.splitn(2, ':');
-  let auth_user = auth_parts.next().unwrap_or("").trim().to_string();
-  let auth_pass = auth_parts.next().unwrap_or("").trim().to_string();
-  let use_basic_auth = !auth_user.is_empty() && !auth_pass.is_empty();
+  let checked_at_ms = now_ms();
+  match std::env::var(&name) {
+    Ok(value) => {
+      let trimmed = value.trim().to_string();
+      Ok(RuntimeEnvValueProof {
+        name,
+        present: !trimmed.is_empty(),
+        value: if trimmed.is_empty() { None } else { Some(trimmed) },
+        checked_at_ms,
+        trust: "verified".to_string(),
+        error: None,
+      })
+    }
+    Err(error) => {
+      let reason = match error {
+        std::env::VarError::NotPresent => "missing".to_string(),
+        std::env::VarError::NotUnicode(_) => "not unicode".to_string(),
+      };
+      Ok(RuntimeEnvValueProof {
+        name,
+        present: false,
+        value: None,
+        checked_at_ms,
+        trust: "failed".to_string(),
+        error: Some(reason),
+      })
+    }
+  }
+}
 
-  let payload = serde_json::json!({
-    "prompt": clean_prompt,
-    "negative_prompt": clean_negative,
-    "width": width,
-    "height": height,
-    "steps": steps,
-    "cfg_scale": cfg_scale,
-    "sampler_name": "DPM++ 2M Karras",
-    "batch_size": 1,
-    "n_iter": 1,
-    "send_images": true,
-    "save_images": false
-  });
+#[tauri::command]
+fn alphonso_bridge_status() -> Value {
+  let base_url = std::env::var("ALPHONSO_BRIDGE_URL").unwrap_or_default();
+  let token = std::env::var("ALPHONSO_BRIDGE_TOKEN").unwrap_or_default();
+  let path_prefix = std::env::var("ALPHONSO_BRIDGE_PATH_PREFIX")
+    .ok()
+    .map(|value| normalize_bridge_path_prefix(&value))
+    .unwrap_or_else(|| "/api/alphonso-bridge".to_string());
+  let timeout_ms = std::env::var("ALPHONSO_BRIDGE_TIMEOUT_MS")
+    .ok()
+    .and_then(|value| value.trim().parse::<u64>().ok())
+    .unwrap_or(15000);
+  let configured = !base_url.trim().is_empty() && !token.trim().is_empty();
 
+  serde_json::json!({
+    "success": true,
+    "configured": configured,
+    "enabled": configured,
+    "status": if configured { "configured" } else { "setup_required" },
+    "baseUrlConfigured": !base_url.trim().is_empty(),
+    "tokenConfigured": !token.trim().is_empty(),
+    "pathPrefix": path_prefix,
+    "timeoutMs": timeout_ms
+  })
+}
+
+#[tauri::command]
+async fn alphonso_bridge_send_packet(packet: Value) -> Result<Value, String> {
+  let base_url = std::env::var("ALPHONSO_BRIDGE_URL")
+    .map_err(|_| "ALPHONSO_BRIDGE_URL is not configured.".to_string())?;
+  let token = std::env::var("ALPHONSO_BRIDGE_TOKEN")
+    .map_err(|_| "ALPHONSO_BRIDGE_TOKEN is not configured.".to_string())?;
+  let path_prefix = std::env::var("ALPHONSO_BRIDGE_PATH_PREFIX")
+    .ok()
+    .map(|value| normalize_bridge_path_prefix(&value))
+    .unwrap_or_else(|| "/api/alphonso-bridge".to_string());
+  let timeout_ms = std::env::var("ALPHONSO_BRIDGE_TIMEOUT_MS")
+    .ok()
+    .and_then(|value| value.trim().parse::<u64>().ok())
+    .unwrap_or(15000);
+  let url = format!("{}{}", trim_trailing_slashes(&base_url), path_prefix);
   let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(180))
-    .user_agent("Alphonso-Miya-SDWebUI/0.1")
+    .timeout(Duration::from_millis(timeout_ms))
     .build()
     .map_err(|error| error.to_string())?;
-  let mut request = client
-    .post(format!("{endpoint}/sdapi/v1/txt2img"))
-    .json(&payload);
-  if use_basic_auth {
-    request = request.basic_auth(auth_user, Some(auth_pass));
+
+  let response = client
+    .post(&url)
+    .bearer_auth(token.trim())
+    .json(&packet)
+    .send()
+    .await
+    .map_err(|error| error.to_string())?;
+
+  let http_status = response.status().as_u16();
+  let response_text = response.text().await.map_err(|error| error.to_string())?;
+  let parsed_response = serde_json::from_str(&response_text).unwrap_or(serde_json::Value::String(response_text));
+  let status_proof = alphonso_bridge_status();
+  let ok = http_status < 400;
+
+  Ok(serde_json::json!({
+    "success": ok,
+    "ok": ok,
+    "httpStatus": http_status,
+    "response": parsed_response,
+    "bridge": status_proof,
+    "status": if ok { "synced" } else { "failed" }
+  }))
+}
+
+#[tauri::command]
+fn check_processes(names: Vec<String>) -> Result<Vec<ProcessProof>, String> {
+  #[cfg(target_os = "windows")]
+  let tasklist_output = {
+    let output = Command::new("tasklist")
+      .args(["/FO", "CSV", "/NH"])
+      .output()
+      .map_err(|error| error.to_string())?;
+
+    String::from_utf8_lossy(&output.stdout).to_string()
+  };
+
+  #[cfg(not(target_os = "windows"))]
+  let tasklist_output = {
+    let output = Command::new("ps")
+      .args(["-axo", "pid,comm"])
+      .output()
+      .map_err(|error| error.to_string())?;
+
+    String::from_utf8_lossy(&output.stdout).to_string()
+  };
+
+  let proofs = names
+    .into_iter()
+    .map(|name| {
+      let matches = parse_tasklist(&tasklist_output, &name);
+      let running = !matches.is_empty();
+      ProcessProof {
+        query: name,
+        running,
+        matches,
+        trust: if running { "verified".to_string() } else { "failed".to_string() },
+      }
+    })
+    .collect();
+
+  Ok(proofs)
+}
+
+fn parse_tasklist(tasklist_output: &str, query: &str) -> Vec<ProcessMatch> {
+  let lower_query = query.to_ascii_lowercase();
+  #[cfg(target_os = "windows")]
+  {
+    tasklist_output
+      .lines()
+      .filter_map(|line| {
+        let trimmed = line.trim();
+        if !trimmed.contains(",") {
+          return None;
+        }
+
+        let clean = trimmed.trim_matches('"');
+        let parts: Vec<&str> = clean.split("\",\"").collect();
+        if parts.len() < 2 {
+          return None;
+        }
+
+        let process_name = parts[0].to_string();
+        if !process_name.to_ascii_lowercase().contains(&lower_query) {
+          return None;
+        }
+
+        let pid = parts[1].parse::<u32>().ok();
+        Some(ProcessMatch {
+          name: process_name,
+          pid,
+        })
+      })
+      .collect()
   }
 
-  let response = request.send().await.map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = body
-      .get("error")
-      .and_then(|value| value.as_str())
-      .or_else(|| body.get("detail").and_then(|value| value.as_str()))
-      .unwrap_or("Stable Diffusion txt2img request failed.");
-    return Ok(MediaGenerationProof {
-      connector_id: "sd_webui".to_string(),
-      ok: false,
-      provider: "automatic1111".to_string(),
-      job_id: None,
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "failed".to_string(),
-      message: "Image generation request failed.".to_string(),
-      error: Some(error_message.to_string()),
-    });
-  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    tasklist_output
+      .lines()
+      .skip(1)
+      .filter_map(|line| {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+          return None;
+        }
 
-  let images = body
-    .get("images")
-    .and_then(|value| value.as_array())
-    .cloned()
-    .unwrap_or_default();
-  let preview_base64 = images
-    .first()
-    .and_then(|value| value.as_str())
-    .map(|value| value.to_string());
-  let image_count = images.len();
-  if image_count == 0 {
-    return Ok(MediaGenerationProof {
-      connector_id: "sd_webui".to_string(),
-      ok: false,
-      provider: "automatic1111".to_string(),
-      job_id: None,
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "failed".to_string(),
-      message: "No image payload returned by local SD WebUI.".to_string(),
-      error: Some("Local SD WebUI returned no images.".to_string()),
-    });
+        let mut parts = trimmed.split_whitespace();
+        let pid = parts.next().and_then(|value| value.parse::<u32>().ok());
+        let name = parts.collect::<Vec<&str>>().join(" ");
+        if name.is_empty() || !name.to_ascii_lowercase().contains(&lower_query) {
+          return None;
+        }
+        Some(ProcessMatch { name, pid })
+      })
+      .collect()
   }
+}
 
-  Ok(MediaGenerationProof {
-    connector_id: "sd_webui".to_string(),
-    ok: true,
-    provider: "automatic1111".to_string(),
-    job_id: None,
-    output_paths: vec![],
-    preview_base64,
-    queued_at_ms,
+#[tauri::command]
+fn record_restore_point(app: tauri::AppHandle, snapshot_id: String, payload: String) -> Result<RestorePointProof, String> {
+  let dir = app_data_subdir(&app, "recovery")?;
+
+  let mut file_path = dir.clone();
+  file_path.push(format!("{snapshot_id}.json"));
+  fs::write(&file_path, payload).map_err(|error| error.to_string())?;
+
+  Ok(RestorePointProof {
+    snapshot_id,
+    file_path: file_path.to_string_lossy().to_string(),
+    written: true,
+    written_at_ms: now_ms(),
     trust: "verified".to_string(),
-    message: format!("Generated {image_count} image(s) using local SD WebUI."),
+  })
+}
+
+#[tauri::command]
+fn write_handoff_export_file(workspace_root: String, file_name: String, content: String) -> Result<HandoffExportProof, String> {
+  let safe_name = Path::new(file_name.trim())
+    .file_name()
+    .and_then(|value| value.to_str())
+    .filter(|value| !value.trim().is_empty())
+    .unwrap_or("alphonso-self-development.md")
+    .replace(['/', '\\'], "_");
+  let proof = workspace::write_workspace_text_file(
+    workspace_root,
+    format!("docs/handoff/{safe_name}"),
+    content,
+  )?;
+  Ok(HandoffExportProof {
+    file_path: proof.file_path,
+    written: proof.written,
+    written_at_ms: proof.written_at_ms,
+    bytes: proof.bytes,
+    trust: proof.trust,
+  })
+}
+
+#[tauri::command]
+fn run_ocr_adapter(
+  adapter: Option<String>,
+  engine_path: String,
+  image_path: Option<String>,
+  extra_args: Option<Vec<String>>,
+) -> Result<OcrAdapterProof, String> {
+  let started = now_ms();
+  let adapter = adapter.unwrap_or_else(|| "version_check".to_string());
+  let engine = PathBuf::from(&engine_path);
+  if !engine.exists() || !engine.is_file() {
+    return Ok(OcrAdapterProof {
+      adapter,
+      engine_path,
+      image_path,
+      started_at_ms: started,
+      finished_at_ms: now_ms(),
+      success: false,
+      exit_code: None,
+      stdout: String::new(),
+      stderr: String::new(),
+      trust: "failed".to_string(),
+      error: Some("OCR engine binary path is invalid.".to_string()),
+    });
+  }
+
+  let mut args = vec![];
+  match adapter.as_str() {
+    "version_check" => {
+      args.push("--version".to_string());
+    }
+    "tesseract_cli" => {
+      let image = image_path.clone().ok_or_else(|| "Image path is required for tesseract_cli adapter.".to_string())?;
+      let image_file = PathBuf::from(&image);
+      if !image_file.exists() || !image_file.is_file() {
+        return Err("Image path does not exist.".to_string());
+      }
+      args.push(image);
+      args.push("stdout".to_string());
+      args.push("--dpi".to_string());
+      args.push("70".to_string());
+    }
+    _ => {
+      return Err("Unsupported OCR adapter. Supported adapters: version_check, tesseract_cli.".to_string());
+    }
+  }
+
+  if let Some(extra) = extra_args {
+    args.extend(extra);
+  }
+
+  let output = Command::new(&engine_path).args(&args).output().map_err(|error| error.to_string())?;
+  let finished = now_ms();
+  let success = output.status.success();
+
+  Ok(OcrAdapterProof {
+    adapter,
+    engine_path,
+    image_path,
+    started_at_ms: started,
+    finished_at_ms: finished,
+    success,
+    exit_code: output.status.code(),
+    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+    trust: if success { "verified".to_string() } else { "failed".to_string() },
     error: None,
   })
 }
 
-async fn probe_local_runtime_health(
-  connector_id: &str,
-  provider: &str,
-  endpoint: &str,
-  probe_path: &str,
-) -> Result<LocalRuntimeHealthProof, String> {
+#[tauri::command]
+fn check_ocr_capability(engine_path: Option<String>) -> OcrCapabilityProof {
   let checked_at_ms = now_ms();
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(10))
-    .user_agent("Alphonso-LocalRuntimeHealth/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-  let response = client
-    .get(format!("{endpoint}{probe_path}"))
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let http_status = Some(response.status().as_u16());
-  if !response.status().is_success() {
-    return Ok(LocalRuntimeHealthProof {
-      connector_id: connector_id.to_string(),
-      provider: provider.to_string(),
-      ok: false,
-      endpoint: endpoint.to_string(),
-      probe_path: probe_path.to_string(),
-      http_status,
+  if let Some(path) = engine_path {
+    let path_buf = PathBuf::from(&path);
+    if path_buf.exists() && path_buf.is_file() {
+      return OcrCapabilityProof {
+        available: true,
+        engine: "custom".to_string(),
+        message: format!("OCR engine binary detected at {path}"),
+        checked_at_ms,
+        trust: "verified".to_string(),
+      };
+    }
+
+    return OcrCapabilityProof {
+      available: false,
+      engine: "custom".to_string(),
+      message: format!("OCR engine path does not exist: {path}"),
       checked_at_ms,
       trust: "failed".to_string(),
-      message: format!("{provider} runtime responded but not successfully."),
-      error: Some(format!("HTTP {}", response.status().as_u16())),
-    });
+    };
   }
 
-  Ok(LocalRuntimeHealthProof {
-    connector_id: connector_id.to_string(),
-    provider: provider.to_string(),
-    ok: true,
-    endpoint: endpoint.to_string(),
-    probe_path: probe_path.to_string(),
-    http_status,
+  OcrCapabilityProof {
+    available: false,
+    engine: "unconfigured".to_string(),
+    message: "OCR engine is not configured yet. Set an engine path explicitly.".to_string(),
     checked_at_ms,
-    trust: "verified".to_string(),
-    message: format!("{provider} runtime is reachable."),
-    error: None,
-  })
-}
-
-#[tauri::command]
-async fn connector_check_local_runtime_health(connector_id: String) -> Result<LocalRuntimeHealthProof, String> {
-  let clean_id = connector_id.trim();
-  match clean_id {
-    "sd_webui" => {
-      let endpoint = std::env::var("LOCAL_SDWEBUI_ENDPOINT")
-        .unwrap_or_else(|_| "http://127.0.0.1:7860".to_string())
-        .trim_end_matches('/')
-        .to_string();
-      probe_local_runtime_health("sd_webui", "automatic1111", &endpoint, "/sdapi/v1/samplers").await
-    }
-    "comfyui_video" => {
-      let endpoint = std::env::var("COMFYUI_ENDPOINT")
-        .unwrap_or_else(|_| "http://127.0.0.1:8188".to_string())
-        .trim_end_matches('/')
-        .to_string();
-      probe_local_runtime_health("comfyui_video", "comfyui", &endpoint, "/system_stats").await
-    }
-    _ => Err(format!("Unsupported local runtime connector: {clean_id}")),
+    trust: "unverified".to_string(),
   }
 }
 
 #[tauri::command]
-async fn connector_queue_comfyui_video(
-  prompt: String,
-  workflow_json: String,
-) -> Result<MediaGenerationProof, String> {
-  let queued_at_ms = now_ms();
-  let clean_prompt = prompt.trim().to_string();
-  if clean_prompt.is_empty() {
-    return Ok(MediaGenerationProof {
-      connector_id: "comfyui_video".to_string(),
-      ok: false,
-      provider: "comfyui".to_string(),
-      job_id: None,
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "failed".to_string(),
-      message: "Prompt is required.".to_string(),
-      error: Some("Prompt is required.".to_string()),
+fn decompose_jose_command_backend(command_text: String) -> Vec<JoseAssignmentProof> {
+  let clean = command_text.trim().to_string();
+  if clean.is_empty() {
+    return vec![];
+  }
+  let lower = clean.to_ascii_lowercase();
+  let fragments = split_command_fragments(&lower);
+  let mut assignments: Vec<JoseAssignmentProof> = vec![];
+
+  let research = text_has_any(&lower, &["research", "lookup", "docs", "source", "citation", "latest", "pricing", "market"]);
+  let creative = text_has_any(&lower, &["video", "script", "brand", "campaign", "thumbnail", "storyboard", "prompt", "creative"]);
+  let local_execution = text_has_any(&lower, &["build", "runtime", "ollama", "verify", "diagnostic", "fix", "test", "package", "file"]);
+  let publishing = text_has_any(&lower, &["upload", "publish", "post", "youtube", "tiktok", "instagram"]);
+  let risky_local = text_has_any(&lower, &["delete", "remove", "deploy", "write", "modify", "execute"]);
+
+  if research {
+    assignments.push(JoseAssignmentProof {
+      agent: "hector".to_string(),
+      title: format!("Hector research task: {}", clean.chars().take(64).collect::<String>()),
+      rationale: "Research language detected. Hector should gather and verify sources.".to_string(),
+      action_type: "research".to_string(),
+      risk_level: "low".to_string(),
+      requires_approval: true,
+      command_preview: "Research and citation proof only. No uploads or account actions.".to_string(),
+      decomposition: fragments.clone(),
     });
   }
 
-  let mut workflow: Value = match serde_json::from_str(&workflow_json) {
-    Ok(value) => value,
-    Err(error) => {
-      return Ok(MediaGenerationProof {
-        connector_id: "comfyui_video".to_string(),
-        ok: false,
-        provider: "comfyui".to_string(),
-        job_id: None,
-        output_paths: vec![],
-        preview_base64: None,
-        queued_at_ms,
-        trust: "failed".to_string(),
-        message: "Workflow JSON is invalid.".to_string(),
-        error: Some(error.to_string()),
-      });
-    }
-  };
-
-  let replaced = inject_prompt_into_comfy_workflow(&mut workflow, &clean_prompt);
-  if replaced == 0 {
-    return Ok(MediaGenerationProof {
-      connector_id: "comfyui_video".to_string(),
-      ok: false,
-      provider: "comfyui".to_string(),
-      job_id: None,
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "unverified".to_string(),
-      message: "Workflow has no CLIPTextEncode text inputs to inject prompt.".to_string(),
-      error: Some("Provide a workflow with CLIPTextEncode text input nodes.".to_string()),
+  if publishing {
+    assignments.push(JoseAssignmentProof {
+      agent: "hector".to_string(),
+      title: format!("Hector publish safety check: {}", clean.chars().take(64).collect::<String>()),
+      rationale: "Publishing language detected. Jose approval required before any external action.".to_string(),
+      action_type: "external_publish_handoff".to_string(),
+      risk_level: "high".to_string(),
+      requires_approval: true,
+      command_preview: "No automatic posting. Requires explicit approval and connector auth.".to_string(),
+      decomposition: fragments.clone(),
     });
   }
 
-  let endpoint = std::env::var("COMFYUI_ENDPOINT")
-    .unwrap_or_else(|_| "http://127.0.0.1:8188".to_string())
-    .trim_end_matches('/')
-    .to_string();
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(120))
-    .user_agent("Alphonso-Miya-ComfyUI/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-  let payload = serde_json::json!({
-    "prompt": workflow
-  });
-
-  let response = client
-    .post(format!("{endpoint}/prompt"))
-    .json(&payload)
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() {
-    let error_message = body
-      .get("error")
-      .and_then(|value| value.as_str())
-      .or_else(|| body.get("detail").and_then(|value| value.as_str()))
-      .unwrap_or("ComfyUI prompt queue request failed.");
-    return Ok(MediaGenerationProof {
-      connector_id: "comfyui_video".to_string(),
-      ok: false,
-      provider: "comfyui".to_string(),
-      job_id: None,
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "failed".to_string(),
-      message: "ComfyUI queue request failed.".to_string(),
-      error: Some(error_message.to_string()),
+  if creative {
+    assignments.push(JoseAssignmentProof {
+      agent: "miya".to_string(),
+      title: format!("Miya creative task: {}", clean.chars().take(64).collect::<String>()),
+      rationale: "Creative language detected. Miya produces script/storyboard/prompt packages.".to_string(),
+      action_type: "creative_package".to_string(),
+      risk_level: "low".to_string(),
+      requires_approval: true,
+      command_preview: "Creative package generation only.".to_string(),
+      decomposition: fragments.clone(),
     });
   }
 
-  let job_id = body
-    .get("prompt_id")
-    .and_then(|value| value.as_str())
-    .map(|value| value.to_string());
+  if local_execution {
+    assignments.push(JoseAssignmentProof {
+      agent: "alphonso".to_string(),
+      title: format!("Alphonso operator task: {}", clean.chars().take(64).collect::<String>()),
+      rationale: "Runtime/build/verification language detected.".to_string(),
+      action_type: "local_operation".to_string(),
+      risk_level: if risky_local { "high".to_string() } else { "medium".to_string() },
+      requires_approval: true,
+      command_preview: if risky_local {
+        "Potential local/system action. Explicit approval required.".to_string()
+      } else {
+        "Local diagnostics/verification only.".to_string()
+      },
+      decomposition: fragments.clone(),
+    });
+  }
 
-  Ok(MediaGenerationProof {
-    connector_id: "comfyui_video".to_string(),
-    ok: true,
-    provider: "comfyui".to_string(),
-    job_id: job_id.clone(),
-    output_paths: vec![],
-    preview_base64: None,
-    queued_at_ms,
-    trust: "verified".to_string(),
-    message: if let Some(job_id) = job_id {
-      format!("ComfyUI video workflow queued. prompt_id={job_id}")
-    } else {
-      "ComfyUI workflow queued, but prompt_id was not returned.".to_string()
-    },
-    error: None,
-  })
+  if assignments.is_empty() {
+    assignments.push(JoseAssignmentProof {
+      agent: "jose".to_string(),
+      title: format!("Jose planning task: {}", clean.chars().take(64).collect::<String>()),
+      rationale: "No specialist match detected.".to_string(),
+      action_type: "orchestration_review".to_string(),
+      risk_level: "low".to_string(),
+      requires_approval: false,
+      command_preview: "Planning only.".to_string(),
+      decomposition: fragments,
+    });
+  }
+
+  assignments
 }
 
-#[tauri::command]
-async fn connector_get_comfyui_history(prompt_id: String) -> Result<MediaGenerationProof, String> {
-  let queued_at_ms = now_ms();
-  let clean_id = prompt_id.trim().to_string();
-  if clean_id.is_empty() {
-    return Ok(MediaGenerationProof {
-      connector_id: "comfyui_video".to_string(),
-      ok: false,
-      provider: "comfyui".to_string(),
-      job_id: None,
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "failed".to_string(),
-      message: "prompt_id is required.".to_string(),
-      error: Some("prompt_id is required.".to_string()),
-    });
-  }
-
-  let endpoint = std::env::var("COMFYUI_ENDPOINT")
-    .unwrap_or_else(|_| "http://127.0.0.1:8188".to_string())
-    .trim_end_matches('/')
-    .to_string();
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(30))
-    .user_agent("Alphonso-Miya-ComfyUI/0.1")
-    .build()
-    .map_err(|error| error.to_string())?;
-  let response = client
-    .get(format!("{endpoint}/history/{clean_id}"))
-    .send()
-    .await
-    .map_err(|error| error.to_string())?;
-  let status = response.status();
-  let body: Value = response.json().await.map_err(|error| error.to_string())?;
-
-  if !status.is_success() {
-    return Ok(MediaGenerationProof {
-      connector_id: "comfyui_video".to_string(),
-      ok: false,
-      provider: "comfyui".to_string(),
-      job_id: Some(clean_id),
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "failed".to_string(),
-      message: "ComfyUI history request failed.".to_string(),
-      error: Some(format!("HTTP {}", status.as_u16())),
-    });
-  }
-
-  let history_entry = body.get(&clean_id).cloned().unwrap_or(Value::Null);
-  if history_entry.is_null() {
-    return Ok(MediaGenerationProof {
-      connector_id: "comfyui_video".to_string(),
-      ok: true,
-      provider: "comfyui".to_string(),
-      job_id: Some(clean_id),
-      output_paths: vec![],
-      preview_base64: None,
-      queued_at_ms,
-      trust: "pending".to_string(),
-      message: "Workflow is still running or history not available yet.".to_string(),
-      error: None,
-    });
-  }
-
-  let mut output_paths: Vec<String> = vec![];
-  if let Some(outputs) = history_entry.get("outputs").and_then(|value| value.as_object()) {
-    for node_output in outputs.values() {
-      if let Some(images) = node_output.get("images").and_then(|value| value.as_array()) {
-        for image in images {
-          let filename = image.get("filename").and_then(|value| value.as_str()).unwrap_or("");
-          let subfolder = image.get("subfolder").and_then(|value| value.as_str()).unwrap_or("");
-          let file_type = image.get("type").and_then(|value| value.as_str()).unwrap_or("output");
-          if filename.is_empty() {
-            continue;
-          }
-          output_paths.push(format!("{subfolder}/{filename} ({file_type})"));
-        }
-      }
-    }
-  }
-  output_paths = dedup_strings(output_paths);
-
-  Ok(MediaGenerationProof {
-    connector_id: "comfyui_video".to_string(),
-    ok: true,
-    provider: "comfyui".to_string(),
-    job_id: Some(clean_id),
-    output_paths: output_paths.clone(),
-    preview_base64: None,
-    queued_at_ms,
-    trust: "verified".to_string(),
-    message: if output_paths.is_empty() {
-      "ComfyUI history loaded. No output files listed yet.".to_string()
-    } else {
-      format!("ComfyUI history loaded. {} output file(s) detected.", output_paths.len())
-    },
-    error: None,
-  })
+fn text_has_any(text: &str, terms: &[&str]) -> bool {
+  terms.iter().any(|term| text.contains(term))
 }
 
-fn dedup_strings(mut values: Vec<String>) -> Vec<String> {
-  values.sort();
-  values.dedup();
-  values
+fn split_command_fragments(input: &str) -> Vec<String> {
+  input
+    .split([',', '.'])
+    .flat_map(|part| part.split(" then "))
+    .flat_map(|part| part.split(" and "))
+    .map(|part| part.trim().to_string())
+    .filter(|part| !part.is_empty())
+    .take(10)
+    .collect()
 }
 
 #[tauri::command]
@@ -2739,731 +994,143 @@ async fn check_app_update(
   }
 }
 
-fn between_quotes(line: &str) -> Option<String> {
-  let mut quote_char = '\0';
-  let mut start_index: Option<usize> = None;
-  for (idx, ch) in line.char_indices() {
-    if start_index.is_none() {
-      if ch == '"' || ch == '\'' {
-        quote_char = ch;
-        start_index = Some(idx + ch.len_utf8());
-      }
-      continue;
-    }
-
-    if ch == quote_char {
-      let start = start_index.unwrap_or(0);
-      if idx > start {
-        return Some(line[start..idx].to_string());
-      }
-      break;
-    }
-  }
-  None
-}
-
-fn extract_dependencies(content: &str, language: &str) -> Vec<String> {
-  let mut deps: Vec<String> = vec![];
-
-  for line in content.lines() {
-    let trimmed = line.trim();
-    if trimmed.is_empty() {
-      continue;
-    }
-
-    match language {
-      "javascript" | "react-jsx" | "typescript" | "react-tsx"
-        if (trimmed.starts_with("import ") || trimmed.contains(" from ") || trimmed.contains("require(")) => {
-          if let Some(dep) = between_quotes(trimmed) {
-            deps.push(dep);
-          }
-        }
-      "rust"
-        if trimmed.starts_with("use ") => {
-          let raw = trimmed.trim_start_matches("use ").trim_end_matches(';').trim();
-          if !raw.is_empty() {
-            deps.push(raw.to_string());
-          }
-        }
-      "python" => {
-        if trimmed.starts_with("import ") {
-          let raw = trimmed.trim_start_matches("import ").trim();
-          if !raw.is_empty() {
-            deps.push(raw.split_whitespace().next().unwrap_or("").to_string());
-          }
-        } else if trimmed.starts_with("from ") && trimmed.contains(" import ") {
-          let raw = trimmed.trim_start_matches("from ").split(" import ").next().unwrap_or("").trim();
-          if !raw.is_empty() {
-            deps.push(raw.to_string());
-          }
-        }
-      }
-      _ => {}
-    }
-  }
-
-  dedup_strings(deps.into_iter().filter(|dep| !dep.is_empty()).collect())
-}
-
-fn parse_tasklist(tasklist_output: &str, query: &str) -> Vec<ProcessMatch> {
-  let lower_query = query.to_ascii_lowercase();
-  #[cfg(target_os = "windows")]
-  {
-    tasklist_output
-      .lines()
-      .filter_map(|line| {
-        let trimmed = line.trim();
-        if !trimmed.contains(",") {
-          return None;
-        }
-
-        let clean = trimmed.trim_matches('"');
-        let parts: Vec<&str> = clean.split("\",\"").collect();
-        if parts.len() < 2 {
-          return None;
-        }
-
-        let process_name = parts[0].to_string();
-        if !process_name.to_ascii_lowercase().contains(&lower_query) {
-          return None;
-        }
-
-        let pid = parts[1].parse::<u32>().ok();
-        Some(ProcessMatch {
-          name: process_name,
-          pid,
-        })
-      })
-      .collect()
-  }
-
-  #[cfg(not(target_os = "windows"))]
-  {
-    tasklist_output
-      .lines()
-      .skip(1)
-      .filter_map(|line| {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-          return None;
-        }
-
-        let mut parts = trimmed.split_whitespace();
-        let pid = parts.next().and_then(|value| value.parse::<u32>().ok());
-        let name = parts.collect::<Vec<&str>>().join(" ");
-        if name.is_empty() || !name.to_ascii_lowercase().contains(&lower_query) {
-          return None;
-        }
-        Some(ProcessMatch { name, pid })
-      })
-      .collect()
-  }
-}
-
-fn text_has_any(text: &str, terms: &[&str]) -> bool {
-  terms.iter().any(|term| text.contains(term))
-}
-
-fn split_command_fragments(input: &str) -> Vec<String> {
-  input
-    .split([',', '.'])
-    .flat_map(|part| part.split(" then "))
-    .flat_map(|part| part.split(" and "))
-    .map(|part| part.trim().to_string())
-    .filter(|part| !part.is_empty())
-    .take(10)
-    .collect()
+#[tauri::command]
+fn send_app_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
+  use tauri_plugin_notification::NotificationExt;
+  app.notification()
+    .builder()
+    .title(&title)
+    .body(&body)
+    .show()
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn decompose_jose_command_backend(command_text: String) -> Vec<JoseAssignmentProof> {
-  let clean = command_text.trim().to_string();
-  if clean.is_empty() {
-    return vec![];
+fn open_url(url: String) -> Result<UrlOpenProof, String> {
+  if !url.starts_with("http://") && !url.starts_with("https://") {
+    return Err("URL must start with http:// or https://".to_string());
   }
-  let lower = clean.to_ascii_lowercase();
-  let fragments = split_command_fragments(&lower);
-  let mut assignments: Vec<JoseAssignmentProof> = vec![];
-
-  let research = text_has_any(&lower, &["research", "lookup", "docs", "source", "citation", "latest", "pricing", "market"]);
-  let creative = text_has_any(&lower, &["video", "script", "brand", "campaign", "thumbnail", "storyboard", "prompt", "creative"]);
-  let local_execution = text_has_any(&lower, &["build", "runtime", "ollama", "verify", "diagnostic", "fix", "test", "package", "file"]);
-  let publishing = text_has_any(&lower, &["upload", "publish", "post", "youtube", "tiktok", "instagram"]);
-  let risky_local = text_has_any(&lower, &["delete", "remove", "deploy", "write", "modify", "execute"]);
-
-  if research {
-    assignments.push(JoseAssignmentProof {
-      agent: "hector".to_string(),
-      title: format!("Hector research task: {}", clean.chars().take(64).collect::<String>()),
-      rationale: "Research language detected. Hector should gather and verify sources.".to_string(),
-      action_type: "research".to_string(),
-      risk_level: "low".to_string(),
-      requires_approval: true,
-      command_preview: "Research and citation proof only. No uploads or account actions.".to_string(),
-      decomposition: fragments.clone(),
-    });
-  }
-
-  if publishing {
-    assignments.push(JoseAssignmentProof {
-      agent: "hector".to_string(),
-      title: format!("Hector publish safety check: {}", clean.chars().take(64).collect::<String>()),
-      rationale: "Publishing language detected. Jose approval required before any external action.".to_string(),
-      action_type: "external_publish_handoff".to_string(),
-      risk_level: "high".to_string(),
-      requires_approval: true,
-      command_preview: "No automatic posting. Requires explicit approval and connector auth.".to_string(),
-      decomposition: fragments.clone(),
-    });
-  }
-
-  if creative {
-    assignments.push(JoseAssignmentProof {
-      agent: "miya".to_string(),
-      title: format!("Miya creative task: {}", clean.chars().take(64).collect::<String>()),
-      rationale: "Creative language detected. Miya produces script/storyboard/prompt packages.".to_string(),
-      action_type: "creative_package".to_string(),
-      risk_level: "low".to_string(),
-      requires_approval: true,
-      command_preview: "Creative package generation only.".to_string(),
-      decomposition: fragments.clone(),
-    });
-  }
-
-  if local_execution {
-    assignments.push(JoseAssignmentProof {
-      agent: "alphonso".to_string(),
-      title: format!("Alphonso operator task: {}", clean.chars().take(64).collect::<String>()),
-      rationale: "Runtime/build/verification language detected.".to_string(),
-      action_type: "local_operation".to_string(),
-      risk_level: if risky_local { "high".to_string() } else { "medium".to_string() },
-      requires_approval: true,
-      command_preview: if risky_local {
-        "Potential local/system action. Explicit approval required.".to_string()
-      } else {
-        "Local diagnostics/verification only.".to_string()
-      },
-      decomposition: fragments.clone(),
-    });
-  }
-
-  if assignments.is_empty() {
-    assignments.push(JoseAssignmentProof {
-      agent: "jose".to_string(),
-      title: format!("Jose planning task: {}", clean.chars().take(64).collect::<String>()),
-      rationale: "No specialist match detected.".to_string(),
-      action_type: "orchestration_review".to_string(),
-      risk_level: "low".to_string(),
-      requires_approval: false,
-      command_preview: "Planning only.".to_string(),
-      decomposition: fragments,
-    });
-  }
-
-  assignments
-}
-
-#[tauri::command]
-fn execute_command_verified(program: String, args: Vec<String>, cwd: Option<String>) -> Result<CommandProof, String> {
-  let started = now_ms();
-
-  if !allowed_program(&program) {
-    return Err("Program is not allowed by Alphonso supervised command policy.".to_string());
-  }
-
-  let mut command = Command::new(&program);
-  command.args(&args);
-
-  if let Some(path) = &cwd {
-    command.current_dir(path);
-  }
-
-  let output = command.output().map_err(|error| error.to_string())?;
-  let finished = now_ms();
-  let success = output.status.success();
-
-  Ok(CommandProof {
-    program,
-    args,
-    cwd,
-    started_at_ms: started,
-    finished_at_ms: finished,
-    success,
-    exit_code: output.status.code(),
-    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-    trust: if success { "verified".to_string() } else { "failed".to_string() },
-  })
-}
-
-#[tauri::command]
-fn verify_paths(paths: Vec<String>) -> Vec<PathProof> {
-  paths
-    .into_iter()
-    .map(|path| {
-      let path_buf = PathBuf::from(&path);
-      let metadata = fs::metadata(&path_buf).ok();
-      let modified_at_ms = metadata
-        .as_ref()
-        .and_then(|meta| meta.modified().ok())
-        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
-        .map(|duration| duration.as_millis() as u64);
-
-      PathProof {
-        path,
-        exists: metadata.is_some(),
-        is_file: metadata.as_ref().map(|meta| meta.is_file()).unwrap_or(false),
-        is_dir: metadata.as_ref().map(|meta| meta.is_dir()).unwrap_or(false),
-        modified_at_ms,
-        trust: if metadata.is_some() { "verified".to_string() } else { "failed".to_string() },
-      }
-    })
-    .collect()
-}
-
-#[tauri::command]
-fn read_runtime_env_value(name: String) -> Result<RuntimeEnvValueProof, String> {
-  if !ALPHONSO_RUNTIME_ENV_NAMES.contains(&name.as_str()) {
-    return Err("Environment variable is not exposed through this command.".to_string());
-  }
-
-  let checked_at_ms = now_ms();
-  match std::env::var(&name) {
-    Ok(value) => {
-      let trimmed = value.trim().to_string();
-      Ok(RuntimeEnvValueProof {
-        name,
-        present: !trimmed.is_empty(),
-        value: if trimmed.is_empty() { None } else { Some(trimmed) },
-        checked_at_ms,
-        trust: "verified".to_string(),
-        error: None,
-      })
-    }
-    Err(error) => {
-      let reason = match error {
-        std::env::VarError::NotPresent => "missing".to_string(),
-        std::env::VarError::NotUnicode(_) => "not unicode".to_string(),
-      };
-      Ok(RuntimeEnvValueProof {
-        name,
-        present: false,
-        value: None,
-        checked_at_ms,
-        trust: "failed".to_string(),
-        error: Some(reason),
-      })
-    }
-  }
-}
-
-fn normalize_bridge_path_prefix(raw: &str) -> String {
-  let trimmed = raw.trim();
-  if trimmed.is_empty() {
-    "/api/alphonso-bridge".to_string()
-  } else if trimmed.starts_with('/') {
-    trimmed.to_string()
+  if cfg!(target_os = "windows") {
+    Command::new("cmd").args(["/C", "start", &url]).spawn().map_err(|e| e.to_string())?;
+  } else if cfg!(target_os = "macos") {
+    Command::new("open").arg(&url).spawn().map_err(|e| e.to_string())?;
   } else {
-    format!("/{}", trimmed)
+    Command::new("xdg-open").arg(&url).spawn().map_err(|e| e.to_string())?;
   }
-}
-
-fn trim_trailing_slashes(raw: &str) -> String {
-  raw.trim().trim_end_matches('/').to_string()
-}
-
-#[tauri::command]
-fn alphonso_bridge_status() -> Value {
-  let base_url = std::env::var("ALPHONSO_BRIDGE_URL").unwrap_or_default();
-  let token = std::env::var("ALPHONSO_BRIDGE_TOKEN").unwrap_or_default();
-  let path_prefix = std::env::var("ALPHONSO_BRIDGE_PATH_PREFIX")
-    .ok()
-    .map(|value| normalize_bridge_path_prefix(&value))
-    .unwrap_or_else(|| "/api/alphonso-bridge".to_string());
-  let timeout_ms = std::env::var("ALPHONSO_BRIDGE_TIMEOUT_MS")
-    .ok()
-    .and_then(|value| value.trim().parse::<u64>().ok())
-    .unwrap_or(15000);
-  let configured = !base_url.trim().is_empty() && !token.trim().is_empty();
-
-  serde_json::json!({
-    "success": true,
-    "configured": configured,
-    "enabled": configured,
-    "status": if configured { "configured" } else { "setup_required" },
-    "baseUrlConfigured": !base_url.trim().is_empty(),
-    "tokenConfigured": !token.trim().is_empty(),
-    "pathPrefix": path_prefix,
-    "timeoutMs": timeout_ms
+  Ok(UrlOpenProof {
+    url,
+    opened: true,
+    opened_at_ms: now_ms(),
+    trust: "verified".to_string(),
   })
 }
 
 #[tauri::command]
-async fn alphonso_bridge_send_packet(packet: Value) -> Result<Value, String> {
-  let base_url = std::env::var("ALPHONSO_BRIDGE_URL")
-    .map_err(|_| "ALPHONSO_BRIDGE_URL is not configured.".to_string())?;
-  let token = std::env::var("ALPHONSO_BRIDGE_TOKEN")
-    .map_err(|_| "ALPHONSO_BRIDGE_TOKEN is not configured.".to_string())?;
-  let path_prefix = std::env::var("ALPHONSO_BRIDGE_PATH_PREFIX")
-    .ok()
-    .map(|value| normalize_bridge_path_prefix(&value))
-    .unwrap_or_else(|| "/api/alphonso-bridge".to_string());
-  let timeout_ms = std::env::var("ALPHONSO_BRIDGE_TIMEOUT_MS")
-    .ok()
-    .and_then(|value| value.trim().parse::<u64>().ok())
-    .unwrap_or(15000);
-  let url = format!("{}{}", trim_trailing_slashes(&base_url), path_prefix);
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_millis(timeout_ms))
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  let response = client
-    .post(&url)
-    .bearer_auth(token.trim())
-    .json(&packet)
+async fn fetch_url_content(state: tauri::State<'_, reqwest::Client>, url: String) -> Result<UrlFetchProof, String> {
+  if !url.starts_with("http://") && !url.starts_with("https://") {
+    return Err("URL must start with http:// or https://".to_string());
+  }
+  let response = state.get(&url)
+    .header(reqwest::header::USER_AGENT, "Alphonso/1.0")
     .send()
     .await
-    .map_err(|error| error.to_string())?;
+    .map_err(|e| e.to_string())?;
+  let status = response.status().as_u16();
+  let html = response.text().await.map_err(|e| e.to_string())?;
 
-  let http_status = response.status().as_u16();
-  let response_text = response.text().await.map_err(|error| error.to_string())?;
-  let parsed_response = serde_json::from_str(&response_text).unwrap_or(serde_json::Value::String(response_text));
-  let status_proof = alphonso_bridge_status();
-  let ok = http_status < 400;
-
-  Ok(serde_json::json!({
-    "success": ok,
-    "ok": ok,
-    "httpStatus": http_status,
-    "response": parsed_response,
-    "bridge": status_proof,
-    "status": if ok { "synced" } else { "failed" }
-  }))
-}
-
-#[tauri::command]
-fn check_processes(names: Vec<String>) -> Result<Vec<ProcessProof>, String> {
-  #[cfg(target_os = "windows")]
-  let tasklist_output = {
-    let output = Command::new("tasklist")
-      .args(["/FO", "CSV", "/NH"])
-      .output()
-      .map_err(|error| error.to_string())?;
-
-    String::from_utf8_lossy(&output.stdout).to_string()
-  };
-
-  #[cfg(not(target_os = "windows"))]
-  let tasklist_output = {
-    let output = Command::new("ps")
-      .args(["-axo", "pid,comm"])
-      .output()
-      .map_err(|error| error.to_string())?;
-
-    String::from_utf8_lossy(&output.stdout).to_string()
-  };
-
-  let proofs = names
-    .into_iter()
-    .map(|name| {
-      let matches = parse_tasklist(&tasklist_output, &name);
-      let running = !matches.is_empty();
-      ProcessProof {
-        query: name,
-        running,
-        matches,
-        trust: if running { "verified".to_string() } else { "failed".to_string() },
-      }
+  let title = html
+    .lines()
+    .find(|line| line.to_lowercase().contains("<title>"))
+    .and_then(|line| {
+      let start = line.to_lowercase().find("<title>")? + 7;
+      let end = line.to_lowercase().find("</title>")?;
+      Some(line[start..end].trim().to_string())
     })
+    .unwrap_or_default();
+
+  let mut content = String::new();
+  let mut in_tag = false;
+  for ch in html.chars() {
+    if ch == '<' { in_tag = true; continue; }
+    if ch == '>' { in_tag = false; continue; }
+    if !in_tag { content.push(ch); }
+  }
+  let content = content
+    .lines()
+    .map(|l| l.trim())
+    .filter(|l| !l.is_empty())
+    .take(200)
+    .collect::<Vec<_>>()
+    .join("\n")
+    .chars()
+    .take(10000)
     .collect();
 
-  Ok(proofs)
-}
-
-
-#[tauri::command]
-fn record_restore_point(app: tauri::AppHandle, snapshot_id: String, payload: String) -> Result<RestorePointProof, String> {
-  let dir = app_data_subdir(&app, "recovery")?;
-
-  let mut file_path = dir.clone();
-  file_path.push(format!("{snapshot_id}.json"));
-  fs::write(&file_path, payload).map_err(|error| error.to_string())?;
-
-  Ok(RestorePointProof {
-    snapshot_id,
-    file_path: file_path.to_string_lossy().to_string(),
-    written: true,
-    written_at_ms: now_ms(),
-    trust: "verified".to_string(),
-  })
-}
-
-#[tauri::command]
-fn write_handoff_export_file(workspace_root: String, file_name: String, content: String) -> Result<HandoffExportProof, String> {
-  let safe_name = Path::new(file_name.trim())
-    .file_name()
-    .and_then(|value| value.to_str())
-    .filter(|value| !value.trim().is_empty())
-    .unwrap_or("alphonso-self-development.md")
-    .replace(['/', '\\'], "_");
-  let proof = write_workspace_text_file(
-    workspace_root,
-    format!("docs/handoff/{safe_name}"),
+  Ok(UrlFetchProof {
+    url,
+    status,
     content,
-  )?;
-  Ok(HandoffExportProof {
-    file_path: proof.file_path,
-    written: proof.written,
-    written_at_ms: proof.written_at_ms,
-    bytes: proof.bytes,
-    trust: proof.trust,
-  })
-}
-
-#[tauri::command]
-fn write_workspace_text_file(workspace_root: String, relative_path: String, content: String) -> Result<WorkspaceWriteProof, String> {
-  let root = PathBuf::from(workspace_root.trim());
-  if root.as_os_str().is_empty() {
-    return Err("Workspace root is required for workspace file writes.".to_string());
-  }
-
-  let root_abs = fs::canonicalize(&root).map_err(|error| error.to_string())?;
-  let rel = Path::new(relative_path.trim());
-  if rel.as_os_str().is_empty() {
-    return Err("Relative path is required.".to_string());
-  }
-  if rel.is_absolute() || rel.components().any(|component| matches!(component, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
-    return Err("Unsafe relative path rejected.".to_string());
-  }
-
-  let file_path = root_abs.join(rel);
-  if let Some(parent) = file_path.parent() {
-    fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-  }
-
-  let payload = content.into_bytes();
-  let bytes = payload.len();
-  fs::write(&file_path, payload).map_err(|error| error.to_string())?;
-
-  Ok(WorkspaceWriteProof {
-    file_path: file_path.to_string_lossy().to_string(),
-    relative_path: rel.to_string_lossy().to_string(),
-    written: true,
-    written_at_ms: now_ms(),
-    bytes,
-    trust: "verified".to_string(),
-  })
-}
-
-#[tauri::command]
-fn run_ocr_adapter(
-  adapter: Option<String>,
-  engine_path: String,
-  image_path: Option<String>,
-  extra_args: Option<Vec<String>>,
-) -> Result<OcrAdapterProof, String> {
-  let started = now_ms();
-  let adapter = adapter.unwrap_or_else(|| "version_check".to_string());
-  let engine = PathBuf::from(&engine_path);
-  if !engine.exists() || !engine.is_file() {
-    return Ok(OcrAdapterProof {
-      adapter,
-      engine_path,
-      image_path,
-      started_at_ms: started,
-      finished_at_ms: now_ms(),
-      success: false,
-      exit_code: None,
-      stdout: String::new(),
-      stderr: String::new(),
-      trust: "failed".to_string(),
-      error: Some("OCR engine binary path is invalid.".to_string()),
-    });
-  }
-
-  let mut args = vec![];
-  match adapter.as_str() {
-    "version_check" => {
-      args.push("--version".to_string());
-    }
-    "tesseract_cli" => {
-      let image = image_path.clone().ok_or_else(|| "Image path is required for tesseract_cli adapter.".to_string())?;
-      let image_file = PathBuf::from(&image);
-      if !image_file.exists() || !image_file.is_file() {
-        return Err("Image path does not exist.".to_string());
-      }
-      args.push(image);
-      args.push("stdout".to_string());
-      args.push("--dpi".to_string());
-      args.push("70".to_string());
-    }
-    _ => {
-      return Err("Unsupported OCR adapter. Supported adapters: version_check, tesseract_cli.".to_string());
-    }
-  }
-
-  if let Some(extra) = extra_args {
-    args.extend(extra);
-  }
-
-  let output = Command::new(&engine_path).args(&args).output().map_err(|error| error.to_string())?;
-  let finished = now_ms();
-  let success = output.status.success();
-
-  Ok(OcrAdapterProof {
-    adapter,
-    engine_path,
-    image_path,
-    started_at_ms: started,
-    finished_at_ms: finished,
-    success,
-    exit_code: output.status.code(),
-    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-    trust: if success { "verified".to_string() } else { "failed".to_string() },
-    error: None,
-  })
-}
-
-#[tauri::command]
-fn collect_workspace_proof(root: String, max_files: Option<u64>) -> Result<WorkspaceProof, String> {
-  let root_path = PathBuf::from(&root);
-  let checked_at_ms = now_ms();
-
-  if !root_path.exists() || !root_path.is_dir() {
-    return Ok(WorkspaceProof {
-      root,
-      exists: false,
-      file_count: 0,
-      dir_count: 0,
-      total_bytes: 0,
-      sampled_files: vec![],
-      symbol_hits: vec![],
-      checked_at_ms,
-      trust: "failed".to_string(),
-      error: Some("Workspace root does not exist or is not a directory.".to_string()),
-    });
-  }
-
-  let limit = max_files.unwrap_or(1200) as usize;
-  let mut stack = vec![root_path.clone()];
-  let mut file_count = 0_u64;
-  let mut dir_count = 0_u64;
-  let mut total_bytes = 0_u64;
-  let mut sampled_files: Vec<String> = vec![];
-  let mut symbol_counts = [0_u64; 7];
-
-  while let Some(dir) = stack.pop() {
-    dir_count += 1;
-    let entries = match fs::read_dir(&dir) {
-      Ok(entries) => entries,
-      Err(_) => continue,
-    };
-
-    for entry in entries.flatten() {
-      let path = entry.path();
-      let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
-        continue;
-      };
-
-      if path.is_dir() {
-        if matches!(file_name, ".git" | "node_modules" | "target" | "dist") {
-          continue;
-        }
-        stack.push(path);
-        continue;
-      }
-
-      if !path.is_file() {
-        continue;
-      }
-
-      file_count += 1;
-      if let Ok(meta) = fs::metadata(&path) {
-        total_bytes += meta.len();
-      }
-
-      if sampled_files.len() < 12 {
-        sampled_files.push(path.to_string_lossy().to_string());
-      }
-
-      if (file_count as usize) > limit {
-        break;
-      }
-
-      let extension = path.extension().and_then(|value| value.to_str()).unwrap_or("");
-      if !matches!(extension, "js" | "jsx" | "ts" | "tsx" | "rs" | "py") {
-        continue;
-      }
-
-      if let Ok(content) = fs::read_to_string(&path) {
-        let next = symbol_counts_for_text(&content);
-        for (index, value) in next.iter().enumerate() {
-          symbol_counts[index] += value;
-        }
-      }
-    }
-
-    if (file_count as usize) > limit {
-      break;
-    }
-  }
-
-  let symbol_hits = symbol_hits_from_counts(symbol_counts);
-
-  Ok(WorkspaceProof {
-    root,
-    exists: true,
-    file_count,
-    dir_count,
-    total_bytes,
-    sampled_files,
-    symbol_hits,
-    checked_at_ms,
+    title,
+    fetched_at_ms: now_ms(),
     trust: "verified".to_string(),
     error: None,
   })
 }
 
 #[tauri::command]
-fn check_ocr_capability(engine_path: Option<String>) -> OcrCapabilityProof {
-  let checked_at_ms = now_ms();
-  if let Some(path) = engine_path {
-    let path_buf = PathBuf::from(&path);
-    if path_buf.exists() && path_buf.is_file() {
-      return OcrCapabilityProof {
-        available: true,
-        engine: "custom".to_string(),
-        message: format!("OCR engine binary detected at {path}"),
-        checked_at_ms,
-        trust: "verified".to_string(),
-      };
-    }
-
-    return OcrCapabilityProof {
-      available: false,
-      engine: "custom".to_string(),
-      message: format!("OCR engine path does not exist: {path}"),
-      checked_at_ms,
-      trust: "failed".to_string(),
-    };
+fn read_clipboard() -> Result<ClipboardProof, String> {
+  #[cfg(target_os = "windows")]
+  {
+    use std::process::Command;
+    let output = Command::new("powershell")
+      .args(["-Command", "Get-Clipboard"])
+      .output()
+      .map_err(|e| e.to_string())?;
+    let content = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(ClipboardProof {
+      action: "read".to_string(),
+      content,
+      performed_at_ms: now_ms(),
+      trust: "verified".to_string(),
+    })
   }
+  #[cfg(not(target_os = "windows"))]
+  {
+    Err("Clipboard read not supported on this platform".to_string())
+  }
+}
 
-  OcrCapabilityProof {
-    available: false,
-    engine: "unconfigured".to_string(),
-    message: "OCR engine is not configured yet. Set an engine path explicitly.".to_string(),
-    checked_at_ms,
-    trust: "unverified".to_string(),
+#[tauri::command]
+fn write_clipboard(_content: String) -> Result<ClipboardProof, String> {
+  #[cfg(target_os = "windows")]
+  {
+    use std::process::Command;
+    let mut child = Command::new("powershell")
+      .args(["-Command", "Set-Clipboard"])
+      .stdin(std::process::Stdio::piped())
+      .spawn()
+      .map_err(|e| e.to_string())?;
+    if let Some(mut stdin) = child.stdin.take() {
+      use std::io::Write;
+      stdin.write_all(_content.as_bytes()).map_err(|e| e.to_string())?;
+    }
+    child.wait().map_err(|e| e.to_string())?;
+    Ok(ClipboardProof {
+      action: "write".to_string(),
+      content: _content.chars().take(100).collect(),
+      performed_at_ms: now_ms(),
+      trust: "verified".to_string(),
+    })
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    Err("Clipboard write not supported on this platform".to_string())
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  // ── trim_trailing_slashes ─────────────────────────────────────────────────
 
   #[test]
   fn trim_trailing_slashes_removes_trailing_slashes() {
@@ -3478,8 +1145,6 @@ mod tests {
     assert_eq!(trim_trailing_slashes(""), "");
   }
 
-  // ── to_hex ────────────────────────────────────────────────────────────────
-
   #[test]
   fn to_hex_produces_correct_lowercase_hex() {
     assert_eq!(to_hex(&[0x00, 0xff, 0xab, 0x12]), "00ffab12");
@@ -3488,1122 +1153,9 @@ mod tests {
   }
 }
 
-#[tauri::command]
-async fn fetch_research_sources(sources: Vec<ResearchSourceInput>) -> Vec<ResearchSourceProof> {
-  let client = match reqwest::Client::builder()
-    .timeout(Duration::from_secs(12))
-    .redirect(reqwest::redirect::Policy::limited(5))
-    .user_agent("Alphonso-Hector/0.1 local-first research verifier")
-    .build()
-  {
-    Ok(client) => client,
-    Err(error) => {
-      return vec![ResearchSourceProof {
-        url: String::new(),
-        source_type: "unknown".to_string(),
-        official: false,
-        fetched_at_ms: now_ms(),
-        http_status: None,
-        ok: false,
-        title: None,
-        snippet: None,
-        date_checked: unix_now_iso(),
-        confidence: "failed".to_string(),
-        risk_level: "medium".to_string(),
-        verification_state: "failed".to_string(),
-        error: Some(error.to_string()),
-      }];
-    }
-  };
-
-  let mut proofs = Vec::new();
-  for source in sources.into_iter().take(10) {
-    let fetched_at_ms = now_ms();
-    let source_type = source.source_type.unwrap_or_else(|| "public_web".to_string());
-    let official = source.official.unwrap_or(false);
-    let risk_level = if official { "low" } else { "medium" }.to_string();
-    let parsed = reqwest::Url::parse(source.url.trim());
-    if parsed.as_ref().map(|url| url.scheme() != "http" && url.scheme() != "https").unwrap_or(true) {
-      proofs.push(ResearchSourceProof {
-        url: source.url,
-        source_type,
-        official,
-        fetched_at_ms,
-        http_status: None,
-        ok: false,
-        title: None,
-        snippet: None,
-        date_checked: unix_now_iso(),
-        confidence: "failed".to_string(),
-        risk_level,
-        verification_state: "failed".to_string(),
-        error: Some("Only http and https URLs are supported.".to_string()),
-      });
-      continue;
-    }
-
-    // Safety: the `continue` block above already handles every Err and non-http/https case.
-    // If we reach this line, parsed is guaranteed Ok with a valid http(s) URL.
-    let url = match parsed {
-      Ok(u) => u,
-      Err(_) => continue, // defensive fallback; should be unreachable due to guard above
-    };
-    match client.get(url.clone()).send().await {
-      Ok(response) => {
-        let status = response.status();
-        match response.bytes().await {
-          Ok(bytes) => {
-            let max_len = bytes.len().min(200_000);
-            let body = String::from_utf8_lossy(&bytes[..max_len]).to_string();
-            let title = extract_title(&body);
-            let text = strip_html_tags(&body);
-            let snippet = if text.is_empty() {
-              None
-            } else {
-              Some(text.chars().take(420).collect::<String>())
-            };
-            proofs.push(ResearchSourceProof {
-              url: url.to_string(),
-              source_type,
-              official,
-              fetched_at_ms,
-              http_status: Some(status.as_u16()),
-              ok: status.is_success(),
-              title,
-              snippet,
-              date_checked: unix_now_iso(),
-              confidence: if status.is_success() { "verified".to_string() } else { "failed".to_string() },
-              risk_level,
-              verification_state: if status.is_success() { "verified".to_string() } else { "failed".to_string() },
-              error: if status.is_success() { None } else { Some(format!("HTTP status {}", status.as_u16())) },
-            });
-          }
-          Err(error) => proofs.push(ResearchSourceProof {
-            url: url.to_string(),
-            source_type,
-            official,
-            fetched_at_ms,
-            http_status: Some(status.as_u16()),
-            ok: false,
-            title: None,
-            snippet: None,
-            date_checked: unix_now_iso(),
-            confidence: "failed".to_string(),
-            risk_level,
-            verification_state: "failed".to_string(),
-            error: Some(error.to_string()),
-          }),
-        }
-      }
-      Err(error) => proofs.push(ResearchSourceProof {
-        url: url.to_string(),
-        source_type,
-        official,
-        fetched_at_ms,
-        http_status: None,
-        ok: false,
-        title: None,
-        snippet: None,
-        date_checked: unix_now_iso(),
-        confidence: "failed".to_string(),
-        risk_level,
-        verification_state: "failed".to_string(),
-        error: Some(error.to_string()),
-      }),
-    }
-  }
-
-  proofs
-}
-
-#[tauri::command]
-async fn search_research_sources(request: ResearchSearchInput) -> Result<Vec<ResearchSearchResult>, String> {
-  let query = request.query.trim().to_string();
-  if query.is_empty() {
-    return Ok(vec![]);
-  }
-  let source_type = request.source_type.unwrap_or_else(|| "official_docs".to_string());
-  let limit = request.limit.unwrap_or(6).clamp(1, 12) as usize;
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(14))
-    .redirect(reqwest::redirect::Policy::limited(5))
-    .user_agent("Alphonso-Hector/0.1 local-first research discovery")
-    .build()
-    .map_err(|error| error.to_string())?;
-
-  let response = client
-    .get("https://html.duckduckgo.com/html/")
-    .query(&[("q", query.as_str()), ("kl", "us-en"), ("kp", "-1")])
-    .header("Accept", "text/html,application/xhtml+xml")
-    .header("Referer", "https://html.duckduckgo.com/")
-    .send()
-    .await
-    .map_err(|error| format!("DuckDuckGo HTML request failed: {error}"))?;
-
-  let status = response.status();
-  if !status.is_success() {
-    return Err(format!("DuckDuckGo HTML request returned HTTP {}", status.as_u16()));
-  }
-
-  let html = response.text().await.map_err(|error| error.to_string())?;
-  Ok(parse_ddg_results(&html, &source_type, limit))
-}
-
-#[tauri::command]
-async fn search_brave_sources(query: String, limit: Option<u8>, source_type: Option<String>) -> Result<Vec<ResearchSearchResult>, String> {
-  let query = query.trim().to_string();
-  if query.is_empty() {
-    return Ok(vec![]);
-  }
-  let api_key = std::env::var("BRAVE_SEARCH_API_KEY")
-    .map_err(|_| "BRAVE_SEARCH_API_KEY not set".to_string())?;
-  let api_key = api_key.trim().to_string();
-  if api_key.is_empty() {
-    return Err("BRAVE_SEARCH_API_KEY is empty".to_string());
-  }
-  let count = limit.unwrap_or(8).clamp(1, 20);
-  let src_type = source_type.unwrap_or_else(|| "official_docs".to_string());
-
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_secs(14))
-    .user_agent("Alphonso-Hector/0.1 local-first research discovery")
-    .build()
-    .map_err(|e| e.to_string())?;
-
-  let response = client
-    .get("https://api.search.brave.com/res/v1/web/search")
-    .query(&[
-      ("q", query.as_str()),
-      ("count", &count.to_string()),
-      ("country", "us"),
-      ("search_lang", "en"),
-      ("safesearch", "moderate"),
-    ])
-    .header("Accept", "application/json")
-    .header("Accept-Encoding", "gzip")
-    .header("X-Subscription-Token", api_key.as_str())
-    .send()
-    .await
-    .map_err(|e| format!("Brave Search request failed: {e}"))?;
-
-  let status = response.status();
-  if !status.is_success() {
-    return Err(format!("Brave Search returned HTTP {}", status.as_u16()));
-  }
-
-  let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
-  let raw_results = body
-    .get("web")
-    .and_then(|w| w.get("results"))
-    .and_then(|r| r.as_array())
-    .cloned()
-    .unwrap_or_default();
-
-  let results = raw_results
-    .iter()
-    .filter_map(|item| {
-      let url = item.get("url").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
-      if url.is_empty() { return None; }
-      let title = item.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled").chars().take(180).collect::<String>();
-      let snippet = item.get("description")
-        .and_then(|v| v.as_str())
-        .map(|s| s.chars().take(320).collect::<String>());
-      Some(ResearchSearchResult {
-        url,
-        title,
-        snippet,
-        source_type: src_type.clone(),
-        provider: "brave_search".to_string(),
-        date_checked: unix_now_iso(),
-        confidence: "inferred".to_string(),
-        risk_level: "medium".to_string(),
-        verification_state: "inferred".to_string(),
-      })
-    })
-    .take(count as usize)
-    .collect();
-
-  Ok(results)
-}
-
-#[tauri::command]
-fn build_workspace_symbol_index(root: String, max_files: Option<u64>) -> Result<WorkspaceSymbolIndex, String> {
-  let root_path = PathBuf::from(&root);
-  let generated_at_ms = now_ms();
-  let max_files = max_files.unwrap_or(500);
-
-  if !root_path.exists() || !root_path.is_dir() {
-    return Ok(WorkspaceSymbolIndex {
-      root,
-      generated_at_ms,
-      max_files,
-      files_indexed: 0,
-      totals: vec![],
-      dependency_edges: 0,
-      files: vec![],
-      trust: "failed".to_string(),
-      error: Some("Workspace root does not exist or is not a directory.".to_string()),
-    });
-  }
-
-  let mut stack = vec![root_path.clone()];
-  let mut files: Vec<FileSymbolSummary> = vec![];
-  let mut total_counts = [0_u64; 7];
-  let mut dependency_edges = 0_usize;
-
-  while let Some(dir) = stack.pop() {
-    let entries = match fs::read_dir(&dir) {
-      Ok(entries) => entries,
-      Err(_) => continue,
-    };
-
-    for entry in entries.flatten() {
-      let path = entry.path();
-      let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
-        continue;
-      };
-
-      if path.is_dir() {
-        if matches!(file_name, ".git" | "node_modules" | "target" | "dist") {
-          continue;
-        }
-        stack.push(path);
-        continue;
-      }
-
-      if !path.is_file() {
-        continue;
-      }
-
-      let extension = path.extension().and_then(|value| value.to_str()).unwrap_or("");
-      if !matches!(extension, "js" | "jsx" | "ts" | "tsx" | "rs" | "py") {
-        continue;
-      }
-
-      if files.len() >= max_files as usize {
-        break;
-      }
-
-      let content = match fs::read_to_string(&path) {
-        Ok(content) => content,
-        Err(_) => continue,
-      };
-      let counts = symbol_counts_for_text(&content);
-      let language = language_for_extension(extension);
-      let dependencies = extract_dependencies(&content, &language);
-      dependency_edges += dependencies.len();
-      for (index, value) in counts.iter().enumerate() {
-        total_counts[index] += value;
-      }
-
-      let bytes = fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
-      files.push(FileSymbolSummary {
-        path: path.to_string_lossy().to_string(),
-        language,
-        bytes,
-        symbol_hits: symbol_hits_from_counts(counts),
-        dependencies,
-        trust: "verified".to_string(),
-      });
-    }
-
-    if files.len() >= max_files as usize {
-      break;
-    }
-  }
-
-  Ok(WorkspaceSymbolIndex {
-    root,
-    generated_at_ms,
-    max_files,
-    files_indexed: files.len() as u64,
-    totals: symbol_hits_from_counts(total_counts),
-    dependency_edges,
-    files,
-    trust: "verified".to_string(),
-    error: None,
-  })
-}
-
-fn readiness_surface_for_path(path: &Path) -> String {
-  let lower = path.to_string_lossy().to_ascii_lowercase();
-  if lower.contains("connector") || lower.contains("webhook") {
-    return "connector".to_string();
-  }
-  if lower.contains("workflow") || lower.contains("receipt") || lower.contains("approval") {
-    return "workflow".to_string();
-  }
-  if lower.contains("update") || lower.contains("release") || lower.contains("updater") || lower.contains("latest.json") {
-    return "release".to_string();
-  }
-  if lower.contains("memory") || lower.contains("ledger") {
-    return "memory".to_string();
-  }
-  if lower.contains("security") || lower.contains("auth") || lower.contains("policy") || lower.contains("signature") {
-    return "security".to_string();
-  }
-  if lower.contains("component") || lower.contains("app.jsx") || lower.contains("panel") || lower.contains("view") {
-    return "ui".to_string();
-  }
-  if lower.ends_with(".md") || lower.contains("docs") {
-    return "docs".to_string();
-  }
-  "other".to_string()
-}
-
-fn readiness_file_extension(path: &Path) -> String {
-  path.extension()
-    .and_then(|value| value.to_str())
-    .unwrap_or("")
-    .to_ascii_lowercase()
-}
-
-fn readiness_scan_timed_out(started_at_ms: u64) -> bool {
-  now_ms().saturating_sub(started_at_ms) > 90_000
-}
-
-fn readiness_path_contains_segment(path: &Path, segment: &str) -> bool {
-  path.components().any(|component| {
-    component
-      .as_os_str()
-      .to_string_lossy()
-      .eq_ignore_ascii_case(segment)
-  })
-}
-
-fn readiness_should_skip_path(path: &Path, file_name: &str) -> bool {
-  let path_lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
-  matches!(
-    file_name,
-    ".git"
-      | "node_modules"
-      | "target"
-      | "dist"
-      | "release"
-      | "package-lock.json"
-      | "yarn.lock"
-      | "pnpm-lock.yaml"
-      | "Cargo.lock"
-  ) || readiness_path_contains_segment(path, ".git")
-    || readiness_path_contains_segment(path, "node_modules")
-    || readiness_path_contains_segment(path, "target")
-    || readiness_path_contains_segment(path, "dist")
-    || path_lower.contains("/release/rc0/")
-    || path_lower.contains("/docs/handoff")
-    || path_lower.contains("/src-tauri/gen/")
-    || path_lower.contains("/generated/")
-}
-
-fn readiness_is_allowed_top_level_dir(file_name: &str) -> bool {
-  matches!(file_name, "src" | "src-tauri" | "scripts" | "gateway" | "docs")
-}
-
-fn readiness_proof_scan_targets(root: &Path) -> Vec<PathBuf> {
-  let targets = [
-    "src/App.jsx",
-    "src/components/EcosystemHub.jsx",
-    "src/components/ProductionReadinessPanel.jsx",
-    "src/components/SelfDevelopmentPanel.jsx",
-    "src/components/OperatorDashboard.jsx",
-    "src/services/nativeRc0ProofService.js",
-    "src/services/nativeSelfDevelopmentAutostartService.js",
-    "src/services/connectorRegistryService.js",
-    "src/services/repoAuditService.js",
-    "src/services/devPacketService.js",
-    "src/services/selfDevelopmentService.js",
-    "src/services/workflowExecutionService.js",
-    "src/services/workflowReceiptService.js",
-    "src/services/workflowMemoryService.js",
-    "src/services/runtimeLedgerService.js",
-    "src/services/productionReadinessService.js",
-    "src/services/workspaceRootService.js",
-    "scripts/proof-native-selfdev.mjs",
-    "scripts/setup-updater-signing.mjs",
-    "scripts/verify-updater-readiness.mjs",
-    "src-tauri/src/lib.rs",
-    "src-tauri/src/native_proof.rs",
-    "gateway/whatsapp-cloud/src/server.js",
-    "gateway/whatsapp-cloud/src/verify.js",
-    "gateway/whatsapp-cloud/src/normalize.js",
-    "gateway/whatsapp-cloud/src/forward.js",
-    "docs/UPDATER_SIGNING_SETUP.md",
-  ];
-
-  targets.iter().map(|relative| root.join(relative)).collect()
-}
-
-fn scan_readiness_target_paths(
-  root: &Path,
-  target_paths: Vec<PathBuf>,
-  generated_at_ms: u64,
-  max_files: usize,
-  max_findings: usize,
-) -> Result<WorkspaceReadinessScan, String> {
-  let mut files_scanned = 0_u64;
-  let mut findings: Vec<WorkspaceReadinessFinding> = vec![];
-  let mut placeholder_count = 0_u64;
-  let mut todo_count = 0_u64;
-  let mut setup_required_count = 0_u64;
-  let mut blocked_count = 0_u64;
-  let failed_count = 0_u64;
-  let mut partial_count = 0_u64;
-  let scan_started_at_ms = generated_at_ms;
-
-  for path in target_paths {
-    if readiness_scan_timed_out(scan_started_at_ms) || findings.len() >= max_findings || files_scanned as usize >= max_files {
-      return Ok(WorkspaceReadinessScan {
-        root: root.to_string_lossy().to_string(),
-        generated_at_ms,
-        files_scanned,
-        findings,
-        placeholder_count,
-        todo_count,
-        setup_required_count,
-        blocked_count,
-        failed_count,
-        partial_count,
-        trust: "partial".to_string(),
-        error: Some("Readiness scan time budget reached before proof surface completed.".to_string()),
-      });
-    }
-
-    if !path.exists() || !path.is_file() {
-      continue;
-    }
-
-    if readiness_should_skip_path(&path, path.file_name().and_then(|name| name.to_str()).unwrap_or("")) {
-      continue;
-    }
-
-    let progress = NativeProofStageProof {
-      stage: "08_scan_progress".to_string(),
-      status: "running".to_string(),
-      timestamp: format!("{}", now_ms()),
-      process_id: std::process::id(),
-      workspace_root: root.to_string_lossy().to_string(),
-      output_dir: "release/rc0".to_string(),
-      proof_request_found: true,
-      window_label: None,
-      note: Some(format!("Scanning proof surface file: {}", path.to_string_lossy())),
-      error: None,
-      duration_ms: None,
-    };
-    let _ = write_native_proof_stage(Path::new("release/rc0"), "08_scan_progress.json", &progress);
-
-    let extension = readiness_file_extension(&path);
-    if !matches!(
-      extension.as_str(),
-      "js" | "jsx" | "ts" | "tsx" | "rs" | "mjs" | "cjs" | "md" | "toml" | "json" | "yml" | "yaml" | "css" | "html"
-    ) {
-      continue;
-    }
-
-    if let Ok(metadata) = fs::metadata(&path) {
-      const MAX_READY_SCAN_BYTES: u64 = 512 * 1024;
-      if metadata.len() > MAX_READY_SCAN_BYTES {
-        continue;
-      }
-    }
-
-    files_scanned += 1;
-    if files_scanned as usize > max_files {
-      break;
-    }
-
-    let content = match fs::read_to_string(&path) {
-      Ok(content) => content,
-      Err(_) => continue,
-    };
-
-    if readiness_scan_timed_out(scan_started_at_ms) {
-      return Ok(WorkspaceReadinessScan {
-        root: root.to_string_lossy().to_string(),
-        generated_at_ms,
-        files_scanned,
-        findings,
-        placeholder_count,
-        todo_count,
-        setup_required_count,
-        blocked_count,
-        failed_count,
-        partial_count,
-        trust: "partial".to_string(),
-        error: Some("Readiness scan time budget reached after reading a proof surface file.".to_string()),
-      });
-    }
-
-    for (line_index, line) in content.lines().enumerate() {
-      if findings.len() >= max_findings {
-        break;
-      }
-
-      let Some((needle, kind, priority, severity)) = readiness_keyword_match(line) else {
-        continue;
-      };
-
-      let line_number = (line_index + 1) as u64;
-      let message = if needle == "setup required" || needle == "setup-required" {
-        "Setup-required surface should be labeled clearly and backed by real checks.".to_string()
-      } else if kind == "missing_approval" {
-        "Approval gate is missing or not enforced; add Jose approval or truth-label the action.".to_string()
-      } else if kind == "missing_receipt" {
-        "Receipt-backed evidence is missing for a production-facing action.".to_string()
-      } else if kind == "updater_blocker" {
-        "Updater or release path is blocked and should not imply completion.".to_string()
-      } else if kind == "connector_blocker" {
-        "Connector path is blocked and should be marked setup_required until real provider proof exists.".to_string()
-      } else if kind == "not_wired" {
-        "Surface is explicitly marked as not wired; keep it disabled or implement the real path.".to_string()
-      } else if kind == "fake" || kind == "simulation" {
-        "Production-facing surface should not imply fake or simulated execution.".to_string()
-      } else if kind == "placeholder" || kind == "scaffold" || kind == "demo" || kind == "mock" {
-        "Production-facing surface should be replaced with real behavior or explicitly setup-required state.".to_string()
-      } else {
-        "Code review marker remains in the workspace and should be resolved or tracked.".to_string()
-      };
-
-      findings.push(WorkspaceReadinessFinding {
-        id: format!("ready-{}-{}-{}", findings.len() + 1, files_scanned, line_number),
-        path: path.to_string_lossy().to_string(),
-        line_number,
-        surface: readiness_surface_for_path(&path),
-        kind: kind.to_string(),
-        priority: priority.to_string(),
-        severity: severity.to_string(),
-        message,
-        excerpt: line.trim().chars().take(180).collect(),
-      });
-
-      match kind {
-        "placeholder" | "scaffold" | "demo" | "mock" | "not_wired" | "fake" | "simulated" => {
-          placeholder_count += 1;
-        }
-        "todo" => {
-          todo_count += 1;
-        }
-        "setup_required" => {
-          setup_required_count += 1;
-        }
-        _ => {}
-      }
-
-      if priority == "P0" {
-        blocked_count += 1;
-      } else if priority == "P1" {
-        partial_count += 1;
-      }
-    }
-
-    if findings.len() >= max_findings || files_scanned as usize > max_files {
-      break;
-    }
-  }
-
-  let trust = if blocked_count > 0 {
-    "failed"
-  } else if placeholder_count > 0 || setup_required_count > 0 {
-    "partial"
-  } else {
-    "verified"
-  }
-  .to_string();
-
-  Ok(WorkspaceReadinessScan {
-    root: root.to_string_lossy().to_string(),
-    generated_at_ms,
-    files_scanned,
-    findings,
-    placeholder_count,
-    todo_count,
-    setup_required_count,
-    blocked_count,
-    failed_count,
-    partial_count,
-    trust,
-    error: None,
-  })
-}
-
-fn readiness_keyword_match(line: &str) -> Option<(&'static str, &'static str, &'static str, &'static str)> {
-  let lower = line.to_ascii_lowercase();
-  let patterns = [
-    ("missing approval", "missing_approval", "P0", "P0"),
-    ("approval gate", "missing_approval", "P0", "P0"),
-    ("missing receipt", "missing_receipt", "P0", "P0"),
-    ("receipt missing", "missing_receipt", "P0", "P0"),
-    ("updater blocker", "updater_blocker", "P0", "P0"),
-    ("release blocker", "updater_blocker", "P0", "P0"),
-    ("connector blocker", "connector_blocker", "P0", "P0"),
-    ("not wired", "not_wired", "P0", "P0"),
-    ("fake success", "fake", "P0", "P0"),
-    ("fake", "fake", "P0", "P0"),
-    ("simulated", "simulation", "P0", "P0"),
-    ("simulation", "simulation", "P0", "P0"),
-    ("placeholder-only", "placeholder", "P1", "P1"),
-    ("placeholder only", "placeholder", "P1", "P1"),
-    ("placeholder", "placeholder", "P1", "P1"),
-    ("scaffold", "scaffold", "P1", "P1"),
-    ("demo-only", "demo", "P1", "P1"),
-    ("demo", "demo", "P1", "P1"),
-    ("mock", "mock", "P1", "P1"),
-    ("setup-required", "setup_required", "P1", "P1"),
-    ("setup required", "setup_required", "P1", "P1"),
-    ("todo", "todo", "P2", "P2"),
-    ("fixme", "fixme", "P2", "P2"),
-  ];
-
-  patterns
-    .into_iter()
-    .find(|(needle, _, _, _)| lower.contains(needle))
-}
-
-#[tauri::command]
-fn scan_workspace_readiness(
-  root: String,
-  max_files: Option<u64>,
-  max_findings: Option<u64>,
-  proof_mode: Option<bool>,
-) -> Result<WorkspaceReadinessScan, String> {
-  let root_path = PathBuf::from(&root);
-  let generated_at_ms = now_ms();
-  let scan_started_at_ms = generated_at_ms;
-  let max_files = max_files.unwrap_or(1200) as usize;
-  let max_findings = max_findings.unwrap_or(240) as usize;
-  let proof_mode = proof_mode.unwrap_or(false)
-    || std::env::var("ALPHONSO_RC0_PROOF")
-      .map(|value| value.trim() == "1")
-      .unwrap_or(false)
-    || std::env::var("ALPHONSO_SELFDEV_AUTORUN")
-      .map(|value| value.trim() == "1")
-      .unwrap_or(false);
-
-  if !root_path.exists() || !root_path.is_dir() {
-    return Ok(WorkspaceReadinessScan {
-      root,
-      generated_at_ms,
-      files_scanned: 0,
-      findings: vec![],
-      placeholder_count: 0,
-      todo_count: 0,
-      setup_required_count: 0,
-      blocked_count: 0,
-      failed_count: 0,
-      partial_count: 0,
-      trust: "failed".to_string(),
-      error: Some("Workspace root does not exist or is not a directory.".to_string()),
-    });
-  }
-
-  if proof_mode {
-    let proof_start = NativeProofStageProof {
-      stage: "08_scan_progress".to_string(),
-      status: "running".to_string(),
-      timestamp: format!("{}", now_ms()),
-      process_id: std::process::id(),
-      workspace_root: root_path.display().to_string(),
-      output_dir: "release/rc0".to_string(),
-      proof_request_found: true,
-      window_label: None,
-      note: Some("Native proof scan branch entered.".to_string()),
-      error: None,
-      duration_ms: None,
-    };
-    let _ = write_native_proof_stage(Path::new("release/rc0"), "08_scan_progress.json", &proof_start);
-    return scan_readiness_target_paths(
-      &root_path,
-      readiness_proof_scan_targets(&root_path),
-      generated_at_ms,
-      max_files.min(80),
-      max_findings,
-    );
-  }
-
-  let mut stack = vec![root_path.clone()];
-  let mut files_scanned = 0_u64;
-  let mut findings: Vec<WorkspaceReadinessFinding> = vec![];
-  let mut placeholder_count = 0_u64;
-  let mut todo_count = 0_u64;
-  let mut setup_required_count = 0_u64;
-  let mut blocked_count = 0_u64;
-  let mut failed_count = 0_u64;
-  let mut partial_count = 0_u64;
-
-  while let Some(dir) = stack.pop() {
-    if readiness_scan_timed_out(scan_started_at_ms) {
-      return Ok(WorkspaceReadinessScan {
-        root,
-        generated_at_ms,
-        files_scanned,
-        findings,
-        placeholder_count,
-        todo_count,
-        setup_required_count,
-        blocked_count,
-        failed_count,
-        partial_count,
-        trust: "partial".to_string(),
-        error: Some("Readiness scan time budget reached before traversal completed.".to_string()),
-      });
-    }
-
-    if files_scanned as usize >= max_files {
-      return Ok(WorkspaceReadinessScan {
-        root,
-        generated_at_ms,
-        files_scanned,
-        findings,
-        placeholder_count,
-        todo_count,
-        setup_required_count,
-        blocked_count,
-        failed_count,
-        partial_count,
-        trust: "partial".to_string(),
-        error: Some(format!("Readiness scan stopped after max_files={max_files}.")),
-      });
-    }
-
-    let entries = match fs::read_dir(&dir) {
-      Ok(entries) => entries,
-      Err(_) => continue,
-    };
-    let is_root_dir = dir == root_path;
-
-    for entry in entries.flatten() {
-      if readiness_scan_timed_out(scan_started_at_ms) {
-        return Ok(WorkspaceReadinessScan {
-          root,
-          generated_at_ms,
-          files_scanned,
-          findings,
-          placeholder_count,
-          todo_count,
-          setup_required_count,
-          blocked_count,
-          failed_count,
-          partial_count,
-          trust: "partial".to_string(),
-          error: Some("Readiness scan time budget reached before traversal completed.".to_string()),
-        });
-      }
-
-      let path = entry.path();
-      let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
-        continue;
-      };
-
-      if let Ok(file_type) = entry.file_type() {
-        if file_type.is_symlink() {
-          continue;
-        }
-      }
-
-      if path.is_dir() {
-        if readiness_should_skip_path(&path, file_name) {
-          continue;
-        }
-        if is_root_dir && !readiness_is_allowed_top_level_dir(file_name) {
-          continue;
-        }
-        stack.push(path);
-        continue;
-      }
-
-      if !path.is_file() {
-        continue;
-      }
-
-      if readiness_should_skip_path(&path, file_name) {
-        continue;
-      }
-
-      let extension = readiness_file_extension(&path);
-      if !matches!(
-        extension.as_str(),
-        "js" | "jsx" | "ts" | "tsx" | "rs" | "mjs" | "cjs" | "md" | "toml" | "json" | "yml" | "yaml" | "css" | "html"
-      ) {
-        continue;
-      }
-
-      if let Ok(metadata) = entry.metadata() {
-        const MAX_READY_SCAN_BYTES: u64 = 512 * 1024;
-        if metadata.len() > MAX_READY_SCAN_BYTES {
-          continue;
-        }
-      }
-
-      if files_scanned as usize >= max_files {
-        return Ok(WorkspaceReadinessScan {
-          root,
-          generated_at_ms,
-          files_scanned,
-          findings,
-          placeholder_count,
-          todo_count,
-          setup_required_count,
-          blocked_count,
-          failed_count,
-          partial_count,
-          trust: "partial".to_string(),
-          error: Some(format!("Readiness scan stopped after max_files={max_files}.")),
-        });
-      }
-
-      files_scanned += 1;
-
-      let content = match fs::read_to_string(&path) {
-        Ok(content) => content,
-        Err(_) => continue,
-      };
-
-      if readiness_scan_timed_out(scan_started_at_ms) {
-        return Ok(WorkspaceReadinessScan {
-          root,
-          generated_at_ms,
-          files_scanned,
-          findings,
-          placeholder_count,
-          todo_count,
-          setup_required_count,
-          blocked_count,
-          failed_count,
-          partial_count,
-          trust: "partial".to_string(),
-          error: Some("Readiness scan time budget reached after reading a file batch.".to_string()),
-        });
-      }
-
-      for (line_index, line) in content.lines().enumerate() {
-        if findings.len() >= max_findings {
-          break;
-        }
-
-        let Some((needle, kind, priority, severity)) = readiness_keyword_match(line) else {
-          continue;
-        };
-
-        let line_number = (line_index + 1) as u64;
-        let message = if needle == "setup required" || needle == "setup-required" {
-          "Setup-required surface should be labeled clearly and backed by real checks.".to_string()
-        } else if kind == "missing_approval" {
-          "Approval gate is missing or not enforced; add Jose approval or truth-label the action.".to_string()
-        } else if kind == "missing_receipt" {
-          "Receipt-backed evidence is missing for a production-facing action.".to_string()
-        } else if kind == "updater_blocker" {
-          "Updater or release path is blocked and should not imply completion.".to_string()
-        } else if kind == "connector_blocker" {
-          "Connector path is blocked and should be marked setup_required until real provider proof exists.".to_string()
-        } else if kind == "not_wired" {
-          "Surface is explicitly marked as not wired; keep it disabled or implement the real path.".to_string()
-        } else if kind == "fake" || kind == "simulation" {
-          "Production-facing surface should not imply fake or simulated execution.".to_string()
-        } else if kind == "placeholder" || kind == "scaffold" || kind == "demo" || kind == "mock" {
-          "Production-facing surface should be replaced with real behavior or explicitly setup-required state.".to_string()
-        } else {
-          "Code review marker remains in the workspace and should be resolved or tracked.".to_string()
-        };
-
-        findings.push(WorkspaceReadinessFinding {
-          id: format!("ready-{}-{}-{}", findings.len() + 1, files_scanned, line_number),
-          path: path.to_string_lossy().to_string(),
-          line_number,
-          surface: readiness_surface_for_path(&path),
-          kind: kind.to_string(),
-          priority: priority.to_string(),
-          severity: severity.to_string(),
-          message,
-          excerpt: line.trim().chars().take(180).collect(),
-        });
-
-        match kind {
-          "placeholder" | "scaffold" | "demo" | "mock" | "not_wired" | "fake" | "simulated" => {
-            placeholder_count += 1;
-          }
-          "todo" => {
-            todo_count += 1;
-          }
-          "setup_required" => {
-            setup_required_count += 1;
-          }
-          _ => {}
-        }
-
-        if priority == "P0" {
-          blocked_count += 1;
-        } else if priority == "P1" {
-          partial_count += 1;
-        } else if priority == "P2" && kind == "todo" {
-          failed_count += 0;
-        }
-      }
-
-      if findings.len() >= max_findings || files_scanned as usize >= max_files {
-        break;
-      }
-    }
-
-    if findings.len() >= max_findings || files_scanned as usize >= max_files {
-      break;
-    }
-  }
-
-  let trust = if blocked_count > 0 {
-    "failed"
-  } else if placeholder_count > 0 || setup_required_count > 0 {
-    "partial"
-  } else {
-    "verified"
-  }
-  .to_string();
-
-  Ok(WorkspaceReadinessScan {
-    root,
-    generated_at_ms,
-    files_scanned,
-    findings,
-    placeholder_count,
-    todo_count,
-    setup_required_count,
-    blocked_count,
-    failed_count,
-    partial_count,
-    trust,
-    error: None,
-  })
-}
-
-#[tauri::command]
-fn send_app_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
-  use tauri_plugin_notification::NotificationExt;
-  app.notification()
-    .builder()
-    .title(&title)
-    .body(&body)
-    .show()
-    .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn inspect_updater_release(bundle_dir: String, manifest_dir: String) -> Result<ReleaseArtifactProof, String> {
-  let bundle_path = PathBuf::from(&bundle_dir);
-  let manifest_path = PathBuf::from(&manifest_dir).join("latest.json");
-
-  if !bundle_path.exists() || !bundle_path.is_dir() {
-    return Ok(ReleaseArtifactProof {
-      bundle_dir,
-      manifest_dir,
-      installer_path: None,
-      installer_found: false,
-      signature_path: None,
-      signature_found: false,
-      latest_json_path: Some(manifest_path.to_string_lossy().to_string()),
-      latest_json_found: manifest_path.exists(),
-      manifest_valid: false,
-      manifest_version: None,
-      manifest_url: None,
-      manifest_signature: None,
-      trust: "failed".to_string(),
-      error: Some("Updater bundle directory does not exist or is not a directory.".to_string()),
-    });
-  }
-
-  let mut installer_candidates: Vec<(PathBuf, u64)> = vec![];
-  for entry in fs::read_dir(&bundle_path).map_err(|error| error.to_string())? {
-    let entry = entry.map_err(|error| error.to_string())?;
-    let path = entry.path();
-    if !path.is_file() {
-      continue;
-    }
-    let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or("");
-    if !file_name.ends_with("-setup.exe") {
-      continue;
-    }
-    let modified_at_ms = fs::metadata(&path)
-      .ok()
-      .and_then(|meta| meta.modified().ok())
-      .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
-      .map(|duration| duration.as_millis() as u64)
-      .unwrap_or(0);
-    installer_candidates.push((path, modified_at_ms));
-  }
-  installer_candidates.sort_by_key(|b| std::cmp::Reverse(b.1));
-
-  let installer_path = installer_candidates.first().map(|(path, _)| path.clone());
-  let signature_path = installer_path.as_ref().map(|path| PathBuf::from(format!("{}.sig", path.to_string_lossy())));
-  let installer_found = installer_path
-    .as_ref()
-    .map(|path| path.exists() && path.is_file())
-    .unwrap_or(false);
-  let signature_found = signature_path
-    .as_ref()
-    .map(|path| path.exists() && path.is_file())
-    .unwrap_or(false);
-  let latest_json_found = manifest_path.exists() && manifest_path.is_file();
-
-  let mut manifest_valid = false;
-  let mut manifest_version = None;
-  let mut manifest_url = None;
-  let mut manifest_signature = None;
-  let mut manifest_error = None;
-
-  if latest_json_found {
-    match fs::read_to_string(&manifest_path) {
-      Ok(raw) => match serde_json::from_str::<Value>(&raw) {
-        Ok(json) => {
-          manifest_version = json.get("version").and_then(|value| value.as_str()).map(|value| value.to_string());
-          let platform = json.get("platforms").and_then(|value| value.get("windows-x86_64"));
-          manifest_signature = platform.and_then(|value| value.get("signature")).and_then(|value| value.as_str()).map(|value| value.to_string());
-          manifest_url = platform.and_then(|value| value.get("url")).and_then(|value| value.as_str()).map(|value| value.to_string());
-          manifest_valid = manifest_version.is_some()
-            && manifest_signature.as_ref().map(|value| !value.trim().is_empty()).unwrap_or(false)
-            && manifest_url.as_ref().map(|value| !value.trim().is_empty()).unwrap_or(false);
-          if !manifest_valid {
-            manifest_error = Some("latest.json is present but missing required version, url, or signature fields.".to_string());
-          }
-        }
-        Err(error) => {
-          manifest_error = Some(format!("latest.json could not be parsed: {error}"));
-        }
-      },
-      Err(error) => {
-        manifest_error = Some(format!("latest.json could not be read: {error}"));
-      }
-    }
-  }
-
-  let trust = if installer_found && signature_found && manifest_valid {
-    "verified"
-  } else if latest_json_found || installer_found || signature_found {
-    "partial"
-  } else {
-    "failed"
-  }
-  .to_string();
-
-  Ok(ReleaseArtifactProof {
-    bundle_dir,
-    manifest_dir,
-    installer_path: installer_path.map(|path| path.to_string_lossy().to_string()),
-    installer_found,
-    signature_path: signature_path.map(|path| path.to_string_lossy().to_string()),
-    signature_found,
-    latest_json_path: Some(manifest_path.to_string_lossy().to_string()),
-    latest_json_found,
-    manifest_valid,
-    manifest_version,
-    manifest_url,
-    manifest_signature,
-    trust,
-    error: manifest_error,
-  })
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   load_dotenv();
-  // Shared HTTP client — built once at startup and stored in Tauri state.
-  // All commands should prefer `state: tauri::State<'_, reqwest::Client>` over creating a new client per call.
   let http_client = reqwest::Client::builder()
     .timeout(std::time::Duration::from_secs(30))
     .build()
@@ -4871,7 +1423,6 @@ pub fn run() {
         )?;
       }
 
-      // Global hotkey: Ctrl+Shift+Space → show window + start voice input
       use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
       let shortcut: Shortcut = "Ctrl+Shift+Space".parse().unwrap_or_else(|_| "CommandOrControl+Shift+Space".parse().expect("fallback hotkey parse"));
       let app_handle_hs = app.handle().clone();
@@ -4918,7 +1469,6 @@ pub fn run() {
     .on_window_event(|window, event| {
       match event {
         WindowEvent::CloseRequested { api, .. }
-          // Hide to tray instead of closing; "Quit Alphonso" in the tray menu exits for real.
           if window.label() == "main" => {
             let _ = window.hide();
             api.prevent_close();
@@ -4964,7 +1514,7 @@ pub fn run() {
       ollama_generate,
       record_restore_point,
       write_handoff_export_file,
-      write_workspace_text_file,
+      workspace::write_workspace_text_file,
       append_audit_log,
       read_audit_log,
       verify_audit_chain,
@@ -4972,7 +1522,7 @@ pub fn run() {
       validate_plugin_manifest_disk,
       execute_plugin_tool,
       run_ocr_adapter,
-      collect_workspace_proof,
+      workspace::collect_workspace_proof,
       check_ocr_capability,
       get_memory_store_status,
       upsert_memory_records,
@@ -4983,21 +1533,21 @@ pub fn run() {
       list_events_command,
       list_event_dedup_command,
       get_event_store_status,
-      fetch_research_sources,
-      search_research_sources,
-      search_brave_sources,
+      search::fetch_research_sources,
+      search::search_research_sources,
+      search::search_brave_sources,
       decompose_jose_command_backend,
-      build_workspace_symbol_index,
-      scan_workspace_readiness,
-      inspect_updater_release,
+      workspace::build_workspace_symbol_index,
+      workspace::scan_workspace_readiness,
+      workspace::inspect_updater_release,
       check_app_update,
       check_env_vars_presence,
-      connector_poll_telegram,
+      telegram::connector_poll_telegram,
       connector_poll_whatsapp,
-      verify_whatsapp_cloud_webhook_challenge,
-      verify_whatsapp_cloud_webhook_signature,
-      normalize_whatsapp_cloud_inbound,
-      connector_send_telegram,
+      whatsapp_webhook::verify_whatsapp_cloud_webhook_challenge,
+      whatsapp_webhook::verify_whatsapp_cloud_webhook_signature,
+      whatsapp_webhook::normalize_whatsapp_cloud_inbound,
+      telegram::connector_send_telegram,
       connector_send_whatsapp,
       connector_send_chatgpt,
       connector_send_claude,
@@ -5010,7 +1560,16 @@ pub fn run() {
       connector_generate_sdwebui_image,
       connector_queue_comfyui_video,
       connector_get_comfyui_history,
-      connector_check_local_runtime_health
+      connector_check_local_runtime_health,
+      workspace::read_workspace_file,
+      workspace::delete_workspace_file,
+      workspace::move_workspace_file,
+      workspace::search_workspace_files,
+      workspace::list_workspace_directory,
+      open_url,
+      fetch_url_content,
+      read_clipboard,
+      write_clipboard
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

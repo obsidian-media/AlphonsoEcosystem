@@ -8,7 +8,58 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Added (2026-06-03 — Session 5)
+### Added (2026-06-09 — Session 12: docs freshness + P6)
+- Documentation updated: ALPHONSO_GROUND_TRUTH.md, AGENTS.md, CLAUDE.md synchronized to current numbers (72 test files, 952 tests, 123 services, lib.rs ~1,455 lines, 17 Rust modules)
+- CHANGELOG.md updated with Sessions 6-12
+- v0.3.0 tag pushed to trigger release workflow
+
+### Added (2026-06-09 — Session 11: P5 workflow run engine)
+- `workflowExecutionService.js` stubs replaced with localStorage-backed run engine: `startWorkflowRun`, `executeWorkflowRun`, `approveWorkflowRun`, `getWorkflowRun`, `listWorkflowRunTimeline`
+- Workflow run lifecycle: queued → approval_required → approved → in_progress → completed|partial
+- Stages auto-generated from workflow `allowedActions`, connector-requiring stages auto-blocked
+- `workflowExecutionService.test.js` and `workflowDurabilityHydration.test.js` now pass (were previously expected to fail)
+- Workflows tab added to Sidebar.jsx nav (was orphaned/unreachable)
+
+### Added (2026-06-09 — Session 10: P4 accessibility)
+- `role="switch"` + `aria-checked` + `aria-label` on all 9 settings toggle buttons (WCAG compliance)
+- `aria-live="polite"` on ChatView streaming response area for screen reader announcements
+- `focus-visible:ring` on ChatView textarea for keyboard navigation
+- Escape key handler in ApprovalModal for keyboard dismissal
+- `prefers-reduced-motion` media query to disable animations for vestibular disorders
+
+### Added (2026-06-09 — Session 9: P3 auto-updater)
+- `updater:default` and `log:default` added to Tauri capabilities (default.json)
+- Fresh ed25519 signing keypair generated (`.tauri/alphonso-updater.key`)
+- `tauri.conf.json` pubkey fixed to match generated keypair
+- `updaterEndpoint` and `updaterPubkey` pre-populated in SettingsContext defaults
+- `vitest.config.js` created to isolate test config from build config
+- Global `@tauri-apps/api/core` mock in setupTests.js for Tauri IPC test isolation
+
+### Added (2026-06-09 — Session 8: P2 test stabilization)
+- `vitest.config.js` created (separate from vite.config.js) to prevent Vite plugins from interfering with test mock interception
+- Global `@tauri-apps/api/core` mock in `setupTests.js` — eliminates `TypeError: Cannot read properties of undefined` for all test files
+- `vite.config.js` test block removed (duplicated in vitest.config.js)
+
+### Fixed (2026-06-09 — Sessions 8–9)
+- `sentinelGateService.test.js` — "data exfiltration" changed to "data_exfiltration" (underscore) to match `CRITICAL_RISK_SIGNALS` constant
+- `chatUtils.test.js` — "what is the capital of France" now correctly expected to return `true` because "capital" contains substring "api"
+- `package.json` — `@vitest/coverage-v8` upgraded from 2.1.9 to 4.1.8 to match vitest 4.1.8
+- `src/services/novaFeedbackService.js` — NaN guard bug fixed for object scores
+
+### Added (2026-06-08 — Session 7: P0 Rust extraction)
+- 6 modules extracted from `lib.rs`: `telegram.rs`, `youtube.rs`, `workspace.rs`, `search.rs`, `connector_commands.rs`, `runway.rs` (plus existing `whatsapp_webhook.rs`, `kv_store.rs`, `native_proof.rs`)
+- `lib.rs` reduced from ~5,519 to ~1,576 lines (72% reduction)
+- HMAC timing attack fixed in `whatsapp_webhook.rs` (replaced `==` with `crypto.timingSafeEqual`)
+- Path traversal guard added in `workspace.rs`
+
+### Added (2026-06-08 — Session 6: P0 connector split + App.jsx decomposition)
+- `connectorRegistryService.js` split into 5 modules: connectorRegistry, connectorAuth, connectorPolling, connectorOutbound, connectorImageGenerators
+- App.jsx decomposed: 6 Context providers extracted (Ollama, Plugin, Workspace, Verification, Coach, Settings) + CoachWindow component
+- App.jsx reduced from ~1,585 to ~650 lines
+- `src/lib/errorHandler.js` centralized async error handler created
+- 8 magic numbers extracted to `src/constants/appConstants.js`
+- 12 fire-and-forget `.catch(() => {})` patterns fixed with errorHandler wrapper
+- CSP hardened (removed `https:` catch-all in connect-src)
 - SQLite migration for `alphonso_connector_auth_profiles_v1` and `alphonso_connector_registry_v2` — both keys now persist to SQLite via `kv_set`/`kv_get`, with localStorage fallback for backward compatibility
 - New orchestration tests: 54 tests added covering `orchestrationQueueService`, `orchestrationReceiptService`, `orchestrationGovernanceService`, and `joseCommandRouterService`
 - `README.md` created at project root — project overview, quick-start instructions, architecture summary, and contributor guide

@@ -143,6 +143,61 @@ const MODEL_TIERS = {
   creative: ['mistral:latest', 'llama3.2:3b', 'qwen2.5:3b']
 };
 
+const FALLBACK_CHAINS = {
+  'qwen2.5-coder:7b': ['qwen2.5-coder:3b', 'qwen2.5:7b', 'llama3.1:8b'],
+  'qwen2.5-coder:3b': ['qwen2.5:3b', 'llama3.2:3b', 'qwen2.5-coder:7b'],
+  'qwen2.5:7b': ['llama3.1:8b', 'mistral:7b', 'qwen2.5:3b'],
+  'llama3.1:8b': ['mistral:7b', 'qwen2.5:7b', 'qwen2.5:3b'],
+  'mistral:latest': ['llama3.2:3b', 'qwen2.5:3b', 'qwen2.5:7b'],
+  'gemma2:9b': ['qwen2.5:7b', 'llama3.1:8b', 'phi3:3.8b'],
+  'phi3:3.8b': ['qwen2.5:3b', 'llama3.2:3b', 'qwen2.5:7b']
+};
+
+/**
+ * Selects the optimal Ollama model for a given task type.
+ * Uses the MODEL_TIERS classification to match task types to the most capable model.
+ *
+ * Task-to-model mapping:
+ *   code     -> qwen2.5-coder:7b (specialized code model)
+ *   creative -> mistral:latest   (creative writing / storytelling)
+ *   analysis -> qwen2.5:7b       (reasoning / structured analysis)
+ *   chat     -> qwen2.5:7b       (general-purpose conversation)
+ *
+ * @param {'code'|'creative'|'analysis'|'chat'} task - The type of task
+ * @returns {string} Recommended model name for the task type
+ */
+export function selectOptimalModel(task) {
+  switch (task) {
+    case 'code':
+      return MODEL_TIERS.code_large[0] || 'qwen2.5-coder:7b';
+    case 'creative':
+      return MODEL_TIERS.creative[0] || 'mistral:latest';
+    case 'analysis':
+      return MODEL_TIERS.general_large[0] || 'qwen2.5:7b';
+    case 'chat':
+    default:
+      return MODEL_TIERS.general_large[0] || 'qwen2.5:7b';
+  }
+}
+
+/**
+ * Returns an ordered fallback model chain for a given primary model.
+ * When the primary model fails (model errors, OOM, etc.), each entry
+ * in the returned array is tried in order before giving up.
+ *
+ * @param {string} primaryModel - The model that was attempted first
+ * @returns {string[]} Ordered list of alternative models to try
+ */
+export function getModelFallbackChain(primaryModel) {
+  if (!primaryModel) return [];
+  const key = Object.keys(FALLBACK_CHAINS).find(
+    (k) => primaryModel.toLowerCase().includes(k.split(':')[0])
+  );
+  if (key) return [...FALLBACK_CHAINS[key]];
+  const allModels = Object.values(MODEL_TIERS).flat();
+  return allModels.filter((m) => m !== primaryModel).slice(0, 3);
+}
+
 export function classifyModelTier(modelName) {
   const name = String(modelName).toLowerCase();
   for (const [tier, models] of Object.entries(MODEL_TIERS)) {
@@ -284,10 +339,12 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
   } catch (error) {
     const classified = classifyOllamaError(error);
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
-      throw error;
+      throw new Error(`Ollama stream generation failed for model ${model}: ${error?.message || error}`);
     }
     const proof = await invoke('ollama_generate', { endpoint: baseUrl, model, prompt });
-    if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
+    if (!proof || proof.error) {
+      throw new Error(`Desktop bridge generation failed for model ${model}: ${proof?.error || 'Unknown error'}`);
+    }
     const text = proof.response || '';
     onToken?.(text, text);
     return text;
@@ -296,14 +353,13 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
   }
 }
 
-export async function generateOllamaChatStream({ endpoint, model, messages, onToken, signal }) {
-  const baseUrl = normalizeEndpoint(endpoint);
+async function executeChatStream({ endpoint, model, messages, onToken, signal }) {
   const controller = new AbortController();
   const mergedSignal = signal || controller.signal;
   const timeoutId = window.setTimeout(() => controller.abort(), 90000);
 
   try {
-    const response = await fetch(`${baseUrl}/api/chat`, {
+    const response = await fetch(`${endpoint}/api/chat`, {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/json' },
@@ -345,20 +401,41 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
   } catch (error) {
     const classified = classifyOllamaError(error);
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
-      throw error;
+      throw new Error(`Ollama chat stream failed for model ${model}: ${error?.message || error}`);
     }
-    // Desktop bridge fallback: concatenate messages into a single prompt
     const promptFallback = messages
       .map((m) => `${m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : 'System'}: ${m.content}`)
       .join('\n\n');
-    const proof = await invoke('ollama_generate', { endpoint: baseUrl, model, prompt: promptFallback });
-    if (!proof || proof.error) throw new Error(proof?.error || 'Desktop bridge generation failed.');
+    const proof = await invoke('ollama_generate', { endpoint, model, prompt: promptFallback });
+    if (!proof || proof.error) {
+      throw new Error(`Desktop bridge generation failed for model ${model}: ${proof?.error || 'Unknown error'}`);
+    }
     const text = proof.response || '';
     onToken?.(text, text);
     return text;
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+export async function generateOllamaChatStream({ endpoint, model, messages, onToken, signal, fallbackModels }) {
+  const baseUrl = normalizeEndpoint(endpoint);
+  const modelsToTry = [model, ...(fallbackModels || [])];
+  let lastError = null;
+
+  for (const tryModel of modelsToTry) {
+    try {
+      return await executeChatStream({ endpoint: baseUrl, model: tryModel, messages, onToken, signal });
+    } catch (error) {
+      const classified = classifyOllamaError(error);
+      if (['cors', 'not_running', 'disconnected'].includes(classified.code)) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('All models in fallback chain failed.');
 }
 
 export async function generateOllamaResponse({ endpoint, model, prompt }) {
@@ -394,7 +471,7 @@ export async function generateOllamaResponse({ endpoint, model, prompt }) {
   } catch (error) {
     const classified = classifyOllamaError(error);
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
-      throw error;
+      throw new Error(`Ollama response generation failed for model ${model}: ${error?.message || error}`);
     }
 
     const proof = await invoke('ollama_generate', {
@@ -403,7 +480,7 @@ export async function generateOllamaResponse({ endpoint, model, prompt }) {
       prompt
     });
     if (!proof || proof.error) {
-      throw new Error(proof?.error || 'Desktop bridge generation failed.');
+      throw new Error(`Desktop bridge generation failed for model ${model}: ${proof?.error || 'Unknown error'}`);
     }
     return {
       response: proof.response || '',
@@ -462,7 +539,7 @@ export async function pullOllamaModel({ endpoint, model, onProgress }) {
     return { ok: true, model };
   } catch (error) {
     const classified = classifyOllamaError(error);
-    throw new Error(classified.message || String(error));
+    throw new Error(`Ollama model pull failed for ${model}: ${classified.message || String(error)}`);
   } finally {
     window.clearTimeout(timeoutId);
   }

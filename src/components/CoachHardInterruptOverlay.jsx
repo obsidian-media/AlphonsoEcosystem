@@ -23,9 +23,9 @@ export function CoachHardInterruptOverlay({ intervention, pauseUntilMs, onAction
             </div>
           )}
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-zinc-950 hover:bg-red-100">Pause 60s</button>
-            <button type="button" onClick={() => onAction?.('end_session')} className="rounded-xl border border-red-300/30 bg-red-500/15 px-4 py-2 text-xs font-bold uppercase tracking-widest text-red-50 hover:bg-red-500/25">End session</button>
-            <button type="button" onClick={() => onAction?.('continue_anyway')} className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:bg-white/10 hover:text-zinc-100">Continue anyway</button>
+            <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-zinc-950 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70" aria-label="Pause for 60 seconds">Pause 60s</button>
+            <button type="button" onClick={() => onAction?.('end_session')} className="rounded-xl border border-red-300/30 bg-red-500/15 px-4 py-2 text-xs font-bold uppercase tracking-widest text-red-50 hover:bg-red-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70" aria-label="End session">End session</button>
+            <button type="button" onClick={() => onAction?.('continue_anyway')} className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50" aria-label="Continue anyway despite warning">Continue anyway</button>
           </div>
           <div className="text-[11px] text-zinc-500">Protective/local-only interruption. No upload, no prediction advice.</div>
         </div>

@@ -8,6 +8,8 @@
   "permissions": [
     "core:default",
     "notification:default",
-    "global-shortcut:default"
+    "global-shortcut:default",
+    "updater:default",
+    "log:default"
   ]
 }
