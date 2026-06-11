@@ -115,7 +115,7 @@ jobs:
   e2e:
     name: Playwright E2E Smoke Test
     needs: [test]
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
@@ -136,22 +136,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Install Ollama
+      - name: Start Ollama
         run: |
-          Invoke-WebRequest -Uri "https://ollama.com/download/OllamaSetup.exe" -OutFile "$env:TEMP\OllamaSetup.exe"
-          Start-Process -FilePath "$env:TEMP\OllamaSetup.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -Wait -NoNewWindow
-          $ollamaPath = "$env:LOCALAPPDATA\Programs\Ollama"
-          echo "$ollamaPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          & "$ollamaPath\ollama.exe" --version
-
-      - name: Start Ollama and pull model
-        run: |
-          $ollamaPath = "$env:LOCALAPPDATA\Programs\Ollama"
-          Start-Process -FilePath "$ollamaPath\ollama.exe" -ArgumentList "serve" -WindowStyle Hidden
-          Start-Sleep -Seconds 10
-          & "$ollamaPath\ollama.exe" pull tinyllama
-        env:
-          OLLAMA_HOST: "http://127.0.0.1:11434"
+          docker run -d --name ollama -p 11434:11434 ollama/ollama
+          sleep 10
+          docker exec ollama ollama pull tinyllama
 
       - name: Run Playwright tests
         run: npx playwright test --reporter=list
