@@ -10,7 +10,8 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
           if (id.includes('react-dom')) return 'react-dom';
-          if (id.includes('/react/')) return 'react';
+          if (id.includes('/react/') && !id.includes('react-dom')) return 'react';
+          if (id.includes('framer-motion') || id.includes('motion-dom')) return 'vendor';
           if (id.includes('lucide-react')) return 'lucide-react';
           if (id.includes('@tauri-apps/api')) return 'tauri-api';
           return 'vendor';

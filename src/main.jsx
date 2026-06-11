@@ -4,7 +4,7 @@ import App from './App'
 import './index.css'
 import { ToastProvider } from './components/ToastProvider'
 import { startNativeSelfDevelopmentAutostart } from './services/nativeSelfDevelopmentAutostartService'
-import MarketingLandingPage from './components/MarketingLandingPage'
+const MarketingLandingPage = React.lazy(() => import('./components/MarketingLandingPage'))
 
 const CRASH_LOG_KEY = 'alphonso_crash_log_v1';
 const MAX_CRASH_ENTRIES = 20;
@@ -78,7 +78,9 @@ root.render(
   <React.StrictMode>
     <BootBoundary>
       {isMarketingPage ? (
-        <MarketingLandingPage />
+        <React.Suspense fallback={null}>
+          <MarketingLandingPage />
+        </React.Suspense>
       ) : (
         <ToastProvider>
           <App />
