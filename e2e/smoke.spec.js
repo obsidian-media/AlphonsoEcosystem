@@ -3,6 +3,13 @@ import { test, expect } from '@playwright/test';
 test.describe('Alphonso E2E smoke tests', () => {
 
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('alphonso_onboarding_complete_v1', 'true');
+      localStorage.setItem('alphonso_settings', JSON.stringify({
+        selectedModel: 'tinyllama',
+        endpoint: 'http://localhost:11434'
+      }));
+    });
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 15000 });
   });
