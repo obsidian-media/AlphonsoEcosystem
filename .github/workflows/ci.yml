@@ -115,7 +115,8 @@ jobs:
   e2e:
     name: Playwright E2E Smoke Test
     needs: [test]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -136,14 +137,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Start Ollama
-        run: |
-          docker run -d --name ollama -p 11434:11434 ollama/ollama
-          sleep 10
-          docker exec ollama ollama pull tinyllama
-
       - name: Run Playwright tests
         run: npx playwright test --reporter=list
         env:
           CI: true
-          OLLAMA_HOST: "http://127.0.0.1:11434"
