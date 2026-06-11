@@ -62,7 +62,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY2MTIzRDQ1NjQ5RTAyNUIKUldSYkFwNWtSVDBTOXV3b2U2ekFSUWV0UE9DRlpJQ0Z2WFY2Y0g0WGhYc2gybStiaUZjcVVDdkQK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOEVDRjc2ODY2MzIyN0YKUldSL0ltT0dkcytPN1FSV0JrbUovUzNjQXc2YTJEYWgrTG9UdHdNZC9BZTk5M0Z1VkF6eTlmelUK",
       "endpoints": [
         "https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json"
       ]

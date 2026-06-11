@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { getDefaultWorkspaceRoot } from '../services/workspaceRootService';
 
@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS = {
   coachAgent: 'alphonso',
   autoUpdateEnabled: true,
   updaterEndpoint: 'https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json',
-  updaterPubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY2MTIzRDQ1NjQ5RTAyNUIKUldSYkFwNWtSVDBTOXV3b2U2ekFSUWV0UE9DRlpJQ0Z2WFY2Y0g0WGhYc2gybStiaUZjcVVDdkQK',
+  updaterPubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOEVDRjc2ODY2MzIyN0YKUldSL0ltT0dkcytPN1FSV0JrbUovUzNjQXc2YTJEYWgrTG9UdHdNZC9BZTk5M0Z1VkF6eTlmelUK',
   updaterTarget: '',
   idleTimeoutMinutes: 15
 };
@@ -41,8 +41,10 @@ export function SettingsProvider({ children }) {
     });
   }, []);
 
+  const value = useMemo(() => ({ settings, setSettings, operatorMode, setOperatorMode }), [settings, setSettings, operatorMode, setOperatorMode]);
+
   return (
-    <SettingsContext.Provider value={{ settings, setSettings, operatorMode, setOperatorMode }}>
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );

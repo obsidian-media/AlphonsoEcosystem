@@ -479,11 +479,12 @@ function VerificationLogsProvider({ children }) {
   const [durableAuditLogs, setDurableAuditLogs] = useState([]);
   const [auditChainProof, setAuditChainProof] = useState(null);
   const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
+  const bridgeValue = React.useMemo(() => ({ verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice }), [verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice]);
 
   return (
-    <VerificationLogsBridge value={{ verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice }}>
+    <VerificationLogsBridge.Provider value={bridgeValue}>
       {children}
-    </VerificationLogsBridge>
+    </VerificationLogsBridge.Provider>
   );
 }
 
@@ -501,10 +502,12 @@ function RequestApprovalProvider({ children }) {
     });
   }, []);
 
+  const approvalValue = React.useMemo(() => ({ approvalPending, setApprovalPending, requestApproval, approvalResolveRef }), [approvalPending, setApprovalPending, requestApproval]);
+
   return (
-    <RequestApprovalBridge value={{ approvalPending, setApprovalPending, requestApproval, approvalResolveRef }}>
+    <RequestApprovalBridge.Provider value={approvalValue}>
       {children}
-    </RequestApprovalBridge>
+    </RequestApprovalBridge.Provider>
   );
 }
 

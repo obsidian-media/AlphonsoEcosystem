@@ -74,8 +74,25 @@ const root = ReactDOM.createRoot(document.getElementById('root'))
 const pathname = window.location.pathname.toLowerCase();
 const isMarketingPage = pathname === '/website' || pathname === '/landing';
 
+const USE_STRICT_MODE = !window.__PLAYWRIGHT__;
+
 root.render(
-  <React.StrictMode>
+  USE_STRICT_MODE ? (
+    <React.StrictMode>
+      <BootBoundary>
+        {isMarketingPage ? (
+          <React.Suspense fallback={null}>
+            <MarketingLandingPage />
+          </React.Suspense>
+        ) : (
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        )}
+        <BootReadySignal />
+      </BootBoundary>
+    </React.StrictMode>
+  ) : (
     <BootBoundary>
       {isMarketingPage ? (
         <React.Suspense fallback={null}>
@@ -88,5 +105,5 @@ root.render(
       )}
       <BootReadySignal />
     </BootBoundary>
-  </React.StrictMode>,
+  ),
 )

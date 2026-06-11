@@ -12,6 +12,6 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 60000
   },
-  timeout: 30000,
-  retries: 1
+  timeout: 60000,
+  retries: 2
 });
