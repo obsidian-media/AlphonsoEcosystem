@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react({ jsxRuntime: 'automatic' })],
+  resolve: {
+    dedupe: ['react', 'react-dom']
+  },
   build: {
     chunkSizeWarningLimit: 900,
     rollupOptions: {
@@ -12,7 +15,6 @@ export default defineConfig({
           if (id.includes('react-dom')) return 'react-dom';
           if (id.includes('/react/') && !id.includes('react-dom')) return 'react';
           if (id.includes('framer-motion') || id.includes('motion-dom')) return 'vendor';
-          if (id.includes('lucide-react')) return 'lucide-react';
           if (id.includes('@tauri-apps/api')) return 'tauri-api';
           return 'vendor';
         }
