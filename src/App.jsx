@@ -536,11 +536,13 @@ export default function App() {
   );
 }
 
+const NOOP_MEMORY = () => {};
+
 function OllamaProviderInner({ children }) {
   const bridge = useVerificationLogsBridge();
   const approval = useRequestApprovalBridge();
   return (
-    <OllamaProvider setVerificationLogs={bridge.setVerificationLogs} setMemoryItems={() => {}}>
+    <OllamaProvider setVerificationLogs={bridge.setVerificationLogs} setMemoryItems={NOOP_MEMORY}>
       {children}
     </OllamaProvider>
   );
