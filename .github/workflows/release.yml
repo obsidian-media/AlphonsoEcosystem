@@ -126,7 +126,7 @@ jobs:
           "manifest_path=$manifestPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Alphonso ${{ steps.tag.outputs.version }}
