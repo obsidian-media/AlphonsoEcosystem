@@ -1468,10 +1468,9 @@ pub fn run() {
     })
     .on_window_event(|window, event| {
       match event {
-        WindowEvent::CloseRequested { api, .. }
+        WindowEvent::CloseRequested { .. }
           if window.label() == "main" => {
-            let _ = window.hide();
-            api.prevent_close();
+            std::process::exit(0);
           }
         WindowEvent::Focused(true) | WindowEvent::Resized(_) => {
           let proof_output_dir = native_proof_output_dir();
