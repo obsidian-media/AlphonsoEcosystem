@@ -81,7 +81,7 @@ const runNativeProofAttempt = async (attempt = 1) => {
 
 window.setTimeout(() => {
   void runNativeProofAttempt()
-}, 1000)
+}, 5000)
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
 const pathname = window.location.pathname.toLowerCase();

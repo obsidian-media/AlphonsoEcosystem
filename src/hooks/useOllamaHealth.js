@@ -117,7 +117,10 @@ export function useOllamaHealth({
   useEffect(() => {
     if (initialCheckDoneRef.current) return;
     initialCheckDoneRef.current = true;
-    runOllamaCheck();
+    const timerId = window.setTimeout(() => {
+      runOllamaCheck();
+    }, 1500);
+    return () => window.clearTimeout(timerId);
   }, [runOllamaCheck]);
 
   useEffect(() => {

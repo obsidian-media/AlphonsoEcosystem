@@ -20,7 +20,7 @@ export function usePollingEffects({
   setBraveSearchConfigured,
   screenObserverRunRef
 }) {
-  // Update check callback and interval
+  // Update check callback and interval — deferred to avoid boot storm
   useEffect(() => {
     if (!settings.autoUpdateEnabled || isCoachWindow || desktopBridge.state !== 'connected') return undefined;
 
@@ -69,10 +69,12 @@ export function usePollingEffects({
       setVerificationLogs((current) => [...current, log].slice(-250));
     };
 
-    runUpdateCheck({ manual: false });
+    const timerId = window.setTimeout(() => {
+      runUpdateCheck({ manual: false });
+    }, 5000);
     const intervalMs = 1000 * 60 * 30;
     const timer = window.setInterval(() => runUpdateCheck({ manual: false }), intervalMs);
-    return () => window.clearInterval(timer);
+    return () => { window.clearTimeout(timerId); window.clearInterval(timer); };
   }, [desktopBridge.state, isCoachWindow, settings.autoUpdateEnabled, settings.updaterEndpoint, settings.updaterPubkey, settings.updaterTarget, setUpdateCheckState, setVerificationLogs]);
 
   // Screen observer cleanup
@@ -82,10 +84,13 @@ export function usePollingEffects({
     }
   }, []);
 
-  // Brave search config check
+  // Brave search config check — deferred
   useEffect(() => {
     if (isCoachWindow) return;
-    isBraveSearchConfigured().then((configured) => setBraveSearchConfigured(configured)).catch(() => {});
+    const timerId = window.setTimeout(() => {
+      isBraveSearchConfigured().then((configured) => setBraveSearchConfigured(configured)).catch(() => {});
+    }, 3000);
+    return () => window.clearTimeout(timerId);
   }, [isCoachWindow, setBraveSearchConfigured]);
 
   // WhatsApp connector polling — deferred to avoid boot storm
@@ -111,7 +116,7 @@ export function usePollingEffects({
       }
     };
 
-    timeoutId = window.setTimeout(poll, 15000);
+    timeoutId = window.setTimeout(poll, 20000);
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
