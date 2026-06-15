@@ -463,7 +463,7 @@ export function useAppEffects({
     return () => {
       cancelled = true;
     };
-  }, [desktopBridge.state, nativeProofHooks, settings.workspaceRoot, updateCheckState, verificationLogs, workspaceFoundation]);
+  }, [desktopBridge.state, nativeProofHooks, settings.workspaceRoot, updateCheckState, workspaceFoundation]);
 
   // Online/offline listener
   useEffect(() => {

@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-09 — Session 11 complete (workflow run engine, auto-updater provisioning, accessibility, vitest config isolation, test fixes)  
+**Last verified:** 2026-06-15 — Deep audit complete (agent system, service layer, frontend, backend, tests, infrastructure, security, documentation)  
 **Verified by:** OpenCode agent (72 test files, 952 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 0.3.0  
+**Version:** 1.0.0  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -55,7 +55,7 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 
 ---
 
-## 3. Service Layer — 123 Services in `src/services/`
+## 3. Service Layer — 124 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
@@ -136,8 +136,8 @@ Key services that past audits missed or underestimated:
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-08, Session 10):**
-- 72 test files, 951+ tests passing
+**Test files (verified 2026-06-15, deep audit):**
+- 72 test files, 952 tests passing
 - 14 Rust unit tests passing
 ```
 accBridgeService.test.js

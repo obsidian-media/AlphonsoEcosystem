@@ -10,12 +10,12 @@
 ```
 src/                   React frontend (.jsx, not .tsx)
   agents/              9 agent profiles, permissions, schemas
-  components/          76+ UI components
-  services/            123 services (policy-gated, not stubs)
+  components/          82 UI components
+  services/            124 services (policy-gated, not stubs)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
   test/                72 test files, 952 tests (Vitest)
 src-tauri/             Rust backend
-  src/lib.rs           ~1,455 lines, 63 Tauri commands
+  src/lib.rs           ~1,455 lines, 76 Tauri commands (across all Rust modules)
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
   src/native_proof.rs  Native proof/RC0 engine
@@ -34,7 +34,7 @@ src-tauri/             Rust backend
 scripts/               Build, release, auth, verification scripts
 e2e/                   Playwright E2E tests
 gateway/               WhatsApp Cloud gateway (Railway-ready, not deployed)
-docs/                  52+ documentation files
+docs/                  116 documentation files
 ```
 
 ## Build & Test Commands

@@ -891,7 +891,7 @@ mod tests {
 
   #[test]
   fn initializes_memory_schema_with_migration_registry() {
-    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    let conn = Connection::open_in_memory().expect("in-memory db");
     let version = initialize_memory_schema(&conn).expect("initialize schema");
     assert_eq!(version, MEMORY_SCHEMA_VERSION);
 
@@ -906,7 +906,7 @@ mod tests {
 
   #[test]
   fn wal_pragma_applies_on_in_memory_db() {
-    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    let conn = Connection::open_in_memory().expect("in-memory db");
     // WAL mode is silently ignored on in-memory DBs (they use memory journal),
     // but the execute_batch must not return an error — this confirms the SQL is valid.
     let result = conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;");

@@ -156,6 +156,20 @@
         window.__ALPHONSO_BOOT_ERROR__(msg, det);
       });
     </script>
+    <script>
+      // Tauri API mock for browser dev mode
+      if (!window.__TAURI_INTERNALS__) {
+        window.__TAURI_INTERNALS__ = {
+          invoke: function() { return Promise.resolve(null); },
+          transformCallback: function(cb) { return 0; },
+          unregisterCallback: function() {},
+          convertFileSrc: function(p) { return p; },
+          metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main' } }
+        };
+        window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { registerListener: function(){}, unregisterListener: function(){} };
+        window.__PLAYWRIGHT__ = true;
+      }
+    </script>
   </head>
   <body class="bg-zinc-950">
     <div id="alphonso-boot-status">

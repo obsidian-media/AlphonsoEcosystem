@@ -113,26 +113,31 @@ export function useOllamaHealth({
     }
   }, [desktopBridge.state, settings.endpoint, settings.selectedModel, setOllamaStatus, setLastCheckedAt, setVerificationLogs, setMemoryItems, setSettings, ollamaCheckRunRef]);
 
+  const initialCheckDoneRef = useRef(false);
   useEffect(() => {
+    if (initialCheckDoneRef.current) return;
+    initialCheckDoneRef.current = true;
     runOllamaCheck();
   }, [runOllamaCheck]);
 
   useEffect(() => {
-    const BACKOFF = [5000, 10000, 15000, 30000];
-    const CONNECTED_INTERVAL = 30000;
+    const POLL_INTERVAL = 30000;
     let timeoutId = null;
-    let attempt = 0;
+    let cancelled = false;
 
-    const schedule = (ms) => {
-      timeoutId = window.setTimeout(async () => {
-        await runOllamaCheck();
-        attempt = 0;
-        schedule(CONNECTED_INTERVAL);
-      }, ms);
+    const poll = async () => {
+      if (cancelled) return;
+      await runOllamaCheck();
+      if (!cancelled) {
+        timeoutId = window.setTimeout(poll, POLL_INTERVAL);
+      }
     };
 
-    schedule(BACKOFF[0]);
-    return () => window.clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(poll, 5000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [runOllamaCheck]);
 
   return runOllamaCheck;
