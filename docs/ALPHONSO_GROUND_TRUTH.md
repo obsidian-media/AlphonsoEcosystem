@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
 **Last verified:** 2026-06-15 — Deep audit complete (agent system, service layer, frontend, backend, tests, infrastructure, security, documentation)  
 **Verified by:** OpenCode agent (72 test files, 952 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 1.0.0  
+**Version:** 1.0.2 (WebView2 leak fix + boot optimizations)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 0.1.0 |
+| Version | 1.0.2 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `C:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
@@ -198,8 +198,8 @@ workflowOperationsRegistryService.test.js
 workspaceRootService.test.js
 ```
 
-**Rust tests (verified 2026-06-03, Session 6):**
-- 24 tests in `src-tauri/src/lib.rs`, `kv_store.rs`, `whatsapp_webhook.rs` — all passing
+**Rust tests (verified 2026-06-15, Session 13):**
+- 14 tests in `src-tauri/src/lib.rs`, `kv_store.rs`, `whatsapp_webhook.rs` — all passing
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
@@ -335,7 +335,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **56 test files, 442 tests, all passing** (verified 2026-06-03, Session 6). 24 Rust unit tests also passing. New test files since Session 5: `agentPairingConstants.test.js`, `agentPairingExecutionService.test.js`, `telegramAutoPollService.test.js`.
+- [x] **Test suite confirmed passing** — **72 test files, 952 tests, all passing** (verified 2026-06-15, Session 13). 14 Rust unit tests also passing. New test files since Session 6: `appStorage.test.js`, `chatUtils.test.js`, `ollamaUtils.test.js`, `trustModel.test.js`, `connectorAuditLogService.test.js`, `sourceConfidenceService.test.js`.
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -379,6 +379,14 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [ ] **No onboarding flow** — first-launch experience does not guide through Ollama check → model download → connector setup
 - [x] **Dark/light theme toggle** — `Sidebar.jsx` has Moon/Sun toggle persisting to `alphonso_theme_v1`; applies `.light` class to `<html>`; basic CSS variables in `index.css` (2026-06-01, Agent 1). Full Tailwind token propagation is a future task.
 - [ ] **Toast notifications** — `ToastProvider` already mounted in `main.jsx`; inbound message toasts already wired in `App.jsx` — no gap here
+
+### FREEZE FIX & BOOT OPTIMIZATIONS (v1.0.2)
+- [x] **WebView2 zombie process fix** — Changed `CloseRequested` handler from hide-to-tray (`api.prevent_close()` + `window.hide()`) to `std::process::exit(0)`. This prevents WebView2 Edge processes from accumulating across sessions, which was causing the freeze.
+- [x] **useAppEffects refactor** — Split 858-line `useAppEffects.js` into 6 focused hooks: `useBootEffects`, `usePersistenceEffects`, `useSessionEffects`, `usePollingEffects`, `useDataHydration`, `useNativeProofEffects`.
+- [x] **Ollama polling simplified** — Removed broken backoff (attempt counter was never incremented), changed to fixed 30s interval with initial check guard.
+- [x] **Autorun dependency trimmed** — Removed `verificationLogs` (200+ entries) from useEffect dependency array.
+- [x] **Boot performance monitoring** — Added `performance.mark()` calls in `main.jsx` for boot sequence tracking.
+- [x] **WhatsApp polling deferred** — Polling now waits 15s after boot and only runs if connector is authenticated.
 
 ---
 
@@ -462,6 +470,6 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-09 — Session 12 complete. 72 test files, 952 tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB — 44% reduction from code splitting), `cargo clippy -- -D warnings` clean (passes on CI ubuntu-latest). `lib.rs` ~1,455 lines (16 extracted modules, 9,968 total Rust lines). Coverage 27.97% (threshold 20%, src/ scoped). Version 0.3.0. Run `npm run verify:app` and `npm run export:ground-truth` to re-verify._
+_Last verified: 2026-06-15 — Session 13 complete. 72 test files, 952 tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB — 44% reduction from code splitting), `cargo clippy -- -D warnings` clean (passes on CI ubuntu-latest). `lib.rs` ~1,455 lines (16 extracted modules, 9,968 total Rust lines). Coverage 27.97% (threshold 20%, src/ scoped). Version 1.0.2. WebView2 zombie process fix: CloseRequested now calls std::process::exit(0) instead of hide-to-tray. useAppEffects split into 6 focused hooks. Ollama polling simplified to 30s fixed interval. Boot performance monitoring added. WhatsApp polling deferred 15s. Run `npm run verify:app` to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.

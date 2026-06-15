@@ -3,8 +3,8 @@
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 5, Tailwind 3) + Ollama (local LLM)
-- **Version**: 1.0.0 (publicly installable, runtime-proven, release-hardened)
-- **Target**: v1.0.0 = publicly installable, runtime-proven, release-hardened
+- **Version**: 1.0.2 (WebView2 leak fix, boot optimizations)
+- **Target**: v1.0.2 = publicly installable, runtime-proven, freeze-fixed
 
 ## Directory Structure
 ```
@@ -12,6 +12,7 @@ src/                   React frontend (.jsx, not .tsx)
   agents/              9 agent profiles, permissions, schemas
   components/          82 UI components
   services/            124 services (policy-gated, not stubs)
+  hooks/               8 custom hooks (useAppEffects split into 6 focused hooks)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
   test/                72 test files, 952 tests (Vitest)
 src-tauri/             Rust backend
@@ -32,7 +33,7 @@ src-tauri/             Rust backend
   src/memory_store.rs  Memory persistence
   src/meta_publish.rs  Meta publishing
 scripts/               Build, release, auth, verification scripts
-e2e/                   Playwright E2E tests
+e2e/                   Playwright E2E tests (smoke.spec.js, boot.spec.js)
 gateway/               WhatsApp Cloud gateway (Railway-ready, not deployed)
 docs/                  116 documentation files
 ```
@@ -42,7 +43,7 @@ docs/                  116 documentation files
 npm run dev              # Vite dev server (port 5173)
 npm run test             # All 952 tests across 72 files
 npm run lint             # ESLint on src/
-npm run build            # Vite production build
+npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
 npm run test:coverage    # Coverage report (actual: 27.97%, threshold: 20%)
 npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
@@ -72,9 +73,10 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 - **orchestrationQueueService.js** manages durable queue with dead-letter replay
 - All 9 connectors (Telegram, WhatsApp, YouTube, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI) are policy-gated, not raw stubs
 - `externalAgentAdapter.js` is the only intentional placeholder (returns "not_wired" for all providers)
+- Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
 ## Do Not Duplicate
-Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 123 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 124 services already exist.
 
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.
@@ -82,9 +84,10 @@ Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not
 ## Version Rules
 - v0.1.0: local install/build/test/release pipeline works
 - v1.0.0: publicly installable + runtime proof — achieved
+- v1.0.2: WebView2 leak fix + boot optimizations — achieved
 - Never fake readiness — use truth labels: COMPLETE / PARTIAL / PLACEHOLDER / FAKE
 
 ## Known Staleness
-- CLAUDE.md says "42 test files, 158 tests" — actual count is 47 test files, 180+ tests
-- ARCHITECTURE.md says lib.rs "~7,200 lines" — actual is ~7,078
-- Ground truth last verified 2026-06-01 — some gaps may have been addressed since
+- CLAUDE.md says "42 test files, 158 tests" — actual count is 72 test files, 952 tests
+- ARCHITECTURE.md says lib.rs "~7,200 lines" — actual is ~1,455 (after module extraction)
+- Ground truth last verified 2026-06-15 — some gaps may have been addressed since
