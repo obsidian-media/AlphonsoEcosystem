@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.3] - 2026-06-15
+
+### Fixed
+- **App freeze on startup resolved** — Moved heavy proof engine startup and workspace validation to background thread (`tauri::async_runtime::spawn`) instead of blocking main thread
+- Added release profile optimizations (LTO, codegen-units=1, strip, panic=abort) for smaller/faster binary
+- Improved NSIS installer with LZMA compression
+
+### Changed
+- `src-tauri/src/lib.rs`: Moved proof engine initialization to background task
+- `src-tauri/Cargo.toml`: Added release profile with LTO and optimizations
+- `src-tauri/tauri.conf.json`: Enhanced window configuration and NSIS installer settings
+
+---
+
 ## [Unreleased]
 
 ### Added (2026-06-09 — Session 12: docs freshness + P6)
