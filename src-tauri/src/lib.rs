@@ -1238,83 +1238,87 @@ pub fn run() {
         let _ = write_native_proof_stage(&proof_output_dir, "03_tauri_started.json", &tauri_started);
 
         if proof_requested {
-          let native_proof_started = NativeProofStageProof {
-            stage: "05_native_proof_engine_started".to_string(),
-            status: "running".to_string(),
-            timestamp: format!("{}", now_ms()),
-            process_id,
-            workspace_root: workspace_root.clone(),
-            output_dir: proof_output_dir.display().to_string(),
-            proof_request_found: proof_request.is_some(),
-            window_label: None,
-            note: Some("Rust startup hook requested the native RC0 proof engine.".to_string()),
-            error: None,
-            duration_ms: None,
-          };
-          let _ = write_native_proof_stage(&proof_output_dir, "05_native_proof_engine_started.json", &native_proof_started);
+          let proof_output_dir_clone = proof_output_dir.clone();
+          let workspace_root_clone = workspace_root.clone();
+          tauri::async_runtime::spawn(async move {
+            let native_proof_started = NativeProofStageProof {
+              stage: "05_native_proof_engine_started".to_string(),
+              status: "running".to_string(),
+              timestamp: format!("{}", now_ms()),
+              process_id,
+              workspace_root: workspace_root_clone.clone(),
+              output_dir: proof_output_dir_clone.display().to_string(),
+              proof_request_found: true,
+              window_label: None,
+              note: Some("Rust startup hook requested the native RC0 proof engine.".to_string()),
+              error: None,
+              duration_ms: None,
+            };
+            let _ = write_native_proof_stage(&proof_output_dir_clone, "05_native_proof_engine_started.json", &native_proof_started);
 
-          let validation_paths = vec![
-            workspace_root.clone(),
-            format!("{}/package.json", workspace_root),
-            format!("{}/src", workspace_root),
-            format!("{}/src-tauri", workspace_root),
-            format!("{}/docs", workspace_root),
-          ];
-          let validation_proofs = verify_paths(validation_paths);
-          let root_proof = validation_proofs.first().cloned();
-          let entry_proofs = validation_proofs.into_iter().skip(1).collect::<Vec<_>>();
-          let missing_entries = ["package.json", "src", "src-tauri", "docs"]
-            .iter()
-            .zip(entry_proofs.iter())
-            .filter_map(|(entry, proof)| if proof.exists { None } else { Some((*entry).to_string()) })
-            .collect::<Vec<_>>();
-          let workspace_ok = root_proof.map(|proof| proof.exists && proof.is_dir).unwrap_or(false) && missing_entries.is_empty();
-          let native_workspace_validated = NativeProofStageProof {
-            stage: "06_workspace_validated".to_string(),
-            status: if workspace_ok { "ready".to_string() } else { "setup_required".to_string() },
-            timestamp: format!("{}", now_ms()),
-            process_id,
-            workspace_root: workspace_root.clone(),
-            output_dir: proof_output_dir.display().to_string(),
-            proof_request_found: proof_request.is_some(),
-            window_label: None,
-            note: Some(if workspace_ok {
-              "Workspace root validated from the Rust startup hook.".to_string()
-            } else {
-              format!("Workspace validation is setup_required; missing entries: {}", missing_entries.join(", "))
-            }),
-            error: if workspace_ok {
-              None
-            } else {
-              Some(format!("Workspace validation is setup_required; missing entries: {}", missing_entries.join(", ")))
-            },
-            duration_ms: None,
-          };
-          let _ = write_native_proof_stage(&proof_output_dir, "06_workspace_validated.json", &native_workspace_validated);
-          let native_scan_started = NativeProofStageProof {
-            stage: "07_scan_started".to_string(),
-            status: if workspace_ok { "running".to_string() } else { "setup_required".to_string() },
-            timestamp: format!("{}", now_ms()),
-            process_id,
-            workspace_root: workspace_root.clone(),
-            output_dir: proof_output_dir.display().to_string(),
-            proof_request_found: proof_request.is_some(),
-            window_label: None,
-            note: Some(if workspace_ok {
-              "Rust startup hook scheduled the repository scan phase.".to_string()
-            } else {
-              "Repository scan remains setup_required until workspace validation passes.".to_string()
-            }),
-            error: if workspace_ok { None } else { Some("Workspace validation is setup_required.".to_string()) },
-            duration_ms: None,
-          };
-          let _ = write_native_proof_stage(&proof_output_dir, "07_scan_started.json", &native_scan_started);
-          start_native_rc0_proof_if_requested(
-            workspace_root.clone(),
-            proof_output_dir.display().to_string(),
-            "automated".to_string(),
-            Some(80),
-          );
+            let validation_paths = vec![
+              workspace_root_clone.clone(),
+              format!("{}/package.json", workspace_root_clone),
+              format!("{}/src", workspace_root_clone),
+              format!("{}/src-tauri", workspace_root_clone),
+              format!("{}/docs", workspace_root_clone),
+            ];
+            let validation_proofs = verify_paths(validation_paths);
+            let root_proof = validation_proofs.first().cloned();
+            let entry_proofs = validation_proofs.into_iter().skip(1).collect::<Vec<_>>();
+            let missing_entries = ["package.json", "src", "src-tauri", "docs"]
+              .iter()
+              .zip(entry_proofs.iter())
+              .filter_map(|(entry, proof)| if proof.exists { None } else { Some((*entry).to_string()) })
+              .collect::<Vec<_>>();
+            let workspace_ok = root_proof.map(|proof| proof.exists && proof.is_dir).unwrap_or(false) && missing_entries.is_empty();
+            let native_workspace_validated = NativeProofStageProof {
+              stage: "06_workspace_validated".to_string(),
+              status: if workspace_ok { "ready".to_string() } else { "setup_required".to_string() },
+              timestamp: format!("{}", now_ms()),
+              process_id,
+              workspace_root: workspace_root_clone.clone(),
+              output_dir: proof_output_dir_clone.display().to_string(),
+              proof_request_found: true,
+              window_label: None,
+              note: Some(if workspace_ok {
+                "Workspace root validated from the Rust startup hook.".to_string()
+              } else {
+                format!("Workspace validation is setup_required; missing entries: {}", missing_entries.join(", "))
+              }),
+              error: if workspace_ok {
+                None
+              } else {
+                Some(format!("Workspace validation is setup_required; missing entries: {}", missing_entries.join(", ")))
+              },
+              duration_ms: None,
+            };
+            let _ = write_native_proof_stage(&proof_output_dir_clone, "06_workspace_validated.json", &native_workspace_validated);
+            let native_scan_started = NativeProofStageProof {
+              stage: "07_scan_started".to_string(),
+              status: if workspace_ok { "running".to_string() } else { "setup_required".to_string() },
+              timestamp: format!("{}", now_ms()),
+              process_id,
+              workspace_root: workspace_root_clone.clone(),
+              output_dir: proof_output_dir_clone.display().to_string(),
+              proof_request_found: true,
+              window_label: None,
+              note: Some(if workspace_ok {
+                "Rust startup hook scheduled the repository scan phase.".to_string()
+              } else {
+                "Repository scan remains setup_required until workspace validation passes.".to_string()
+              }),
+              error: if workspace_ok { None } else { Some("Workspace validation is setup_required.".to_string()) },
+              duration_ms: None,
+            };
+            let _ = write_native_proof_stage(&proof_output_dir_clone, "07_scan_started.json", &native_scan_started);
+            start_native_rc0_proof_if_requested(
+              workspace_root_clone,
+              proof_output_dir_clone.display().to_string(),
+              "automated".to_string(),
+              Some(80),
+            );
+          });
         }
 
         let proof_event_dir = proof_output_dir.clone();
@@ -1392,28 +1396,6 @@ pub fn run() {
           }
         })
         .build(app)?;
-
-      if proof_requested {
-        if let Some(main_window) = app.get_webview_window("main") {
-          let _ = main_window.unminimize();
-          let _ = main_window.show();
-          let _ = main_window.set_focus();
-          let payload = NativeProofStageProof {
-            stage: "04_frontend_loaded".to_string(),
-            status: "window_visible".to_string(),
-            timestamp: now_ms().to_string(),
-            process_id: std::process::id(),
-            workspace_root: workspace_root.clone(),
-            output_dir: proof_output_dir.display().to_string(),
-            proof_request_found: proof_request.is_some(),
-            window_label: Some(main_window.label().to_string()),
-            note: Some("Main window was shown during proof boot; frontend load is still being confirmed.".to_string()),
-            error: None,
-            duration_ms: None,
-          };
-          let _ = write_native_proof_stage(&proof_output_dir, "04_frontend_loaded.json", &payload);
-        }
-      }
 
       if cfg!(debug_assertions) {
         app.handle().plugin(
