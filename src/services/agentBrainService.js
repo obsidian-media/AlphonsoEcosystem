@@ -452,12 +452,8 @@ function detectProjectType(projectDir, packageJson) {
   if (deps.express || deps.fastify || deps.hono) return 'node-express';
   if (deps.typescript && !deps.vite && !deps.next) return 'typescript';
 
-  // Check for Python
-  try {
-    const fs = require('fs');
-    const hasPy = fs.existsSync('requirements.txt') || fs.existsSync('pyproject.toml') || fs.existsSync('setup.py');
-    if (hasPy) return 'python';
-  } catch { /* ignore */ }
+  // Python detection is not possible in browser context (no fs access)
+  // Project type will be inferred from other signals if needed
 
   return null;
 }
@@ -1006,8 +1002,6 @@ export async function executeWithTools(commandText, options = {}) {
   if (filesWritten.length > 0 && projectDirectory) {
     onProgress?.({ stage: 'validating', agent: 'alphonso', detail: 'Running final validation' });
     const projectContext = await readProjectContext(projectDirectory);
-    const { validateGeneratedFiles } = await import('./agentBrainService');
-    // Validation is handled inline since validateGeneratedFiles is not exported
     results.push(`Files written: ${filesWritten.join(', ')}`);
   }
 

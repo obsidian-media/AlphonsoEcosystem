@@ -9,6 +9,10 @@ const MarketingLandingPage = React.lazy(() => import('./components/MarketingLand
 const CRASH_LOG_KEY = 'alphonso_crash_log_v1';
 const MAX_CRASH_ENTRIES = 20;
 
+if (typeof performance !== 'undefined') {
+  performance.mark('alphonso:main:start');
+}
+
 function recordCrash(type, message, stack) {
   try {
     const entry = { type, message, stack, ts: new Date().toISOString(), ua: navigator.userAgent };
@@ -24,6 +28,15 @@ window.addEventListener('unhandledrejection', (e) => recordCrash('promise', Stri
 
 function BootReadySignal() {
   React.useEffect(() => {
+    if (typeof performance !== 'undefined') {
+      performance.mark('alphonso:main:boot-ready');
+      try {
+        const mainStart = performance.getEntriesByName('alphonso:main:start')[0]?.startTime || 0;
+        const renderStart = performance.getEntriesByName('alphonso:main:render-start')[0]?.startTime || 0;
+        const bootReady = performance.getEntriesByName('alphonso:main:boot-ready')[0]?.startTime || 0;
+        console.log(`[Alphonso Boot] main→render: ${(renderStart - mainStart).toFixed(0)}ms, render→ready: ${(bootReady - renderStart).toFixed(0)}ms, total: ${(bootReady - mainStart).toFixed(0)}ms`);
+      } catch { /* ignore */ }
+    }
     window.__ALPHONSO_BOOT_READY__?.();
   }, []);
   return null;
@@ -75,6 +88,10 @@ const pathname = window.location.pathname.toLowerCase();
 const isMarketingPage = pathname === '/website' || pathname === '/landing';
 
 const USE_STRICT_MODE = !window.__PLAYWRIGHT__;
+
+if (typeof performance !== 'undefined') {
+  performance.mark('alphonso:main:render-start');
+}
 
 root.render(
   USE_STRICT_MODE ? (
