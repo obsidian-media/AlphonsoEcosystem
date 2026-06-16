@@ -38,7 +38,7 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 
 5. **Run tests**
    ```bash
-   npm run test         # All 180+ tests
+   npm run test         # All 978 tests across 73 files
    npm run lint         # ESLint
    npm run verify:app   # lint + test + build
    ```
@@ -46,18 +46,23 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 ## Project Structure
 
 ```
-src/                   React frontend (.jsx)
+src/                   React frontend (.jsx, 9 .ts services)
   agents/              9 agent profiles, permissions, schemas
-  components/          76+ UI components
-  services/            89+ services (policy-gated)
+  components/          82+ UI components
+  services/            124 services (policy-gated)
+  hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js)
-  test/                47 test files (Vitest)
+  test/                73 test files (Vitest)
 src-tauri/             Rust backend
-  src/lib.rs           ~7,078 lines, 63 Tauri commands
+  src/lib.rs           ~1,455 lines, 76 Tauri commands (across 16 modules)
+  src/utils.rs         Shared utilities
+  src/kv_store.rs      SQLite-backed KV store
+  src/ollama.rs        Ollama backend
+  src/policy_gate.rs   Policy enforcement backend
 scripts/               Build, release, auth scripts
 e2e/                   Playwright E2E tests
 gateway/               WhatsApp Cloud gateway
-docs/                  Documentation
+docs/                  120+ documentation files
 ```
 
 ## Development Workflow
