@@ -21,9 +21,12 @@ mod policy_gate;
 mod runway;
 mod search;
 mod telegram;
+mod utils;
 mod whatsapp_webhook;
 mod workspace;
 mod youtube;
+
+pub(crate) use utils::*;
 
 pub(crate) use audit_log::*;
 pub(crate) use connector_commands::*;
