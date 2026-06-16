@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const invoke = vi.fn().mockResolvedValue(null);
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args) => invoke(...args)
+  invoke: (...args) => invoke(...args),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 const { persistChatMessages, loadChatMessages, deleteChatMessages } = await import('../services/chatPersistenceService');

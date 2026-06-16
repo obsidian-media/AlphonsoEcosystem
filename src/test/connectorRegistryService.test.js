@@ -5,7 +5,8 @@ const { invoke: mockInvoke } = vi.hoisted(() => ({
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args) => mockInvoke(...args)
+  invoke: (...args) => mockInvoke(...args),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 import { listConnectors, sendQwenConnectorMessage, verifyConnectorEnvironment } from '../services/connectorRegistryService';

@@ -12,11 +12,12 @@ vi.mock('@tauri-apps/api/core', () => ({
     if (command === 'connector_send_telegram') {
       return {
         ok: true,
-        externalId: 'telegram-proof-1'
+        externalId: 'telegram-proof-1',
       };
     }
     return { ok: true };
-  })
+  }),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 import { proveTelegramConnectorPath, updateConnectorAuthProfile } from '../services/connectorRegistryService';

@@ -7,7 +7,8 @@ const { invokeMock, runRepoAuditMock, collectProductionReadinessSnapshotMock } =
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: invokeMock
+  invoke: invokeMock,
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 vi.mock('../services/repoAuditService', () => ({

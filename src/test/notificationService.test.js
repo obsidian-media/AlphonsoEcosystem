@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const invoke = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args) => invoke(...args)
+  invoke: (...args) => invoke(...args),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 const { sendNativeNotification } = await import('../services/notificationService.js');

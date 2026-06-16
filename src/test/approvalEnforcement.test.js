@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn(async () => ({ ok: true }))
+  invoke: vi.fn(async () => ({ ok: true })),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 import { requireApproval } from '../services/approval/approvalService';

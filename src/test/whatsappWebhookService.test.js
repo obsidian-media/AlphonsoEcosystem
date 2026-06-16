@@ -50,7 +50,8 @@ vi.mock('@tauri-apps/api/core', () => ({
     }
 
     return { ok: true };
-  })
+  }),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 import { processInbound, verifyWebhook } from '../services/whatsappWebhookService';

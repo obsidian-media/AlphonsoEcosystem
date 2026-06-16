@@ -1,7 +1,8 @@
 import { createSnapshot, restoreSnapshotById } from '../services/recoveryService';
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn().mockResolvedValue({ ok: true })
+  invoke: vi.fn().mockResolvedValue({ ok: true }),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 describe('Recovery restore behavior', () => {

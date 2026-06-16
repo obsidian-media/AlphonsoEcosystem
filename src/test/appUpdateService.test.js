@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const invoke = vi.fn().mockResolvedValue(null);
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args) => invoke(...args)
+  invoke: (...args) => invoke(...args),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 const { getLastUpdateNotice, setLastUpdateNotice, checkAppUpdate, notifyUpdateAvailable } = await import('../services/appUpdateService');

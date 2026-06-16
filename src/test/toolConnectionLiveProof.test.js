@@ -11,7 +11,8 @@ vi.mock('@tauri-apps/api/core', () => ({
       };
     }
     return { ok: true };
-  })
+  }),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 import { proveToolConnectionPath, upsertToolConnection } from '../services/toolConnectionService';

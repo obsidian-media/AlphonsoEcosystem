@@ -90,7 +90,8 @@ vi.mock('@tauri-apps/api/core', () => ({
     }
 
     return { ok: true };
-  })
+  }),
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 import { createResearchDraft, isBraveSearchConfigured, listHectorReports, runHectorLiveResearch } from '../services/hectorResearchService';

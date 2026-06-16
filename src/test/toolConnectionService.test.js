@@ -6,7 +6,8 @@ const { invokeMock, requireApprovalMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: invokeMock
+  invoke: invokeMock,
+  isTauri: vi.fn().mockReturnValue(false)
 }));
 
 vi.mock('../services/approval/approvalService', () => ({
