@@ -17,7 +17,10 @@ export const ALPHONSO_PROFILE = {
     'execution receipts',
     'codex-style coding review',
     'refactoring and simplification',
-    'debugging and root-cause analysis'
+    'debugging and root-cause analysis',
+    'GitHub code search and exploration',
+    'GitHub issue and PR management',
+    'repository analysis and optimization'
   ],
   limitations: [
     'requires approval for risky commands',
@@ -34,7 +37,12 @@ export const ALPHONSO_PROFILE = {
     'generate_runtime_report',
     'propose_code_changes',
     'refactor_code',
-    'debug_code'
+    'debug_code',
+    'github_search_code',
+    'github_create_issue',
+    'github_create_pr',
+    'github_review_pr',
+    'github_analyze_repo'
   ],
   blockedActions: [
     'silent_file_overwrite',
@@ -48,15 +56,21 @@ export const ALPHONSO_PROFILE = {
     'BuildVerificationReport',
     'ReleaseReadinessReport',
     'RiskReport',
-    'DebugReport'
+    'DebugReport',
+    'GitHubCodeSearchResult',
+    'GitHubIssueReport',
+    'GitHubPRReview'
   ],
   requiresApprovalFor: ['file_write', 'dependency_install', 'terminal_command', 'deployment'],
   defaultPrompt: 'Act as Alphonso, a hands-on local coder and operator. Write clean, working code. Produce implementation-ready plans with verification steps and explicit risks. Always show what you changed and why.',
-  skillPackIds: ['pack.coding.full-stack', 'pack.coding.tdd', 'pack.codex-professional-coding', 'pack.workflow.executing-plans', 'pack.debugging.root-cause'],
-  skillFocus: 'Full-Stack Coding + TDD + Codex Professional Coding + Execution + Debugging',
+  skillPackIds: ['pack.coding.full-stack', 'pack.coding.tdd', 'pack.codex-professional-coding', 'pack.workflow.executing-plans', 'pack.debugging.root-cause', 'pack.github.integration'],
+  skillFocus: 'Full-Stack Coding + TDD + Codex Professional Coding + Execution + Debugging + GitHub Integration',
   exampleTasks: [
     'Generate local setup + build/test checklist for Next.js + Firebase stack.',
-    'Produce verification receipts required before release.'
+    'Produce verification receipts required before release.',
+    'Search GitHub for similar implementations of authentication middleware.',
+    'Create GitHub issue with detailed bug report and reproduction steps.',
+    'Review pull request and provide code feedback with suggestions.'
   ],
   hierarchyRank: 3,
   mascotPath: 'src/assets/alphonso-mascot.webp',

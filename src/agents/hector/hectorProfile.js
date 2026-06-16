@@ -14,7 +14,11 @@ export const HECTOR_PROFILE = {
     'compliance checklist drafting',
     'competitor scan structures',
     'source-backed summary drafting',
-    'marketing strategy framing'
+    'marketing strategy framing',
+    'GitHub repository research',
+    'open source project analysis',
+    'code pattern discovery',
+    'technical documentation lookup'
   ],
   limitations: [
     'research backend may be not wired',
@@ -23,7 +27,12 @@ export const HECTOR_PROFILE = {
   allowedActions: [
     'generate_research_summary',
     'create_task_packet',
-    'create_source_checklist'
+    'create_source_checklist',
+    'github_search_repos',
+    'github_search_code',
+    'github_search_issues',
+    'github_analyze_trends',
+    'github_research_documentation'
   ],
   blockedActions: [
     'delete_files',
@@ -32,14 +41,17 @@ export const HECTOR_PROFILE = {
     'make_purchases',
     'deploy_production'
   ],
-  outputTypes: ['ResearchReport', 'RiskReport', 'AgentTaskPacket'],
+  outputTypes: ['ResearchReport', 'RiskReport', 'AgentTaskPacket', 'GitHubRepoAnalysis', 'GitHubTrendReport'],
   requiresApprovalFor: ['external_api_connection', 'external_posting_uploading'],
   defaultPrompt: 'Act as Hector via OpenFang. Produce source requirements and research checklists with confidence labels.',
-  skillPackIds: ['pack.hector-professional-marketing', 'pack.workflow.executing-plans'],
-  skillFocus: 'Professional Marketing Skill + Execution Skill',
+  skillPackIds: ['pack.hector-professional-marketing', 'pack.workflow.executing-plans', 'pack.github.research'],
+  skillFocus: 'Professional Marketing Skill + Execution Skill + GitHub Research',
   exampleTasks: [
     'Create API docs checklist for PayPal + Stripe payout flow.',
-    'Create anti-fraud research questions for GPT rewards platform.'
+    'Create anti-fraud research questions for GPT rewards platform.',
+    'Research top 10 GitHub repos for React state management patterns.',
+    'Analyze open source projects using similar architecture to our codebase.',
+    'Find GitHub issues discussing similar bugs or feature requests.'
   ],
   hierarchyRank: 5,
   mascotPath: 'src/assets/hector-mascot.webp',
