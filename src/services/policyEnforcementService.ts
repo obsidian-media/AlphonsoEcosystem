@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES } from './trustModel';
+import { canUseConnector } from './licenseService';
 
 const SETTINGS_KEY = 'alphonso_settings';
 
@@ -133,6 +134,18 @@ export function evaluatePolicyGate({
   const riskLevel = classifyConnectorRisk(id, action);
   const requiresApproval = HIGH_RISK_ACTION_PATTERNS.some((pattern) => pattern.test(action) || pattern.test(preview));
   const paidOrMetered = PAID_OR_METERED_CONNECTORS.has(id);
+
+  if (!canUseConnector(id)) {
+    return {
+      ok: false,
+      blocked: true,
+      setupRequired: false,
+      reason: `Connector '${id}' requires a Pro license. Upgrade at alphonso.dev/pro`,
+      riskLevel,
+      confidence: TRUST_STATES.VERIFIED,
+      verificationState: TRUST_STATES.PENDING
+    };
+  }
 
   if (policy.zeroCostMode && paidOrMetered && !approved) {
     return {
