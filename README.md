@@ -1,32 +1,34 @@
 # Alphonso
 
-> Local-first AI desktop companion powered by Ollama — **v1.0.3**
+> Local-first AI desktop companion powered by Ollama — **v2.0.0**
 
 [![CI](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-978%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-1.0.3-blue)
+![Tests](https://img.shields.io/badge/tests-1015%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 
-Alphonso is a privacy-first desktop AI assistant that runs entirely on your machine. It orchestrates 9 specialized agents, connects to 11 external services, and uses Ollama for local LLM inference — keeping your data off the cloud.
+Alphonso is a privacy-first desktop AI assistant that runs entirely on your machine. It orchestrates 9 specialized agents, connects to 13 external services, and uses Ollama for local LLM inference — keeping your data off the cloud.
 
 ## Features
 
-- **9 Agent System** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with defined roles, permissions, and contracts
-- **11 Connectors** — Telegram, WhatsApp Cloud, YouTube, Claude, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search, Ollama
+- **9 Enhanced Agents** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with defined roles, permissions, and contracts. Now with GitHub and Slack integration.
+- **13 Connectors** — Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search, Ollama
 - **Local LLM** — Ollama integration with model switching (`llama3.2:3b` default)
 - **Policy Enforcement** — Fail-closed gate for all outbound actions; per-agent permission contracts
+- **License Tiers** — Free, Pro, and Enterprise tiers with premium connector gates
+- **Performance Optimized** — Parallel execution, memory caching with TTL/LRU, optimized policy checks
 - **Durable Orchestration** — Queue with state transitions, dead-letter replay, and approval workflows
 - **Memory** — SQLite-backed durable memory with governance metadata and retention policies
 - **Desktop Native** — Tauri v2 (Rust backend) + React 18 frontend; NSIS/MSI installers
-- **978 Unit Tests** — 73 test files, all passing; 27.97% code coverage
+- **1015 Unit Tests** — 76 test files, all passing; ~28% code coverage
 
 ## Documentation
 
 - [Getting Started](docs/GETTING_STARTED.md) — Quick setup guide
 - [Agent Guide](docs/AGENT_GUIDE.md) — What each agent does and when to use them
-- [Connectors](docs/CONNECTORS.md) — Setup for all 11 external integrations
+- [Connectors](docs/CONNECTORS.md) — Setup for all 13 external integrations
 - [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and fixes
-- [User Manual](docs/USER_MANUAL.md) — Full feature reference
+- [User Manual](docs/USER_MANUAL.md) — Full feature reference (v2.0.0)
 - [Architecture](ARCHITECTURE.md) — System design and technical details
 
 ## Installation

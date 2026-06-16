@@ -81,11 +81,16 @@ Dead-letter path: failed packets move to `dead_letter` state with replay capabil
 - `packetExecutionService.js` — packet-level execution
 
 ### Policy & Approval (fail-closed)
-- `policyEnforcementService.js` — centralized policy gate: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks
-- `connectorRegistryService.js` — all 11 connector send paths run through policy gate before any external call
+- `policyEnforcementService.ts` — centralized policy gate: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks, license tier validation
+- `licenseService.ts` — license tier system (Free/Pro/Enterprise) with premium connector gates
+- `connectorRegistryService.js` — all 13 connector send paths run through policy gate before any external call
+
+### Performance & Execution
+- `parallelExecutionService.ts` — parallel task execution with concurrency control, retry logic, and task queues
+- `cacheService.ts` — memory caching with TTL, LRU eviction, and global/connector/agent caches
 
 ### Agent Contracts
-- `agentContractService.js` — per-agent allowed/blocked action prefixes, checked before every packet execution
+- `agentContractService.ts` — per-agent allowed/blocked action prefixes, checked before every packet execution
 - `agentBusService.js` — inter-agent messaging bus
 
 ### Memory & Knowledge
@@ -96,6 +101,12 @@ Dead-letter path: failed packets move to `dead_letter` state with replay capabil
 
 ### Connectors & External
 - `connectorRegistryService.js` — all outbound connector paths (policy-gated)
+- `connectors/githubConnector.ts` — GitHub API: issues, PRs, releases, code search, workflows, file content
+- `connectors/slackConnector.ts` — Slack API: messages, channels, files, reactions, webhooks
+- `connectors/connectorAuth.js` — connector authentication management
+- `connectors/connectorOutbound.js` — outbound connector dispatch
+- `connectors/connectorPolling.js` — inbound connector polling
+- `connectors/connectorImageGenerators.js` — image generation connectors (SD WebUI, ComfyUI)
 - `whatsappWebhookService.js` — WhatsApp webhook handling
 - `marcusPublishService.js` — Marcus-governed distribution
 - `metaPublishService.js` — Meta/Instagram publishing
@@ -138,7 +149,8 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 ## Security Model
 
 - **CSP** — enforced via `tauri.conf.json` `security.csp` with a production policy string
-- **policyEnforcementService.js** — centralized fail-closed gate for all connector sends; blocks with an explicit blocked result object when uncertain or unauthorized
+- **policyEnforcementService.ts** — centralized fail-closed gate for all connector sends; blocks with an explicit blocked result object when uncertain or unauthorized
+- **licenseService.ts** — license tier validation (Free/Pro/Enterprise) gates premium connectors
 - **Zero-cost mode** — blocks paid connectors (Claude API, OpenAI, YouTube, etc.) by default unless explicitly overridden
 - **Approval gates** — risky actions (external sends, uploads, publishes) require explicit user confirmation in the `ApprovalModal` UI before execution proceeds
 - **Connector allowlists** — `TELEGRAM_ALLOWED_CHAT_IDS` and `WHATSAPP_ALLOWED_NUMBERS` block unauthorized senders at the Rust command layer
@@ -160,11 +172,11 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 
 ## Known Technical Debt
 
-- `src-tauri/src/lib.rs` is ~7,078 lines — two modules extracted: `whatsapp_webhook.rs` + `kv_store.rs`. Next candidate: Telegram connector block
-- All frontend files are `.jsx` not `.tsx` — no TypeScript migration yet (only `memoryService.ts` migrated)
+- `src-tauri/src/lib.rs` is ~1,455 lines (16 modules extracted: `utils.rs`, `kv_store.rs`, `whatsapp_webhook.rs`, `native_proof.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `connector_commands.rs`, `search.rs`, `telegram.rs`, `workspace.rs`, `youtube.rs`, `runway.rs`)
+- All frontend files are `.jsx` not `.tsx` — partial TypeScript migration (9 services migrated: policyEnforcement, agentContract, orchestrationQueue, license, cache, parallelExecution, memory, ollama, chatUtils)
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud inbound webhook requires hosted endpoint deployment (not yet live)
 - Playwright E2E exists (`e2e/smoke.spec.js`) but not wired into CI
-- Component test coverage at 5.78% — 4 agent modules at 0%
-- App.jsx is ~2,700 lines — god component needs refactoring
+- Component test coverage at ~6% — 4 agent modules at 0%
 - Mascot images not compressed (jose: 236KB, alphonso: 243KB)
+- GitHub/Slack connector tests not yet comprehensive (mocking needed)
