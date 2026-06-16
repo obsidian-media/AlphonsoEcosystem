@@ -30,7 +30,9 @@ const RATE_LIMIT_DEFAULTS = {
   comfyui_video: { maxPerMinute: 30 },
   chatgpt: { maxPerMinute: 60 },
   claude: { maxPerMinute: 60 },
-  qwen: { maxPerMinute: 30 }
+  qwen: { maxPerMinute: 30 },
+  github: { maxPerMinute: 60 },
+  slack: { maxPerMinute: 60 }
 };
 
 const rateLimitBuckets = {};
@@ -798,6 +800,152 @@ export async function uploadYouTubeConnectorVideo({
     title,
     videoId: result?.videoId || null,
     url: result?.url || null,
+    error: result?.error || null
+  });
+  return result;
+}
+
+export async function sendGitHubAction(action, payload, options = {}) {
+  const auth = isConnectorAuthenticated('github');
+  if (!auth.ok) {
+    return logUnauthenticatedConnectorRequest('github', action, JSON.stringify(payload), options);
+  }
+  const circuit = getConnectorCircuitState('github', action);
+  if (!circuit.ok) {
+    appendConnectorAudit('github', 'action_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'github', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
+  }
+  const approval = await requireConnectorApproval('github', action, JSON.stringify(payload), {
+    ...options,
+    action
+  });
+  if (!approval.ok) return approval;
+  const readiness = await requireConnectorReady('github', action, JSON.stringify(payload), options);
+  if (!readiness.ok) return readiness;
+  const gate = gateConnectorAction('github', action, JSON.stringify(payload), options);
+  if (!gate.ok) {
+    return {
+      ok: false,
+      connectorId: 'github',
+      blocked: true,
+      trust: gate.verificationState || TRUST_STATES.PENDING,
+      error: gate.reason || 'GitHub connector policy gate blocked the action.'
+    };
+  }
+  let envCheck = null;
+  try {
+    envCheck = await invoke('check_env_vars_presence', { names: ['GITHUB_TOKEN'] });
+  } catch {
+    envCheck = null;
+  }
+  if (envCheck && !envCheck.GITHUB_TOKEN) {
+    appendConnectorAudit('github', 'action_blocked_missing_key', { action });
+    return {
+      ok: false, connectorId: 'github', blocked: true,
+      error: 'GitHub token is not configured — set GITHUB_TOKEN in environment',
+      code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
+    };
+  }
+  await guardConnectorRateLimit('github');
+  let result;
+  try {
+    result = await invoke('connector_github_action', { action, payload });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('github', action);
+    appendConnectorAudit('github', 'action_failed', { action, error: errMsg });
+    return {
+      ok: false, connectorId: 'github', blocked: false,
+      error: `GitHub connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
+  recordConnectorSuccess('github', action);
+  trackConnectorSend('github');
+  appendConnectorAudit('github', result?.ok ? 'action_success' : 'action_failed', {
+    action,
+    result: result?.data || null,
+    error: result?.error || null
+  });
+  return result;
+}
+
+export async function sendSlackMessage(channel, text, options = {}) {
+  const auth = isConnectorAuthenticated('slack');
+  if (!auth.ok) {
+    return logUnauthenticatedConnectorRequest('slack', 'message_send', text, {
+      ...options,
+      target: channel
+    });
+  }
+  const circuit = getConnectorCircuitState('slack', 'message_send');
+  if (!circuit.ok) {
+    appendConnectorAudit('slack', 'send_blocked_circuit_open', {
+      failures: circuit.failures,
+      remainingMs: circuit.remainingMs
+    });
+    return {
+      ok: false, connectorId: 'slack', blocked: true,
+      error: `Circuit breaker open — ${Math.ceil(circuit.remainingMs / 1000)}s remaining`,
+      trust: TRUST_STATES.FAILED
+    };
+  }
+  const approval = await requireConnectorApproval('slack', 'message_send', text, {
+    ...options,
+    target: channel
+  });
+  if (!approval.ok) return approval;
+  const readiness = await requireConnectorReady('slack', 'message_send', text, options);
+  if (!readiness.ok) return readiness;
+  const gate = gateConnectorAction('slack', 'message_send', text, options);
+  if (!gate.ok) {
+    return {
+      ok: false,
+      connectorId: 'slack',
+      blocked: true,
+      trust: gate.verificationState || TRUST_STATES.PENDING,
+      error: gate.reason || 'Slack connector policy gate blocked the action.'
+    };
+  }
+  let envCheck = null;
+  try {
+    envCheck = await invoke('check_env_vars_presence', { names: ['SLACK_BOT_TOKEN'] });
+  } catch {
+    envCheck = null;
+  }
+  if (envCheck && !envCheck.SLACK_BOT_TOKEN) {
+    appendConnectorAudit('slack', 'send_blocked_missing_key', { channel, text: String(text || '').slice(0, 80) });
+    return {
+      ok: false, connectorId: 'slack', blocked: true,
+      error: 'Slack bot token is not configured — set SLACK_BOT_TOKEN in environment',
+      code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
+    };
+  }
+  await guardConnectorRateLimit('slack');
+  let result;
+  try {
+    result = await invoke('connector_slack_send', { channel, text, ...options });
+  } catch (error) {
+    const errMsg = String(error || '');
+    recordConnectorFailure('slack', 'message_send');
+    appendConnectorAudit('slack', 'send_failed', { channel, text, error: errMsg });
+    return {
+      ok: false, connectorId: 'slack', blocked: false,
+      error: `Slack connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
+    };
+  }
+  recordConnectorSuccess('slack', 'message_send');
+  trackConnectorSend('slack');
+  appendConnectorAudit('slack', result?.ok ? 'send_success' : 'send_failed', {
+    channel,
+    text: String(text || '').slice(0, 200),
+    ts: result?.ts || null,
     error: result?.error || null
   });
   return result;

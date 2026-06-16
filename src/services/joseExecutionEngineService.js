@@ -38,6 +38,8 @@ import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../l
 import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
+import { executeParallel } from './parallelExecutionService';
+import { agentCache } from './cacheService';
 
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());

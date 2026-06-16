@@ -125,6 +125,24 @@ export const DEFAULT_CONNECTORS = [
     requiredEnv: ['RUNWAYML_API_SECRET'],
     permissions: ['cloud_video_generation', 'approval_requests'],
     disabledReason: 'Runway API secret is not configured in the backend environment.'
+  },
+  {
+    id: 'github',
+    name: 'GitHub Connector',
+    status: 'not_configured',
+    transport: 'github_rest_api_v3',
+    requiredEnv: ['GITHUB_TOKEN'],
+    permissions: ['repo_read', 'repo_write', 'issue_read', 'issue_write', 'pr_read', 'pr_write', 'release_read', 'release_write', 'code_search', 'approval_requests'],
+    disabledReason: 'GitHub personal access token is not configured.'
+  },
+  {
+    id: 'slack',
+    name: 'Slack Connector',
+    status: 'not_configured',
+    transport: 'slack_web_api',
+    requiredEnv: ['SLACK_BOT_TOKEN'],
+    permissions: ['channel_read', 'channel_write', 'message_send', 'file_upload', 'reaction_add', 'approval_requests'],
+    disabledReason: 'Slack bot token is not configured.'
   }
 ];
 

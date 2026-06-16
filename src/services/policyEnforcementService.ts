@@ -1,8 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES } from './trustModel';
 import { canUseConnector } from './licenseService';
+import { MemoryCache, cached, createCacheKey } from './cacheService';
 
 const SETTINGS_KEY = 'alphonso_settings';
+
+const policyCache = new MemoryCache({ maxSize: 500 });
+const SETTINGS_CACHE_TTL = 30000;
+const RISK_CACHE_TTL = 300000;
 
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
@@ -60,24 +65,26 @@ export interface PolicyGateResult {
 }
 
 export function getRuntimePolicySettings(): RuntimePolicySettings {
-  const defaults: RuntimePolicySettings = {
-    approvalMode: true,
-    zeroCostMode: true,
-    safeMode: true,
-    localOnlyMode: true
-  };
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return {
-      approvalMode: parsed.approvalMode !== false,
-      zeroCostMode: parsed.zeroCostMode !== false,
-      safeMode: parsed.safeMode !== false,
-      localOnlyMode: parsed.localOnlyMode !== false
+  return cached(policyCache, 'policy:settings:sync', () => {
+    const defaults: RuntimePolicySettings = {
+      approvalMode: true,
+      zeroCostMode: true,
+      safeMode: true,
+      localOnlyMode: true
     };
-  } catch {
-    return defaults;
-  }
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return {
+        approvalMode: parsed.approvalMode !== false,
+        zeroCostMode: parsed.zeroCostMode !== false,
+        safeMode: parsed.safeMode !== false,
+        localOnlyMode: parsed.localOnlyMode !== false
+      };
+    } catch {
+      return defaults;
+    }
+  }, SETTINGS_CACHE_TTL);
 }
 
 export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySettings> {
@@ -109,15 +116,24 @@ export async function setRuntimePolicySettings(settings: Partial<RuntimePolicySe
   try {
     await invoke('kv_set', { key: SETTINGS_KEY, value: JSON.stringify(next) });
   } catch {}
+  policyCache.delete('policy:settings:sync');
+  policyCache.keys().filter(k => k.startsWith('policy:gate:')).forEach(k => policyCache.delete(k));
 }
 
 export function classifyConnectorRisk(connectorId: string, actionType: string = ''): ConnectorRiskLevel {
   const id = String(connectorId || '').toLowerCase();
   const action = String(actionType || '').toLowerCase();
-  if (id === 'youtube' || action.includes('publish') || action.includes('upload')) return 'high';
-  if (id === 'telegram' || id === 'whatsapp') return 'high';
-  if (id === 'chatgpt' || id === 'claude' || id === 'qwen' || id === 'notion' || id === 'clickup') return 'medium';
-  return 'low';
+  const cacheKey = createCacheKey('policy:risk', id, action);
+  const cachedRisk = policyCache.get(cacheKey);
+  if (cachedRisk !== null) return cachedRisk as ConnectorRiskLevel;
+
+  let risk: ConnectorRiskLevel = 'low';
+  if (id === 'youtube' || action.includes('publish') || action.includes('upload')) risk = 'high';
+  else if (id === 'telegram' || id === 'whatsapp') risk = 'high';
+  else if (id === 'chatgpt' || id === 'claude' || id === 'qwen' || id === 'notion' || id === 'clickup' || id === 'github' || id === 'slack') risk = 'medium';
+
+  policyCache.set(cacheKey, risk, RISK_CACHE_TTL);
+  return risk;
 }
 
 export function evaluatePolicyGate({
