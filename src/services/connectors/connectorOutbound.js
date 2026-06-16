@@ -930,7 +930,7 @@ export async function sendSlackMessage(channel, text, options = {}) {
   await guardConnectorRateLimit('slack');
   let result;
   try {
-    result = await invoke('connector_slack_send', { channel, text, ...options });
+    result = await invoke('connector_slack_send', { channel, text, threadTs: options.threadTs || options.thread_ts || null });
   } catch (error) {
     const errMsg = String(error || '');
     recordConnectorFailure('slack', 'message_send');

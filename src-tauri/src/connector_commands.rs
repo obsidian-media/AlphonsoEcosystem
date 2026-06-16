@@ -145,6 +145,305 @@ async fn probe_local_runtime_health(
   })
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GithubActionProof {
+  pub(crate) ok: bool,
+  pub(crate) action: String,
+  pub(crate) http_status: Option<u16>,
+  pub(crate) data: Option<Value>,
+  pub(crate) sent_at_ms: u64,
+  pub(crate) trust: String,
+  pub(crate) error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SlackSendProof {
+  pub(crate) ok: bool,
+  pub(crate) channel: String,
+  pub(crate) ts: Option<String>,
+  pub(crate) sent_at_ms: u64,
+  pub(crate) trust: String,
+  pub(crate) error: Option<String>,
+}
+
+#[tauri::command]
+pub(crate) async fn connector_github_action(action: String, payload: Value) -> Result<GithubActionProof, String> {
+  let sent_at_ms = now_ms();
+  let token = std::env::var("GITHUB_TOKEN").unwrap_or_default();
+  if token.trim().is_empty() {
+    return Ok(GithubActionProof {
+      ok: false,
+      action,
+      http_status: None,
+      data: None,
+      sent_at_ms,
+      trust: "unverified".to_string(),
+      error: Some("GITHUB_TOKEN is not configured.".to_string()),
+    });
+  }
+
+  let clean_action = action.trim().to_string();
+  if clean_action.is_empty() {
+    return Ok(GithubActionProof {
+      ok: false,
+      action: clean_action,
+      http_status: None,
+      data: None,
+      sent_at_ms,
+      trust: "failed".to_string(),
+      error: Some("action is required.".to_string()),
+    });
+  }
+
+  let owner = payload.get("owner").and_then(|value| value.as_str()).unwrap_or("");
+  let repo = payload.get("repo").and_then(|value| value.as_str()).unwrap_or("");
+
+  let client = reqwest::Client::builder()
+    .timeout(Duration::from_secs(30))
+    .user_agent("Alphonso-GitHub-Connector/0.1")
+    .build()
+    .map_err(|error| error.to_string())?;
+
+  let (method, url, body) = match clean_action.as_str() {
+    "create_issue" => {
+      if owner.is_empty() || repo.is_empty() {
+        return Ok(GithubActionProof {
+          ok: false,
+          action: clean_action,
+          http_status: None,
+          data: None,
+          sent_at_ms,
+          trust: "failed".to_string(),
+          error: Some("payload must include owner and repo.".to_string()),
+        });
+      }
+      let issue_payload = serde_json::json!({
+        "title": payload.get("title"),
+        "body": payload.get("body"),
+        "labels": payload.get("labels"),
+      });
+      ("POST", format!("https://api.github.com/repos/{owner}/{repo}/issues"), issue_payload)
+    }
+    "dispatch_workflow" => {
+      if owner.is_empty() || repo.is_empty() {
+        return Ok(GithubActionProof {
+          ok: false,
+          action: clean_action,
+          http_status: None,
+          data: None,
+          sent_at_ms,
+          trust: "failed".to_string(),
+          error: Some("payload must include owner and repo.".to_string()),
+        });
+      }
+      let workflow_id = payload.get("workflow_id").and_then(|value| value.as_str()).unwrap_or("");
+      if workflow_id.is_empty() {
+        return Ok(GithubActionProof {
+          ok: false,
+          action: clean_action,
+          http_status: None,
+          data: None,
+          sent_at_ms,
+          trust: "failed".to_string(),
+          error: Some("payload must include workflow_id.".to_string()),
+        });
+      }
+      let ref_name = payload.get("ref").and_then(|value| value.as_str()).unwrap_or("main");
+      let dispatch_payload = serde_json::json!({
+        "ref": ref_name,
+        "inputs": payload.get("inputs"),
+      });
+      ("POST", format!("https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches"), dispatch_payload)
+    }
+    "create_pr" => {
+      if owner.is_empty() || repo.is_empty() {
+        return Ok(GithubActionProof {
+          ok: false,
+          action: clean_action,
+          http_status: None,
+          data: None,
+          sent_at_ms,
+          trust: "failed".to_string(),
+          error: Some("payload must include owner and repo.".to_string()),
+        });
+      }
+      let pr_payload = serde_json::json!({
+        "title": payload.get("title"),
+        "head": payload.get("head"),
+        "base": payload.get("base").and_then(|value| value.as_str()).unwrap_or("main"),
+        "body": payload.get("body"),
+      });
+      ("POST", format!("https://api.github.com/repos/{owner}/{repo}/pulls"), pr_payload)
+    }
+    "get_repo" => {
+      if owner.is_empty() || repo.is_empty() {
+        return Ok(GithubActionProof {
+          ok: false,
+          action: clean_action,
+          http_status: None,
+          data: None,
+          sent_at_ms,
+          trust: "failed".to_string(),
+          error: Some("payload must include owner and repo.".to_string()),
+        });
+      }
+      ("GET", format!("https://api.github.com/repos/{owner}/{repo}"), Value::Null)
+    }
+    "list_issues" => {
+      if owner.is_empty() || repo.is_empty() {
+        return Ok(GithubActionProof {
+          ok: false,
+          action: clean_action,
+          http_status: None,
+          data: None,
+          sent_at_ms,
+          trust: "failed".to_string(),
+          error: Some("payload must include owner and repo.".to_string()),
+        });
+      }
+      let state = payload.get("state").and_then(|value| value.as_str()).unwrap_or("open");
+      ("GET", format!("https://api.github.com/repos/{owner}/{repo}/issues?state={state}&per_page=20"), Value::Null)
+    }
+    _ => {
+      return Ok(GithubActionProof {
+        ok: false,
+        action: clean_action.clone(),
+        http_status: None,
+        data: None,
+        sent_at_ms,
+        trust: "failed".to_string(),
+        error: Some(format!("Unsupported GitHub action: {clean_action}. Supported: create_issue, dispatch_workflow, create_pr, get_repo, list_issues")),
+      });
+    }
+  };
+
+  let request = match method {
+    "POST" => client.post(&url).bearer_auth(token.trim()).json(&body),
+    _ => client.get(&url).bearer_auth(token.trim()),
+  };
+
+  let response = request
+    .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+    .header(reqwest::header::USER_AGENT, "Alphonso-GitHub-Connector/0.1")
+    .send()
+    .await
+    .map_err(|error| error.to_string())?;
+  let http_status = response.status().as_u16();
+  let response_body: Value = response.json().await.map_err(|error| error.to_string())?;
+
+  if http_status >= 400 {
+    let error_message = response_body
+      .get("message")
+      .and_then(|value| value.as_str())
+      .unwrap_or("GitHub API request failed.")
+      .to_string();
+    return Ok(GithubActionProof {
+      ok: false,
+      action: clean_action,
+      http_status: Some(http_status),
+      data: Some(response_body),
+      sent_at_ms,
+      trust: "failed".to_string(),
+      error: Some(error_message),
+    });
+  }
+
+  Ok(GithubActionProof {
+    ok: true,
+    action: clean_action,
+    http_status: Some(http_status),
+    data: Some(response_body),
+    sent_at_ms,
+    trust: "verified".to_string(),
+    error: None,
+  })
+}
+
+#[tauri::command]
+pub(crate) async fn connector_slack_send(channel: String, text: String, thread_ts: Option<String>) -> Result<SlackSendProof, String> {
+  let sent_at_ms = now_ms();
+  let token = std::env::var("SLACK_BOT_TOKEN").unwrap_or_default();
+  if token.trim().is_empty() {
+    return Ok(SlackSendProof {
+      ok: false,
+      channel,
+      ts: None,
+      sent_at_ms,
+      trust: "unverified".to_string(),
+      error: Some("SLACK_BOT_TOKEN is not configured.".to_string()),
+    });
+  }
+
+  let clean_channel = channel.trim().to_string();
+  let clean_text = text.trim().to_string();
+  if clean_channel.is_empty() || clean_text.is_empty() {
+    return Ok(SlackSendProof {
+      ok: false,
+      channel: clean_channel,
+      ts: None,
+      sent_at_ms,
+      trust: "failed".to_string(),
+      error: Some("channel and text are required.".to_string()),
+    });
+  }
+
+  let client = reqwest::Client::builder()
+    .timeout(Duration::from_secs(20))
+    .user_agent("Alphonso-Slack-Connector/0.1")
+    .build()
+    .map_err(|error| error.to_string())?;
+
+  let mut payload = serde_json::json!({
+    "channel": clean_channel,
+    "text": clean_text,
+  });
+  if let Some(ts) = thread_ts {
+    let clean_ts = ts.trim().to_string();
+    if !clean_ts.is_empty() {
+      payload["thread_ts"] = Value::String(clean_ts);
+    }
+  }
+
+  let response = client
+    .post("https://slack.com/api/chat.postMessage")
+    .bearer_auth(token.trim())
+    .json(&payload)
+    .send()
+    .await
+    .map_err(|error| error.to_string())?;
+  let http_status = response.status().as_u16();
+  let body: Value = response.json().await.map_err(|error| error.to_string())?;
+
+  let slack_ok = body.get("ok").and_then(|value| value.as_bool()).unwrap_or(false);
+  let ts = body.get("ts").and_then(|value| value.as_str()).map(|value| value.to_string());
+
+  if http_status >= 400 || !slack_ok {
+    let error_message = body
+      .get("error")
+      .and_then(|value| value.as_str())
+      .unwrap_or("Slack chat.postMessage API call failed.");
+    return Ok(SlackSendProof {
+      ok: false,
+      channel: clean_channel,
+      ts: None,
+      sent_at_ms,
+      trust: "failed".to_string(),
+      error: Some(format!("HTTP {http_status}: {error_message}")),
+    });
+  }
+
+  Ok(SlackSendProof {
+    ok: true,
+    channel: clean_channel,
+    ts,
+    sent_at_ms,
+    trust: "verified".to_string(),
+    error: None,
+  })
+}
+
 #[tauri::command]
 pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
@@ -1352,4 +1651,211 @@ pub(crate) async fn connector_get_comfyui_history(prompt_id: String) -> Result<M
     },
     error: None,
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::sync::{Mutex, OnceLock};
+
+  fn env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+  }
+
+  #[test]
+  fn github_action_proof_serializes_to_camel_case() {
+    let proof = GithubActionProof {
+      ok: true,
+      action: "create_issue".to_string(),
+      http_status: Some(201),
+      data: None,
+      sent_at_ms: 1000,
+      trust: "verified".to_string(),
+      error: None,
+    };
+    let json = serde_json::to_value(&proof).unwrap();
+    assert_eq!(json["ok"], true);
+    assert_eq!(json["action"], "create_issue");
+    assert_eq!(json["httpStatus"], 201);
+    assert_eq!(json["sentAtMs"], 1000);
+    assert_eq!(json["trust"], "verified");
+    assert!(json["error"].is_null());
+  }
+
+  #[test]
+  fn github_action_proof_serializes_error() {
+    let proof = GithubActionProof {
+      ok: false,
+      action: "bad_action".to_string(),
+      http_status: None,
+      data: None,
+      sent_at_ms: 2000,
+      trust: "failed".to_string(),
+      error: Some("GITHUB_TOKEN is not configured.".to_string()),
+    };
+    let json = serde_json::to_value(&proof).unwrap();
+    assert_eq!(json["ok"], false);
+    assert_eq!(json["error"], "GITHUB_TOKEN is not configured.");
+    assert!(json["httpStatus"].is_null());
+  }
+
+  #[test]
+  fn slack_send_proof_serializes_to_camel_case() {
+    let proof = SlackSendProof {
+      ok: true,
+      channel: "C012345".to_string(),
+      ts: Some("1712345678.000001".to_string()),
+      sent_at_ms: 3000,
+      trust: "verified".to_string(),
+      error: None,
+    };
+    let json = serde_json::to_value(&proof).unwrap();
+    assert_eq!(json["ok"], true);
+    assert_eq!(json["channel"], "C012345");
+    assert_eq!(json["ts"], "1712345678.000001");
+    assert_eq!(json["sentAtMs"], 3000);
+    assert!(json["error"].is_null());
+  }
+
+  #[test]
+  fn slack_send_proof_serializes_missing_ts() {
+    let proof = SlackSendProof {
+      ok: false,
+      channel: "".to_string(),
+      ts: None,
+      sent_at_ms: 4000,
+      trust: "failed".to_string(),
+      error: Some("channel and text are required.".to_string()),
+    };
+    let json = serde_json::to_value(&proof).unwrap();
+    assert_eq!(json["ok"], false);
+    assert!(json["ts"].is_null());
+    assert_eq!(json["error"], "channel and text are required.");
+  }
+
+  fn run_with_env<F>(f: F)
+  where
+    F: FnOnce(&tokio::runtime::Runtime) -> () + Send,
+  {
+    let _guard = env_lock().lock().unwrap();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+      .enable_all()
+      .build()
+      .unwrap();
+    f(&runtime);
+  }
+
+  #[test]
+  fn connector_github_action_rejects_empty_action() {
+    run_with_env(|runtime| {
+      std::env::remove_var("GITHUB_TOKEN");
+      std::env::set_var("GITHUB_TOKEN", "test-token");
+      let payload = serde_json::json!({});
+      let result = runtime.block_on(connector_github_action("".to_string(), payload)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      assert!(result.error.unwrap().contains("action is required"));
+      std::env::remove_var("GITHUB_TOKEN");
+    });
+  }
+
+  #[test]
+  fn connector_github_action_rejects_unsupported_action() {
+    run_with_env(|runtime| {
+      std::env::remove_var("GITHUB_TOKEN");
+      std::env::set_var("GITHUB_TOKEN", "test-token");
+      let payload = serde_json::json!({});
+      let result = runtime.block_on(connector_github_action("fly_to_mars".to_string(), payload)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      let error = result.error.unwrap();
+      assert!(error.contains("Unsupported GitHub action"));
+      assert!(error.contains("fly_to_mars"));
+      std::env::remove_var("GITHUB_TOKEN");
+    });
+  }
+
+  #[test]
+  fn connector_github_action_requires_missing_owner_in_create_issue() {
+    run_with_env(|runtime| {
+      std::env::remove_var("GITHUB_TOKEN");
+      std::env::set_var("GITHUB_TOKEN", "test-token");
+      let payload = serde_json::json!({
+        "title": "Test issue",
+        "body": "Description"
+      });
+      let result = runtime.block_on(connector_github_action("create_issue".to_string(), payload)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      assert!(result.error.unwrap().contains("payload must include owner and repo"));
+      std::env::remove_var("GITHUB_TOKEN");
+    });
+  }
+
+  #[test]
+  fn connector_github_action_requires_missing_workflow_id() {
+    run_with_env(|runtime| {
+      std::env::remove_var("GITHUB_TOKEN");
+      std::env::set_var("GITHUB_TOKEN", "test-token");
+      let payload = serde_json::json!({
+        "owner": "test-owner",
+        "repo": "test-repo"
+      });
+      let result = runtime.block_on(connector_github_action("dispatch_workflow".to_string(), payload)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      assert!(result.error.unwrap().contains("payload must include workflow_id"));
+      std::env::remove_var("GITHUB_TOKEN");
+    });
+  }
+
+  #[test]
+  fn connector_slack_send_rejects_empty_channel() {
+    run_with_env(|runtime| {
+      std::env::remove_var("SLACK_BOT_TOKEN");
+      std::env::set_var("SLACK_BOT_TOKEN", "test-token");
+      let result = runtime.block_on(connector_slack_send("".to_string(), "hello".to_string(), None)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      assert!(result.error.unwrap().contains("channel and text are required"));
+      std::env::remove_var("SLACK_BOT_TOKEN");
+    });
+  }
+
+  #[test]
+  fn connector_slack_send_rejects_empty_text() {
+    run_with_env(|runtime| {
+      std::env::remove_var("SLACK_BOT_TOKEN");
+      std::env::set_var("SLACK_BOT_TOKEN", "test-token");
+      let result = runtime.block_on(connector_slack_send("C012345".to_string(), "".to_string(), None)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      assert!(result.error.unwrap().contains("channel and text are required"));
+      std::env::remove_var("SLACK_BOT_TOKEN");
+    });
+  }
+
+  #[test]
+  fn connector_github_action_reports_missing_token() {
+    run_with_env(|runtime| {
+      std::env::remove_var("GITHUB_TOKEN");
+      let payload = serde_json::json!({});
+      let result = runtime.block_on(connector_github_action("get_repo".to_string(), payload)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "unverified");
+      assert!(result.error.unwrap().contains("GITHUB_TOKEN is not configured"));
+    });
+  }
+
+  #[test]
+  fn connector_slack_send_reports_missing_token() {
+    run_with_env(|runtime| {
+      std::env::remove_var("SLACK_BOT_TOKEN");
+      let result = runtime.block_on(connector_slack_send("C012345".to_string(), "hello".to_string(), None)).unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "unverified");
+      assert!(result.error.unwrap().contains("SLACK_BOT_TOKEN is not configured"));
+    });
+  }
 }

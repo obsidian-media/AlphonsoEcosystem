@@ -1533,6 +1533,8 @@ pub fn run() {
       whatsapp_webhook::normalize_whatsapp_cloud_inbound,
       telegram::connector_send_telegram,
       connector_send_whatsapp,
+      connector_github_action,
+      connector_slack_send,
       connector_send_chatgpt,
       connector_send_claude,
       connector_send_qwen,

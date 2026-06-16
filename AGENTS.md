@@ -12,10 +12,10 @@ src/                   React frontend (.jsx, not .tsx)
   agents/              9 agent profiles, permissions, schemas
   components/          82 UI components
   services/            124 services (policy-gated, not stubs)
-    connectors/        GitHub, Slack, and other connector implementations
+    connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                76 test files, 1015 tests (Vitest)
+  test/                72 test files, 952 tests (Vitest, 73 known Tauri mock failures)
 src-tauri/             Rust backend
   src/lib.rs           ~1,455 lines, 76 Tauri commands (across 16 modules)
   src/utils.rs         Shared utilities
@@ -23,7 +23,7 @@ src-tauri/             Rust backend
   src/whatsapp_webhook.rs  WhatsApp webhook module
   src/native_proof.rs  Native proof/RC0 engine
   src/runway.rs        Runway video generation
-  src/connector_commands.rs  Connector Rust backend (12 commands)
+  src/connector_commands.rs  Connector Rust backend (14 commands, incl. GitHub & Slack)
   src/telegram.rs      Telegram connector
   src/youtube.rs       YouTube upload
   src/workspace.rs     Workspace file ops
@@ -43,7 +43,7 @@ docs/                  120+ documentation files
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # All 1015 tests across 76 files
+npm run test             # 952 tests (72 files; 73 known Tauri mock failures)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
@@ -52,7 +52,7 @@ npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
 
 # From src-tauri/
 cargo check              # Verify Rust compiles
-cargo test               # 14 Rust unit tests
+cargo test               # 60 Rust unit tests (across 16 modules)
 cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 ```
 

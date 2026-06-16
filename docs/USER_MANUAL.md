@@ -683,6 +683,6 @@ Key Services:
   hectorResearchService.js         Live research pipeline (DuckDuckGo + Ollama)
   connectorHealthCheckService.js   Live connector health probes
   connectorRegistryService.js      13 connector registry
-  githubConnector.ts               GitHub API integration
-  slackConnector.ts                Slack API integration
+  connector_commands.rs            Rust: connector_github_action (5 actions via GitHub REST API v3)
+  connector_commands.rs            Rust: connector_slack_send (chat.postMessage via Slack Web API)
 ```

@@ -101,8 +101,9 @@ Dead-letter path: failed packets move to `dead_letter` state with replay capabil
 
 ### Connectors & External
 - `connectorRegistryService.js` — all outbound connector paths (policy-gated)
-- `connectors/githubConnector.ts` — GitHub API: issues, PRs, releases, code search, workflows, file content
-- `connectors/slackConnector.ts` — Slack API: messages, channels, files, reactions, webhooks
+- `connectors/connectorOutbound.js` — frontend dispatch (policy-gated, calls Rust commands via invoke)
+- `connector_commands.rs` — `connector_github_action`: GitHub REST API v3 — create_issue, dispatch_workflow, create_pr, get_repo, list_issues
+- `connector_commands.rs` — `connector_slack_send`: Slack Web API chat.postMessage with optional thread_ts
 - `connectors/connectorAuth.js` — connector authentication management
 - `connectors/connectorOutbound.js` — outbound connector dispatch
 - `connectors/connectorPolling.js` — inbound connector polling
@@ -176,7 +177,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - All frontend files are `.jsx` not `.tsx` — partial TypeScript migration (9 services migrated: policyEnforcement, agentContract, orchestrationQueue, license, cache, parallelExecution, memory, ollama, chatUtils)
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud inbound webhook requires hosted endpoint deployment (not yet live)
-- Playwright E2E exists (`e2e/smoke.spec.js`) but not wired into CI
+- Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`)
 - Component test coverage at ~6% — 4 agent modules at 0%
 - Mascot images not compressed (jose: 236KB, alphonso: 243KB)
-- GitHub/Slack connector tests not yet comprehensive (mocking needed)
+- GitHub/Slack connector tests: 12 Rust unit tests added for error paths and serialization; live API mocking still needed for HTTP response testing
