@@ -1,11 +1,11 @@
 # Alphonso
 
-> Local-first AI desktop companion powered by Ollama — **v1.0.0**
+> Local-first AI desktop companion powered by Ollama — **v1.0.3**
 
 [![CI](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-952%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Tests](https://img.shields.io/badge/tests-978%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.3-blue)
 
 Alphonso is a privacy-first desktop AI assistant that runs entirely on your machine. It orchestrates 9 specialized agents, connects to 11 external services, and uses Ollama for local LLM inference — keeping your data off the cloud.
 
@@ -18,7 +18,16 @@ Alphonso is a privacy-first desktop AI assistant that runs entirely on your mach
 - **Durable Orchestration** — Queue with state transitions, dead-letter replay, and approval workflows
 - **Memory** — SQLite-backed durable memory with governance metadata and retention policies
 - **Desktop Native** — Tauri v2 (Rust backend) + React 18 frontend; NSIS/MSI installers
-- **952 Unit Tests** — 72 test files, all passing; 27.97% code coverage
+- **978 Unit Tests** — 73 test files, all passing; 27.97% code coverage
+
+## Documentation
+
+- [Getting Started](docs/GETTING_STARTED.md) — Quick setup guide
+- [Agent Guide](docs/AGENT_GUIDE.md) — What each agent does and when to use them
+- [Connectors](docs/CONNECTORS.md) — Setup for all 11 external integrations
+- [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and fixes
+- [User Manual](docs/USER_MANUAL.md) — Full feature reference
+- [Architecture](ARCHITECTURE.md) — System design and technical details
 
 ## Installation
 
