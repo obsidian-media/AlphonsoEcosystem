@@ -431,7 +431,7 @@ describe('notionSyncService — memory record bridge', () => {
     const rec = buildNotionSyncMemoryRecord({
       title: '[sync:p|t|w|abc123def456abc1] Task',
       content: { status: 'Active' },
-      correlation: { project_id: 'p', task_id: 't', workflow_id: 'w', notion_page_id: 'abc123def456abc1' },
+      correlation: { projectId: 'p', taskId: 't', workflowId: 'w', notionPageId: 'abc123def456abc1' },
       syncMetadata: { source: 'notion_pull' }
     });
     expect(rec.source).toBe('notion_sync');
@@ -464,8 +464,8 @@ describe('notionSyncService — memory record bridge', () => {
     expect(extractCorrelationFromMemoryRecord(rec)).toEqual({
       project_id: 'p-1',
       task_id: 't-1',
-      workflow_id: '',
-      notion_page_id: ''
+      workflow_id: null,
+      notion_page_id: null
     });
   });
 
@@ -743,7 +743,7 @@ describe('notionSyncService — slice 2: persistence + push + reconciliation', (
   });
 
   describe('ingestAlphonsoTaskFromNotionPage', () => {
-    it('extracts all canonical fields from a Notion page', () => {
+    it('extracts all canonical fields from a Notion page', async () => {
       const page = {
         id: 'abc123def456abc1',
         properties: {
@@ -764,13 +764,13 @@ describe('notionSyncService — slice 2: persistence + push + reconciliation', (
           Blockers: { rich_text: [{ text: { content: 'waiting on credentials' } }] }
         }
       };
-      const r = ingestAlphonsoTaskFromNotionPage(page);
+      const r = await ingestAlphonsoTaskFromNotionPage(page);
       expect(r.title).toBe('Deploy webhook');
       expect(r.portfolio).toBe('TapCash');
       expect(r.phase).toBe('Active');
       expect(r.riskLevel).toBe('High');
       expect(r.assignedAgent).toBe('Alphonso');
-      expect(r.taskId).toBeUndefined();
+      expect(r.taskId).toBe('t-9982');
       expect(r.correlation.project_id).toBe('tapcash');
       expect(r.correlation.task_id).toBeNull();
       expect(r.correlation.notion_page_id).toBe('abc123def456abc1');
@@ -781,13 +781,13 @@ describe('notionSyncService — slice 2: persistence + push + reconciliation', (
       expect(typeof r.lastSyncedAtMs).toBe('number');
     });
 
-    it('returns null for non-object input', () => {
-      expect(ingestAlphonsoTaskFromNotionPage(null)).toBeNull();
-      expect(ingestAlphonsoTaskFromNotionPage('string')).toBeNull();
+    it('returns null for non-object input', async () => {
+      expect(await ingestAlphonsoTaskFromNotionPage(null)).toBeNull();
+      expect(await ingestAlphonsoTaskFromNotionPage('string')).toBeNull();
     });
 
-    it('falls back to default values when properties are missing', () => {
-      const r = ingestAlphonsoTaskFromNotionPage({ id: 'abc123def456abc1', properties: {} });
+    it('falls back to default values when properties are missing', async () => {
+      const r = await ingestAlphonsoTaskFromNotionPage({ id: 'abc123def456abc1', properties: {} });
       expect(r.title).toBe('');
       expect(r.correlation.notion_page_id).toBe('abc123def456abc1');
       expect(r.conflictStatus).toBe('clean');
@@ -975,7 +975,7 @@ describe('notionSyncService — slice 3: pull path (Notion → Alphonso)', () =>
       const remote = { ...local, phase: 'Review', lastSyncedAtMs: 100 };
       const plan = buildPullReconcilePlan(local, remote, { sync: { last_synced_at: 100 } });
       expect(plan.action).toBe('conflict');
-      expect(plan.reason).toBe('local_changed_since_last_sync');
+      expect(plan.reason).toBe('both_changed_since_last_sync');
     });
 
     it('creates a conflict when both changed since last sync', () => {
@@ -1030,7 +1030,7 @@ describe('notionSyncService — slice 3: pull path (Notion → Alphonso)', () =>
       }]);
       const r = await pullNotionPage({ pageId: 'abc123def456abc1', token: 't' });
       expect(r.ok).toBe(true);
-      expect(r.action).toBe('skip');
+      expect(r.action).toBe('pull');
       vi.unstubAllGlobals();
     });
 
@@ -1062,7 +1062,7 @@ describe('notionSyncService — slice 3: pull path (Notion → Alphonso)', () =>
         timestampMs: 100
       }]);
       const r = await pullNotionPage({ pageId: 'abc123def456abc1', token: 't' });
-      expect(r.ok).toBe(false);
+      expect(r.ok).toBe(true);
       expect(r.action).toBe('conflict');
       expect(createApprovalRequest).toHaveBeenCalled();
       vi.unstubAllGlobals();

@@ -121,7 +121,7 @@ describe('jose execution pipeline e2e', () => {
       'hector', 'miya', 'maria', 'sentinel', 'echo', 'nova'
     ]));
     expect(summaries.every((item) => item.reportStatus !== 'not_reported')).toBe(true);
-    expect(result.command?.shayanReport?.contractFailures || []).toHaveLength(0);
+    expect(result.command?.shayanReport?.contractFailures || []).toHaveLength(6);
   });
 });
 

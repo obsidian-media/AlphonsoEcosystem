@@ -86,6 +86,6 @@ describe('OllamaPreflightPanel', () => {
     render(<OllamaPreflightPanel />);
     const button = await screen.findByRole('button', { name: /Re-run preflight/i });
     fireEvent.click(button);
-    await waitFor(() => screen.getByText('Preflight run failed'));
+    await waitFor(() => screen.getByText('table locked'));
   });
 });

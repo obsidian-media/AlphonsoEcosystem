@@ -81,9 +81,8 @@ async function guardConnectorRateLimit(connectorId) {
 function getConnectorEnvironment() {
   try {
     const raw = localStorage.getItem('alphonso_connector_registry_v2');
-    const parsed = raw ? JSON.parse(raw) : {};
-    if (parsed?.envPresence && typeof parsed.envPresence === 'object') return parsed.envPresence;
-    const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    const rows = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.rows) ? parsed.rows : []);
     const telegram = rows.find((row) => row?.id === 'telegram');
     const presence = telegram?.envPresence || {};
     return presence;

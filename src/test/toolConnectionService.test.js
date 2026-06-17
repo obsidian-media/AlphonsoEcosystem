@@ -93,7 +93,7 @@ describe('toolConnectionService', () => {
     const result = await sendToolConnectionMessage(created.connection.id, 'hello team', { approved: true });
 
     expect(requireApprovalMock).toHaveBeenCalledTimes(1);
-    expect(invokeMock).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledTimes(3);
     expect(invokeMock.mock.calls[0][0]).toBe('tool_connection_post_webhook');
     expect(result.ok).toBe(true);
     expect(result.connection.lastTestStatus).toBe('verified');

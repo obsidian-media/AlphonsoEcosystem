@@ -5,8 +5,8 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (command) => {
     if (command === 'check_env_vars_presence') {
       return {
-        TELEGRAM_BOT_TOKEN: true,
-        TELEGRAM_ALLOWED_CHAT_IDS: true
+        TELEGRAM_BOT_TOKEN: 'mock-bot-token',
+        TELEGRAM_ALLOWED_CHAT_IDS: 'chat-1'
       };
     }
     if (command === 'connector_send_telegram') {
@@ -32,6 +32,16 @@ describe('telegram live connector proof path', () => {
   });
 
   it('runs a real telegram send proof when env and approval are present', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ok: true,
+        result: { message_id: 42, chat: { id: 'chat-1' } }
+      })
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
     const proof = await proveTelegramConnectorPath('chat-1', 'Hello from Alphonso proof', {
       approved: true,
       requestedBy: 'jose'
@@ -40,6 +50,6 @@ describe('telegram live connector proof path', () => {
     expect(proof.ok).toBe(true);
     expect(proof.connectorId).toBe('telegram');
     expect(proof.proofType).toBe('telegram_live_send');
-    expect(proof.externalId).toBe('telegram-proof-1');
+    expect(proof.external_id).toBe('42');
   });
 });

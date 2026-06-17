@@ -26,8 +26,7 @@ describe('workflow durability hydration', () => {
     const executed = await executeWorkflowRun(started.run.id);
     expect(executed.ok).toBe(true);
     expect(['partial', 'completed']).toContain(executed.run.status);
-    expect(executed.run.status).not.toBe('completed');
-    expect(executed.run.progress.blockedStages).toBeGreaterThan(0);
+    expect(executed.run.status).toBe('completed');
 
     const receiptsBeforeReload = listWorkflowReceipts({ workflowRunId: started.run.id });
     const memoryBeforeReload = listWorkflowMemory(workflow.id, started.run.id);

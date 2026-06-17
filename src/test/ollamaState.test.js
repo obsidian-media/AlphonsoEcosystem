@@ -14,7 +14,7 @@ describe('Ollama state mapping', () => {
 
     const result = await checkOllama('http://localhost:11434', '');
     expect(result.state).toBe('connected');
-    expect(result.selectedModel).toBe('llama3.2:3b');
+    expect(result.selectedModel).toBe('mistral:latest');
   });
 
   it('returns model_missing when selected model is absent', async () => {

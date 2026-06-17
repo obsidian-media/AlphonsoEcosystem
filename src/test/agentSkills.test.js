@@ -17,7 +17,7 @@ describe('agent skill integration', () => {
     expect(ALPHONSO_PROFILE.skillFocus).toContain('Codex Professional Coding');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-professional-marketing');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.workflow.executing-plans');
-    expect(HECTOR_PROFILE.skillFocus).toBe('Professional Marketing Skill + Execution Skill');
+    expect(HECTOR_PROFILE.skillFocus).toBe('Professional Marketing Skill + Execution Skill + GitHub Research');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-audit-governance');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-trust-verification');
     expect(MARIA_PROFILE.skillFocus).toBe('Audit Governance Skill + Trust Verification Skill');
