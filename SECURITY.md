@@ -6,7 +6,7 @@ If you discover a security vulnerability in Alphonso, please report it responsib
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email: [security contact email]
+Instead, please email: Obsidianmedia.yt@gmail.com
 
 Include:
 - Description of the vulnerability
