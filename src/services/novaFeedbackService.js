@@ -42,7 +42,7 @@ export function storeNovaScore(commandId, score) {
   if (!commandId || score == null) return null;
   const opportunityScore = Number(score?.opportunityScore ?? score);
   const riskScore = Number(score?.riskScore ?? 0);
-  if (Number.isNaN(opportunityScore) && Number.isNaN(riskScore)) return null;
+  if (Number.isNaN(opportunityScore) || Number.isNaN(riskScore)) return null;
   const numericScore = Number.isNaN(opportunityScore) ? 0 : opportunityScore;
   const entry = {
     commandId,
