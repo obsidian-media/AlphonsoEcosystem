@@ -37,7 +37,14 @@ vi.mock('../services/verificationService', () => ({
   verifyProcessProof: vi.fn(async () => ({
     id: 'process-proof-test',
     payload: [{ running: runtimeReachable }]
-  }))
+  })),
+  verifyCommandExecution: vi.fn(async () => {
+    if (!runtimeReachable) throw new Error('Runtime not reachable');
+    return {
+      payload: { success: true, exitCode: 0, stdout: '', stderr: '' },
+      trust: 'verified'
+    };
+  })
 }));
 
 vi.mock('../services/hectorResearchService', () => ({
@@ -102,6 +109,14 @@ import {
   retryDLQ,
   runJoseCommandExecutionPipeline
 } from '../services/joseExecutionEngineService';
+
+let _timeoutSpy;
+function mockSetTimeout() {
+  _timeoutSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation((cb) => { cb(); return 0; });
+}
+function restoreSetTimeout() {
+  if (_timeoutSpy) _timeoutSpy.mockRestore();
+}
 
 describe('jose intake command detection', () => {
   it('matches jose-prefixed commands', () => {
@@ -207,6 +222,10 @@ describe('LLM-powered agent drafting', () => {
     localStorage.clear();
     runtimeReachable = true;
     ollamaAvailable = true;
+    mockSetTimeout();
+  });
+  afterEach(() => {
+    restoreSetTimeout();
   });
 
   it('uses LLM-generated package when Ollama is available', async () => {
@@ -310,6 +329,7 @@ describe('dependency-aware execution', () => {
     localStorage.clear();
     runtimeReachable = true;
     ollamaAvailable = true;
+    mockSetTimeout();
     mockSetAgentOutput.mockClear();
     mockGetPriorOutputs.mockClear();
     mockBuildExecutionPlan.mockImplementation((assignments) => {
@@ -320,6 +340,9 @@ describe('dependency-aware execution', () => {
       }
       return { waves: [Object.keys(assignmentMap)], assignmentMap };
     });
+  });
+  afterEach(() => {
+    restoreSetTimeout();
   });
 
   it('calls setAgentOutput after each successful agent execution', async () => {
@@ -423,10 +446,14 @@ describe('sentinel gate integration', () => {
     localStorage.clear();
     runtimeReachable = true;
     ollamaAvailable = true;
+    mockSetTimeout();
     mockShouldBlock.mockReset();
     mockCheckSentinelAlerts.mockReset();
     mockShouldBlock.mockReturnValue({ blocked: false, reason: '' });
     mockCheckSentinelAlerts.mockReturnValue({ found: false, alerts: [], output: null });
+  });
+  afterEach(() => {
+    restoreSetTimeout();
   });
 
   it('routes sentinel-blocked assignments to pending_approval', async () => {
@@ -537,9 +564,13 @@ describe('nova feedback integration', () => {
     localStorage.clear();
     runtimeReachable = true;
     ollamaAvailable = true;
+    mockSetTimeout();
     mockStoreNovaScore.mockClear();
     mockGetDecompositionHints.mockClear();
     mockGetDecompositionHints.mockReturnValue({ hints: [], score: null });
+  });
+  afterEach(() => {
+    restoreSetTimeout();
   });
 
   it('calls storeNovaScore after Nova executes successfully', async () => {

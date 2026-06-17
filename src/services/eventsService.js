@@ -63,6 +63,12 @@ const availability = {
   nextCheckAtMs: 0
 };
 
+export function resetEventsAvailability() {
+  availability.checked = false;
+  availability.available = false;
+  availability.nextCheckAtMs = 0;
+}
+
 export function buildEventId(dedupKey, occurredAtMs) {
   const k = String(dedupKey || '').trim() || 'event';
   const ts = Math.max(0, Number(occurredAtMs || timestampMs()));
@@ -258,7 +264,8 @@ export async function getEventStoreStatus() {
 export async function recordEvent(event) {
   const available = await isEventsTableAvailable();
   if (!available) return { ok: false, blocked: true, reason: 'events_table_unavailable' };
-  const normalized = normalizeEventRecord(event);
+  const enriched = event.dedupKey ? event : buildEvent(event);
+  const normalized = normalizeEventRecord(enriched);
   try {
     const proof = await invoke('record_event', { event: normalized });
     return { ok: true, proof, event: normalized };

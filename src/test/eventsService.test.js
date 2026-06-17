@@ -24,7 +24,8 @@ import {
   recordEvent,
   listEvents,
   listEventDedup,
-  EVENTS_SERVICE_PUBLIC_API
+  EVENTS_SERVICE_PUBLIC_API,
+  resetEventsAvailability
 } from '../services/eventsService.js';
 
 describe('eventsService — constants', () => {
@@ -194,6 +195,7 @@ describe('eventsService — dedup + aggregates', () => {
 describe('eventsService — Tauri wrapper', () => {
   beforeEach(() => {
     invoke.mockReset();
+    resetEventsAvailability();
   });
 
   it('isEventsTableAvailable returns false when invoke throws', async () => {

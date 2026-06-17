@@ -24,13 +24,13 @@ describe('workflowExecutionService', () => {
     expect(['approval_required', 'setup_required', 'blocked', 'queued']).toContain(receipts[0].status);
   });
 
-  it('executes low-risk learning run and creates timeline', () => {
+  it('executes low-risk learning run and creates timeline', async () => {
     const wf = listWorkflowOperations().find((row) => row.id === 'wf-learning-skill-development');
     const started = startWorkflowRun(wf.id, {
       triggerType: 'manual_command',
       input: 'Create a learning plan for Rust.'
     });
-    const result = executeWorkflowRun(started.run.id);
+    const result = await executeWorkflowRun(started.run.id);
     expect(result.ok).toBe(true);
     expect(['completed', 'partial']).toContain(result.run.status);
     const timeline = listWorkflowRunTimeline(started.run.id);

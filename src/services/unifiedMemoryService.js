@@ -22,7 +22,8 @@ export const MEMORY_NAMESPACES = ['shared', 'miya', 'ecosystem', 'workflow'];
 const STORAGE_KEYS = {
   shared: 'alphonso_memory_items_v1',
   miya: 'alphonso_miya_memory_v1',
-  ecosystem: 'alphonso_ecosystem_memory_v1'
+  ecosystem: 'alphonso_ecosystem_memory_v1',
+  workflow: 'alphonso_workflow_memory_v1'
 };
 
 const CAPS = { shared: 1000, miya: 700, ecosystem: 1500, workflow: 2000 };
@@ -126,6 +127,15 @@ function computeAutoTags(item) {
 const durableMemoryProbe = { checked: false, available: false, nextCheckAtMs: 0 };
 let durableWriteQueue = Promise.resolve();
 
+export function resetMemoryServiceState() {
+  CONTENT_HASH_CACHE.clear();
+  durableMemoryProbe.checked = false;
+  durableMemoryProbe.available = false;
+  durableMemoryProbe.nextCheckAtMs = 0;
+  durableWriteQueue = Promise.resolve();
+  _tickLog.warned = false;
+}
+
 // ── LocalStorage helpers ──────────────────────────────────────────────
 
 function readLocal(namespace) {
@@ -155,7 +165,6 @@ export function tickExpiry(now = Date.now()) {
     const rows = readLocal(ns);
     const before = rows.length;
     const kept = rows.filter((item) => {
-      if (item.expiresAt && Number(new Date(item.expiresAt).getTime()) <= now) return false;
       const ttl = TTL_CONFIG[item.category] || DEFAULT_TTL_MS;
       const age = now - Number(item.timestampMs || 0);
       if (age > ttl) {
@@ -280,7 +289,7 @@ export function pushMemory(partial) {
   const now = timestampMs();
 
   const item = {
-    id: partial.id || `${namespace}-mem-${now}-${Math.random().toString(16).slice(2, 8)}`,
+    id: partial.id || `mem-${now}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: now,
     title: partial.title || 'Untitled memory',
     category: partial.category || 'timeline_memory',

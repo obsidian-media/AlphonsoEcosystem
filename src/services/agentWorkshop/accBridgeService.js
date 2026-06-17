@@ -126,6 +126,7 @@ async function writePacketArtifact(packet, workspaceRoot) {
 async function postPacket(packet, config) {
   try {
     const backendResult = await invoke('alphonso_bridge_send_packet', { packet });
+    if (backendResult == null) throw new Error('Tauri invoke returned empty');
     return {
       ok: Boolean(backendResult?.success ?? backendResult?.ok ?? true),
       httpStatus: backendResult?.httpStatus || 200,

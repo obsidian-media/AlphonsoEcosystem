@@ -142,7 +142,7 @@ describe('appUpdateService', () => {
     it('saves update notice after successful notification', async () => {
       const original = globalThis.Notification;
       const mockNotificationInstance = { onclick: null };
-      globalThis.Notification = vi.fn().mockImplementation(() => mockNotificationInstance);
+      globalThis.Notification = vi.fn().mockImplementation(function() { return mockNotificationInstance; });
       globalThis.Notification.permission = 'granted';
 
       const result = await notifyUpdateAvailable({ available: true, latestVersion: '2.0.0' });

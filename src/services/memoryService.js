@@ -23,6 +23,7 @@ export {
   exportMemoryItems,
   importMemoryItems,
   clearContentHashCache,
+  resetMemoryServiceState,
   MEMORY_CATEGORIES,
   MEMORY_NAMESPACES
 } from './unifiedMemoryService';

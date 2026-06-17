@@ -110,11 +110,11 @@ function extractNovaScore(result) {
 
 function checkSentinelGate(commandId, assignment) {
   const risk = String(assignment?.riskLevel || '').toLowerCase();
-  if (risk !== 'high' && risk !== 'critical') {
-    return { blocked: false, reason: '' };
-  }
   const sentinelAlerts = checkSentinelAlerts(commandId);
   if (!sentinelAlerts.found) {
+    return { blocked: false, reason: '' };
+  }
+  if (risk !== 'high' && risk !== 'critical') {
     return { blocked: false, reason: '' };
   }
   const blockResult = sentinelShouldBlock(assignment, sentinelAlerts.output);
@@ -1461,48 +1461,6 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
-      if (isRiskyAssignment(assignment)) {
-        pendingApprovalCount += 1;
-        executionReceipts.push({
-          packetId: assignment.packetId,
-          agent: assignment.agent,
-          status: 'approval_required'
-        });
-        onProgress?.({
-          stage: 'approval_required',
-          assignment,
-          packetId: assignment.packetId
-        });
-        recordOrchestrationQueueTransition({
-          commandId: command.id,
-          packetId: assignment.packetId,
-          agent: AGENTS.JOSE,
-          fromStatus: packet.status || 'unknown',
-          toStatus: 'pending_approval',
-          reason: 'Risky assignment requires approval.',
-          retryCount: packet.retryCount || 0,
-          confidence: TRUST_STATES.VERIFIED,
-          verificationState: TRUST_STATES.PENDING
-        });
-        appendOrchestrationReceipt({
-          workflowId: 'jose_execution_pipeline',
-          commandId: command.id,
-          packetId: assignment.packetId,
-          eventType: 'approval_required',
-          status: 'pending_approval',
-          agent: AGENTS.JOSE,
-          actionType: assignment.actionType,
-          riskLevel: assignment.riskLevel || 'high',
-          approved: false,
-          blocked: true,
-          setupRequired: false,
-          details: { reason: 'risky_assignment' },
-          confidence: TRUST_STATES.VERIFIED,
-          verificationState: TRUST_STATES.PENDING
-        });
-        continue;
-      }
-
       const sentinelGate = checkSentinelGate(command.id, assignment);
       if (sentinelGate.blocked) {
         pendingApprovalCount += 1;
@@ -1547,6 +1505,48 @@ export async function runJoseCommandExecutionPipeline({
           blocked: true,
           setupRequired: false,
           details: { reason: sentinelGate.reason },
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        continue;
+      }
+
+      if (isRiskyAssignment(assignment)) {
+        pendingApprovalCount += 1;
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'approval_required'
+        });
+        onProgress?.({
+          stage: 'approval_required',
+          assignment,
+          packetId: assignment.packetId
+        });
+        recordOrchestrationQueueTransition({
+          commandId: command.id,
+          packetId: assignment.packetId,
+          agent: AGENTS.JOSE,
+          fromStatus: packet.status || 'unknown',
+          toStatus: 'pending_approval',
+          reason: 'Risky assignment requires approval.',
+          retryCount: packet.retryCount || 0,
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'approval_required',
+          status: 'pending_approval',
+          agent: AGENTS.JOSE,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'high',
+          approved: false,
+          blocked: true,
+          setupRequired: false,
+          details: { reason: 'risky_assignment' },
           confidence: TRUST_STATES.VERIFIED,
           verificationState: TRUST_STATES.PENDING
         });

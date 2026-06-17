@@ -11,13 +11,15 @@ const {
   pushMemoryItem,
   listMemoryItems,
   hydrateMemoryFromDurable,
-  MEMORY_CATEGORIES
+  MEMORY_CATEGORIES,
+  resetMemoryServiceState
 } = await import('../services/memoryService.js');
 
 describe('memoryService', () => {
   beforeEach(() => {
     localStorage.clear();
     invoke.mockReset();
+    resetMemoryServiceState();
   });
 
   describe('MEMORY_CATEGORIES', () => {

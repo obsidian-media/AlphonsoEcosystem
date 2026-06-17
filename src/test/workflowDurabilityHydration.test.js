@@ -23,7 +23,7 @@ describe('workflow durability hydration', () => {
     expect(started.ok).toBe(true);
 
     approveWorkflowRun(started.run.id, 'test');
-    const executed = executeWorkflowRun(started.run.id);
+    const executed = await executeWorkflowRun(started.run.id);
     expect(executed.ok).toBe(true);
     expect(['partial', 'completed']).toContain(executed.run.status);
     expect(executed.run.status).not.toBe('completed');
