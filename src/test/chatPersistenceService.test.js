@@ -7,13 +7,14 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
-const { persistChatMessages, loadChatMessages, deleteChatMessages } = await import('../services/chatPersistenceService');
+const { persistChatMessages, loadChatMessages, deleteChatMessages, resetDurableCache } = await import('../services/chatPersistenceService');
 
 describe('chatPersistenceService', () => {
   beforeEach(() => {
     localStorage.clear();
     invoke.mockReset();
     invoke.mockResolvedValue(null);
+    resetDurableCache();
   });
 
   describe('loadChatMessages', () => {

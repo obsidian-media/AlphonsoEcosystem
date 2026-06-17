@@ -28,6 +28,11 @@ export interface ChatMemoryRecord {
   expiryRule: null;
 }
 
+export function resetDurableCache(): void {
+  durableAvailable = null;
+  durableCheckAtMs = 0;
+}
+
 async function isDurableAvailable(): Promise<boolean> {
   const now = timestampMs();
   if (durableAvailable !== null && now < durableCheckAtMs) return durableAvailable;
