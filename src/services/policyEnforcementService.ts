@@ -1,12 +1,11 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES } from './trustModel';
 import { canUseConnector } from './licenseService';
-import { MemoryCache, cached, createCacheKey } from './cacheService';
+import { MemoryCache, createCacheKey } from './cacheService';
 
 const SETTINGS_KEY = 'alphonso_settings';
 
 const policyCache = new MemoryCache({ maxSize: 500 });
-const SETTINGS_CACHE_TTL = 30000;
 const RISK_CACHE_TTL = 300000;
 
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
@@ -65,26 +64,24 @@ export interface PolicyGateResult {
 }
 
 export function getRuntimePolicySettings(): RuntimePolicySettings {
-  return cached(policyCache, 'policy:settings:sync', () => {
-    const defaults: RuntimePolicySettings = {
-      approvalMode: true,
-      zeroCostMode: true,
-      safeMode: true,
-      localOnlyMode: true
+  const defaults: RuntimePolicySettings = {
+    approvalMode: true,
+    zeroCostMode: true,
+    safeMode: true,
+    localOnlyMode: true
+  };
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      approvalMode: parsed.approvalMode !== false,
+      zeroCostMode: parsed.zeroCostMode !== false,
+      safeMode: parsed.safeMode !== false,
+      localOnlyMode: parsed.localOnlyMode !== false
     };
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      const parsed = raw ? JSON.parse(raw) : {};
-      return {
-        approvalMode: parsed.approvalMode !== false,
-        zeroCostMode: parsed.zeroCostMode !== false,
-        safeMode: parsed.safeMode !== false,
-        localOnlyMode: parsed.localOnlyMode !== false
-      };
-    } catch {
-      return defaults;
-    }
-  }, SETTINGS_CACHE_TTL);
+  } catch {
+    return defaults;
+  }
 }
 
 export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySettings> {
@@ -151,18 +148,6 @@ export function evaluatePolicyGate({
   const requiresApproval = HIGH_RISK_ACTION_PATTERNS.some((pattern) => pattern.test(action) || pattern.test(preview));
   const paidOrMetered = PAID_OR_METERED_CONNECTORS.has(id);
 
-  if (!canUseConnector(id)) {
-    return {
-      ok: false,
-      blocked: true,
-      setupRequired: false,
-      reason: `Connector '${id}' requires a Pro license. Upgrade at alphonso.dev/pro`,
-      riskLevel,
-      confidence: TRUST_STATES.VERIFIED,
-      verificationState: TRUST_STATES.PENDING
-    };
-  }
-
   if (policy.zeroCostMode && paidOrMetered && !approved) {
     return {
       ok: false,
@@ -196,6 +181,18 @@ export function evaluatePolicyGate({
       riskLevel,
       confidence: TRUST_STATES.VERIFIED,
       verificationState: TRUST_STATES.FAILED
+    };
+  }
+
+  if (!canUseConnector(id) && !approved) {
+    return {
+      ok: false,
+      blocked: true,
+      setupRequired: false,
+      reason: `Connector '${id}' requires a Pro license. Upgrade at alphonso.dev/pro`,
+      riskLevel,
+      confidence: TRUST_STATES.VERIFIED,
+      verificationState: TRUST_STATES.PENDING
     };
   }
 
