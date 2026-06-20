@@ -1,6 +1,10 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 
 const MARKET_KEY = 'alphonso_local_marketplace_registry_v1';
+const CATALOGUE_URL_KEY = 'alphonso_marketplace_catalogue_url_v1';
+
+export const DEFAULT_CATALOGUE_URL =
+  'https://raw.githubusercontent.com/Thatisshayan/AlphonsoEcosystem/main/gateway/marketplace/catalogue.json';
 
 const DEFAULT_ITEMS = [
   { id: 'item.agent.jose', name: 'Jose Orchestrator Agent', type: 'agent', status: 'installed' },
@@ -62,4 +66,26 @@ export function setMarketplaceItemStatus(itemId, status) {
   ));
   writeItems(items);
   return items;
+}
+
+export function getRemoteCatalogueUrl() {
+  try {
+    return localStorage.getItem(CATALOGUE_URL_KEY) || DEFAULT_CATALOGUE_URL;
+  } catch {
+    return DEFAULT_CATALOGUE_URL;
+  }
+}
+
+export function setRemoteCatalogueUrl(url) {
+  if (!url || typeof url !== 'string') throw new Error('Invalid catalogue URL');
+  localStorage.setItem(CATALOGUE_URL_KEY, url);
+}
+
+export async function fetchRemoteCatalogue(url) {
+  const endpoint = url || getRemoteCatalogueUrl();
+  const res = await fetch(endpoint, { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`Catalogue fetch failed: ${res.status}`);
+  const json = await res.json();
+  if (!json || !Array.isArray(json.items)) throw new Error('Invalid catalogue format: missing items array');
+  return json.items;
 }
