@@ -7,7 +7,9 @@
     },
     "whatsapp-cloud": {
       "root": "gateway/whatsapp-cloud",
-      "routePrefix": "/_/whatsapp-cloud"
+      "routePrefix": "/_/whatsapp-cloud",
+      "framework": "node",
+      "entrypoint": "src/server.js"
     }
   }
 }
