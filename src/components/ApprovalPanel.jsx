@@ -27,7 +27,8 @@ function resolveAssignment(item) {
     agent: item.agent || assignment?.agent || 'unknown',
     actionType: item.actionType || assignment?.actionType || 'unknown',
     riskLevel: inferRisk(assignment),
-    reason: item.reason || ''
+    reason: item.reason || '',
+    previewContent: item.previewContent || null
   };
 }
 
@@ -104,6 +105,12 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved 
                 </div>
                 {item.reason && (
                   <div className="text-[10px] text-zinc-500 truncate mt-0.5">{item.reason}</div>
+                )}
+                {item.previewContent && (
+                  <div className="mt-2 p-2 rounded-lg bg-zinc-900/60 border border-white/[0.06]">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-1">Preview</div>
+                    <div className="text-[10px] text-zinc-400 whitespace-pre-wrap leading-relaxed">{item.previewContent}</div>
+                  </div>
                 )}
               </div>
               <div className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest ${risk.badge}`}>
