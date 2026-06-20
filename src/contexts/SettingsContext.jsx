@@ -26,7 +26,11 @@ const DEFAULT_SETTINGS = {
   updaterEndpoint: 'https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json',
   updaterPubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOEVDRjc2ODY2MzIyN0YKUldSL0ltT0dkcytPN1FSV0JrbUovUzNjQXc2YTJEYWgrTG9UdHdNZC9BZTk5M0Z1VkF6eTlmelUK',
   updaterTarget: '',
-  idleTimeoutMinutes: 15
+  idleTimeoutMinutes: 15,
+  autoLaunchServices: false,
+  comfyuiDir: '',
+  comfyuiPython: 'python',
+  outputFolder: ''
 };
 
 export function SettingsProvider({ children }) {

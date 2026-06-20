@@ -694,6 +694,7 @@ export function ChatView({
               <PipelineResultCard
                 result={pipelineResult}
                 commandText={pipelineCommandText}
+                outputFolder={settings.outputFolder || ''}
                 onRetryAgent={(receipt) => {
                   setMessages((current) => [...current, {
                     id: nextMsgId(),
