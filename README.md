@@ -1,53 +1,83 @@
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/Thatisshayan/AlphonsoEcosystem/main/ALPHONSO_THUMBNAIL.webp" alt="Alphonso" width="180"/>
+
 # Alphonso
 
-> Local-first AI desktop companion powered by Ollama — **v2.0.0**
+> **v2.0.0** — Local-first AI desktop companion powered by Ollama
 
-[![CI](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/AlphonsoEcosystem/local-agent-ui-v2/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-1015%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.0)
+[![Tests](https://img.shields.io/badge/tests-1015%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
-Alphonso is a privacy-first desktop AI assistant that runs entirely on your machine. It orchestrates 9 specialized agents, connects to 13 external services, and uses Ollama for local LLM inference — keeping your data off the cloud.
+**Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
+It orchestrates 9 specialized agents, connects to 13 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
+
+[**Download v2.0.0**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.0) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [obsidianmedia.online](https://obsidianmedia.online)
+
+</div>
+
+---
+
+## What's New in v2.0.0
+
+- **Enhanced 9-Agent System** — all agents upgraded with GitHub and Slack integration
+- **GitHub Connector** — issues, PRs, releases, code search, workflow dispatch, file content
+- **Slack Connector** — messages, channels, files, reactions, webhooks
+- **Parallel Execution** — concurrency-controlled task execution with retry logic
+- **Memory Cache** — TTL + LRU eviction for agents and connectors
+- **License Tiers** — Free / Pro / Enterprise with premium connector gates
+- **AppShell Refactor** — `useAppShellState` hook; 196 lines removed from App.jsx
+- **1,015 Tests** — 76 test files, all passing; 14 Rust unit tests across 16 modules
+- **WebView2 Fix** — `std::process::exit(0)` on window close prevents zombie process leak
+
+---
 
 ## Features
 
-- **9 Enhanced Agents** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with defined roles, permissions, and contracts. Now with GitHub and Slack integration.
-- **13 Connectors** — Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search, Ollama
-- **Local LLM** — Ollama integration with model switching (`llama3.2:3b` default)
-- **Policy Enforcement** — Fail-closed gate for all outbound actions; per-agent permission contracts
-- **License Tiers** — Free, Pro, and Enterprise tiers with premium connector gates
-- **Performance Optimized** — Parallel execution, memory caching with TTL/LRU, optimized policy checks
-- **Durable Orchestration** — Queue with state transitions, dead-letter replay, and approval workflows
-- **Memory** — SQLite-backed durable memory with governance metadata and retention policies
-- **Desktop Native** — Tauri v2 (Rust backend) + React 18 frontend; NSIS/MSI installers
-- **1015 Unit Tests** — 76 test files, all passing; ~28% code coverage
+- **9 Enhanced Agents** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with defined roles, permission contracts, and enforced boundaries. Now with GitHub and Slack capabilities.
+- **13 Connectors** — Ollama, Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude API, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search
+- **1,000+ Integrations** — Composio integration gives access to GitHub, Slack, Jira, Salesforce, Linear, and 1,000+ more services — all policy-gated
+- **Local LLM First** — Ollama with model switching (`llama3.2:3b` default); no prompt leaves your device for core operations
+- **Fail-Closed Policy Gate** — every outbound action runs through `policyEnforcementService.ts`; if credentials are missing or the action is ambiguous it is blocked, not allowed
+- **Durable Orchestration** — queue with state transitions (`queued → approval_required → approved → in_progress → completed`), dead-letter replay, and approval workflows
+- **10 Structured Workflows** — Marketing Ops, Social Media, Content Production, Learning, Startup/Product Dev, Opportunity Discovery, Construction Ops, Knowledge Preservation, Content Repurposing, Automation Governance
+- **SQLite Memory** — durable memory with governance metadata (owner, sensitivity, retention, privacy policy) in WAL mode
+- **Plugin System** — sandboxed plugin runtime + local marketplace
+- **Screen Intelligence** — `screenIntelligenceService.js` for on-screen context awareness
+- **Voice Service** — `voiceService.js` for voice interaction
+- **Desktop Native** — Tauri v2 (Rust 1.77) + React 18 + Vite 5; ~6.8MB NSIS/MSI installer for Windows
 
-## Documentation
-
-- [Getting Started](docs/GETTING_STARTED.md) — Quick setup guide
-- [Agent Guide](docs/AGENT_GUIDE.md) — What each agent does and when to use them
-- [Connectors](docs/CONNECTORS.md) — Setup for all 13 external integrations
-- [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and fixes
-- [User Manual](docs/USER_MANUAL.md) — Full feature reference (v2.0.0)
-- [Architecture](ARCHITECTURE.md) — System design and technical details
+---
 
 ## Installation
+
+### Download the Installer (Windows)
+
+1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.0)
+1. Download `Alphonso_2.0.0_x64-setup.exe`
+1. Run the installer (per-user, no admin required)
+1. Launch Alphonso — it auto-detects Ollama if running
+
+**Auto-Update:** If you have a previous version installed, Alphonso will prompt you to update automatically via the Tauri updater (ed25519-signed manifests).
 
 ### Prerequisites
 
 | Dependency | Version | Purpose |
-|------------|---------|---------|
+|-----------|---------------|---------------------------|
 | **Node.js** | 20+ | Frontend dev server & build |
 | **npm** | 10+ | Package management |
 | **Rust** | 1.77+ (`cargo`) | Tauri desktop backend |
 | **Ollama** | Latest | Local LLM engine |
 | **Git** | Any | Version control |
 
-### Desktop App (Windows)
+### Build from Source
 
 ```bash
-git clone https://github.com/AlphonsoEcosystem/local-agent-ui-v2.git
-cd local-agent-ui-v2
+git clone https://github.com/Thatisshayan/AlphonsoEcosystem.git
+cd AlphonsoEcosystem
 npm install
 
 # Install Ollama and pull a model
@@ -56,121 +86,110 @@ ollama pull llama3.2:3b
 
 # Start development
 npm run dev          # Web-only mode at http://localhost:5173
-
-# Or full native desktop
-npm run desktop:dev  # Tauri dev window
-```
-
-### Web-Only Mode
-
-```bash
-npm install
-npm run dev          # http://localhost:5173
+npm run desktop:dev  # Full Tauri dev window (requires Rust)
 ```
 
 ### Production Build
 
 ```bash
-npm run build                    # Web build (dist/)
-npm run tauri build              # Native installer (src-tauri/target/release/bundle/)
+npm run build          # Web build (dist/)
+npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 ```
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    React 18 (Vite 5, Tailwind 3)                │
-│                                                                 │
-│   ┌─────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│   │  9 Agents    │  │ 76+ UI       │  │ 123 Services         │  │
-│   │ (profiles,   │  │ Components   │  │ (policy-gated,      │  │
-│   │  contracts)  │  │              │  │  orchestrated)       │  │
-│   └──────┬───────┘  └──────────────┘  └──────────┬───────────┘  │
-│          │                                        │             │
-│          └─────────────┬──────────────────────────┘             │
-│                        ▼                                       │
-│            ┌──────────────────────┐                             │
-│            │  policyEnforcement   │  ← fail-closed gate         │
-│            │    Service.js        │                             │
-│            └──────────┬───────────┘                             │
-│                       │                                         │
-├───────────────────────┼─────────────────────────────────────────┤
-│            Tauri v2 (Rust 1.77)   │                             │
-│                       ▼                                         │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  lib.rs  ~1,455 lines · 63 Tauri commands               │    │
-│  │  ├── kv_store.rs        SQLite-backed KV store          │    │
-│  │  ├── policy_gate.rs     Policy enforcement backend      │    │
-│  │  ├── audit_log.rs       Audit chain                     │    │
-│  │  ├── ollama.rs          Ollama inference backend        │    │
-│  │  ├── memory_store.rs    Memory persistence              │    │
-│  │  ├── telegram.rs        Telegram connector              │    │
-│  │  ├── youtube.rs         YouTube upload                  │    │
-│  │  ├── whatsapp_webhook.rs WhatsApp webhook               │    │
-│  │  ├── connector_commands.rs 12 connector commands        │    │
-│  │  ├── native_proof.rs    Native proof engine             │    │
-│  │  ├── plugin_runtime.rs  Plugin runtime                  │    │
-│  │  ├── meta_publish.rs    Meta publishing                 │    │
-│  │  ├── search.rs          Research search                 │    │
-│  │  ├── workspace.rs       Workspace ops                   │    │
-│  │  └── runway.rs          Video generation                │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Ollama (local)  ←→  Connectors  (Telegram, WhatsApp,   │   │
-│  │                        Claude, ChatGPT, Notion, ClickUp, │   │
-│  │                        SD WebUI, ComfyUI, Brave Search)  │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                  React 18 (Vite 5, Tailwind 3)                   │
+│                                                                  │
+│  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
+│  │  9 Agents     │  │  82 UI           │  │  124 Services      │  │
+│  │  (profiles,   │  │  Components     │  │  (policy-gated,    │  │
+│  │   contracts)  │  │  14 Hooks       │  │   orchestrated)    │  │
+│  └──────┬────────┘  └─────────────────┘  └──────────┬─────────┘  │
+│         │                                            │            │
+│         └────────────────┬───────────────────────────┘            │
+│                          ▼                                       │
+│              ┌────────────────────────┐                           │
+│              │  policyEnforcementService.ts  ← fail-closed gate  │
+│              │  licenseService.ts            ← tier validation   │
+│              │  agentContractService.ts      ← per-agent gates   │
+│              │  parallelExecutionService.ts  ← concurrency       │
+│              │  cacheService.ts              ← TTL/LRU cache     │
+│              └──────────────┬─────────────────────────────────── │
+│                             │                                     │
+├─────────────────────────────┼───────────────────────────────────┤
+│           Tauri v2 (Rust 1.77) — IPC Bridge                      │
+│                             ▼                                     │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  lib.rs ~1,455 lines · 76 Tauri commands · 16 modules    │    │
+│  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
+│  │  ├── policy_gate.rs       Policy enforcement backend     │    │
+│  │  ├── audit_log.rs         Immutable audit chain          │    │
+│  │  ├── ollama.rs            Ollama inference backend       │    │
+│  │  ├── memory_store.rs      Memory persistence             │    │
+│  │  ├── telegram.rs          Telegram connector             │    │
+│  │  ├── youtube.rs           YouTube upload                 │    │
+│  │  ├── whatsapp_webhook.rs  WhatsApp webhook (HMAC-safe)   │    │
+│  │  ├── connector_commands.rs  14 commands (GitHub + Slack) │    │
+│  │  ├── native_proof.rs      Native proof engine            │    │
+│  │  ├── plugin_runtime.rs    Plugin runtime                 │    │
+│  │  ├── meta_publish.rs      Meta/Instagram publishing      │    │
+│  │  ├── search.rs            Research search                │    │
+│  │  ├── workspace.rs         Workspace file ops (path guard)│    │
+│  │  ├── runway.rs            Video generation               │    │
+│  │  └── utils.rs             Shared utilities               │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  SQLite (WAL) · memory_records · kv_store · runtime_ledger│    │
+│  └──────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Architecture Rules
 
-- **Fail-closed**: Every outbound connector call goes through `policyEnforcementService.js` — if credentials are missing or the action is ambiguous, it is blocked, not allowed.
-- **Agent contracts**: `agentContractService.js` enforces per-agent allowed/blocked action prefixes.
-- **Durable queue**: `orchestrationQueueService.js` manages state transitions, dead-letter replay, and approval workflows.
-- **Memory**: SQLite-backed via `kv_store.rs` with governance metadata and retention policies.
-- **Security**: CSP enforced at Tauri level; updater signatures via `tauri-plugin-updater`.
+- **Fail-closed**: Every outbound connector call runs through `policyEnforcementService.ts` — if credentials are missing or the action is ambiguous, it is blocked, never allowed
+- **Agent contracts**: `agentContractService.ts` enforces per-agent allowed/blocked action prefixes on every packet before execution
+- **License gates**: `licenseService.ts` validates Free/Pro/Enterprise tier before any premium connector fires
+- **Durable queue**: `orchestrationQueueService.js` manages state transitions, dead-letter replay, and approval workflows
+- **Parallel execution**: `parallelExecutionService.ts` handles concurrency control and retry logic
+- **Memory caching**: `cacheService.ts` provides TTL and LRU eviction for global, connector, and agent caches
+- **SQLite in WAL mode**: `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;` for concurrent read/write
 
-## Development
+---
 
-```bash
-npm run dev            # Start Vite dev server
-npm run lint           # ESLint on src/
-npm run test           # Run all 952 tests across 72 files
-npm run test:coverage  # Coverage report (threshold 20%)
-npm run build          # Production build
-npm run verify:app     # lint + test + build in one command
-```
+## The 9 Agents
 
-### Rust Backend
+| Agent | Role | Key Constraint | v2.0.0 Capabilities |
+|------------|------------------------------------------------------|-----------------------------------------------|--------------------------------------------------------|
+| **Alphonso** | Local operator — execution, verification, packaging | General execution | GitHub code search, issue/PR management, repo analysis |
+| **Jose** | Orchestrator — intake, routing, merge, confirm, report | Cannot bypass high-risk restrictions | Parallel execution coordination |
+| **Hector** | Research + citations, source scan | No terminal/filesystem/posting/purchase actions | GitHub research, open source analysis, trend discovery |
+| **Miya** | Creative — strategy, script, storyboard, export | No unapproved publishing or system commands | Content Catalyst pipeline |
+| **Maria** | Governance, audit, risk, approval review | No destructive execution | Enhanced compliance checks |
+| **Marcus** | Approved distribution execution | Only executes under approved paths | GitHub releases, Slack notifications, team communication |
+| **Echo** | Memory historian and archival | Knowledge preservation only | Improved retrieval speed |
+| **Sentinel** | Security monitoring, automation safety | Safety checks only, no destructive execution | Optimized policy checks |
+| **Nova** | Scoring, analysis, opportunity prioritization | Analysis only | Cached analytics |
 
-```bash
-cd src-tauri
-cargo check                        # Verify compilation
-cargo test                         # Run 14 Rust unit tests
-cargo clippy -- -D warnings        # Lint (CI enforces zero warnings)
-```
+All agents are registered in `src/agents/agentRegistry.js`, enforced by `agentContractService.ts`, and communicate via `agentBusService.js`.
 
-### E2E Tests
-
-```bash
-npx playwright install chromium    # One-time browser install
-npm run dev                        # Dev server must be running
-npm run test:e2e                   # Playwright smoke tests
-```
+---
 
 ## Connectors
 
-Each connector requires specific environment variables. See [docs/CONNECTORS.md](docs/CONNECTORS.md) for setup instructions, credentials, and test procedures.
-
-| Connector | Status | Env Var Required |
-|-----------|--------|-----------------|
+| Connector | Status | Env Var |
+|--------------|-----------------------|----------------------|
 | Ollama | Built-in | None (local) |
 | Telegram | Production | `TELEGRAM_BOT_TOKEN` |
 | WhatsApp Cloud | Staging | `WHATSAPP_CLOUD_TOKEN` |
-| Claude | Production | `ANTHROPIC_API_KEY` |
+| Claude API | Production | `ANTHROPIC_API_KEY` |
 | ChatGPT | Production | `OPENAI_API_KEY` |
+| **GitHub** | **Production (v2.0.0)** | `GITHUB_TOKEN` |
+| **Slack** | **Production (v2.0.0)** | `SLACK_BOT_TOKEN` |
 | YouTube | Ready | `YOUTUBE_API_KEY` |
 | Notion | Ready | `NOTION_API_KEY` |
 | ClickUp | Ready | `CLICKUP_API_KEY` |
@@ -178,28 +197,95 @@ Each connector requires specific environment variables. See [docs/CONNECTORS.md]
 | ComfyUI | Ready | `COMFYUI_URL` |
 | Brave Search | Ready | `BRAVE_SEARCH_API_KEY` |
 
-## Agents
+All connectors are policy-gated through `connectorRegistryService.js`. See [docs/CONNECTORS.md](docs/CONNECTORS.md) for full setup instructions.
 
-| Agent | Role |
-|-------|------|
-| Alphonso | Local operator — execution, verification, packaging |
-| Jose | Orchestrator — intake, routing, merge, confirm, report |
-| Hector | Research + citations, source scan |
-| Miya | Creative — strategy, script, storyboard, export |
-| Maria | Governance, audit, risk, approval review |
-| Marcus | Approved distribution execution |
-| Echo | Memory historian and archival |
-| Sentinel | Security monitoring, automation safety |
-| Nova | Scoring, analysis, opportunity prioritization |
+---
+
+## License Tiers
+
+| Tier | Connectors | Price |
+|--------------|--------------------------------------------------|------------|
+| **Free** | Ollama (local), Brave Search | Free forever |
+| **Pro** | + Claude, ChatGPT, GitHub, Slack, Telegram, Notion | TBD |
+| **Enterprise** | All 13 connectors + Composio (1,000+ services) | TBD |
+
+---
+
+## Development
+
+```bash
+npm run dev            # Vite dev server (port 5173)
+npm run lint           # ESLint on src/
+npm run test           # 1,015 tests across 76 files
+npm run test:coverage  # Coverage report (~28%; threshold 20%)
+npm run build          # Production build (OXC compiler)
+npm run verify:app     # lint + test + build in one command
+npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
+```
+
+### Rust Backend
+
+```bash
+cd src-tauri
+cargo check                    # Verify compilation
+cargo test                     # 14 Rust unit tests (16 modules)
+cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
+```
+
+---
+
+## Documentation
+
+| Document | Description |
+|---------------------------------------------|----------------------------------------------|
+| [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Quick setup guide |
+| [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | What each agent does and when to use them |
+| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 13 connectors |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
+| [USER_MANUAL.md](docs/USER_MANUAL.md) | Full feature reference (v2.0.0) |
+| [RELEASE.md](docs/RELEASE.md) | Auto-updater signing and release pipeline |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System design and technical details |
+| [AGENTS.md](AGENTS.md) | Agent context and directory structure |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting policy |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, workflow, code style, and PR guidelines |
+
+---
+
+## Release History
+
+| Version | Date | Highlights |
+|----------|-------------|-----------------------------------------------------------------------------|
+| **v2.0.0** | June 16, 2026 | Enhanced agents, GitHub + Slack connectors, parallel execution, license tiers |
+| v1.0.3 | June 15, 2026 | Installer update |
+| v1.0.2 | June 15, 2026 | WebView2 zombie process fix, boot optimizations |
+| v1.0.1 | June 15, 2026 | Stability fixes |
+| v1.0.0 | June 12, 2026 | Public release — fixed infinite re-render loop, auto-update keys |
+| v0.3.0 | June 9, 2026 | Major refactor — lib.rs modularization, streaming, security hardening |
+| v0.1.1 | June 4, 2026 | Initial installer release |
+
+---
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 124 services already exist.
+
 ## Security
 
-See [SECURITY.md](SECURITY.md) for vulnerability reporting policy and scope.
+See [SECURITY.md](SECURITY.md) for vulnerability reporting policy and scope.  
+Security contact: [security@obsidianmedia.online](mailto:security@obsidianmedia.online)
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+Business Source License 1.1 (BSL 1.1) — see [LICENSE](LICENSE) for details.  
+Change date: four years from release. Personal use is free. Commercial use requires a license.
+
+---
+
+<div align="center">
+
+Built by [Obsidian Media](https://obsidianmedia.online) · Ontario, Canada  
+**Your AI team. Your machine. Your rules.**
+
+</div>
