@@ -44,6 +44,7 @@ pub(crate) fn normalize_bridge_path_prefix(raw: &str) -> String {
   }
 }
 
+#[expect(dead_code)]
 pub(crate) fn build_http_client(timeout_ms: u64) -> Result<reqwest::Client, String> {
   reqwest::Client::builder()
     .timeout(Duration::from_millis(timeout_ms))
@@ -51,6 +52,7 @@ pub(crate) fn build_http_client(timeout_ms: u64) -> Result<reqwest::Client, Stri
     .map_err(|error| error.to_string())
 }
 
+#[expect(dead_code)]
 pub(crate) fn truncate_string(s: &str, max_len: usize) -> String {
   if s.len() <= max_len {
     s.to_string()
@@ -59,6 +61,7 @@ pub(crate) fn truncate_string(s: &str, max_len: usize) -> String {
   }
 }
 
+#[expect(dead_code)]
 pub(crate) fn generate_id() -> String {
   use std::time::{SystemTime, UNIX_EPOCH};
   let now = SystemTime::now()
