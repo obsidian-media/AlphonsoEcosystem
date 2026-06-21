@@ -11,13 +11,13 @@
 src/                   React frontend (.jsx, not .tsx)
   agents/              9 agent profiles, permissions, schemas
   components/          82 UI components
-  services/            130 services (policy-gated, not stubs)
+  services/            129 services (policy-gated, not stubs)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
   test/                81 test files, 1,100 tests (Vitest, all passing)
 src-tauri/             Rust backend
-  src/lib.rs           ~1,713 lines, 82 Tauri commands (across 18 modules)
+  src/lib.rs           ~1,585 lines, 82 Tauri commands (across 18 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -52,7 +52,7 @@ npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
 
 # From src-tauri/
 cargo check              # Verify Rust compiles
-cargo test               # 14 Rust unit tests (across 18 modules)
+cargo test               # 60 Rust unit tests (across 18 modules)
 cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 ```
 
@@ -95,5 +95,5 @@ Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not
 - Never fake readiness — use truth labels: COMPLETE / PARTIAL / PLACEHOLDER / FAKE
 
 ## Known Staleness
-- ARCHITECTURE.md says lib.rs "~7,200 lines" — actual is ~1,713 (after 18 module extractions)
+- ARCHITECTURE.md says lib.rs "~7,200 lines" — actual is ~1,585 (18 modules in src-tauri/src)
 - Ground truth last verified 2026-06-21 — WhatsApp deployment finalized

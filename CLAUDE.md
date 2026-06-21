@@ -19,7 +19,7 @@ npm run lint             # ESLint on src/
 
 # Rust (run from src-tauri/ directory)
 cargo check              # Verify Rust compiles
-cargo test               # Run 14 Rust unit tests
+cargo test               # Run 60 Rust unit tests
 cargo clippy -- -D warnings  # Lint Rust — must be zero warnings (CI enforces this)
 
 # Updater / release
@@ -49,7 +49,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **parallelExecutionService.ts**: parallel task execution with concurrency control, retry logic, and task queues
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **13 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama — all policy-gated
-- **lib.rs is ~1,713 lines** — 18 modules extracted (utils, kv_store, whatsapp_webhook, native_proof, runway, connector_commands, telegram, youtube, workspace, search, plugin_runtime, policy_gate, audit_log, ollama, memory_store, meta_publish, main)
+- **lib.rs is ~1,585 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
 - **All 1100 tests are in `src/test/`** — 81 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
@@ -94,7 +94,7 @@ Before writing any new service, component, or feature, check this list:
 ## Before Making Changes
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
-2. Check `src/services/` for an existing service before writing a new one — there are 130 services
+2. Check `src/services/` for an existing service before writing a new one — there are 129 services
 3. Check `src/test/` — there are 81 test files already; add to them, don't create a parallel test system
 4. Run `npm run test` before and after any change; all 1100 tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
@@ -123,7 +123,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
     ConnectorHealthPanel.jsx        — full connector panel (lazy chunk)
     ConnectorStatusIndicators.jsx   — small dot/strip components (static-safe import)
     AgentActivityLog.jsx            — activity timeline tab (appendAgentActivity wired)
-  services/            130 services
+  services/            129 services
     connectors/        GitHub, Slack, and other connector implementations
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
@@ -132,7 +132,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
-    lib.rs             Rust backend (~1,713 lines)
+    lib.rs             Rust backend (~1,585 lines)
     utils.rs           Shared utilities
     kv_store.rs        KV store module — kv_set, kv_get, save_settings, load_settings
     whatsapp_webhook.rs  WhatsApp webhook module (3 commands, 4 structs)
