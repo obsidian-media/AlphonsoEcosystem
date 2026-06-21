@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
@@ -10,6 +10,7 @@ import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, 
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
+import { NovaHistoryChart } from './NovaHistoryChart';
 
 function EchoTimeline() {
   const items = listMemoryItems()
@@ -967,6 +968,11 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Activity} label="Echo Memory Timeline" />
         <EchoTimeline />
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={TrendingUp} label="Nova Opportunity History" />
+        <NovaHistoryChart />
       </section>
 
       <section className="space-y-4">

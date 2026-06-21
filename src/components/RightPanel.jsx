@@ -3,6 +3,7 @@ import { Activity, ChevronLeft, ChevronRight, Cpu, Shield, Wifi, WifiOff } from 
 import { formatModelSize } from '../lib/ollama';
 import { scanForThreats } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
+import { SentinelFindingModal } from './SentinelFindingModal';
 
 function StatusDot({ state }) {
   const colors = {
@@ -62,6 +63,8 @@ export function RightPanel({
       return stored ? JSON.parse(stored) : null;
     } catch { return null; }
   });
+
+  const [selectedFinding, setSelectedFinding] = useState(null);
 
   const runQuickScan = () => {
     const result = scanForThreats('', {});
@@ -219,7 +222,13 @@ export function RightPanel({
                   <div className="px-3 py-1.5">
                     <p className="text-[10px] text-zinc-500">{sentinelScan.findings.length} finding{sentinelScan.findings.length > 1 ? 's' : ''}</p>
                     {sentinelScan.findings.slice(0, 2).map((f, i) => (
-                      <p key={i} className="text-[10px] text-zinc-600 truncate">• {f.type || f.pattern || 'threat'}</p>
+                      <button
+                        key={i}
+                        onClick={() => setSelectedFinding(sentinelScan.findings[i])}
+                        className="block w-full text-left text-[10px] text-zinc-600 truncate cursor-pointer hover:text-zinc-400 transition-colors"
+                      >
+                        • {f.type || f.pattern || 'threat'}
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -247,6 +256,7 @@ export function RightPanel({
               Refresh Status
             </button>
           </div>
+          <SentinelFindingModal finding={selectedFinding} onClose={() => setSelectedFinding(null)} />
         </>
       )}
 
