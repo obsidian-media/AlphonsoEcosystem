@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.3] - 2026-06-21 — Phase 3: Agent Runtimes + Connector Credential UI
+
+### Added
+- **Maria Governance Auditor runtime** — `src/services/mariaAuditService.js` — Ollama-powered governance audit engine: JSON risk assessment (riskLevel/approvalRequired/policyFindings[]/complianceNotes[]/summary), deterministic fallback via `marcusAuditService.generateRiskScore()`, memory persistence, session event logging, orchestration receipt. Wired into `joseExecutionEngineService.js` `executeMariaAssignment()`.
+- **Echo Knowledge Historian runtime** — `src/services/echoMemoryService.js` — Ollama-powered memory synthesis engine: retention classification (permanent/standard_180d/ephemeral_7d based on content patterns), category classification (project/timeline/preference/orchestration), confidence normalization across TRUST_STATES ranking, memory persistence. Wired into `joseExecutionEngineService.js` `executeEchoAssignment()`.
+- **Marcus Distribution Executor runtime** — `src/services/marcusExecutionService.js` — Full distribution engine with Maria governance gate: blocks on critical/high risk when `approvalRequired`, GitHub release/issue actions via `githubConnector.js`, Slack messaging via `slackConnector.js`, multi-platform publish via `marcusPublishService`, audit schema recording. Wired into `joseExecutionEngineService.js` `executeMarcusAssignment()`.
+- **Connector credential UI** — `ConnectorSetupPanel.jsx` now has credential input panels for all 9 API-key connectors: GitHub (token), Slack (bot token), Claude/Anthropic (API key), ChatGPT/OpenAI (API key), Notion (API key + optional page ID), ClickUp (API key + optional list ID), WhatsApp Cloud (access token + phone number ID + verify token), YouTube OAuth (client ID + client secret + refresh token + channel ID), Qwen/DashScope (API key). All use `saveConnectorCredential()` + `updateConnectorAuthProfile()` — credentials stored locally, connector enabled on save.
+- **`CredentialSection` component** — reusable credential panel sub-component in `ConnectorSetupPanel.jsx` handling label/password/text field layout, save button, and hint text.
+- **3 new test files** — `mariaAuditService.test.js` (33 tests), `echoMemoryService.test.js` (35 tests), `marcusExecutionService.test.js` (23 tests). Total: 84 files / 1191 tests.
+
+### Fixed
+- **`claudeService.js` credential read** — was reading from auth profiles `profiles.claude.apiKey`; now reads via `getConnectorCredential('claude', 'ANTHROPIC_API_KEY')` — consistent with all other connectors (Telegram pattern).
+- **`chatgptService.js` credential read** — now reads via `getConnectorCredential('chatgpt', 'OPENAI_API_KEY')` — same fix.
+- **Maria/Echo stubs replaced** — `executeMariaAssignment()` and `executeEchoAssignment()` in Jose engine were thin regex stubs; replaced with full service calls to dedicated runtime files.
+
+### Changed
+- Test count: 81 files / 1100 tests → **84 files / 1191 tests** (all passing)
+
+---
+
 ## [2.0.2] - 2026-06-21
 
 ### Added

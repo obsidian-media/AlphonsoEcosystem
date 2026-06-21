@@ -28,23 +28,29 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 **Cannot:** Execute system commands or unapproved publishing
 **When to use:** "Write a YouTube script about X", "Create a marketing strategy", "Design a storyboard".
 
-### Maria — Governance
-**Role:** Audit, risk assessment, approval review
-**Can do:** Review actions for compliance, flag risks, approve/deny requests
+### Maria — Governance Auditor
+**Role:** Risk assessment, compliance review, approval gating
+**Runtime:** `src/services/mariaAuditService.js` — Ollama-powered with deterministic fallback
+**Can do:** Run governance audits on any assignment, score risk (low/medium/high/critical), flag policy violations, emit compliance notes, gate Marcus execution
 **Cannot:** Perform destructive execution
-**When to use:** Automatic — Maria reviews high-risk actions before they execute.
+**Schema:** `riskLevel`, `approvalRequired`, `policyFindings[]`, `complianceNotes[]`, `summary`
+**When to use:** Automatic — Jose routes governance-flagged actions through Maria before Marcus executes. High/critical risk with `approvalRequired=true` blocks Marcus.
 
-### Marcus — Distribution
-**Role:** Approved distribution execution
-**Can do:** Publish content, send messages, upload files — but only on approved paths
-**Cannot:** Execute anything not explicitly approved
-**When to use:** "Post this to Telegram", "Upload to YouTube", "Send via WhatsApp" (after approval).
+### Marcus — Distribution Executor
+**Role:** Approved distribution execution across GitHub, Slack, and publish platforms
+**Runtime:** `src/services/marcusExecutionService.js` — requires Maria governance clearance
+**Can do:** Create GitHub releases and issues, send Slack messages, dispatch multi-platform publish (Instagram, YouTube, Telegram, WhatsApp, Notion, ClickUp) — but only after Maria clears the risk level
+**Cannot:** Execute anything not explicitly approved or where Maria flagged critical/high with `approvalRequired`
+**Schema:** `workflowId`, `connectorId`, `approvedBy: "maria-governance"`, `status`, `resultUrl`, `executedAtMs`
+**When to use:** "Post this to Telegram", "Create a GitHub release", "Send Slack notification" (after Maria audit).
 
-### Echo — Memory Historian
-**Role:** Knowledge preservation and archival
-**Can do:** Store memories, retrieve past context, maintain knowledge base
+### Echo — Knowledge Historian
+**Role:** Memory synthesis and archival across all agent outputs
+**Runtime:** `src/services/echoMemoryService.js` — Ollama-powered with deterministic fallback
+**Can do:** Synthesize memories from workflow outputs, classify retention policy (permanent/standard_180d/ephemeral_7d), categorize memories (project/timeline/preference/orchestration), normalize confidence levels
 **Cannot:** Modify or delete without approval
-**When to use:** Automatic — Echo stores important conversations and retrieves relevant context.
+**Schema:** `memoryId`, `category`, `retentionPolicy`, `sensitivity`, `confidenceLevel`, `archivedAtMs`
+**When to use:** Automatic — Echo runs after workflow completion to preserve important context and knowledge.
 
 ### Sentinel — Security Monitor
 **Role:** Security monitoring, automation safety

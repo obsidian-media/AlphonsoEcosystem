@@ -28,6 +28,38 @@ import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/tel
 import { saveConnectorCredential, getConnectorCredential } from '../services/connectors/connectorAuth';
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
 
+function CredentialSection({ title, connectorId, borderColor, bgColor, labelColor, fields, onSave, hint }) {
+  return (
+    <div className={`mt-4 rounded-xl border ${borderColor} ${bgColor} p-4`}>
+      <div className={`mb-3 text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>{title}</div>
+      <div className="grid grid-cols-1 gap-2">
+        {fields.map((f) => (
+          <div key={f.key} className="flex flex-col gap-1">
+            <label className="text-[10px] text-zinc-400 uppercase tracking-wider">{f.label}</label>
+            <input
+              type={f.secret === false ? 'text' : 'password'}
+              value={f.value || ''}
+              onChange={(e) => f.onChange(e.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-white/20"
+              placeholder={f.placeholder}
+              autoComplete="off"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        {hint && <p className="text-[10px] text-zinc-500 leading-relaxed flex-1">{hint}</p>}
+        <button
+          onClick={onSave}
+          className={`rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-100 transition-colors ${bgColor.replace('/8', '/30')} hover:opacity-80 border ${borderColor} shrink-0`}
+        >
+          Save &amp; Enable
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ConnectorSetupPanel() {
   const [connectors, setConnectors] = useState(() => listConnectors());
   const [audit, setAudit] = useState(() => listConnectorAudit());
@@ -56,6 +88,24 @@ export function ConnectorSetupPanel() {
   const [telegramBotToken, setTelegramBotToken] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN'));
   const [telegramChatIds, setTelegramChatIds] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS'));
   const [telegramBotVerified, setTelegramBotVerified] = useState(null);
+
+  // API key credentials for all other connectors
+  const [githubToken, setGithubToken] = useState(() => getConnectorCredential('github', 'GITHUB_TOKEN'));
+  const [slackBotToken, setSlackBotToken] = useState(() => getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
+  const [anthropicApiKey, setAnthropicApiKey] = useState(() => getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
+  const [openaiApiKey, setOpenaiApiKey] = useState(() => getConnectorCredential('chatgpt', 'OPENAI_API_KEY'));
+  const [notionApiKey, setNotionApiKey] = useState(() => getConnectorCredential('notion', 'NOTION_API_KEY'));
+  const [notionParentPageId, setNotionParentPageId] = useState(() => getConnectorCredential('notion', 'NOTION_PARENT_PAGE_ID'));
+  const [clickupApiKey, setClickupApiKey] = useState(() => getConnectorCredential('clickup', 'CLICKUP_API_KEY'));
+  const [clickupListId, setClickupListId] = useState(() => getConnectorCredential('clickup', 'CLICKUP_LIST_ID'));
+  const [whatsappAccessToken, setWhatsappAccessToken] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN'));
+  const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID'));
+  const [whatsappVerifyToken, setWhatsappVerifyToken] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_VERIFY_TOKEN'));
+  const [youtubeClientId, setYoutubeClientId] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CLIENT_ID'));
+  const [youtubeClientSecret, setYoutubeClientSecret] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CLIENT_SECRET'));
+  const [youtubeRefreshToken, setYoutubeRefreshToken] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_REFRESH_TOKEN'));
+  const [youtubeChannelId, setYoutubeChannelId] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CHANNEL_ID'));
+  const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +245,24 @@ export function ConnectorSetupPanel() {
     updateConnectorAuthProfile('telegram', { enabled: true, allowlist: chatIds.split(/[,\n]/).map((s) => s.trim()).filter(Boolean) });
     setTelegramBotVerified(null);
     setNotice('Telegram credentials saved. Click Verify Bot to test the connection.');
+    refresh();
+  };
+
+  const saveConnectorApiKey = (connectorId, fields) => {
+    let hasValue = false;
+    for (const [key, value] of Object.entries(fields)) {
+      const trimmed = String(value || '').trim();
+      if (trimmed) {
+        saveConnectorCredential(connectorId, key, trimmed);
+        hasValue = true;
+      }
+    }
+    if (hasValue) {
+      updateConnectorAuthProfile(connectorId, { enabled: true });
+      setNotice(`${connectorId} credentials saved and connector enabled.`);
+    } else {
+      setNotice(`No credentials provided for ${connectorId}.`);
+    }
     refresh();
   };
 
@@ -681,6 +749,131 @@ export function ConnectorSetupPanel() {
           This verifies challenge/signature logic and inbound normalization locally. Public webhook hosting and live Meta callback delivery remain setup-required.
         </p>
       </div>
+
+      {/* ── API Key Credential Sections ── */}
+      <CredentialSection
+        title="GitHub Credentials"
+        connectorId="github"
+        borderColor="border-violet-300/20"
+        bgColor="bg-violet-500/8"
+        labelColor="text-violet-200/80"
+        fields={[
+          { label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }
+        ]}
+        onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
+        hint="Generate at github.com/settings/tokens — needs repo, workflow scopes for Marcus release actions."
+      />
+
+      <CredentialSection
+        title="Slack Credentials"
+        connectorId="slack"
+        borderColor="border-green-300/20"
+        bgColor="bg-green-500/8"
+        labelColor="text-green-200/80"
+        fields={[
+          { label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' }
+        ]}
+        onSave={() => saveConnectorApiKey('slack', { SLACK_BOT_TOKEN: slackBotToken })}
+        hint="Create a Slack app at api.slack.com, add chat:write scope, install to workspace, copy Bot User OAuth Token."
+      />
+
+      <CredentialSection
+        title="Claude (Anthropic) Credentials"
+        connectorId="claude"
+        borderColor="border-orange-300/20"
+        bgColor="bg-orange-500/8"
+        labelColor="text-orange-200/80"
+        fields={[
+          { label: 'Anthropic API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }
+        ]}
+        onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
+        hint="Get your key at console.anthropic.com/settings/keys. Stored locally, never sent to any server except Anthropic."
+      />
+
+      <CredentialSection
+        title="ChatGPT (OpenAI) Credentials"
+        connectorId="chatgpt"
+        borderColor="border-teal-300/20"
+        bgColor="bg-teal-500/8"
+        labelColor="text-teal-200/80"
+        fields={[
+          { label: 'OpenAI API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }
+        ]}
+        onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
+        hint="Get your key at platform.openai.com/api-keys. Stored locally, never sent to any server except OpenAI."
+      />
+
+      <CredentialSection
+        title="Notion Credentials"
+        connectorId="notion"
+        borderColor="border-pink-300/20"
+        bgColor="bg-pink-500/8"
+        labelColor="text-pink-200/80"
+        fields={[
+          { label: 'Integration API Key', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
+          { label: 'Parent Page ID (optional)', placeholder: 'Page UUID from Notion URL', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
+        ]}
+        onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
+        hint="Create an integration at notion.so/my-integrations. Share the target page with your integration. Copy the integration secret."
+      />
+
+      <CredentialSection
+        title="ClickUp Credentials"
+        connectorId="clickup"
+        borderColor="border-purple-300/20"
+        bgColor="bg-purple-500/8"
+        labelColor="text-purple-200/80"
+        fields={[
+          { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
+          { label: 'List ID (optional default)', placeholder: 'ClickUp list ID', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
+        ]}
+        onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
+        hint="Get your API key at app.clickup.com/settings. The List ID can be found in the list URL."
+      />
+
+      <CredentialSection
+        title="WhatsApp Cloud Credentials"
+        connectorId="whatsapp"
+        borderColor="border-emerald-300/20"
+        bgColor="bg-emerald-500/8"
+        labelColor="text-emerald-200/80"
+        fields={[
+          { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
+          { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
+          { label: 'Webhook Verify Token', placeholder: 'Your custom verify token', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false }
+        ]}
+        onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken })}
+        hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The verify token is a string you choose."
+      />
+
+      <CredentialSection
+        title="YouTube OAuth Credentials"
+        connectorId="youtube"
+        borderColor="border-red-300/20"
+        bgColor="bg-red-500/8"
+        labelColor="text-red-200/80"
+        fields={[
+          { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
+          { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
+          { label: 'Refresh Token', placeholder: 'Run npm run auth:youtube to generate', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
+          { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
+        ]}
+        onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
+        hint="Create OAuth credentials in Google Cloud Console (YouTube Data API v3). Run npm run auth:youtube in terminal to get your refresh token."
+      />
+
+      <CredentialSection
+        title="Qwen (DashScope) Credentials"
+        connectorId="qwen"
+        borderColor="border-yellow-300/20"
+        bgColor="bg-yellow-500/8"
+        labelColor="text-yellow-200/80"
+        fields={[
+          { label: 'DashScope API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }
+        ]}
+        onSave={() => saveConnectorApiKey('qwen', { DASHSCOPE_API_KEY: qwenApiKey })}
+        hint="Get your key at dashscope.aliyuncs.com. Uses the international endpoint by default."
+      />
 
       <div className="mt-4">
         <ToolConnectionsPanel />

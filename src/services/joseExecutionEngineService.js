@@ -28,6 +28,9 @@ import { recordOrchestrationQueueTransition } from './orchestrationQueueService'
 import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
+import { runMariaGovernanceAudit } from './mariaAuditService';
+import { runEchoPreservation } from './echoMemoryService';
+import { runMarcusDistribution } from './marcusExecutionService';
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { loadAgentSkillGuidance } from './skillPackService';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
@@ -168,6 +171,38 @@ export function draftPrompt(agent, task, context = {}) {
       skillContext,
       '',
       'Return plain text, 2-4 paragraphs.'
+    ].filter(Boolean).join('\n');
+  }
+
+  if (agent === 'maria') {
+    return [
+      'You are Maria, an AI governance auditor for a local AI desktop companion.',
+      'Analyze the following task for governance risks, policy compliance, and approval requirements.',
+      'Return ONLY valid JSON with keys: riskLevel, approvalRequired, policyFindings (array), complianceNotes (array), summary.',
+      '',
+      'Task:',
+      taskText,
+      contextSnippet ? `Prior context: ${contextSnippet}` : '',
+      skillContext,
+      '',
+      'Return ONLY the JSON object, no markdown fences.'
+    ].filter(Boolean).join('\n');
+  }
+
+  if (agent === 'echo') {
+    return [
+      'You are Echo, a knowledge preservation specialist for a local AI desktop companion.',
+      'Synthesize the following workflow context into a structured memory entry.',
+      'Return ONLY valid JSON with keys: title (max 100 chars), content (2-3 sentences), category, sensitivity, retentionPolicy.',
+      'Valid categories: project_memory, timeline_memory, preference_memory, orchestration_memory.',
+      'Valid sensitivity: internal, public, confidential.',
+      'Valid retentionPolicy: standard_180d, permanent, ephemeral_7d.',
+      '',
+      'Task:',
+      taskText,
+      contextSnippet ? `Prior context: ${contextSnippet}` : '',
+      '',
+      'Return ONLY the JSON object, no markdown fences.'
     ].filter(Boolean).join('\n');
   }
 
@@ -811,103 +846,11 @@ async function executeJoseAssignment(commandText, assignment) {
 }
 
 async function executeMariaAssignment(commandText, assignment, options = {}) {
-  const priorOutputs = options.priorOutputs || {};
-  const risks = [];
-  const issues = [];
-  const approvals = [];
-
-  const riskLevel = String(assignment?.riskLevel || 'low').toLowerCase();
-  if (riskLevel === 'high' || riskLevel === 'critical') {
-    risks.push({ level: riskLevel, reason: `Assignment risk level is ${riskLevel}.` });
-  }
-
-  const actionType = String(assignment?.actionType || '').toLowerCase();
-  if (actionType.includes('delete') || actionType.includes('remove') || actionType.includes('destroy')) {
-    risks.push({ level: 'high', reason: 'Destructive action detected in action type.' });
-    approvals.push({ required: true, reason: 'Destructive action requires operator approval.' });
-  }
-  if (actionType.includes('publish') || actionType.includes('deploy') || actionType.includes('send') || actionType.includes('post')) {
-    risks.push({ level: 'medium', reason: 'Public/external action detected.' });
-    approvals.push({ required: true, reason: 'External action requires operator approval.' });
-  }
-  if (actionType.includes('file_write') || actionType.includes('filesystem')) {
-    risks.push({ level: 'medium', reason: 'Filesystem modification detected.' });
-    approvals.push({ required: true, reason: 'File system changes require approval.' });
-  }
-
-  for (const [agent, output] of Object.entries(priorOutputs)) {
-    const agentTrust = String(output?.trust || output?.verificationState || '').toLowerCase();
-    if (agentTrust === 'failed' || agentTrust === 'unverified') {
-      issues.push({ agent, issue: `${agent} output has trust state: ${agentTrust}.` });
-    }
-    if (output?.resultState === 'failed') {
-      issues.push({ agent, issue: `${agent} execution failed.` });
-    }
-    if (output?.blocked) {
-      issues.push({ agent, issue: `${agent} output was blocked.` });
-    }
-  }
-
-  const overallRisk = risks.some((r) => r.level === 'critical') ? 'critical'
-    : risks.some((r) => r.level === 'high') ? 'high'
-    : risks.some((r) => r.level === 'medium') ? 'medium'
-    : 'low';
-
-  const approved = issues.length === 0 && !approvals.some((a) => a.required);
-
-  const summary = [
-    `Maria governance audit for "${(commandText || '').slice(0, 80)}".`,
-    `Overall risk: ${overallRisk}.`,
-    `Risks identified: ${risks.length}.`,
-    `Issues: ${issues.length}.`,
-    `Approvals required: ${approvals.length}.`,
-    approved ? 'Audit passed. Safe to proceed.' : 'Audit flagged. Review required before execution.'
-  ].join(' ');
-
-  return {
-    summary,
-    resultState: approved ? 'completed' : 'pending_review',
-    resultUrl: null,
-    artifacts: [
-      { type: 'governance_audit', action: assignment?.actionType || 'governance_audit' },
-      { type: 'risk_assessment', risks, overallRisk },
-      { type: 'compliance_issues', issues },
-      { type: 'approval_requirements', approvals }
-    ],
-    sources: [],
-    contractAction: assignment?.actionType || 'governance_audit',
-    trust: approved ? TRUST_STATES.VERIFIED : TRUST_STATES.PENDING,
-    verificationState: approved ? TRUST_STATES.VERIFIED : TRUST_STATES.PENDING
-  };
+  return runMariaGovernanceAudit(commandText, assignment, options);
 }
 
 async function executeEchoAssignment(commandText, assignment, options = {}) {
-  const priorOutputs = options.priorOutputs || {};
-  const preservedSummaries = Object.entries(priorOutputs)
-    .map(([agent, output]) => `[${agent}] ${output?.summary || 'no summary'}`)
-    .join('\n');
-  pushMemoryItem({
-    title: `Echo preserved workflow decision`,
-    category: 'timeline_memory',
-    content: {
-      commandText,
-      assignmentAction: assignment?.actionType || 'memory_preservation',
-      agentSummaries: preservedSummaries || 'no prior agent outputs',
-      agentCount: Object.keys(priorOutputs).length
-    },
-    source: 'jose-execution-engine',
-    sourceAgent: 'echo',
-    confidence: TRUST_STATES.TEMPORARY,
-    verificationState: TRUST_STATES.UNVERIFIED
-  });
-  return {
-    summary: `Echo preserved command context and workflow output for "${commandText}". Prior agents: ${Object.keys(priorOutputs).join(', ') || 'none'}.`,
-    resultState: 'completed',
-    resultUrl: null,
-    artifacts: [{ type: 'memory_preservation', status: 'recorded', preservedAgents: Object.keys(priorOutputs) }],
-    sources: [],
-    contractAction: assignment?.actionType || 'memory_preservation'
-  };
+  return runEchoPreservation(commandText, assignment, options.priorOutputs || {}, options);
 }
 
 async function executeSentinelAssignment(commandText, assignment, options = {}) {
@@ -1132,29 +1075,7 @@ async function executeNovaAssignment(commandText, assignment, options = {}) {
 }
 
 async function executeMarcusAssignment(commandText, assignment, options = {}) {
-  const mariaContext = options.priorOutputs?.maria;
-  const governanceStatus = mariaContext?.resultState || 'unknown';
-  const governanceArtifacts = mariaContext?.artifacts || [];
-  const governanceSummary = mariaContext?.summary || '';
-  return {
-    summary: mariaContext
-      ? `Marcus reviewed governance approval (status: ${governanceStatus}) and prepared distribution execution for "${commandText}". Governance: ${governanceSummary}`
-      : `Marcus requires explicit approved external execution before distribution for "${commandText}".`,
-    resultState: governanceStatus === 'completed' ? 'pending_review' : 'pending_review',
-    resultUrl: null,
-    artifacts: [
-      { type: 'distribution_execution', status: 'approval_required' },
-      ...(mariaContext ? [{
-        type: 'governance_review_input',
-        agent: 'maria',
-        resultState: governanceStatus,
-        governanceSummary,
-        governanceArtifacts
-      }] : [])
-    ],
-    sources: [],
-    contractAction: assignment?.actionType || 'distribution_execution'
-  };
+  return runMarcusDistribution(commandText, assignment, options.priorOutputs || {}, options);
 }
 
 async function executeBoardroomPlanning(assignment, commandText, options = {}) {

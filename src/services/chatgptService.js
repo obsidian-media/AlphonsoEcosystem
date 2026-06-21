@@ -1,4 +1,5 @@
 import { appendConnectorAudit, isConnectorAuthenticated } from './connectorRegistryService';
+import { getConnectorCredential } from './connectors/connectorAuth';
 import { TRUST_STATES, timestampMs } from './trustModel';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -24,13 +25,7 @@ async function streamWithReconnect(fn, maxRetries = 3) {
 }
 
 function getApiKey() {
-  try {
-    const raw = localStorage.getItem('alphonso_connector_auth_profiles_v1');
-    const profiles = raw ? JSON.parse(raw) : {};
-    return profiles?.chatgpt?.apiKey || '';
-  } catch {
-    return '';
-  }
+  return getConnectorCredential('chatgpt', 'OPENAI_API_KEY');
 }
 
 function buildHeaders(apiKey) {

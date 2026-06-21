@@ -3,11 +3,16 @@
 All outbound connector calls run through `policyEnforcementService.js` before any external API is contacted. The gate fails closed: missing credentials, zero-cost mode, or unauthorized senders all result in a blocked result with an audit receipt. No raw stubs — every listed path is wired through the policy gate.
 
 **Setup flow for every connector:**
-1. Add the required env vars to `.env` (copy from `.env.example`)
-2. Verify presence in the Connector Setup panel inside the app
-3. Confirm allowlist / auth profiles
-4. Run a supervised test action (approval-gated)
-5. The connector stays `setup_required` until a verified test result is produced
+
+> **Important:** Alphonso is a desktop app (Tauri). Environment variables in `.env` are NOT read by the running app — they only apply to the Railway gateway service. **All credentials must be entered through the in-app Connector Setup panel.** They are stored securely in localStorage/SQLite on your device.
+
+1. Open the app → Settings → Connector Setup
+2. Select the connector from the dropdown
+3. Enter credentials in the credential input fields that appear below the connector status
+4. Click **Save & Enable** — the connector is immediately activated
+5. Verify the connector status dot turns green
+6. Run a supervised test action (approval-gated) to confirm end-to-end connectivity
+7. The connector stays `setup_required` until a verified test result is produced
 
 ---
 

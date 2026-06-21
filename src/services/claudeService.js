@@ -1,4 +1,5 @@
 import { appendConnectorAudit, isConnectorAuthenticated } from './connectorRegistryService';
+import { getConnectorCredential } from './connectors/connectorAuth';
 import { TRUST_STATES, timestampMs } from './trustModel';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
@@ -24,13 +25,7 @@ async function streamWithReconnect(fn, maxRetries = 3) {
 }
 
 function getApiKey() {
-  try {
-    const raw = localStorage.getItem('alphonso_connector_auth_profiles_v1');
-    const profiles = raw ? JSON.parse(raw) : {};
-    return profiles?.claude?.apiKey || '';
-  } catch {
-    return '';
-  }
+  return getConnectorCredential('claude', 'ANTHROPIC_API_KEY');
 }
 
 function buildHeaders(apiKey) {

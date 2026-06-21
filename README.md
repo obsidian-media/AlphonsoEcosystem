@@ -32,7 +32,7 @@ It orchestrates 9 specialized agents, connects to 13 external services, and uses
 - **Memory Cache** — TTL + LRU eviction for agents and connectors
 - **License Tiers** — Free / Pro / Enterprise with premium connector gates
 - **AppShell Refactor** — `useAppShellState` hook; 196 lines removed from App.jsx
-- **1,100 Tests** — 81 test files, all passing; 60 Rust unit tests across 18 modules
+- **1,191 Tests** — 84 test files, all passing; 14 Rust unit tests across 18 modules
 - **WebView2 Fix** — `std::process::exit(0)` on window close prevents zombie process leak
 
 ---
@@ -209,7 +209,7 @@ All connectors are policy-gated through `connectorRegistryService.js`. See [docs
 |--------------|--------------------------------------------------|------------|
 | **Free** | Ollama (local), Brave Search, Telegram, WhatsApp Cloud, YouTube | Free forever |
 | **Pro** | + Claude, ChatGPT, GitHub, Slack, Notion, ClickUp, SD WebUI, ComfyUI | $12/mo ($99/yr) |
-| **Enterprise** | All 13 connectors + multi-desktop, audit export, priority support | $49/mo ($499/yr) |
+| **Enterprise** | All 14 connectors + multi-desktop, audit export, priority support | $49/mo ($499/yr) |
 | **One-Time** | Same as Pro — perpetual license, 1 year updates | $199 |
 
 See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
@@ -245,7 +245,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 |---------------------------------------------|----------------------------------------------|
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Quick setup guide |
 | [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | What each agent does and when to use them |
-| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 13 connectors |
+| [CONNECTORS.md](docs/CONNECTORS.md) | Setup for all 14 connectors (UI-based credential entry) |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 | [USER_MANUAL.md](docs/USER_MANUAL.md) | Full feature reference (v2.0.0) |
 | [RELEASE.md](docs/RELEASE.md) | Auto-updater signing and release pipeline |
