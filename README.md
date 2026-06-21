@@ -15,7 +15,9 @@
 **Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
 It orchestrates 9 specialized agents, connects to 13 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
 
-[**Download v2.0.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [obsidianmedia.online](https://obsidianmedia.online)
+**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 13 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
+
+[**Download v2.0.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
@@ -56,8 +58,8 @@ It orchestrates 9 specialized agents, connects to 13 external services, and uses
 
 ### Download the Installer (Windows)
 
-1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.0)
-1. Download `Alphonso_2.0.0_x64-setup.exe`
+1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2)
+1. Download `Alphonso_2.0.2_x64-setup.exe`
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
 
@@ -205,9 +207,12 @@ All connectors are policy-gated through `connectorRegistryService.js`. See [docs
 
 | Tier | Connectors | Price |
 |--------------|--------------------------------------------------|------------|
-| **Free** | Ollama (local), Brave Search | Free forever |
-| **Pro** | + Claude, ChatGPT, GitHub, Slack, Telegram, Notion | TBD |
-| **Enterprise** | All 13 connectors + Composio (1,000+ services) | TBD |
+| **Free** | Ollama (local), Brave Search, Telegram, WhatsApp Cloud, YouTube | Free forever |
+| **Pro** | + Claude, ChatGPT, GitHub, Slack, Notion, ClickUp, SD WebUI, ComfyUI | $12/mo ($99/yr) |
+| **Enterprise** | All 13 connectors + multi-desktop, audit export, priority support | $49/mo ($499/yr) |
+| **One-Time** | Same as Pro — perpetual license, 1 year updates | $199 |
+
+See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 
 ---
 
@@ -247,6 +252,8 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design and technical details |
 | [AGENTS.md](AGENTS.md) | Agent context and directory structure |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting policy |
+| [COMPARISON.md](docs/COMPARISON.md) | Feature comparison vs 8 competitors |
+| [PRICING.md](docs/PRICING.md) | Free/Pro/Enterprise/One-Time pricing tiers |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, workflow, code style, and PR guidelines |
 
 ---
