@@ -50,7 +50,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **14 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~1,585 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 1439+ tests are in `src/test/`** — 100 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 1439+ tests are in `src/test/`** — 101 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
@@ -102,6 +102,22 @@ Before writing any new service, component, or feature, check this list:
 | Echo memory timeline | `src/components/SettingsView.jsx` — `EchoTimeline` component, retention tier grouping |
 | Composio toolkit toggles | `src/components/SettingsView.jsx` — `enabledToolkits` Set, `toggleComposioToolkit()` |
 | Hector RSS failover | `src/services/hectorResearchService.js` — `RSS_FEED_CATALOG`, `fetchRssSources`, `parseRssItems` |
+| Notification center | `src/components/NotificationCenter.jsx` — fixed top-right panel, colored borders per type, relative timestamps, "Clear all" |
+| Agent status strip | `src/components/AgentStatusStrip.jsx` — horizontal badge strip with pulsing dot per running agent |
+| Updater notification banner | `src/components/UpdaterNotification.jsx` — amber fixed banner, "Update & Restart" / "Later" buttons, wired in App.jsx |
+| Ollama model picker (ChatView) | `src/components/ModelSwitcher.jsx` — exports `OllamaModelPicker` (used by ChatView) + `ModelSwitcher` 3-pill switcher |
+| WhatsApp inbox panel | `src/components/WhatsAppInboxPanel.jsx` — received message list, inline reply input |
+| Crash log service | `src/services/crashLogService.js` — `logError` / `getCrashLog` / `clearCrashLog`, 100-entry localStorage ring |
+| Agent approval audit log | `src/services/agentAuditService.js` — `logApprovalEvent` / `getAuditLog`, 100-entry ring, `alphonso_approval_audit_v1` |
+| Workspace export/import service | `src/services/workspaceExportService.js` — `exportWorkspace` / `importWorkspace` over all `alphonso_*` localStorage keys |
+| Workspace export/import UI | `src/components/WorkspaceExportImportView.jsx` — Export (JSON download) + Import (file picker), wired in SettingsView |
+| Agent performance view | `src/components/AgentPerformanceView.jsx` — per-agent success/error/avg-latency from `orchestrationReceipts` |
+| ChatView drag-and-drop | `src/components/ChatView.jsx` — `attachedFiles` state, drag-zone, pill badges, filenames appended to command |
+| Hector briefing card | `src/components/ChatView.jsx` — sky-tinted `hectorBriefing` card after pipeline, shows top 3 sources |
+| Sentinel scheduled scans | `src/services/sentinelSecurityService.js` — `startScheduledScans(intervalMs, onResult)` interval export |
+| Nova opportunity history | `src/services/novaAnalysisService.js` — `saveOpportunityScore` / `getOpportunityHistory`, 30-entry localStorage |
+| RightPanel audit tab | `src/components/RightPanel.jsx` — System/Audit tab switcher, last 10 approval events with outcome badges |
+| RightPanel auto-refresh | `src/components/RightPanel.jsx` — 10-min `setInterval` calling `runQuickScan()` |
 
 ---
 
@@ -116,7 +132,7 @@ Before writing any new service, component, or feature, check this list:
 
 ---
 
-## Real Gaps (as of 2026-06-21 — v2.0.5 + Direction 3 & 4 complete)
+## Real Gaps (as of 2026-06-21 — v2.0.5 + All 5 Directions complete)
 
 These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current state before working on any of them:
 
@@ -138,7 +154,22 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Composio toolkit toggles~~ — **CLOSED Direction 4** (toggleable cards in SettingsView)
 - ~~Hector RSS failover~~ — **CLOSED Direction 4** (12 curated feeds, parseRssItems, fetchRssSources)
 - ~~WorkflowBuilderView~~ — **CLOSED Direction 4** (new component + AutomationView Builder tab)
-- ~~Component test coverage at ~6%~~ — **CLOSED Direction 3** (100 test files / 1425 tests; ~12% component coverage)
+- ~~Component test coverage at ~6%~~ — **CLOSED Direction 3** (101 test files / 1439+ tests; ~12% component coverage)
+- ~~Notification center~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/NotificationCenter.jsx`)
+- ~~Agent status strip~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/AgentStatusStrip.jsx`)
+- ~~Updater notification banner~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/UpdaterNotification.jsx`)
+- ~~WhatsApp inbox panel~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/WhatsAppInboxPanel.jsx`)
+- ~~Crash log service~~ — **CLOSED Direction 2 (All 5 Sprint)** (`src/services/crashLogService.js`)
+- ~~cacheService hard entry cap~~ — **CLOSED Direction 2 (All 5 Sprint)** (`maxEntries=500` in `cacheService.ts`)
+- ~~Dead-letter queue retry~~ — **CLOSED Direction 2 (All 5 Sprint)** (`retryDeadLetter()` in orchestrationQueueService)
+- ~~ChatView file drag-and-drop~~ — **CLOSED Direction 4 (All 5 Sprint)** (`attachedFiles` state + file pills in ChatView)
+- ~~Hector briefing card~~ — **CLOSED Direction 4 (All 5 Sprint)** (`hectorBriefing` state + sky card in ChatView)
+- ~~Sentinel scheduled background scans~~ — **CLOSED Direction 4 (All 5 Sprint)** (`startScheduledScans` in sentinelSecurityService)
+- ~~Nova opportunity persistence~~ — **CLOSED Direction 4 (All 5 Sprint)** (`saveOpportunityScore`/`getOpportunityHistory` in novaAnalysisService)
+- ~~Agent performance dashboard~~ — **CLOSED Direction 4 (All 5 Sprint)** (`src/components/AgentPerformanceView.jsx`)
+- ~~Agent approval audit trail~~ — **CLOSED Direction 5 (All 5 Sprint)** (`src/services/agentAuditService.js` + RightPanel Audit tab)
+- ~~Workspace export/import~~ — **CLOSED Direction 5 (All 5 Sprint)** (`workspaceExportService.js` + `WorkspaceExportImportView.jsx`)
+- ~~RightPanel auto-refresh + audit tab~~ — **CLOSED Direction 5 (All 5 Sprint)** (10-min interval + System/Audit tab switcher)
 - localStorage → SQLite migration — completed for 5 keys. Remaining: durable runtime data migration
 - Coverage at ~30% — next staged target 35%
 - TypeScript migration — partial; 9 .ts services exist in src/services/, components still .jsx
@@ -159,7 +190,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                100 test files (Vitest, vitest.config.js)
+  test/                101 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
