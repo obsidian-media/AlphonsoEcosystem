@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 1015 tests across 76 files — all should pass
+npm run test             # Run all 1100 tests across 81 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + test + build in one command
@@ -48,9 +48,9 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **licenseService.ts**: license tier validation (Free/Pro/Enterprise) gates premium connectors (GitHub, Slack, Claude, ChatGPT, YouTube, Notion, ClickUp, SD WebUI, ComfyUI)
 - **parallelExecutionService.ts**: parallel task execution with concurrency control, retry logic, and task queues
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
-- **13 connectors**: Telegram, WhatsApp, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama — all policy-gated
-- **lib.rs is ~1,455 lines** — 16 modules extracted (utils, whatsapp_webhook, kv_store, native_proof, plugin_runtime, policy_gate, audit_log, ollama, memory_store, meta_publish, connector_commands, search, telegram, workspace, youtube, runway, main)
-- **All 1015 tests are in `src/test/`** — 76 test files; Vitest via vitest.config.js (separate from vite build config)
+- **13 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama — all policy-gated
+- **lib.rs is ~1,713 lines** — 18 modules extracted (utils, kv_store, whatsapp_webhook, native_proof, runway, connector_commands, telegram, youtube, workspace, search, plugin_runtime, policy_gate, audit_log, ollama, memory_store, meta_publish, main)
+- **All 1100 tests are in `src/test/`** — 81 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
@@ -94,25 +94,23 @@ Before writing any new service, component, or feature, check this list:
 ## Before Making Changes
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
-2. Check `src/services/` for an existing service before writing a new one — there are 124 services
-3. Check `src/test/` — there are 76 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 1015 tests must continue to pass
+2. Check `src/services/` for an existing service before writing a new one — there are 130 services
+3. Check `src/test/` — there are 81 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 1100 tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
 ---
 
-## Real Gaps (as of 2026-06-15 — v2.0.0)
+## Real Gaps (as of 2026-06-21 — v2.0.2)
 
 These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current state before working on any of them:
 
-- WhatsApp Cloud inbound webhook — hosted endpoint not deployed (Railway config exists)
-- localStorage → SQLite migration — completed for 5 keys. Remaining: durable runtime data migration
 - Coverage at ~28% — next staged target 30%
-- Auto-updater signed manifest hosting — keypair generated, needs GitHub Secrets added
 - TypeScript migration — partial; 9 .ts services exist in src/services/, components still .jsx
-- GitHub/Slack connector tests — need comprehensive mocking for API calls
 - Component test coverage at ~6% — 4 agent modules at 0%
+- Echo, Sentinel, Nova agents have skeletal profiles (10 lines) and no dedicated runtimes
+- Miya, Maria agents use deterministic templates instead of dedicated runtimes
 
 ---
 
@@ -125,16 +123,16 @@ src/                   React frontend (all .jsx, 9 .ts services)
     ConnectorHealthPanel.jsx        — full connector panel (lazy chunk)
     ConnectorStatusIndicators.jsx   — small dot/strip components (static-safe import)
     AgentActivityLog.jsx            — activity timeline tab (appendAgentActivity wired)
-  services/            124 services
+  services/            130 services
     connectors/        GitHub, Slack, and other connector implementations
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                76 test files (Vitest, vitest.config.js)
+  test/                81 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
-    lib.rs             Rust backend (~1,455 lines)
+    lib.rs             Rust backend (~1,713 lines)
     utils.rs           Shared utilities
     kv_store.rs        KV store module — kv_set, kv_get, save_settings, load_settings
     whatsapp_webhook.rs  WhatsApp webhook module (3 commands, 4 structs)
@@ -144,7 +142,7 @@ src-tauri/
     youtube.rs         YouTube upload module
     workspace.rs       Workspace file ops module
     search.rs          Research search module
-    connector_commands.rs  Connector Rust backend (12 commands)
+    connector_commands.rs  Connector Rust backend (14 commands)
     plugin_runtime.rs  Plugin runtime engine
     policy_gate.rs     Policy enforcement backend
     audit_log.rs       Audit chain
@@ -154,7 +152,7 @@ src-tauri/
   Cargo.toml
 docs/                  Documentation and handoff packages
   ALPHONSO_GROUND_TRUTH.md   <- single source of truth
-  USER_MANUAL.md       Full user manual (v2.0.0)
+  USER_MANUAL.md       Full user manual (v2.0.2)
   GETTING_STARTED.md   Quick setup guide
   AGENT_GUIDE.md       Agent capabilities and permissions
   TROUBLESHOOTING.md   Common issues and fixes
@@ -167,10 +165,10 @@ docs/                  Documentation and handoff packages
 playwright.config.js   Playwright config (baseURL :5173, headless Chromium)
 vitest.config.js       Vitest config (separate from vite build config)
 gateway/
-  whatsapp-cloud/      Railway-hosted WhatsApp Cloud gateway (setup_required)
+  whatsapp-cloud/      Railway-hosted WhatsApp Cloud gateway (live, deployed)
 scripts/               Build, release, and auth helper scripts
 ```
 
 ---
 
-_Last verified: 2026-06-15 — v2.0.0. 76 test files, 1015 tests, all passing. Coverage ~28% (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. Auto-updater keypair generated (TAURI_SIGNING_PRIVATE_KEY needs GitHub Secrets). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-21 — v2.0.2. 81 test files, 1100 tests, all passing. Coverage ~28% (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. WhatsApp Cloud deployed and live. Auto-updater operational (v2.0.2 release tagged). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

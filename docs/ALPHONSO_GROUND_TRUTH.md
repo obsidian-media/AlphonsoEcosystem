@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-15 — Deep audit complete (agent system, service layer, frontend, backend, tests, infrastructure, security, documentation)  
-**Verified by:** OpenCode agent (72 test files, 952 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 1.0.2 (WebView2 leak fix + boot optimizations)  
+**Last verified:** 2026-06-21 — Session complete (WhatsApp Cloud API full wiring + deployment, GitHub/Slack connector tests, auto-updater live, v2.0.2 released)  
+**Verified by:** Claude Code session (81 test files, 1100 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
+**Version:** 2.0.2 (WhatsApp Cloud API end-to-end + auto-updater operational)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 1.0.2 |
+| Version | 2.0.2 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `C:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
@@ -55,7 +55,7 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 
 ---
 
-## 3. Service Layer — 124 Services in `src/services/`
+## 3. Service Layer — 130 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 

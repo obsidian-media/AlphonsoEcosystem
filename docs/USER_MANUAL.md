@@ -652,15 +652,15 @@ Object.keys(localStorage)
 src/
   agents/           9 agent profiles, permissions, schemas
   components/       82+ UI components
-  services/         124 services (policy-gated)
+  services/         130 services (policy-gated)
     connectors/     GitHub, Slack, and other connector implementations
   hooks/            14 custom React hooks
   lib/              Utilities (ollama.js, chatUtils.js)
   features/         Content Catalyst, etc.
-  test/             76 test files (1015 tests)
+  test/             81 test files (1100 tests)
 
 src-tauri/
-  src/lib.rs        Rust backend (~1,455 lines, 16 modules)
+  src/lib.rs        Rust backend (~1,713 lines, 18 modules)
   src/utils.rs      Shared Rust utilities
   src/kv_store.rs   SQLite KV store
   src/memory_store.rs  Runtime ledger
