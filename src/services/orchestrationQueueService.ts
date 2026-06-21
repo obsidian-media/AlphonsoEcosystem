@@ -202,6 +202,17 @@ export function forceDeadLetterPacket(packetId: string, reason: string = 'Manual
   return { ok: true, packet: dead, transition };
 }
 
+export function retryDeadLetter(): number {
+  const packets = listAgentPackets();
+  const deadLetterPackets = packets.filter((p: any) => p.status === 'dead_letter');
+  let requeued = 0;
+  for (const packet of deadLetterPackets) {
+    const result = replayPacketFromDeadLetter(packet.id, 'Bulk dead-letter retry requested.');
+    if (result.ok) requeued++;
+  }
+  return requeued;
+}
+
 export function markPacketInterrupted(packetId: string, reason: string = 'Pipeline interrupted.'): ReplayResult {
   const packet = getPacketById(packetId);
   if (!packet) return { ok: false, reason: 'Packet not found.' };
