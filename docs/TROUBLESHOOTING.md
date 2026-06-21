@@ -61,8 +61,9 @@ NODE_OPTIONS="--max-old-space-size=4096" npm run build
 ## Runtime Issues
 
 ### App freezes on startup
-- This was fixed in v1.0.3 — ensure you're on the latest version
+- This was fixed in v1.0.3 — ensure you're on the latest version (v2.0.2)
 - Heavy startup work is now deferred to prevent UI freeze
+- The auto-updater will notify you of new versions automatically (requires v2.0.2+ installed)
 
 ### WebView2 zombie process (Windows)
 - Fixed in v1.0.2 — window close now calls `std::process::exit(0)`
@@ -115,6 +116,34 @@ cargo clippy -- -D warnings
 | `agent not allowed` | Agent contract violation | Check AGENT_GUIDE.md |
 | `dead_letter` state | Orchestration packet failed | Check Activity tab for details |
 | `WAL mode` errors | SQLite concurrent access | Restart the app |
+
+## WhatsApp Issues
+
+### Outbound messages not sending
+1. Verify `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` are set in Settings → Connectors → WhatsApp
+2. Check the connector UI shows green for those keys
+3. Ensure the recipient number is in international format (digits only, e.g. `16474842752`)
+4. Verify the access token has not expired — Meta tokens expire after ~60 days; regenerate from App Dashboard
+
+### Inbound messages not arriving
+1. Confirm `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` is set to `https://<your-railway-url>/queue/drain`
+2. Confirm `WHATSAPP_VERIFY_TOKEN` matches the value set in Railway env vars
+3. Confirm `WHATSAPP_ALLOWED_NUMBERS` contains the sender's number (digits only, no `+`)
+4. Check Railway gateway health: `GET https://<your-railway-url>/health` — should return `"status": "ready"`
+5. Verify Meta webhook subscription is pointing to `https://<your-railway-url>/webhook` and verified
+
+### Gateway returns 403 on drain
+The `WHATSAPP_VERIFY_TOKEN` in Alphonso must match the `WHATSAPP_VERIFY_TOKEN` env var in Railway. Both must be the same string.
+
+### Messages blocked (sender not in allowlist)
+WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP_ALLOWED_NUMBERS` list should also be digits-only. The gateway strips `+` automatically, but double-check the format.
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `WHATSAPP_ACCESS_TOKEN not set` | Missing credential | Add in Settings → Connectors → WhatsApp |
+| `Gateway drain failed: HTTP 401` | Token mismatch | Match `WHATSAPP_VERIFY_TOKEN` in app and Railway |
+| `Gateway drain failed: HTTP 404` | Wrong drain URL | Use `https://<url>/queue/drain` (not `/webhook`) |
+| `sender_not_allowlisted` | Number not in allowlist | Add digits-only number to `WHATSAPP_ALLOWED_NUMBERS` |
 
 ## Getting Help
 

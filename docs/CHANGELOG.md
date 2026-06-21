@@ -6,6 +6,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.2] - 2026-06-21
+
+### Added
+- **WhatsApp Cloud API — full end-to-end wiring** — Inbound polling via Railway gateway queue (`GET /queue/drain`), outbound send via `browserSendWhatsApp` reading credentials from the app connector UI. No `ALPHONSO_FORWARD_URL` required.
+- `src/services/whatsappBrowserConnector.js` — new browser-side connector module: `browserSendWhatsApp` (outbound via Meta Graph API v17.0) and `browserPollWhatsAppGateway` (inbound via Railway gateway drain endpoint with Bearer token auth)
+- **Gateway queue** (`gateway/whatsapp-cloud/`) — self-contained in-memory message queue (max 500 messages), `GET /queue/drain` endpoint (Bearer token auth, limit param), `WHATSAPP_ALLOWED_NUMBERS` env var alias, `+` prefix stripped from allowlist at startup
+- **GitHub connector tests** — `src/test/githubConnector.test.js` (20 tests, PR #41)
+- **Slack connector tests** — `src/test/slackConnector.test.js` (16 tests, PR #41)
+- **Auto-updater fully operational** — ed25519 keypair in GitHub Secrets (`TAURI_SIGNING_PRIVATE_KEY`), pubkey already in `tauri.conf.json` and `SettingsContext.jsx`, v2.0.2 release built and published. Future app installs will auto-update on next version bump.
+
+### Changed
+- Version bumped `2.0.0 → 2.0.2` in `src-tauri/tauri.conf.json` (enables auto-updater comparison)
+- Test count: 76 files / 1015 tests → **81 files / 1100 tests** (all passing)
+- `pollWhatsAppConnector` in `connectorPolling.js` — falls back to `browserPollWhatsAppGateway` when Rust returns `trust: "placeholder"` (Cloud API mode, not Twilio)
+- `sendWhatsAppConnectorMessage` in `connectorOutbound.js` — dual-path: Rust command first, `browserSendWhatsApp` fallback when no OS-level env token is present
+
+### Fixed
+- WhatsApp allowlist `+` prefix mismatch — incoming WhatsApp numbers arrive as digits-only (`16474842752`); allowlist entries with `+` prefix are now stripped at gateway startup and in the frontend normalizer
+- WhatsApp Cloud inbound gap **CLOSED** — Railway gateway now has built-in queue, no external relay needed
+
+---
+
 ## [1.0.3] - 2026-06-15
 
 ### Fixed
