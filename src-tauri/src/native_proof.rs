@@ -6,8 +6,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-use super::{now_ms};
-use crate::workspace::{inspect_updater_release, WorkspaceReadinessFinding, WorkspaceReadinessScan};
+use super::now_ms;
+use crate::workspace::{
+  inspect_updater_release, WorkspaceReadinessFinding, WorkspaceReadinessScan,
+};
 use crate::{verify_paths, write_native_proof_stage};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,12 +94,21 @@ struct NativeRc0ProofState {
 fn read_env(name: &str) -> Option<String> {
   std::env::var(name).ok().and_then(|value| {
     let trimmed = value.trim().to_string();
-    if trimmed.is_empty() { None } else { Some(trimmed) }
+    if trimmed.is_empty() {
+      None
+    } else {
+      Some(trimmed)
+    }
   })
 }
 
 fn resolve_workspace_root(input: &NativeRc0ProofInput, proof_request: Option<Value>) -> String {
-  if let Some(root) = input.workspace_root.as_ref().map(|value| value.trim().to_string()).filter(|value| !value.is_empty()) {
+  if let Some(root) = input
+    .workspace_root
+    .as_ref()
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty())
+  {
     return root;
   }
   if let Some(root) = read_env("ALPHONSO_WORKSPACE_ROOT") {
@@ -118,7 +129,12 @@ fn resolve_workspace_root(input: &NativeRc0ProofInput, proof_request: Option<Val
 }
 
 fn resolve_output_dir(input: &NativeRc0ProofInput, proof_request: Option<Value>) -> String {
-  if let Some(dir) = input.output_dir.as_ref().map(|value| value.trim().to_string()).filter(|value| !value.is_empty()) {
+  if let Some(dir) = input
+    .output_dir
+    .as_ref()
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty())
+  {
     return dir;
   }
   if let Some(dir) = read_env("ALPHONSO_PROOF_OUTPUT_DIR") {
@@ -218,7 +234,8 @@ fn packet_from_finding(index: usize, finding: &WorkspaceReadinessFinding) -> Nat
       "npm.cmd run proof:rc0".to_string(),
     ],
     expected_proof: "10_rc0_package_written.json plus refreshed RC0 evidence artifacts".to_string(),
-    rollback_note: "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth." .to_string(),
+    rollback_note:
+      "Revert the isolated patch and rerun proof:rc0 if the change regresses RC0 truth.".to_string(),
     setup_required_dependencies,
   }
 }
@@ -237,7 +254,10 @@ fn rc0_path_contains_segment(path: &Path, segment: &str) -> bool {
 }
 
 fn rc0_should_skip_path(path: &Path, file_name: &str) -> bool {
-  let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+  let lower = path
+    .to_string_lossy()
+    .replace('\\', "/")
+    .to_ascii_lowercase();
   matches!(
     file_name,
     ".git"
@@ -267,16 +287,28 @@ fn rc0_surface_for_path(path: &Path) -> String {
   if lower.contains("workflow") || lower.contains("receipt") || lower.contains("approval") {
     return "workflow".to_string();
   }
-  if lower.contains("update") || lower.contains("release") || lower.contains("updater") || lower.contains("latest.json") {
+  if lower.contains("update")
+    || lower.contains("release")
+    || lower.contains("updater")
+    || lower.contains("latest.json")
+  {
     return "release".to_string();
   }
   if lower.contains("memory") || lower.contains("ledger") {
     return "memory".to_string();
   }
-  if lower.contains("security") || lower.contains("auth") || lower.contains("policy") || lower.contains("signature") {
+  if lower.contains("security")
+    || lower.contains("auth")
+    || lower.contains("policy")
+    || lower.contains("signature")
+  {
     return "security".to_string();
   }
-  if lower.contains("component") || lower.contains("app.jsx") || lower.contains("panel") || lower.contains("view") {
+  if lower.contains("component")
+    || lower.contains("app.jsx")
+    || lower.contains("panel")
+    || lower.contains("view")
+  {
     return "ui".to_string();
   }
   if lower.ends_with(".md") || lower.contains("docs") {
@@ -285,7 +317,9 @@ fn rc0_surface_for_path(path: &Path) -> String {
   "other".to_string()
 }
 
-fn rc0_keyword_match(line: &str) -> Option<(&'static str, &'static str, &'static str, &'static str)> {
+fn rc0_keyword_match(
+  line: &str,
+) -> Option<(&'static str, &'static str, &'static str, &'static str)> {
   let lower = line.to_ascii_lowercase();
   let patterns = [
     ("missing approval", "missing_approval", "P0", "P0"),
@@ -318,7 +352,11 @@ fn rc0_keyword_match(line: &str) -> Option<(&'static str, &'static str, &'static
     .find(|(needle, _, _, _)| lower.contains(needle))
 }
 
-fn scan_rc0_target_surface(root: &Path, max_files: usize, max_findings: usize) -> Result<WorkspaceReadinessScan, String> {
+fn scan_rc0_target_surface(
+  root: &Path,
+  max_files: usize,
+  max_findings: usize,
+) -> Result<WorkspaceReadinessScan, String> {
   let generated_at_ms = now_ms();
   let scan_started_at_ms = generated_at_ms;
   let target_paths = [
@@ -391,7 +429,20 @@ fn scan_rc0_target_surface(root: &Path, max_files: usize, max_findings: usize) -
       .to_ascii_lowercase();
     if !matches!(
       extension.as_str(),
-      "js" | "jsx" | "ts" | "tsx" | "rs" | "mjs" | "cjs" | "md" | "toml" | "json" | "yml" | "yaml" | "css" | "html"
+      "js"
+        | "jsx"
+        | "ts"
+        | "tsx"
+        | "rs"
+        | "mjs"
+        | "cjs"
+        | "md"
+        | "toml"
+        | "json"
+        | "yml"
+        | "yaml"
+        | "css"
+        | "html"
     ) {
       continue;
     }
@@ -423,7 +474,8 @@ fn scan_rc0_target_surface(root: &Path, max_files: usize, max_findings: usize) -
       let message = if needle == "setup required" || needle == "setup-required" {
         "Setup-required surface should be labeled clearly and backed by real checks.".to_string()
       } else if kind == "missing_approval" {
-        "Approval gate is missing or not enforced; add Jose approval or truth-label the action.".to_string()
+        "Approval gate is missing or not enforced; add Jose approval or truth-label the action."
+          .to_string()
       } else if kind == "missing_receipt" {
         "Receipt-backed evidence is missing for a production-facing action.".to_string()
       } else if kind == "updater_blocker" {
@@ -431,7 +483,8 @@ fn scan_rc0_target_surface(root: &Path, max_files: usize, max_findings: usize) -
       } else if kind == "connector_blocker" {
         "Connector path is blocked and should be marked setup_required until real provider proof exists.".to_string()
       } else if kind == "not_wired" {
-        "Surface is explicitly marked as not wired; keep it disabled or implement the real path.".to_string()
+        "Surface is explicitly marked as not wired; keep it disabled or implement the real path."
+          .to_string()
       } else if kind == "fake" || kind == "simulation" {
         "Production-facing surface should not imply fake or simulated execution.".to_string()
       } else if kind == "placeholder" || kind == "scaffold" || kind == "demo" || kind == "mock" {
@@ -441,7 +494,12 @@ fn scan_rc0_target_surface(root: &Path, max_files: usize, max_findings: usize) -
       };
 
       findings.push(WorkspaceReadinessFinding {
-        id: format!("ready-{}-{}-{}", findings.len() + 1, files_scanned, line_number),
+        id: format!(
+          "ready-{}-{}-{}",
+          findings.len() + 1,
+          files_scanned,
+          line_number
+        ),
         path: path.to_string_lossy().to_string(),
         line_number,
         surface: rc0_surface_for_path(&path),
@@ -522,7 +580,13 @@ fn proof_markdown(
     format!("- P1 count: {}", result.p1_count),
     format!("- P2 count: {}", result.p2_count),
     format!("- packetsGenerated: {}", result.packets_generated),
-    format!("- updateState: {}", update_status.get("trust").and_then(Value::as_str).unwrap_or("unknown")),
+    format!(
+      "- updateState: {}",
+      update_status
+        .get("trust")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown")
+    ),
     String::new(),
     "## Top Generated Packets".to_string(),
   ];
@@ -552,7 +616,11 @@ fn proof_markdown(
   lines.push("- foundation_only: local runtime surfaces that exist but are not external production connectors".to_string());
   lines.push("- partial: updater signing or external provider gaps remain".to_string());
   lines.push("- setup_required: connectors and updater manifest/signing as needed".to_string());
-  lines.push(format!("- blocked: {}, failed: {}", result.p0_count > 0, result.error.is_some()));
+  lines.push(format!(
+    "- blocked: {}, failed: {}",
+    result.p0_count > 0,
+    result.error.is_some()
+  ));
   lines.join("\n") + "\n"
 }
 
@@ -590,9 +658,20 @@ fn readiness_snapshot(
     json!({"id":"comfyui_video","state":"foundation_only","status":"foundation_only","configured":"foundation_only","envStatus":"foundation_only","allowlistStatus":"configured","testActionAvailable":true,"lastTestResult":"foundation_only","approvalRequired":false,"receiptStatus":"unknown","failureReason":"Requires local ComfyUI runtime + workflow JSON (default: http://127.0.0.1:8188).","zeroCostPolicy":"local_or_free"}),
   ];
   let live_blockers = [
-    if env_presence.values().all(|present| *present) { None } else { Some("updater_signing_setup_required") },
-    if updater_proof.latest_json_found { None } else { Some("updater_manifest_setup_required") },
-    if connector_rows.iter().any(|row| row.get("state").and_then(Value::as_str) == Some("setup_required")) {
+    if env_presence.values().all(|present| *present) {
+      None
+    } else {
+      Some("updater_signing_setup_required")
+    },
+    if updater_proof.latest_json_found {
+      None
+    } else {
+      Some("updater_manifest_setup_required")
+    },
+    if connector_rows
+      .iter()
+      .any(|row| row.get("state").and_then(Value::as_str) == Some("setup_required"))
+    {
       Some("external_connectors_setup_required")
     } else {
       None
@@ -680,11 +759,13 @@ fn stage_record(
   let _ = workspace_root;
   let proof_output_dir = PathBuf::from(output_dir);
   write_native_proof_stage(&proof_output_dir, stage_file, &payload)?;
-  Ok(proof_output_dir
-    .join("proof")
-    .join(stage_file)
-    .display()
-    .to_string())
+  Ok(
+    proof_output_dir
+      .join("proof")
+      .join(stage_file)
+      .display()
+      .to_string(),
+  )
 }
 
 fn write_artifact(
@@ -699,9 +780,14 @@ fn write_artifact(
     return Err("Relative path is required.".to_string());
   }
   if rel.is_absolute()
-    || rel
-      .components()
-      .any(|component| matches!(component, std::path::Component::ParentDir | std::path::Component::Prefix(_) | std::path::Component::RootDir))
+    || rel.components().any(|component| {
+      matches!(
+        component,
+        std::path::Component::ParentDir
+          | std::path::Component::Prefix(_)
+          | std::path::Component::RootDir
+      )
+    })
   {
     return Err("Unsafe relative path rejected.".to_string());
   }
@@ -720,14 +806,31 @@ fn build_remaining_blockers_markdown(snapshot: &Value, scan: &WorkspaceReadiness
   if snapshot.get("updaterSigningStatus").and_then(Value::as_str) != Some("ready") {
     blockers.push("updater signing setup required".to_string());
   }
-  if snapshot.get("updaterManifestStatus").and_then(Value::as_str) != Some("ready") {
+  if snapshot
+    .get("updaterManifestStatus")
+    .and_then(Value::as_str)
+    != Some("ready")
+  {
     blockers.push("hosted updater manifest setup required".to_string());
   }
-  if snapshot.get("connectorReadiness").and_then(Value::as_array).map(|rows| rows.iter().all(|row| row.get("status").and_then(Value::as_str) == Some("setup_required"))).unwrap_or(true) {
+  if snapshot
+    .get("connectorReadiness")
+    .and_then(Value::as_array)
+    .map(|rows| {
+      rows
+        .iter()
+        .all(|row| row.get("status").and_then(Value::as_str) == Some("setup_required"))
+    })
+    .unwrap_or(true)
+  {
     blockers.push("external connectors setup required".to_string());
   }
   if !scan.findings.is_empty() {
-    let p0 = scan.findings.iter().filter(|finding| finding.priority == "P0").count();
+    let p0 = scan
+      .findings
+      .iter()
+      .filter(|finding| finding.priority == "P0")
+      .count();
     if p0 > 0 {
       blockers.push(format!("{p0} P0 production blockers remain"));
     }
@@ -741,15 +844,20 @@ fn build_remaining_blockers_markdown(snapshot: &Value, scan: &WorkspaceReadiness
 }
 
 fn build_install_and_run_markdown(output_dir: &str) -> String {
-  ["# Install and Run".to_string(),
+  [
+    "# Install and Run".to_string(),
     String::new(),
-    "1. Install the desktop build from the NSIS or MSI bundle produced by `npx.cmd tauri build`.".to_string(),
-    "2. Launch `src-tauri/target/release/app.exe` or the installed Alphonso desktop app.".to_string(),
+    "1. Install the desktop build from the NSIS or MSI bundle produced by `npx.cmd tauri build`."
+      .to_string(),
+    "2. Launch `src-tauri/target/release/app.exe` or the installed Alphonso desktop app."
+      .to_string(),
     "3. Open the Ecosystem tab and view Self-Development Mode.".to_string(),
     "4. Use `Run Native Proof Cycle` for a supervised proof run.".to_string(),
     "5. For automated RC0 proof, run `npm.cmd run proof:rc0`.".to_string(),
-    "6. Do not treat setup-required connector or updater states as live-production completion.".to_string(),
-    format!("7. RC0 outputs are written under `{output_dir}` and `docs/handoff/`.")]
+    "6. Do not treat setup-required connector or updater states as live-production completion."
+      .to_string(),
+    format!("7. RC0 outputs are written under `{output_dir}` and `docs/handoff/`."),
+  ]
   .join("\n")
     + "\n"
 }
@@ -768,10 +876,25 @@ fn find_workspace_validation(root: &str) -> Result<(bool, Vec<String>, Vec<Strin
   let missing_entries = REQUIRED_ENTRIES
     .iter()
     .zip(entry_proofs.iter())
-    .filter_map(|(entry, proof)| if proof.exists { None } else { Some((*entry).to_string()) })
+    .filter_map(|(entry, proof)| {
+      if proof.exists {
+        None
+      } else {
+        Some((*entry).to_string())
+      }
+    })
     .collect::<Vec<_>>();
-  let exists = root_proof.map(|proof| proof.exists && proof.is_dir).unwrap_or(false);
-  Ok((exists && missing_entries.is_empty(), REQUIRED_ENTRIES.iter().map(|entry| entry.to_string()).collect(), missing_entries))
+  let exists = root_proof
+    .map(|proof| proof.exists && proof.is_dir)
+    .unwrap_or(false);
+  Ok((
+    exists && missing_entries.is_empty(),
+    REQUIRED_ENTRIES
+      .iter()
+      .map(|entry| entry.to_string())
+      .collect(),
+    missing_entries,
+  ))
 }
 
 fn update_state_file(
@@ -798,7 +921,12 @@ fn update_state_file(
     timestamp_ms: now_ms(),
   };
   let content = serde_json::to_string_pretty(&state).map_err(|error| error.to_string())?;
-  write_artifact(workspace_root, output_dir, "release/rc0/native-proof-run-status.json", content)
+  write_artifact(
+    workspace_root,
+    output_dir,
+    "release/rc0/native-proof-run-status.json",
+    content,
+  )
 }
 
 pub fn start_native_rc0_proof_if_requested(
@@ -821,7 +949,11 @@ pub fn start_native_rc0_proof_if_requested(
       error: None,
       duration_ms: None,
     };
-    let _ = write_native_proof_stage(Path::new(&output_dir_hint), "05_native_proof_engine_thread_started.json", &thread_started);
+    let _ = write_native_proof_stage(
+      Path::new(&output_dir_hint),
+      "05_native_proof_engine_thread_started.json",
+      &thread_started,
+    );
     let workspace_root = workspace_root_hint.clone();
     let output_dir = output_dir_hint.clone();
     let input = NativeRc0ProofInput {
@@ -846,7 +978,9 @@ pub fn start_native_rc0_proof_if_requested(
   });
 }
 
-pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeRc0ProofResult, String> {
+pub fn run_native_rc0_proof_engine(
+  input: NativeRc0ProofInput,
+) -> Result<NativeRc0ProofResult, String> {
   std::env::set_var("ALPHONSO_RC0_PROOF", "1");
   let proof_request = read_proof_request(input.output_dir.as_deref().unwrap_or(DEFAULT_OUTPUT_DIR));
   let workspace_root = resolve_workspace_root(&input, proof_request.clone());
@@ -856,7 +990,9 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
   let mut sentinels = vec![];
   let mut artifacts = vec![];
   let proof_mode = input.mode.unwrap_or_else(|| "automated".to_string());
-  let max_files = usize::try_from(input.max_files.unwrap_or(80)).unwrap_or(80).min(80);
+  let max_files = usize::try_from(input.max_files.unwrap_or(80))
+    .unwrap_or(80)
+    .min(80);
   let started_at_ms = now_ms();
 
   let start = stage_record(
@@ -872,7 +1008,8 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
   )?;
   sentinels.push(start);
 
-  let (workspace_ok, _required_entries, missing_entries) = find_workspace_validation(&workspace_root)?;
+  let (workspace_ok, _required_entries, missing_entries) =
+    find_workspace_validation(&workspace_root)?;
   let validation_note = if workspace_ok {
     Some("Workspace validation passed.".to_string())
   } else {
@@ -881,12 +1018,20 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
       missing_entries.join(", ")
     ))
   };
-  let validation_error = if workspace_ok { None } else { validation_note.clone() };
+  let validation_error = if workspace_ok {
+    None
+  } else {
+    validation_note.clone()
+  };
   let validation_path = stage_record(
     &workspace_root,
     &output_dir,
     "06_workspace_validated.json",
-    if workspace_ok { "ready" } else { "setup_required" },
+    if workspace_ok {
+      "ready"
+    } else {
+      "setup_required"
+    },
     validation_note,
     validation_error,
     process_id,
@@ -908,7 +1053,10 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
       artifacts: artifacts.clone(),
       sentinels: sentinels.clone(),
       top_packets: vec![],
-      error: Some(format!("Workspace validation failed; missing entries: {}", missing_entries.join(", "))),
+      error: Some(format!(
+        "Workspace validation failed; missing entries: {}",
+        missing_entries.join(", ")
+      )),
     };
     let _ = stage_record(
       &workspace_root,
@@ -921,7 +1069,13 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
       proof_request_found,
       None,
     );
-    let _ = update_state_file(&workspace_root, &output_dir, &proof_mode, "setup_required", &result);
+    let _ = update_state_file(
+      &workspace_root,
+      &output_dir,
+      &proof_mode,
+      "setup_required",
+      &result,
+    );
     return Ok(result);
   }
 
@@ -930,7 +1084,9 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
     &output_dir,
     "07_scan_started.json",
     "running",
-    Some(format!("Scanning approved workspace root with max_files={max_files}.")),
+    Some(format!(
+      "Scanning approved workspace root with max_files={max_files}."
+    )),
     None,
     process_id,
     proof_request_found,
@@ -992,7 +1148,12 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
       _ => {}
     }
   }
-  let scan_stage_status = if scan.error.as_ref().map(|error| error.contains("time budget")).unwrap_or(false) {
+  let scan_stage_status = if scan
+    .error
+    .as_ref()
+    .map(|error| error.contains("time budget"))
+    .unwrap_or(false)
+  {
     "partial"
   } else if scan.error.is_some() {
     "failed"
@@ -1034,7 +1195,10 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
     &workspace_root,
     &output_dir,
     "release/rc0/self-development-packets.json",
-    format!("{}\n", serde_json::to_string_pretty(&packets).map_err(|error| error.to_string())?),
+    format!(
+      "{}\n",
+      serde_json::to_string_pretty(&packets).map_err(|error| error.to_string())?
+    ),
   )?;
   artifacts.push(packets_path);
   let packets_stage = stage_record(
@@ -1055,7 +1219,12 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
   let updater_proof = inspect_updater_release(updater_bundle_dir, updater_manifest_dir)?;
   let proof_state = if !workspace_ok {
     "setup_required"
-  } else if scan.error.as_ref().map(|error| error.contains("time budget")).unwrap_or(false) {
+  } else if scan
+    .error
+    .as_ref()
+    .map(|error| error.contains("time budget"))
+    .unwrap_or(false)
+  {
     "partial"
   } else if scan.error.is_some() {
     "failed"
@@ -1064,26 +1233,35 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
   } else {
     "ready"
   };
-  let readiness_snapshot = readiness_snapshot(&workspace_root, &scan, &NativeRc0ProofResult {
-    ok: true,
-    workspace_root: workspace_root.clone(),
-    output_dir: output_dir.clone(),
-    files_scanned: scan.files_scanned,
-    p0_count,
-    p1_count,
-    p2_count,
-    packets_generated,
-    artifacts: vec![],
-    sentinels: sentinels.clone(),
-    top_packets: packets.clone(),
-    error: None,
-  }, &updater_proof, proof_state);
+  let readiness_snapshot = readiness_snapshot(
+    &workspace_root,
+    &scan,
+    &NativeRc0ProofResult {
+      ok: true,
+      workspace_root: workspace_root.clone(),
+      output_dir: output_dir.clone(),
+      files_scanned: scan.files_scanned,
+      p0_count,
+      p1_count,
+      p2_count,
+      packets_generated,
+      artifacts: vec![],
+      sentinels: sentinels.clone(),
+      top_packets: packets.clone(),
+      error: None,
+    },
+    &updater_proof,
+    proof_state,
+  );
 
   let readiness_json = write_artifact(
     &workspace_root,
     &output_dir,
     "release/rc0/production-readiness.json",
-    format!("{}\n", serde_json::to_string_pretty(&readiness_snapshot).map_err(|error| error.to_string())?),
+    format!(
+      "{}\n",
+      serde_json::to_string_pretty(&readiness_snapshot).map_err(|error| error.to_string())?
+    ),
   )?;
   artifacts.push(readiness_json);
 
@@ -1095,7 +1273,10 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
     &workspace_root,
     &output_dir,
     "release/rc0/connector-readiness.json",
-    format!("{}\n", serde_json::to_string_pretty(&connector_readiness).map_err(|error| error.to_string())?),
+    format!(
+      "{}\n",
+      serde_json::to_string_pretty(&connector_readiness).map_err(|error| error.to_string())?
+    ),
   )?;
   artifacts.push(connector_json);
 
@@ -1103,7 +1284,10 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
     &workspace_root,
     &output_dir,
     "release/rc0/updater-readiness.json",
-    format!("{}\n", serde_json::to_string_pretty(&updater_proof).map_err(|error| error.to_string())?),
+    format!(
+      "{}\n",
+      serde_json::to_string_pretty(&updater_proof).map_err(|error| error.to_string())?
+    ),
   )?;
   artifacts.push(updater_json);
 
@@ -1164,20 +1348,27 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
   artifacts.push(install_path);
 
   let date_tag = format_timestamp(started_at_ms);
-  let proof_markdown_content = proof_markdown(&workspace_root, proof_state, &scan, &packets, &NativeRc0ProofResult {
-    ok: true,
-    workspace_root: workspace_root.clone(),
-    output_dir: output_dir.clone(),
-    files_scanned: scan.files_scanned,
-    p0_count,
-    p1_count,
-    p2_count,
-    packets_generated,
-    artifacts: artifacts.clone(),
-    sentinels: sentinels.clone(),
-    top_packets: packets.clone(),
-    error: None,
-  }, &json!(updater_proof));
+  let proof_markdown_content = proof_markdown(
+    &workspace_root,
+    proof_state,
+    &scan,
+    &packets,
+    &NativeRc0ProofResult {
+      ok: true,
+      workspace_root: workspace_root.clone(),
+      output_dir: output_dir.clone(),
+      files_scanned: scan.files_scanned,
+      p0_count,
+      p1_count,
+      p2_count,
+      packets_generated,
+      artifacts: artifacts.clone(),
+      sentinels: sentinels.clone(),
+      top_packets: packets.clone(),
+      error: None,
+    },
+    &json!(updater_proof),
+  );
   let proof_path = write_artifact(
     &workspace_root,
     &output_dir,
@@ -1226,7 +1417,10 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
     &workspace_root,
     &output_dir,
     &format!("docs/handoff/ALPHONSO_SELFDEV_PACKETS_{date_tag}.json"),
-    format!("{}\n", serde_json::to_string_pretty(&packets).map_err(|error| error.to_string())?),
+    format!(
+      "{}\n",
+      serde_json::to_string_pretty(&packets).map_err(|error| error.to_string())?
+    ),
   )?;
   artifacts.push(docs_packets);
 
@@ -1234,7 +1428,10 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
     &workspace_root,
     &output_dir,
     &format!("docs/handoff/ALPHONSO_PRODUCTION_READINESS_SNAPSHOT_{date_tag}.json"),
-    format!("{}\n", serde_json::to_string_pretty(&readiness_snapshot).map_err(|error| error.to_string())?),
+    format!(
+      "{}\n",
+      serde_json::to_string_pretty(&readiness_snapshot).map_err(|error| error.to_string())?
+    ),
   )?;
   artifacts.push(docs_snapshot);
 
@@ -1280,7 +1477,8 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
       "lastCompletedStage": "10_rc0_package_written.json",
       "message": "Native RC0 proof engine completed successfully."
     }))
-    .map_err(|error| error.to_string())? + "\n",
+    .map_err(|error| error.to_string())?
+      + "\n",
   )?;
   artifacts.push(run_status_path);
   result.artifacts = artifacts.clone();
@@ -1291,7 +1489,9 @@ pub fn run_native_rc0_proof_engine(input: NativeRc0ProofInput) -> Result<NativeR
 }
 
 #[tauri::command]
-pub async fn run_native_rc0_proof(input: NativeRc0ProofInput) -> Result<NativeRc0ProofResult, String> {
+pub async fn run_native_rc0_proof(
+  input: NativeRc0ProofInput,
+) -> Result<NativeRc0ProofResult, String> {
   tauri::async_runtime::spawn_blocking(move || run_native_rc0_proof_engine(input))
     .await
     .map_err(|error| error.to_string())?

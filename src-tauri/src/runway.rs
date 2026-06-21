@@ -257,7 +257,10 @@ async fn poll_and_download(
           ratio,
           duration,
           false,
-          format!("Runway output download returned HTTP {}.", response.status().as_u16()),
+          format!(
+            "Runway output download returned HTTP {}.",
+            response.status().as_u16()
+          ),
           Some(output_url.clone()),
         );
       }
@@ -321,10 +324,16 @@ pub async fn runway_generate_video(request: RunwayVideoRequest) -> RunwayVideoPr
         ok: false,
         task_id: None,
         status: "setup_required".to_string(),
-        model: request.model.unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string()),
-        ratio: request.ratio.unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string()),
+        model: request
+          .model
+          .unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string()),
+        ratio: request
+          .ratio
+          .unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string()),
         duration: request.duration.unwrap_or(DEFAULT_RUNWAY_DURATION),
-        output_dir: request.output_dir.unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
+        output_dir: request
+          .output_dir
+          .unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
         output_urls: Vec::new(),
         output_files: Vec::new(),
         setup_required: true,
@@ -343,10 +352,16 @@ pub async fn runway_generate_video(request: RunwayVideoRequest) -> RunwayVideoPr
       ok: false,
       task_id: None,
       status: "failed".to_string(),
-      model: request.model.unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string()),
-      ratio: request.ratio.unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string()),
+      model: request
+        .model
+        .unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string()),
+      ratio: request
+        .ratio
+        .unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string()),
       duration: request.duration.unwrap_or(DEFAULT_RUNWAY_DURATION),
-      output_dir: request.output_dir.unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
+      output_dir: request
+        .output_dir
+        .unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
       output_urls: Vec::new(),
       output_files: Vec::new(),
       setup_required: false,
@@ -358,14 +373,24 @@ pub async fn runway_generate_video(request: RunwayVideoRequest) -> RunwayVideoPr
     };
   }
 
-  let model = request.model.unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string());
-  let ratio = request.ratio.unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string());
+  let model = request
+    .model
+    .unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string());
+  let ratio = request
+    .ratio
+    .unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string());
   let duration = request.duration.unwrap_or(DEFAULT_RUNWAY_DURATION);
-  let timeout_seconds = request.timeout_seconds.unwrap_or(DEFAULT_RUNWAY_TIMEOUT_SECS);
-  let output_dir_raw = request.output_dir.unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string());
+  let timeout_seconds = request
+    .timeout_seconds
+    .unwrap_or(DEFAULT_RUNWAY_TIMEOUT_SECS);
+  let output_dir_raw = request
+    .output_dir
+    .unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string());
   let saved_dir = resolve_output_dir(&output_dir_raw);
-  let base_url = std::env::var("RUNWAYML_API_BASE_URL").unwrap_or_else(|_| DEFAULT_RUNWAY_BASE_URL.to_string());
-  let version = std::env::var("RUNWAYML_API_VERSION").unwrap_or_else(|_| DEFAULT_RUNWAY_VERSION.to_string());
+  let base_url =
+    std::env::var("RUNWAYML_API_BASE_URL").unwrap_or_else(|_| DEFAULT_RUNWAY_BASE_URL.to_string());
+  let version =
+    std::env::var("RUNWAYML_API_VERSION").unwrap_or_else(|_| DEFAULT_RUNWAY_VERSION.to_string());
   let client = reqwest::Client::new();
   let auth_header = format!("Bearer {api_secret}");
   let endpoint = format!("{}/v1/image_to_video", base_url.trim_end_matches('/'));
@@ -375,7 +400,11 @@ pub async fn runway_generate_video(request: RunwayVideoRequest) -> RunwayVideoPr
     "ratio": ratio,
     "duration": duration,
   });
-  if let Some(prompt_image) = request.prompt_image.as_ref().filter(|value| !value.trim().is_empty()) {
+  if let Some(prompt_image) = request
+    .prompt_image
+    .as_ref()
+    .filter(|value| !value.trim().is_empty())
+  {
     body["promptImage"] = json!(prompt_image);
   }
 
@@ -452,15 +481,18 @@ pub async fn runway_generate_video(request: RunwayVideoRequest) -> RunwayVideoPr
 
   // Persist the job before polling so it can be resumed if the app is killed mid-render.
   let _ = fs::create_dir_all(&saved_dir);
-  write_pending_marker(&saved_dir, &RunwayPendingJob {
-    task_id: task_id.clone(),
-    prompt_text: request.prompt_text.clone(),
-    model: model.clone(),
-    ratio: ratio.clone(),
-    duration,
-    output_dir: saved_dir.display().to_string(),
-    started_at_ms,
-  });
+  write_pending_marker(
+    &saved_dir,
+    &RunwayPendingJob {
+      task_id: task_id.clone(),
+      prompt_text: request.prompt_text.clone(),
+      model: model.clone(),
+      ratio: ratio.clone(),
+      duration,
+      output_dir: saved_dir.display().to_string(),
+      started_at_ms,
+    },
+  );
 
   poll_and_download(
     &client,
@@ -523,7 +555,9 @@ pub async fn runway_resume_task(request: RunwayResumeRequest) -> RunwayVideoProo
         model: DEFAULT_RUNWAY_MODEL.to_string(),
         ratio: DEFAULT_RUNWAY_RATIO.to_string(),
         duration: DEFAULT_RUNWAY_DURATION,
-        output_dir: request.output_dir.unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
+        output_dir: request
+          .output_dir
+          .unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
         output_urls: Vec::new(),
         output_files: Vec::new(),
         setup_required: true,
@@ -536,23 +570,41 @@ pub async fn runway_resume_task(request: RunwayResumeRequest) -> RunwayVideoProo
     }
   };
 
-  let output_dir_raw = request.output_dir.unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string());
+  let output_dir_raw = request
+    .output_dir
+    .unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string());
   let saved_dir = resolve_output_dir(&output_dir_raw);
-  let base_url = std::env::var("RUNWAYML_API_BASE_URL").unwrap_or_else(|_| DEFAULT_RUNWAY_BASE_URL.to_string());
-  let version = std::env::var("RUNWAYML_API_VERSION").unwrap_or_else(|_| DEFAULT_RUNWAY_VERSION.to_string());
+  let base_url =
+    std::env::var("RUNWAYML_API_BASE_URL").unwrap_or_else(|_| DEFAULT_RUNWAY_BASE_URL.to_string());
+  let version =
+    std::env::var("RUNWAYML_API_VERSION").unwrap_or_else(|_| DEFAULT_RUNWAY_VERSION.to_string());
   let client = reqwest::Client::new();
   let auth_header = format!("Bearer {api_secret}");
-  let timeout_seconds = request.timeout_seconds.unwrap_or(DEFAULT_RUNWAY_TIMEOUT_SECS);
+  let timeout_seconds = request
+    .timeout_seconds
+    .unwrap_or(DEFAULT_RUNWAY_TIMEOUT_SECS);
 
   // Read metadata from the pending marker if available.
   let pending = fs::read_to_string(pending_marker_path(&saved_dir, &request.task_id))
     .ok()
     .and_then(|s| serde_json::from_str::<RunwayPendingJob>(&s).ok());
 
-  let model = pending.as_ref().map(|j| j.model.clone()).unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string());
-  let ratio = pending.as_ref().map(|j| j.ratio.clone()).unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string());
-  let duration = pending.as_ref().map(|j| j.duration).unwrap_or(DEFAULT_RUNWAY_DURATION);
-  let original_start = pending.as_ref().map(|j| j.started_at_ms).unwrap_or(started_at_ms);
+  let model = pending
+    .as_ref()
+    .map(|j| j.model.clone())
+    .unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string());
+  let ratio = pending
+    .as_ref()
+    .map(|j| j.ratio.clone())
+    .unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string());
+  let duration = pending
+    .as_ref()
+    .map(|j| j.duration)
+    .unwrap_or(DEFAULT_RUNWAY_DURATION);
+  let original_start = pending
+    .as_ref()
+    .map(|j| j.started_at_ms)
+    .unwrap_or(started_at_ms);
 
   poll_and_download(
     &client,
@@ -586,7 +638,11 @@ fn failed_proof(
     provider: "runway".to_string(),
     ok: false,
     task_id: None,
-    status: if setup_required { "setup_required".to_string() } else { "failed".to_string() },
+    status: if setup_required {
+      "setup_required".to_string()
+    } else {
+      "failed".to_string()
+    },
     model,
     ratio,
     duration,
@@ -594,7 +650,11 @@ fn failed_proof(
     output_urls: Vec::new(),
     output_files: Vec::new(),
     setup_required,
-    trust: if setup_required { "setup_required".to_string() } else { "failed".to_string() },
+    trust: if setup_required {
+      "setup_required".to_string()
+    } else {
+      "failed".to_string()
+    },
     message,
     error,
     started_at_ms,

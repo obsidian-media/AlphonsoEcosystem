@@ -8,8 +8,13 @@ pub(crate) async fn youtube_access_token() -> Result<String, String> {
   let client_id = std::env::var("YOUTUBE_CLIENT_ID").unwrap_or_default();
   let client_secret = std::env::var("YOUTUBE_CLIENT_SECRET").unwrap_or_default();
   let refresh_token = std::env::var("YOUTUBE_REFRESH_TOKEN").unwrap_or_default();
-  if client_id.trim().is_empty() || client_secret.trim().is_empty() || refresh_token.trim().is_empty() {
-    return Err("YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, or YOUTUBE_REFRESH_TOKEN is missing.".to_string());
+  if client_id.trim().is_empty()
+    || client_secret.trim().is_empty()
+    || refresh_token.trim().is_empty()
+  {
+    return Err(
+      "YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, or YOUTUBE_REFRESH_TOKEN is missing.".to_string(),
+    );
   }
 
   let client = reqwest::Client::builder()

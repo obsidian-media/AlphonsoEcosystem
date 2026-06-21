@@ -59,7 +59,11 @@ fn extract_title(html: &str) -> Option<String> {
   let start_close = lower[start..].find('>')? + start + 1;
   let end = lower[start_close..].find("</title>")? + start_close;
   let title = clean_ws(&html[start_close..end]);
-  if title.is_empty() { None } else { Some(title.chars().take(180).collect()) }
+  if title.is_empty() {
+    None
+  } else {
+    Some(title.chars().take(180).collect())
+  }
 }
 
 pub(crate) fn strip_html_tags(input: &str) -> String {
@@ -153,7 +157,11 @@ fn decode_ddg_result_url(raw_href: &str) -> Option<String> {
   None
 }
 
-pub(crate) fn parse_ddg_results(html: &str, source_type: &str, limit: usize) -> Vec<ResearchSearchResult> {
+pub(crate) fn parse_ddg_results(
+  html: &str,
+  source_type: &str,
+  limit: usize,
+) -> Vec<ResearchSearchResult> {
   let mut results: Vec<ResearchSearchResult> = vec![];
   let mut cursor = 0usize;
   let max_results = limit.clamp(1, 12);
@@ -202,7 +210,9 @@ pub(crate) fn parse_ddg_results(html: &str, source_type: &str, limit: usize) -> 
         let snippet_hint = tag_end + snippet_rel;
         let snippet_start = lower[..snippet_hint].rfind('<')?;
         let snippet_tail = &lower[snippet_hint..search_window_end];
-        let close_rel = snippet_tail.find("</a>").or_else(|| snippet_tail.find("</div>"))?;
+        let close_rel = snippet_tail
+          .find("</a>")
+          .or_else(|| snippet_tail.find("</div>"))?;
         let snippet_end = snippet_hint + close_rel + 4;
         let snippet_html = &html[snippet_start..snippet_end];
         let plain = decode_html_entities(&strip_html_tags(snippet_html));
@@ -215,7 +225,11 @@ pub(crate) fn parse_ddg_results(html: &str, source_type: &str, limit: usize) -> 
 
     results.push(ResearchSearchResult {
       url,
-      title: if title.is_empty() { "Untitled result".to_string() } else { title.chars().take(180).collect() },
+      title: if title.is_empty() {
+        "Untitled result".to_string()
+      } else {
+        title.chars().take(180).collect()
+      },
       snippet,
       source_type: source_type.to_string(),
       provider: "duckduckgo_html".to_string(),
@@ -231,7 +245,9 @@ pub(crate) fn parse_ddg_results(html: &str, source_type: &str, limit: usize) -> 
 }
 
 #[tauri::command]
-pub(crate) async fn fetch_research_sources(sources: Vec<ResearchSourceInput>) -> Vec<ResearchSourceProof> {
+pub(crate) async fn fetch_research_sources(
+  sources: Vec<ResearchSourceInput>,
+) -> Vec<ResearchSourceProof> {
   let client = match reqwest::Client::builder()
     .timeout(std::time::Duration::from_secs(12))
     .redirect(reqwest::redirect::Policy::limited(5))
@@ -261,11 +277,17 @@ pub(crate) async fn fetch_research_sources(sources: Vec<ResearchSourceInput>) ->
   let mut proofs = Vec::new();
   for source in sources.into_iter().take(10) {
     let fetched_at_ms = now_ms();
-    let source_type = source.source_type.unwrap_or_else(|| "public_web".to_string());
+    let source_type = source
+      .source_type
+      .unwrap_or_else(|| "public_web".to_string());
     let official = source.official.unwrap_or(false);
     let risk_level = if official { "low" } else { "medium" }.to_string();
     let parsed = reqwest::Url::parse(source.url.trim());
-    if parsed.as_ref().map(|url| url.scheme() != "http" && url.scheme() != "https").unwrap_or(true) {
+    if parsed
+      .as_ref()
+      .map(|url| url.scheme() != "http" && url.scheme() != "https")
+      .unwrap_or(true)
+    {
       proofs.push(ResearchSourceProof {
         url: source.url,
         source_type,
@@ -314,10 +336,22 @@ pub(crate) async fn fetch_research_sources(sources: Vec<ResearchSourceInput>) ->
               title,
               snippet,
               date_checked: unix_now_iso(),
-              confidence: if status.is_success() { "verified".to_string() } else { "failed".to_string() },
+              confidence: if status.is_success() {
+                "verified".to_string()
+              } else {
+                "failed".to_string()
+              },
               risk_level,
-              verification_state: if status.is_success() { "verified".to_string() } else { "failed".to_string() },
-              error: if status.is_success() { None } else { Some(format!("HTTP status {}", status.as_u16())) },
+              verification_state: if status.is_success() {
+                "verified".to_string()
+              } else {
+                "failed".to_string()
+              },
+              error: if status.is_success() {
+                None
+              } else {
+                Some(format!("HTTP status {}", status.as_u16()))
+              },
             });
           }
           Err(error) => proofs.push(ResearchSourceProof {
@@ -359,12 +393,16 @@ pub(crate) async fn fetch_research_sources(sources: Vec<ResearchSourceInput>) ->
 }
 
 #[tauri::command]
-pub(crate) async fn search_research_sources(request: ResearchSearchInput) -> Result<Vec<ResearchSearchResult>, String> {
+pub(crate) async fn search_research_sources(
+  request: ResearchSearchInput,
+) -> Result<Vec<ResearchSearchResult>, String> {
   let query = request.query.trim().to_string();
   if query.is_empty() {
     return Ok(vec![]);
   }
-  let source_type = request.source_type.unwrap_or_else(|| "official_docs".to_string());
+  let source_type = request
+    .source_type
+    .unwrap_or_else(|| "official_docs".to_string());
   let limit = request.limit.unwrap_or(6).clamp(1, 12) as usize;
 
   let client = reqwest::Client::builder()
@@ -385,7 +423,10 @@ pub(crate) async fn search_research_sources(request: ResearchSearchInput) -> Res
 
   let status = response.status();
   if !status.is_success() {
-    return Err(format!("DuckDuckGo HTML request returned HTTP {}", status.as_u16()));
+    return Err(format!(
+      "DuckDuckGo HTML request returned HTTP {}",
+      status.as_u16()
+    ));
   }
 
   let html = response.text().await.map_err(|error| error.to_string())?;
@@ -393,7 +434,11 @@ pub(crate) async fn search_research_sources(request: ResearchSearchInput) -> Res
 }
 
 #[tauri::command]
-pub(crate) async fn search_brave_sources(query: String, limit: Option<u8>, source_type: Option<String>) -> Result<Vec<ResearchSearchResult>, String> {
+pub(crate) async fn search_brave_sources(
+  query: String,
+  limit: Option<u8>,
+  source_type: Option<String>,
+) -> Result<Vec<ResearchSearchResult>, String> {
   let query = query.trim().to_string();
   if query.is_empty() {
     return Ok(vec![]);
@@ -445,10 +490,24 @@ pub(crate) async fn search_brave_sources(query: String, limit: Option<u8>, sourc
   let results = raw_results
     .iter()
     .filter_map(|item| {
-      let url = item.get("url").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
-      if url.is_empty() { return None; }
-      let title = item.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled").chars().take(180).collect::<String>();
-      let snippet = item.get("description")
+      let url = item
+        .get("url")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+      if url.is_empty() {
+        return None;
+      }
+      let title = item
+        .get("title")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Untitled")
+        .chars()
+        .take(180)
+        .collect::<String>();
+      let snippet = item
+        .get("description")
         .and_then(|v| v.as_str())
         .map(|s| s.chars().take(320).collect::<String>());
       Some(ResearchSearchResult {

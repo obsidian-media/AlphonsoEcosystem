@@ -78,10 +78,17 @@ fn graph_error_message(body: &Value, fallback: &str) -> String {
 }
 
 #[tauri::command]
-pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<MetaPublishProof, String> {
+pub(crate) async fn meta_publish_content(
+  request: MetaPublishRequest,
+) -> Result<MetaPublishProof, String> {
   let published_at_ms = now_ms();
   let platform = request.platform.trim().to_ascii_lowercase();
-  let _request_id = request.request_id.as_deref().unwrap_or("").trim().to_string();
+  let _request_id = request
+    .request_id
+    .as_deref()
+    .unwrap_or("")
+    .trim()
+    .to_string();
   if platform.is_empty() || !matches!(platform.as_str(), "instagram" | "facebook") {
     return Ok(MetaPublishProof {
       connector_id: "meta".to_string(),
@@ -140,13 +147,19 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
   let caption = request
     .caption
     .as_deref()
-    .unwrap_or(request.message.as_deref().unwrap_or(request.title.as_deref().unwrap_or("")))
+    .unwrap_or(
+      request
+        .message
+        .as_deref()
+        .unwrap_or(request.title.as_deref().unwrap_or("")),
+    )
     .trim()
     .to_string();
   let title = request.title.as_deref().unwrap_or("").trim().to_string();
   let link = request.link.as_deref().unwrap_or("").trim().to_string();
 
-  let mut auth_query: Vec<(String, String)> = vec![("access_token".to_string(), access_token.trim().to_string())];
+  let mut auth_query: Vec<(String, String)> =
+    vec![("access_token".to_string(), access_token.trim().to_string())];
   if let Some(proof_value) = proof.clone() {
     auth_query.push(("appsecret_proof".to_string(), proof_value));
   }
@@ -169,9 +182,24 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
       });
     }
 
-    let image_url = request.image_url.as_deref().unwrap_or("").trim().to_string();
-    let video_url = request.video_url.as_deref().unwrap_or("").trim().to_string();
-    let media_type = request.media_type.as_deref().unwrap_or("").trim().to_ascii_uppercase();
+    let image_url = request
+      .image_url
+      .as_deref()
+      .unwrap_or("")
+      .trim()
+      .to_string();
+    let video_url = request
+      .video_url
+      .as_deref()
+      .unwrap_or("")
+      .trim()
+      .to_string();
+    let media_type = request
+      .media_type
+      .as_deref()
+      .unwrap_or("")
+      .trim()
+      .to_ascii_uppercase();
     if image_url.is_empty() && video_url.is_empty() {
       return Ok(MetaPublishProof {
         connector_id: "meta".to_string(),
@@ -212,7 +240,10 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
       .await
       .map_err(|error| error.to_string())?;
     let create_status = create_response.status();
-    let create_body: Value = create_response.json().await.map_err(|error| error.to_string())?;
+    let create_body: Value = create_response
+      .json()
+      .await
+      .map_err(|error| error.to_string())?;
     if !create_status.is_success() {
       return Ok(MetaPublishProof {
         connector_id: "meta".to_string(),
@@ -225,7 +256,10 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
         published_at_ms,
         trust: "failed".to_string(),
         message: "Instagram media container creation failed.".to_string(),
-        error: Some(graph_error_message(&create_body, "Instagram media container creation failed.")),
+        error: Some(graph_error_message(
+          &create_body,
+          "Instagram media container creation failed.",
+        )),
       });
     }
     let creation_id = create_body
@@ -264,7 +298,10 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
       .await
       .map_err(|error| error.to_string())?;
     let publish_status = publish_response.status();
-    let publish_body: Value = publish_response.json().await.map_err(|error| error.to_string())?;
+    let publish_body: Value = publish_response
+      .json()
+      .await
+      .map_err(|error| error.to_string())?;
     if !publish_status.is_success() {
       return Ok(MetaPublishProof {
         connector_id: "meta".to_string(),
@@ -277,7 +314,10 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
         published_at_ms,
         trust: "failed".to_string(),
         message: "Instagram media publish failed.".to_string(),
-        error: Some(graph_error_message(&publish_body, "Instagram media publish failed.")),
+        error: Some(graph_error_message(
+          &publish_body,
+          "Instagram media publish failed.",
+        )),
       });
     }
 
@@ -323,10 +363,29 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
     });
   }
 
-  let local_file_path = request.local_file_path.as_deref().unwrap_or("").trim().to_string();
-  let image_url = request.image_url.as_deref().unwrap_or("").trim().to_string();
-  let video_url = request.video_url.as_deref().unwrap_or("").trim().to_string();
-  let page_endpoint_base = format!("https://graph.facebook.com/{}/{}", meta_graph_api_version(), page_id.trim());
+  let local_file_path = request
+    .local_file_path
+    .as_deref()
+    .unwrap_or("")
+    .trim()
+    .to_string();
+  let image_url = request
+    .image_url
+    .as_deref()
+    .unwrap_or("")
+    .trim()
+    .to_string();
+  let video_url = request
+    .video_url
+    .as_deref()
+    .unwrap_or("")
+    .trim()
+    .to_string();
+  let page_endpoint_base = format!(
+    "https://graph.facebook.com/{}/{}",
+    meta_graph_api_version(),
+    page_id.trim()
+  );
 
   if !local_file_path.is_empty() {
     return Ok(MetaPublishProof {
@@ -350,7 +409,14 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
       .query(&auth_query)
       .form(&[
         ("file_url", video_url.clone()),
-        ("description", if caption.is_empty() { title.clone() } else { caption.clone() }),
+        (
+          "description",
+          if caption.is_empty() {
+            title.clone()
+          } else {
+            caption.clone()
+          },
+        ),
       ])
       .send()
       .await
@@ -407,7 +473,14 @@ pub(crate) async fn meta_publish_content(request: MetaPublishRequest) -> Result<
       .query(&auth_query)
       .form(&[
         ("url", image_url.clone()),
-        ("caption", if caption.is_empty() { title.clone() } else { caption.clone() }),
+        (
+          "caption",
+          if caption.is_empty() {
+            title.clone()
+          } else {
+            caption.clone()
+          },
+        ),
       ])
       .send()
       .await

@@ -74,14 +74,26 @@ mod tests {
 
   #[test]
   fn trim_trailing_slashes_removes_trailing_slashes() {
-    assert_eq!(trim_trailing_slashes("http://localhost:11434/"), "http://localhost:11434");
-    assert_eq!(trim_trailing_slashes("http://localhost:11434///"), "http://localhost:11434");
-    assert_eq!(trim_trailing_slashes("  http://localhost:11434/  "), "http://localhost:11434");
+    assert_eq!(
+      trim_trailing_slashes("http://localhost:11434/"),
+      "http://localhost:11434"
+    );
+    assert_eq!(
+      trim_trailing_slashes("http://localhost:11434///"),
+      "http://localhost:11434"
+    );
+    assert_eq!(
+      trim_trailing_slashes("  http://localhost:11434/  "),
+      "http://localhost:11434"
+    );
   }
 
   #[test]
   fn trim_trailing_slashes_leaves_clean_urls_unchanged() {
-    assert_eq!(trim_trailing_slashes("http://localhost:11434"), "http://localhost:11434");
+    assert_eq!(
+      trim_trailing_slashes("http://localhost:11434"),
+      "http://localhost:11434"
+    );
     assert_eq!(trim_trailing_slashes(""), "");
   }
 
@@ -94,7 +106,13 @@ mod tests {
 
   #[test]
   fn dedup_strings_removes_duplicates() {
-    let input = vec!["b".to_string(), "a".to_string(), "b".to_string(), "c".to_string(), "a".to_string()];
+    let input = vec![
+      "b".to_string(),
+      "a".to_string(),
+      "b".to_string(),
+      "c".to_string(),
+      "a".to_string(),
+    ];
     let result = dedup_strings(input);
     assert_eq!(result, vec!["a", "b", "c"]);
   }

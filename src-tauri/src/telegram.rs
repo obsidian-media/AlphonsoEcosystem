@@ -1,4 +1,6 @@
-use crate::{app_data_subdir, now_ms, ConnectorInboundMessage, ConnectorPollProof, ConnectorSendProof};
+use crate::{
+  app_data_subdir, now_ms, ConnectorInboundMessage, ConnectorPollProof, ConnectorSendProof,
+};
 use serde_json::Value;
 use std::fs;
 
@@ -15,7 +17,10 @@ fn json_value_to_plain_string(value: &Value) -> String {
   value.to_string()
 }
 
-fn connector_cursor_path(app: &tauri::AppHandle, connector_id: &str) -> Result<std::path::PathBuf, String> {
+fn connector_cursor_path(
+  app: &tauri::AppHandle,
+  connector_id: &str,
+) -> Result<std::path::PathBuf, String> {
   let mut dir = app_data_subdir(app, "connectors")?;
   dir.push(format!("{connector_id}_cursor.json"));
   Ok(dir)
@@ -28,7 +33,11 @@ fn read_connector_cursor(app: &tauri::AppHandle, connector_id: &str) -> Option<i
   parsed.get("cursor").and_then(|value| value.as_i64())
 }
 
-fn write_connector_cursor(app: &tauri::AppHandle, connector_id: &str, cursor: i64) -> Result<(), String> {
+fn write_connector_cursor(
+  app: &tauri::AppHandle,
+  connector_id: &str,
+  cursor: i64,
+) -> Result<(), String> {
   let path = connector_cursor_path(app, connector_id)?;
   let payload = serde_json::json!({
     "connectorId": connector_id,
@@ -92,10 +101,17 @@ pub(crate) async fn connector_poll_telegram(
       messages: vec![],
       checked_at_ms,
       trust: "failed".to_string(),
-      error: Some(format!("Telegram getUpdates returned HTTP {}", status.as_u16())),
+      error: Some(format!(
+        "Telegram getUpdates returned HTTP {}",
+        status.as_u16()
+      )),
     });
   }
-  if !payload.get("ok").and_then(|value| value.as_bool()).unwrap_or(false) {
+  if !payload
+    .get("ok")
+    .and_then(|value| value.as_bool())
+    .unwrap_or(false)
+  {
     let description = payload
       .get("description")
       .and_then(|value| value.as_str())
@@ -116,12 +132,21 @@ pub(crate) async fn connector_poll_telegram(
   let mut messages: Vec<ConnectorInboundMessage> = vec![];
   if let Some(rows) = payload.get("result").and_then(|value| value.as_array()) {
     for row in rows {
-      let update_id = row.get("update_id").and_then(|value| value.as_i64()).unwrap_or(0);
+      let update_id = row
+        .get("update_id")
+        .and_then(|value| value.as_i64())
+        .unwrap_or(0);
       if update_id > 0 {
-        next_cursor = Some(next_cursor.map(|cursor| cursor.max(update_id)).unwrap_or(update_id));
+        next_cursor = Some(
+          next_cursor
+            .map(|cursor| cursor.max(update_id))
+            .unwrap_or(update_id),
+        );
       }
       let message = row.get("message").or_else(|| row.get("edited_message"));
-      let Some(message_value) = message else { continue };
+      let Some(message_value) = message else {
+        continue;
+      };
 
       let chat_id = message_value
         .get("chat")
@@ -135,7 +160,11 @@ pub(crate) async fn connector_poll_telegram(
       let text = message_value
         .get("text")
         .and_then(|value| value.as_str())
-        .or_else(|| message_value.get("caption").and_then(|value| value.as_str()))
+        .or_else(|| {
+          message_value
+            .get("caption")
+            .and_then(|value| value.as_str())
+        })
         .unwrap_or("")
         .trim()
         .to_string();
@@ -222,7 +251,12 @@ pub(crate) async fn connector_send_telegram(
     .map_err(|error| error.to_string())?;
   let status = response.status();
   let body: Value = response.json().await.map_err(|error| error.to_string())?;
-  if !status.is_success() || !body.get("ok").and_then(|value| value.as_bool()).unwrap_or(false) {
+  if !status.is_success()
+    || !body
+      .get("ok")
+      .and_then(|value| value.as_bool())
+      .unwrap_or(false)
+  {
     let description = body
       .get("description")
       .and_then(|value| value.as_str())
@@ -230,7 +264,10 @@ pub(crate) async fn connector_send_telegram(
     return Ok(ConnectorSendProof {
       connector_id: "telegram".to_string(),
       ok: false,
-      target: payload.get("chat_id").map(json_value_to_plain_string).unwrap_or_default(),
+      target: payload
+        .get("chat_id")
+        .map(json_value_to_plain_string)
+        .unwrap_or_default(),
       external_id: None,
       sent_at_ms,
       trust: "failed".to_string(),
@@ -246,7 +283,10 @@ pub(crate) async fn connector_send_telegram(
   Ok(ConnectorSendProof {
     connector_id: "telegram".to_string(),
     ok: true,
-    target: payload.get("chat_id").map(json_value_to_plain_string).unwrap_or_default(),
+    target: payload
+      .get("chat_id")
+      .map(json_value_to_plain_string)
+      .unwrap_or_default(),
     external_id,
     sent_at_ms,
     trust: "verified".to_string(),

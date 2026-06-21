@@ -81,7 +81,10 @@ pub(crate) struct PluginToolExecutionProof {
 
 fn plugin_blocked_token_present(value: &str) -> Option<&'static str> {
   const BLOCKED: [&str; 8] = ["&&", "||", ";", "|", ">", "<", "$(", "`"];
-  BLOCKED.into_iter().find(|&token| value.contains(token)).map(|v| v as _)
+  BLOCKED
+    .into_iter()
+    .find(|&token| value.contains(token))
+    .map(|v| v as _)
 }
 
 pub(crate) fn validate_plugin_extra_args(extra_args: &[String]) -> Result<(), String> {
@@ -136,7 +139,8 @@ pub(crate) fn discover_plugins_from_disk(
     if let Ok(entries) = fs::read_dir(&root) {
       for entry in entries.flatten() {
         let path = entry.path();
-        if path.is_file() && path.file_name().and_then(|name| name.to_str()) == Some("plugin.json") {
+        if path.is_file() && path.file_name().and_then(|name| name.to_str()) == Some("plugin.json")
+        {
           manifest_paths.push(path.clone());
         }
         if path.is_dir() {
@@ -180,7 +184,9 @@ pub(crate) fn discover_plugins_from_disk(
           version: parsed.version.unwrap_or_else(|| "0.0.0".to_string()),
           permissions: parsed.permissions.unwrap_or_default(),
           enabled_by_default: parsed.enabled_by_default.unwrap_or(false),
-          manifest_version: parsed.manifest_version.unwrap_or_else(|| "1.0.0".to_string()),
+          manifest_version: parsed
+            .manifest_version
+            .unwrap_or_else(|| "1.0.0".to_string()),
           manifest_path: manifest_path.to_string_lossy().to_string(),
           tools,
           trust: "verified".to_string(),
@@ -245,12 +251,24 @@ pub(crate) fn validate_plugin_manifest_disk(
         errors.push("Plugin id is empty.".to_string());
       }
       if parsed.manifest_version.as_deref() != Some("1.0.0") {
-        warnings.push("Plugin manifest_version is not 1.0.0. Compatibility is not guaranteed.".to_string());
+        warnings.push(
+          "Plugin manifest_version is not 1.0.0. Compatibility is not guaranteed.".to_string(),
+        );
       }
-      if parsed.permissions.as_ref().map(|p| p.is_empty()).unwrap_or(true) {
+      if parsed
+        .permissions
+        .as_ref()
+        .map(|p| p.is_empty())
+        .unwrap_or(true)
+      {
         warnings.push("Plugin permissions are missing or empty.".to_string());
       }
-      if parsed.tools.as_ref().map(|tools| tools.is_empty()).unwrap_or(true) {
+      if parsed
+        .tools
+        .as_ref()
+        .map(|tools| tools.is_empty())
+        .unwrap_or(true)
+      {
         warnings.push("Plugin has no declared tools.".to_string());
       }
       if let Some(tools) = parsed.tools {
@@ -262,7 +280,10 @@ pub(crate) fn validate_plugin_manifest_disk(
             errors.push(format!("Plugin tool {} has empty program.", tool.id));
           }
           if !allowed_program(&tool.program) {
-            warnings.push(format!("Plugin tool {} program '{}' is outside supervised allowlist.", tool.id, tool.program));
+            warnings.push(format!(
+              "Plugin tool {} program '{}' is outside supervised allowlist.",
+              tool.id, tool.program
+            ));
           }
         }
       }
@@ -278,7 +299,11 @@ pub(crate) fn validate_plugin_manifest_disk(
     valid,
     errors,
     warnings,
-    trust: if valid { "verified".to_string() } else { "failed".to_string() },
+    trust: if valid {
+      "verified".to_string()
+    } else {
+      "failed".to_string()
+    },
   };
   let _ = append_plugin_audit_event(
     &app,
@@ -372,7 +397,8 @@ pub(crate) fn execute_plugin_tool(
   }
 
   let encoded = fs::read_to_string(&manifest_path_buf).map_err(|error| error.to_string())?;
-  let parsed: PluginManifestDisk = serde_json::from_str(&encoded).map_err(|error| error.to_string())?;
+  let parsed: PluginManifestDisk =
+    serde_json::from_str(&encoded).map_err(|error| error.to_string())?;
 
   if parsed.id != plugin_id {
     let reason = "Plugin id does not match manifest id.".to_string();
@@ -391,7 +417,10 @@ pub(crate) fn execute_plugin_tool(
   }
 
   let plugin_permissions = parsed.permissions.unwrap_or_default();
-  if !plugin_permissions.iter().any(|permission| permission == "tools.execute") {
+  if !plugin_permissions
+    .iter()
+    .any(|permission| permission == "tools.execute")
+  {
     let reason = "Plugin manifest missing tools.execute permission.".to_string();
     let _ = append_plugin_audit_event(
       &app,
@@ -413,7 +442,10 @@ pub(crate) fn execute_plugin_tool(
     .find(|item| item.id == tool_id)
     .ok_or_else(|| "Tool id not found in manifest.".to_string())?;
   let tool_permissions = tool.permissions.unwrap_or_default();
-  if !tool_permissions.iter().any(|permission| permission == "command.execute") {
+  if !tool_permissions
+    .iter()
+    .any(|permission| permission == "command.execute")
+  {
     let reason = "Plugin tool missing command.execute permission.".to_string();
     let _ = append_plugin_audit_event(
       &app,
@@ -473,7 +505,11 @@ pub(crate) fn execute_plugin_tool(
     exit_code: output.status.code(),
     stdout: String::from_utf8_lossy(&output.stdout).to_string(),
     stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-    trust: if success { "verified".to_string() } else { "failed".to_string() },
+    trust: if success {
+      "verified".to_string()
+    } else {
+      "failed".to_string()
+    },
     error: None,
   };
 

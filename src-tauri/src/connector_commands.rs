@@ -1,4 +1,6 @@
-use crate::{now_ms, ConnectorInboundMessage, ConnectorPollProof, ConnectorSendProof, dedup_strings};
+use crate::{
+  dedup_strings, now_ms, ConnectorInboundMessage, ConnectorPollProof, ConnectorSendProof,
+};
 use serde::Serialize;
 use serde_json::Value;
 use std::time::Duration;
@@ -81,7 +83,10 @@ fn inject_prompt_into_comfy_workflow(workflow: &mut Value, prompt: &str) -> usiz
       .and_then(|value| value.as_str())
       .unwrap_or("")
       .to_string();
-    let Some(inputs) = node_obj.get_mut("inputs").and_then(|value| value.as_object_mut()) else {
+    let Some(inputs) = node_obj
+      .get_mut("inputs")
+      .and_then(|value| value.as_object_mut())
+    else {
       continue;
     };
 
@@ -169,7 +174,10 @@ pub(crate) struct SlackSendProof {
 }
 
 #[tauri::command]
-pub(crate) async fn connector_github_action(action: String, payload: Value) -> Result<GithubActionProof, String> {
+pub(crate) async fn connector_github_action(
+  action: String,
+  payload: Value,
+) -> Result<GithubActionProof, String> {
   let sent_at_ms = now_ms();
   let token = std::env::var("GITHUB_TOKEN").unwrap_or_default();
   if token.trim().is_empty() {
@@ -197,8 +205,14 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
     });
   }
 
-  let owner = payload.get("owner").and_then(|value| value.as_str()).unwrap_or("");
-  let repo = payload.get("repo").and_then(|value| value.as_str()).unwrap_or("");
+  let owner = payload
+    .get("owner")
+    .and_then(|value| value.as_str())
+    .unwrap_or("");
+  let repo = payload
+    .get("repo")
+    .and_then(|value| value.as_str())
+    .unwrap_or("");
 
   let client = reqwest::Client::builder()
     .timeout(Duration::from_secs(30))
@@ -224,7 +238,11 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
         "body": payload.get("body"),
         "labels": payload.get("labels"),
       });
-      ("POST", format!("https://api.github.com/repos/{owner}/{repo}/issues"), issue_payload)
+      (
+        "POST",
+        format!("https://api.github.com/repos/{owner}/{repo}/issues"),
+        issue_payload,
+      )
     }
     "dispatch_workflow" => {
       if owner.is_empty() || repo.is_empty() {
@@ -238,7 +256,10 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
           error: Some("payload must include owner and repo.".to_string()),
         });
       }
-      let workflow_id = payload.get("workflow_id").and_then(|value| value.as_str()).unwrap_or("");
+      let workflow_id = payload
+        .get("workflow_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
       if workflow_id.is_empty() {
         return Ok(GithubActionProof {
           ok: false,
@@ -250,12 +271,21 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
           error: Some("payload must include workflow_id.".to_string()),
         });
       }
-      let ref_name = payload.get("ref").and_then(|value| value.as_str()).unwrap_or("main");
+      let ref_name = payload
+        .get("ref")
+        .and_then(|value| value.as_str())
+        .unwrap_or("main");
       let dispatch_payload = serde_json::json!({
         "ref": ref_name,
         "inputs": payload.get("inputs"),
       });
-      ("POST", format!("https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches"), dispatch_payload)
+      (
+        "POST",
+        format!(
+          "https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches"
+        ),
+        dispatch_payload,
+      )
     }
     "create_pr" => {
       if owner.is_empty() || repo.is_empty() {
@@ -275,7 +305,11 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
         "base": payload.get("base").and_then(|value| value.as_str()).unwrap_or("main"),
         "body": payload.get("body"),
       });
-      ("POST", format!("https://api.github.com/repos/{owner}/{repo}/pulls"), pr_payload)
+      (
+        "POST",
+        format!("https://api.github.com/repos/{owner}/{repo}/pulls"),
+        pr_payload,
+      )
     }
     "get_repo" => {
       if owner.is_empty() || repo.is_empty() {
@@ -289,7 +323,11 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
           error: Some("payload must include owner and repo.".to_string()),
         });
       }
-      ("GET", format!("https://api.github.com/repos/{owner}/{repo}"), Value::Null)
+      (
+        "GET",
+        format!("https://api.github.com/repos/{owner}/{repo}"),
+        Value::Null,
+      )
     }
     "list_issues" => {
       if owner.is_empty() || repo.is_empty() {
@@ -303,8 +341,15 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
           error: Some("payload must include owner and repo.".to_string()),
         });
       }
-      let state = payload.get("state").and_then(|value| value.as_str()).unwrap_or("open");
-      ("GET", format!("https://api.github.com/repos/{owner}/{repo}/issues?state={state}&per_page=20"), Value::Null)
+      let state = payload
+        .get("state")
+        .and_then(|value| value.as_str())
+        .unwrap_or("open");
+      (
+        "GET",
+        format!("https://api.github.com/repos/{owner}/{repo}/issues?state={state}&per_page=20"),
+        Value::Null,
+      )
     }
     _ => {
       return Ok(GithubActionProof {
@@ -362,7 +407,11 @@ pub(crate) async fn connector_github_action(action: String, payload: Value) -> R
 }
 
 #[tauri::command]
-pub(crate) async fn connector_slack_send(channel: String, text: String, thread_ts: Option<String>) -> Result<SlackSendProof, String> {
+pub(crate) async fn connector_slack_send(
+  channel: String,
+  text: String,
+  thread_ts: Option<String>,
+) -> Result<SlackSendProof, String> {
   let sent_at_ms = now_ms();
   let token = std::env::var("SLACK_BOT_TOKEN").unwrap_or_default();
   if token.trim().is_empty() {
@@ -416,8 +465,14 @@ pub(crate) async fn connector_slack_send(channel: String, text: String, thread_t
   let http_status = response.status().as_u16();
   let body: Value = response.json().await.map_err(|error| error.to_string())?;
 
-  let slack_ok = body.get("ok").and_then(|value| value.as_bool()).unwrap_or(false);
-  let ts = body.get("ts").and_then(|value| value.as_str()).map(|value| value.to_string());
+  let slack_ok = body
+    .get("ok")
+    .and_then(|value| value.as_bool())
+    .unwrap_or(false);
+  let ts = body
+    .get("ts")
+    .and_then(|value| value.as_str())
+    .map(|value| value.to_string());
 
   if http_status >= 400 || !slack_ok {
     let error_message = body
@@ -445,7 +500,10 @@ pub(crate) async fn connector_slack_send(channel: String, text: String, thread_t
 }
 
 #[tauri::command]
-pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<ConnectorSendProof, String> {
+pub(crate) async fn connector_send_whatsapp(
+  to: String,
+  text: String,
+) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
   let provider = std::env::var("WHATSAPP_PROVIDER")
     .map(|value| value.trim().to_ascii_lowercase())
@@ -474,7 +532,10 @@ pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<
     let account_sid = std::env::var("WHATSAPP_TWILIO_ACCOUNT_SID").unwrap_or_default();
     let auth_token = std::env::var("WHATSAPP_TWILIO_AUTH_TOKEN").unwrap_or_default();
     let from_number = std::env::var("WHATSAPP_TWILIO_FROM").unwrap_or_default();
-    if account_sid.trim().is_empty() || auth_token.trim().is_empty() || from_number.trim().is_empty() {
+    if account_sid.trim().is_empty()
+      || auth_token.trim().is_empty()
+      || from_number.trim().is_empty()
+    {
       return Ok(ConnectorSendProof {
         connector_id: "whatsapp".to_string(),
         ok: false,
@@ -486,8 +547,15 @@ pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<
       });
     }
 
-    let endpoint = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", account_sid.trim());
-    let formatted_to = if clean_to.starts_with("whatsapp:") { clean_to.clone() } else { format!("whatsapp:{clean_to}") };
+    let endpoint = format!(
+      "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
+      account_sid.trim()
+    );
+    let formatted_to = if clean_to.starts_with("whatsapp:") {
+      clean_to.clone()
+    } else {
+      format!("whatsapp:{clean_to}")
+    };
     let formatted_from = if from_number.trim().starts_with("whatsapp:") {
       from_number.trim().to_string()
     } else {
@@ -523,7 +591,10 @@ pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<
         error: Some(error_message.to_string()),
       });
     }
-    let external_id = body.get("sid").and_then(|value| value.as_str()).map(|value| value.to_string());
+    let external_id = body
+      .get("sid")
+      .and_then(|value| value.as_str())
+      .map(|value| value.to_string());
     return Ok(ConnectorSendProof {
       connector_id: "whatsapp".to_string(),
       ok: true,
@@ -578,7 +649,11 @@ pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<
     return Ok(ConnectorSendProof {
       connector_id: "whatsapp".to_string(),
       ok: false,
-      target: payload.get("to").and_then(|value| value.as_str()).unwrap_or_default().to_string(),
+      target: payload
+        .get("to")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string(),
       external_id: None,
       sent_at_ms,
       trust: "failed".to_string(),
@@ -595,7 +670,11 @@ pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<
   Ok(ConnectorSendProof {
     connector_id: "whatsapp".to_string(),
     ok: true,
-    target: payload.get("to").and_then(|value| value.as_str()).unwrap_or_default().to_string(),
+    target: payload
+      .get("to")
+      .and_then(|value| value.as_str())
+      .unwrap_or_default()
+      .to_string(),
     external_id,
     sent_at_ms,
     trust: "verified".to_string(),
@@ -604,7 +683,11 @@ pub(crate) async fn connector_send_whatsapp(to: String, text: String) -> Result<
 }
 
 #[tauri::command]
-pub(crate) async fn connector_send_notion(title: String, content: String, parent_page_id: Option<String>) -> Result<ConnectorSendProof, String> {
+pub(crate) async fn connector_send_notion(
+  title: String,
+  content: String,
+  parent_page_id: Option<String>,
+) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
   let token = std::env::var("NOTION_API_KEY").unwrap_or_default();
   if token.trim().is_empty() {
@@ -634,10 +717,7 @@ pub(crate) async fn connector_send_notion(title: String, content: String, parent
   }
 
   let env_parent = std::env::var("NOTION_PARENT_PAGE_ID").unwrap_or_default();
-  let target_parent = parent_page_id
-    .unwrap_or_default()
-    .trim()
-    .to_string();
+  let target_parent = parent_page_id.unwrap_or_default().trim().to_string();
   let parent = if !target_parent.is_empty() {
     target_parent
   } else {
@@ -651,7 +731,9 @@ pub(crate) async fn connector_send_notion(title: String, content: String, parent
       external_id: None,
       sent_at_ms,
       trust: "unverified".to_string(),
-      error: Some("NOTION_PARENT_PAGE_ID is missing and no parent_page_id override was provided.".to_string()),
+      error: Some(
+        "NOTION_PARENT_PAGE_ID is missing and no parent_page_id override was provided.".to_string(),
+      ),
     });
   }
 
@@ -716,7 +798,10 @@ pub(crate) async fn connector_send_notion(title: String, content: String, parent
     });
   }
 
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
+  let external_id = body
+    .get("id")
+    .and_then(|value| value.as_str())
+    .map(|value| value.to_string());
   Ok(ConnectorSendProof {
     connector_id: "notion".to_string(),
     ok: true,
@@ -729,7 +814,11 @@ pub(crate) async fn connector_send_notion(title: String, content: String, parent
 }
 
 #[tauri::command]
-pub(crate) async fn connector_send_clickup(title: String, content: String, list_id: Option<String>) -> Result<ConnectorSendProof, String> {
+pub(crate) async fn connector_send_clickup(
+  title: String,
+  content: String,
+  list_id: Option<String>,
+) -> Result<ConnectorSendProof, String> {
   let sent_at_ms = now_ms();
   let token = std::env::var("CLICKUP_API_KEY").unwrap_or_default();
   if token.trim().is_empty() {
@@ -760,7 +849,11 @@ pub(crate) async fn connector_send_clickup(title: String, content: String, list_
 
   let env_list = std::env::var("CLICKUP_LIST_ID").unwrap_or_default();
   let target_list = list_id.unwrap_or_default().trim().to_string();
-  let effective_list = if !target_list.is_empty() { target_list } else { env_list.trim().to_string() };
+  let effective_list = if !target_list.is_empty() {
+    target_list
+  } else {
+    env_list.trim().to_string()
+  };
   if effective_list.is_empty() {
     return Ok(ConnectorSendProof {
       connector_id: "clickup".to_string(),
@@ -779,7 +872,10 @@ pub(crate) async fn connector_send_clickup(title: String, content: String, list_
     .build()
     .map_err(|error| error.to_string())?;
 
-  let endpoint = format!("https://api.clickup.com/api/v2/list/{}/task", effective_list);
+  let endpoint = format!(
+    "https://api.clickup.com/api/v2/list/{}/task",
+    effective_list
+  );
   let payload = serde_json::json!({
     "name": clean_title,
     "description": if clean_content.is_empty() { "Created by Alphonso connector." } else { clean_content.as_str() },
@@ -813,7 +909,10 @@ pub(crate) async fn connector_send_clickup(title: String, content: String, list_
     });
   }
 
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
+  let external_id = body
+    .get("id")
+    .and_then(|value| value.as_str())
+    .map(|value| value.to_string());
   Ok(ConnectorSendProof {
     connector_id: "clickup".to_string(),
     ok: true,
@@ -858,7 +957,9 @@ pub(crate) async fn tool_connection_post_webhook(
       response_preview: None,
       sent_at_ms,
       trust: "failed".to_string(),
-      error: Some("Webhook URLs must use https or localhost/http loopback for local testing.".to_string()),
+      error: Some(
+        "Webhook URLs must use https or localhost/http loopback for local testing.".to_string(),
+      ),
     });
   }
 
@@ -913,7 +1014,9 @@ pub(crate) async fn tool_connection_post_webhook(
 }
 
 #[tauri::command]
-pub(crate) async fn connector_poll_whatsapp(limit: Option<u16>) -> Result<ConnectorPollProof, String> {
+pub(crate) async fn connector_poll_whatsapp(
+  limit: Option<u16>,
+) -> Result<ConnectorPollProof, String> {
   let checked_at_ms = now_ms();
   let provider = std::env::var("WHATSAPP_PROVIDER")
     .map(|value| value.trim().to_ascii_lowercase())
@@ -934,7 +1037,8 @@ pub(crate) async fn connector_poll_whatsapp(limit: Option<u16>) -> Result<Connec
   let account_sid = std::env::var("WHATSAPP_TWILIO_ACCOUNT_SID").unwrap_or_default();
   let auth_token = std::env::var("WHATSAPP_TWILIO_AUTH_TOKEN").unwrap_or_default();
   let from_number = std::env::var("WHATSAPP_TWILIO_FROM").unwrap_or_default();
-  if account_sid.trim().is_empty() || auth_token.trim().is_empty() || from_number.trim().is_empty() {
+  if account_sid.trim().is_empty() || auth_token.trim().is_empty() || from_number.trim().is_empty()
+  {
     return Ok(ConnectorPollProof {
       connector_id: "whatsapp".to_string(),
       ok: false,
@@ -996,20 +1100,39 @@ pub(crate) async fn connector_poll_whatsapp(limit: Option<u16>) -> Result<Connec
   let mut messages: Vec<ConnectorInboundMessage> = vec![];
   if let Some(rows) = body.get("messages").and_then(|value| value.as_array()) {
     for row in rows {
-      let direction = row.get("direction").and_then(|value| value.as_str()).unwrap_or("");
+      let direction = row
+        .get("direction")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
       if direction != "inbound" {
         continue;
       }
-      let from = row.get("from").and_then(|value| value.as_str()).unwrap_or("").to_string();
-      let to = row.get("to").and_then(|value| value.as_str()).unwrap_or("").to_string();
+      let from = row
+        .get("from")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+      let to = row
+        .get("to")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
       if to != formatted_from {
         continue;
       }
-      let text = row.get("body").and_then(|value| value.as_str()).unwrap_or("").trim().to_string();
+      let text = row
+        .get("body")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
       if text.is_empty() {
         continue;
       }
-      let sid = row.get("sid").and_then(|value| value.as_str()).unwrap_or("0");
+      let sid = row
+        .get("sid")
+        .and_then(|value| value.as_str())
+        .unwrap_or("0");
       messages.push(ConnectorInboundMessage {
         update_id: 0,
         chat_id: from.clone(),
@@ -1071,7 +1194,8 @@ pub(crate) async fn connector_send_chatgpt(
     });
   }
 
-  let model = std::env::var("OPENAI_CONNECTOR_MODEL").unwrap_or_else(|_| "gpt-4.1-mini".to_string());
+  let model =
+    std::env::var("OPENAI_CONNECTOR_MODEL").unwrap_or_else(|_| "gpt-4.1-mini".to_string());
   let client = http_client.inner();
   let payload = serde_json::json!({
     "model": model,
@@ -1103,7 +1227,10 @@ pub(crate) async fn connector_send_chatgpt(
       error: Some(message.to_string()),
     });
   }
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
+  let external_id = body
+    .get("id")
+    .and_then(|value| value.as_str())
+    .map(|value| value.to_string());
   Ok(ConnectorSendProof {
     connector_id: "chatgpt".to_string(),
     ok: true,
@@ -1147,7 +1274,8 @@ pub(crate) async fn connector_send_claude(
     });
   }
 
-  let model = std::env::var("CLAUDE_CONNECTOR_MODEL").unwrap_or_else(|_| "claude-3-5-sonnet-latest".to_string());
+  let model = std::env::var("CLAUDE_CONNECTOR_MODEL")
+    .unwrap_or_else(|_| "claude-3-5-sonnet-latest".to_string());
   let client = http_client.inner();
   let payload = serde_json::json!({
     "model": model,
@@ -1183,7 +1311,10 @@ pub(crate) async fn connector_send_claude(
       error: Some(message.to_string()),
     });
   }
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
+  let external_id = body
+    .get("id")
+    .and_then(|value| value.as_str())
+    .map(|value| value.to_string());
   Ok(ConnectorSendProof {
     connector_id: "claude".to_string(),
     ok: true,
@@ -1267,7 +1398,10 @@ pub(crate) async fn connector_send_qwen(
       error: Some(message.to_string()),
     });
   }
-  let external_id = body.get("id").and_then(|value| value.as_str()).map(|value| value.to_string());
+  let external_id = body
+    .get("id")
+    .and_then(|value| value.as_str())
+    .map(|value| value.to_string());
   Ok(ConnectorSendProof {
     connector_id: "qwen".to_string(),
     ok: true,
@@ -1409,7 +1543,9 @@ pub(crate) async fn connector_generate_sdwebui_image(
 }
 
 #[tauri::command]
-pub(crate) async fn connector_check_local_runtime_health(connector_id: String) -> Result<LocalRuntimeHealthProof, String> {
+pub(crate) async fn connector_check_local_runtime_health(
+  connector_id: String,
+) -> Result<LocalRuntimeHealthProof, String> {
   let clean_id = connector_id.trim();
   match clean_id {
     "sd_webui" => {
@@ -1551,7 +1687,9 @@ pub(crate) async fn connector_queue_comfyui_video(
 }
 
 #[tauri::command]
-pub(crate) async fn connector_get_comfyui_history(prompt_id: String) -> Result<MediaGenerationProof, String> {
+pub(crate) async fn connector_get_comfyui_history(
+  prompt_id: String,
+) -> Result<MediaGenerationProof, String> {
   let queued_at_ms = now_ms();
   let clean_id = prompt_id.trim().to_string();
   if clean_id.is_empty() {
@@ -1618,13 +1756,25 @@ pub(crate) async fn connector_get_comfyui_history(prompt_id: String) -> Result<M
   }
 
   let mut output_paths: Vec<String> = vec![];
-  if let Some(outputs) = history_entry.get("outputs").and_then(|value| value.as_object()) {
+  if let Some(outputs) = history_entry
+    .get("outputs")
+    .and_then(|value| value.as_object())
+  {
     for node_output in outputs.values() {
       if let Some(images) = node_output.get("images").and_then(|value| value.as_array()) {
         for image in images {
-          let filename = image.get("filename").and_then(|value| value.as_str()).unwrap_or("");
-          let subfolder = image.get("subfolder").and_then(|value| value.as_str()).unwrap_or("");
-          let file_type = image.get("type").and_then(|value| value.as_str()).unwrap_or("output");
+          let filename = image
+            .get("filename")
+            .and_then(|value| value.as_str())
+            .unwrap_or("");
+          let subfolder = image
+            .get("subfolder")
+            .and_then(|value| value.as_str())
+            .unwrap_or("");
+          let file_type = image
+            .get("type")
+            .and_then(|value| value.as_str())
+            .unwrap_or("output");
           if filename.is_empty() {
             continue;
           }
@@ -1647,7 +1797,10 @@ pub(crate) async fn connector_get_comfyui_history(prompt_id: String) -> Result<M
     message: if output_paths.is_empty() {
       "ComfyUI history loaded. No output files listed yet.".to_string()
     } else {
-      format!("ComfyUI history loaded. {} output file(s) detected.", output_paths.len())
+      format!(
+        "ComfyUI history loaded. {} output file(s) detected.",
+        output_paths.len()
+      )
     },
     error: None,
   })
@@ -1752,7 +1905,9 @@ mod tests {
       std::env::remove_var("GITHUB_TOKEN");
       std::env::set_var("GITHUB_TOKEN", "test-token");
       let payload = serde_json::json!({});
-      let result = runtime.block_on(connector_github_action("".to_string(), payload)).unwrap();
+      let result = runtime
+        .block_on(connector_github_action("".to_string(), payload))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
       assert!(result.error.unwrap().contains("action is required"));
@@ -1766,7 +1921,9 @@ mod tests {
       std::env::remove_var("GITHUB_TOKEN");
       std::env::set_var("GITHUB_TOKEN", "test-token");
       let payload = serde_json::json!({});
-      let result = runtime.block_on(connector_github_action("fly_to_mars".to_string(), payload)).unwrap();
+      let result = runtime
+        .block_on(connector_github_action("fly_to_mars".to_string(), payload))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
       let error = result.error.unwrap();
@@ -1785,10 +1942,15 @@ mod tests {
         "title": "Test issue",
         "body": "Description"
       });
-      let result = runtime.block_on(connector_github_action("create_issue".to_string(), payload)).unwrap();
+      let result = runtime
+        .block_on(connector_github_action("create_issue".to_string(), payload))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
-      assert!(result.error.unwrap().contains("payload must include owner and repo"));
+      assert!(result
+        .error
+        .unwrap()
+        .contains("payload must include owner and repo"));
       std::env::remove_var("GITHUB_TOKEN");
     });
   }
@@ -1802,10 +1964,18 @@ mod tests {
         "owner": "test-owner",
         "repo": "test-repo"
       });
-      let result = runtime.block_on(connector_github_action("dispatch_workflow".to_string(), payload)).unwrap();
+      let result = runtime
+        .block_on(connector_github_action(
+          "dispatch_workflow".to_string(),
+          payload,
+        ))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
-      assert!(result.error.unwrap().contains("payload must include workflow_id"));
+      assert!(result
+        .error
+        .unwrap()
+        .contains("payload must include workflow_id"));
       std::env::remove_var("GITHUB_TOKEN");
     });
   }
@@ -1815,10 +1985,19 @@ mod tests {
     run_with_env(|runtime| {
       std::env::remove_var("SLACK_BOT_TOKEN");
       std::env::set_var("SLACK_BOT_TOKEN", "test-token");
-      let result = runtime.block_on(connector_slack_send("".to_string(), "hello".to_string(), None)).unwrap();
+      let result = runtime
+        .block_on(connector_slack_send(
+          "".to_string(),
+          "hello".to_string(),
+          None,
+        ))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
-      assert!(result.error.unwrap().contains("channel and text are required"));
+      assert!(result
+        .error
+        .unwrap()
+        .contains("channel and text are required"));
       std::env::remove_var("SLACK_BOT_TOKEN");
     });
   }
@@ -1828,10 +2007,19 @@ mod tests {
     run_with_env(|runtime| {
       std::env::remove_var("SLACK_BOT_TOKEN");
       std::env::set_var("SLACK_BOT_TOKEN", "test-token");
-      let result = runtime.block_on(connector_slack_send("C012345".to_string(), "".to_string(), None)).unwrap();
+      let result = runtime
+        .block_on(connector_slack_send(
+          "C012345".to_string(),
+          "".to_string(),
+          None,
+        ))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "failed");
-      assert!(result.error.unwrap().contains("channel and text are required"));
+      assert!(result
+        .error
+        .unwrap()
+        .contains("channel and text are required"));
       std::env::remove_var("SLACK_BOT_TOKEN");
     });
   }
@@ -1841,10 +2029,15 @@ mod tests {
     run_with_env(|runtime| {
       std::env::remove_var("GITHUB_TOKEN");
       let payload = serde_json::json!({});
-      let result = runtime.block_on(connector_github_action("get_repo".to_string(), payload)).unwrap();
+      let result = runtime
+        .block_on(connector_github_action("get_repo".to_string(), payload))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "unverified");
-      assert!(result.error.unwrap().contains("GITHUB_TOKEN is not configured"));
+      assert!(result
+        .error
+        .unwrap()
+        .contains("GITHUB_TOKEN is not configured"));
     });
   }
 
@@ -1852,10 +2045,19 @@ mod tests {
   fn connector_slack_send_reports_missing_token() {
     run_with_env(|runtime| {
       std::env::remove_var("SLACK_BOT_TOKEN");
-      let result = runtime.block_on(connector_slack_send("C012345".to_string(), "hello".to_string(), None)).unwrap();
+      let result = runtime
+        .block_on(connector_slack_send(
+          "C012345".to_string(),
+          "hello".to_string(),
+          None,
+        ))
+        .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "unverified");
-      assert!(result.error.unwrap().contains("SLACK_BOT_TOKEN is not configured"));
+      assert!(result
+        .error
+        .unwrap()
+        .contains("SLACK_BOT_TOKEN is not configured"));
     });
   }
 }

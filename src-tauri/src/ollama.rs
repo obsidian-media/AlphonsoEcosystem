@@ -48,7 +48,9 @@ pub(crate) struct OllamaGenerateProof {
 }
 
 #[tauri::command]
-pub(crate) async fn check_ollama_runtime(endpoint: Option<String>) -> Result<OllamaRuntimeProof, String> {
+pub(crate) async fn check_ollama_runtime(
+  endpoint: Option<String>,
+) -> Result<OllamaRuntimeProof, String> {
   let base = endpoint
     .unwrap_or_else(|| "http://localhost:11434".to_string())
     .trim_end_matches('/')
@@ -128,7 +130,9 @@ pub(crate) async fn check_ollama_runtime(endpoint: Option<String>) -> Result<Oll
 }
 
 #[tauri::command]
-pub(crate) async fn ollama_list_models(endpoint: Option<String>) -> Result<OllamaModelsProof, String> {
+pub(crate) async fn ollama_list_models(
+  endpoint: Option<String>,
+) -> Result<OllamaModelsProof, String> {
   let base = endpoint
     .unwrap_or_else(|| "http://localhost:11434".to_string())
     .trim_end_matches('/')
@@ -169,8 +173,14 @@ pub(crate) async fn ollama_list_models(endpoint: Option<String>) -> Result<Ollam
             .filter_map(|item| {
               let name = item.get("name").and_then(Value::as_str)?.to_string();
               let size = item.get("size").and_then(Value::as_i64);
-              let modified_at = item.get("modified_at").and_then(Value::as_str).map(str::to_string);
-              let digest = item.get("digest").and_then(Value::as_str).map(str::to_string);
+              let modified_at = item
+                .get("modified_at")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+              let digest = item
+                .get("digest")
+                .and_then(Value::as_str)
+                .map(str::to_string);
               let details = item.get("details").cloned();
               Some(OllamaModelInfo {
                 name,
@@ -197,7 +207,11 @@ pub(crate) async fn ollama_list_models(endpoint: Option<String>) -> Result<Ollam
       http_status: None,
       models: vec![],
       trust: "failed".to_string(),
-      reason: Some(if error.is_timeout() { "Request timeout".to_string() } else { error.to_string() }),
+      reason: Some(if error.is_timeout() {
+        "Request timeout".to_string()
+      } else {
+        error.to_string()
+      }),
     }),
   }
 }
@@ -257,7 +271,11 @@ pub(crate) async fn ollama_generate(
         model,
         response: response_text,
         done,
-        trust: if success { "verified".to_string() } else { "failed".to_string() },
+        trust: if success {
+          "verified".to_string()
+        } else {
+          "failed".to_string()
+        },
         error: if success {
           None
         } else {
@@ -272,7 +290,11 @@ pub(crate) async fn ollama_generate(
       response: String::new(),
       done: false,
       trust: "failed".to_string(),
-      error: Some(if error.is_timeout() { "Request timeout".to_string() } else { error.to_string() }),
+      error: Some(if error.is_timeout() {
+        "Request timeout".to_string()
+      } else {
+        error.to_string()
+      }),
     }),
   }
 }

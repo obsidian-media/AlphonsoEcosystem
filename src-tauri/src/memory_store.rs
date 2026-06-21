@@ -145,12 +145,15 @@ fn memory_db_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> 
   Ok(dir)
 }
 
-pub(crate) fn open_memory_db(app: &tauri::AppHandle) -> Result<(Connection, std::path::PathBuf), String> {
+pub(crate) fn open_memory_db(
+  app: &tauri::AppHandle,
+) -> Result<(Connection, std::path::PathBuf), String> {
   let path = memory_db_path(app)?;
   let conn = Connection::open(&path).map_err(|error| error.to_string())?;
   // WAL mode: allows concurrent reads during writes, prevents UI freeze on memory writes.
   // PRAGMA synchronous=NORMAL is safe with WAL and gives a solid durability/performance balance.
-  conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-65536;")
+  conn
+    .execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-65536;")
     .map_err(|error| format!("WAL pragma failed: {}", error))?;
   initialize_memory_schema(&conn)?;
   Ok((conn, path))
@@ -413,7 +416,9 @@ pub(crate) fn get_memory_store_status(app: tauri::AppHandle) -> MemoryStoreStatu
   match open_memory_db(&app) {
     Ok((conn, path)) => {
       let record_count = conn
-        .query_row("SELECT COUNT(*) FROM memory_records", [], |row| row.get::<_, i64>(0))
+        .query_row("SELECT COUNT(*) FROM memory_records", [], |row| {
+          row.get::<_, i64>(0)
+        })
         .unwrap_or(0)
         .max(0) as u64;
       let expired_count = conn
@@ -451,7 +456,10 @@ pub(crate) fn get_memory_store_status(app: tauri::AppHandle) -> MemoryStoreStatu
 }
 
 #[tauri::command]
-pub(crate) fn upsert_memory_records(app: tauri::AppHandle, records: Vec<MemoryRecord>) -> Result<MemoryWriteProof, String> {
+pub(crate) fn upsert_memory_records(
+  app: tauri::AppHandle,
+  records: Vec<MemoryRecord>,
+) -> Result<MemoryWriteProof, String> {
   let written_at_ms = crate::now_ms();
   let (mut conn, path) = open_memory_db(&app)?;
   let tx = conn.transaction().map_err(|error| error.to_string())?;
@@ -498,7 +506,10 @@ pub(crate) fn upsert_memory_records(app: tauri::AppHandle, records: Vec<MemoryRe
 }
 
 #[tauri::command]
-pub(crate) fn list_memory_records(app: tauri::AppHandle, filters: Option<MemoryListFilters>) -> Result<Vec<MemoryRecord>, String> {
+pub(crate) fn list_memory_records(
+  app: tauri::AppHandle,
+  filters: Option<MemoryListFilters>,
+) -> Result<Vec<MemoryRecord>, String> {
   let (conn, _) = open_memory_db(&app)?;
   let mut stmt = conn
     .prepare(
@@ -512,7 +523,9 @@ pub(crate) fn list_memory_records(app: tauri::AppHandle, filters: Option<MemoryL
     )
     .map_err(|error| error.to_string())?;
 
-  let rows = stmt.query_map([], row_to_memory).map_err(|error| error.to_string())?;
+  let rows = stmt
+    .query_map([], row_to_memory)
+    .map_err(|error| error.to_string())?;
   let filters = filters.unwrap_or(MemoryListFilters {
     category: None,
     source_agent: None,
@@ -534,13 +547,21 @@ pub(crate) fn list_memory_records(app: tauri::AppHandle, filters: Option<MemoryL
       }
     }
     if let Some(confidence) = &filters.confidence {
-      if confidence != "all" && &record.confidence != confidence && &record.verification_state != confidence {
+      if confidence != "all"
+        && &record.confidence != confidence
+        && &record.verification_state != confidence
+      {
         continue;
       }
     }
     if let Some(project_reference) = &filters.project_reference {
       if !project_reference.trim().is_empty()
-        && !record.project_reference.clone().unwrap_or_default().to_ascii_lowercase().contains(&project_reference.to_ascii_lowercase())
+        && !record
+          .project_reference
+          .clone()
+          .unwrap_or_default()
+          .to_ascii_lowercase()
+          .contains(&project_reference.to_ascii_lowercase())
       {
         continue;
       }
@@ -639,7 +660,10 @@ pub(crate) enum EventInsertOutcome {
   Deduped,
 }
 
-pub(crate) fn insert_event(conn: &mut Connection, event: &EventRecord) -> Result<EventInsertOutcome, String> {
+pub(crate) fn insert_event(
+  conn: &mut Connection,
+  event: &EventRecord,
+) -> Result<EventInsertOutcome, String> {
   let payload_json = serde_json::to_string(&event.payload).map_err(|error| error.to_string())?;
   let occurred_at_ms = event.occurred_at_ms as i64;
   let recorded_at_ms = crate::now_ms() as i64;
@@ -724,7 +748,7 @@ pub(crate) fn list_events(conn: &Connection, filters: &EventListFilters) -> Vec<
   let mut sql = String::from(
     "SELECT id, event_type, source, subject_kind, subject_id, outcome, payload_json, \
             dedup_key, occurred_at_ms, recorded_at_ms, correlation_id, trust \
-     FROM events WHERE 1=1"
+     FROM events WHERE 1=1",
   );
   let mut binds: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
   if let Some(et) = &filters.event_type {
@@ -787,7 +811,7 @@ pub(crate) fn list_event_dedup(conn: &Connection, limit: u32) -> Vec<EventDedupR
   let mut stmt = match conn.prepare(
     "SELECT dedup_key, first_event_id, first_occurred_at_ms, occurrence_count, \
             last_occurred_at_ms, last_outcome, last_event_type, last_source \
-     FROM event_dedup ORDER BY last_occurred_at_ms DESC LIMIT ?1"
+     FROM event_dedup ORDER BY last_occurred_at_ms DESC LIMIT ?1",
   ) {
     Ok(stmt) => stmt,
     Err(_) => return Vec::new(),
@@ -801,19 +825,27 @@ pub(crate) fn list_event_dedup(conn: &Connection, limit: u32) -> Vec<EventDedupR
 
 pub(crate) fn compute_event_status(conn: &Connection) -> EventStoreStatus {
   let event_count: u64 = conn
-    .query_row("SELECT COUNT(*) FROM events", [], |row| row.get::<_, i64>(0))
+    .query_row("SELECT COUNT(*) FROM events", [], |row| {
+      row.get::<_, i64>(0)
+    })
     .unwrap_or(0)
     .max(0) as u64;
   let dedup_count: u64 = conn
-    .query_row("SELECT COUNT(*) FROM event_dedup", [], |row| row.get::<_, i64>(0))
+    .query_row("SELECT COUNT(*) FROM event_dedup", [], |row| {
+      row.get::<_, i64>(0)
+    })
     .unwrap_or(0)
     .max(0) as u64;
   let unique_event_types: u64 = conn
-    .query_row("SELECT COUNT(DISTINCT event_type) FROM events", [], |row| row.get::<_, i64>(0))
+    .query_row("SELECT COUNT(DISTINCT event_type) FROM events", [], |row| {
+      row.get::<_, i64>(0)
+    })
     .unwrap_or(0)
     .max(0) as u64;
   let last_event_at_ms: Option<i64> = conn
-    .query_row("SELECT MAX(occurred_at_ms) FROM events", [], |row| row.get(0))
+    .query_row("SELECT MAX(occurred_at_ms) FROM events", [], |row| {
+      row.get(0)
+    })
     .unwrap_or(None);
   EventStoreStatus {
     available: true,
@@ -831,15 +863,26 @@ pub(crate) fn compute_event_status(conn: &Connection) -> EventStoreStatus {
 }
 
 #[tauri::command]
-pub(crate) fn record_event(app: tauri::AppHandle, event: EventRecord) -> Result<EventWriteProof, String> {
+pub(crate) fn record_event(
+  app: tauri::AppHandle,
+  event: EventRecord,
+) -> Result<EventWriteProof, String> {
   let written_at_ms = crate::now_ms();
   let (mut conn, path) = open_memory_db(&app)?;
   let outcome = insert_event(&mut conn, &event)?;
   drop(conn);
   Ok(EventWriteProof {
     requested: 1,
-    written: if outcome == EventInsertOutcome::Written { 1 } else { 0 },
-    deduped: if outcome == EventInsertOutcome::Deduped { 1 } else { 0 },
+    written: if outcome == EventInsertOutcome::Written {
+      1
+    } else {
+      0
+    },
+    deduped: if outcome == EventInsertOutcome::Deduped {
+      1
+    } else {
+      0
+    },
     storage: "sqlite_events".to_string(),
     path: path.to_string_lossy().to_string(),
     written_at_ms,
@@ -848,13 +891,19 @@ pub(crate) fn record_event(app: tauri::AppHandle, event: EventRecord) -> Result<
 }
 
 #[tauri::command]
-pub(crate) fn list_events_command(app: tauri::AppHandle, filters: Option<EventListFilters>) -> Result<Vec<EventRecord>, String> {
+pub(crate) fn list_events_command(
+  app: tauri::AppHandle,
+  filters: Option<EventListFilters>,
+) -> Result<Vec<EventRecord>, String> {
   let (conn, _) = open_memory_db(&app)?;
   Ok(list_events(&conn, &filters.unwrap_or_default()))
 }
 
 #[tauri::command]
-pub(crate) fn list_event_dedup_command(app: tauri::AppHandle, limit: Option<u32>) -> Result<Vec<EventDedupRow>, String> {
+pub(crate) fn list_event_dedup_command(
+  app: tauri::AppHandle,
+  limit: Option<u32>,
+) -> Result<Vec<EventDedupRow>, String> {
   let (conn, _) = open_memory_db(&app)?;
   Ok(list_event_dedup(&conn, limit.unwrap_or(200)))
 }
@@ -896,7 +945,9 @@ mod tests {
     assert_eq!(version, MEMORY_SCHEMA_VERSION);
 
     let migration_count: i64 = conn
-      .query_row("SELECT COUNT(*) FROM memory_schema_migrations", [], |row| row.get(0))
+      .query_row("SELECT COUNT(*) FROM memory_schema_migrations", [], |row| {
+        row.get(0)
+      })
       .expect("migration count");
     assert_eq!(migration_count, 3);
 
@@ -910,7 +961,11 @@ mod tests {
     // WAL mode is silently ignored on in-memory DBs (they use memory journal),
     // but the execute_batch must not return an error — this confirms the SQL is valid.
     let result = conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;");
-    assert!(result.is_ok(), "WAL pragma should not error on in-memory db: {:?}", result);
+    assert!(
+      result.is_ok(),
+      "WAL pragma should not error on in-memory db: {:?}",
+      result
+    );
   }
 
   fn sample_event(id: &str, dedup_key: &str, occurred_at_ms: u64, outcome: &str) -> EventRecord {
@@ -935,15 +990,27 @@ mod tests {
     initialize_memory_schema(&conn).expect("initialize schema");
 
     // First insertion: writes both events + event_dedup rows.
-    let first = insert_event(&mut conn, &sample_event("evt-1", "ollama.preflight:llama3.2:3b", 1_000, "success")).expect("first insert");
+    let first = insert_event(
+      &mut conn,
+      &sample_event("evt-1", "ollama.preflight:llama3.2:3b", 1_000, "success"),
+    )
+    .expect("first insert");
     assert_eq!(first, EventInsertOutcome::Written);
 
     // Same dedup_key, different id: deduped (no new event row).
-    let second = insert_event(&mut conn, &sample_event("evt-2", "ollama.preflight:llama3.2:3b", 2_000, "success")).expect("second insert");
+    let second = insert_event(
+      &mut conn,
+      &sample_event("evt-2", "ollama.preflight:llama3.2:3b", 2_000, "success"),
+    )
+    .expect("second insert");
     assert_eq!(second, EventInsertOutcome::Deduped);
 
     // Different dedup_key: written again.
-    let third = insert_event(&mut conn, &sample_event("evt-3", "notion.sync.pull:abc123", 3_000, "failure")).expect("third insert");
+    let third = insert_event(
+      &mut conn,
+      &sample_event("evt-3", "notion.sync.pull:abc123", 3_000, "failure"),
+    )
+    .expect("third insert");
     assert_eq!(third, EventInsertOutcome::Written);
 
     let event_count: i64 = conn
@@ -981,7 +1048,10 @@ mod tests {
         |row| row.get(0),
       )
       .expect("first_event_id");
-    assert_eq!(first_event_id, "evt-first", "first_event_id must remain stable across dedupes");
+    assert_eq!(
+      first_event_id, "evt-first",
+      "first_event_id must remain stable across dedupes"
+    );
 
     let last_outcome: String = conn
       .query_row(
@@ -990,7 +1060,10 @@ mod tests {
         |row| row.get(0),
       )
       .expect("last_outcome");
-    assert_eq!(last_outcome, "failure", "last_outcome must reflect the latest call");
+    assert_eq!(
+      last_outcome, "failure",
+      "last_outcome must reflect the latest call"
+    );
   }
 
   #[test]
@@ -1015,22 +1088,31 @@ mod tests {
     c.correlation_id = Some("boot-2".to_string());
     insert_event(&mut conn, &c).expect("c");
 
-    let preflights = list_events(&conn, &EventListFilters {
-      event_type: Some("ollama.preflight".to_string()),
-      ..EventListFilters::default()
-    });
+    let preflights = list_events(
+      &conn,
+      &EventListFilters {
+        event_type: Some("ollama.preflight".to_string()),
+        ..EventListFilters::default()
+      },
+    );
     assert_eq!(preflights.len(), 2);
 
-    let boot1 = list_events(&conn, &EventListFilters {
-      correlation_id: Some("boot-1".to_string()),
-      ..EventListFilters::default()
-    });
+    let boot1 = list_events(
+      &conn,
+      &EventListFilters {
+        correlation_id: Some("boot-1".to_string()),
+        ..EventListFilters::default()
+      },
+    );
     assert_eq!(boot1.len(), 2);
 
-    let blocked = list_events(&conn, &EventListFilters {
-      outcome: Some("blocked".to_string()),
-      ..EventListFilters::default()
-    });
+    let blocked = list_events(
+      &conn,
+      &EventListFilters {
+        outcome: Some("blocked".to_string()),
+        ..EventListFilters::default()
+      },
+    );
     assert_eq!(blocked.len(), 1);
     assert_eq!(blocked[0].id, "c");
   }

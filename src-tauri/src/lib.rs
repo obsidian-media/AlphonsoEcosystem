@@ -4,9 +4,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tauri::{Emitter, Listener, Manager, WindowEvent};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Emitter, Listener, Manager, WindowEvent};
 use tauri_plugin_updater::UpdaterExt;
 
 mod audit_log;
@@ -33,7 +33,9 @@ pub(crate) use connector_commands::*;
 pub(crate) use kv_store::{kv_get, kv_set, load_settings, save_settings};
 pub(crate) use memory_store::*;
 pub(crate) use meta_publish::*;
-pub(crate) use native_proof::{run_native_rc0_proof, start_native_rc0_proof_if_requested, NativeProofStageProof};
+pub(crate) use native_proof::{
+  run_native_rc0_proof, start_native_rc0_proof_if_requested, NativeProofStageProof,
+};
 pub(crate) use ollama::*;
 pub(crate) use plugin_runtime::*;
 pub(crate) use policy_gate::*;
@@ -292,7 +294,10 @@ pub(crate) fn unix_now_iso() -> String {
 }
 
 pub(crate) fn app_data_subdir(app: &tauri::AppHandle, subdir: &str) -> Result<PathBuf, String> {
-  let mut dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+  let mut dir = app
+    .path()
+    .app_data_dir()
+    .map_err(|error| error.to_string())?;
   dir.push(subdir);
   fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
   Ok(dir)
@@ -391,7 +396,11 @@ fn trim_trailing_slashes(raw: &str) -> String {
 }
 
 #[tauri::command]
-fn execute_command_verified(program: String, args: Vec<String>, cwd: Option<String>) -> Result<CommandProof, String> {
+fn execute_command_verified(
+  program: String,
+  args: Vec<String>,
+  cwd: Option<String>,
+) -> Result<CommandProof, String> {
   let started = now_ms();
 
   if !allowed_program(&program) {
@@ -419,7 +428,11 @@ fn execute_command_verified(program: String, args: Vec<String>, cwd: Option<Stri
     exit_code: output.status.code(),
     stdout: String::from_utf8_lossy(&output.stdout).to_string(),
     stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-    trust: if success { "verified".to_string() } else { "failed".to_string() },
+    trust: if success {
+      "verified".to_string()
+    } else {
+      "failed".to_string()
+    },
   })
 }
 
@@ -439,10 +452,17 @@ fn verify_paths(paths: Vec<String>) -> Vec<PathProof> {
       PathProof {
         path,
         exists: metadata.is_some(),
-        is_file: metadata.as_ref().map(|meta| meta.is_file()).unwrap_or(false),
+        is_file: metadata
+          .as_ref()
+          .map(|meta| meta.is_file())
+          .unwrap_or(false),
         is_dir: metadata.as_ref().map(|meta| meta.is_dir()).unwrap_or(false),
         modified_at_ms,
-        trust: if metadata.is_some() { "verified".to_string() } else { "failed".to_string() },
+        trust: if metadata.is_some() {
+          "verified".to_string()
+        } else {
+          "failed".to_string()
+        },
       }
     })
     .collect()
@@ -461,7 +481,11 @@ fn read_runtime_env_value(name: String) -> Result<RuntimeEnvValueProof, String> 
       Ok(RuntimeEnvValueProof {
         name,
         present: !trimmed.is_empty(),
-        value: if trimmed.is_empty() { None } else { Some(trimmed) },
+        value: if trimmed.is_empty() {
+          None
+        } else {
+          Some(trimmed)
+        },
         checked_at_ms,
         trust: "verified".to_string(),
         error: None,
@@ -540,7 +564,8 @@ async fn alphonso_bridge_send_packet(packet: Value) -> Result<Value, String> {
 
   let http_status = response.status().as_u16();
   let response_text = response.text().await.map_err(|error| error.to_string())?;
-  let parsed_response = serde_json::from_str(&response_text).unwrap_or(serde_json::Value::String(response_text));
+  let parsed_response =
+    serde_json::from_str(&response_text).unwrap_or(serde_json::Value::String(response_text));
   let status_proof = alphonso_bridge_status();
   let ok = http_status < 400;
 
@@ -585,7 +610,11 @@ fn check_processes(names: Vec<String>) -> Result<Vec<ProcessProof>, String> {
         query: name,
         running,
         matches,
-        trust: if running { "verified".to_string() } else { "failed".to_string() },
+        trust: if running {
+          "verified".to_string()
+        } else {
+          "failed".to_string()
+        },
       }
     })
     .collect();
@@ -649,7 +678,11 @@ fn parse_tasklist(tasklist_output: &str, query: &str) -> Vec<ProcessMatch> {
 }
 
 #[tauri::command]
-fn record_restore_point(app: tauri::AppHandle, snapshot_id: String, payload: String) -> Result<RestorePointProof, String> {
+fn record_restore_point(
+  app: tauri::AppHandle,
+  snapshot_id: String,
+  payload: String,
+) -> Result<RestorePointProof, String> {
   let dir = app_data_subdir(&app, "recovery")?;
 
   let mut file_path = dir.clone();
@@ -666,7 +699,11 @@ fn record_restore_point(app: tauri::AppHandle, snapshot_id: String, payload: Str
 }
 
 #[tauri::command]
-fn write_handoff_export_file(workspace_root: String, file_name: String, content: String) -> Result<HandoffExportProof, String> {
+fn write_handoff_export_file(
+  workspace_root: String,
+  file_name: String,
+  content: String,
+) -> Result<HandoffExportProof, String> {
   let safe_name = Path::new(file_name.trim())
     .file_name()
     .and_then(|value| value.to_str())
@@ -719,7 +756,9 @@ fn run_ocr_adapter(
       args.push("--version".to_string());
     }
     "tesseract_cli" => {
-      let image = image_path.clone().ok_or_else(|| "Image path is required for tesseract_cli adapter.".to_string())?;
+      let image = image_path
+        .clone()
+        .ok_or_else(|| "Image path is required for tesseract_cli adapter.".to_string())?;
       let image_file = PathBuf::from(&image);
       if !image_file.exists() || !image_file.is_file() {
         return Err("Image path does not exist.".to_string());
@@ -730,7 +769,9 @@ fn run_ocr_adapter(
       args.push("70".to_string());
     }
     _ => {
-      return Err("Unsupported OCR adapter. Supported adapters: version_check, tesseract_cli.".to_string());
+      return Err(
+        "Unsupported OCR adapter. Supported adapters: version_check, tesseract_cli.".to_string(),
+      );
     }
   }
 
@@ -738,7 +779,10 @@ fn run_ocr_adapter(
     args.extend(extra);
   }
 
-  let output = Command::new(&engine_path).args(&args).output().map_err(|error| error.to_string())?;
+  let output = Command::new(&engine_path)
+    .args(&args)
+    .output()
+    .map_err(|error| error.to_string())?;
   let finished = now_ms();
   let success = output.status.success();
 
@@ -752,7 +796,11 @@ fn run_ocr_adapter(
     exit_code: output.status.code(),
     stdout: String::from_utf8_lossy(&output.stdout).to_string(),
     stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-    trust: if success { "verified".to_string() } else { "failed".to_string() },
+    trust: if success {
+      "verified".to_string()
+    } else {
+      "failed".to_string()
+    },
     error: None,
   })
 }
@@ -800,21 +848,68 @@ fn decompose_jose_command_backend(command_text: String) -> Vec<JoseAssignmentPro
   let fragments = split_command_fragments(&lower);
   let mut assignments: Vec<JoseAssignmentProof> = vec![];
 
-  let research = text_has_any(&lower, &["research", "lookup", "docs", "source", "citation", "latest", "pricing", "market"]);
-  let creative = text_has_any(&lower, &["video", "script", "brand", "campaign", "thumbnail", "storyboard", "prompt", "creative"]);
-  let local_execution = text_has_any(&lower, &["build", "runtime", "ollama", "verify", "diagnostic", "fix", "test", "package", "file"]);
-  let publishing = text_has_any(&lower, &["upload", "publish", "post", "youtube", "tiktok", "instagram"]);
-  let risky_local = text_has_any(&lower, &["delete", "remove", "deploy", "write", "modify", "execute"]);
+  let research = text_has_any(
+    &lower,
+    &[
+      "research", "lookup", "docs", "source", "citation", "latest", "pricing", "market",
+    ],
+  );
+  let creative = text_has_any(
+    &lower,
+    &[
+      "video",
+      "script",
+      "brand",
+      "campaign",
+      "thumbnail",
+      "storyboard",
+      "prompt",
+      "creative",
+    ],
+  );
+  let local_execution = text_has_any(
+    &lower,
+    &[
+      "build",
+      "runtime",
+      "ollama",
+      "verify",
+      "diagnostic",
+      "fix",
+      "test",
+      "package",
+      "file",
+    ],
+  );
+  let publishing = text_has_any(
+    &lower,
+    &[
+      "upload",
+      "publish",
+      "post",
+      "youtube",
+      "tiktok",
+      "instagram",
+    ],
+  );
+  let risky_local = text_has_any(
+    &lower,
+    &["delete", "remove", "deploy", "write", "modify", "execute"],
+  );
 
   if research {
     assignments.push(JoseAssignmentProof {
       agent: "hector".to_string(),
-      title: format!("Hector research task: {}", clean.chars().take(64).collect::<String>()),
+      title: format!(
+        "Hector research task: {}",
+        clean.chars().take(64).collect::<String>()
+      ),
       rationale: "Research language detected. Hector should gather and verify sources.".to_string(),
       action_type: "research".to_string(),
       risk_level: "low".to_string(),
       requires_approval: true,
-      command_preview: "Research and citation proof only. No uploads or account actions.".to_string(),
+      command_preview: "Research and citation proof only. No uploads or account actions."
+        .to_string(),
       decomposition: fragments.clone(),
     });
   }
@@ -822,12 +917,17 @@ fn decompose_jose_command_backend(command_text: String) -> Vec<JoseAssignmentPro
   if publishing {
     assignments.push(JoseAssignmentProof {
       agent: "hector".to_string(),
-      title: format!("Hector publish safety check: {}", clean.chars().take(64).collect::<String>()),
-      rationale: "Publishing language detected. Jose approval required before any external action.".to_string(),
+      title: format!(
+        "Hector publish safety check: {}",
+        clean.chars().take(64).collect::<String>()
+      ),
+      rationale: "Publishing language detected. Jose approval required before any external action."
+        .to_string(),
       action_type: "external_publish_handoff".to_string(),
       risk_level: "high".to_string(),
       requires_approval: true,
-      command_preview: "No automatic posting. Requires explicit approval and connector auth.".to_string(),
+      command_preview: "No automatic posting. Requires explicit approval and connector auth."
+        .to_string(),
       decomposition: fragments.clone(),
     });
   }
@@ -835,8 +935,12 @@ fn decompose_jose_command_backend(command_text: String) -> Vec<JoseAssignmentPro
   if creative {
     assignments.push(JoseAssignmentProof {
       agent: "miya".to_string(),
-      title: format!("Miya creative task: {}", clean.chars().take(64).collect::<String>()),
-      rationale: "Creative language detected. Miya produces script/storyboard/prompt packages.".to_string(),
+      title: format!(
+        "Miya creative task: {}",
+        clean.chars().take(64).collect::<String>()
+      ),
+      rationale: "Creative language detected. Miya produces script/storyboard/prompt packages."
+        .to_string(),
       action_type: "creative_package".to_string(),
       risk_level: "low".to_string(),
       requires_approval: true,
@@ -848,10 +952,17 @@ fn decompose_jose_command_backend(command_text: String) -> Vec<JoseAssignmentPro
   if local_execution {
     assignments.push(JoseAssignmentProof {
       agent: "alphonso".to_string(),
-      title: format!("Alphonso operator task: {}", clean.chars().take(64).collect::<String>()),
+      title: format!(
+        "Alphonso operator task: {}",
+        clean.chars().take(64).collect::<String>()
+      ),
       rationale: "Runtime/build/verification language detected.".to_string(),
       action_type: "local_operation".to_string(),
-      risk_level: if risky_local { "high".to_string() } else { "medium".to_string() },
+      risk_level: if risky_local {
+        "high".to_string()
+      } else {
+        "medium".to_string()
+      },
       requires_approval: true,
       command_preview: if risky_local {
         "Potential local/system action. Explicit approval required.".to_string()
@@ -865,7 +976,10 @@ fn decompose_jose_command_backend(command_text: String) -> Vec<JoseAssignmentPro
   if assignments.is_empty() {
     assignments.push(JoseAssignmentProof {
       agent: "jose".to_string(),
-      title: format!("Jose planning task: {}", clean.chars().take(64).collect::<String>()),
+      title: format!(
+        "Jose planning task: {}",
+        clean.chars().take(64).collect::<String>()
+      ),
       rationale: "No specialist match detected.".to_string(),
       action_type: "orchestration_review".to_string(),
       risk_level: "low".to_string(),
@@ -1026,7 +1140,8 @@ async fn check_app_update(
 #[tauri::command]
 fn send_app_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
   use tauri_plugin_notification::NotificationExt;
-  app.notification()
+  app
+    .notification()
     .builder()
     .title(&title)
     .body(&body)
@@ -1040,11 +1155,20 @@ fn open_url(url: String) -> Result<UrlOpenProof, String> {
     return Err("URL must start with http:// or https://".to_string());
   }
   if cfg!(target_os = "windows") {
-    Command::new("cmd").args(["/C", "start", &url]).spawn().map_err(|e| e.to_string())?;
+    Command::new("cmd")
+      .args(["/C", "start", &url])
+      .spawn()
+      .map_err(|e| e.to_string())?;
   } else if cfg!(target_os = "macos") {
-    Command::new("open").arg(&url).spawn().map_err(|e| e.to_string())?;
+    Command::new("open")
+      .arg(&url)
+      .spawn()
+      .map_err(|e| e.to_string())?;
   } else {
-    Command::new("xdg-open").arg(&url).spawn().map_err(|e| e.to_string())?;
+    Command::new("xdg-open")
+      .arg(&url)
+      .spawn()
+      .map_err(|e| e.to_string())?;
   }
   Ok(UrlOpenProof {
     url,
@@ -1055,11 +1179,15 @@ fn open_url(url: String) -> Result<UrlOpenProof, String> {
 }
 
 #[tauri::command]
-async fn fetch_url_content(state: tauri::State<'_, reqwest::Client>, url: String) -> Result<UrlFetchProof, String> {
+async fn fetch_url_content(
+  state: tauri::State<'_, reqwest::Client>,
+  url: String,
+) -> Result<UrlFetchProof, String> {
   if !url.starts_with("http://") && !url.starts_with("https://") {
     return Err("URL must start with http:// or https://".to_string());
   }
-  let response = state.get(&url)
+  let response = state
+    .get(&url)
     .header(reqwest::header::USER_AGENT, "Alphonso/1.0")
     .send()
     .await
@@ -1080,9 +1208,17 @@ async fn fetch_url_content(state: tauri::State<'_, reqwest::Client>, url: String
   let mut content = String::new();
   let mut in_tag = false;
   for ch in html.chars() {
-    if ch == '<' { in_tag = true; continue; }
-    if ch == '>' { in_tag = false; continue; }
-    if !in_tag { content.push(ch); }
+    if ch == '<' {
+      in_tag = true;
+      continue;
+    }
+    if ch == '>' {
+      in_tag = false;
+      continue;
+    }
+    if !in_tag {
+      content.push(ch);
+    }
   }
   let content = content
     .lines()
@@ -1141,7 +1277,9 @@ fn write_clipboard(_content: String) -> Result<ClipboardProof, String> {
       .map_err(|e| e.to_string())?;
     if let Some(mut stdin) = child.stdin.take() {
       use std::io::Write;
-      stdin.write_all(_content.as_bytes()).map_err(|e| e.to_string())?;
+      stdin
+        .write_all(_content.as_bytes())
+        .map_err(|e| e.to_string())?;
     }
     child.wait().map_err(|e| e.to_string())?;
     Ok(ClipboardProof {
@@ -1174,7 +1312,11 @@ fn pick_folder() -> Result<FolderPickProof, String> {
       .map_err(|e| e.to_string())?;
     let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let picked = !path.is_empty();
-    return Ok(FolderPickProof { path, picked, picked_at_ms: now_ms() });
+    return Ok(FolderPickProof {
+      path,
+      picked,
+      picked_at_ms: now_ms(),
+    });
   }
   #[allow(unreachable_code)]
   Err("Folder picker is Windows-only".to_string())
@@ -1186,7 +1328,12 @@ async fn launch_ollama() -> Result<ServiceLaunchProof, String> {
     .timeout(std::time::Duration::from_millis(800))
     .build()
     .map_err(|e| e.to_string())?;
-  if client.get("http://localhost:11434/api/tags").send().await.is_ok() {
+  if client
+    .get("http://localhost:11434/api/tags")
+    .send()
+    .await
+    .is_ok()
+  {
     return Ok(ServiceLaunchProof {
       service: "ollama".to_string(),
       launched: false,
@@ -1197,10 +1344,14 @@ async fn launch_ollama() -> Result<ServiceLaunchProof, String> {
   }
   use std::process::Command;
   if cfg!(target_os = "windows") {
-    Command::new("cmd").args(["/C", "start", "/B", "ollama", "serve"]).spawn()
+    Command::new("cmd")
+      .args(["/C", "start", "/B", "ollama", "serve"])
+      .spawn()
       .map_err(|e| format!("Failed to launch Ollama: {}", e))?;
   } else {
-    Command::new("sh").args(["-c", "ollama serve &"]).spawn()
+    Command::new("sh")
+      .args(["-c", "ollama serve &"])
+      .spawn()
       .map_err(|e| format!("Failed to launch Ollama: {}", e))?;
   }
   Ok(ServiceLaunchProof {
@@ -1213,16 +1364,26 @@ async fn launch_ollama() -> Result<ServiceLaunchProof, String> {
 }
 
 #[tauri::command]
-async fn launch_comfyui(comfyui_dir: String, python_exe: String) -> Result<ServiceLaunchProof, String> {
+async fn launch_comfyui(
+  comfyui_dir: String,
+  python_exe: String,
+) -> Result<ServiceLaunchProof, String> {
   let dir = comfyui_dir.trim().to_string();
   if dir.is_empty() {
-    return Err("ComfyUI directory is not configured. Set it in Settings → Local Services.".to_string());
+    return Err(
+      "ComfyUI directory is not configured. Set it in Settings → Local Services.".to_string(),
+    );
   }
   let client = reqwest::Client::builder()
     .timeout(std::time::Duration::from_millis(800))
     .build()
     .map_err(|e| e.to_string())?;
-  if client.get("http://localhost:8188/system_stats").send().await.is_ok() {
+  if client
+    .get("http://localhost:8188/system_stats")
+    .send()
+    .await
+    .is_ok()
+  {
     return Ok(ServiceLaunchProof {
       service: "comfyui".to_string(),
       launched: false,
@@ -1231,26 +1392,46 @@ async fn launch_comfyui(comfyui_dir: String, python_exe: String) -> Result<Servi
       launched_at_ms: now_ms(),
     });
   }
-  let py = if python_exe.trim().is_empty() { "python".to_string() } else { python_exe.trim().to_string() };
+  let py = if python_exe.trim().is_empty() {
+    "python".to_string()
+  } else {
+    python_exe.trim().to_string()
+  };
   use std::process::Command;
-  Command::new(&py).arg("main.py").current_dir(&dir).spawn()
-    .map_err(|e| format!("Failed to launch ComfyUI from '{}' using '{}': {}", dir, py, e))?;
+  Command::new(&py)
+    .arg("main.py")
+    .current_dir(&dir)
+    .spawn()
+    .map_err(|e| {
+      format!(
+        "Failed to launch ComfyUI from '{}' using '{}': {}",
+        dir, py, e
+      )
+    })?;
   Ok(ServiceLaunchProof {
     service: "comfyui".to_string(),
     launched: true,
     already_running: false,
-    message: format!("ComfyUI launched from '{}'. Allow 10–20 seconds to start.", dir),
+    message: format!(
+      "ComfyUI launched from '{}'. Allow 10–20 seconds to start.",
+      dir
+    ),
     launched_at_ms: now_ms(),
   })
 }
 
 #[tauri::command]
-fn save_image_to_folder(base64_data: String, filename: String, folder: String) -> Result<SaveImageProof, String> {
+fn save_image_to_folder(
+  base64_data: String,
+  filename: String,
+  folder: String,
+) -> Result<SaveImageProof, String> {
   let folder = folder.trim().to_string();
   if folder.is_empty() {
     return Err("No output folder configured".to_string());
   }
-  let raw = base64_data.trim_start_matches("data:image/png;base64,")
+  let raw = base64_data
+    .trim_start_matches("data:image/png;base64,")
     .trim_start_matches("data:image/jpeg;base64,")
     .to_string();
   let path = std::path::Path::new(&folder).join(&filename);
@@ -1267,14 +1448,25 @@ fn save_image_to_folder(base64_data: String, filename: String, folder: String) -
       .args(["-NoProfile", "-Command", &script])
       .output()
       .map_err(|e| e.to_string())?;
-    return Ok(SaveImageProof { path: path_str, saved: true, saved_at_ms: now_ms() });
+    return Ok(SaveImageProof {
+      path: path_str,
+      saved: true,
+      saved_at_ms: now_ms(),
+    });
   }
   #[allow(unreachable_code)]
   {
     use std::process::Command;
     let script = format!("printf '%s' '{}' | base64 -d > '{}'", raw, path_str);
-    Command::new("sh").args(["-c", &script]).output().map_err(|e| e.to_string())?;
-    Ok(SaveImageProof { path: path_str, saved: true, saved_at_ms: now_ms() })
+    Command::new("sh")
+      .args(["-c", &script])
+      .output()
+      .map_err(|e| e.to_string())?;
+    Ok(SaveImageProof {
+      path: path_str,
+      saved: true,
+      saved_at_ms: now_ms(),
+    })
   }
 }
 
@@ -1284,14 +1476,26 @@ mod tests {
 
   #[test]
   fn trim_trailing_slashes_removes_trailing_slashes() {
-    assert_eq!(trim_trailing_slashes("http://localhost:11434/"), "http://localhost:11434");
-    assert_eq!(trim_trailing_slashes("http://localhost:11434///"), "http://localhost:11434");
-    assert_eq!(trim_trailing_slashes("  http://localhost:11434/  "), "http://localhost:11434");
+    assert_eq!(
+      trim_trailing_slashes("http://localhost:11434/"),
+      "http://localhost:11434"
+    );
+    assert_eq!(
+      trim_trailing_slashes("http://localhost:11434///"),
+      "http://localhost:11434"
+    );
+    assert_eq!(
+      trim_trailing_slashes("  http://localhost:11434/  "),
+      "http://localhost:11434"
+    );
   }
 
   #[test]
   fn trim_trailing_slashes_leaves_clean_urls_unchanged() {
-    assert_eq!(trim_trailing_slashes("http://localhost:11434"), "http://localhost:11434");
+    assert_eq!(
+      trim_trailing_slashes("http://localhost:11434"),
+      "http://localhost:11434"
+    );
     assert_eq!(trim_trailing_slashes(""), "");
   }
 
@@ -1316,175 +1520,243 @@ pub fn run() {
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
-        let proof_output_dir = native_proof_output_dir();
-        let proof_request = read_native_proof_request(&proof_output_dir);
-        let workspace_root = native_workspace_root();
-        let process_id = std::process::id();
-        let timestamp = now_ms();
-        let autorun_enabled = std::env::var("ALPHONSO_SELFDEV_AUTORUN")
-          .map(|value| value.trim() == "1")
-          .unwrap_or(false);
-        let rc0_proof_enabled = std::env::var("ALPHONSO_RC0_PROOF")
-          .map(|value| value.trim() == "1")
-          .unwrap_or(false);
-        let proof_requested = autorun_enabled || rc0_proof_enabled || proof_request.is_some();
-        let env_missing_note = if autorun_enabled {
+      let proof_output_dir = native_proof_output_dir();
+      let proof_request = read_native_proof_request(&proof_output_dir);
+      let workspace_root = native_workspace_root();
+      let process_id = std::process::id();
+      let timestamp = now_ms();
+      let autorun_enabled = std::env::var("ALPHONSO_SELFDEV_AUTORUN")
+        .map(|value| value.trim() == "1")
+        .unwrap_or(false);
+      let rc0_proof_enabled = std::env::var("ALPHONSO_RC0_PROOF")
+        .map(|value| value.trim() == "1")
+        .unwrap_or(false);
+      let proof_requested = autorun_enabled || rc0_proof_enabled || proof_request.is_some();
+      let env_missing_note = if autorun_enabled {
+        None
+      } else {
+        Some(
+          "ALPHONSO_SELFDEV_AUTORUN is missing or not enabled in the native runtime.".to_string(),
+        )
+      };
+
+      write_native_startup_trace(
+        "setup_started",
+        &workspace_root,
+        Some("Rust setup hook executed before the webview loads."),
+      );
+
+      let process_started = NativeProofStageProof {
+        stage: "01_process_started".to_string(),
+        status: "running".to_string(),
+        timestamp: format!("{}", timestamp),
+        process_id,
+        workspace_root: workspace_root.clone(),
+        output_dir: proof_output_dir.display().to_string(),
+        proof_request_found: proof_request.is_some(),
+        window_label: None,
+        note: None,
+        error: None,
+        duration_ms: None,
+      };
+      let env_detected = NativeProofStageProof {
+        stage: "02_env_detected".to_string(),
+        status: if proof_requested {
+          "ready".to_string()
+        } else {
+          "setup_required".to_string()
+        },
+        timestamp: format!("{}", timestamp),
+        process_id,
+        workspace_root: workspace_root.clone(),
+        output_dir: proof_output_dir.display().to_string(),
+        proof_request_found: proof_request.is_some(),
+        window_label: None,
+        note: if proof_requested {
+          Some("Native proof mode is enabled for this Tauri runtime.".to_string())
+        } else {
+          env_missing_note.clone()
+        },
+        error: if proof_requested {
           None
         } else {
-          Some("ALPHONSO_SELFDEV_AUTORUN is missing or not enabled in the native runtime.".to_string())
-        };
+          env_missing_note.clone()
+        },
+        duration_ms: None,
+      };
+      let tauri_started = NativeProofStageProof {
+        stage: "03_tauri_started".to_string(),
+        status: "running".to_string(),
+        timestamp: format!("{}", now_ms()),
+        process_id,
+        workspace_root: workspace_root.clone(),
+        output_dir: proof_output_dir.display().to_string(),
+        proof_request_found: proof_request.is_some(),
+        window_label: None,
+        note: None,
+        error: None,
+        duration_ms: None,
+      };
+      let _ = write_native_proof_stage(
+        &proof_output_dir,
+        "01_process_started.json",
+        &process_started,
+      );
+      let _ = write_native_proof_stage(&proof_output_dir, "02_env_detected.json", &env_detected);
+      let _ = write_native_proof_stage(&proof_output_dir, "03_tauri_started.json", &tauri_started);
 
-        write_native_startup_trace(
-          "setup_started",
-          &workspace_root,
-          Some("Rust setup hook executed before the webview loads."),
-        );
+      if proof_requested {
+        let proof_output_dir_clone = proof_output_dir.clone();
+        let workspace_root_clone = workspace_root.clone();
+        tauri::async_runtime::spawn(async move {
+          let native_proof_started = NativeProofStageProof {
+            stage: "05_native_proof_engine_started".to_string(),
+            status: "running".to_string(),
+            timestamp: format!("{}", now_ms()),
+            process_id,
+            workspace_root: workspace_root_clone.clone(),
+            output_dir: proof_output_dir_clone.display().to_string(),
+            proof_request_found: true,
+            window_label: None,
+            note: Some("Rust startup hook requested the native RC0 proof engine.".to_string()),
+            error: None,
+            duration_ms: None,
+          };
+          let _ = write_native_proof_stage(
+            &proof_output_dir_clone,
+            "05_native_proof_engine_started.json",
+            &native_proof_started,
+          );
 
-        let process_started = NativeProofStageProof {
-          stage: "01_process_started".to_string(),
-          status: "running".to_string(),
-          timestamp: format!("{}", timestamp),
-          process_id,
-          workspace_root: workspace_root.clone(),
-          output_dir: proof_output_dir.display().to_string(),
-          proof_request_found: proof_request.is_some(),
-          window_label: None,
-          note: None,
-          error: None,
-          duration_ms: None,
-        };
-        let env_detected = NativeProofStageProof {
-          stage: "02_env_detected".to_string(),
-          status: if proof_requested { "ready".to_string() } else { "setup_required".to_string() },
-          timestamp: format!("{}", timestamp),
-          process_id,
-          workspace_root: workspace_root.clone(),
-          output_dir: proof_output_dir.display().to_string(),
-          proof_request_found: proof_request.is_some(),
-          window_label: None,
-          note: if proof_requested {
-            Some("Native proof mode is enabled for this Tauri runtime.".to_string())
-          } else {
-            env_missing_note.clone()
-          },
-          error: if proof_requested { None } else { env_missing_note.clone() },
-          duration_ms: None,
-        };
-        let tauri_started = NativeProofStageProof {
-          stage: "03_tauri_started".to_string(),
-          status: "running".to_string(),
-          timestamp: format!("{}", now_ms()),
-          process_id,
-          workspace_root: workspace_root.clone(),
-          output_dir: proof_output_dir.display().to_string(),
-          proof_request_found: proof_request.is_some(),
-          window_label: None,
-          note: None,
-          error: None,
-          duration_ms: None,
-        };
-        let _ = write_native_proof_stage(&proof_output_dir, "01_process_started.json", &process_started);
-        let _ = write_native_proof_stage(&proof_output_dir, "02_env_detected.json", &env_detected);
-        let _ = write_native_proof_stage(&proof_output_dir, "03_tauri_started.json", &tauri_started);
-
-        if proof_requested {
-          let proof_output_dir_clone = proof_output_dir.clone();
-          let workspace_root_clone = workspace_root.clone();
-          tauri::async_runtime::spawn(async move {
-            let native_proof_started = NativeProofStageProof {
-              stage: "05_native_proof_engine_started".to_string(),
-              status: "running".to_string(),
-              timestamp: format!("{}", now_ms()),
-              process_id,
-              workspace_root: workspace_root_clone.clone(),
-              output_dir: proof_output_dir_clone.display().to_string(),
-              proof_request_found: true,
-              window_label: None,
-              note: Some("Rust startup hook requested the native RC0 proof engine.".to_string()),
-              error: None,
-              duration_ms: None,
-            };
-            let _ = write_native_proof_stage(&proof_output_dir_clone, "05_native_proof_engine_started.json", &native_proof_started);
-
-            let validation_paths = vec![
-              workspace_root_clone.clone(),
-              format!("{}/package.json", workspace_root_clone),
-              format!("{}/src", workspace_root_clone),
-              format!("{}/src-tauri", workspace_root_clone),
-              format!("{}/docs", workspace_root_clone),
-            ];
-            let validation_proofs = verify_paths(validation_paths);
-            let root_proof = validation_proofs.first().cloned();
-            let entry_proofs = validation_proofs.into_iter().skip(1).collect::<Vec<_>>();
-            let missing_entries = ["package.json", "src", "src-tauri", "docs"]
-              .iter()
-              .zip(entry_proofs.iter())
-              .filter_map(|(entry, proof)| if proof.exists { None } else { Some((*entry).to_string()) })
-              .collect::<Vec<_>>();
-            let workspace_ok = root_proof.map(|proof| proof.exists && proof.is_dir).unwrap_or(false) && missing_entries.is_empty();
-            let native_workspace_validated = NativeProofStageProof {
-              stage: "06_workspace_validated".to_string(),
-              status: if workspace_ok { "ready".to_string() } else { "setup_required".to_string() },
-              timestamp: format!("{}", now_ms()),
-              process_id,
-              workspace_root: workspace_root_clone.clone(),
-              output_dir: proof_output_dir_clone.display().to_string(),
-              proof_request_found: true,
-              window_label: None,
-              note: Some(if workspace_ok {
-                "Workspace root validated from the Rust startup hook.".to_string()
-              } else {
-                format!("Workspace validation is setup_required; missing entries: {}", missing_entries.join(", "))
-              }),
-              error: if workspace_ok {
+          let validation_paths = vec![
+            workspace_root_clone.clone(),
+            format!("{}/package.json", workspace_root_clone),
+            format!("{}/src", workspace_root_clone),
+            format!("{}/src-tauri", workspace_root_clone),
+            format!("{}/docs", workspace_root_clone),
+          ];
+          let validation_proofs = verify_paths(validation_paths);
+          let root_proof = validation_proofs.first().cloned();
+          let entry_proofs = validation_proofs.into_iter().skip(1).collect::<Vec<_>>();
+          let missing_entries = ["package.json", "src", "src-tauri", "docs"]
+            .iter()
+            .zip(entry_proofs.iter())
+            .filter_map(|(entry, proof)| {
+              if proof.exists {
                 None
               } else {
-                Some(format!("Workspace validation is setup_required; missing entries: {}", missing_entries.join(", ")))
-              },
-              duration_ms: None,
-            };
-            let _ = write_native_proof_stage(&proof_output_dir_clone, "06_workspace_validated.json", &native_workspace_validated);
-            let native_scan_started = NativeProofStageProof {
-              stage: "07_scan_started".to_string(),
-              status: if workspace_ok { "running".to_string() } else { "setup_required".to_string() },
-              timestamp: format!("{}", now_ms()),
-              process_id,
-              workspace_root: workspace_root_clone.clone(),
-              output_dir: proof_output_dir_clone.display().to_string(),
-              proof_request_found: true,
-              window_label: None,
-              note: Some(if workspace_ok {
-                "Rust startup hook scheduled the repository scan phase.".to_string()
-              } else {
-                "Repository scan remains setup_required until workspace validation passes.".to_string()
-              }),
-              error: if workspace_ok { None } else { Some("Workspace validation is setup_required.".to_string()) },
-              duration_ms: None,
-            };
-            let _ = write_native_proof_stage(&proof_output_dir_clone, "07_scan_started.json", &native_scan_started);
-            start_native_rc0_proof_if_requested(
-              workspace_root_clone,
-              proof_output_dir_clone.display().to_string(),
-              "automated".to_string(),
-              Some(80),
-            );
-          });
-        }
-
-        let proof_event_dir = proof_output_dir.clone();
-        let _proof_event_listener_id = app.handle().listen("alphonso-native-proof-stage", move |event| {
-          let payload = event.payload();
-          if let Ok(value) = serde_json::from_str::<Value>(payload) {
-            let _ = write_native_proof_event(&proof_event_dir, &value);
-          }
+                Some((*entry).to_string())
+              }
+            })
+            .collect::<Vec<_>>();
+          let workspace_ok = root_proof
+            .map(|proof| proof.exists && proof.is_dir)
+            .unwrap_or(false)
+            && missing_entries.is_empty();
+          let native_workspace_validated = NativeProofStageProof {
+            stage: "06_workspace_validated".to_string(),
+            status: if workspace_ok {
+              "ready".to_string()
+            } else {
+              "setup_required".to_string()
+            },
+            timestamp: format!("{}", now_ms()),
+            process_id,
+            workspace_root: workspace_root_clone.clone(),
+            output_dir: proof_output_dir_clone.display().to_string(),
+            proof_request_found: true,
+            window_label: None,
+            note: Some(if workspace_ok {
+              "Workspace root validated from the Rust startup hook.".to_string()
+            } else {
+              format!(
+                "Workspace validation is setup_required; missing entries: {}",
+                missing_entries.join(", ")
+              )
+            }),
+            error: if workspace_ok {
+              None
+            } else {
+              Some(format!(
+                "Workspace validation is setup_required; missing entries: {}",
+                missing_entries.join(", ")
+              ))
+            },
+            duration_ms: None,
+          };
+          let _ = write_native_proof_stage(
+            &proof_output_dir_clone,
+            "06_workspace_validated.json",
+            &native_workspace_validated,
+          );
+          let native_scan_started = NativeProofStageProof {
+            stage: "07_scan_started".to_string(),
+            status: if workspace_ok {
+              "running".to_string()
+            } else {
+              "setup_required".to_string()
+            },
+            timestamp: format!("{}", now_ms()),
+            process_id,
+            workspace_root: workspace_root_clone.clone(),
+            output_dir: proof_output_dir_clone.display().to_string(),
+            proof_request_found: true,
+            window_label: None,
+            note: Some(if workspace_ok {
+              "Rust startup hook scheduled the repository scan phase.".to_string()
+            } else {
+              "Repository scan remains setup_required until workspace validation passes."
+                .to_string()
+            }),
+            error: if workspace_ok {
+              None
+            } else {
+              Some("Workspace validation is setup_required.".to_string())
+            },
+            duration_ms: None,
+          };
+          let _ = write_native_proof_stage(
+            &proof_output_dir_clone,
+            "07_scan_started.json",
+            &native_scan_started,
+          );
+          start_native_rc0_proof_if_requested(
+            workspace_root_clone,
+            proof_output_dir_clone.display().to_string(),
+            "automated".to_string(),
+            Some(80),
+          );
         });
+      }
 
-        let show_main_item = MenuItem::with_id(app, "show_main", "Open Alphonso", true, None::<&str>)?;
-        let new_chat_item  = MenuItem::with_id(app, "new_chat",  "New Chat",      true, None::<&str>)?;
-        let show_coach_item = MenuItem::with_id(app, "show_coach", "Show Coach", true, None::<&str>)?;
-      let toggle_coach_item = MenuItem::with_id(app, "toggle_coach", "Toggle Coach", true, None::<&str>)?;
+      let proof_event_dir = proof_output_dir.clone();
+      let _proof_event_listener_id =
+        app
+          .handle()
+          .listen("alphonso-native-proof-stage", move |event| {
+            let payload = event.payload();
+            if let Ok(value) = serde_json::from_str::<Value>(payload) {
+              let _ = write_native_proof_event(&proof_event_dir, &value);
+            }
+          });
+
+      let show_main_item =
+        MenuItem::with_id(app, "show_main", "Open Alphonso", true, None::<&str>)?;
+      let new_chat_item = MenuItem::with_id(app, "new_chat", "New Chat", true, None::<&str>)?;
+      let show_coach_item = MenuItem::with_id(app, "show_coach", "Show Coach", true, None::<&str>)?;
+      let toggle_coach_item =
+        MenuItem::with_id(app, "toggle_coach", "Toggle Coach", true, None::<&str>)?;
       let quit_item = MenuItem::with_id(app, "quit_app", "Quit Alphonso", true, None::<&str>)?;
-      let tray_menu = Menu::with_items(app, &[&show_main_item, &new_chat_item, &show_coach_item, &toggle_coach_item, &quit_item])?;
+      let tray_menu = Menu::with_items(
+        app,
+        &[
+          &show_main_item,
+          &new_chat_item,
+          &show_coach_item,
+          &toggle_coach_item,
+          &quit_item,
+        ],
+      )?;
 
       TrayIconBuilder::new()
         .menu(&tray_menu)
@@ -1556,18 +1828,25 @@ pub fn run() {
       }
 
       use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
-      let shortcut: Shortcut = "Ctrl+Shift+Space".parse().unwrap_or_else(|_| "CommandOrControl+Shift+Space".parse().expect("fallback hotkey parse"));
+      let shortcut: Shortcut = "Ctrl+Shift+Space".parse().unwrap_or_else(|_| {
+        "CommandOrControl+Shift+Space"
+          .parse()
+          .expect("fallback hotkey parse")
+      });
       let app_handle_hs = app.handle().clone();
-      app.handle().global_shortcut().on_shortcut(shortcut, move |_, _, event| {
-        if event.state == ShortcutState::Pressed {
-          if let Some(win) = app_handle_hs.get_webview_window("main") {
-            let _ = win.unminimize();
-            let _ = win.show();
-            let _ = win.set_focus();
+      app
+        .handle()
+        .global_shortcut()
+        .on_shortcut(shortcut, move |_, _, event| {
+          if event.state == ShortcutState::Pressed {
+            if let Some(win) = app_handle_hs.get_webview_window("main") {
+              let _ = win.unminimize();
+              let _ = win.show();
+              let _ = win.set_focus();
+            }
+            let _ = app_handle_hs.emit("alphonso://voice_start", "hotkey");
           }
-          let _ = app_handle_hs.emit("alphonso://voice_start", "hotkey");
-        }
-      })?;
+        })?;
 
       Ok(())
     })
@@ -1598,31 +1877,28 @@ pub fn run() {
       );
       let _ = write_native_proof_stage(&proof_output_dir, "04_frontend_loaded.json", &payload);
     })
-    .on_window_event(|window, event| {
-      match event {
-        WindowEvent::CloseRequested { .. }
-          if window.label() == "main" => {
-            std::process::exit(0);
-          }
-        WindowEvent::Focused(true) | WindowEvent::Resized(_) => {
-          let proof_output_dir = native_proof_output_dir();
-          let payload = NativeProofStageProof {
-            stage: "04_frontend_loaded".to_string(),
-            status: "window_ready".to_string(),
-            timestamp: now_ms().to_string(),
-            process_id: std::process::id(),
-            workspace_root: native_workspace_root(),
-            output_dir: proof_output_dir.display().to_string(),
-            proof_request_found: read_native_proof_request(&proof_output_dir).is_some(),
-            window_label: Some(window.label().to_string()),
-            note: Some("Window-ready fallback observed before page-load confirmation.".to_string()),
-            error: None,
-            duration_ms: None,
-          };
-          let _ = write_native_proof_stage(&proof_output_dir, "04_frontend_loaded.json", &payload);
-        }
-        _ => {}
+    .on_window_event(|window, event| match event {
+      WindowEvent::CloseRequested { .. } if window.label() == "main" => {
+        std::process::exit(0);
       }
+      WindowEvent::Focused(true) | WindowEvent::Resized(_) => {
+        let proof_output_dir = native_proof_output_dir();
+        let payload = NativeProofStageProof {
+          stage: "04_frontend_loaded".to_string(),
+          status: "window_ready".to_string(),
+          timestamp: now_ms().to_string(),
+          process_id: std::process::id(),
+          workspace_root: native_workspace_root(),
+          output_dir: proof_output_dir.display().to_string(),
+          proof_request_found: read_native_proof_request(&proof_output_dir).is_some(),
+          window_label: Some(window.label().to_string()),
+          note: Some("Window-ready fallback observed before page-load confirmation.".to_string()),
+          error: None,
+          duration_ms: None,
+        };
+        let _ = write_native_proof_stage(&proof_output_dir, "04_frontend_loaded.json", &payload);
+      }
+      _ => {}
     })
     .invoke_handler(tauri::generate_handler![
       execute_command_verified,

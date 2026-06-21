@@ -1,13 +1,15 @@
 use rusqlite::{params, Connection};
 
 pub(crate) fn ensure_kv_table(conn: &Connection) -> Result<(), String> {
-  conn.execute_batch(
-    "CREATE TABLE IF NOT EXISTS kv_store (
+  conn
+    .execute_batch(
+      "CREATE TABLE IF NOT EXISTS kv_store (
        key   TEXT PRIMARY KEY,
        value TEXT NOT NULL,
        updated_at INTEGER NOT NULL DEFAULT 0
-     );"
-  ).map_err(|e| e.to_string())
+     );",
+    )
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -15,11 +17,13 @@ pub fn kv_set(app: tauri::AppHandle, key: String, value: String) -> Result<(), S
   let (conn, _) = crate::memory_store::open_memory_db(&app)?;
   ensure_kv_table(&conn)?;
   let now = crate::now_ms() as i64;
-  conn.execute(
-    "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)
+  conn
+    .execute(
+      "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-    params![key, value, now],
-  ).map_err(|e| e.to_string())?;
+      params![key, value, now],
+    )
+    .map_err(|e| e.to_string())?;
   Ok(())
 }
 
@@ -43,11 +47,13 @@ pub fn save_settings(app: tauri::AppHandle, settings_json: String) -> Result<(),
   let (conn, _) = crate::memory_store::open_memory_db(&app)?;
   ensure_kv_table(&conn)?;
   let now = crate::now_ms() as i64;
-  conn.execute(
-    "INSERT INTO kv_store (key, value, updated_at) VALUES ('app_settings', ?1, ?2)
+  conn
+    .execute(
+      "INSERT INTO kv_store (key, value, updated_at) VALUES ('app_settings', ?1, ?2)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-    params![settings_json, now],
-  ).map_err(|e| e.to_string())?;
+      params![settings_json, now],
+    )
+    .map_err(|e| e.to_string())?;
   Ok(())
 }
 
@@ -84,7 +90,10 @@ mod tests {
       )
       .expect("query sqlite_master")
       > 0;
-    assert!(table_exists, "kv_store table should exist after ensure_kv_table");
+    assert!(
+      table_exists,
+      "kv_store table should exist after ensure_kv_table"
+    );
   }
 
   #[test]
@@ -93,12 +102,13 @@ mod tests {
     ensure_kv_table(&conn).expect("ensure_kv_table");
     let now = crate::now_ms() as i64;
 
-    conn.execute(
-      "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)
+    conn
+      .execute(
+        "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-      params!["test_key", "test_value", now],
-    )
-    .expect("kv_set insert");
+        params!["test_key", "test_value", now],
+      )
+      .expect("kv_set insert");
 
     let result: String = conn
       .query_row(
@@ -132,18 +142,20 @@ mod tests {
     ensure_kv_table(&conn).expect("ensure_kv_table");
     let now = crate::now_ms() as i64;
 
-    conn.execute(
-      "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)",
-      params!["key1", "original", now],
-    )
-    .expect("first insert");
+    conn
+      .execute(
+        "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)",
+        params!["key1", "original", now],
+      )
+      .expect("first insert");
 
-    conn.execute(
-      "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)
+    conn
+      .execute(
+        "INSERT INTO kv_store (key, value, updated_at) VALUES (?1, ?2, ?3)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-      params!["key1", "overwritten", now],
-    )
-    .expect("overwrite insert");
+        params!["key1", "overwritten", now],
+      )
+      .expect("overwrite insert");
 
     let result: String = conn
       .query_row(
@@ -162,12 +174,13 @@ mod tests {
     let now = crate::now_ms() as i64;
     let settings = r#"{"theme":"dark","language":"en"}"#;
 
-    conn.execute(
-      "INSERT INTO kv_store (key, value, updated_at) VALUES ('app_settings', ?1, ?2)
+    conn
+      .execute(
+        "INSERT INTO kv_store (key, value, updated_at) VALUES ('app_settings', ?1, ?2)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-      params![settings, now],
-    )
-    .expect("save_settings insert");
+        params![settings, now],
+      )
+      .expect("save_settings insert");
 
     let result: String = conn
       .query_row(

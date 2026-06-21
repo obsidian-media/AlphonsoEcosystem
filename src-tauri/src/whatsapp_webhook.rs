@@ -131,7 +131,11 @@ pub(crate) fn verify_whatsapp_cloud_webhook_signature(
       signature_header_present: !received_header.is_empty(),
       app_secret_present: false,
       expected_signature: None,
-      received_signature: if received_header.is_empty() { None } else { Some(received_header) },
+      received_signature: if received_header.is_empty() {
+        None
+      } else {
+        Some(received_header)
+      },
       checked_at_ms,
       trust: "setup_required".to_string(),
       error: Some("WHATSAPP_APP_SECRET is not configured.".to_string()),
@@ -180,12 +184,18 @@ pub(crate) fn verify_whatsapp_cloud_webhook_signature(
     received_signature: Some(received_header),
     checked_at_ms,
     trust: if valid { "verified" } else { "failed" }.to_string(),
-    error: if valid { None } else { Some("Webhook signature mismatch.".to_string()) },
+    error: if valid {
+      None
+    } else {
+      Some("Webhook signature mismatch.".to_string())
+    },
   }
 }
 
 #[tauri::command]
-pub(crate) fn normalize_whatsapp_cloud_inbound(raw_body: String) -> WhatsAppCloudInboundNormalizeProof {
+pub(crate) fn normalize_whatsapp_cloud_inbound(
+  raw_body: String,
+) -> WhatsAppCloudInboundNormalizeProof {
   let checked_at_ms = now_ms();
   let parsed: Value = match serde_json::from_str(raw_body.as_str()) {
     Ok(value) => value,

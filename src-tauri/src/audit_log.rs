@@ -33,7 +33,10 @@ pub(crate) fn sha256_hex(input: &str) -> String {
   let mut hasher = Sha256::new();
   hasher.update(input.as_bytes());
   let digest = hasher.finalize();
-  digest.iter().map(|byte| format!("{byte:02x}")).collect::<String>()
+  digest
+    .iter()
+    .map(|byte| format!("{byte:02x}"))
+    .collect::<String>()
 }
 
 pub(crate) fn append_plugin_audit_event(
@@ -45,7 +48,11 @@ pub(crate) fn append_plugin_audit_event(
 }
 
 #[tauri::command]
-pub(crate) fn append_audit_log(app: tauri::AppHandle, event_type: String, entry: Value) -> Result<AuditWriteProof, String> {
+pub(crate) fn append_audit_log(
+  app: tauri::AppHandle,
+  event_type: String,
+  entry: Value,
+) -> Result<AuditWriteProof, String> {
   let dir = crate::app_data_subdir(&app, "audit")?;
   let mut file_path = dir.clone();
   file_path.push("verification.log.jsonl");
@@ -83,20 +90,32 @@ pub(crate) fn append_audit_log(app: tauri::AppHandle, event_type: String, entry:
   let chain_hash = sha256_hex(&chain_input);
 
   let mut payload = Map::new();
-  payload.insert("id".to_string(), Value::String(format!("audit-{}-{}", crate::now_ms(), rand_suffix())));
-  payload.insert("timestamp_ms".to_string(), Value::Number(written_at_ms.into()));
+  payload.insert(
+    "id".to_string(),
+    Value::String(format!("audit-{}-{}", crate::now_ms(), rand_suffix())),
+  );
+  payload.insert(
+    "timestamp_ms".to_string(),
+    Value::Number(written_at_ms.into()),
+  );
   payload.insert("event_type".to_string(), Value::String(event_type));
   payload.insert("entry".to_string(), entry);
-  payload.insert("prev_hash".to_string(), prev_hash.clone().map(Value::String).unwrap_or(Value::Null));
+  payload.insert(
+    "prev_hash".to_string(),
+    prev_hash.clone().map(Value::String).unwrap_or(Value::Null),
+  );
   payload.insert("chain_hash".to_string(), Value::String(chain_hash.clone()));
 
-  let encoded = serde_json::to_string(&Value::Object(payload)).map_err(|error| error.to_string())?;
+  let encoded =
+    serde_json::to_string(&Value::Object(payload)).map_err(|error| error.to_string())?;
   let mut file = fs::OpenOptions::new()
     .create(true)
     .append(true)
     .open(&file_path)
     .map_err(|error| error.to_string())?;
-  file.write_all(encoded.as_bytes()).map_err(|error| error.to_string())?;
+  file
+    .write_all(encoded.as_bytes())
+    .map_err(|error| error.to_string())?;
   file.write_all(b"\n").map_err(|error| error.to_string())?;
 
   Ok(AuditWriteProof {
@@ -110,7 +129,10 @@ pub(crate) fn append_audit_log(app: tauri::AppHandle, event_type: String, entry:
 }
 
 #[tauri::command]
-pub(crate) fn read_audit_log(app: tauri::AppHandle, limit: Option<usize>) -> Result<Vec<Value>, String> {
+pub(crate) fn read_audit_log(
+  app: tauri::AppHandle,
+  limit: Option<usize>,
+) -> Result<Vec<Value>, String> {
   let dir = crate::app_data_subdir(&app, "audit")?;
   let mut file_path = dir.clone();
   file_path.push("verification.log.jsonl");
@@ -140,7 +162,9 @@ pub(crate) fn read_audit_log(app: tauri::AppHandle, limit: Option<usize>) -> Res
 }
 
 #[tauri::command]
-pub(crate) fn verify_audit_chain(app: tauri::AppHandle) -> Result<AuditChainVerificationProof, String> {
+pub(crate) fn verify_audit_chain(
+  app: tauri::AppHandle,
+) -> Result<AuditChainVerificationProof, String> {
   let dir = crate::app_data_subdir(&app, "audit")?;
   let mut file_path = dir.clone();
   file_path.push("verification.log.jsonl");
@@ -186,11 +210,23 @@ pub(crate) fn verify_audit_chain(app: tauri::AppHandle) -> Result<AuditChainVeri
       }
     };
 
-    let event_type = parsed.get("event_type").and_then(Value::as_str).unwrap_or("");
-    let timestamp_ms = parsed.get("timestamp_ms").and_then(Value::as_u64).unwrap_or(0);
+    let event_type = parsed
+      .get("event_type")
+      .and_then(Value::as_str)
+      .unwrap_or("");
+    let timestamp_ms = parsed
+      .get("timestamp_ms")
+      .and_then(Value::as_u64)
+      .unwrap_or(0);
     let entry_value = parsed.get("entry").cloned().unwrap_or(Value::Null);
-    let stored_prev = parsed.get("prev_hash").and_then(Value::as_str).map(str::to_string);
-    let stored_hash = parsed.get("chain_hash").and_then(Value::as_str).map(str::to_string);
+    let stored_prev = parsed
+      .get("prev_hash")
+      .and_then(Value::as_str)
+      .map(str::to_string);
+    let stored_hash = parsed
+      .get("chain_hash")
+      .and_then(Value::as_str)
+      .map(str::to_string);
 
     if stored_hash.is_none() {
       return Ok(AuditChainVerificationProof {

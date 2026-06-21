@@ -226,18 +226,40 @@ fn language_for_extension(extension: &str) -> String {
     "tsx" => "react-tsx",
     "py" => "python",
     _ => "unknown",
-  }.to_string()
+  }
+  .to_string()
 }
 
 fn symbol_hits_from_counts(counts: [u64; 7]) -> Vec<SymbolHit> {
   vec![
-    SymbolHit { symbol: "rust_fn".to_string(), count: counts[0] },
-    SymbolHit { symbol: "js_function".to_string(), count: counts[1] },
-    SymbolHit { symbol: "class".to_string(), count: counts[2] },
-    SymbolHit { symbol: "const_or_let".to_string(), count: counts[3] },
-    SymbolHit { symbol: "async_decl".to_string(), count: counts[4] },
-    SymbolHit { symbol: "import_or_use".to_string(), count: counts[5] },
-    SymbolHit { symbol: "export_or_pub".to_string(), count: counts[6] },
+    SymbolHit {
+      symbol: "rust_fn".to_string(),
+      count: counts[0],
+    },
+    SymbolHit {
+      symbol: "js_function".to_string(),
+      count: counts[1],
+    },
+    SymbolHit {
+      symbol: "class".to_string(),
+      count: counts[2],
+    },
+    SymbolHit {
+      symbol: "const_or_let".to_string(),
+      count: counts[3],
+    },
+    SymbolHit {
+      symbol: "async_decl".to_string(),
+      count: counts[4],
+    },
+    SymbolHit {
+      symbol: "import_or_use".to_string(),
+      count: counts[5],
+    },
+    SymbolHit {
+      symbol: "export_or_pub".to_string(),
+      count: counts[6],
+    },
   ]
 }
 
@@ -275,18 +297,23 @@ fn extract_dependencies(content: &str, language: &str) -> Vec<String> {
 
     match language {
       "javascript" | "react-jsx" | "typescript" | "react-tsx"
-        if (trimmed.starts_with("import ") || trimmed.contains(" from ") || trimmed.contains("require(")) => {
-          if let Some(dep) = between_quotes(trimmed) {
-            deps.push(dep);
-          }
+        if (trimmed.starts_with("import ")
+          || trimmed.contains(" from ")
+          || trimmed.contains("require(")) =>
+      {
+        if let Some(dep) = between_quotes(trimmed) {
+          deps.push(dep);
         }
-      "rust"
-        if trimmed.starts_with("use ") => {
-          let raw = trimmed.trim_start_matches("use ").trim_end_matches(';').trim();
-          if !raw.is_empty() {
-            deps.push(raw.to_string());
-          }
+      }
+      "rust" if trimmed.starts_with("use ") => {
+        let raw = trimmed
+          .trim_start_matches("use ")
+          .trim_end_matches(';')
+          .trim();
+        if !raw.is_empty() {
+          deps.push(raw.to_string());
         }
+      }
       "python" => {
         if trimmed.starts_with("import ") {
           let raw = trimmed.trim_start_matches("import ").trim();
@@ -294,7 +321,12 @@ fn extract_dependencies(content: &str, language: &str) -> Vec<String> {
             deps.push(raw.split_whitespace().next().unwrap_or("").to_string());
           }
         } else if trimmed.starts_with("from ") && trimmed.contains(" import ") {
-          let raw = trimmed.trim_start_matches("from ").split(" import ").next().unwrap_or("").trim();
+          let raw = trimmed
+            .trim_start_matches("from ")
+            .split(" import ")
+            .next()
+            .unwrap_or("")
+            .trim();
           if !raw.is_empty() {
             deps.push(raw.to_string());
           }
@@ -315,16 +347,28 @@ fn readiness_surface_for_path(path: &Path) -> String {
   if lower.contains("workflow") || lower.contains("receipt") || lower.contains("approval") {
     return "workflow".to_string();
   }
-  if lower.contains("update") || lower.contains("release") || lower.contains("updater") || lower.contains("latest.json") {
+  if lower.contains("update")
+    || lower.contains("release")
+    || lower.contains("updater")
+    || lower.contains("latest.json")
+  {
     return "release".to_string();
   }
   if lower.contains("memory") || lower.contains("ledger") {
     return "memory".to_string();
   }
-  if lower.contains("security") || lower.contains("auth") || lower.contains("policy") || lower.contains("signature") {
+  if lower.contains("security")
+    || lower.contains("auth")
+    || lower.contains("policy")
+    || lower.contains("signature")
+  {
     return "security".to_string();
   }
-  if lower.contains("component") || lower.contains("app.jsx") || lower.contains("panel") || lower.contains("view") {
+  if lower.contains("component")
+    || lower.contains("app.jsx")
+    || lower.contains("panel")
+    || lower.contains("view")
+  {
     return "ui".to_string();
   }
   if lower.ends_with(".md") || lower.contains("docs") {
@@ -334,7 +378,8 @@ fn readiness_surface_for_path(path: &Path) -> String {
 }
 
 fn readiness_file_extension(path: &Path) -> String {
-  path.extension()
+  path
+    .extension()
     .and_then(|value| value.to_str())
     .unwrap_or("")
     .to_ascii_lowercase()
@@ -354,7 +399,10 @@ fn readiness_path_contains_segment(path: &Path, segment: &str) -> bool {
 }
 
 fn readiness_should_skip_path(path: &Path, file_name: &str) -> bool {
-  let path_lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+  let path_lower = path
+    .to_string_lossy()
+    .replace('\\', "/")
+    .to_ascii_lowercase();
   matches!(
     file_name,
     ".git"
@@ -377,7 +425,10 @@ fn readiness_should_skip_path(path: &Path, file_name: &str) -> bool {
 }
 
 fn readiness_is_allowed_top_level_dir(file_name: &str) -> bool {
-  matches!(file_name, "src" | "src-tauri" | "scripts" | "gateway" | "docs")
+  matches!(
+    file_name,
+    "src" | "src-tauri" | "scripts" | "gateway" | "docs"
+  )
 }
 
 fn readiness_proof_scan_targets(root: &Path) -> Vec<PathBuf> {
@@ -432,7 +483,10 @@ fn scan_readiness_target_paths(
   let scan_started_at_ms = generated_at_ms;
 
   for path in target_paths {
-    if readiness_scan_timed_out(scan_started_at_ms) || findings.len() >= max_findings || files_scanned as usize >= max_files {
+    if readiness_scan_timed_out(scan_started_at_ms)
+      || findings.len() >= max_findings
+      || files_scanned as usize >= max_files
+    {
       return Ok(WorkspaceReadinessScan {
         root: root.to_string_lossy().to_string(),
         generated_at_ms,
@@ -445,7 +499,9 @@ fn scan_readiness_target_paths(
         failed_count,
         partial_count,
         trust: "partial".to_string(),
-        error: Some("Readiness scan time budget reached before proof surface completed.".to_string()),
+        error: Some(
+          "Readiness scan time budget reached before proof surface completed.".to_string(),
+        ),
       });
     }
 
@@ -453,7 +509,13 @@ fn scan_readiness_target_paths(
       continue;
     }
 
-    if readiness_should_skip_path(&path, path.file_name().and_then(|name| name.to_str()).unwrap_or("")) {
+    if readiness_should_skip_path(
+      &path,
+      path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(""),
+    ) {
       continue;
     }
 
@@ -466,7 +528,10 @@ fn scan_readiness_target_paths(
       output_dir: "release/rc0".to_string(),
       proof_request_found: true,
       window_label: None,
-      note: Some(format!("Scanning proof surface file: {}", path.to_string_lossy())),
+      note: Some(format!(
+        "Scanning proof surface file: {}",
+        path.to_string_lossy()
+      )),
       error: None,
       duration_ms: None,
     };
@@ -475,7 +540,20 @@ fn scan_readiness_target_paths(
     let extension = readiness_file_extension(&path);
     if !matches!(
       extension.as_str(),
-      "js" | "jsx" | "ts" | "tsx" | "rs" | "mjs" | "cjs" | "md" | "toml" | "json" | "yml" | "yaml" | "css" | "html"
+      "js"
+        | "jsx"
+        | "ts"
+        | "tsx"
+        | "rs"
+        | "mjs"
+        | "cjs"
+        | "md"
+        | "toml"
+        | "json"
+        | "yml"
+        | "yaml"
+        | "css"
+        | "html"
     ) {
       continue;
     }
@@ -510,7 +588,9 @@ fn scan_readiness_target_paths(
         failed_count,
         partial_count,
         trust: "partial".to_string(),
-        error: Some("Readiness scan time budget reached after reading a proof surface file.".to_string()),
+        error: Some(
+          "Readiness scan time budget reached after reading a proof surface file.".to_string(),
+        ),
       });
     }
 
@@ -527,7 +607,8 @@ fn scan_readiness_target_paths(
       let message = if needle == "setup required" || needle == "setup-required" {
         "Setup-required surface should be labeled clearly and backed by real checks.".to_string()
       } else if kind == "missing_approval" {
-        "Approval gate is missing or not enforced; add Jose approval or truth-label the action.".to_string()
+        "Approval gate is missing or not enforced; add Jose approval or truth-label the action."
+          .to_string()
       } else if kind == "missing_receipt" {
         "Receipt-backed evidence is missing for a production-facing action.".to_string()
       } else if kind == "updater_blocker" {
@@ -535,7 +616,8 @@ fn scan_readiness_target_paths(
       } else if kind == "connector_blocker" {
         "Connector path is blocked and should be marked setup_required until real provider proof exists.".to_string()
       } else if kind == "not_wired" {
-        "Surface is explicitly marked as not wired; keep it disabled or implement the real path.".to_string()
+        "Surface is explicitly marked as not wired; keep it disabled or implement the real path."
+          .to_string()
       } else if kind == "fake" || kind == "simulation" {
         "Production-facing surface should not imply fake or simulated execution.".to_string()
       } else if kind == "placeholder" || kind == "scaffold" || kind == "demo" || kind == "mock" {
@@ -545,7 +627,12 @@ fn scan_readiness_target_paths(
       };
 
       findings.push(WorkspaceReadinessFinding {
-        id: format!("ready-{}-{}-{}", findings.len() + 1, files_scanned, line_number),
+        id: format!(
+          "ready-{}-{}-{}",
+          findings.len() + 1,
+          files_scanned,
+          line_number
+        ),
         path: path.to_string_lossy().to_string(),
         line_number,
         surface: readiness_surface_for_path(&path),
@@ -606,7 +693,9 @@ fn scan_readiness_target_paths(
   })
 }
 
-fn readiness_keyword_match(line: &str) -> Option<(&'static str, &'static str, &'static str, &'static str)> {
+fn readiness_keyword_match(
+  line: &str,
+) -> Option<(&'static str, &'static str, &'static str, &'static str)> {
   let lower = line.to_ascii_lowercase();
   let patterns = [
     ("missing approval", "missing_approval", "P0", "P0"),
@@ -640,7 +729,11 @@ fn readiness_keyword_match(line: &str) -> Option<(&'static str, &'static str, &'
 }
 
 #[tauri::command]
-pub(crate) fn write_workspace_text_file(workspace_root: String, relative_path: String, content: String) -> Result<WorkspaceWriteProof, String> {
+pub(crate) fn write_workspace_text_file(
+  workspace_root: String,
+  relative_path: String,
+  content: String,
+) -> Result<WorkspaceWriteProof, String> {
   let root = PathBuf::from(workspace_root.trim());
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required for workspace file writes.".to_string());
@@ -651,7 +744,14 @@ pub(crate) fn write_workspace_text_file(workspace_root: String, relative_path: S
   if rel.as_os_str().is_empty() {
     return Err("Relative path is required.".to_string());
   }
-  if rel.is_absolute() || rel.components().any(|component| matches!(component, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+  if rel.is_absolute()
+    || rel.components().any(|component| {
+      matches!(
+        component,
+        Component::ParentDir | Component::Prefix(_) | Component::RootDir
+      )
+    })
+  {
     return Err("Unsafe relative path rejected.".to_string());
   }
 
@@ -681,7 +781,10 @@ pub(crate) fn write_workspace_text_file(workspace_root: String, relative_path: S
 }
 
 #[tauri::command]
-pub(crate) fn collect_workspace_proof(root: String, max_files: Option<u64>) -> Result<WorkspaceProof, String> {
+pub(crate) fn collect_workspace_proof(
+  root: String,
+  max_files: Option<u64>,
+) -> Result<WorkspaceProof, String> {
   let root_path = PathBuf::from(&root);
   let checked_at_ms = now_ms();
 
@@ -746,7 +849,10 @@ pub(crate) fn collect_workspace_proof(root: String, max_files: Option<u64>) -> R
         break;
       }
 
-      let extension = path.extension().and_then(|value| value.to_str()).unwrap_or("");
+      let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
       if !matches!(extension, "js" | "jsx" | "ts" | "tsx" | "rs" | "py") {
         continue;
       }
@@ -781,7 +887,10 @@ pub(crate) fn collect_workspace_proof(root: String, max_files: Option<u64>) -> R
 }
 
 #[tauri::command]
-pub(crate) fn build_workspace_symbol_index(root: String, max_files: Option<u64>) -> Result<WorkspaceSymbolIndex, String> {
+pub(crate) fn build_workspace_symbol_index(
+  root: String,
+  max_files: Option<u64>,
+) -> Result<WorkspaceSymbolIndex, String> {
   let root_path = PathBuf::from(&root);
   let generated_at_ms = now_ms();
   let max_files = max_files.unwrap_or(500);
@@ -829,7 +938,10 @@ pub(crate) fn build_workspace_symbol_index(root: String, max_files: Option<u64>)
         continue;
       }
 
-      let extension = path.extension().and_then(|value| value.to_str()).unwrap_or("");
+      let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
       if !matches!(extension, "js" | "jsx" | "ts" | "tsx" | "rs" | "py") {
         continue;
       }
@@ -880,7 +992,10 @@ pub(crate) fn build_workspace_symbol_index(root: String, max_files: Option<u64>)
 }
 
 #[tauri::command]
-pub(crate) fn read_workspace_file(workspace_root: String, relative_path: String) -> Result<WorkspaceFileReadProof, String> {
+pub(crate) fn read_workspace_file(
+  workspace_root: String,
+  relative_path: String,
+) -> Result<WorkspaceFileReadProof, String> {
   let root = PathBuf::from(workspace_root.trim());
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
@@ -890,7 +1005,14 @@ pub(crate) fn read_workspace_file(workspace_root: String, relative_path: String)
   if rel.as_os_str().is_empty() {
     return Err("Relative path is required.".to_string());
   }
-  if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+  if rel.is_absolute()
+    || rel.components().any(|c| {
+      matches!(
+        c,
+        Component::ParentDir | Component::Prefix(_) | Component::RootDir
+      )
+    })
+  {
     return Err("Unsafe relative path rejected.".to_string());
   }
   let file_path = root_abs.join(rel);
@@ -913,7 +1035,10 @@ pub(crate) fn read_workspace_file(workspace_root: String, relative_path: String)
 }
 
 #[tauri::command]
-pub(crate) fn delete_workspace_file(workspace_root: String, relative_path: String) -> Result<WorkspaceFileDeleteProof, String> {
+pub(crate) fn delete_workspace_file(
+  workspace_root: String,
+  relative_path: String,
+) -> Result<WorkspaceFileDeleteProof, String> {
   let root = PathBuf::from(workspace_root.trim());
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
@@ -923,7 +1048,14 @@ pub(crate) fn delete_workspace_file(workspace_root: String, relative_path: Strin
   if rel.as_os_str().is_empty() {
     return Err("Relative path is required.".to_string());
   }
-  if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+  if rel.is_absolute()
+    || rel.components().any(|c| {
+      matches!(
+        c,
+        Component::ParentDir | Component::Prefix(_) | Component::RootDir
+      )
+    })
+  {
     return Err("Unsafe relative path rejected.".to_string());
   }
   let file_path = root_abs.join(rel);
@@ -941,7 +1073,11 @@ pub(crate) fn delete_workspace_file(workspace_root: String, relative_path: Strin
 }
 
 #[tauri::command]
-pub(crate) fn move_workspace_file(workspace_root: String, from_relative: String, to_relative: String) -> Result<WorkspaceFileMoveProof, String> {
+pub(crate) fn move_workspace_file(
+  workspace_root: String,
+  from_relative: String,
+  to_relative: String,
+) -> Result<WorkspaceFileMoveProof, String> {
   let root = PathBuf::from(workspace_root.trim());
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
@@ -953,7 +1089,14 @@ pub(crate) fn move_workspace_file(workspace_root: String, from_relative: String,
     return Err("Both from and to paths are required.".to_string());
   }
   for rel in [&from_rel, &to_rel] {
-    if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+    if rel.is_absolute()
+      || rel.components().any(|c| {
+        matches!(
+          c,
+          Component::ParentDir | Component::Prefix(_) | Component::RootDir
+        )
+      })
+    {
       return Err("Unsafe relative path rejected.".to_string());
     }
   }
@@ -978,7 +1121,12 @@ pub(crate) fn move_workspace_file(workspace_root: String, from_relative: String,
 }
 
 #[tauri::command]
-pub(crate) fn search_workspace_files(workspace_root: String, query: String, case_sensitive: bool, max_results: Option<usize>) -> Result<WorkspaceSearchProof, String> {
+pub(crate) fn search_workspace_files(
+  workspace_root: String,
+  query: String,
+  case_sensitive: bool,
+  max_results: Option<usize>,
+) -> Result<WorkspaceSearchProof, String> {
   let root = PathBuf::from(workspace_root.trim());
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
@@ -987,9 +1135,25 @@ pub(crate) fn search_workspace_files(workspace_root: String, query: String, case
   let max_results = max_results.unwrap_or(200);
   let mut results = Vec::new();
   let mut files_scanned = 0;
-  let skip_dirs = ["node_modules", ".git", "target", "dist", "build", "__pycache__", ".next"];
+  let skip_dirs = [
+    "node_modules",
+    ".git",
+    "target",
+    "dist",
+    "build",
+    "__pycache__",
+    ".next",
+  ];
 
-  fn walk_dir(dir: &Path, query: &str, case_sensitive: bool, max_results: usize, results: &mut Vec<WorkspaceSearchResultItem>, files_scanned: &mut usize, skip_dirs: &[&str]) -> Result<(), String> {
+  fn walk_dir(
+    dir: &Path,
+    query: &str,
+    case_sensitive: bool,
+    max_results: usize,
+    results: &mut Vec<WorkspaceSearchResultItem>,
+    files_scanned: &mut usize,
+    skip_dirs: &[&str],
+  ) -> Result<(), String> {
     if results.len() >= max_results {
       return Ok(());
     }
@@ -1002,10 +1166,23 @@ pub(crate) fn search_workspace_files(workspace_root: String, query: String, case
             continue;
           }
         }
-        walk_dir(&path, query, case_sensitive, max_results, results, files_scanned, skip_dirs)?;
+        walk_dir(
+          &path,
+          query,
+          case_sensitive,
+          max_results,
+          results,
+          files_scanned,
+          skip_dirs,
+        )?;
       } else if path.is_file() {
         if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-          if !["js", "jsx", "ts", "tsx", "rs", "py", "go", "json", "md", "txt", "yml", "yaml", "toml", "css", "html", "sh", "bat", "ps1"].contains(&ext) {
+          if ![
+            "js", "jsx", "ts", "tsx", "rs", "py", "go", "json", "md", "txt", "yml", "yaml", "toml",
+            "css", "html", "sh", "bat", "ps1",
+          ]
+          .contains(&ext)
+          {
             continue;
           }
         } else {
@@ -1013,10 +1190,20 @@ pub(crate) fn search_workspace_files(workspace_root: String, query: String, case
         }
         *files_scanned += 1;
         if let Ok(content) = fs::read_to_string(&path) {
-          let rel = path.strip_prefix(dir.parent().unwrap_or(dir)).unwrap_or(&path);
+          let rel = path
+            .strip_prefix(dir.parent().unwrap_or(dir))
+            .unwrap_or(&path);
           for (line_idx, line) in content.lines().enumerate() {
-            let search_line = if case_sensitive { line.to_string() } else { line.to_lowercase() };
-            let search_query = if case_sensitive { query.to_string() } else { query.to_lowercase() };
+            let search_line = if case_sensitive {
+              line.to_string()
+            } else {
+              line.to_lowercase()
+            };
+            let search_query = if case_sensitive {
+              query.to_string()
+            } else {
+              query.to_lowercase()
+            };
             if search_line.contains(&search_query) {
               let match_count = search_line.matches(&search_query).count();
               results.push(WorkspaceSearchResultItem {
@@ -1037,7 +1224,15 @@ pub(crate) fn search_workspace_files(workspace_root: String, query: String, case
     Ok(())
   }
 
-  walk_dir(&root_abs, &query, case_sensitive, max_results, &mut results, &mut files_scanned, &skip_dirs)?;
+  walk_dir(
+    &root_abs,
+    &query,
+    case_sensitive,
+    max_results,
+    &mut results,
+    &mut files_scanned,
+    &skip_dirs,
+  )?;
   let total_matches: usize = results.iter().map(|r| r.match_count).sum();
 
   Ok(WorkspaceSearchProof {
@@ -1052,15 +1247,28 @@ pub(crate) fn search_workspace_files(workspace_root: String, query: String, case
 }
 
 #[tauri::command]
-pub(crate) fn list_workspace_directory(workspace_root: String, relative_path: String, recursive: Option<bool>) -> Result<WorkspaceDirectoryProof, String> {
+pub(crate) fn list_workspace_directory(
+  workspace_root: String,
+  relative_path: String,
+  recursive: Option<bool>,
+) -> Result<WorkspaceDirectoryProof, String> {
   let root = PathBuf::from(workspace_root.trim());
   if root.as_os_str().is_empty() {
     return Err("Workspace root is required.".to_string());
   }
   let root_abs = fs::canonicalize(&root).map_err(|e| e.to_string())?;
   let rel = Path::new(relative_path.trim());
-  let dir_path = if rel.as_os_str().is_empty() { root_abs.clone() } else {
-    if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir | Component::Prefix(_) | Component::RootDir)) {
+  let dir_path = if rel.as_os_str().is_empty() {
+    root_abs.clone()
+  } else {
+    if rel.is_absolute()
+      || rel.components().any(|c| {
+        matches!(
+          c,
+          Component::ParentDir | Component::Prefix(_) | Component::RootDir
+        )
+      })
+    {
       return Err("Unsafe relative path rejected.".to_string());
     }
     root_abs.join(rel)
@@ -1075,9 +1283,25 @@ pub(crate) fn list_workspace_directory(workspace_root: String, relative_path: St
   let mut entries = Vec::new();
   let mut total_files = 0;
   let mut total_dirs = 0;
-  let skip_dirs = ["node_modules", ".git", "target", "dist", "build", "__pycache__", ".next"];
+  let skip_dirs = [
+    "node_modules",
+    ".git",
+    "target",
+    "dist",
+    "build",
+    "__pycache__",
+    ".next",
+  ];
 
-  fn walk_dir_entries(dir: &Path, root: &Path, recursive: bool, entries: &mut Vec<WorkspaceDirEntry>, total_files: &mut usize, total_dirs: &mut usize, skip_dirs: &[&str]) -> Result<(), String> {
+  fn walk_dir_entries(
+    dir: &Path,
+    root: &Path,
+    recursive: bool,
+    entries: &mut Vec<WorkspaceDirEntry>,
+    total_files: &mut usize,
+    total_dirs: &mut usize,
+    skip_dirs: &[&str],
+  ) -> Result<(), String> {
     for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
       let entry = entry.map_err(|e| e.to_string())?;
       let path = entry.path();
@@ -1085,7 +1309,9 @@ pub(crate) fn list_workspace_directory(workspace_root: String, relative_path: St
       let metadata = entry.metadata().ok();
       let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
       let modified_ms = metadata.as_ref().and_then(|m| m.modified().ok()).map(|t| {
-        t.duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+        t.duration_since(UNIX_EPOCH)
+          .map(|d| d.as_millis() as u64)
+          .unwrap_or(0)
       });
       let is_dir = path.is_dir();
       let is_file = path.is_file();
@@ -1107,7 +1333,15 @@ pub(crate) fn list_workspace_directory(workspace_root: String, relative_path: St
           modified_ms,
         });
         if recursive {
-          walk_dir_entries(&path, root, recursive, entries, total_files, total_dirs, skip_dirs)?;
+          walk_dir_entries(
+            &path,
+            root,
+            recursive,
+            entries,
+            total_files,
+            total_dirs,
+            skip_dirs,
+          )?;
         }
       } else if is_file {
         *total_files += 1;
@@ -1125,7 +1359,15 @@ pub(crate) fn list_workspace_directory(workspace_root: String, relative_path: St
     Ok(())
   }
 
-  walk_dir_entries(&dir_path, &root_abs, recursive, &mut entries, &mut total_files, &mut total_dirs, &skip_dirs)?;
+  walk_dir_entries(
+    &dir_path,
+    &root_abs,
+    recursive,
+    &mut entries,
+    &mut total_files,
+    &mut total_dirs,
+    &skip_dirs,
+  )?;
 
   Ok(WorkspaceDirectoryProof {
     directory_path: dir_path.to_string_lossy().to_string(),
@@ -1189,7 +1431,11 @@ pub(crate) fn scan_workspace_readiness(
       error: None,
       duration_ms: None,
     };
-    let _ = write_native_proof_stage(Path::new("release/rc0"), "08_scan_progress.json", &proof_start);
+    let _ = write_native_proof_stage(
+      Path::new("release/rc0"),
+      "08_scan_progress.json",
+      &proof_start,
+    );
     return scan_readiness_target_paths(
       &root_path,
       readiness_proof_scan_targets(&root_path),
@@ -1240,7 +1486,9 @@ pub(crate) fn scan_workspace_readiness(
         failed_count,
         partial_count,
         trust: "partial".to_string(),
-        error: Some(format!("Readiness scan stopped after max_files={max_files}.")),
+        error: Some(format!(
+          "Readiness scan stopped after max_files={max_files}."
+        )),
       });
     }
 
@@ -1301,7 +1549,20 @@ pub(crate) fn scan_workspace_readiness(
       let extension = readiness_file_extension(&path);
       if !matches!(
         extension.as_str(),
-        "js" | "jsx" | "ts" | "tsx" | "rs" | "mjs" | "cjs" | "md" | "toml" | "json" | "yml" | "yaml" | "css" | "html"
+        "js"
+          | "jsx"
+          | "ts"
+          | "tsx"
+          | "rs"
+          | "mjs"
+          | "cjs"
+          | "md"
+          | "toml"
+          | "json"
+          | "yml"
+          | "yaml"
+          | "css"
+          | "html"
       ) {
         continue;
       }
@@ -1326,7 +1587,9 @@ pub(crate) fn scan_workspace_readiness(
           failed_count,
           partial_count,
           trust: "partial".to_string(),
-          error: Some(format!("Readiness scan stopped after max_files={max_files}.")),
+          error: Some(format!(
+            "Readiness scan stopped after max_files={max_files}."
+          )),
         });
       }
 
@@ -1367,7 +1630,8 @@ pub(crate) fn scan_workspace_readiness(
         let message = if needle == "setup required" || needle == "setup-required" {
           "Setup-required surface should be labeled clearly and backed by real checks.".to_string()
         } else if kind == "missing_approval" {
-          "Approval gate is missing or not enforced; add Jose approval or truth-label the action.".to_string()
+          "Approval gate is missing or not enforced; add Jose approval or truth-label the action."
+            .to_string()
         } else if kind == "missing_receipt" {
           "Receipt-backed evidence is missing for a production-facing action.".to_string()
         } else if kind == "updater_blocker" {
@@ -1375,17 +1639,24 @@ pub(crate) fn scan_workspace_readiness(
         } else if kind == "connector_blocker" {
           "Connector path is blocked and should be marked setup_required until real provider proof exists.".to_string()
         } else if kind == "not_wired" {
-          "Surface is explicitly marked as not wired; keep it disabled or implement the real path.".to_string()
+          "Surface is explicitly marked as not wired; keep it disabled or implement the real path."
+            .to_string()
         } else if kind == "fake" || kind == "simulation" {
           "Production-facing surface should not imply fake or simulated execution.".to_string()
         } else if kind == "placeholder" || kind == "scaffold" || kind == "demo" || kind == "mock" {
           "Production-facing surface should be replaced with real behavior or explicitly setup-required state.".to_string()
         } else {
-          "Code review marker remains in the workspace and should be resolved or tracked.".to_string()
+          "Code review marker remains in the workspace and should be resolved or tracked."
+            .to_string()
         };
 
         findings.push(WorkspaceReadinessFinding {
-          id: format!("ready-{}-{}-{}", findings.len() + 1, files_scanned, line_number),
+          id: format!(
+            "ready-{}-{}-{}",
+            findings.len() + 1,
+            files_scanned,
+            line_number
+          ),
           path: path.to_string_lossy().to_string(),
           line_number,
           surface: readiness_surface_for_path(&path),
@@ -1454,7 +1725,10 @@ pub(crate) fn scan_workspace_readiness(
 }
 
 #[tauri::command]
-pub(crate) fn inspect_updater_release(bundle_dir: String, manifest_dir: String) -> Result<ReleaseArtifactProof, String> {
+pub(crate) fn inspect_updater_release(
+  bundle_dir: String,
+  manifest_dir: String,
+) -> Result<ReleaseArtifactProof, String> {
   let bundle_path = PathBuf::from(&bundle_dir);
   let manifest_path = PathBuf::from(&manifest_dir).join("latest.json");
 
@@ -1484,7 +1758,10 @@ pub(crate) fn inspect_updater_release(bundle_dir: String, manifest_dir: String) 
     if !path.is_file() {
       continue;
     }
-    let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or("");
+    let file_name = path
+      .file_name()
+      .and_then(|name| name.to_str())
+      .unwrap_or("");
     if !file_name.ends_with("-setup.exe") {
       continue;
     }
@@ -1499,7 +1776,9 @@ pub(crate) fn inspect_updater_release(bundle_dir: String, manifest_dir: String) 
   installer_candidates.sort_by_key(|b| std::cmp::Reverse(b.1));
 
   let installer_path = installer_candidates.first().map(|(path, _)| path.clone());
-  let signature_path = installer_path.as_ref().map(|path| PathBuf::from(format!("{}.sig", path.to_string_lossy())));
+  let signature_path = installer_path
+    .as_ref()
+    .map(|path| PathBuf::from(format!("{}.sig", path.to_string_lossy())));
   let installer_found = installer_path
     .as_ref()
     .map(|path| path.exists() && path.is_file())
@@ -1520,15 +1799,35 @@ pub(crate) fn inspect_updater_release(bundle_dir: String, manifest_dir: String) 
     match fs::read_to_string(&manifest_path) {
       Ok(raw) => match serde_json::from_str::<Value>(&raw) {
         Ok(json) => {
-          manifest_version = json.get("version").and_then(|value| value.as_str()).map(|value| value.to_string());
-          let platform = json.get("platforms").and_then(|value| value.get("windows-x86_64"));
-          manifest_signature = platform.and_then(|value| value.get("signature")).and_then(|value| value.as_str()).map(|value| value.to_string());
-          manifest_url = platform.and_then(|value| value.get("url")).and_then(|value| value.as_str()).map(|value| value.to_string());
+          manifest_version = json
+            .get("version")
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string());
+          let platform = json
+            .get("platforms")
+            .and_then(|value| value.get("windows-x86_64"));
+          manifest_signature = platform
+            .and_then(|value| value.get("signature"))
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string());
+          manifest_url = platform
+            .and_then(|value| value.get("url"))
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string());
           manifest_valid = manifest_version.is_some()
-            && manifest_signature.as_ref().map(|value| !value.trim().is_empty()).unwrap_or(false)
-            && manifest_url.as_ref().map(|value| !value.trim().is_empty()).unwrap_or(false);
+            && manifest_signature
+              .as_ref()
+              .map(|value| !value.trim().is_empty())
+              .unwrap_or(false)
+            && manifest_url
+              .as_ref()
+              .map(|value| !value.trim().is_empty())
+              .unwrap_or(false);
           if !manifest_valid {
-            manifest_error = Some("latest.json is present but missing required version, url, or signature fields.".to_string());
+            manifest_error = Some(
+              "latest.json is present but missing required version, url, or signature fields."
+                .to_string(),
+            );
           }
         }
         Err(error) => {
