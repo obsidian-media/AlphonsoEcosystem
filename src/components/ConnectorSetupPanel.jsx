@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ClipboardCopy, MessageCircle, RadioTower, Smartphone } from 'lucide-react';
+import {
+  RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
+  Github, MessageSquare, Bot, Zap, Database, ListTodo, Phone, Youtube,
+  Cpu, Slack, Search, Smartphone, Settings2, MessageCircle
+} from 'lucide-react';
 import { ToolConnectionsPanel } from './ToolConnectionsPanel';
 import {
   createConnectorRoutePacket,
@@ -10,7 +14,6 @@ import {
   pollWhatsAppConnector,
   simulateWhatsAppCloudInbound,
   sendTelegramConnectorMessage,
-  proveTelegramConnectorPath,
   sendWhatsAppConnectorMessage,
   sendChatGptConnectorMessage,
   sendClaudeConnectorMessage,
@@ -22,50 +25,176 @@ import {
   verifyWhatsAppCloudWebhookSignature,
   setConnectorStatus,
   updateConnectorAuthProfile,
-  verifyConnectorEnvironment
+  verifyConnectorEnvironment,
+  proveTelegramConnectorPath
 } from '../services/connectorRegistryService';
 import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/telegramAutoPollService';
 import { saveConnectorCredential, getConnectorCredential } from '../services/connectors/connectorAuth';
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
 
-function CredentialSection({ title, connectorId, borderColor, bgColor, labelColor, fields, onSave, hint }) {
+// ── Connector icon map ────────────────────────────────────────────────────────
+const CONNECTOR_ICONS = {
+  telegram: MessageSquare,
+  whatsapp: Phone,
+  github: Github,
+  slack: Slack,
+  claude: Bot,
+  chatgpt: Bot,
+  notion: Database,
+  clickup: ListTodo,
+  youtube: Youtube,
+  qwen: Cpu,
+  brave_search: Search,
+  ollama: Cpu,
+  sd_webui: Settings2,
+  comfyui_video: Settings2,
+  mobile_bridge: Smartphone,
+};
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+function getDisplayStatus(connector) {
+  const status = String(connector?.status || 'unknown').trim().toLowerCase();
+  const requiredEnv = Array.isArray(connector?.requiredEnv) ? connector.requiredEnv : [];
+  const envMissing = requiredEnv.length > 0 && requiredEnv.some((n) => !connector?.envPresence?.[n]);
+  if (status === 'foundation_only') return 'local_only';
+  if (status === 'disabled_safe') return 'not_configured';
+  if (status === 'configured' && envMissing) return 'error';
+  if (status === 'configured' && connector?.lastTestStatus && connector.lastTestStatus !== 'verified') return 'not_configured';
+  if (['configured', 'not_configured', 'invalid', 'unknown', 'setup_required'].includes(status)) {
+    if (status === 'configured') return 'configured';
+    return 'not_configured';
+  }
+  return 'not_configured';
+}
+
+function isConnectorLive(connector) {
+  return getDisplayStatus(connector) === 'configured' && connector?.lastTestStatus === 'verified';
+}
+
+function isConnectorOutboundAllowed(connector, approved) {
+  if (!connector || !approved) return false;
+  if (['mobile_bridge', 'sd_webui', 'comfyui_video'].includes(connector.id)) return false;
+  return getDisplayStatus(connector) === 'configured';
+}
+
+function isConnectorPollAllowed(connector) {
+  if (!connector) return false;
+  if (!['telegram', 'whatsapp'].includes(connector.id)) return false;
+  return getDisplayStatus(connector) === 'configured';
+}
+
+// ── Credential section with save confirmation ─────────────────────────────────
+function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }) {
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    onSave();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
   return (
-    <div className={`mt-4 rounded-xl border ${borderColor} ${bgColor} p-4`}>
-      <div className={`mb-3 text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>{title}</div>
-      <div className="grid grid-cols-1 gap-2">
+    <div className={`rounded-2xl border ${borderColor} ${bgColor} p-5`}>
+      <div className="mb-4 flex items-center gap-2">
+        {Icon && <Icon className={`h-4 w-4 ${accentColor}`} />}
+        <span className="text-sm font-semibold text-zinc-100">{title}</span>
+      </div>
+      <div className="space-y-3">
         {fields.map((f) => (
-          <div key={f.key} className="flex flex-col gap-1">
-            <label className="text-[10px] text-zinc-400 uppercase tracking-wider">{f.label}</label>
+          <div key={f.key}>
+            <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">{f.label}</label>
             <input
               type={f.secret === false ? 'text' : 'password'}
               value={f.value || ''}
               onChange={(e) => f.onChange(e.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-white/20"
+              className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
               placeholder={f.placeholder}
               autoComplete="off"
             />
           </div>
         ))}
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        {hint && <p className="text-[10px] text-zinc-500 leading-relaxed flex-1">{hint}</p>}
+      {hint && <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">{hint}</p>}
+      <div className="mt-4 flex items-center justify-between">
+        {saved ? (
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-400">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            {savedLabel || 'Saved successfully'}
+          </div>
+        ) : (
+          <div />
+        )}
         <button
-          onClick={onSave}
-          className={`rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-100 transition-colors ${bgColor.replace('/8', '/30')} hover:opacity-80 border ${borderColor} shrink-0`}
+          onClick={handleSave}
+          className={`rounded-xl border ${borderColor} px-4 py-2 text-[11px] font-semibold text-zinc-100 transition-opacity hover:opacity-80`}
         >
-          Save &amp; Enable
+          Save & Enable
         </button>
       </div>
     </div>
   );
 }
 
+// ── Connector status card ─────────────────────────────────────────────────────
+function ConnectorCard({ connector, onVerifyEnv }) {
+  const Icon = CONNECTOR_ICONS[connector.id] || MessageCircle;
+  const displayStatus = getDisplayStatus(connector);
+  const live = isConnectorLive(connector);
+
+  const statusConfig = {
+    configured: { label: 'Active', dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-300/20 bg-emerald-500/5' },
+    local_only: { label: 'Local', dot: 'bg-slate-400', text: 'text-slate-400', border: 'border-slate-300/20 bg-slate-500/5' },
+    not_configured: { label: 'Not set up', dot: 'bg-zinc-600', text: 'text-zinc-500', border: 'border-white/10 bg-zinc-900/40' },
+    error: { label: 'Error', dot: 'bg-amber-400', text: 'text-amber-400', border: 'border-amber-300/20 bg-amber-500/5' },
+  };
+
+  const cfg = statusConfig[displayStatus] || statusConfig.not_configured;
+
+  return (
+    <div className={`rounded-xl border p-3.5 ${cfg.border}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 shrink-0 ${cfg.text}`} />
+          <span className="text-sm font-medium text-zinc-100">{connector.name}</span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+          <span className={`text-[10px] font-medium ${cfg.text}`}>{cfg.label}</span>
+        </div>
+      </div>
+      {live && (
+        <div className="mt-2 text-[10px] text-emerald-400/70">
+          Verified & ready
+        </div>
+      )}
+      {displayStatus === 'not_configured' && (
+        <div className="mt-2 text-[10px] text-zinc-600">
+          Enter credentials below to enable
+        </div>
+      )}
+      <button
+        onClick={onVerifyEnv}
+        className="mt-3 w-full rounded-lg bg-white/5 px-3 py-1.5 text-[10px] font-medium text-zinc-400 hover:bg-white/10 hover:text-zinc-200 transition-colors"
+      >
+        Test Connection
+      </button>
+    </div>
+  );
+}
+
+// ── Main panel ────────────────────────────────────────────────────────────────
 export function ConnectorSetupPanel() {
   const [connectors, setConnectors] = useState(() => listConnectors());
   const [audit, setAudit] = useState(() => listConnectorAudit());
   const [authProfiles, setAuthProfiles] = useState(() => listConnectorAuthProfiles());
-  const [simulatedText, setSimulatedText] = useState('ask hector: find latest Tauri v2 docs');
+  const [notice, setNotice] = useState('');
+  const [noticeType, setNoticeType] = useState('info'); // 'info' | 'error' | 'success'
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [transportBusy, setTransportBusy] = useState(false);
+
+  // Advanced / developer state
   const [connectorId, setConnectorId] = useState('telegram');
+  const [simulatedText, setSimulatedText] = useState('ask hector: find latest Tauri v2 docs');
   const [senderId, setSenderId] = useState('');
   const [authInput, setAuthInput] = useState('');
   const [outboundTarget, setOutboundTarget] = useState('');
@@ -81,15 +210,14 @@ export function ConnectorSetupPanel() {
   const [cloudWebhookMode, setCloudWebhookMode] = useState('subscribe');
   const [cloudWebhookVerifyToken, setCloudWebhookVerifyToken] = useState('');
   const [cloudWebhookChallenge, setCloudWebhookChallenge] = useState('challenge-123');
-  const [transportBusy, setTransportBusy] = useState(false);
-  const [notice, setNotice] = useState('');
   const [autoPollState, setAutoPollState] = useState(() => getTelegramAutoPollState());
-  const pollAvailable = ['telegram', 'whatsapp'].includes(connectorId);
+
+  // Telegram credentials
   const [telegramBotToken, setTelegramBotToken] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN'));
   const [telegramChatIds, setTelegramChatIds] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS'));
   const [telegramBotVerified, setTelegramBotVerified] = useState(null);
 
-  // API key credentials for all other connectors
+  // API key credentials
   const [githubToken, setGithubToken] = useState(() => getConnectorCredential('github', 'GITHUB_TOKEN'));
   const [slackBotToken, setSlackBotToken] = useState(() => getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
   const [anthropicApiKey, setAnthropicApiKey] = useState(() => getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
@@ -113,11 +241,7 @@ export function ConnectorSetupPanel() {
       const ids = listConnectors().map((c) => c.id);
       for (const id of ids) {
         if (cancelled) break;
-        try {
-          await verifyConnectorEnvironment(id);
-        } catch {
-          // ignore individual probe failures
-        }
+        try { await verifyConnectorEnvironment(id); } catch { /* silent */ }
       }
       if (!cancelled) {
         setConnectors(listConnectors());
@@ -129,15 +253,9 @@ export function ConnectorSetupPanel() {
   }, []);
 
   const selectedConnector = useMemo(
-    () => connectors.find((connector) => connector.id === connectorId) || null,
+    () => connectors.find((c) => c.id === connectorId) || null,
     [connectors, connectorId]
   );
-  const selectedDisplayStatus = selectedConnector ? displayConnectorStatus(selectedConnector) : 'unknown';
-  const outboundAllowed = Boolean(selectedConnector && isConnectorOutboundAllowed(selectedConnector, explicitApproval));
-  const pollAllowed = Boolean(selectedConnector && isConnectorPollAllowed(selectedConnector));
-
-  const selectedProfile = useMemo(() => authProfiles?.[connectorId] || { enabled: false, allowlist: [], mode: 'allowlist_required' }, [authProfiles, connectorId]);
-  const setupChecklist = useMemo(() => buildConnectorSetupChecklist(connectors, authProfiles), [connectors, authProfiles]);
 
   const refresh = () => {
     setConnectors(listConnectors());
@@ -145,56 +263,95 @@ export function ConnectorSetupPanel() {
     setAuthProfiles(listConnectorAuthProfiles());
   };
 
-  const copySetupChecklist = async () => {
-    try {
-      await navigator.clipboard.writeText(setupChecklist);
-      setNotice('Connector setup checklist copied.');
-    } catch {
-      setNotice('Unable to copy checklist from this browser context.');
-    }
+  const showNotice = (msg, type = 'info') => {
+    setNotice(msg);
+    setNoticeType(type);
   };
 
-  const createRoute = () => {
-    const result = createConnectorRoutePacket(connectorId, simulatedText, senderId);
-    if (result?.rejected) {
-      setNotice(`Route blocked: ${result.reason}`);
-    } else {
-      setNotice(result?.packet?.id ? `Route packet created: ${result.packet.id}` : 'No route packet was created.');
-    }
-    refresh();
-  };
+  // Active connector count for summary
+  const activeCount = connectors.filter((c) => getDisplayStatus(c) === 'configured').length;
 
-  const applyAllowlist = () => {
-    const profile = updateConnectorAuthProfile(connectorId, {
+  // ── Credential save helpers ─────────────────────────────────────────────────
+  const saveTelegramCredentials = () => {
+    const token = telegramBotToken.trim();
+    if (!token) { showNotice('Bot token is required.', 'error'); return; }
+    saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', token);
+    saveConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS', telegramChatIds.trim());
+    updateConnectorAuthProfile('telegram', {
       enabled: true,
-      allowlist: authInput
+      allowlist: telegramChatIds.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)
     });
-    setNotice(`Auth profile updated for ${connectorId}. Allowlist count: ${profile.allowlist.length}`);
+    setTelegramBotVerified(null);
+    showNotice('Telegram credentials saved. Use "Test Connection" on the card to verify.', 'success');
     refresh();
   };
 
-  const disableAuthProfile = () => {
-    const profile = updateConnectorAuthProfile(connectorId, {
-      enabled: false,
-      allowlist: []
-    });
-    setNotice(`Auth profile disabled for ${connectorId}. Allowlist count: ${profile.allowlist.length}`);
+  const saveConnectorApiKey = (cId, fields) => {
+    let hasValue = false;
+    for (const [key, value] of Object.entries(fields)) {
+      const trimmed = String(value || '').trim();
+      if (trimmed) { saveConnectorCredential(cId, key, trimmed); hasValue = true; }
+    }
+    if (hasValue) {
+      updateConnectorAuthProfile(cId, { enabled: true });
+      showNotice(`${cId} credentials saved.`, 'success');
+    } else {
+      showNotice('Please enter at least one credential value.', 'error');
+    }
     refresh();
+  };
+
+  const verifyTelegramBot = async () => {
+    const token = telegramBotToken.trim() || getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
+    if (!token) { showNotice('Enter a bot token first.', 'error'); return; }
+    setTransportBusy(true);
+    try {
+      const result = await verifyTelegramBotEnvironment({ botToken: token });
+      setTelegramBotVerified(result);
+      if (result.ok) {
+        showNotice(`Connected to @${result.botUsername}`, 'success');
+      } else {
+        showNotice(`Telegram error: ${result.error}`, 'error');
+      }
+    } finally { setTransportBusy(false); }
   };
 
   const verifyEnv = async (id) => {
     const result = await verifyConnectorEnvironment(id);
     if (result?.error) {
-      setNotice(`${id} env check failed: ${result.error}`);
+      showNotice(`${id}: ${result.error}`, 'error');
     } else {
-      setNotice(`${id} env check ${result?.ok ? 'passed' : 'failed'} (${result?.status}).`);
+      showNotice(`${id}: ${result?.ok ? 'connection verified' : 'check failed — credentials may be missing'}`, result?.ok ? 'success' : 'error');
     }
     refresh();
   };
 
-  const pollTelegram = async () => {
+  // ── Advanced tool handlers ──────────────────────────────────────────────────
+  const createRoute = () => {
+    const result = createConnectorRoutePacket(connectorId, simulatedText, senderId);
+    if (result?.rejected) {
+      showNotice(`Route blocked: ${result.reason}`, 'error');
+    } else {
+      showNotice(result?.packet?.id ? `Route packet created: ${result.packet.id}` : 'No route packet created.', 'info');
+    }
+    refresh();
+  };
+
+  const applyAllowlist = () => {
+    const profile = updateConnectorAuthProfile(connectorId, { enabled: true, allowlist: authInput });
+    showNotice(`Allowlist updated for ${connectorId}. ${profile.allowlist.length} entries.`, 'success');
+    refresh();
+  };
+
+  const disableAuthProfile = () => {
+    updateConnectorAuthProfile(connectorId, { enabled: false, allowlist: [] });
+    showNotice(`Auth profile disabled for ${connectorId}.`, 'info');
+    refresh();
+  };
+
+  const pollConnector = async () => {
     if (!['telegram', 'whatsapp'].includes(connectorId)) {
-      setNotice('Polling is currently available for Telegram and Twilio-based WhatsApp only.');
+      showNotice('Polling is available for Telegram and WhatsApp only.', 'error');
       return;
     }
     setTransportBusy(true);
@@ -203,835 +360,451 @@ export function ConnectorSetupPanel() {
         ? await pollWhatsAppConnector(20)
         : await pollTelegramConnector(20);
       if (result.error) {
-        setNotice(`${connectorId} poll failed: ${result.error}`);
+        showNotice(`Poll failed: ${result.error}`, 'error');
       } else {
-        setNotice(`${connectorId} poll complete: ${result.count} inbound, ${result.routed} routed, ${result.rejected} rejected, Jose distributed ${result.joseDistributed || 0}, failures ${result.joseFailures || 0}.`);
+        showNotice(`Poll: ${result.count} inbound, ${result.routed} routed, ${result.rejected} rejected.`, 'info');
       }
       refresh();
-    } finally {
-      setTransportBusy(false);
-    }
+    } finally { setTransportBusy(false); }
   };
 
   const runAutoPoll = async () => {
-    if (connectorId !== 'telegram') {
-      setNotice('Auto-poll is only available for Telegram.');
-      return;
-    }
+    if (connectorId !== 'telegram') { showNotice('Auto-poll is Telegram only.', 'error'); return; }
     setTransportBusy(true);
     try {
       const result = await runSingleTelegramPoll({ limit: 12 });
       setAutoPollState(getTelegramAutoPollState());
-      if (result.ok) {
-        setNotice(`Auto-poll complete: ${result.count} inbound, ${result.routed} routed, ${result.rejected} rejected.`);
-      } else {
-        setNotice(`Auto-poll failed: ${result.reason || 'unknown error'}.`);
-      }
+      showNotice(result.ok
+        ? `Auto-poll: ${result.count} inbound, ${result.routed} routed.`
+        : `Auto-poll failed: ${result.reason || 'unknown'}`,
+        result.ok ? 'info' : 'error');
       refresh();
-    } finally {
-      setTransportBusy(false);
-    }
-  };
-
-  const saveTelegramCredentials = () => {
-    const token = telegramBotToken.trim();
-    const chatIds = telegramChatIds.trim();
-    if (!token) {
-      setNotice('Bot token is required.');
-      return;
-    }
-    saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', token);
-    saveConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS', chatIds);
-    updateConnectorAuthProfile('telegram', { enabled: true, allowlist: chatIds.split(/[,\n]/).map((s) => s.trim()).filter(Boolean) });
-    setTelegramBotVerified(null);
-    setNotice('Telegram credentials saved. Click Verify Bot to test the connection.');
-    refresh();
-  };
-
-  const saveConnectorApiKey = (connectorId, fields) => {
-    let hasValue = false;
-    for (const [key, value] of Object.entries(fields)) {
-      const trimmed = String(value || '').trim();
-      if (trimmed) {
-        saveConnectorCredential(connectorId, key, trimmed);
-        hasValue = true;
-      }
-    }
-    if (hasValue) {
-      updateConnectorAuthProfile(connectorId, { enabled: true });
-      setNotice(`${connectorId} credentials saved and connector enabled.`);
-    } else {
-      setNotice(`No credentials provided for ${connectorId}.`);
-    }
-    refresh();
-  };
-
-  const verifyTelegramBot = async () => {
-    const token = telegramBotToken.trim() || getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
-    if (!token) {
-      setNotice('Enter a bot token first.');
-      return;
-    }
-    setTransportBusy(true);
-    try {
-      const result = await verifyTelegramBotEnvironment({ botToken: token });
-      setTelegramBotVerified(result);
-      if (result.ok) {
-        setNotice(`Telegram bot verified: @${result.botUsername}`);
-      } else {
-        setNotice(`Telegram bot verify failed: ${result.error}`);
-      }
-    } finally {
-      setTransportBusy(false);
-    }
+    } finally { setTransportBusy(false); }
   };
 
   const sendOutbound = async () => {
     const needsTarget = !['chatgpt', 'claude', 'qwen', 'youtube'].includes(connectorId);
     if ((needsTarget && !outboundTarget.trim()) || !outboundText.trim()) {
-      setNotice(needsTarget ? 'Outbound target and message are required.' : 'Outbound message is required.');
+      showNotice(needsTarget ? 'Target and message are required.' : 'Message is required.', 'error');
       return;
     }
-
     setTransportBusy(true);
     try {
       let result = null;
-      if (connectorId === 'telegram') {
-        result = await sendTelegramConnectorMessage(outboundTarget.trim(), outboundText.trim(), {
-          approved: explicitApproval
-        });
-      } else if (connectorId === 'whatsapp') {
-        result = await sendWhatsAppConnectorMessage(outboundTarget.trim(), outboundText.trim(), {
-          approved: explicitApproval
-        });
-      } else if (connectorId === 'chatgpt') {
-        result = await sendChatGptConnectorMessage(outboundText.trim(), {
-          approved: explicitApproval
-        });
-      } else if (connectorId === 'claude') {
-        result = await sendClaudeConnectorMessage(outboundText.trim(), {
-          approved: explicitApproval
-        });
-      } else if (connectorId === 'qwen') {
-        result = await sendQwenConnectorMessage(outboundText.trim(), {
-          approved: explicitApproval
-        });
-      } else if (connectorId === 'notion') {
-        result = await sendNotionConnectorEntry({
-          title: outboundText.trim().slice(0, 180),
-          content: outboundText.trim(),
-          parentPageId: outboundTarget.trim()
-        }, {
-          approved: explicitApproval
-        });
-      } else if (connectorId === 'clickup') {
-        result = await sendClickUpConnectorTask({
-          title: outboundText.trim().slice(0, 180),
-          content: outboundText.trim(),
-          listId: outboundTarget.trim()
-        }, {
-          approved: explicitApproval
-        });
-      } else if (connectorId === 'youtube') {
-        result = await uploadYouTubeConnectorVideo({
-          filePath: youtubeFilePath.trim(),
-          title: youtubeTitle.trim(),
-          description: youtubeDescription.trim(),
-          tags: youtubeTags
-            .split(',')
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-            .slice(0, 20),
-          privacyStatus: youtubePrivacy
-        }, {
-          approved: explicitApproval
-        });
-      } else {
-        setNotice('Outbound send is supported for Telegram, WhatsApp, YouTube, ChatGPT, Claude, Qwen, Notion, and ClickUp. Use Miya Studio for local media generation.');
-        return;
-      }
+      if (connectorId === 'telegram') result = await sendTelegramConnectorMessage(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval });
+      else if (connectorId === 'whatsapp') result = await sendWhatsAppConnectorMessage(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval });
+      else if (connectorId === 'chatgpt') result = await sendChatGptConnectorMessage(outboundText.trim(), { approved: explicitApproval });
+      else if (connectorId === 'claude') result = await sendClaudeConnectorMessage(outboundText.trim(), { approved: explicitApproval });
+      else if (connectorId === 'qwen') result = await sendQwenConnectorMessage(outboundText.trim(), { approved: explicitApproval });
+      else if (connectorId === 'notion') result = await sendNotionConnectorEntry({ title: outboundText.trim().slice(0, 180), content: outboundText.trim(), parentPageId: outboundTarget.trim() }, { approved: explicitApproval });
+      else if (connectorId === 'clickup') result = await sendClickUpConnectorTask({ title: outboundText.trim().slice(0, 180), content: outboundText.trim(), listId: outboundTarget.trim() }, { approved: explicitApproval });
+      else if (connectorId === 'youtube') result = await uploadYouTubeConnectorVideo({ filePath: youtubeFilePath.trim(), title: youtubeTitle.trim(), description: youtubeDescription.trim(), tags: youtubeTags.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 20), privacyStatus: youtubePrivacy }, { approved: explicitApproval });
+      else { showNotice('Outbound send not supported for this connector.', 'error'); return; }
 
       if (result?.ok) {
-        if (connectorId === 'youtube') {
-          setNotice(`YouTube upload success. URL: ${result.url || 'returned without url'}`);
-        } else if (connectorId === 'chatgpt') {
-          setNotice(`ChatGPT connector success. Response id: ${result.externalId || 'n/a'}`);
-        } else if (connectorId === 'claude') {
-          setNotice(`Claude connector success. Response id: ${result.externalId || 'n/a'}`);
-        } else if (connectorId === 'qwen') {
-          setNotice(`Qwen connector success. Response id: ${result.externalId || 'n/a'}`);
-        } else if (connectorId === 'notion') {
-          setNotice(`Notion write success. Page id: ${result.externalId || 'n/a'}`);
-        } else if (connectorId === 'clickup') {
-          setNotice(`ClickUp task created. Task id: ${result.externalId || 'n/a'}`);
-        } else {
-          setNotice(`${connectorId} send success. External id: ${result.externalId || 'n/a'}`);
-        }
-      } else {
-        if (result?.blocked) {
-          setNotice(`${connectorId} action blocked by policy: ${result?.error || 'approval/zero-cost/auth gate'}`);
-        } else {
-          setNotice(`${connectorId} action failed: ${result?.error || 'unknown error'}`);
-        }
-      }
-      refresh();
-    } finally {
-      setTransportBusy(false);
-    }
-  };
-
-  const runTelegramLiveProof = async () => {
-    if (connectorId !== 'telegram') {
-      setNotice('Telegram live proof is only available when Telegram is the selected connector.');
-      return;
-    }
-    if (!outboundTarget.trim()) {
-      setNotice('Telegram live proof needs a chat id.');
-      return;
-    }
-    setTransportBusy(true);
-    try {
-      const result = await proveTelegramConnectorPath(outboundTarget.trim(), outboundText.trim(), {
-        approved: explicitApproval,
-        requestedBy: 'jose'
-      });
-      if (result?.ok) {
-        setNotice(`Telegram live proof success. External id: ${result.externalId || 'n/a'}.`);
+        showNotice(`${connectorId} success. ID: ${result.externalId || result.url || 'n/a'}`, 'success');
       } else if (result?.blocked) {
-        setNotice(`Telegram live proof blocked: ${result?.error || 'approval/env gate'}.`);
+        showNotice(`Blocked by policy: ${result?.error || 'approval or auth gate'}`, 'error');
       } else {
-        setNotice(`Telegram live proof failed: ${result?.error || 'unknown error'}.`);
+        showNotice(`Failed: ${result?.error || 'unknown error'}`, 'error');
       }
       refresh();
-    } finally {
-      setTransportBusy(false);
-    }
+    } finally { setTransportBusy(false); }
   };
 
   const runWhatsAppCloudWebhookSimulation = async () => {
     setTransportBusy(true);
     try {
       let payload = {};
-      try {
-        payload = JSON.parse(cloudWebhookPayload);
-      } catch {
-        setNotice('Cloud webhook payload must be valid JSON.');
-        return;
+      try { payload = JSON.parse(cloudWebhookPayload); } catch {
+        showNotice('Webhook payload must be valid JSON.', 'error'); return;
       }
-      const challengeProof = await verifyWhatsAppCloudWebhookChallenge({
-        mode: cloudWebhookMode,
-        verifyToken: cloudWebhookVerifyToken,
-        challenge: cloudWebhookChallenge
-      });
-      const signatureProof = await verifyWhatsAppCloudWebhookSignature({
-        rawBody: JSON.stringify(payload),
-        signatureHeader: cloudWebhookSignature
-      });
+      const challengeProof = await verifyWhatsAppCloudWebhookChallenge({ mode: cloudWebhookMode, verifyToken: cloudWebhookVerifyToken, challenge: cloudWebhookChallenge });
+      const signatureProof = await verifyWhatsAppCloudWebhookSignature({ rawBody: JSON.stringify(payload), signatureHeader: cloudWebhookSignature });
       const routeProof = await simulateWhatsAppCloudInbound(payload);
-      setNotice(
-        `Cloud webhook simulation: challenge=${challengeProof?.ok ? 'ok' : 'fail'}, signature=${signatureProof?.ok ? 'ok' : 'fail'}, routed=${routeProof?.routedCount || 0}, rejected=${routeProof?.rejectedCount || 0}.`
-      );
+      showNotice(`Simulation: challenge=${challengeProof?.ok ? 'ok' : 'fail'}, signature=${signatureProof?.ok ? 'ok' : 'fail'}, routed=${routeProof?.routedCount || 0}.`, 'info');
       refresh();
-    } finally {
-      setTransportBusy(false);
-    }
+    } finally { setTransportBusy(false); }
+  };
+
+  const runTelegramLiveProof = async () => {
+    if (connectorId !== 'telegram') { showNotice('Select Telegram first.', 'error'); return; }
+    if (!outboundTarget.trim()) { showNotice('Enter a chat ID.', 'error'); return; }
+    setTransportBusy(true);
+    try {
+      const result = await proveTelegramConnectorPath(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval, requestedBy: 'jose' });
+      if (result?.ok) showNotice(`Live proof success. ID: ${result.externalId || 'n/a'}`, 'success');
+      else if (result?.blocked) showNotice(`Blocked: ${result?.error}`, 'error');
+      else showNotice(`Failed: ${result?.error || 'unknown'}`, 'error');
+      refresh();
+    } finally { setTransportBusy(false); }
+  };
+
+  const pollAvailable = ['telegram', 'whatsapp'].includes(connectorId);
+  const outboundAllowed = Boolean(selectedConnector && isConnectorOutboundAllowed(selectedConnector, explicitApproval));
+
+  const noticeColors = {
+    success: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
+    error: 'border-red-300/20 bg-red-500/10 text-red-300',
+    info: 'border-teal-300/15 bg-teal-500/10 text-teal-100/80',
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4">
-      <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-        <RadioTower className="h-4 w-4 text-teal-300" />
-        Connector Setup: Messaging, Publishing, Work Apps, Local Media
-      </div>
-      <p className="mb-3 text-[11px] leading-relaxed text-zinc-500">
-        Status labels: configured, foundation_only, not_configured, invalid, unknown, setup_required. A connector is not live until env verification passes and last test is verified. setup_required is never shown as ready.
-      </p>
+    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-5 space-y-6">
 
-      <div className="mb-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-3 text-[11px] text-sky-100/80">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="font-semibold text-sky-50">Setup checklist</div>
-          <button
-            onClick={copySetupChecklist}
-            className="inline-flex items-center gap-2 rounded-lg bg-sky-300/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-sky-100 hover:bg-sky-300/30"
-          >
-            <ClipboardCopy className="h-3.5 w-3.5" />
-            Copy Setup Checklist
-          </button>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+            <RadioTower className="h-4 w-4 text-teal-300" />
+            Connectors
+          </div>
+          <p className="mt-1 text-[12px] text-zinc-500">
+            {activeCount > 0
+              ? `${activeCount} of ${connectors.length} connectors active. Your credentials are stored locally.`
+              : `Connect your tools below. All credentials are stored locally on your device.`}
+          </p>
         </div>
-        <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-black/20 p-3 text-[10px] leading-relaxed text-sky-50/90">{setupChecklist}</pre>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+      {/* ── Notice ── */}
+      {notice && (
+        <div className={`rounded-xl border px-4 py-3 text-[12px] flex items-center gap-2 ${noticeColors[noticeType]}`}>
+          {noticeType === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
+          {noticeType === 'error' && <AlertCircle className="h-3.5 w-3.5 shrink-0" />}
+          {noticeType === 'info' && <Circle className="h-3.5 w-3.5 shrink-0 opacity-50" />}
+          <span>{notice}</span>
+          <button onClick={() => setNotice('')} className="ml-auto opacity-50 hover:opacity-100 text-xs">✕</button>
+        </div>
+      )}
+
+      {/* ── Connector status cards ── */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
         {connectors.map((connector) => (
           <ConnectorCard
             key={connector.id}
             connector={connector}
-            onStatus={(status) => {
-              setConnectorStatus(connector.id, status, 'Manual status marker from setup panel.');
-              refresh();
-            }}
             onVerifyEnv={() => verifyEnv(connector.id)}
           />
         ))}
       </div>
 
-      <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/80">
-        External messaging remains supervised. Telegram live poll/send and WhatsApp official send are wired through Jose routing and connector audit logs. WhatsApp inbound polling is available for Twilio provider; Cloud API inbound still requires webhook wiring. YouTube upload, Notion, ClickUp, ChatGPT, Claude, and Qwen outbound actions are wired with env-based auth. Slack, Discord, and custom webhook connections are managed in the tool connection registry below. Miya Studio wires local SD WebUI and ComfyUI media connectors plus a backend-backed Runway cloud draft path. Risky external actions still require approval.
-      </div>
+      {/* ── Credential Setup ── */}
+      <div>
+        <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Configure Integrations</h3>
+        <div className="space-y-4">
 
-      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[11rem_1fr_12rem]">
-        <select value={connectorId} onChange={(event) => setConnectorId(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
-          {connectors.map((connector) => (
-            <option key={`route-${connector.id}`} value={connector.id}>{connector.name}</option>
-          ))}
-        </select>
-        <input value={simulatedText} onChange={(event) => setSimulatedText(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" />
-        <button onClick={createRoute} className="rounded-xl bg-teal-300 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-teal-200">
-          Route To Jose
-        </button>
-      </div>
-
-      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_2fr_auto_auto]">
-        <input
-          value={senderId}
-          onChange={(event) => setSenderId(event.target.value)}
-          className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-          placeholder="Simulated sender id (must be allowlisted)"
-        />
-        <input
-          value={authInput}
-          onChange={(event) => setAuthInput(event.target.value)}
-          className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-          placeholder="Allowlist ids (comma or newline)"
-        />
-        <button onClick={applyAllowlist} className="rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
-          Save Allowlist
-        </button>
-        <button onClick={disableAuthProfile} className="rounded-xl bg-amber-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-amber-100 hover:bg-amber-500/20">
-          Disable Auth
-        </button>
-      </div>
-
-      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[10rem_1fr_1fr_auto_auto]">
-        <select
-          value={connectorId}
-          onChange={(event) => setConnectorId(event.target.value)}
-          className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-        >
-          {connectors.map((connector) => (
-            <option key={`outbound-${connector.id}`} value={connector.id}>{connector.name}</option>
-          ))}
-        </select>
-        {connectorId === 'youtube' ? (
-          <>
-            <input
-              value={youtubeFilePath}
-              onChange={(event) => setYoutubeFilePath(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-              placeholder="Local video file path"
-            />
-            <input
-              value={youtubeTitle}
-              onChange={(event) => setYoutubeTitle(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-              placeholder="YouTube title"
-            />
-          </>
-        ) : (
-          <>
-            <input
-              value={outboundTarget}
-              onChange={(event) => setOutboundTarget(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-              placeholder={
-                connectorId === 'telegram'
-                  ? 'Telegram chat id'
-                  : connectorId === 'whatsapp'
-                    ? 'WhatsApp number (E.164)'
-                    : connectorId === 'notion'
-                      ? 'Notion parent page id (optional override)'
-                      : connectorId === 'clickup'
-                        ? 'ClickUp list id (optional override)'
-                        : 'Target'
-              }
-            />
-            <input
-              value={outboundText}
-              onChange={(event) => setOutboundText(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-              placeholder="Outbound message"
-            />
-          </>
-        )}
-        <button
-          onClick={pollTelegram}
-          disabled={transportBusy || !pollAllowed}
-          title={pollAllowed ? 'Poll inbound messages for the selected connector.' : 'Polling requires configured Telegram or WhatsApp env plus verified credentials.'}
-          className="rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
-        >
-          {pollAvailable ? (connectorId === 'whatsapp' ? 'Poll WhatsApp' : 'Poll Telegram') : 'Polling N/A'}
-        </button>
-        <button
-          onClick={sendOutbound}
-          disabled={transportBusy || !outboundAllowed}
-          title={outboundAllowed ? 'Send/upload with explicit approval.' : 'Blocked until connector is configured, env-verified, and approval checkbox is checked.'}
-          className="rounded-xl bg-indigo-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100 hover:bg-indigo-500/30 disabled:opacity-50"
-        >
-          {connectorId === 'youtube' ? 'Upload Video' : 'Send Outbound'}
-        </button>
-        {connectorId === 'telegram' && (
-          <button
-            onClick={runTelegramLiveProof}
-            disabled={transportBusy}
-            title="Runs a real Telegram send proof when env, approval, and chat id are present."
-            className="rounded-xl bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-100 hover:bg-emerald-500/30 disabled:opacity-50"
-          >
-            Telegram Live Proof
-          </button>
-        )}
-        {connectorId === 'telegram' && (
-          <button
-            onClick={runAutoPoll}
-            disabled={transportBusy}
-            title="Run a single auto-poll cycle with state tracking and error counting."
-            className="rounded-xl bg-cyan-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-50"
-          >
-            Auto-Poll {autoPollState.errors > 0 ? `(${autoPollState.errors} errors)` : ''}
-          </button>
-        )}
-      </div>
-
-      {connectorId === 'youtube' && (
-        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_10rem]">
-          <input
-            value={youtubeDescription}
-            onChange={(event) => setYoutubeDescription(event.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            placeholder="Description (optional)"
-          />
-          <input
-            value={youtubeTags}
-            onChange={(event) => setYoutubeTags(event.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            placeholder="Tags comma-separated (optional)"
-          />
-          <select
-            value={youtubePrivacy}
-            onChange={(event) => setYoutubePrivacy(event.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-          >
-            <option value="private">private</option>
-            <option value="unlisted">unlisted</option>
-            <option value="public">public</option>
-          </select>
-        </div>
-      )}
-
-      {connectorId === 'telegram' && (
-        <div className="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-500/8 p-4">
-          <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-cyan-200/80">
-            Telegram Bot Credentials
-          </div>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
-            <input
-              type="password"
-              value={telegramBotToken}
-              onChange={(event) => setTelegramBotToken(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-              placeholder="Bot token from @BotFather"
-              autoComplete="off"
-            />
-            <input
-              type="text"
-              value={telegramChatIds}
-              onChange={(event) => setTelegramChatIds(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-              placeholder="Allowed chat IDs (comma-separated)"
-            />
-            <button
-              onClick={saveTelegramCredentials}
-              className="rounded-xl bg-cyan-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/30"
-            >
-              Save &amp; Enable
-            </button>
-            <button
-              onClick={verifyTelegramBot}
-              disabled={transportBusy}
-              className="rounded-xl bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-100 hover:bg-emerald-500/30 disabled:opacity-50"
-            >
-              Verify Bot
-            </button>
-          </div>
-          {telegramBotVerified !== null && (
-            <div className={`mt-2 text-[11px] ${telegramBotVerified.ok ? 'text-emerald-300' : 'text-red-400'}`}>
-              {telegramBotVerified.ok ? `Connected: @${telegramBotVerified.botUsername}` : `Error: ${telegramBotVerified.error}`}
+          {/* Telegram */}
+          <div className="rounded-2xl border border-sky-300/20 bg-sky-500/8 p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-sky-400" />
+              <span className="text-sm font-semibold text-zinc-100">Telegram</span>
             </div>
-          )}
-          <p className="mt-2 text-[10px] text-zinc-500">
-            Commands: /start /help /status /ask &lt;text&gt; — token is stored in localStorage + SQLite, never committed to git.
-          </p>
-        </div>
-      )}
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Bot Token</label>
+                <input
+                  type="password"
+                  value={telegramBotToken}
+                  onChange={(e) => setTelegramBotToken(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
+                  placeholder="Paste your bot token from @BotFather"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Allowed Chat IDs <span className="text-zinc-600 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  value={telegramChatIds}
+                  onChange={(e) => setTelegramChatIds(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
+                  placeholder="e.g. 123456789, 987654321"
+                />
+              </div>
+            </div>
+            <p className="mt-3 text-[11px] text-zinc-500">
+              Create a bot with <span className="text-zinc-400">@BotFather</span> on Telegram to get your bot token. Allowed Chat IDs restrict who can send commands to Alphonso.
+            </p>
+            {telegramBotVerified !== null && (
+              <div className={`mt-3 flex items-center gap-1.5 text-[12px] font-medium ${telegramBotVerified.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                {telegramBotVerified.ok
+                  ? <><CheckCircle2 className="h-3.5 w-3.5" /> Connected as @{telegramBotVerified.botUsername}</>
+                  : <><AlertCircle className="h-3.5 w-3.5" /> {telegramBotVerified.error}</>}
+              </div>
+            )}
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={saveTelegramCredentials}
+                className="rounded-xl border border-sky-300/20 px-4 py-2 text-[11px] font-semibold text-zinc-100 hover:opacity-80 transition-opacity"
+              >
+                Save & Enable
+              </button>
+              <button
+                onClick={verifyTelegramBot}
+                disabled={transportBusy}
+                className="rounded-xl border border-white/10 px-4 py-2 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 hover:border-white/20 disabled:opacity-40 transition-colors"
+              >
+                Verify Bot
+              </button>
+            </div>
+          </div>
 
-      <div className="mt-3 rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-400">
-        <div>
-          Selected connector <span className="font-mono text-zinc-200">{connectorId}</span>: display status{' '}
-          <span className="font-semibold text-zinc-200">{selectedDisplayStatus}</span>
-          {' '}| registry status <span className="font-mono text-zinc-300">{selectedConnector?.status || 'unknown'}</span>
-        </div>
-        <div className="mt-1">
-          Auth: enabled={String(Boolean(selectedProfile.enabled))}, allowlist={selectedProfile.allowlist?.length || 0}
-          {' '}| last test: {selectedConnector?.lastTestStatus || 'not run'}
-          {' '}| external live: {isConnectorLive(selectedConnector) ? 'yes (env verified)' : 'no'}
+          {/* GitHub */}
+          <CredentialSection
+            title="GitHub"
+            icon={Github}
+            borderColor="border-violet-300/20"
+            bgColor="bg-violet-500/8"
+            accentColor="text-violet-400"
+            fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}
+            onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
+            hint="Create a token at github.com/settings/tokens with repo and workflow scopes. Used by Marcus for releases and issue management."
+            savedLabel="GitHub token saved"
+          />
+
+          {/* Slack */}
+          <CredentialSection
+            title="Slack"
+            icon={Slack}
+            borderColor="border-green-300/20"
+            bgColor="bg-green-500/8"
+            accentColor="text-green-400"
+            fields={[{ label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' }]}
+            onSave={() => saveConnectorApiKey('slack', { SLACK_BOT_TOKEN: slackBotToken })}
+            hint="Create a Slack app at api.slack.com/apps, add the chat:write scope, install to your workspace, and copy the Bot User OAuth Token."
+            savedLabel="Slack token saved"
+          />
+
+          {/* Claude */}
+          <CredentialSection
+            title="Claude (Anthropic)"
+            icon={Bot}
+            borderColor="border-orange-300/20"
+            bgColor="bg-orange-500/8"
+            accentColor="text-orange-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
+            hint="Get your key at console.anthropic.com/settings/keys. Only used when you explicitly route a task to Claude."
+            savedLabel="Anthropic key saved"
+          />
+
+          {/* ChatGPT */}
+          <CredentialSection
+            title="ChatGPT (OpenAI)"
+            icon={Bot}
+            borderColor="border-teal-300/20"
+            bgColor="bg-teal-500/8"
+            accentColor="text-teal-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
+            hint="Get your key at platform.openai.com/api-keys. Only used when you explicitly route a task to ChatGPT."
+            savedLabel="OpenAI key saved"
+          />
+
+          {/* Notion */}
+          <CredentialSection
+            title="Notion"
+            icon={Database}
+            borderColor="border-pink-300/20"
+            bgColor="bg-pink-500/8"
+            accentColor="text-pink-400"
+            fields={[
+              { label: 'Integration Secret', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
+              { label: 'Default Page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
+            hint="Create an integration at notion.so/my-integrations, then share the pages you want Alphonso to write to with your integration."
+            savedLabel="Notion credentials saved"
+          />
+
+          {/* ClickUp */}
+          <CredentialSection
+            title="ClickUp"
+            icon={ListTodo}
+            borderColor="border-purple-300/20"
+            bgColor="bg-purple-500/8"
+            accentColor="text-purple-400"
+            fields={[
+              { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
+              { label: 'Default List ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
+            hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
+            savedLabel="ClickUp credentials saved"
+          />
+
+          {/* WhatsApp Cloud */}
+          <CredentialSection
+            title="WhatsApp Cloud"
+            icon={Phone}
+            borderColor="border-emerald-300/20"
+            bgColor="bg-emerald-500/8"
+            accentColor="text-emerald-400"
+            fields={[
+              { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
+              { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
+              { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken })}
+            hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook."
+            savedLabel="WhatsApp credentials saved"
+          />
+
+          {/* YouTube */}
+          <CredentialSection
+            title="YouTube"
+            icon={Youtube}
+            borderColor="border-red-300/20"
+            bgColor="bg-red-500/8"
+            accentColor="text-red-400"
+            fields={[
+              { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
+              { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
+              { label: 'Refresh Token', placeholder: 'Run: npm run auth:youtube', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
+              { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
+            ]}
+            onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
+            hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
+            savedLabel="YouTube credentials saved"
+          />
+
+          {/* Qwen */}
+          <CredentialSection
+            title="Qwen / DashScope"
+            icon={Cpu}
+            borderColor="border-yellow-300/20"
+            bgColor="bg-yellow-500/8"
+            accentColor="text-yellow-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('qwen', { DASHSCOPE_API_KEY: qwenApiKey })}
+            hint="Get your key at dashscope.aliyuncs.com. Alphonso uses the international endpoint automatically."
+            savedLabel="Qwen key saved"
+          />
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/85">
-        <input
-          id="connector-approval-toggle"
-          type="checkbox"
-          checked={explicitApproval}
-          onChange={(event) => setExplicitApproval(event.target.checked)}
-          className="h-3.5 w-3.5 accent-amber-300"
-        />
-        <label htmlFor="connector-approval-toggle" className="cursor-pointer">
-          I explicitly approve risky external action for this send/upload attempt.
-        </label>
-      </div>
-
-      <div className="mt-4 rounded-xl border border-teal-300/15 bg-zinc-900/55 p-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-teal-200/75">
-          WhatsApp Cloud Webhook Simulation (Setup-Required Path)
-        </div>
-        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <input
-            value={cloudWebhookMode}
-            onChange={(event) => setCloudWebhookMode(event.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            placeholder="hub.mode"
-          />
-          <input
-            value={cloudWebhookVerifyToken}
-            onChange={(event) => setCloudWebhookVerifyToken(event.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            placeholder="hub.verify_token"
-          />
-          <input
-            value={cloudWebhookChallenge}
-            onChange={(event) => setCloudWebhookChallenge(event.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            placeholder="hub.challenge"
-          />
-        </div>
-        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_20rem_auto]">
-          <textarea
-            value={cloudWebhookPayload}
-            onChange={(event) => setCloudWebhookPayload(event.target.value)}
-            rows={5}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            placeholder="WhatsApp Cloud webhook JSON payload"
-          />
-          <input
-            value={cloudWebhookSignature}
-            onChange={(event) => setCloudWebhookSignature(event.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-            placeholder="X-Hub-Signature-256 header"
-          />
-          <button
-            onClick={runWhatsAppCloudWebhookSimulation}
-            disabled={transportBusy}
-            className="rounded-xl bg-teal-400/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-teal-100 hover:bg-teal-400/30 disabled:opacity-50"
-          >
-            Simulate Cloud Inbound
-          </button>
-        </div>
-        <p className="mt-2 text-[11px] text-zinc-500">
-          This verifies challenge/signature logic and inbound normalization locally. Public webhook hosting and live Meta callback delivery remain setup-required.
-        </p>
-      </div>
-
-      {/* ── API Key Credential Sections ── */}
-      <CredentialSection
-        title="GitHub Credentials"
-        connectorId="github"
-        borderColor="border-violet-300/20"
-        bgColor="bg-violet-500/8"
-        labelColor="text-violet-200/80"
-        fields={[
-          { label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }
-        ]}
-        onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
-        hint="Generate at github.com/settings/tokens — needs repo, workflow scopes for Marcus release actions."
-      />
-
-      <CredentialSection
-        title="Slack Credentials"
-        connectorId="slack"
-        borderColor="border-green-300/20"
-        bgColor="bg-green-500/8"
-        labelColor="text-green-200/80"
-        fields={[
-          { label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' }
-        ]}
-        onSave={() => saveConnectorApiKey('slack', { SLACK_BOT_TOKEN: slackBotToken })}
-        hint="Create a Slack app at api.slack.com, add chat:write scope, install to workspace, copy Bot User OAuth Token."
-      />
-
-      <CredentialSection
-        title="Claude (Anthropic) Credentials"
-        connectorId="claude"
-        borderColor="border-orange-300/20"
-        bgColor="bg-orange-500/8"
-        labelColor="text-orange-200/80"
-        fields={[
-          { label: 'Anthropic API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }
-        ]}
-        onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
-        hint="Get your key at console.anthropic.com/settings/keys. Stored locally, never sent to any server except Anthropic."
-      />
-
-      <CredentialSection
-        title="ChatGPT (OpenAI) Credentials"
-        connectorId="chatgpt"
-        borderColor="border-teal-300/20"
-        bgColor="bg-teal-500/8"
-        labelColor="text-teal-200/80"
-        fields={[
-          { label: 'OpenAI API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }
-        ]}
-        onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
-        hint="Get your key at platform.openai.com/api-keys. Stored locally, never sent to any server except OpenAI."
-      />
-
-      <CredentialSection
-        title="Notion Credentials"
-        connectorId="notion"
-        borderColor="border-pink-300/20"
-        bgColor="bg-pink-500/8"
-        labelColor="text-pink-200/80"
-        fields={[
-          { label: 'Integration API Key', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
-          { label: 'Parent Page ID (optional)', placeholder: 'Page UUID from Notion URL', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
-        ]}
-        onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
-        hint="Create an integration at notion.so/my-integrations. Share the target page with your integration. Copy the integration secret."
-      />
-
-      <CredentialSection
-        title="ClickUp Credentials"
-        connectorId="clickup"
-        borderColor="border-purple-300/20"
-        bgColor="bg-purple-500/8"
-        labelColor="text-purple-200/80"
-        fields={[
-          { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
-          { label: 'List ID (optional default)', placeholder: 'ClickUp list ID', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
-        ]}
-        onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
-        hint="Get your API key at app.clickup.com/settings. The List ID can be found in the list URL."
-      />
-
-      <CredentialSection
-        title="WhatsApp Cloud Credentials"
-        connectorId="whatsapp"
-        borderColor="border-emerald-300/20"
-        bgColor="bg-emerald-500/8"
-        labelColor="text-emerald-200/80"
-        fields={[
-          { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
-          { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
-          { label: 'Webhook Verify Token', placeholder: 'Your custom verify token', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false }
-        ]}
-        onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken })}
-        hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The verify token is a string you choose."
-      />
-
-      <CredentialSection
-        title="YouTube OAuth Credentials"
-        connectorId="youtube"
-        borderColor="border-red-300/20"
-        bgColor="bg-red-500/8"
-        labelColor="text-red-200/80"
-        fields={[
-          { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
-          { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
-          { label: 'Refresh Token', placeholder: 'Run npm run auth:youtube to generate', value: youtubeRefreshToken, onChange: setYoutubeRefreshToken, key: 'YOUTUBE_REFRESH_TOKEN' },
-          { label: 'Channel ID', placeholder: 'UC...', value: youtubeChannelId, onChange: setYoutubeChannelId, key: 'YOUTUBE_CHANNEL_ID', secret: false }
-        ]}
-        onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
-        hint="Create OAuth credentials in Google Cloud Console (YouTube Data API v3). Run npm run auth:youtube in terminal to get your refresh token."
-      />
-
-      <CredentialSection
-        title="Qwen (DashScope) Credentials"
-        connectorId="qwen"
-        borderColor="border-yellow-300/20"
-        bgColor="bg-yellow-500/8"
-        labelColor="text-yellow-200/80"
-        fields={[
-          { label: 'DashScope API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }
-        ]}
-        onSave={() => saveConnectorApiKey('qwen', { DASHSCOPE_API_KEY: qwenApiKey })}
-        hint="Get your key at dashscope.aliyuncs.com. Uses the international endpoint by default."
-      />
-
-      <div className="mt-4">
+      {/* ── Tool Connections ── */}
+      <div>
         <ToolConnectionsPanel />
       </div>
 
-      {notice && (
-        <div className="mt-3 rounded-xl border border-teal-300/15 bg-teal-500/10 p-3 text-[11px] text-teal-100/80">
-          {notice}
-        </div>
-      )}
+      {/* ── Advanced / Developer Tools ── */}
+      <div className="rounded-xl border border-white/10">
+        <button
+          onClick={() => setAdvancedOpen((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          <span>Developer &amp; Testing Tools</span>
+          {advancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
 
-      <div className="mt-4 space-y-2 max-h-48 overflow-y-auto pr-1">
-        {audit.length === 0 && <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-3 text-sm text-zinc-500">No connector audit entries yet.</div>}
-        {audit.slice().reverse().slice(0, 10).map((entry) => (
-          <div key={entry.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-400">
-            {entry.connectorId} | {entry.action} | {new Date(entry.timestampMs).toLocaleString()}
+        {advancedOpen && (
+          <div className="border-t border-white/10 p-4 space-y-4">
+
+            {/* Connector selector for testing */}
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[11rem_1fr_12rem]">
+              <select value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+                {connectors.map((c) => <option key={`route-${c.id}`} value={c.id}>{c.name}</option>)}
+              </select>
+              <input value={simulatedText} onChange={(e) => setSimulatedText(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Simulated command text" />
+              <button onClick={createRoute} className="rounded-xl bg-teal-300 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-teal-200">
+                Route To Jose
+              </button>
+            </div>
+
+            {/* Allowlist */}
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_2fr_auto_auto]">
+              <input value={senderId} onChange={(e) => setSenderId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Simulated sender id" />
+              <input value={authInput} onChange={(e) => setAuthInput(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Allowlist ids (comma or newline)" />
+              <button onClick={applyAllowlist} className="rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">Save Allowlist</button>
+              <button onClick={disableAuthProfile} className="rounded-xl bg-amber-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-amber-100 hover:bg-amber-500/20">Disable Auth</button>
+            </div>
+
+            {/* Outbound test */}
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[10rem_1fr_1fr_auto_auto]">
+              <select value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+                {connectors.map((c) => <option key={`outbound-${c.id}`} value={c.id}>{c.name}</option>)}
+              </select>
+              {connectorId === 'youtube' ? (
+                <>
+                  <input value={youtubeFilePath} onChange={(e) => setYoutubeFilePath(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Local video file path" />
+                  <input value={youtubeTitle} onChange={(e) => setYoutubeTitle(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="YouTube title" />
+                </>
+              ) : (
+                <>
+                  <input value={outboundTarget} onChange={(e) => setOutboundTarget(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder={connectorId === 'telegram' ? 'Chat ID' : connectorId === 'whatsapp' ? 'Phone (E.164)' : 'Target'} />
+                  <input value={outboundText} onChange={(e) => setOutboundText(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Outbound message" />
+                </>
+              )}
+              <button onClick={pollConnector} disabled={transportBusy || !pollAvailable} className="rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700 disabled:opacity-40">
+                {pollAvailable ? 'Poll' : 'Poll N/A'}
+              </button>
+              <button onClick={sendOutbound} disabled={transportBusy || !outboundAllowed} className="rounded-xl bg-indigo-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100 hover:bg-indigo-500/30 disabled:opacity-40">
+                {connectorId === 'youtube' ? 'Upload' : 'Send'}
+              </button>
+              {connectorId === 'telegram' && (
+                <button onClick={runTelegramLiveProof} disabled={transportBusy} className="rounded-xl bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-100 hover:bg-emerald-500/30 disabled:opacity-40">Live Proof</button>
+              )}
+              {connectorId === 'telegram' && (
+                <button onClick={runAutoPoll} disabled={transportBusy} className="rounded-xl bg-cyan-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-40">
+                  Auto-Poll {autoPollState.errors > 0 ? `(${autoPollState.errors} err)` : ''}
+                </button>
+              )}
+            </div>
+
+            {connectorId === 'youtube' && (
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_10rem]">
+                <input value={youtubeDescription} onChange={(e) => setYoutubeDescription(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Description (optional)" />
+                <input value={youtubeTags} onChange={(e) => setYoutubeTags(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Tags, comma-separated" />
+                <select value={youtubePrivacy} onChange={(e) => setYoutubePrivacy(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+                  <option value="private">private</option>
+                  <option value="unlisted">unlisted</option>
+                  <option value="public">public</option>
+                </select>
+              </div>
+            )}
+
+            {/* Approval gate */}
+            <div className="flex items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/85">
+              <input id="dev-approval" type="checkbox" checked={explicitApproval} onChange={(e) => setExplicitApproval(e.target.checked)} className="h-3.5 w-3.5 accent-amber-300" />
+              <label htmlFor="dev-approval" className="cursor-pointer">Approve this outbound action (required for sends and uploads)</label>
+            </div>
+
+            {/* WhatsApp Cloud webhook simulation */}
+            <div className="rounded-xl border border-teal-300/15 bg-zinc-900/55 p-4">
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-teal-200/75">WhatsApp Cloud Webhook Simulation</div>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <input value={cloudWebhookMode} onChange={(e) => setCloudWebhookMode(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="hub.mode" />
+                <input value={cloudWebhookVerifyToken} onChange={(e) => setCloudWebhookVerifyToken(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="hub.verify_token" />
+                <input value={cloudWebhookChallenge} onChange={(e) => setCloudWebhookChallenge(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="hub.challenge" />
+              </div>
+              <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_20rem_auto]">
+                <textarea value={cloudWebhookPayload} onChange={(e) => setCloudWebhookPayload(e.target.value)} rows={4} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Webhook JSON payload" />
+                <input value={cloudWebhookSignature} onChange={(e) => setCloudWebhookSignature(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="X-Hub-Signature-256 header" />
+                <button onClick={runWhatsAppCloudWebhookSimulation} disabled={transportBusy} className="rounded-xl bg-teal-400/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-teal-100 hover:bg-teal-400/30 disabled:opacity-40">Simulate</button>
+              </div>
+            </div>
+
+            {/* Debug: connector state */}
+            <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[10px] text-zinc-500 font-mono space-y-1">
+              <div>connector: <span className="text-zinc-300">{connectorId}</span> | status: <span className="text-zinc-300">{selectedConnector ? getDisplayStatus(selectedConnector) : 'n/a'}</span> | live: <span className="text-zinc-300">{selectedConnector ? String(isConnectorLive(selectedConnector)) : 'n/a'}</span></div>
+              <div>outbound_allowed: <span className="text-zinc-300">{String(outboundAllowed)}</span> | poll_available: <span className="text-zinc-300">{String(pollAvailable)}</span></div>
+            </div>
+
+            {/* Audit log */}
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-2">Connector Audit</div>
+              {audit.length === 0 && <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-3 text-sm text-zinc-600">No activity yet.</div>}
+              {audit.slice().reverse().slice(0, 10).map((entry) => (
+                <div key={entry.id} className="rounded-xl border border-white/10 bg-zinc-900/55 px-3 py-2 text-[10px] text-zinc-500 font-mono">
+                  {entry.connectorId} · {entry.action} · {new Date(entry.timestampMs).toLocaleTimeString()}
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+        )}
       </div>
     </section>
   );
-}
-
-function ConnectorCard({ connector, onStatus, onVerifyEnv }) {
-  const Icon = connector.id === 'mobile_bridge' ? Smartphone : MessageCircle;
-  const displayStatus = displayConnectorStatus(connector);
-  const live = isConnectorLive(connector);
-  return (
-    <div className={`rounded-xl border p-3 ${connectorShellClass(displayStatus)}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-            <Icon className="h-4 w-4 text-teal-300" />
-            {connector.name}
-          </div>
-          <div className="mt-1 text-[11px] text-zinc-500">{connector.transport}</div>
-        </div>
-        <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${connectorBadgeClass(displayStatus)}`}>
-          {displayStatus}
-        </span>
-      </div>
-      <div className="mt-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-        Registry: {connector.status || 'unknown'} | Live: {live ? 'yes' : 'no'}
-      </div>
-      <div className="mt-3 text-[11px] text-zinc-500">{connector.disabledReason}</div>
-      <div className="mt-3 text-[10px] font-bold uppercase tracking-widest text-zinc-600">Required env</div>
-      <div className="mt-1 space-y-1">
-        {(connector.requiredEnv || []).length === 0 ? (
-          <div className="text-[11px] text-zinc-500">No credentials defined yet.</div>
-        ) : connector.requiredEnv.map((name) => {
-          const present = Boolean(connector.envPresence?.[name]);
-          return (
-            <div key={name} className="flex items-center justify-between rounded bg-black/20 px-2 py-1 font-mono text-[10px] text-zinc-400">
-              <span>{name}</span>
-              <span className={present ? 'text-emerald-300' : 'text-zinc-600'}>{present ? 'present' : 'missing'}</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-2 text-[11px] text-zinc-500">
-        Health check: {connector.lastTestStatus || 'not run'}
-        {connector.lastTestAtMs ? ` (${new Date(connector.lastTestAtMs).toLocaleString()})` : ''}
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button onClick={() => onStatus('not_configured')} className="rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-300">Mark not_configured</button>
-        <button onClick={() => onStatus('disabled_safe')} className="rounded bg-amber-500/15 px-2 py-1 text-[10px] text-amber-200">Mark disabled_safe</button>
-        <button onClick={() => onStatus('foundation_only')} className="rounded bg-slate-500/15 px-2 py-1 text-[10px] text-slate-200">Mark foundation_only</button>
-        <button onClick={onVerifyEnv} className="rounded bg-indigo-500/15 px-2 py-1 text-[10px] text-indigo-200">Verify env (local)</button>
-      </div>
-    </div>
-  );
-}
-
-function displayConnectorStatus(connector) {
-  const status = String(connector?.status || 'unknown').trim().toLowerCase();
-  const requiredEnv = Array.isArray(connector?.requiredEnv) ? connector.requiredEnv : [];
-  const envMissing = requiredEnv.length > 0 && requiredEnv.some((name) => !connector?.envPresence?.[name]);
-  if (status === 'foundation_only') {
-    return 'foundation_only';
-  }
-  if (status === 'disabled_safe') {
-    return 'setup_required';
-  }
-  if (status === 'configured' && envMissing) {
-    return 'invalid';
-  }
-  if (status === 'configured' && connector?.lastTestStatus && connector.lastTestStatus !== 'verified') {
-    return 'setup_required';
-  }
-  if (['configured', 'not_configured', 'invalid', 'unknown', 'setup_required'].includes(status)) {
-    return status;
-  }
-  return 'unknown';
-}
-
-function isConnectorLive(connector) {
-  if (!connector) return false;
-  return displayConnectorStatus(connector) === 'configured' && connector.lastTestStatus === 'verified';
-}
-
-function isConnectorOutboundAllowed(connector, explicitApproval) {
-  if (!connector || !explicitApproval) return false;
-  if (['mobile_bridge', 'sd_webui', 'comfyui_video'].includes(connector.id)) return false;
-  return displayConnectorStatus(connector) === 'configured';
-}
-
-function isConnectorPollAllowed(connector) {
-  if (!connector) return false;
-  if (!['telegram', 'whatsapp'].includes(connector.id)) return false;
-  return displayConnectorStatus(connector) === 'configured';
-}
-
-function connectorShellClass(displayStatus) {
-  if (displayStatus === 'configured') return 'border-emerald-300/25 bg-emerald-500/5';
-  if (displayStatus === 'foundation_only') return 'border-slate-300/25 bg-slate-500/5';
-  if (displayStatus === 'setup_required' || displayStatus === 'not_configured') return 'border-indigo-300/25 bg-indigo-500/5';
-  if (displayStatus === 'invalid' || displayStatus === 'unknown') return 'border-amber-300/25 bg-amber-500/5';
-  return 'border-white/10 bg-zinc-900/55';
-}
-
-function connectorBadgeClass(displayStatus) {
-  if (displayStatus === 'configured') return 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200';
-  if (displayStatus === 'foundation_only') return 'border-slate-300/20 bg-slate-500/10 text-slate-200';
-  if (displayStatus === 'setup_required' || displayStatus === 'not_configured') return 'border-indigo-300/20 bg-indigo-500/10 text-indigo-200';
-  if (displayStatus === 'invalid') return 'border-amber-300/20 bg-amber-500/10 text-amber-200';
-  return 'border-zinc-300/20 bg-zinc-500/10 text-zinc-200';
-}
-
-function buildConnectorSetupChecklist(connectors = [], authProfiles = {}) {
-  const lines = [
-    'ALPHONSO CONNECTOR SETUP CHECKLIST',
-    '',
-    'Truth rule: no connector is live until env verification passes, allowlist/auth is configured, and the last test is verified.',
-    ''
-  ];
-
-  connectors.forEach((connector) => {
-    const auth = authProfiles?.[connector.id] || { enabled: false, allowlist: [], mode: 'allowlist_required' };
-    const env = Array.isArray(connector.requiredEnv) && connector.requiredEnv.length > 0
-      ? connector.requiredEnv.join(', ')
-      : 'none';
-    const allowlist = Array.isArray(auth.allowlist) ? auth.allowlist.length : 0;
-    lines.push(`- ${connector.name}`);
-    lines.push(`  status: ${connector.status || 'unknown'}`);
-    lines.push(`  required env: ${env}`);
-    lines.push(`  allowlist: ${connector.id === 'mobile_bridge' || connector.id === 'sd_webui' || connector.id === 'comfyui_video' ? 'local-only / foundation-only' : `${allowlist} entries (${auth.enabled ? 'enabled' : 'disabled'})`}`);
-    lines.push(`  next step: verify env, then run the connector test action with explicit approval if it sends or uploads externally.`);
-    lines.push('');
-  });
-
-  lines.push('- Slack / Discord / Custom webhook connections');
-  lines.push('  configure via Tool Connections panel with a webhook URL, label, message prefix, and optional payload template.');
-  lines.push('  keep active=false until the URL is validated and a supervised test send succeeds.');
-  lines.push('');
-  lines.push('- WhatsApp Cloud inbound');
-  lines.push('  hosted webhook + verify token + signature verification remain setup_required until deployed.');
-  lines.push('');
-  lines.push('- Local SD WebUI / ComfyUI');
-  lines.push('  point at the local runtime endpoint and verify reachability before relying on the connector.');
-  return lines.join('\n').trim();
 }
