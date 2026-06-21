@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-21 — Phase 1 Stage 3 complete (coverage push; 89 test files, 1324 tests passing)  
-**Verified by:** Claude Code session (89 test files, 1324 tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 2.0.4 (All 9 agents have production runtimes; v2.0.4 release tag pushed)  
+**Last verified:** 2026-06-21 — v2.0.5 UI/UX polish sprint complete  
+**Verified by:** Claude Code session (89 test files, 1324 tests passing, cargo clippy clean, rustfmt clean, release built and published)  
+**Version:** 2.0.5 (All 9 agents have production runtimes; v2.0.5 NSIS installer live on GitHub Releases)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---

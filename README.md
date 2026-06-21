@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.0.4** — Local-first AI desktop companion powered by Ollama
+> **v2.0.5** — Local-first AI desktop companion powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.0.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.4)
+[![Version](https://img.shields.io/badge/version-2.0.5-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.5)
 [![Tests](https://img.shields.io/badge/tests-1324%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -17,20 +17,21 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 14 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.0.4**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.4) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.0.5**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.5) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
 
-## What's New in v2.0.4
+## What's New in v2.0.5
 
-- **All 9 Agent Runtimes Complete** — Sentinel security scanning, Nova opportunity analysis, Maria governance audit, Echo memory synthesis, Marcus distribution — all Ollama-powered with deterministic fallback
-- **Connector Credential UI** — all 14 connectors (9 API-key connectors) now have in-app credential panels; no `.env` file needed
-- **Auto-Updater** — ed25519-signed manifests; installed app receives future updates automatically
-- **Coverage Push** — 89 test files, 1,324 tests, ~30% coverage (threshold 20%)
-- **claudeService/chatgptService fix** — both now read API keys via `getConnectorCredential()` (consistent with all other connectors)
-- **WhatsApp Cloud** — Railway-hosted gateway end-to-end; inbound polling + outbound send
+- **Working Dark/Light Theme** — replaced non-functional Space/Studio/Gold/Clean buttons with a real Dark/Light toggle; full app switches including sidebar and chrome
+- **Chat hints fixed** — "Ollama is setup_required" jargon replaced with clear context-aware messages ("Start Ollama" vs "Choose a model in Settings")
+- **Workflow operations fixed** — all operations were showing "disabled" due to a logic bug; now correctly show "active"
+- **Activity log overhauled** — agent color coding, friendly action labels, proper empty state with guidance
+- **MiyaStudio simplified** — removed decorative 8-panel grid; cleaner single-page creative workspace
+- **Ecosystem page simplified** — ConnectorSetupPanel removed from Ecosystem (it has its own tab); heavy panels moved to Advanced mode only
+- **rustfmt compliance** — all 19 Rust source files formatted to match CI standard
 
 ---
 
@@ -55,8 +56,8 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 ### Download the Installer (Windows)
 
-1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.4)
-1. Download `Alphonso_2.0.4_x64-setup.exe`
+1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.5)
+1. Download `Alphonso_2.0.5_x64-setup.exe`
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
 
@@ -260,7 +261,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.0.4** | June 21, 2026 | All 9 agent runtimes, connector credential UI, coverage ~30%, 1,324 tests |
+| **v2.0.5** | June 21, 2026 | All 9 agent runtimes, connector credential UI, coverage ~30%, 1,324 tests |
 | v2.0.2 | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |
 | v1.0.3 | June 15, 2026 | Installer update |
 | v1.0.2 | June 15, 2026 | WebView2 zombie process fix, boot optimizations |
