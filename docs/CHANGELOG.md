@@ -16,7 +16,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - `executeSentinelAssignment()` in Jose → thin wrapper calling `runSentinelSecurityScan()`
 - `executeNovaAssignment()` in Jose → thin wrapper calling `runNovaAnalysis()`
-- Test count: 84 files / 1191 tests → **86 files / 1260 tests** (all passing)
+- Test count: 84 files / 1191 tests → **89 files / 1324 tests** (all passing, including Stage 3 coverage tests)
+
+### Coverage push (Stage 3)
+- `connectorAuth.test.js` — 25 tests covering `saveConnectorCredential`, `getConnectorCredential`, `getConnectorCredentials`, `readAuthProfiles`, `writeAuthProfiles`, `updateConnectorAuthProfile`, `DEFAULT_AUTH_PROFILES`
+- `agentMetricsService.test.js` — 26 tests covering `recordAgentExecution`, `getAgentMetrics`, `getPerAgentBreakdown`, `getTopCommands`, `getSevenDayTrend`
+- `modelSelectionService.test.js` — 21 tests covering `getSelectedModel`, `setSelectedModel`, `getModelForTask`, `setTaskModelOverride`, `getRecentModels`, `getModelList`, `getRecommendedModel`
 
 ---
 

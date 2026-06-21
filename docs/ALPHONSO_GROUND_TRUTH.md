@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-21 — Phase 1 complete (Sentinel + Nova full runtimes; 86 test files, 1260 tests passing)  
-**Verified by:** Claude Code session (86 test files, 1260 tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 2.0.4 (All 9 agents have production runtimes)  
+**Last verified:** 2026-06-21 — Phase 1 Stage 3 complete (coverage push; 89 test files, 1324 tests passing)  
+**Verified by:** Claude Code session (89 test files, 1324 tests passing, cargo clippy clean, lint clean, build passing)  
+**Version:** 2.0.4 (All 9 agents have production runtimes; v2.0.4 release tag pushed)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -138,8 +138,8 @@ Key services that past audits missed or underestimated:
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-21 Phase 1, all passing):**
-- 86 test files, 1260 tests passing
+**Test files (verified 2026-06-21 Phase 1 Stage 3, all passing):**
+- 89 test files, 1324 tests passing
 - 14 Rust unit tests passing
 ```
 accBridgeService.test.js
@@ -210,6 +210,9 @@ echoMemoryService.test.js        ← added Phase 3 (35 tests)
 marcusExecutionService.test.js   ← added Phase 3 (23 tests)
 sentinelSecurityService.test.js  ← added Phase 1 (33 tests)
 novaAnalysisService.test.js      ← added Phase 1 (36 tests)
+connectorAuth.test.js            ← added Phase 1 Stage 3 (coverage push)
+agentMetricsService.test.js      ← added Phase 1 Stage 3 (coverage push)
+modelSelectionService.test.js    ← added Phase 1 Stage 3 (coverage push)
 sourceConfidenceService.test.js
 telegramAutoPollService.test.js
 telegramConnectorProof.test.js
@@ -365,7 +368,7 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **86 test files, 1260 tests, all passing** (verified 2026-06-21 Phase 1). 14 Rust unit tests also passing. Phase 1 additions: `sentinelSecurityService.test.js` (33 tests), `novaAnalysisService.test.js` (36 tests). Phase 3 prior: `mariaAuditService.test.js` (33), `echoMemoryService.test.js` (35), `marcusExecutionService.test.js` (23). `githubConnector.test.js` (20), `slackConnector.test.js` (16), plus TypeScript service tests.
+- [x] **Test suite confirmed passing** — **89 test files, 1324 tests, all passing** (verified 2026-06-21 Phase 1). 14 Rust unit tests also passing. Phase 1 additions: `sentinelSecurityService.test.js` (33 tests), `novaAnalysisService.test.js` (36 tests). Phase 3 prior: `mariaAuditService.test.js` (33), `echoMemoryService.test.js` (35), `marcusExecutionService.test.js` (23). `githubConnector.test.js` (20), `slackConnector.test.js` (16), plus TypeScript service tests.
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
