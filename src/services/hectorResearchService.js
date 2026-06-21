@@ -329,22 +329,22 @@ export async function searchBrave(query, count = 10) {
 }
 
 // Curated topic-matched RSS feed list
-const RSS_FEED_CATALOG = [
-  { url: 'https://feeds.feedburner.com/TechCrunch', topics: ['tech', 'startup', 'ai', 'software'] },
-  { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml', topics: ['tech', 'ai', 'science'] },
-  { url: 'https://www.theverge.com/rss/index.xml', topics: ['tech', 'software', 'hardware'] },
-  { url: 'https://feeds.arstechnica.com/arstechnica/index', topics: ['tech', 'science', 'software'] },
-  { url: 'https://www.wired.com/feed/rss', topics: ['tech', 'ai', 'culture'] },
-  { url: 'https://techcrunch.com/feed/', topics: ['startup', 'funding', 'tech'] },
-  { url: 'https://news.ycombinator.com/rss', topics: ['tech', 'programming', 'startup', 'ai'] },
-  { url: 'https://dev.to/feed', topics: ['programming', 'software', 'developer'] },
-  { url: 'https://css-tricks.com/feed/', topics: ['css', 'frontend', 'web', 'design'] },
-  { url: 'https://overreacted.io/rss.xml', topics: ['react', 'javascript', 'frontend'] },
-  { url: 'https://www.indiehackers.com/feed.xml', topics: ['startup', 'indie', 'business'] },
-  { url: 'https://feeds.feedburner.com/venturebeat/SZYF', topics: ['ai', 'ml', 'tech', 'enterprise'] },
+export const RSS_FEED_CATALOG = [
+  { url: 'https://feeds.feedburner.com/TechCrunch', name: 'TechCrunch', topics: ['tech', 'startup', 'ai', 'software'] },
+  { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml', name: 'NYT Technology', topics: ['tech', 'ai', 'science'] },
+  { url: 'https://www.theverge.com/rss/index.xml', name: 'The Verge', topics: ['tech', 'software', 'hardware'] },
+  { url: 'https://feeds.arstechnica.com/arstechnica/index', name: 'Ars Technica', topics: ['tech', 'science', 'software'] },
+  { url: 'https://www.wired.com/feed/rss', name: 'Wired', topics: ['tech', 'ai', 'culture'] },
+  { url: 'https://techcrunch.com/feed/', name: 'TechCrunch Feed', topics: ['startup', 'funding', 'tech'] },
+  { url: 'https://news.ycombinator.com/rss', name: 'Hacker News', topics: ['tech', 'programming', 'startup', 'ai'] },
+  { url: 'https://dev.to/feed', name: 'DEV Community', topics: ['programming', 'software', 'developer'] },
+  { url: 'https://css-tricks.com/feed/', name: 'CSS-Tricks', topics: ['css', 'frontend', 'web', 'design'] },
+  { url: 'https://overreacted.io/rss.xml', name: 'Overreacted', topics: ['react', 'javascript', 'frontend'] },
+  { url: 'https://www.indiehackers.com/feed.xml', name: 'Indie Hackers', topics: ['startup', 'indie', 'business'] },
+  { url: 'https://feeds.feedburner.com/venturebeat/SZYF', name: 'VentureBeat', topics: ['ai', 'ml', 'tech', 'enterprise'] },
 ];
 
-function scoreRssFeed(feed, query) {
+export function scoreRssFeed(feed, query) {
   const queryLower = query.toLowerCase();
   const queryWords = queryLower.split(/\s+/);
   let score = 0;
@@ -354,7 +354,7 @@ function scoreRssFeed(feed, query) {
   return score;
 }
 
-function parseRssItems(xmlText, feedUrl, limit) {
+export function parseRssItems(xmlText, feedUrl, limit) {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlText, 'application/xml');
