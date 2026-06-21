@@ -1,7 +1,7 @@
 # Alphonso User Manual
 
-**Version**: 2.0.0
-**Last Updated**: 2026-06-15
+**Version**: 2.0.2
+**Last Updated**: 2026-06-21
 **Status**: Production Ready
 
 ---
@@ -278,8 +278,8 @@ Alphonso has 13 built-in connectors, all policy-gated:
 
 | Connector | Type | Cost | Tier Required |
 |-----------|------|------|---------------|
-| Telegram | Messaging | Free (self-hosted) | Free |
-| WhatsApp | Messaging | Free (self-hosted) | Free |
+| Telegram | Messaging | Free (self-hosted bot) | Free |
+| WhatsApp | Messaging | Free (Meta Cloud API + Railway gateway) | Free |
 | Brave Search | Search | Free | Free |
 | YouTube | Publishing | Free | Pro |
 | Claude | LLM | Paid | Pro |
@@ -292,6 +292,22 @@ Alphonso has 13 built-in connectors, all policy-gated:
 | ComfyUI | Image Gen | Free (local) | Pro |
 | Runway | Video Gen | Paid | Pro |
 | Ollama | LLM | Free (local) | Free |
+
+### WhatsApp Cloud Setup
+
+WhatsApp uses Meta's Cloud API (free) + a small Railway gateway service for inbound messages.
+
+**Required credentials** (set in Settings → Connectors → WhatsApp):
+
+| Credential | Description |
+|---|---|
+| `WHATSAPP_ACCESS_TOKEN` | From Meta App Dashboard → WhatsApp → API Setup |
+| `WHATSAPP_PHONE_NUMBER_ID` | Your WhatsApp Business phone number ID |
+| `WHATSAPP_VERIFY_TOKEN` | Secret token you set in both Railway and here |
+| `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` | `https://<your-railway-url>/queue/drain` |
+| `WHATSAPP_ALLOWED_NUMBERS` | Comma-separated allowed sender numbers (digits only) |
+
+See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment steps.
 
 ### Connector Safety
 
@@ -657,7 +673,7 @@ src/
   hooks/            14 custom React hooks
   lib/              Utilities (ollama.js, chatUtils.js)
   features/         Content Catalyst, etc.
-  test/             76 test files (1015 tests)
+  test/             81 test files (1100 tests)
 
 src-tauri/
   src/lib.rs        Rust backend (~1,455 lines, 16 modules)

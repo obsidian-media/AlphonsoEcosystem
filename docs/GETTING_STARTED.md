@@ -52,6 +52,33 @@ On first launch, Alphonso will:
 - **Connectors** — Connect to Telegram, WhatsApp, Notion, and more. See [CONNECTORS.md](./CONNECTORS.md).
 - **Settings** — Configure approval mode, zero-cost mode, privacy shield, and more.
 
+## WhatsApp Cloud Setup (optional)
+
+To use WhatsApp Cloud API (send/receive messages):
+
+### 1. Deploy the Railway Gateway
+
+Deploy `gateway/whatsapp-cloud/` to Railway and set these env vars:
+- `WHATSAPP_VERIFY_TOKEN` — any secret string you choose
+- `WHATSAPP_APP_SECRET` — from Meta App Dashboard → App Settings
+- `WHATSAPP_ALLOWED_NUMBERS` — comma-separated allowed sender numbers (digits only, no `+`)
+
+Point your Meta webhook URL to `https://<your-railway-url>/webhook`.
+
+### 2. Enter Credentials in Alphonso
+
+Open **Settings → Connectors → WhatsApp** and enter:
+
+| Key | Where to find it |
+|-----|-----------------|
+| `WHATSAPP_ACCESS_TOKEN` | Meta App Dashboard → WhatsApp → API Setup |
+| `WHATSAPP_PHONE_NUMBER_ID` | Meta App Dashboard → WhatsApp → Phone Numbers |
+| `WHATSAPP_VERIFY_TOKEN` | Same value you set in Railway |
+| `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` | `https://<your-railway-url>/queue/drain` |
+| `WHATSAPP_ALLOWED_NUMBERS` | Same comma-separated list as Railway |
+
+Alphonso will poll the gateway queue every 30 seconds for inbound messages and route them through Jose.
+
 ## Key Concepts
 
 ### Approval Mode (on by default)

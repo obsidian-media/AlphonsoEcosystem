@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-15 — Deep audit complete (agent system, service layer, frontend, backend, tests, infrastructure, security, documentation)  
-**Verified by:** OpenCode agent (72 test files, 952 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 1.0.2 (WebView2 leak fix + boot optimizations)  
+**Last verified:** 2026-06-21 — Session complete (WhatsApp Cloud API full wiring, GitHub/Slack connector tests, auto-updater live, v2.0.2 released)  
+**Verified by:** Claude Code session (81 test files, 1100 tests passing, 14 Rust tests passing, cargo clippy clean, lint clean, build passing)  
+**Version:** 2.0.2 (WhatsApp Cloud API end-to-end + auto-updater operational)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,9 +25,9 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 1.0.2 |
+| Version | 2.0.2 |
 | Type | Tauri v2 desktop app (Windows) |
-| Project root | `C:\AgentDevWork\repos\AlphonsoEcosystem` |
+| Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
 | Frontend | React 18, Vite 5, Tailwind 3, Lucide React — currently `.jsx` (not `.tsx`) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
@@ -132,53 +132,77 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 72 Files in `src/test/` (not zero)
+## 4. Test Suite — 81 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-15, deep audit):**
-- 72 test files, 952 tests passing
+**Test files (verified 2026-06-21, all passing):**
+- 81 test files, 1100 tests passing
 - 14 Rust unit tests passing
 ```
 accBridgeService.test.js
+agentBusService.test.js
 agentContractService.test.js
+agentOutputStoreService.test.js
 agentPairingConstants.test.js
 agentPairingExecutionService.test.js
 agentSkills.test.js
 approvalEnforcement.test.js
 appStorage.test.js
+appUpdateService.test.js
+ApprovalPanel.test.jsx
+batchOrchestratorService.test.js
+cacheService.test.ts
+chatPersistenceService.test.js
 chatUtils.test.js
 coachInterventionService.test.js
 coachSkillService.test.js
 coachSoundCueService.test.js
 connectorAuditLogService.test.js
+connectorGitHubSlack.test.ts
 connectorRegistryService.test.js
 contentCatalystBridgeService.test.js
 contentCatalystService.test.js
 devPacketService.test.js
+durableMemoryService.test.js
+eventsService.test.js
+githubConnector.test.js          ← added PR #41 (20 tests)
 hectorResearchService.test.js
 joseCommandRouterService.test.js
 joseExecutionEngineService.test.js
 josePipelineE2E.test.js
 joseZeroCostRouting.test.js
+licenseService.test.ts
+localMarketplaceService.test.js
 memoryService.test.js
 missionRoomService.test.js
 miyaComfyWorkflowPresetService.test.js
 miyaExportPacketService.test.js
 miyaWorkflowTemplates.test.js
+notificationService.test.js
+notionSyncService.test.js
+novaFeedbackService.test.js
 ollamaReadinessGuide.test.js
 ollamaState.test.js
 ollamaUtils.test.js
+OllamaPreflightPanel.test.jsx
 operatorDashboard.test.jsx
 orchestrationQueueService.test.js
 orchestrationReceiptService.test.js
+parallelExecutionService.test.ts
+pluginRegistryService.test.js
 pluginSandboxService.test.js
+policyEnforcementCaching.test.ts
 policyEnforcementService.test.js
 productionReadinessService.test.js
 recoveryService.test.js
 runtimeLedgerService.test.js
 runwayService.test.js
 selfDevelopmentService.test.js
+sentinelGateService.test.js
+services/agentContract.test.ts
+sessionIntelligenceService.test.js
+slackConnector.test.js           ← added PR #41 (16 tests)
 sourceConfidenceService.test.js
 telegramAutoPollService.test.js
 telegramConnectorProof.test.js
@@ -194,6 +218,7 @@ whatsappGatewaySecurity.test.js
 whatsappWebhookService.test.js
 workflowDurabilityHydration.test.js
 workflowExecutionService.test.js
+workflowGovernanceService.test.js
 workflowOperationsRegistryService.test.js
 workspaceRootService.test.js
 ```
@@ -203,12 +228,10 @@ workspaceRootService.test.js
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- Run the existing tests and measure actual pass rate: `npm run test`
-- Measure coverage (not yet configured with thresholds)
-- Fix any failing tests
-- Add GitHub Actions coverage threshold gate
-- Add Rust unit tests (these do not exist yet — Rust-side is the real gap)
-- Add Playwright E2E smoke test
+- Coverage is at ~28% (threshold 20%) — next staged target is 30%
+- Component test coverage is low (~6%); 4 agent modules at 0%
+- GitHub/Slack connector tests exist but benefit from more API mocking scenarios
+- Run `npm run test:coverage` to see current state
 
 ---
 
@@ -270,9 +293,9 @@ All outbound connector paths run through `policyEnforcementService.js` before an
 | Connector | Frontend path | Rust command | Live status |
 |---|---|---|---|
 | Telegram | `connectorRegistryService.sendTelegramConnectorMessage` | Yes | Credential-dependent |
-| WhatsApp outbound | `connectorRegistryService.sendWhatsAppConnectorMessage` | Yes | Credential-dependent |
+| WhatsApp outbound | `connectorRegistryService.sendWhatsAppConnectorMessage` | Yes (+ browser fallback) | Credential-dependent |
 | WhatsApp inbound (Twilio poll) | `whatsappWebhookService.js` | Yes | Credential-dependent |
-| WhatsApp inbound (Cloud webhook) | Payload normalizer exists | Not deployed | Requires hosted endpoint |
+| WhatsApp inbound (Cloud webhook) | `browserPollWhatsAppGateway` → Railway queue drain | Browser fallback | Live — requires Railway gateway + 5 credentials in UI |
 | YouTube upload | `connectorRegistryService.uploadYouTubeConnectorVideo` | Yes | OAuth-dependent |
 | Notion | `connectorRegistryService.sendNotionConnectorEntry` | Yes | Token-dependent |
 | ClickUp | `connectorRegistryService.sendClickUpConnectorTask` | Yes | Token-dependent |
@@ -287,7 +310,7 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 
 ## 8. Real Gaps — What Actually Needs Work
 
-These are confirmed gaps as of 2026-05-31. Any agent working on these areas should check current state before implementing — some may have been partially addressed since this file was last updated.
+These are confirmed gaps as of 2026-06-21. Any agent working on these areas should check current state before implementing — some may have been partially addressed since this file was last updated.
 
 ### SECURITY
 - [x] **CSP fixed** — `"security": { "csp": null }` replaced with full production policy string in `tauri.conf.json` (2026-05-31, Agent A). See `docs/SECURITY_CONFIG_REPORT.md`.
@@ -304,7 +327,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **lib.rs continued splitting + plugins extracted** — DONE (2026-06-07, OpenCode): `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `runway.rs`, `native_proof.rs` now own their own modules. `cargo check` clean, `cargo clippy -- -D warnings` clean, `cargo test` clean (14 Rust unit tests passing).
 - [x] **Policy gate expanded** — `policy_gate.rs` whitelist expanded from 8 to 40+ programs: python, pip, cargo, npx, yarn, pnpm, curl, wget, ffmpeg, docker, pwsh, explorer, chrome, copy, xcopy, robocopy, mkdir, del, and more. Still blocks: cmd, rm, shutdown, format, net, reg.
 - [x] **New Tauri commands** — `read_workspace_file`, `delete_workspace_file`, `move_workspace_file`, `search_workspace_files`, `list_workspace_directory`, `open_url`, `fetch_url_content`, `read_clipboard`, `write_clipboard`. All with safe path validation (no escape from workspace root).
-- [ ] **lib.rs further splitting** — Next candidate: Telegram connector block (~lines 1543–1757 in original, now shifted).
+- [ ] **lib.rs further splitting** — Optional: Telegram connector block can be extracted further if needed.
 - [x] **Rust unit tests added** — 14 tests in `#[cfg(test)] mod tests` covering `allowed_program`, `plugin_blocked_token_present`, `validate_plugin_extra_args`, `trim_trailing_slashes`, `wal_pragma_applies_on_in_memory_db`, `to_hex` — all passing (verified `cargo test` 2026-05-31, Agent D)
 - [x] **Shared `reqwest::Client`** — built at startup, registered via `.manage()`, used by `connector_poll_telegram`, `connector_send_telegram`, `connector_send_chatgpt`, `connector_send_claude` (2026-05-31, Agent D).
 - [x] **SQLite WAL mode + cache** — `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-65536;` in `open_memory_db()` — 64MB page cache added (2026-06-01, Agent 3)
@@ -335,7 +358,7 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **72 test files, 952 tests, all passing** (verified 2026-06-15, Session 13). 14 Rust unit tests also passing. New test files since Session 6: `appStorage.test.js`, `chatUtils.test.js`, `ollamaUtils.test.js`, `trustModel.test.js`, `connectorAuditLogService.test.js`, `sourceConfidenceService.test.js`.
+- [x] **Test suite confirmed passing** — **81 test files, 1100 tests, all passing** (verified 2026-06-21). 14 Rust unit tests also passing. Notable additions: `githubConnector.test.js` (20 tests, PR #41), `slackConnector.test.js` (16 tests, PR #41), plus `cacheService.test.ts`, `licenseService.test.ts`, `parallelExecutionService.test.ts`, `policyEnforcementCaching.test.ts`, `services/agentContract.test.ts`.
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -353,12 +376,12 @@ These are confirmed gaps as of 2026-05-31. Any agent working on these areas shou
 
 ### INFRASTRUCTURE & DOCS
 - [x] **`ARCHITECTURE.md`** — created at project root: full stack, IPC flow, 9-agent roster, orchestration flow, service groups, storage model, security model, deployment (2026-05-31, Agent H)
-- [x] **`CLAUDE.md`** — created at project root: session-start guide, all npm + cargo commands, do-not-duplicate table, real gaps, directory tree (2026-05-31, Agent H)
-- [x] **`docs/CONNECTORS.md`** — all 11 connectors documented: env vars, credential steps, test procedure, limitations (2026-05-31, Agent H)
-- [x] **`docs/CHANGELOG.md`** — created with Unreleased entries for all Agent A–D changes + [0.1.0] summary (2026-05-31, Agent H)
+- [x] **`CLAUDE.md`** — created at project root: session-start guide, all npm + cargo commands, do-not-duplicate table, real gaps, directory tree (2026-05-31, Agent H; updated 2026-06-21)
+- [x] **`docs/CONNECTORS.md`** — all 13 connectors documented: env vars, credential steps, test procedure, limitations
+- [x] **`docs/CHANGELOG.md`** — maintained with all session changes through v2.0.2
 - [x] **`docs/IOS_COMPANION_PLAN.md`** — iOS companion architecture: WebSocket server design, JSON-RPC protocol, mDNS discovery, SwiftUI vs React Native tradeoffs, 5-phase implementation roadmap (2026-06-08)
-- [x] **`.github/dependabot.yml`** — npm (weekly), Cargo (weekly), GitHub Actions (weekly) (2026-05-31, Agent H)
-- [ ] **Auto-updater signing pipeline** — `release:updater` script exists; full key management + hosted signed manifest not finalized
+- [x] **`.github/dependabot.yml`** — npm (weekly), Cargo (weekly), GitHub Actions (weekly)
+- [x] **Auto-updater fully operational** — ed25519 keypair generated, `TAURI_SIGNING_PRIVATE_KEY` set in GitHub Secrets, pubkey in `tauri.conf.json`, v2.0.2 release triggered via `workflow_dispatch`. Future installs will auto-update.
 - [ ] **Gateway Dockerfile** — `gateway/` service not containerized
 - [ ] **Branch protection on `main`** — CI not yet required before merge
 
@@ -432,6 +455,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **Desktop preflight/verify** → `verify:desktop:preflight`, `verify:desktop` already exist
 - **CI workflows** → `ci.yml` and `verify-app.yml` already exist and passing green (extend, do not replace)
 - **WhatsApp webhook Rust module** → `src-tauri/src/whatsapp_webhook.rs` — `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs live here. Do not re-add to `lib.rs`.
+- **WhatsApp browser connector** → `src/services/whatsappBrowserConnector.js` — `browserSendWhatsApp` (outbound via Meta Graph API v17.0) and `browserPollWhatsAppGateway` (inbound via Railway gateway `/queue/drain`). Reads credentials from `connectorAuth.js` (`getConnectorCredential`). Do NOT recreate.
 - **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `save_settings`, `load_settings`, `ensure_kv_table`. Do not re-add to `lib.rs`.
 - **Multi-turn Ollama chat** → `src/lib/ollama.js` — `generateOllamaChatStream` uses `/api/chat` endpoint with full `messages` array. `ChatView.jsx` captures history snapshot before state updates and passes it. Do not recreate.
 - **appendAgentActivity wiring** → wired in `joseExecutionEngineService.js` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Both import from `../components/AgentActivityLog`.
@@ -475,17 +499,25 @@ The following improvements were noted but deferred to a dedicated UI sprint:
 - **WhatsApp gateway deploy guide** — in-app instructions for Railway deployment of `gateway/whatsapp-cloud/`
 - **Component test coverage** — currently ~6%; target 15% minimum for UI components
 
-### Railway Deployment (ready, but requires manual setup)
+### Railway Deployment (gateway live — no ALPHONSO_FORWARD_URL needed)
 **Two Railway configs exist:**
 1. **Root `railway.json`** → deploys React frontend as static web app (no Rust/Ollama)
 2. **`gateway/whatsapp-cloud/railway.json`** → deploys WhatsApp Cloud webhook gateway (24/7 microservice)
 
-**The gateway is fully code-complete and can be deployed now.** Required env vars to set in Railway dashboard:
-- `WHATSAPP_VERIFY_TOKEN` — your webhook verify token (any string)
+**The gateway is fully code-complete and deployed.** Required env vars in Railway dashboard:
+- `WHATSAPP_VERIFY_TOKEN` — your webhook verify token (same value as in Alphonso connector UI)
 - `WHATSAPP_APP_SECRET` — from Meta App Dashboard → App Settings
-- `ALPHONSO_FORWARD_URL` — the Alphonso desktop app's local endpoint (or a relay URL)
+- `WHATSAPP_ALLOWLIST` or `WHATSAPP_ALLOWED_NUMBERS` — comma-separated allowed phone numbers (digits only, no `+`)
+- `ALPHONSO_FORWARD_URL` — **optional**; gateway has a built-in queue so this is no longer required
 
-After deploy: point Meta webhook to `https://<your-railway-url>/webhook`.
+**Alphonso credentials to set in Settings → Connectors → WhatsApp:**
+- `WHATSAPP_ACCESS_TOKEN` — from Meta App Dashboard
+- `WHATSAPP_PHONE_NUMBER_ID` — WhatsApp Business phone number ID
+- `WHATSAPP_VERIFY_TOKEN` — same token as set in Railway
+- `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` — `https://<your-railway-url>/queue/drain`
+- `WHATSAPP_ALLOWED_NUMBERS` — comma-separated allowed sender numbers (digits only)
+
+After Railway deploy: point Meta webhook URL to `https://<your-railway-url>/webhook`.
 
 ---
 
@@ -506,6 +538,6 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-15 — Session 13 complete. 72 test files, 952 tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB — 44% reduction from code splitting), `cargo clippy -- -D warnings` clean (passes on CI ubuntu-latest). `lib.rs` ~1,455 lines (16 extracted modules, 9,968 total Rust lines). Coverage 27.97% (threshold 20%, src/ scoped). Version 1.0.2. WebView2 zombie process fix: CloseRequested now calls std::process::exit(0) instead of hide-to-tray. useAppEffects split into 6 focused hooks. Ollama polling simplified to 30s fixed interval. Boot performance monitoring added. WhatsApp polling deferred 15s. Run `npm run verify:app` to re-verify._
+_Last verified: 2026-06-21 — Session complete. 81 test files, 1100 tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB), `cargo clippy -- -D warnings` clean. `lib.rs` ~1,455 lines (16 extracted modules). Coverage ~28% (threshold 20%, src/ scoped). Version 2.0.2. WhatsApp Cloud API fully wired: `browserSendWhatsApp` (outbound), `browserPollWhatsAppGateway` (inbound via Railway queue drain). Auto-updater operational: keypair in GitHub Secrets, v2.0.2 release triggered. GitHub/Slack connector tests added (36 tests, PR #41). Run `npm run verify:app` to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.

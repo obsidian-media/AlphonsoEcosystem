@@ -41,33 +41,43 @@ All outbound connector calls run through `policyEnforcementService.js` before an
 
 ## 2. WhatsApp — Cloud API (Meta)
 
-**Status:** Outbound send wired; inbound requires hosted webhook (setup_required).
+**Status:** Fully wired — outbound send via browser fallback (`browserSendWhatsApp`), inbound polling via Railway gateway queue (`browserPollWhatsAppGateway`). No hosted endpoint required beyond the Railway gateway.
 
-**Required env vars:**
-| Variable | Description |
+**Required credentials** (enter in Settings → Connectors → WhatsApp — NOT in `.env`):
+| Credential | Description |
 |---|---|
-| `WHATSAPP_PROVIDER` | Set to `cloud_api` |
 | `WHATSAPP_ACCESS_TOKEN` | Meta Cloud API access token |
 | `WHATSAPP_PHONE_NUMBER_ID` | Phone number ID from Meta for Developers |
-| `WHATSAPP_VERIFY_TOKEN` | Webhook verify token you define |
-| `WHATSAPP_ALLOWED_NUMBERS` | Allowlisted sender phone numbers |
+| `WHATSAPP_VERIFY_TOKEN` | Webhook verify token you define (must match Railway) |
+| `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` | `https://<your-railway-url>/queue/drain` |
+| `WHATSAPP_ALLOWED_NUMBERS` | Comma-separated allowed sender numbers (digits only, no `+`) |
 
 **How to get credentials:**
 1. Create a Meta for Developers app at `developers.facebook.com`
 2. Add WhatsApp product; go to WhatsApp > API Setup
-3. Copy the temporary/permanent access token → `WHATSAPP_ACCESS_TOKEN`
+3. Copy the access token → `WHATSAPP_ACCESS_TOKEN`
 4. Copy the Phone Number ID → `WHATSAPP_PHONE_NUMBER_ID`
-5. Set `WHATSAPP_VERIFY_TOKEN` to any secret string you choose (used during webhook verification)
+5. Set `WHATSAPP_VERIFY_TOKEN` to any secret string you choose
+6. Deploy `gateway/whatsapp-cloud/` to Railway (see setup below)
+7. Railway drain URL → `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL`
+
+**Railway gateway setup:**
+1. Deploy `gateway/whatsapp-cloud/` to Railway
+2. Set env vars in Railway dashboard: `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_ALLOWED_NUMBERS`
+3. Point Meta webhook URL to `https://<railway-url>/webhook`
+4. Enter the drain URL in Alphonso: `https://<railway-url>/queue/drain`
+5. Alphonso polls `/queue/drain` every ~30s for inbound messages
 
 **How to test:**
-- Outbound: Connector Setup panel → supervised send test to an allowed number
-- Inbound (hosted): Deploy `gateway/whatsapp-cloud/` to Railway; configure Meta webhook URL; run challenge verification
+- Outbound: Settings → Connectors → WhatsApp → supervised send test
+- Inbound: Send a WhatsApp message from an allowlisted number → should appear routed through Jose within 30s
 
 **Known limitations:**
-- Inbound webhook requires a hosted public endpoint (Railway gateway) — not live until deployed and verified
-- Signature validation exists in Rust (`verify_whatsapp_cloud_webhook_signature`) but requires hosted deployment
+- Inbound polling interval is ~30s (not real-time; webhook events go to the queue)
+- Allowlist numbers must be digits only, no `+` (the gateway strips `+` automatically)
+- Credentials are stored in `alphonso_connector_credentials_v1` (localStorage + SQLite), not env vars
 
-**Setup docs:** `docs/WHATSAPP_BRIDGE_SETUP.md`, `docs/RAILWAY_WHATSAPP_GATEWAY.md`
+**Setup docs:** `docs/GETTING_STARTED.md`, `docs/WHATSAPP_BRIDGE_SETUP.md`, `docs/RAILWAY_WHATSAPP_GATEWAY.md`
 
 ---
 

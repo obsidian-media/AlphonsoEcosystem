@@ -176,8 +176,8 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - `src-tauri/src/lib.rs` is ~1,455 lines (16 modules extracted: `utils.rs`, `kv_store.rs`, `whatsapp_webhook.rs`, `native_proof.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `connector_commands.rs`, `search.rs`, `telegram.rs`, `workspace.rs`, `youtube.rs`, `runway.rs`)
 - All frontend files are `.jsx` not `.tsx` — partial TypeScript migration (9 services migrated: policyEnforcement, agentContract, orchestrationQueue, license, cache, parallelExecution, memory, ollama, chatUtils)
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
-- WhatsApp Cloud inbound webhook requires hosted endpoint deployment (not yet live)
+- WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
 - Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`)
 - Component test coverage at ~6% — 4 agent modules at 0%
 - Mascot images not compressed (jose: 236KB, alphonso: 243KB)
-- GitHub/Slack connector tests: 12 Rust unit tests added for error paths and serialization; live API mocking still needed for HTTP response testing
+- GitHub connector tests: 20 tests in `githubConnector.test.js` (PR #41); Slack connector tests: 16 tests in `slackConnector.test.js` (PR #41)
