@@ -7,17 +7,21 @@ export interface CacheEntry<T> {
 export interface CacheOptions {
   ttl?: number;
   maxSize?: number;
+  maxEntries?: number;
 }
 
 const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 const DEFAULT_MAX_SIZE = 1000;
+const DEFAULT_MAX_ENTRIES = 500;
 
 export class MemoryCache<T = any> {
   private cache = new Map<string, CacheEntry<T>>();
   private maxSize: number;
+  private maxEntries: number;
 
   constructor(options: CacheOptions = {}) {
     this.maxSize = options.maxSize || DEFAULT_MAX_SIZE;
+    this.maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
   }
 
   get(key: string): T | null {
@@ -44,6 +48,12 @@ export class MemoryCache<T = any> {
       timestamp: Date.now(),
       ttl,
     });
+
+    while (this.cache.size > this.maxEntries) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) this.cache.delete(oldestKey);
+      else break;
+    }
   }
 
   has(key: string): boolean {
