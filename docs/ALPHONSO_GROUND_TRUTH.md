@@ -1,6 +1,6 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-21 — v2.0.5 UI/UX polish sprint complete  
-**Verified by:** Claude Code session (89 test files, 1324 tests passing, cargo clippy clean, rustfmt clean, release built and published)  
+**Last verified:** 2026-06-21 — Direction 3 (Testing) + Direction 4 (Agent Intelligence) sprints complete  
+**Verified by:** Claude Code session (100 test files, 1425 tests passing, cargo clippy clean)  
 **Version:** 2.0.5 (All 9 agents have production runtimes; v2.0.5 NSIS installer live on GitHub Releases)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
@@ -134,12 +134,12 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 84 Files in `src/test/` (not zero)
+## 4. Test Suite — 100 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-21 Phase 1 Stage 3, all passing):**
-- 89 test files, 1324 tests passing
+**Test files (verified 2026-06-21 Direction 3 sprint, all passing):**
+- 100 test files, 1425 tests passing
 - 14 Rust unit tests passing
 ```
 accBridgeService.test.js
@@ -193,6 +193,17 @@ orchestrationQueueService.test.js
 orchestrationReceiptService.test.js
 parallelExecutionService.test.ts
 pluginRegistryService.test.js
+AgentActivityLog.test.jsx          ← added Direction 3 (6 tests)
+ApprovalModal.test.jsx             ← added Direction 3 (10 tests)
+ChatView.test.jsx                  ← added Direction 3 (8 tests)
+ConnectorSetupPanel.test.jsx       ← added Direction 3 (7 tests)
+MicrophoneStatus.test.jsx          ← added Direction 3 (5 tests)
+RightPanel.test.jsx                ← added Direction 3 (8 tests)
+VoiceInputButton.test.jsx          ← added Direction 3 (6 tests)
+voiceService.test.js               ← added Direction 3 (10 tests)
+WorkflowBuilderView.test.jsx       ← added Direction 3 (7 tests)
+useVoiceInput.test.js              ← added Direction 3 (7 tests)
+telegramCompanionService.test.js   ← added Direction 1
 pluginSandboxService.test.js
 policyEnforcementCaching.test.ts
 policyEnforcementService.test.js
@@ -238,9 +249,8 @@ workspaceRootService.test.js
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- Coverage is at ~28% (threshold 20%) — next staged target is 30%
-- Component test coverage is low (~6%); 4 agent modules at 0%
-- GitHub/Slack connector tests exist but benefit from more API mocking scenarios
+- Coverage is at ~30%+ (threshold 20%) — next staged target is 35%
+- Component test coverage improved to ~12% with 11 new component test files (Direction 3)
 - Run `npm run test:coverage` to see current state
 
 ---
@@ -368,7 +378,7 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **89 test files, 1324 tests, all passing** (verified 2026-06-21 Phase 1). 14 Rust unit tests also passing. Phase 1 additions: `sentinelSecurityService.test.js` (33 tests), `novaAnalysisService.test.js` (36 tests). Phase 3 prior: `mariaAuditService.test.js` (33), `echoMemoryService.test.js` (35), `marcusExecutionService.test.js` (23). `githubConnector.test.js` (20), `slackConnector.test.js` (16), plus TypeScript service tests.
+- [x] **Test suite confirmed passing** — **100 test files, 1425 tests, all passing** (verified 2026-06-21 Direction 3 sprint). 14 Rust unit tests also passing. Direction 3 additions: `ApprovalModal.test.jsx` (10), `RightPanel.test.jsx` (8), `ChatView.test.jsx` (8), `ConnectorSetupPanel.test.jsx` (7), `WorkflowBuilderView.test.jsx` (7), `useVoiceInput.test.js` (7), `AgentActivityLog.test.jsx` (6), `VoiceInputButton.test.jsx` (6), `voiceService.test.js` (10), `MicrophoneStatus.test.jsx` (5), plus 8 RSS tests added to `hectorResearchService.test.js`. Earlier: `sentinelSecurityService.test.js` (33), `novaAnalysisService.test.js` (36), `mariaAuditService.test.js` (33), `echoMemoryService.test.js` (35), `marcusExecutionService.test.js` (23), `githubConnector.test.js` (20), `slackConnector.test.js` (16).
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -400,8 +410,21 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **Connector credential UI gap** — **CLOSED Phase 3** All 9 API-key connectors now have credential input panels in `ConnectorSetupPanel.jsx`: GitHub, Slack, Claude/Anthropic, ChatGPT/OpenAI, Notion (2-field), ClickUp (2-field), WhatsApp (3-field), YouTube (4-field), Qwen.
 - [x] **claudeService.js credential inconsistency** — **CLOSED Phase 3** Was reading from auth profiles `.claude.apiKey`; now reads via `getConnectorCredential('claude', 'ANTHROPIC_API_KEY')` consistent with all other connectors.
 - [x] **chatgptService.js credential inconsistency** — **CLOSED Phase 3** Now reads via `getConnectorCredential('chatgpt', 'OPENAI_API_KEY')`.
+- [x] **Telegram companion commands** — **CLOSED Direction 1** `telegramCompanionService.js` now handles `/help` (full command list), `/report` (Ollama status + queue + activity), `/files` (workspace directory listing). `telegramCompanionService.test.js` added (full test suite).
+- [x] **Voice STT wiring** — **CLOSED Direction 1** `voiceService.js` now exports `SpeechRecognitionClass`, `supportsSpeechRecognition()`, `startSpeechRecognition()`. `useVoiceInput.js` hooks STT path with `liveTranscript` state + fallback mic-only path.
+- [x] **Nova insight card in ChatView** — **CLOSED Direction 4** After Jose pipeline, fires `computeOpportunityScores` + async `runNovaAnalysis`; score > 65 shows insight card with SVG score ring, recommendation, dismiss button.
+- [x] **Screen context injection** — **CLOSED Direction 4** `buildProjectSummary()` accepts `screenContext` param; last 3 `screenObserverLogs` events injected before "Next steps". `App.jsx` passes `screenObserverLogs` to `ChatView`.
+- [x] **Maria risk score ring in ApprovalModal** — **CLOSED Direction 4** `ScoreRing` SVG component + `riskToScore()` + `mariaScore` prop override. Color-coded red/amber/green by score.
+- [x] **Sentinel dashboard in RightPanel** — **CLOSED Direction 4** `scanForThreats()` on mount + ↺ re-scan button; threat level badge, findings list, last-scanned time; persisted to `alphonso_sentinel_last_scan_v1`.
+- [x] **Echo memory timeline in SettingsView** — **CLOSED Direction 4** `EchoTimeline` component groups `listMemoryItems()` by retentionTier (permanent ♾ / standard_180d 📅 / ephemeral_7d ⏳) with expiry countdown.
+- [x] **Composio toolkit toggles** — **CLOSED Direction 4** Static badge spans → toggleable 2-col grid cards; enabled set persisted to `alphonso_composio_toolkits_enabled_v1`.
+- [x] **Hector RSS failover** — **CLOSED Direction 4** `RSS_FEED_CATALOG` (12 curated feeds), `fetchRssSources()`, `parseRssItems()` (DOMParser-based), `scoreRssFeed()` — wired as last-resort after Brave/DDG.
+- [x] **WorkflowBuilderView** — **CLOSED Direction 4** New `src/components/WorkflowBuilderView.jsx` — two-panel builder (sidebar + node editor), 9 node types, up/down reorder, save confirmation. `AutomationView` now has Overview/Builder tab bar.
+- [x] **Component test coverage** — **CLOSED Direction 3** 11 new component test files: ApprovalModal, RightPanel, ChatView, ConnectorSetupPanel, WorkflowBuilderView, AgentActivityLog, VoiceInputButton, MicrophoneStatus plus voiceService + useVoiceInput hook tests. 100 test files / 1425 tests.
 - [ ] **Gateway Dockerfile** — `gateway/` service not containerized
 - [ ] **Branch protection on `main`** — CI not yet required before merge
+- [ ] **TypeScript migration** — partial; 9 .ts services exist in src/services/, components still .jsx
+- [ ] **localStorage → SQLite remaining keys** — durable runtime data migration incomplete
 
 ### PERFORMANCE
 - [x] **Lazy loading** — 20+ heavy views lazy-loaded. Main chunk: **288KB** (budget 550KB). Code splitting applied to ChatView, WorkflowPanel, coach components.

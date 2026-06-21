@@ -6,6 +6,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.5-d3d4] - 2026-06-21 — Direction 3 (Testing) + Direction 4 (Agent Intelligence)
+
+### Added — Direction 4: Agent Intelligence & Capabilities
+
+- **Nova insight card** (`ChatView.jsx`) — fires after Jose pipeline when `computeOpportunityScores` returns > 65; SVG score ring + recommendation text + dismiss button; score-based color (emerald/amber/zinc)
+- **Screen context injection** (`ChatView.jsx`, `App.jsx`) — `buildProjectSummary()` accepts `screenContext` param; last 3 `screenObserverLogs` events injected before "Next steps"
+- **Maria risk score ring** (`ApprovalModal.jsx`) — `ScoreRing` SVG component, `riskToScore()` helper, `mariaScore` prop override (0–100); color red ≥75 / amber ≥45 / green below
+- **Sentinel security dashboard** (`RightPanel.jsx`) — `scanForThreats()` on mount + ↺ re-scan button; threat level badge with Shield icon, findings list, last-scanned timestamp; persisted to `alphonso_sentinel_last_scan_v1`
+- **Echo memory timeline** (`SettingsView.jsx`) — `EchoTimeline` component groups `listMemoryItems()` by retentionTier (permanent ♾ / standard_180d 📅 / ephemeral_7d ⏳) with live expiry countdown
+- **Composio toolkit toggles** (`SettingsView.jsx`) — static badge spans replaced with toggleable 2-col grid cards; enabled set persisted to `alphonso_composio_toolkits_enabled_v1`
+- **Hector RSS failover** (`hectorResearchService.js`) — `RSS_FEED_CATALOG` (12 curated feeds: TechCrunch, NYT Tech, Verge, Ars Technica, Wired, HN, dev.to, etc.), `scoreRssFeed()`, `parseRssItems()` (DOMParser RSS+Atom), `fetchRssSources()` — wired as last-resort in `discoverResearchSourcesWithFailover`
+- **WorkflowBuilderView** (`src/components/WorkflowBuilderView.jsx`) — NEW two-panel visual workflow builder: sidebar (list + create with Enter key), right panel (9 node types from WORKFLOW_NODE_LIBRARY, Add Step dropdown, up/down reorder via ChevronUp/Down, delete, 2s save confirmation)
+- **AutomationView Builder tab** (`AutomationView.jsx`) — Overview / Builder tab bar; Builder renders `WorkflowBuilderView` full-height
+
+### Added — Direction 3: Testing & Code Quality
+
+- **11 new test files, +101 tests** — total: 100 files / 1425 tests (up from 89 files / 1324 tests)
+  - `ApprovalModal.test.jsx` — 10 tests: dialog role, risk inference, ScoreRing mariaScore, Approve/Deny callbacks, Escape key, destructive warning
+  - `RightPanel.test.jsx` — 8 tests: Sentinel auto-scan on mount, re-scan button, threat level display, collapse toggle
+  - `ChatView.test.jsx` — 8 tests: render smoke, Ollama offline hint, compact mode, send button states, abort visibility
+  - `ConnectorSetupPanel.test.jsx` — 7 tests: 14 connector cards, Telegram/GitHub sections, Save button
+  - `WorkflowBuilderView.test.jsx` — 7 tests: empty state, create workflow via input/Enter, node editor empty state
+  - `useVoiceInput.test.js` — 7 tests: idle/unsupported initial states, liveTranscript, function presence, startListening state transition
+  - `AgentActivityLog.test.jsx` — 6 tests: header, empty state, entry display with agent name
+  - `VoiceInputButton.test.jsx` — 6 tests: idle/listening/requesting label text, disabled states, onToggle
+  - `voiceService.test.js` — 10 tests: VOICE_STATES shape, TRANSCRIPTION_PIPELINE_STATUS, getVoicePrivacyLabel, classifyVoiceError
+  - `MicrophoneStatus.test.jsx` — 5 tests: privacyLabel, message compact/non-compact, indicator colors
+  - `hectorResearchService.test.js` — +8 RSS tests: catalog structure, scoreRssFeed, parseRssItems, fetchRssSources success/failure
+
+### Added — Direction 1: Platform & Connectivity
+
+- **Telegram companion commands** (`telegramCompanionService.js`) — `/help` (full command list), `/report` (Ollama + queue + activity snapshot, 3800-char cap), `/files` (workspace directory listing via Tauri or desktop-only fallback)
+- **Voice STT pipeline** (`voiceService.js`, `useVoiceInput.js`) — `startSpeechRecognition()` using Web Speech API, `liveTranscript` state in hook, fallback mic-only path, `TRANSCRIPTION_PIPELINE_STATUS` exports
+- **Ollama offline banner** (`ChatView.jsx`) — dismissible amber banner in compact mode when Ollama is offline
+
+---
+
 ## [2.0.5] - 2026-06-21 — UI/UX Polish Sprint
 
 ### Fixed
