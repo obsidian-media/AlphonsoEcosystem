@@ -17,7 +17,7 @@ src/                   React frontend (.jsx, not .tsx)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
   test/                81 test files, 1,100 tests (Vitest, all passing)
 src-tauri/             Rust backend
-  src/lib.rs           ~1,585 lines, 82 Tauri commands (across 18 modules)
+  src/lib.rs           ~1,584 lines, 82 Tauri commands (across 18 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -37,7 +37,7 @@ src-tauri/             Rust backend
 scripts/               Build, release, auth, verification scripts
 e2e/                   Playwright E2E tests (smoke.spec.js, boot.spec.js)
 gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
-docs/                  53 documentation files
+docs/                  56 documentation files
 ```
 
 ## Build & Test Commands
