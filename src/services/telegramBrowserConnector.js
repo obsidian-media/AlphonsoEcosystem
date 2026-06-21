@@ -1,253 +1,66 @@
-import { timestampMs } from './trustModel';
+import { getConnectorCredential } from './connectors/connectorAuth.js';
 
-const TELEGRAM_POLL_KEY = 'alphonso_telegram_poll_cursor_v1';
-const TELEGRAM_POLL_AUDIT_KEY = 'alphonso_telegram_poll_audit_v1';
-
-export function getTelegramPollCursor() {
-  try {
-    const raw = localStorage.getItem(TELEGRAM_POLL_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return typeof parsed.cursor === 'number' ? parsed.cursor : null;
-  } catch {
-    return null;
-  }
-}
-
-export function setTelegramPollCursor(cursor) {
-  try {
-    localStorage.setItem(
-      TELEGRAM_POLL_KEY,
-      JSON.stringify({ cursor, updatedAt: timestampMs() })
-    );
-  } catch {
-    // ignore storage errors in tests/restricted environments
-  }
-}
-
-function getAuditRows() {
-  try {
-    const raw = localStorage.getItem(TELEGRAM_POLL_AUDIT_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function appendAudit(entry) {
-  const next = [...getAuditRows(), { ...entry, id: `telegram_browser_${Date.now()}_${Math.random().toString(16).slice(2, 8)}` }].slice(-200);
-  try {
-    localStorage.setItem(TELEGRAM_POLL_AUDIT_KEY, JSON.stringify(next));
-  } catch {
-    // ignore
-  }
-}
-
-export async function browserPollTelegram({ botToken, limit = 50 } = {}) {
-  const token = (botToken || '').trim();
-  if (!token) {
-    appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: 'missing_bot_token' });
-    return { ok: false, count: 0, messages: [], error: 'bot_token_missing' };
-  }
-
-  const offset = getTelegramPollCursor();
-  let endpoint = `https://api.telegram.org/bot${token}/getUpdates?limit=${limit}&timeout=10`;
-  if (typeof offset === 'number' && Number.isFinite(offset)) {
-    endpoint += `&offset=${offset + 1}`;
-  }
-
-  let response;
-  try {
-    response = await fetch(endpoint);
-  } catch (error) {
-    appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: String(error) });
-    return { ok: false, count: 0, messages: [], error: String(error) };
-  }
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: `http_${response.status}`, body: text });
-    return { ok: false, count: 0, messages: [], error: `telegram_http_${response.status}` };
-  }
-
-  const body = await response.json();
-  if (!body?.ok) {
-    const description = body?.description || 'telegram_get_updates_failed';
-    appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: description });
-    return { ok: false, count: 0, messages: [], error: description };
-  }
-
-  const result = Array.isArray(body.result) ? body.result : [];
-  const lastUpdate = result.length ? result[result.length - 1] : null;
-  const lastId = lastUpdate?.update_id ?? offset ?? null;
-  if (typeof lastId === 'number') {
-    setTelegramPollCursor(lastId);
-  }
-
-  const messages = [];
-  for (const update of result) {
-    const messageValue = update.message || update.edited_message;
-    if (!messageValue) continue;
-
-    const chat = messageValue.chat || {};
-    const from = messageValue.from || {};
-    const text = (messageValue.text || messageValue.caption || '').trim();
-    if (!text) continue;
-
-    messages.push({
-      update_id: update.update_id,
-      chat_id: String(chat.id ?? chat.username ?? ''),
-      chat_type: chat.type || 'unknown',
-      from_id: String(from.id ?? ''),
-      from_username: from.username || null,
-      text,
-      date_unix: messageValue.date ?? Math.floor(Date.now() / 1000),
-      received_at_ms: timestampMs()
-    });
-  }
-
-  appendAudit({
-    at: timestampMs(),
-    kind: 'poll_success',
-    count: messages.length,
-    lastUpdateId: lastId,
-    cursorAfter: lastId
-  });
-
-  return {
-    ok: true,
-    count: result.length,
-    routed: messages.length,
-    messages,
-    cursor: typeof lastId === 'number' ? lastId : null
-  };
-}
+const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
 
 export async function browserSendTelegram({ botToken, chatId, text }) {
-  const target = String(chatId || '').trim();
-  const body = String(text || '').trim();
-  if (!target) return { ok: false, error: 'chat_id_required' };
-  if (!body) return { ok: false, error: 'text_required' };
+  const token = botToken || getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
+  if (!token) {
+    throw new Error('TELEGRAM_BOT_TOKEN not set in connector credentials');
+  }
 
-  const token = (botToken || '').trim();
-  if (!token) return { ok: false, error: 'bot_token_missing' };
+  const url = `${TELEGRAM_API_BASE}${token}/sendMessage`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: String(chatId || ''),
+      text: String(text || '')
+    })
+  });
 
-  const endpoint = `https://api.telegram.org/bot${token}/sendMessage`;
-  let response;
-  try {
-    response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: target, text: body, disable_web_page_preview: true })
-    });
-  } catch (error) {
-    appendAudit({ at: timestampMs(), kind: 'send_failed', reason: String(error), chatId: target });
-    return { ok: false, error: String(error) };
+  const data = await response.json().catch(() => ({}));
+  return {
+    ok: response.ok && data?.ok === true,
+    connectorId: 'telegram',
+    externalId: data?.result?.message_id ? String(data.result.message_id) : null,
+    httpStatus: response.status,
+    error: response.ok ? null : (data?.description || `HTTP ${response.status}`),
+    trust: response.ok ? 'verified' : 'failed'
+  };
+}
+
+export async function browserPollTelegram({ botToken, limit = 12 } = {}) {
+  const token = botToken || getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
+  if (!token) {
+    throw new Error('TELEGRAM_BOT_TOKEN not set in connector credentials');
+  }
+
+  const url = `${TELEGRAM_API_BASE}${token}/getUpdates`;
+  const params = new URLSearchParams({ limit: String(limit), timeout: '10' });
+  const response = await fetch(`${url}?${params}`, { method: 'GET' });
+
+  if (!response.ok) {
+    throw new Error(`Telegram poll failed: HTTP ${response.status}`);
   }
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data?.ok) {
-    const description = data?.description || `http_${response.status}`;
-    appendAudit({ at: timestampMs(), kind: 'send_failed', reason: description, chatId: target });
-    return { ok: false, error: description };
-  }
+  const updates = Array.isArray(data?.result) ? data.result : [];
 
-  const messageId = data?.result?.message_id ?? null;
-  appendAudit({
-    at: timestampMs(),
-    kind: 'send_success',
-    chatId: target,
-    messageId,
-    preview: body.slice(0, 80)
+  const messages = updates.map((update) => {
+    const msg = update?.message || update?.edited_message || {};
+    return {
+      updateId: update?.update_id ?? null,
+      chatId: String(msg?.chat?.id || ''),
+      fromId: String(msg?.from?.id || ''),
+      text: String(msg?.text || ''),
+      messageId: String(msg?.message_id || '')
+    };
   });
 
   return {
     ok: true,
-    connector_id: 'telegram',
-    target,
-    external_id: typeof messageId === 'number' ? String(messageId) : null,
-    sent_at_ms: timestampMs(),
-    trust: 'verified',
-    error: null
-  };
-}
-
-export function parseTelegramCommand(text) {
-  const trimmed = (text || '').trim();
-  if (!trimmed.startsWith('/')) return null;
-  const parts = trimmed.slice(1).split(/\s+/);
-  const cmd = (parts[0] || '').toLowerCase().replace(/@\w+$/, '');
-  const args = parts.slice(1).join(' ');
-  return { cmd, args };
-}
-
-export async function handleTelegramBotCommand({ text, chatId, botToken }) {
-  const parsed = parseTelegramCommand(text);
-  if (!parsed) return { ok: false, error: 'not_a_command' };
-
-  let reply = '';
-  if (parsed.cmd === 'start') {
-    reply = 'Hi! I\'m Alphonso, your local AI companion.\n\nAvailable commands:\n/ask <question> — Ask me anything\n/status — System status\n/help — Show all commands';
-  } else if (parsed.cmd === 'help') {
-    reply = 'Commands:\n/ask <text> — Route a question to Jose (Orchestrator)\n/status — Get Alphonso system status\n/start — Welcome message\n/help — This help message';
-  } else if (parsed.cmd === 'status') {
-    reply = 'Alphonso is online.\nAgents: Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova + Alphonso (9 active)\nTelegram: polling active\nOllama: local inference on demand';
-  } else if (parsed.cmd === 'ask') {
-    if (!parsed.args.trim()) {
-      reply = 'Usage: /ask <your question>\nExample: /ask Summarize today\'s tasks';
-    } else {
-      const preview = parsed.args.slice(0, 80) + (parsed.args.length > 80 ? '...' : '');
-      reply = `Routing to Jose: "${preview}"\n\nJose will process your request. Check the app for results.`;
-    }
-  } else {
-    return { ok: false, error: 'unknown_command' };
-  }
-
-  if (!reply) return { ok: true, reply: '' };
-  if (botToken && chatId) {
-    return browserSendTelegram({ botToken, chatId, text: reply });
-  }
-  return { ok: true, reply };
-}
-
-export async function verifyTelegramBotEnvironment({ botToken } = {}) {
-  const token = (botToken || '').trim();
-  if (!token) {
-    return {
-      ok: false,
-      botUsername: null,
-      trust: 'failed',
-      error: 'TELEGRAM_BOT_TOKEN is not configured.'
-    };
-  }
-
-  let response;
-  try {
-    response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
-  } catch (error) {
-    return {
-      ok: false,
-      botUsername: null,
-      trust: 'failed',
-      error: String(error)
-    };
-  }
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data?.ok) {
-    return {
-      ok: false,
-      botUsername: null,
-      trust: 'failed',
-      error: data?.description || `telegram_getMe_failed_${response.status}`
-    };
-  }
-
-  const botUsername = data?.result?.username || null;
-  return {
-    ok: true,
-    botUsername: String(botUsername || ''),
-    trust: 'verified',
-    error: null
+    messages,
+    cursor: updates.length > 0 ? updates[updates.length - 1].update_id : null,
+    trust: 'verified'
   };
 }
