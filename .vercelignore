@@ -4,7 +4,6 @@ src-tauri/
 
 # Docs and archives — large binaries in here
 docs/
-scripts/
 
 # Test files
 e2e/
