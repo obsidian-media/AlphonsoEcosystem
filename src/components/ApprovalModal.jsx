@@ -81,6 +81,34 @@ function inferConnector(label) {
   return null;
 }
 
+function riskToScore(level) {
+  if (level === 'high') return 85;
+  if (level === 'low') return 20;
+  return 55; // medium
+}
+
+function ScoreRing({ score }) {
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const filled = circumference - (score / 100) * circumference;
+  const color = score >= 75 ? '#f87171' : score >= 45 ? '#fbbf24' : '#34d399';
+  return (
+    <div className="relative w-12 h-12 shrink-0">
+      <svg width="48" height="48" viewBox="0 0 48 48" className="-rotate-90">
+        <circle cx="24" cy="24" r={radius} fill="none" stroke="#27272a" strokeWidth="4" />
+        <circle
+          cx="24" cy="24" r={radius} fill="none"
+          stroke={color} strokeWidth="4"
+          strokeDasharray={circumference}
+          strokeDashoffset={filled}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white">{score}</span>
+    </div>
+  );
+}
+
 /**
  * ApprovalModal
  *
@@ -89,6 +117,7 @@ function inferConnector(label) {
  *   action     — string: explicit action name (overrides label when provided)
  *   connector  — string: explicit connector name (auto-inferred from label if omitted)
  *   riskLevel  — 'high' | 'medium' | 'low' (auto-inferred from label if omitted)
+ *   mariaScore — number (0–100): optional numeric risk score from Maria; overrides inferred score
  *   onConfirm  — function: called when user clicks Approve
  *   onCancel   — function: called when user clicks Deny / presses Escape
  */
@@ -97,6 +126,7 @@ export function ApprovalModal({
   action,
   connector,
   riskLevel,
+  mariaScore,
   onConfirm,
   onCancel
 }) {
@@ -104,6 +134,7 @@ export function ApprovalModal({
   const resolvedConnector = connector || inferConnector(actionText);
   const resolvedRisk = riskLevel || inferRiskLevel(actionText);
   const destructive = isDestructiveAction(actionText);
+  const displayScore = mariaScore !== undefined && mariaScore !== null ? mariaScore : riskToScore(resolvedRisk);
 
   const risk = RISK_BADGE[resolvedRisk] || RISK_BADGE.medium;
   const RiskIcon = resolvedRisk === 'high' ? ShieldAlert : Shield;
@@ -138,13 +169,14 @@ export function ApprovalModal({
           </div>
         </div>
 
-        {/* Meta row: connector + risk badge */}
+        {/* Meta row: connector + risk badge + score ring */}
         <div className="flex items-center gap-2 flex-wrap">
           {resolvedConnector && (
             <div className="rounded-lg border border-white/10 bg-zinc-800/60 px-2.5 py-1 text-[10px] font-semibold text-zinc-300">
               {resolvedConnector}
             </div>
           )}
+          <ScoreRing score={displayScore} />
           <div className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest ${risk.classes}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${risk.dot}`} />
             {risk.label}

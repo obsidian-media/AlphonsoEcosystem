@@ -3,12 +3,14 @@ import { RefreshCw } from 'lucide-react';
 import { createWorkflow, listWorkflows } from '../services/workflowBuilderService';
 import { listWorkflowReceipts } from '../services/workflowReceiptService';
 import { listWorkflowOperations } from '../services/workflowOperationsRegistryService';
+import { WorkflowBuilderView } from './WorkflowBuilderView';
 
 export function AutomationView() {
   const [workflows, setWorkflows] = React.useState(() => listWorkflows());
   const [runs, setRuns] = React.useState(() => listWorkflowReceipts());
   const [ops, setOps] = React.useState(() => listWorkflowOperations());
   const [newName, setNewName] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('overview');
 
   const handleCreate = () => {
     const name = newName.trim();
@@ -25,7 +27,37 @@ export function AutomationView() {
   };
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Tab bar */}
+      <div className="flex items-center gap-1 px-6 pt-4 pb-0 border-b border-white/[0.06] shrink-0">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
+            activeTab === 'overview'
+              ? 'bg-zinc-900 border border-b-0 border-white/[0.08] text-zinc-100'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab('builder')}
+          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
+            activeTab === 'builder'
+              ? 'bg-zinc-900 border border-b-0 border-white/[0.08] text-zinc-100'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          Builder
+        </button>
+      </div>
+
+      {activeTab === 'builder' ? (
+        <div className="flex-1 overflow-hidden">
+          <WorkflowBuilderView />
+        </div>
+      ) : (
+    <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-zinc-100">Automation</h2>
@@ -104,6 +136,8 @@ export function AutomationView() {
             </div>
           ))}
         </div>
+      )}
+    </div>
       )}
     </div>
   );

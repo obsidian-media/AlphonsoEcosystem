@@ -328,6 +328,85 @@ export async function searchBrave(query, count = 10) {
   }
 }
 
+// Curated topic-matched RSS feed list
+const RSS_FEED_CATALOG = [
+  { url: 'https://feeds.feedburner.com/TechCrunch', topics: ['tech', 'startup', 'ai', 'software'] },
+  { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml', topics: ['tech', 'ai', 'science'] },
+  { url: 'https://www.theverge.com/rss/index.xml', topics: ['tech', 'software', 'hardware'] },
+  { url: 'https://feeds.arstechnica.com/arstechnica/index', topics: ['tech', 'science', 'software'] },
+  { url: 'https://www.wired.com/feed/rss', topics: ['tech', 'ai', 'culture'] },
+  { url: 'https://techcrunch.com/feed/', topics: ['startup', 'funding', 'tech'] },
+  { url: 'https://news.ycombinator.com/rss', topics: ['tech', 'programming', 'startup', 'ai'] },
+  { url: 'https://dev.to/feed', topics: ['programming', 'software', 'developer'] },
+  { url: 'https://css-tricks.com/feed/', topics: ['css', 'frontend', 'web', 'design'] },
+  { url: 'https://overreacted.io/rss.xml', topics: ['react', 'javascript', 'frontend'] },
+  { url: 'https://www.indiehackers.com/feed.xml', topics: ['startup', 'indie', 'business'] },
+  { url: 'https://feeds.feedburner.com/venturebeat/SZYF', topics: ['ai', 'ml', 'tech', 'enterprise'] },
+];
+
+function scoreRssFeed(feed, query) {
+  const queryLower = query.toLowerCase();
+  const queryWords = queryLower.split(/\s+/);
+  let score = 0;
+  for (const word of queryWords) {
+    if (feed.topics.some(t => t.includes(word) || word.includes(t))) score += 2;
+  }
+  return score;
+}
+
+function parseRssItems(xmlText, feedUrl, limit) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, 'application/xml');
+    const items = Array.from(doc.querySelectorAll('item, entry')).slice(0, limit);
+    return items.map(item => {
+      const title = item.querySelector('title')?.textContent?.trim() || '';
+      const link = item.querySelector('link')?.textContent?.trim()
+        || item.querySelector('link')?.getAttribute('href')?.trim()
+        || feedUrl;
+      const desc = item.querySelector('description, summary, content')?.textContent?.trim() || '';
+      return { title, url: link, snippet: desc.slice(0, 200), source: 'rss' };
+    }).filter(r => r.title && r.url);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRssSources(query, limit = 8) {
+  if (!query || typeof query !== 'string') return [];
+
+  // Score and pick the top 4 feeds for this query
+  const scored = RSS_FEED_CATALOG
+    .map(feed => ({ feed, score: scoreRssFeed(feed, query) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+
+  const results = [];
+  await Promise.allSettled(scored.map(async ({ feed }) => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const resp = await fetch(feed.url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!resp.ok) return;
+      const text = await resp.text();
+      const items = parseRssItems(text, feed.url, Math.ceil(limit / scored.length) + 1);
+      results.push(...items);
+    } catch {
+      // ignore per-feed failures
+    }
+  }));
+
+  const deduped = results
+    .filter((r, i, arr) => arr.findIndex(x => x.url === r.url) === i)
+    .slice(0, limit);
+
+  if (deduped.length > 0) {
+    persistResearchResult(`rss:${query}`, deduped);
+  }
+  return deduped;
+}
+
 async function discoverResearchSourcesBrave({ researchQuestion, sourceType, limit = 8 }) {
   let results = null;
   try {
@@ -445,6 +524,9 @@ async function discoverResearchSourcesWithFailover({
     }
   } catch (error) {
     providerChain.push('duckduckgo_html_error');
+    // Try RSS as last-resort fallback
+    const rssSources = await fetchRssSources(researchQuestion, limit);
+    if (rssSources.length > 0) return { ok: true, sources: rssSources, strategy: 'rss_fallback' };
     return await continueWithRefinements({
       researchQuestion,
       sourceType,
@@ -454,6 +536,10 @@ async function discoverResearchSourcesWithFailover({
       primaryError: String(error)
     });
   }
+
+  // Try RSS as last-resort fallback
+  const rssSources = await fetchRssSources(researchQuestion, limit);
+  if (rssSources.length > 0) return { ok: true, sources: rssSources, strategy: 'rss_fallback' };
 
   return continueWithRefinements({
     researchQuestion,

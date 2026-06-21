@@ -20,12 +20,13 @@ import { listOrchestrationReceipts } from '../services/orchestrationReceiptServi
 import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
 import { startProactiveWatcher } from '../services/proactiveAgentService';
 import { MemorySearch } from './MemorySearch';
+import { runNovaAnalysis, computeOpportunityScores, classifyPriorityTier } from '../services/novaAnalysisService';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
 const VoiceInputButton = lazy(() => import('./VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
 
-function buildProjectSummary(result, commandText, baseSummary) {
+function buildProjectSummary(result, commandText, baseSummary, screenContext = []) {
   const receipts = result?.executionReceipts || [];
   const allArtifacts = receipts.flatMap((r) => r.artifacts || []);
   const brainArtifacts = allArtifacts.filter((a) => a.type === 'brain_generation' || a.type === 'project_scaffold');
@@ -100,6 +101,15 @@ function buildProjectSummary(result, commandText, baseSummary) {
     }
   }
 
+  if (screenContext.length > 0) {
+    const recent = screenContext.slice(-3);
+    lines.push('**Screen context:**');
+    for (const e of recent) {
+      lines.push(`  ${e.type || 'screen'}: ${String(e.text || e.description || '').slice(0, 100)}`);
+    }
+    lines.push('');
+  }
+
   lines.push('**Next steps:**');
   if (autoRunArtifact?.url) {
     lines.push(`  Open ${autoRunArtifact.url} in your browser`);
@@ -126,7 +136,8 @@ export function ChatView({
   onRetryOllama,
   onJoseExecutionState,
   onOpenSettings,
-  onModelChange
+  onModelChange,
+  screenObserverLogs = []
 }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -149,6 +160,7 @@ export function ChatView({
   const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
   const [showMemorySearch, setShowMemorySearch] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [novaInsight, setNovaInsight] = useState(null);
   const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
   const messagesEndRef = useRef(null);
@@ -282,6 +294,7 @@ export function ChatView({
 
   const handleSend = async () => {
     if (!inputValue.trim() || isGenerating) return;
+    setNovaInsight(null);
     const cleanInput = inputValue.trim();
     const joseCommand = isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput);
 
@@ -347,7 +360,7 @@ export function ChatView({
           ? '\nApprove the pending tasks below to continue.'
           : '';
 
-        const richSummary = buildProjectSummary(result, cleanInput, baseSummary);
+        const richSummary = buildProjectSummary(result, cleanInput, baseSummary, screenObserverLogs);
 
         setMessages((current) => [...current, {
           id: nextMsgId(),
@@ -375,6 +388,16 @@ export function ChatView({
             : 'Jose completed routing and merged reports.'
         );
         onTaskComplete();
+
+        // Fire Nova analysis in background — non-blocking
+        try {
+          const novaScores = computeOpportunityScores(cleanInput, {});
+          if (novaScores.valueScore > 60) {
+            runNovaAnalysis(cleanInput, null, {}, { skipOllama: true }).then(novaResult => {
+              if (novaResult?.score > 65) setNovaInsight(novaResult);
+            }).catch(() => {});
+          }
+        } catch { /* non-critical */ }
       } catch (error) {
         setMessages((current) => [...current, {
           id: nextMsgId(),
@@ -732,6 +755,30 @@ export function ChatView({
                   }]);
                 }}
               />
+            </div>
+          </div>
+        )}
+
+        {novaInsight && !isGenerating && (
+          <div className="mx-auto w-full max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Nova Insight</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    novaInsight.score >= 80 ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300' :
+                    novaInsight.score >= 60 ? 'bg-amber-500/10 border-amber-400/20 text-amber-300' :
+                    'bg-zinc-500/10 border-zinc-400/20 text-zinc-400'
+                  }`}>Score {novaInsight.score}/100</span>
+                </div>
+                <button onClick={() => setNovaInsight(null)} className="text-zinc-600 hover:text-zinc-400 rounded">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {novaInsight.recommendation && (
+                <p className="text-xs text-zinc-300 leading-relaxed">{novaInsight.recommendation}</p>
+              )}
             </div>
           </div>
         )}
