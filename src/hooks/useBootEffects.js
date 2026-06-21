@@ -179,4 +179,28 @@ export function useBootEffects({
       if (idleId) cancelIdle(idleId);
     };
   }, [setDesktopBridge]);
+
+  // Phase 1 (idle): Telegram companion startup
+  useEffect(() => {
+    let cancelled = false;
+    let idleId;
+
+    async function startTelegram() {
+      if (cancelled) return;
+      try {
+        const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+        const { startTelegramCompanion } = await import('../services/telegramCompanionService');
+        const token = getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
+        if (token) {
+          startTelegramCompanion();
+        }
+      } catch { /* ignore */ }
+    }
+
+    idleId = onIdle(startTelegram);
+    return () => {
+      cancelled = true;
+      if (idleId) cancelIdle(idleId);
+    };
+  }, []);
 }
