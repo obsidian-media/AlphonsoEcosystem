@@ -1,19 +1,17 @@
-// Lightweight in-memory ring buffer (last 100 entries) for connector call audit
-const MAX_ENTRIES = 100;
-const log = [];
+import { invoke } from '@tauri-apps/api/core';
+import { AGENTS, createAgentPacket, requestPacketRetry, sendPacketToDeadLetter, updatePacketStatus } from '../agentBusService';
+import { appendSessionEvent } from '../sessionIntelligenceService';
+import { TRUST_STATES, timestampMs } from '../trustModel';
+import { createJoseCommandRoute } from '../joseCommandRouterService';
+import { browserPollTelegram } from '../telegramBrowserConnector';
+import { browserPollWhatsAppGateway } from '../whatsappBrowserConnector';
+import {
+  appendConnectorAudit,
+  requireConnectorReady,
+  verifyConnectorEnvironment
+} from './connectorRegistry.js';
+import {
+  readAuthProfiles
+} from './connectorAuth.js';
 
-export function appendConnectorAuditEntry({ connectorId, ok, latencyMs, errorCode }) {
-  log.push({ connectorId, ok, latencyMs, errorCode: errorCode || null, ts: Date.now() });
-  if (log.length > MAX_ENTRIES) log.shift();
-}
-
-export function getConnectorAuditLog() {
-  return [...log];
-}
-
-export function getLastEntryForConnector(connectorId) {
-  for (let i = log.length - 1; i >= 0; i--) {
-    if (log[i].connectorId === connectorId) return log[i];
-  }
-  return null;
-}
+// ... rest of the file as originally provided
