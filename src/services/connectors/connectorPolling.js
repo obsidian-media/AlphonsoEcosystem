@@ -4,6 +4,7 @@ import { appendSessionEvent } from '../sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from '../trustModel';
 import { createJoseCommandRoute } from '../joseCommandRouterService';
 import { browserPollTelegram } from '../telegramBrowserConnector';
+import { browserPollWhatsAppGateway } from '../whatsappBrowserConnector';
 import {
   appendConnectorAudit,
   requireConnectorReady,
@@ -226,6 +227,24 @@ export async function pollWhatsAppConnector(limit = 12) {
       messages: [],
       error: String(error)
     };
+  }
+
+  // Cloud API mode: Rust returns trust="placeholder" because inbound polling goes through
+  // the Railway gateway queue instead. Fall back to browser drain.
+  if (!proof?.ok && proof?.trust === 'placeholder') {
+    try {
+      proof = await browserPollWhatsAppGateway({ limit });
+    } catch (browserError) {
+      appendConnectorAudit('whatsapp', 'poll_gateway_failed', { error: String(browserError) });
+      return {
+        ok: false,
+        count: 0,
+        routed: 0,
+        rejected: 0,
+        messages: [],
+        error: String(browserError)
+      };
+    }
   }
 
   const messages = Array.isArray(proof?.messages) ? proof.messages : [];

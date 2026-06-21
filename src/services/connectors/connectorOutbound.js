@@ -5,6 +5,8 @@ import { sendChatGPTMessage } from '../chatgptService';
 import { sendClaudeMessage } from '../claudeService';
 import { appendConnectorAuditEntry } from '../connectorAuditLogService';
 import { browserSendTelegram } from '../telegramBrowserConnector';
+import { browserSendWhatsApp } from '../whatsappBrowserConnector';
+import { getConnectorCredential } from './connectorAuth.js';
 import {
   gateConnectorAction,
   requireConnectorReady,
@@ -281,32 +283,45 @@ export async function sendWhatsAppConnectorMessage(to, text, options = {}) {
       error: gate.reason || 'WhatsApp policy gate blocked the action.'
     };
   }
+  // Check env vars in Rust process AND in the credential store.
   let envCheck = null;
   try {
     envCheck = await invoke('check_env_vars_presence', { names: ['WHATSAPP_ACCESS_TOKEN'] });
   } catch {
     envCheck = null;
   }
-  if (envCheck && !envCheck.WHATSAPP_ACCESS_TOKEN) {
+  const rustHasToken = Boolean(envCheck?.WHATSAPP_ACCESS_TOKEN);
+  const browserToken = getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN');
+  if (!rustHasToken && !browserToken) {
     appendConnectorAudit('whatsapp', 'send_blocked_missing_key', { text: String(text || '').slice(0, 80) });
     return {
       ok: false, connectorId: 'whatsapp', blocked: true,
-      error: 'WhatsApp access token missing — configure WHATSAPP_ACCESS_TOKEN',
+      error: 'WhatsApp access token missing — set WHATSAPP_ACCESS_TOKEN in connector credentials',
       code: 'MISSING_KEY', trust: TRUST_STATES.FAILED
     };
   }
   await guardConnectorRateLimit('whatsapp');
   let result;
-  try {
-    result = await invoke('connector_send_whatsapp', { to, text });
-  } catch (error) {
-    const errMsg = String(error || '');
-    recordConnectorFailure('whatsapp', 'external_send');
-    appendConnectorAudit('whatsapp', 'send_failed', { target: to, error: errMsg });
-    return {
-      ok: false, connectorId: 'whatsapp', blocked: false,
-      error: `WhatsApp connector error: ${errMsg}`, trust: TRUST_STATES.FAILED
-    };
+  if (rustHasToken) {
+    try {
+      result = await invoke('connector_send_whatsapp', { to, text });
+    } catch {
+      result = null;
+    }
+  }
+  // Fall back to browser send if Rust path unavailable or failed.
+  if (!result?.ok && browserToken) {
+    try {
+      result = await browserSendWhatsApp({ to, text });
+    } catch (browserError) {
+      const errMsg = String(browserError || '');
+      recordConnectorFailure('whatsapp', 'external_send');
+      appendConnectorAudit('whatsapp', 'send_failed', { target: to, error: errMsg });
+      return {
+        ok: false, connectorId: 'whatsapp', blocked: false,
+        error: `WhatsApp send error: ${errMsg}`, trust: TRUST_STATES.FAILED
+      };
+    }
   }
   recordConnectorSuccess('whatsapp', 'external_send');
   trackConnectorSend('whatsapp');
