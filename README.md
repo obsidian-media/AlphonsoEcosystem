@@ -4,43 +4,40 @@
 
 # Alphonso
 
-> **v2.0.2** — Local-first AI desktop companion powered by Ollama
+> **v2.0.4** — Local-first AI desktop companion powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.0.2-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2)
-[![Tests](https://img.shields.io/badge/tests-1100%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.0.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.4)
+[![Tests](https://img.shields.io/badge/tests-1324%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
 **Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
-It orchestrates 9 specialized agents, connects to 13 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
+It orchestrates 9 specialized agents, connects to 14 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
 
-**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 13 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
+**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 14 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.0.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.0.4**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.4) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
 
-## What's New in v2.0.0
+## What's New in v2.0.4
 
-- **Enhanced 9-Agent System** — all agents upgraded with GitHub and Slack integration
-- **GitHub Connector** — issues, PRs, releases, code search, workflow dispatch, file content
-- **Slack Connector** — messages, channels, files, reactions, webhooks
-- **Parallel Execution** — concurrency-controlled task execution with retry logic
-- **Memory Cache** — TTL + LRU eviction for agents and connectors
-- **License Tiers** — Free / Pro / Enterprise with premium connector gates
-- **AppShell Refactor** — `useAppShellState` hook; 196 lines removed from App.jsx
-- **1,324 Tests** — 89 test files, all passing; 14 Rust unit tests across 18 modules
-- **WebView2 Fix** — `std::process::exit(0)` on window close prevents zombie process leak
+- **All 9 Agent Runtimes Complete** — Sentinel security scanning, Nova opportunity analysis, Maria governance audit, Echo memory synthesis, Marcus distribution — all Ollama-powered with deterministic fallback
+- **Connector Credential UI** — all 14 connectors (9 API-key connectors) now have in-app credential panels; no `.env` file needed
+- **Auto-Updater** — ed25519-signed manifests; installed app receives future updates automatically
+- **Coverage Push** — 89 test files, 1,324 tests, ~30% coverage (threshold 20%)
+- **claudeService/chatgptService fix** — both now read API keys via `getConnectorCredential()` (consistent with all other connectors)
+- **WhatsApp Cloud** — Railway-hosted gateway end-to-end; inbound polling + outbound send
 
 ---
 
 ## Features
 
 - **9 Enhanced Agents** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with defined roles, permission contracts, and enforced boundaries. Now with GitHub and Slack capabilities.
-- **13 Connectors** — Ollama, Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude API, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search
+- **14 Connectors** — Ollama, Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude API, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search, Qwen/DashScope
 - **1,000+ Integrations** — Composio integration gives access to GitHub, Slack, Jira, Salesforce, Linear, and 1,000+ more services — all policy-gated
 - **Local LLM First** — Ollama with model switching (`llama3.2:3b` default); no prompt leaves your device for core operations
 - **Fail-Closed Policy Gate** — every outbound action runs through `policyEnforcementService.ts`; if credentials are missing or the action is ambiguous it is blocked, not allowed
@@ -58,8 +55,8 @@ It orchestrates 9 specialized agents, connects to 13 external services, and uses
 
 ### Download the Installer (Windows)
 
-1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2)
-1. Download `Alphonso_2.0.2_x64-setup.exe`
+1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.4)
+1. Download `Alphonso_2.0.4_x64-setup.exe`
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
 
@@ -198,6 +195,7 @@ All agents are registered in `src/agents/agentRegistry.js`, enforced by `agentCo
 | SD WebUI | Ready | `SD_WEBUI_URL` |
 | ComfyUI | Ready | `COMFYUI_URL` |
 | Brave Search | Ready | `BRAVE_SEARCH_API_KEY` |
+| Qwen/DashScope | Ready | `DASHSCOPE_API_KEY` |
 
 All connectors are policy-gated through `connectorRegistryService.js`. See [docs/CONNECTORS.md](docs/CONNECTORS.md) for full setup instructions.
 
@@ -221,8 +219,8 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 1,100 tests across 81 files
-npm run test:coverage  # Coverage report (~28%; threshold 20%)
+npm run test           # 1,324 tests across 89 files
+npm run test:coverage  # Coverage report (~30%; threshold 20%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + test + build in one command
 npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
@@ -233,7 +231,7 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 60 Rust unit tests (18 modules)
+cargo test                     # 14 Rust unit tests (18 modules)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 
@@ -262,7 +260,8 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.0.2** | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |
+| **v2.0.4** | June 21, 2026 | All 9 agent runtimes, connector credential UI, coverage ~30%, 1,324 tests |
+| v2.0.2 | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |
 | v1.0.3 | June 15, 2026 | Installer update |
 | v1.0.2 | June 15, 2026 | WebView2 zombie process fix, boot optimizations |
 | v1.0.1 | June 15, 2026 | Stability fixes |
