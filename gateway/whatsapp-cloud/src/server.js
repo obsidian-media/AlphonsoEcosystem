@@ -8,9 +8,14 @@ const PORT = Number(process.env.PORT || 8080);
 const VERIFY_TOKEN = String(process.env.WHATSAPP_VERIFY_TOKEN || '').trim();
 const APP_SECRET = String(process.env.WHATSAPP_APP_SECRET || '').trim();
 const FORWARD_URL = String(process.env.ALPHONSO_FORWARD_URL || '').trim();
-const ALLOWLIST = String(process.env.WHATSAPP_ALLOWLIST || process.env.ALPHONSO_FORWARD_ALLOWLIST || '')
+const ALLOWLIST = String(
+  process.env.WHATSAPP_ALLOWLIST ||
+  process.env.WHATSAPP_ALLOWED_NUMBERS ||
+  process.env.ALPHONSO_FORWARD_ALLOWLIST ||
+  ''
+)
   .split(',')
-  .map((value) => value.trim())
+  .map((value) => value.trim().replace(/^\+/, ''))
   .filter(Boolean);
 const FORWARD_TIMEOUT_MS = Number(process.env.FORWARD_TIMEOUT_MS || 5000);
 const MAX_WEBHOOK_BODY_BYTES = Number(process.env.WHATSAPP_MAX_WEBHOOK_BODY_BYTES || 1024 * 1024);
@@ -19,17 +24,29 @@ const gatewayRateLimiter = createRateLimiter({
   maxRequests: Number(process.env.WHATSAPP_RATE_MAX_REQUESTS || 60)
 });
 
-function safeLog(message, details = {}) {
-  process.stdout.write(`[whatsapp-gateway] ${message} ${JSON.stringify(redactGatewayDetails(details))}\n`);
+// In-memory message queue — stores inbound packets until Alphonso drains them.
+const messageQueue = [];
+const MAX_QUEUE_SIZE = 500;
+
+function enqueue(packet) {
+  if (messageQueue.length >= MAX_QUEUE_SIZE) messageQueue.shift();
+  messageQueue.push({ ...packet, queuedAtMs: Date.now() });
 }
 
-function readBody(request) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    request.on('data', (chunk) => chunks.push(chunk));
-    request.on('end', () => resolve(Buffer.concat(chunks)));
-    request.on('error', reject);
-  });
+function drainQueue(limit = 100) {
+  return messageQueue.splice(0, Math.min(limit, messageQueue.length));
+}
+
+function isQueueAuthorized(request, url) {
+  if (!VERIFY_TOKEN) return false;
+  const auth = String(request.headers['authorization'] || '');
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const query = url.searchParams.get('token') || '';
+  return bearer === VERIFY_TOKEN || query === VERIFY_TOKEN;
+}
+
+function safeLog(message, details = {}) {
+  process.stdout.write(`[whatsapp-gateway] ${message} ${JSON.stringify(redactGatewayDetails(details))}\n`);
 }
 
 function sendJson(response, statusCode, payload) {
@@ -55,15 +72,16 @@ const server = http.createServer(async (request, response) => {
   if (request.method === 'GET' && url.pathname === '/health') {
     return sendJson(response, 200, {
       ok: true,
-      status: VERIFY_TOKEN && APP_SECRET ? (FORWARD_URL ? 'ready' : 'setup_required') : 'setup_required',
+      status: VERIFY_TOKEN && APP_SECRET ? 'ready' : 'setup_required',
       forwardConfigured: Boolean(FORWARD_URL),
+      queueLength: messageQueue.length,
       verifyTokenConfigured: Boolean(VERIFY_TOKEN),
       appSecretConfigured: Boolean(APP_SECRET),
       allowlistCount: ALLOWLIST.length,
       requiredEnv: {
         WHATSAPP_VERIFY_TOKEN: VERIFY_TOKEN ? 'present' : 'missing',
         WHATSAPP_APP_SECRET: APP_SECRET ? 'present' : 'missing',
-        ALPHONSO_FORWARD_URL: FORWARD_URL ? 'present' : 'missing'
+        ALPHONSO_FORWARD_URL: FORWARD_URL ? 'present' : 'queued'
       }
     });
   }
@@ -79,6 +97,16 @@ const server = http.createServer(async (request, response) => {
     }
     safeLog('Challenge rejected', { mode, tokenPresent: Boolean(token), challengePresent: Boolean(challenge) });
     return sendJson(response, 403, { ok: false, status: 'blocked' });
+  }
+
+  // Alphonso polls this endpoint to drain queued inbound messages.
+  if (request.method === 'GET' && url.pathname === '/queue/drain') {
+    if (!isQueueAuthorized(request, url)) {
+      return sendJson(response, 401, { ok: false, status: 'unauthorized' });
+    }
+    const limit = Math.min(Number(url.searchParams.get('limit') || 100), 500);
+    const messages = drainQueue(limit);
+    return sendJson(response, 200, { ok: true, messages, count: messages.length });
   }
 
   if (request.method === 'POST' && url.pathname === '/webhook') {
@@ -111,20 +139,34 @@ const server = http.createServer(async (request, response) => {
     const messages = normalizeInboundPayload(payload);
     const results = [];
     for (const message of messages) {
-      const result = await forwardNormalizedPacket({
-        forwardUrl: FORWARD_URL,
-        packet: message,
-        allowlist: ALLOWLIST,
-        timeoutMs: FORWARD_TIMEOUT_MS
-      });
-      results.push(result);
+      const sender = String(message?.from || '').replace(/^\+/, '');
+      const senderAllowed = ALLOWLIST.length === 0 || (sender && ALLOWLIST.includes(sender));
+      if (!senderAllowed) {
+        results.push({ ok: false, status: 'blocked', reason: 'sender_not_allowlisted' });
+        continue;
+      }
+      // Always enqueue for Alphonso to poll via /queue/drain.
+      enqueue(message);
+      // Optionally also forward to an external ALPHONSO_FORWARD_URL if configured.
+      if (FORWARD_URL) {
+        const result = await forwardNormalizedPacket({
+          forwardUrl: FORWARD_URL,
+          packet: message,
+          allowlist: [],
+          timeoutMs: FORWARD_TIMEOUT_MS
+        });
+        results.push(result);
+      } else {
+        results.push({ ok: true, status: 'queued' });
+      }
     }
 
-    const accepted = results.some((result) => result.ok);
-    safeLog('Inbound normalized', { messages: messages.length, accepted, forwardConfigured: Boolean(FORWARD_URL) });
+    const accepted = results.length > 0 && results.some((result) => result.ok);
+    safeLog('Inbound normalized', { messages: messages.length, accepted, queueLength: messageQueue.length });
     return sendJson(response, accepted ? 200 : 202, {
       ok: accepted,
       normalizedCount: messages.length,
+      queueLength: messageQueue.length,
       results: results.map((result) => ({
         ok: result.ok,
         status: result.status,
