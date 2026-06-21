@@ -8,6 +8,7 @@ import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
+import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 
 function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
   return (
@@ -918,6 +919,10 @@ export function SettingsView({
           ))}
         </div>
       </section>
+
+      <div className="border-t border-white/5 pt-4">
+        <WorkspaceExportImportView />
+      </div>
     </div>
   );
 }
