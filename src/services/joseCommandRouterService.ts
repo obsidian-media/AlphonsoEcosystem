@@ -704,7 +704,8 @@ function validateReportContract(assignment: JoseCommandAssignment, reportPayload
     return value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
   });
   const state = String(payload.resultState || 'pending_review');
-  const invalidState = !(contract.allowedResultStates || []).includes(state);
+  const allowedStates = contract.allowedResultStates || [];
+  const invalidState = allowedStates.length > 0 && !allowedStates.includes(state);
   const urlMissing = contract.requiresUrlForVerified && state === 'verified' && !payload.resultUrl;
   return {
     valid: missing.length === 0 && !invalidState && !urlMissing,
