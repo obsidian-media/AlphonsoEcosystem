@@ -242,3 +242,12 @@ export async function runSentinelSecurityScan(commandText, assignment, options =
     schema
   };
 }
+
+export function startScheduledScans(intervalMs, onResult) {
+  const ms = intervalMs ?? 10 * 60 * 1000;
+  const id = setInterval(() => {
+    const result = scanForThreats('', {});
+    onResult?.(result);
+  }, ms);
+  return () => clearInterval(id);
+}

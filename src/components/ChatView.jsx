@@ -132,6 +132,9 @@ export function ChatView({
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [attachedFile, setAttachedFile] = useState(null);
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [hectorBriefing, setHectorBriefing] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState(null);
@@ -275,9 +278,19 @@ export function ChatView({
 
   const modelReady = settings.selectedModel && !selectedModelMissing;
 
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) setAttachedFiles((prev) => [...prev, ...files]);
+  };
+
   const handleSend = async () => {
     if (!inputValue.trim() || isGenerating) return;
-    const cleanInput = inputValue.trim();
+    const filesSuffix = attachedFiles.length
+      ? `\n\n[Attached files: ${attachedFiles.map((f) => f.name).join(', ')}]`
+      : '';
+    const cleanInput = inputValue.trim() + filesSuffix;
     const joseCommand = isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput);
 
     if (joseCommand) {
@@ -285,6 +298,7 @@ export function ChatView({
       setMessages((current) => [...current, userMessage]);
       setInputValue('');
       setAttachedFile(null);
+      setAttachedFiles([]);
       setIsGenerating(true);
       onGenerationChange(true);
       onJoseExecutionState?.('thinking', 'Jose is decomposing and distributing the command.');
@@ -361,6 +375,10 @@ export function ChatView({
         if (result?.commandId) {
           const receipts = listOrchestrationReceipts({ commandId: result.commandId });
           setExecutionReceipts(receipts);
+          const hectorReceipt = result?.executionReceipts?.find((r) => r.agent === 'hector');
+          if (hectorReceipt?.payload?.sources?.length || hectorReceipt?.details?.sources?.length) {
+            setHectorBriefing({ sources: hectorReceipt?.payload?.sources || hectorReceipt?.details?.sources || [] });
+          }
         }
 
         onJoseExecutionState?.(
@@ -407,6 +425,7 @@ export function ChatView({
     setMessages((current) => [...current, userMessage]);
     setInputValue('');
     setAttachedFile(null);
+    setAttachedFiles([]);
     setIsGenerating(true);
     onGenerationChange(true);
 
@@ -793,7 +812,24 @@ export function ChatView({
       </div>
 
       <div className={`${compactChat ? 'p-3' : 'p-5'} shrink-0 max-w-4xl mx-auto w-full`}>
-        <div className="relative bg-zinc-900/80 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all">
+        {hectorBriefing && (
+          <div className="mx-4 mb-2 rounded-xl border border-sky-400/20 bg-sky-500/5 p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Hector Research</span>
+              <button onClick={() => setHectorBriefing(null)} className="text-zinc-500 hover:text-zinc-300 text-xs">×</button>
+            </div>
+            {hectorBriefing.sources?.slice(0, 3).map((src, i) => (
+              <div key={i} className="text-[11px] text-zinc-400 truncate">{src.title || src.url}</div>
+            ))}
+          </div>
+        )}
+        <div
+          className={`relative bg-zinc-900/80 border rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all ${isDragging ? 'border-amber-400/30 border-dashed' : 'border-white/10'}`}
+          onDragEnter={() => setIsDragging(true)}
+          onDragLeave={() => setIsDragging(false)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+        >
           <input
             ref={fileInputRef}
             type="file"
@@ -832,6 +868,16 @@ export function ChatView({
             }}
             className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
           />
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-4 pb-1">
+              {attachedFiles.map((f, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-800 border border-white/10 text-[11px] text-zinc-300">
+                  {f.name}
+                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-zinc-500 hover:text-zinc-200 ml-0.5" aria-label={`Remove ${f.name}`}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="mt-1 text-2xs text-zinc-500">
             {ollamaStatus.state === 'connected' && !selectedModelMissing
               ? `Message ${settings.selectedModel || 'local model'}`
