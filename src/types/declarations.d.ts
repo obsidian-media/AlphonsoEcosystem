@@ -1,3 +1,13 @@
+declare module '*.svg' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.webp' {
+  const src: string;
+  export default src;
+}
+
 declare module '*/sessionIntelligenceService' {
   export const SESSION_EVENT_SCOPE: string;
   export function appendSessionEvent(event: {
