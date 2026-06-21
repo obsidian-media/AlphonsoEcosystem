@@ -6,6 +6,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.5-d1d2d3d4d5] - 2026-06-21 — All 5 Directions Sprint
+
+### Added — Direction 1 (UX): New Components
+- **NotificationCenter** — fixed top-right panel, colored left borders per type (success/warning/error/info), relative timestamps, "Clear all" link
+- **AgentStatusStrip** — horizontal badge strip with pulsing dot for running agents, compact mode support
+- **UpdaterNotification** — fixed amber banner for new version, "Update & Restart" / "Later" buttons, wired into App.jsx
+- **ModelSwitcher** — 3-pill switcher (Ollama/Claude/ChatGPT) with amber active state; original `OllamaModelPicker` preserved
+- **WhatsAppInboxPanel** — scrollable received-message list with inline reply input, one-at-a-time via `openReplyId` state
+
+### Added — Direction 2 (Infrastructure)
+- **cacheService.ts** — `maxEntries` hard cap (default 500) with oldest-key eviction after every `set()`
+- **crashLogService.js** — `logError` / `getCrashLog` / `clearCrashLog` backed by localStorage (100-entry rolling cap)
+- **orchestrationQueueService** — `retryDeadLetter()` re-queues all dead-letter items back to main queue with fresh retry count
+
+### Added — Direction 4 (Intelligence): Chat + Services
+- **ChatView drag-and-drop** — drop files onto chat input; file pills with × removal; filenames appended to Jose command on send
+- **Hector briefing card** (`ChatView.jsx`) — sky-tinted dismissible card shows up to 3 Hector research sources after pipeline run
+- **Sentinel scheduled scans** (`sentinelSecurityService.js`) — `startScheduledScans(intervalMs, onResult)` background interval export
+- **Nova opportunity persistence** (`novaAnalysisService.js`) — `saveOpportunityScore` / `getOpportunityHistory` rolling 30-entry localStorage history
+- **AgentPerformanceView** — per-agent success/error count + avg latency computed from `orchestrationReceipts`
+
+### Added — Direction 5 (Platform)
+- **agentAuditService.js** — `logApprovalEvent` / `getAuditLog` / `clearAuditLog` with 100-entry ring buffer
+- **workspaceExportService.js** — `exportWorkspace` (serializes all `alphonso_*` localStorage keys) / `importWorkspace` (validates prefix, reports errors)
+- **WorkspaceExportImportView** — Export (JSON download) + Import (file picker) with emerald/red status feedback; wired into SettingsView
+- **RightPanel System/Audit tabs** — tab switcher in header; Audit tab shows last 10 approval events with outcome badges; 10-min auto-refresh interval
+
+### Added — Direction 3 (Testing): 2 new test files
+- `src/test/agentAuditService.test.js` (5 tests)
+- `src/test/workspaceExportService.test.js` (9 tests)
+
+**Total: 101 test files**
+
+---
+
 ## [2.0.5-d3d4] - 2026-06-21 — Direction 3 (Testing) + Direction 4 (Agent Intelligence)
 
 ### Added — Direction 4: Agent Intelligence & Capabilities
