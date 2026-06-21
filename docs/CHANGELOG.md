@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.5] - 2026-06-21 — UI/UX Polish Sprint
+
+### Fixed
+- **Dark/Light theme** — replaced non-functional Space/Studio/Gold/Clean buttons with a working Dark/Light toggle in the command bar; root element now correctly applies `.light` CSS class so the full app switches theme
+- **Chat hint text** — "Ollama is setup_required" jargon replaced with context-aware messages: "Start Ollama to enable local AI responses" vs "Choose a local model in Settings"
+- **Workflow operations showing "disabled"** — `AutomationView` was checking `op.enabled` which was always `undefined`; now checks `op.status === 'active'`
+- **Activity log** — complete display overhaul: agent color coding, friendly capitalized action names, improved empty state with guidance text
+- **MiyaStudio too boxy** — removed `ProductionPipelineMatrix` (8-panel decorative grid); simplified `ExportPackageReadiness` to a single status bar
+- **Ecosystem/Agents page too boxy** — removed `ConnectorSetupPanel` from EcosystemHub (it lives in its own Connectors tab); moved `ProductionReadinessPanel` and `SelfDevelopmentPanel` to Advanced mode only
+- **WorkflowOperationsDashboard** — removed developer "Truth labels: confirmed, partial, setup_required…" explanation shown to end users
+
+---
+
 ## [2.0.4] - 2026-06-21 — Phase 1: Sentinel & Nova Full Runtimes
 
 ### Added
