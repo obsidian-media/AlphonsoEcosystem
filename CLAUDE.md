@@ -50,7 +50,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **14 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~1,585 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 1191 tests are in `src/test/`** — 84 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 1260 tests are in `src/test/`** — 86 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
@@ -123,7 +123,8 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - Coverage at ~28% — next staged target 30%
 - TypeScript migration — partial; 9 .ts services exist in src/services/, components still .jsx
 - Component test coverage at ~6%
-- Sentinel, Nova agents have skeletal profiles (10 lines) and no dedicated runtimes
+- ~~Sentinel runtime~~ — **CLOSED Phase 1** (`src/services/sentinelSecurityService.js`)
+- ~~Nova runtime~~ — **CLOSED Phase 1** (`src/services/novaAnalysisService.js`)
 
 ---
 
@@ -141,7 +142,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                84 test files (Vitest, vitest.config.js)
+  test/                86 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
@@ -184,4 +185,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-21 — Phase 3 complete. 84 test files, 1191 tests, all passing. Coverage ~28% (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. Maria/Echo/Marcus runtimes complete. All 9 API-key connectors have credential UI. WhatsApp Cloud deployed and live. Auto-updater operational. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-21 — Phase 1 complete. 86 test files, 1260 tests, all passing. All 9 agents have production runtimes. Coverage ~28%+ (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

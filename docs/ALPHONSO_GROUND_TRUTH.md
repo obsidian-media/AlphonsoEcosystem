@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-21 — Phase 3 complete (Maria, Echo, Marcus full runtimes; connector credential UI for all 9 connectors; claudeService/chatgptService credential fix)  
-**Verified by:** Claude Code session (84 test files, 1191 tests passing, cargo clippy clean, lint clean, build passing)  
-**Version:** 2.0.2 (Phase 3 agent runtimes + connector credential UI complete)  
+**Last verified:** 2026-06-21 — Phase 1 complete (Sentinel + Nova full runtimes; 86 test files, 1260 tests passing)  
+**Verified by:** Claude Code session (86 test files, 1260 tests passing, cargo clippy clean, lint clean, build passing)  
+**Version:** 2.0.4 (All 9 agents have production runtimes)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -50,6 +50,8 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 | **Maria** | Governance Auditor — risk assessment, compliance review, approval gate | Does not perform destructive execution; Ollama-powered with deterministic fallback |
 | **Marcus** | Distribution Executor — GitHub releases, Slack notifications, publish pipelines | Requires Maria governance clearance; blocked on high/critical risk without approval |
 | **Echo** | Knowledge Historian — memory synthesis, retention classification, archival | Knowledge preservation only; Ollama-powered with deterministic fallback |
+| **Sentinel** | Security Monitor — threat detection, permission audit, automation safety | Ollama-powered + deterministic scan; blocks on critical risk or secret detection |
+| **Nova** | Opportunity Analyst — scoring, prioritization, strategic analysis | 4-dimension scoring (value/risk/timing/effort); Ollama-powered with deterministic fallback |
 | **Sentinel** | Security monitoring, automation safety | Safety checks only, no destructive execution |
 | **Nova** | Scoring, analysis, opportunity prioritization | Analysis only |
 
@@ -136,8 +138,8 @@ Key services that past audits missed or underestimated:
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-21 Phase 3, all passing):**
-- 84 test files, 1191 tests passing
+**Test files (verified 2026-06-21 Phase 1, all passing):**
+- 86 test files, 1260 tests passing
 - 14 Rust unit tests passing
 ```
 accBridgeService.test.js
@@ -206,6 +208,8 @@ slackConnector.test.js           ← added PR #41 (16 tests)
 mariaAuditService.test.js        ← added Phase 3 (33 tests)
 echoMemoryService.test.js        ← added Phase 3 (35 tests)
 marcusExecutionService.test.js   ← added Phase 3 (23 tests)
+sentinelSecurityService.test.js  ← added Phase 1 (33 tests)
+novaAnalysisService.test.js      ← added Phase 1 (36 tests)
 sourceConfidenceService.test.js
 telegramAutoPollService.test.js
 telegramConnectorProof.test.js
@@ -361,7 +365,7 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **84 test files, 1191 tests, all passing** (verified 2026-06-21 Phase 3). 14 Rust unit tests also passing. Notable additions: Phase 3 — `mariaAuditService.test.js` (33 tests), `echoMemoryService.test.js` (35 tests), `marcusExecutionService.test.js` (23 tests). Prior: `githubConnector.test.js` (20 tests), `slackConnector.test.js` (16 tests), plus `cacheService.test.ts`, `licenseService.test.ts`, `parallelExecutionService.test.ts`, `policyEnforcementCaching.test.ts`, `services/agentContract.test.ts`.
+- [x] **Test suite confirmed passing** — **86 test files, 1260 tests, all passing** (verified 2026-06-21 Phase 1). 14 Rust unit tests also passing. Phase 1 additions: `sentinelSecurityService.test.js` (33 tests), `novaAnalysisService.test.js` (36 tests). Phase 3 prior: `mariaAuditService.test.js` (33), `echoMemoryService.test.js` (35), `marcusExecutionService.test.js` (23). `githubConnector.test.js` (20), `slackConnector.test.js` (16), plus TypeScript service tests.
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -385,6 +389,8 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **`docs/IOS_COMPANION_PLAN.md`** — iOS companion architecture: WebSocket server design, JSON-RPC protocol, mDNS discovery, SwiftUI vs React Native tradeoffs, 5-phase implementation roadmap (2026-06-08)
 - [x] **`.github/dependabot.yml`** — npm (weekly), Cargo (weekly), GitHub Actions (weekly)
 - [x] **Auto-updater fully operational** — ed25519 keypair generated, `TAURI_SIGNING_PRIVATE_KEY` set in GitHub Secrets, pubkey in `tauri.conf.json`, v2.0.2 release triggered via `workflow_dispatch`. Future installs will auto-update.
+- [x] **Sentinel Security Monitor runtime** — **CLOSED Phase 1** `src/services/sentinelSecurityService.js` — deterministic threat scan + Ollama deep analysis, blocks on critical risk/secret detection, full SENTINEL_ALERT_SCHEMA output.
+- [x] **Nova Opportunity Analyst runtime** — **CLOSED Phase 1** `src/services/novaAnalysisService.js` — 4-dimension scoring (value/risk/timing/effort), Ollama strategic recommendation, integrates novaFeedbackService for decomposition hints, full NOVA_OPPORTUNITY_SCHEMA output.
 - [x] **Maria Governance Auditor runtime** — **CLOSED Phase 3** `src/services/mariaAuditService.js` — Ollama-powered audit with JSON schema, deterministic fallback via `marcusAuditService.generateRiskScore()`, memory persistence, session event logging, orchestration receipt.
 - [x] **Echo Knowledge Historian runtime** — **CLOSED Phase 3** `src/services/echoMemoryService.js` — Ollama synthesis, retention classification (permanent/standard_180d/ephemeral_7d), category classification, confidence normalization, memory persistence.
 - [x] **Marcus Distribution Executor runtime** — **CLOSED Phase 3** `src/services/marcusExecutionService.js` — Maria governance gate (blocks on critical/high with approvalRequired), GitHub actions (release/issue), Slack messaging, publish dispatch via `marcusPublishService`, audit records.

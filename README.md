@@ -32,7 +32,7 @@ It orchestrates 9 specialized agents, connects to 13 external services, and uses
 - **Memory Cache** — TTL + LRU eviction for agents and connectors
 - **License Tiers** — Free / Pro / Enterprise with premium connector gates
 - **AppShell Refactor** — `useAppShellState` hook; 196 lines removed from App.jsx
-- **1,191 Tests** — 84 test files, all passing; 14 Rust unit tests across 18 modules
+- **1,260 Tests** — 86 test files, all passing; 14 Rust unit tests across 18 modules
 - **WebView2 Fix** — `std::process::exit(0)` on window close prevents zombie process leak
 
 ---

@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.4] - 2026-06-21 — Phase 1: Sentinel & Nova Full Runtimes
+
+### Added
+- **Sentinel Security Monitor runtime** — `src/services/sentinelSecurityService.js` — Full two-layer threat detection: deterministic scan (credential pattern matching, destructive commands, code execution risk, privilege escalation, unverified URLs, prior agent failure analysis) + Ollama deep threat analysis with JSON schema output. Deterministic blocking overrides Ollama leniency. Memory persistence, session event logging, orchestration receipt. Returns `SENTINEL_ALERT_SCHEMA` shape (`alertId`, `scope`, `severity`, `findings[]`, `requiresApproval`, `recommendedAction`, `detectedAtMs`). Wired into `joseExecutionEngineService.js` `executeSentinelAssignment()` (replaced 85-line stub).
+- **Nova Opportunity Analyst runtime** — `src/services/novaAnalysisService.js` — Full four-dimension opportunity scoring (valueScore/riskScore/timingScore/effortScore) + Ollama strategic analysis with prioritization and recommendation. Integrates with existing `novaFeedbackService` for decomposition hints and score storage. Memory persistence, session events, orchestration receipt. Returns `NOVA_OPPORTUNITY_SCHEMA` shape (`opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`). Wired into `joseExecutionEngineService.js` `executeNovaAssignment()` (replaced 132-line stub).
+- **2 new test files** — `sentinelSecurityService.test.js` (33 tests), `novaAnalysisService.test.js` (36 tests). Total: 86 files / 1260 tests.
+
+### Changed
+- `executeSentinelAssignment()` in Jose → thin wrapper calling `runSentinelSecurityScan()`
+- `executeNovaAssignment()` in Jose → thin wrapper calling `runNovaAnalysis()`
+- Test count: 84 files / 1191 tests → **86 files / 1260 tests** (all passing)
+
+---
+
 ## [2.0.3] - 2026-06-21 — Phase 3: Agent Runtimes + Connector Credential UI
 
 ### Added

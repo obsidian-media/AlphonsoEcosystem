@@ -53,16 +53,19 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 **When to use:** Automatic — Echo runs after workflow completion to preserve important context and knowledge.
 
 ### Sentinel — Security Monitor
-**Role:** Security monitoring, automation safety
+**Role:** Security monitoring and automation safety
+**Runtime:** `src/services/sentinelSecurityService.js` — two-layer detection: deterministic + Ollama
 **Can do:** Monitor for threats, validate safety of automated actions
 **Cannot:** Perform destructive execution
 **When to use:** Automatic — Sentinel monitors all external interactions for security risks.
 
-### Nova — Analyst
-**Role:** Scoring, analysis, opportunity prioritization
-**Can do:** Score opportunities, analyze data, prioritize tasks
-**Cannot:** Execute actions — analysis only
-**When to use:** "Which of these leads is most promising?", "Prioritize these tasks", "Analyze this data".
+### Nova — Opportunity Analyst
+**Role:** Opportunity scoring, prioritization, and strategic analysis
+**Runtime:** `src/services/novaAnalysisService.js` — 4-dimension scoring + Ollama strategic analysis
+**Can do:** Score opportunities across 4 dimensions (valueScore/riskScore/timingScore/effortScore), classify priority tier (watchlist/medium/high/critical), generate strategic recommendations, store scores for decomposition hints, identify favorable opportunity/risk ratios
+**Cannot:** Execute actions — analysis and recommendation only
+**Schema:** `opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`
+**When to use:** "Which of these is most promising?", "Prioritize these tasks", "Analyze this opportunity". Nova also runs automatically to score incoming commands for Jose's routing decisions.
 
 ## How Agents Collaborate
 
