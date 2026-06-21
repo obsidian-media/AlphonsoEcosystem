@@ -44,6 +44,7 @@
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or my feature works
 - [ ] New and existing unit tests pass locally with my changes
+- [ ] `npm run verify:docs` — doc counts are fresh (update any stale counts in the same PR)
 - [ ] Any dependent changes have been merged and published
 
 ## Screenshots (if applicable)

@@ -21,6 +21,7 @@
     "release:updater": "node scripts/release-updater.mjs",
     "verify:ollama": "node scripts/verify-ollama-runtime.mjs",
     "export:ground-truth": "node scripts/export-ground-truth.mjs",
+    "verify:docs": "node scripts/verify-doc-counts.mjs",
     "proof:native-selfdev": "node scripts/proof-native-selfdev.mjs",
     "proof:rc0": "node scripts/proof-native-selfdev.mjs --rc0",
     "auth:youtube": "node scripts/auth-youtube.mjs",

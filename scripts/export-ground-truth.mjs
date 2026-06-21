@@ -7,20 +7,20 @@
  *   - ALPHONSO_GROUND_TRUTH.generated.md     (operator-readable)
  *   - alphonso-ground-truth.snapshot.json    (machine-readable)
  *
- * Reuses existing services where it can:
- *   - no network writes
- *   - reads Ollama at http://127.0.0.1:11434/api/tags (best-effort, never throws)
- *   - never reads NOTION_API_KEY (only checks presence / length, never logs)
+ * Reuses shared counting utilities from scripts/shared/counters.mjs.
  *
  * Drift detection compares a small set of numeric claims baked into the script
  * (the same ones OpenCode audits by hand). If a claim is wrong, the script
  * prints a `[drift]` line and writes the diff into the generated artifacts.
- * The script does NOT exit non-zero on drift — drift is informational.
+ *
+ * Flags:
+ *   --fail-on-drift    Exit non-zero if any drift detected (for CI)
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { countLines, getAllCounts } from './shared/counters.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,53 +30,7 @@ const OUTPUT_MD = join(PROJECT_ROOT, 'ALPHONSO_GROUND_TRUTH.generated.md');
 const OUTPUT_JSON = join(PROJECT_ROOT, 'alphonso-ground-truth.snapshot.json');
 const GROUND_TRUTH_MD = join(PROJECT_ROOT, 'docs', 'ALPHONSO_GROUND_TRUTH.md');
 
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.opencode', '.vscode', '.idea', 'target', 'release-artifacts', 'coverage']);
-const RUST_FILE_EXT = new Set(['.rs']);
-const JS_FILE_EXT = new Set(['.js', '.jsx', '.mjs', '.cjs']);
-const TS_FILE_EXT = new Set(['.ts', '.tsx']);
-
-function walk(dir, predicate, results = []) {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return results;
-  }
-  for (const entry of entries) {
-    if (entry.name.startsWith('.') && entry.name !== '.opencode') continue;
-    if (SKIP_DIRS.has(entry.name)) continue;
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walk(full, predicate, results);
-    } else if (entry.isFile()) {
-      if (predicate(full)) results.push(full);
-    }
-  }
-  return results;
-}
-
-function countLines(path) {
-  try {
-    const text = readFileSync(path, 'utf8');
-    if (text.length === 0) return 0;
-    // Count non-empty lines, matching what humans read in an editor
-    return text.split(/\r?\n/).filter((line) => line.length > 0).length;
-  } catch {
-    return 0;
-  }
-}
-
-function byExt(extensions) {
-  return (path) => extensions.has(extname(path).toLowerCase());
-}
-
-function countInDir(relDir, predicate) {
-  const full = join(PROJECT_ROOT, relDir);
-  if (!existsSync(full)) return { files: 0, lines: 0, paths: [] };
-  const files = walk(full, predicate);
-  const lines = files.reduce((acc, f) => acc + countLines(f), 0);
-  return { files: files.length, lines, paths: files.map((f) => relative(PROJECT_ROOT, f)) };
-}
+const failOnDrift = process.argv.includes('--fail-on-drift');
 
 async function fetchJson(url, options = {}, timeoutMs = 4000) {
   const controller = new AbortController();
@@ -110,7 +64,6 @@ async function probeOllama(endpoint) {
 }
 
 function probeNotion() {
-  // NEVER log the token, never read its value, never include it in output.
   const fromVite = (typeof process !== 'undefined' && process.env?.VITE_NOTION_API_KEY) || '';
   const fromNode = process.env?.NOTION_API_KEY || '';
   const tokenPresent = Boolean((fromVite && fromVite !== 'YOUR_NOTION_API_KEY_HERE') || (fromNode && fromNode !== 'YOUR_NOTION_API_KEY_HERE'));
@@ -120,52 +73,17 @@ function probeNotion() {
     tokenPresent,
     parentIdPresent,
     databaseIdPresent,
-    // explicit booleans only — value never leaves the process
     note: tokenPresent
       ? 'credentials present in env (token value not inspected)'
       : 'no Notion credentials in env (treat as offline)'
   };
 }
 
-const DRIFT_CLAIMS = [
-  { key: 'lib_rs_lines', label: 'src-tauri/src/lib.rs lines', claim: 4642, actual: null, how: () => countLines(join(PROJECT_ROOT, 'src-tauri', 'src', 'lib.rs')) },
-  { key: 'js_test_files', label: 'JS test files (src/test, .js only)', claim: 65, actual: null, how: () => countInDir('src/test', byExt(new Set(['.js']))).files },
-  { key: 'jsx_test_files', label: 'JSX test files (src/test, .jsx only)', claim: null, actual: null, how: () => countInDir('src/test', byExt(new Set(['.jsx']))).files },
-  { key: 'js_test_lines', label: 'JS test lines (src/test)', claim: null, actual: null, how: () => countInDir('src/test', byExt(new Set(['.js']))).lines },
-  { key: 'service_files', label: 'service files (src/services)', claim: null, actual: null, how: () => {
-      const js = countInDir('src/services', byExt(JS_FILE_EXT));
-      const ts = countInDir('src/services', byExt(TS_FILE_EXT));
-      return { files: js.files + ts.files, jsFiles: js.files, tsFiles: ts.files, lines: js.lines + ts.lines };
-    }
-  },
-  { key: 'component_files', label: 'component files (src/components)', claim: null, actual: null, how: () => countInDir('src/components', byExt(new Set(['.jsx', '.tsx']))) },
-  { key: 'agent_files', label: 'agent profile files (src/agents)', claim: null, actual: null, how: () => {
-      const profiles = countInDir('src/agents', byExt(JS_FILE_EXT));
-      return { files: profiles.files, lines: profiles.lines };
-    }
-  },
-  { key: 'rust_files', label: 'Rust source files (src-tauri/src)', claim: null, actual: null, how: () => countInDir('src-tauri/src', byExt(RUST_FILE_EXT)) },
-  { key: 'script_files', label: 'node script files (scripts)', claim: null, actual: null, how: () => countInDir('scripts', byExt(JS_FILE_EXT)) }
-];
-
 async function main() {
   const startedAt = new Date().toISOString();
   const ollama = await probeOllama('http://127.0.0.1:11434');
   const notion = probeNotion();
-
-  const drift = DRIFT_CLAIMS.map((entry) => {
-    const result = entry.how();
-    let actual;
-    let detail;
-    if (typeof result === 'object' && result !== null && 'files' in result) {
-      actual = result.files;
-      detail = result;
-    } else {
-      actual = result;
-    }
-    const driftDetected = entry.claim !== null && entry.claim !== undefined && actual !== entry.claim;
-    return { key: entry.key, label: entry.label, claim: entry.claim, actual, drift: driftDetected, detail };
-  });
+  const counts = getAllCounts();
 
   // Derived: the actual current test count (only meaningful after a test run)
   let testCount = null;
@@ -181,25 +99,35 @@ async function main() {
     }
   }
 
+  // Hardcoded drift claims for the values OpenCode audits by hand
+  const DRIFT_CLAIMS = [
+    { key: 'lib_rs_lines', label: 'src-tauri/src/lib.rs lines', claim: 4642, actual: counts.libRs.nonEmptyLines },
+    { key: 'js_test_files', label: 'JS test files (src/test, .js)', claim: 65, actual: counts.tests.js },
+    { key: 'service_files', label: 'Service files (src/services)', claim: null, actual: counts.services.files },
+    { key: 'component_files', label: 'Component files (src/components)', claim: null, actual: counts.components.files },
+    { key: 'agent_files', label: 'Agent profile files (src/agents)', claim: null, actual: counts.agents.files },
+    { key: 'rust_source_files', label: 'Rust source files (src-tauri/src)', claim: null, actual: counts.rustSource.files },
+    { key: 'tauri_commands', label: 'Tauri commands', claim: null, actual: counts.tauriCommands },
+    { key: 'rust_tests', label: 'Rust unit tests', claim: null, actual: counts.rustTests },
+    { key: 'script_files', label: 'Script files (scripts/)', claim: null, actual: counts.scripts.files }
+  ];
+
+  const drift = DRIFT_CLAIMS.map((entry) => {
+    const driftDetected = entry.claim !== null && entry.claim !== undefined && entry.actual !== entry.claim;
+    return { key: entry.key, label: entry.label, claim: entry.claim, actual: entry.actual, drift: driftDetected };
+  });
+
   const generated = {
     generatedAt: startedAt,
     schema: 'alphonso.ground_truth.v1',
     counters: {
-      lib_rs_lines: countLines(join(PROJECT_ROOT, 'src-tauri', 'src', 'lib.rs')),
-      rust_files: countInDir('src-tauri/src', byExt(RUST_FILE_EXT)),
-      services: (() => {
-        const js = countInDir('src/services', byExt(JS_FILE_EXT));
-        const ts = countInDir('src/services', byExt(TS_FILE_EXT));
-        return { js: js.files, ts: ts.files, total: js.files + ts.files, lines: js.lines + ts.lines };
-      })(),
-      components: countInDir('src/components', byExt(new Set(['.jsx', '.tsx']))),
-      agents: countInDir('src/agents', byExt(JS_FILE_EXT)),
-      scripts: countInDir('scripts', byExt(JS_FILE_EXT)),
-      js_tests: (() => {
-        const js = countInDir('src/test', byExt(new Set(['.js'])));
-        const jsx = countInDir('src/test', byExt(new Set(['.jsx'])));
-        return { js: js.files, jsx: jsx.files, total: js.files + jsx.files, lines: js.lines };
-      })(),
+      lib_rs_lines: counts.libRs.nonEmptyLines,
+      rust_source: counts.rustSource,
+      services: counts.services,
+      components: counts.components,
+      agents: counts.agents,
+      scripts: counts.scripts,
+      tests: counts.tests,
       vitest_last: testCount ? { tests: testCount, files: testFilesCount } : null
     },
     runtime: {
@@ -215,7 +143,16 @@ async function main() {
 
   const summary = {
     generatedAt: generated.generatedAt,
-    counters: generated.counters,
+    counters: {
+      lib_rs_lines: generated.counters.lib_rs_lines,
+      rust_files: generated.counters.rust_source.files,
+      services_total: generated.counters.services.files,
+      components: generated.counters.components.files,
+      agents: generated.counters.agents.files,
+      scripts: generated.counters.scripts.files,
+      test_files: generated.counters.tests.files,
+      test_lines: generated.counters.tests.lines
+    },
     ollamaReachable: ollama.ok,
     ollamaModelCount: ollama.ok ? ollama.modelCount : 0,
     notionWired: notion.tokenPresent,
@@ -235,15 +172,16 @@ async function main() {
   lines.push('| Metric | Value |');
   lines.push('|---|---|');
   lines.push(`| src-tauri/src/lib.rs lines | **${generated.counters.lib_rs_lines}** |`);
-  lines.push(`| Rust source files (src-tauri/src) | ${generated.counters.rust_files.files} |`);
-  lines.push(`| Service files (src/services) | ${generated.counters.services.total} (js=${generated.counters.services.js}, ts=${generated.counters.services.ts}) |`);
+  lines.push(`| Rust source files (src-tauri/src) | ${generated.counters.rust_source.files} |`);
+  lines.push(`| Service files (src/services) | ${generated.counters.services.files} (js=${generated.counters.services.js}, ts=${generated.counters.services.ts}) |`);
   lines.push(`| Service lines (src/services) | ${generated.counters.services.lines} |`);
   lines.push(`| Component files (src/components) | ${generated.counters.components.files} |`);
   lines.push(`| Agent profile files (src/agents) | ${generated.counters.agents.files} |`);
   lines.push(`| Node script files (scripts) | ${generated.counters.scripts.files} |`);
-  lines.push(`| JS test files (src/test, .js) | ${generated.counters.js_tests.js} |`);
-  lines.push(`| JSX test files (src/test, .jsx) | ${generated.counters.js_tests.jsx} |`);
-  lines.push(`| Test files total (src/test) | ${generated.counters.js_tests.total} |`);
+  lines.push(`| JS test files (src/test, .js) | ${generated.counters.tests.js} |`);
+  lines.push(`| JSX test files (src/test, .jsx) | ${generated.counters.tests.jsx} |`);
+  lines.push(`| TS test files (src/test, .ts) | ${generated.counters.tests.ts} |`);
+  lines.push(`| Test files total (src/test) | ${generated.counters.tests.files} |`);
   if (generated.counters.vitest_last) {
     lines.push(`| Last vitest run | ${generated.counters.vitest_last.tests} tests across ${generated.counters.vitest_last.files} files |`);
   } else {
@@ -298,6 +236,10 @@ async function main() {
     process.stdout.write('\n[drift] detected claims that differ from the audited values:\n');
     for (const d of generated.drift) {
       process.stdout.write(`  - ${d.label}: claim=${d.claim} actual=${d.actual}\n`);
+    }
+    if (failOnDrift) {
+      process.stdout.write('\n[drift] --fail-on-drift is set, exiting with code 1.\n');
+      process.exit(1);
     }
   }
 }

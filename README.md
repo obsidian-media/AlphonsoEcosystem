@@ -4,10 +4,10 @@
 
 # Alphonso
 
-> **v2.0.0** — Local-first AI desktop companion powered by Ollama
+> **v2.0.2** — Local-first AI desktop companion powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.0)
-[![Tests](https://img.shields.io/badge/tests-1015%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.0.2-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2)
+[![Tests](https://img.shields.io/badge/tests-1100%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
@@ -15,7 +15,7 @@
 **Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
 It orchestrates 9 specialized agents, connects to 13 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
 
-[**Download v2.0.0**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.0) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.0.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
@@ -30,7 +30,7 @@ It orchestrates 9 specialized agents, connects to 13 external services, and uses
 - **Memory Cache** — TTL + LRU eviction for agents and connectors
 - **License Tiers** — Free / Pro / Enterprise with premium connector gates
 - **AppShell Refactor** — `useAppShellState` hook; 196 lines removed from App.jsx
-- **1,015 Tests** — 76 test files, all passing; 14 Rust unit tests across 16 modules
+- **1,100 Tests** — 81 test files, all passing; 60 Rust unit tests across 18 modules
 - **WebView2 Fix** — `std::process::exit(0)` on window close prevents zombie process leak
 
 ---
@@ -105,7 +105,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │                  React 18 (Vite 5, Tailwind 3)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
-│  │  9 Agents     │  │  82 UI           │  │  124 Services      │  │
+│  │  9 Agents     │  │  82 UI           │  │  130 Services      │  │
 │  │  (profiles,   │  │  Components     │  │  (policy-gated,    │  │
 │  │   contracts)  │  │  14 Hooks       │  │   orchestrated)    │  │
 │  └──────┬────────┘  └─────────────────┘  └──────────┬─────────┘  │
@@ -124,7 +124,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~1,455 lines · 76 Tauri commands · 16 modules    │    │
+│  │  lib.rs ~1,585 lines · 82 Tauri commands · 18 modules    │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -216,7 +216,7 @@ All connectors are policy-gated through `connectorRegistryService.js`. See [docs
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 1,015 tests across 76 files
+npm run test           # 1,100 tests across 81 files
 npm run test:coverage  # Coverage report (~28%; threshold 20%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + test + build in one command
@@ -228,7 +228,7 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 14 Rust unit tests (16 modules)
+cargo test                     # 60 Rust unit tests (18 modules)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 
@@ -255,7 +255,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.0.0** | June 16, 2026 | Enhanced agents, GitHub + Slack connectors, parallel execution, license tiers |
+| **v2.0.2** | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |
 | v1.0.3 | June 15, 2026 | Installer update |
 | v1.0.2 | June 15, 2026 | WebView2 zombie process fix, boot optimizations |
 | v1.0.1 | June 15, 2026 | Stability fixes |
@@ -269,7 +269,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 124 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 130 services already exist.
 
 ## Security
 

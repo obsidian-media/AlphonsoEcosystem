@@ -19,7 +19,7 @@ npm run lint             # ESLint on src/
 
 # Rust (run from src-tauri/ directory)
 cargo check              # Verify Rust compiles
-cargo test               # Run 14 Rust unit tests
+cargo test               # Run 60 Rust unit tests
 cargo clippy -- -D warnings  # Lint Rust — must be zero warnings (CI enforces this)
 
 # Updater / release
@@ -48,8 +48,8 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **licenseService.ts**: license tier validation (Free/Pro/Enterprise) gates premium connectors (GitHub, Slack, Claude, ChatGPT, YouTube, Notion, ClickUp, SD WebUI, ComfyUI)
 - **parallelExecutionService.ts**: parallel task execution with concurrency control, retry logic, and task queues
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
-- **13 connectors**: Telegram, WhatsApp, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama — all policy-gated
-- **lib.rs is ~1,455 lines** — 16 modules extracted (utils, whatsapp_webhook, kv_store, native_proof, plugin_runtime, policy_gate, audit_log, ollama, memory_store, meta_publish, connector_commands, search, telegram, workspace, youtube, runway, main)
+- **13 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama — all policy-gated
+- **lib.rs is ~1,585 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
 - **All 1100 tests are in `src/test/`** — 81 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
@@ -96,7 +96,7 @@ Before writing any new service, component, or feature, check this list:
 ## Before Making Changes
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
-2. Check `src/services/` for an existing service before writing a new one — there are 124+ services
+2. Check `src/services/` for an existing service before writing a new one — there are 130 services
 3. Check `src/test/` — there are 81 test files already; add to them, don't create a parallel test system
 4. Run `npm run test` before and after any change; all 1100 tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
@@ -112,8 +112,10 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Auto-updater~~ — **CLOSED** (keypair in GitHub Secrets, v2.0.2 released, future updates detected automatically)
 - localStorage → SQLite migration — completed for 5 keys. Remaining: durable runtime data migration
 - Coverage at ~28% — next staged target 30%
-- TypeScript migration — partial; .ts services exist in src/services/, components still .jsx
+- TypeScript migration — partial; 9 .ts services exist in src/services/, components still .jsx
 - Component test coverage at ~6% — 4 agent modules at 0%
+- Echo, Sentinel, Nova agents have skeletal profiles (10 lines) and no dedicated runtimes
+- Miya, Maria agents use deterministic templates instead of dedicated runtimes
 
 ---
 
@@ -126,7 +128,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
     ConnectorHealthPanel.jsx        — full connector panel (lazy chunk)
     ConnectorStatusIndicators.jsx   — small dot/strip components (static-safe import)
     AgentActivityLog.jsx            — activity timeline tab (appendAgentActivity wired)
-  services/            124 services
+  services/            130 services
     connectors/        GitHub, Slack, and other connector implementations
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
@@ -135,7 +137,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
-    lib.rs             Rust backend (~1,455 lines)
+    lib.rs             Rust backend (~1,585 lines)
     utils.rs           Shared utilities
     kv_store.rs        KV store module — kv_set, kv_get, save_settings, load_settings
     whatsapp_webhook.rs  WhatsApp webhook module (3 commands, 4 structs)
@@ -145,7 +147,7 @@ src-tauri/
     youtube.rs         YouTube upload module
     workspace.rs       Workspace file ops module
     search.rs          Research search module
-    connector_commands.rs  Connector Rust backend (12 commands)
+    connector_commands.rs  Connector Rust backend (14 commands)
     plugin_runtime.rs  Plugin runtime engine
     policy_gate.rs     Policy enforcement backend
     audit_log.rs       Audit chain
@@ -168,10 +170,10 @@ docs/                  Documentation and handoff packages
 playwright.config.js   Playwright config (baseURL :5173, headless Chromium)
 vitest.config.js       Vitest config (separate from vite build config)
 gateway/
-  whatsapp-cloud/      Railway-hosted WhatsApp Cloud gateway (live — has /queue/drain endpoint)
+  whatsapp-cloud/      Railway-hosted WhatsApp Cloud gateway (live, deployed)
 scripts/               Build, release, and auth helper scripts
 ```
 
 ---
 
-_Last verified: 2026-06-21 — v2.0.2. 81 test files, 1100 tests, all passing. Coverage ~28% (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. Auto-updater live (TAURI_SIGNING_PRIVATE_KEY in GitHub Secrets, v2.0.2 released). WhatsApp Cloud API fully wired (inbound + outbound via browser fallback). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-21 — v2.0.2. 81 test files, 1100 tests, all passing. Coverage ~28% (threshold 20%). cargo clippy clean. CI: ci.yml + release.yml. WhatsApp Cloud deployed and live. Auto-updater operational (v2.0.2 release tagged). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
