@@ -1,0 +1,14 @@
+{
+  "experimentalServices": {
+    "web": {
+      "routePrefix": "/",
+      "framework": "vite",
+      "buildCommand": "npm run build"
+    },
+    "whatsapp-cloud": {
+      "root": "gateway/whatsapp-cloud",
+      "routePrefix": "/_/whatsapp-cloud",
+      "framework": "nodejs"
+    }
+  }
+}
