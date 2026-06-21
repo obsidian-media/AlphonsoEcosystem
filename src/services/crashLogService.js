@@ -1,3 +1,5 @@
+import { durableGet, durableSet, durableRemove } from '../lib/durableStore';
+
 const MAX_ENTRIES = 100;
 const LOG_KEY = 'alphonso_crash_log_v1';
 
@@ -10,13 +12,13 @@ export function logError(error, context = {}) {
     context
   });
   if (entries.length > MAX_ENTRIES) entries.splice(0, entries.length - MAX_ENTRIES);
-  try { localStorage.setItem(LOG_KEY, JSON.stringify(entries)); } catch {}
+  try { durableSet(LOG_KEY, JSON.stringify(entries)); } catch {}
 }
 
 export function getCrashLog() {
-  try { return JSON.parse(localStorage.getItem(LOG_KEY) ?? '[]'); } catch { return []; }
+  try { return JSON.parse(durableGet(LOG_KEY) ?? '[]'); } catch { return []; }
 }
 
 export function clearCrashLog() {
-  localStorage.removeItem(LOG_KEY);
+  durableRemove(LOG_KEY);
 }
