@@ -9,6 +9,7 @@ import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioSta
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
+import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 
 function EchoTimeline() {
   const items = listMemoryItems()
@@ -1007,6 +1008,10 @@ export function SettingsView({
           ))}
         </div>
       </section>
+
+      <div className="border-t border-white/5 pt-4">
+        <WorkspaceExportImportView />
+      </div>
     </div>
   );
 }
