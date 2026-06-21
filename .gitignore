@@ -46,3 +46,4 @@ release/rc0/
 
 # OpenCode agent config
 .opencode/
+.claude/worktrees/
