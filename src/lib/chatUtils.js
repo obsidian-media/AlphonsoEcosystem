@@ -13,31 +13,42 @@ export const CHAT_ASSISTANT_PROMPT = [
 ].join('\n');
 
 export function shouldRouteThroughJose(text) {
-  const lower = String(text || '').toLowerCase();
+  const lower = String(text || '').toLowerCase().trim();
+  if (!lower) return false;
+
+  // Explicit Jose invocation — always route
+  if (/^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(lower)) return true;
+
+  // Pure questions → direct to Ollama regardless of topic
+  if (lower.endsWith('?')) return false;
+
+  // Conversational openers that are information-seeking → Ollama
+  if (/^(what\s+is\b|what\s+are\b|what's\b|how\s+does\b|how\s+do\s+i\b|how\s+do\s+you\b|why\s+does\b|why\s+is\b|why\s+do\b|explain\b|describe\b|tell\s+me\s+about\b|tell\s+me\s+what\b|who\s+is\b|where\s+is\b|when\s+did\b|when\s+does\b|can\s+you\s+explain\b|could\s+you\s+explain\b|help\s+me\s+understand\b|what\s+do\s+you\s+think\b|summarize\b|compare\b|difference\s+between\b|give\s+me\s+an\s+overview\b|overview\s+of\b|thoughts\s+on\b|opinion\s+on\b)/i.test(lower)) return false;
+
+  // Explicit task/action phrases — things the user wants DONE (not just discussed)
   return [
-    'folder', 'file', 'desktop', 'rename', 'create ', 'make ', 'generate ', 'image',
-    'picture', 'visual', 'miya', 'maia', 'jose', 'agent', 'delegate', 'task',
-    'move ', 'delete ', 'remove ', 'open ', 'save ', 'install ', 'write ', 'edit ', 'copy ', 'path',
-    'command', 'system', 'plan', 'roadmap', 'batch', 'boardroom',
-    'build', 'app', 'code', 'deploy', 'test', 'run ', 'start', 'scaffold', 'stack',
-    'frontend', 'backend', 'api', 'database', 'server', 'cli', 'tool', 'project',
-    'setup', 'configure', 'compile', 'bundle', 'package', 'npm', 'yarn', 'git ',
-    'docker', 'compose', 'react', 'next', 'vue', 'angular', 'node', 'python',
-    'flask', 'django', 'express', 'fastapi', 'typescript', 'javascript', 'html', 'css',
-    'tailwind', 'prisma', 'postgres', 'mysql', 'mongo', 'redis', 'graphql', 'rest',
-    'auth', 'login', 'dashboard', 'admin', 'panel', 'settings', 'config',
-    'migration', 'schema', 'model', 'controller', 'route', 'component', 'page',
-    'layout', 'theme', 'prototype', 'architecture', 'ci', 'cd', 'pipeline',
-    'workflow', 'automation', 'script', 'lib', 'library', 'module', 'dependency',
-    'plugin', 'extension', 'integration', 'connector', 'gateway', 'proxy',
-    'cache', 'queue', 'worker', 'job', 'debug', 'log', 'monitor', 'metric',
-    'analytics', 'chart', 'form', 'input', 'validation', 'encrypt', 'hash',
-    'permission', 'access', 'security', 'backup', 'restore', 'upgrade',
-    'release', 'version', 'documentation', 'tutorial', 'guide', 'reference',
-    'sdk', 'web', 'mobile', 'desktop', 'cloud', 'machine learning', 'ai ',
-    'deep learning', 'neural', 'data', 'insight', 'predict', 'recommend',
-    'automate', 'orchestrat', 'integrat', 'optimi', 'perform', 'scalab',
-    'reliab', 'resili', 'fault', 'disaster', 'monitor', 'observ'
+    'create a', 'create an', 'create the',
+    'build a', 'build an', 'build the',
+    'make a', 'make an', 'make the',
+    'generate a', 'generate an', 'generate the',
+    'write a', 'write an', 'write the', 'write code', 'write me',
+    'design a', 'design an', 'design the',
+    'develop a', 'develop an', 'develop the',
+    'set up a', 'set up an', 'set up the',
+    'scaffold', 'implement a', 'implement an', 'implement the',
+    'deploy', 'publish to', 'upload to', 'post to', 'send to',
+    'install ', 'npm run', 'npm install', 'yarn run', 'yarn add',
+    'git commit', 'git push', 'git pull', 'git clone',
+    'docker', 'rename the', 'rename this', 'delete the', 'delete this',
+    'remove the', 'remove this', 'move the', 'move this',
+    'folder', 'file path', 'desktop file', 'rename file',
+    'open the file', 'save the file', 'edit the file', 'edit the config', 'edit the settings',
+    'run a command', 'run the command', 'execute a', 'execute the',
+    'miya', 'hector ', 'alphonso agent',
+    'ask miya', 'ask hector', 'ask alphonso', 'ask agent',
+    'tell miya', 'tell hector', 'delegate to', 'delegate this',
+    'agent task', 'run a task', 'batch', 'boardroom',
+    'roadmap plan', 'workflow plan', 'task plan'
   ].some((term) => lower.includes(term));
 }
 

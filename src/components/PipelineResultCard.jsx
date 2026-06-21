@@ -1,5 +1,6 @@
-import React from 'react';
-import { Bot, CheckCircle2, Clock, Copy, ExternalLink, Eye, FileText, AlertTriangle, RefreshCw, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { Bot, CheckCircle2, ChevronDown, ChevronUp, Clock, Copy, Download, ExternalLink, Eye, FileText, AlertTriangle, RefreshCw, XCircle } from 'lucide-react';
 
 const AGENT_ICONS = {
   hector: '🔬',
@@ -86,6 +87,108 @@ function AgentCard({ receipt, onRetry }) {
   );
 }
 
+function CreativePackageCard({ artifact }) {
+  const [scriptOpen, setScriptOpen] = useState(false);
+  return (
+    <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10 space-y-2">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Creative Package — Miya</div>
+      {artifact.title && <div className="text-[13px] text-zinc-100 font-semibold">{artifact.title}</div>}
+      {artifact.hook && <div className="text-[11px] text-zinc-300 italic">{artifact.hook}</div>}
+      {artifact.script && (
+        <div>
+          <button
+            onClick={() => setScriptOpen((o) => !o)}
+            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-purple-300/70 hover:text-purple-300 transition-colors"
+          >
+            {scriptOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {scriptOpen ? 'Hide Script' : 'Show Full Script'}
+          </button>
+          {scriptOpen && (
+            <div className="mt-1.5 p-2 rounded bg-purple-500/5 border border-purple-500/10 text-[11px] text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+              {artifact.script}
+            </div>
+          )}
+        </div>
+      )}
+      {Array.isArray(artifact.scenes) && artifact.scenes.length > 0 && (
+        <div className="space-y-0.5">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-purple-300/60">Scenes</div>
+          {artifact.scenes.map((s, i) => (
+            <div key={i} className="text-[11px] text-zinc-400 pl-2 border-l border-purple-500/20">{s}</div>
+          ))}
+        </div>
+      )}
+      {Array.isArray(artifact.prompts) && artifact.prompts.length > 0 && (
+        <div className="space-y-0.5">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-purple-300/60">Image Prompts</div>
+          {artifact.prompts.map((p, i) => (
+            <div key={i} className="text-[11px] text-zinc-400 pl-2 border-l border-purple-500/20 font-mono">{p}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GeneratedImageCard({ img, index, outputFolder }) {
+  const [saving, setSaving] = useState(false);
+  const [savedPath, setSavedPath] = useState(null);
+
+  const handleSave = async () => {
+    if (!img.previewBase64 || !outputFolder) return;
+    setSaving(true);
+    try {
+      const filename = `alphonso_image_${Date.now()}_${index + 1}.png`;
+      const result = await invoke('save_image_to_folder', {
+        base64Data: img.previewBase64,
+        filename,
+        folder: outputFolder
+      });
+      if (result?.saved) setSavedPath(result.path);
+    } catch { /* ignore */ } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={`p-2 rounded-lg border ${img.status === 'generated' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+      {img.status === 'generated' ? (
+        <>
+          {img.previewBase64 && (
+            <img
+              src={`data:image/png;base64,${img.previewBase64}`}
+              alt={img.prompt}
+              className="w-full h-48 object-cover rounded mb-2"
+            />
+          )}
+          {img.imageUrls?.length > 0 && !img.previewBase64 && (
+            <div className="text-[10px] text-emerald-400 mb-1">{img.imageUrls.length} image(s) saved by ComfyUI</div>
+          )}
+          <div className="text-[10px] text-zinc-400 truncate">{img.prompt}</div>
+          <div className="text-[9px] text-zinc-600 mt-0.5">{img.provider} · {img.checkpoint || 'default'}</div>
+          {img.previewBase64 && outputFolder && (
+            <button
+              onClick={handleSave}
+              disabled={saving || !!savedPath}
+              className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              {savedPath ? 'Saved' : saving ? 'Saving…' : 'Save to Folder'}
+            </button>
+          )}
+          {savedPath && <div className="text-[9px] text-emerald-500/70 font-mono mt-0.5 break-all">{savedPath}</div>}
+        </>
+      ) : (
+        <div className="text-[11px] text-red-300">
+          <div className="font-medium">Generation failed</div>
+          <div className="text-[10px] text-zinc-400 mt-0.5 truncate">{img.prompt}</div>
+          <div className="text-[10px] text-red-300/70 mt-0.5">{img.error || 'ComfyUI may be offline. Start it from Settings → Local Services, or paste the prompt above into ComfyUI manually.'}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ArtifactDisplay({ artifacts }) {
   if (!Array.isArray(artifacts) || artifacts.length === 0) return null;
   return (
@@ -93,35 +196,16 @@ function ArtifactDisplay({ artifacts }) {
       {artifacts.map((artifact, idx) => {
         if (!artifact || typeof artifact !== 'object') return null;
         if (artifact.script || artifact.prompts || artifact.scenes) {
-          return (
-            <div key={idx} className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-1">Creative Package</div>
-              {artifact.title && <div className="text-[12px] text-zinc-200 font-medium">{artifact.title}</div>}
-              {artifact.hook && <div className="text-[11px] text-zinc-400 mt-0.5">{artifact.hook}</div>}
-              {Array.isArray(artifact.prompts) && artifact.prompts.length > 0 && (
-                <div className="mt-1.5 space-y-0.5">
-                  <div className="text-[9px] font-bold uppercase tracking-wider text-purple-300/60">Prompts</div>
-                  {artifact.prompts.map((p, i) => (
-                    <div key={i} className="text-[11px] text-zinc-400 pl-2 border-l border-purple-500/20">{p}</div>
-                  ))}
-                </div>
-              )}
-              {Array.isArray(artifact.scenes) && artifact.scenes.length > 0 && (
-                <div className="mt-1.5 space-y-0.5">
-                  <div className="text-[9px] font-bold uppercase tracking-wider text-purple-300/60">Scenes</div>
-                  {artifact.scenes.map((s, i) => (
-                    <div key={i} className="text-[11px] text-zinc-400 pl-2 border-l border-purple-500/20">{s}</div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
+          return <CreativePackageCard key={idx} artifact={artifact} />;
         }
         if (artifact.type === 'hector_report' || artifact.type === 'research_draft') {
           return (
             <div key={idx} className="p-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
               <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Research Report</div>
-              <div className="text-[11px] text-zinc-400 mt-0.5">{artifact.reportId || artifact.type}</div>
+              {artifact.summary && <div className="text-[11px] text-zinc-300 mt-1 leading-relaxed">{artifact.summary}</div>}
+              {Array.isArray(artifact.sources) && artifact.sources.length > 0 && (
+                <div className="mt-1 text-[10px] text-zinc-500">Sources: {artifact.sources.join(', ')}</div>
+              )}
             </div>
           );
         }
@@ -160,6 +244,9 @@ function ArtifactDisplay({ artifacts }) {
             </div>
           );
         }
+        if (artifact.type === 'generated_images' || artifact.type === 'comfyui_local_generation_options') {
+          return null; // handled by dedicated section in PipelineResultCard
+        }
         return (
           <div key={idx} className="p-2 rounded-lg bg-zinc-500/5 border border-white/5">
             <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{artifact.type || 'Artifact'}</div>
@@ -171,7 +258,7 @@ function ArtifactDisplay({ artifacts }) {
   );
 }
 
-export function PipelineResultCard({ result, commandText, onRetryAgent }) {
+export function PipelineResultCard({ result, commandText, onRetryAgent, outputFolder }) {
   if (!result) return null;
   const executedCount = result.executedCount || 0;
   const pendingCount = result.pendingApprovalCount || 0;
@@ -184,6 +271,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent }) {
   const url = shayanReport?.resultUrl || null;
   const assignmentSummaries = shayanReport?.assignmentSummaries || [];
   const artifacts = assignmentSummaries.flatMap((a) => a.artifacts || []);
+  const agentReports = assignmentSummaries.filter((a) => a.reportSummary);
 
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-zinc-900/80 to-zinc-950/60 shadow-xl overflow-hidden">
@@ -251,43 +339,32 @@ export function PipelineResultCard({ result, commandText, onRetryAgent }) {
       {artifacts.filter((a) => a.type === 'generated_images').map((imgArtifact, idx) => (
         <div key={`gen-img-${idx}`} className="px-4 py-3 border-b border-white/[0.04]">
           <div className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-2">
-            Generated Images ({imgArtifact.count || 0})
+            Generated Images ({imgArtifact.count || (imgArtifact.images || []).length})
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {(imgArtifact.images || []).map((img, i) => (
-              <div key={i} className={`p-2 rounded-lg border ${
-                img.status === 'generated'
-                  ? 'bg-emerald-500/5 border-emerald-500/20'
-                  : 'bg-red-500/5 border-red-500/20'
-              }`}>
-                {img.status === 'generated' ? (
-                  <>
-                    {img.previewBase64 && (
-                      <img
-                        src={`data:image/png;base64,${img.previewBase64}`}
-                        alt={img.prompt}
-                        className="w-full h-32 object-cover rounded mb-1.5"
-                      />
-                    )}
-                    {img.imageUrls?.length > 0 && !img.previewBase64 && (
-                      <div className="text-[10px] text-emerald-400">
-                        {img.imageUrls.length} image(s) saved
-                      </div>
-                    )}
-                    <div className="text-[10px] text-zinc-400 truncate">{img.prompt}</div>
-                    <div className="text-[9px] text-zinc-600 mt-0.5">{img.provider} · {img.checkpoint || 'default'}</div>
-                  </>
-                ) : (
-                  <div className="text-[11px] text-red-300">
-                    <div className="font-medium">Failed: {img.prompt}</div>
-                    <div className="text-[10px] text-red-300/70 mt-0.5">{img.error}</div>
-                  </div>
-                )}
-              </div>
+              <GeneratedImageCard key={i} img={img} index={i} outputFolder={outputFolder} />
             ))}
           </div>
         </div>
       ))}
+
+      {agentReports.length > 0 && (
+        <div className="px-4 py-3 border-b border-white/[0.04]">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Agent Reports</div>
+          <div className="space-y-2">
+            {agentReports.map((a, idx) => (
+              <div key={idx} className="p-2 rounded-lg bg-zinc-800/40 border border-white/[0.06]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[10px]">{AGENT_ICONS[a.agent] || '🤖'}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{a.agent}</span>
+                </div>
+                <div className="text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap">{a.reportSummary}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {result.commandId && (
         <div className="px-4 py-2 flex items-center justify-between">

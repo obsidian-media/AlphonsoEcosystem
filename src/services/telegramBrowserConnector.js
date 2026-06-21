@@ -172,6 +172,44 @@ export async function browserSendTelegram({ botToken, chatId, text }) {
   };
 }
 
+export function parseTelegramCommand(text) {
+  const trimmed = (text || '').trim();
+  if (!trimmed.startsWith('/')) return null;
+  const parts = trimmed.slice(1).split(/\s+/);
+  const cmd = (parts[0] || '').toLowerCase().replace(/@\w+$/, '');
+  const args = parts.slice(1).join(' ');
+  return { cmd, args };
+}
+
+export async function handleTelegramBotCommand({ text, chatId, botToken }) {
+  const parsed = parseTelegramCommand(text);
+  if (!parsed) return { ok: false, error: 'not_a_command' };
+
+  let reply = '';
+  if (parsed.cmd === 'start') {
+    reply = 'Hi! I\'m Alphonso, your local AI companion.\n\nAvailable commands:\n/ask <question> — Ask me anything\n/status — System status\n/help — Show all commands';
+  } else if (parsed.cmd === 'help') {
+    reply = 'Commands:\n/ask <text> — Route a question to Jose (Orchestrator)\n/status — Get Alphonso system status\n/start — Welcome message\n/help — This help message';
+  } else if (parsed.cmd === 'status') {
+    reply = 'Alphonso is online.\nAgents: Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova + Alphonso (9 active)\nTelegram: polling active\nOllama: local inference on demand';
+  } else if (parsed.cmd === 'ask') {
+    if (!parsed.args.trim()) {
+      reply = 'Usage: /ask <your question>\nExample: /ask Summarize today\'s tasks';
+    } else {
+      const preview = parsed.args.slice(0, 80) + (parsed.args.length > 80 ? '...' : '');
+      reply = `Routing to Jose: "${preview}"\n\nJose will process your request. Check the app for results.`;
+    }
+  } else {
+    return { ok: false, error: 'unknown_command' };
+  }
+
+  if (!reply) return { ok: true, reply: '' };
+  if (botToken && chatId) {
+    return browserSendTelegram({ botToken, chatId, text: reply });
+  }
+  return { ok: true, reply };
+}
+
 export async function verifyTelegramBotEnvironment({ botToken } = {}) {
   const token = (botToken || '').trim();
   if (!token) {

@@ -1,10 +1,11 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Bot, ChevronsDown, ChevronsUp, Copy, Download, History, Paperclip, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
+import { Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
 import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
+import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
   OLLAMA_TROUBLESHOOTING_COMMAND,
@@ -148,6 +149,7 @@ export function ChatView({
   const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
   const [showMemorySearch, setShowMemorySearch] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
@@ -298,6 +300,7 @@ export function ChatView({
           source: 'shayan',
           endpoint: settings.endpoint,
           zeroCostMode: settings.zeroCostMode,
+          previewMode,
           conversationHistory,
           onProgress: (progress) => {
             setLiveProgress(progress);
@@ -519,6 +522,19 @@ export function ChatView({
               {compactChat ? 'Focus' : 'Full'}
             </button>
             <button
+              onClick={() => {
+                const next = !previewMode;
+                setPreviewMode(next);
+                setRuntimePolicySettings({ previewMode: next }).catch(() => {});
+              }}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${previewMode ? 'text-amber-400' : 'text-zinc-500 hover:text-amber-400'}`}
+              aria-label={previewMode ? 'Preview mode on — approve before publishing' : 'Auto mode — publish without approval'}
+              title={previewMode ? 'Preview mode: see results before publishing' : 'Auto mode: publish immediately'}
+            >
+              {previewMode ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+              {previewMode ? 'Preview' : 'Auto'}
+            </button>
+            <button
               onClick={exportChat}
               disabled={messages.length === 0}
               className="text-2xs text-zinc-500 hover:text-indigo-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded"
@@ -678,6 +694,7 @@ export function ChatView({
               <PipelineResultCard
                 result={pipelineResult}
                 commandText={pipelineCommandText}
+                outputFolder={settings.outputFolder || ''}
                 onRetryAgent={(receipt) => {
                   setMessages((current) => [...current, {
                     id: nextMsgId(),

@@ -83,9 +83,20 @@ function parseContentCatalystRequest(commandText) {
 }
 
 function isRiskyAssignment(assignment) {
-  const risk = String(assignment?.riskLevel || '').toLowerCase();
   const action = String(assignment?.actionType || '').toLowerCase();
-  return risk === 'high' || risk === 'critical' || /external_publish|publish|upload|post/.test(action);
+  const agent = String(assignment?.agent || '').toLowerCase();
+  // Only block Marcus (distribution) and explicit external connector sends
+  return agent === 'marcus'
+    || /telegram_send|whatsapp_send|youtube_upload|external_publish|connector_send|distribution_execution/.test(action);
+}
+
+function buildPreviewContent(priorOutputs) {
+  if (!priorOutputs || typeof priorOutputs !== 'object') return null;
+  const parts = [];
+  if (priorOutputs.miya?.summary) parts.push(`Creative: ${priorOutputs.miya.summary}`);
+  if (priorOutputs.hector?.summary) parts.push(`Research: ${priorOutputs.hector.summary}`);
+  if (priorOutputs.maria?.summary) parts.push(`Governance: ${priorOutputs.maria.summary}`);
+  return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
 function isBlockedByZeroCostMode(packet, assignment) {
@@ -1374,6 +1385,7 @@ export async function runJoseCommandExecutionPipeline({
   source = 'shayan',
   endpoint,
   zeroCostMode,
+  previewMode = true,
   onProgress,
   onToken,
   conversationHistory
@@ -1511,12 +1523,15 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
-      if (isRiskyAssignment(assignment)) {
+      if (isRiskyAssignment(assignment) && previewMode) {
+        const previewPriorOutputs = getPriorOutputs(command.id, assignment.agent);
+        const previewContent = buildPreviewContent(previewPriorOutputs);
         pendingApprovalCount += 1;
         executionReceipts.push({
           packetId: assignment.packetId,
           agent: assignment.agent,
-          status: 'approval_required'
+          status: 'approval_required',
+          previewContent
         });
         onProgress?.({
           stage: 'approval_required',

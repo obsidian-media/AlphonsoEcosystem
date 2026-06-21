@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
@@ -225,6 +226,58 @@ export function SettingsView({
     const path = files[0].path || files[0].webkitRelativePath?.split('/')[0] || '';
     if (path) setSettings({ ...settings, workspaceRoot: path });
     e.target.value = '';
+  };
+
+  // Local services state
+  const [launchStatus, setLaunchStatus] = useState(null);
+
+  const handlePickOutputFolder = async () => {
+    try {
+      const result = await invoke('pick_folder');
+      if (result?.picked && result.path) setSettings({ ...settings, outputFolder: result.path });
+    } catch { /* Tauri not available */ }
+  };
+
+  const handlePickComfyUIDir = async () => {
+    try {
+      const result = await invoke('pick_folder');
+      if (result?.picked && result.path) setSettings({ ...settings, comfyuiDir: result.path });
+    } catch { /* Tauri not available */ }
+  };
+
+  const handleLaunchOllama = async () => {
+    setLaunchStatus({ service: 'ollama', state: 'launching' });
+    try {
+      const result = await invoke('launch_ollama');
+      setLaunchStatus({
+        service: 'ollama',
+        state: result?.launched ? 'launched' : result?.already_running ? 'running' : 'done',
+        message: result?.message || 'Done'
+      });
+    } catch (err) {
+      setLaunchStatus({ service: 'ollama', state: 'error', message: String(err?.message || err) });
+    }
+  };
+
+  const handleLaunchComfyUI = async () => {
+    if (!settings.comfyuiDir) {
+      setLaunchStatus({ service: 'comfyui', state: 'error', message: 'Set ComfyUI directory first.' });
+      return;
+    }
+    setLaunchStatus({ service: 'comfyui', state: 'launching' });
+    try {
+      const result = await invoke('launch_comfyui', {
+        comfyuiDir: settings.comfyuiDir,
+        pythonExe: settings.comfyuiPython || 'python'
+      });
+      setLaunchStatus({
+        service: 'comfyui',
+        state: result?.launched ? 'launched' : result?.already_running ? 'running' : 'done',
+        message: result?.message || 'Done'
+      });
+    } catch (err) {
+      setLaunchStatus({ service: 'comfyui', state: 'error', message: String(err?.message || err) });
+    }
   };
 
   // Backup/restore state
@@ -638,6 +691,126 @@ export function SettingsView({
 
           <div className="text-[11px] text-zinc-500">
             When enabled, agents can use Composio tools for external task management. Zero-cost mode still requires approval for paid actions.
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Zap} label="Local Services" />
+        <div className="space-y-4">
+
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-white">Auto-Launch on Startup</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Start Ollama (and ComfyUI if configured) automatically when Alphonso opens.</div>
+              </div>
+              <button
+                onClick={() => setSettings({ ...settings, autoLaunchServices: !settings.autoLaunchServices })}
+                className={`relative w-10 h-6 rounded-full border transition-colors ${
+                  settings.autoLaunchServices
+                    ? 'bg-indigo-500 border-indigo-400'
+                    : 'bg-zinc-700 border-zinc-600'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${settings.autoLaunchServices ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-white">Output Folder</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Where generated images and files are saved.</div>
+              </div>
+              <button
+                onClick={handlePickOutputFolder}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-medium border border-white/10 transition-colors"
+              >
+                <Folder className="w-3.5 h-3.5" />
+                Browse
+              </button>
+            </div>
+            <input
+              type="text"
+              value={settings.outputFolder || ''}
+              onChange={(e) => setSettings({ ...settings, outputFolder: e.target.value })}
+              placeholder="C:\Users\You\Pictures\Alphonso"
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+          </div>
+
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-white">Ollama</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Local LLM inference server at localhost:11434.</div>
+              </div>
+              <button
+                onClick={handleLaunchOllama}
+                disabled={launchStatus?.service === 'ollama' && launchStatus?.state === 'launching'}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-medium border border-white/10 transition-colors"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                {launchStatus?.service === 'ollama' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
+              </button>
+            </div>
+            {launchStatus?.service === 'ollama' && launchStatus?.state !== 'launching' && (
+              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'}`}>
+                {launchStatus.state === 'error' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
+                {launchStatus.message}
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-white">ComfyUI</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Local image generation server at localhost:8188.</div>
+              </div>
+              <button
+                onClick={handleLaunchComfyUI}
+                disabled={launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching'}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-medium border border-white/10 transition-colors"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                {launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
+              </button>
+            </div>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={settings.comfyuiDir || ''}
+                  onChange={(e) => setSettings({ ...settings, comfyuiDir: e.target.value })}
+                  placeholder="C:\ComfyUI"
+                  className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                />
+                <button
+                  onClick={handlePickComfyUIDir}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-medium border border-white/10 transition-colors"
+                >
+                  <Folder className="w-3.5 h-3.5" />
+                  Browse
+                </button>
+              </div>
+              <input
+                type="text"
+                value={settings.comfyuiPython || ''}
+                onChange={(e) => setSettings({ ...settings, comfyuiPython: e.target.value })}
+                placeholder="python  (or full path to python.exe)"
+                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              />
+              <div className="text-[11px] text-zinc-600">Python executable used to run <span className="font-mono">main.py</span>. Leave blank to use <span className="font-mono">python</span>.</div>
+            </div>
+            {launchStatus?.service === 'comfyui' && launchStatus?.state !== 'launching' && (
+              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'}`}>
+                {launchStatus.state === 'error' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
+                {launchStatus.message}
+              </div>
+            )}
           </div>
         </div>
       </section>

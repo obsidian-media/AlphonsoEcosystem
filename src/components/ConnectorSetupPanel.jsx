@@ -25,6 +25,8 @@ import {
   verifyConnectorEnvironment
 } from '../services/connectorRegistryService';
 import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/telegramAutoPollService';
+import { saveConnectorCredential, getConnectorCredential } from '../services/connectors/connectorAuth';
+import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
 
 export function ConnectorSetupPanel() {
   const [connectors, setConnectors] = useState(() => listConnectors());
@@ -51,6 +53,9 @@ export function ConnectorSetupPanel() {
   const [notice, setNotice] = useState('');
   const [autoPollState, setAutoPollState] = useState(() => getTelegramAutoPollState());
   const pollAvailable = ['telegram', 'whatsapp'].includes(connectorId);
+  const [telegramBotToken, setTelegramBotToken] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN'));
+  const [telegramChatIds, setTelegramChatIds] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS'));
+  const [telegramBotVerified, setTelegramBotVerified] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,6 +178,41 @@ export function ConnectorSetupPanel() {
         setNotice(`Auto-poll failed: ${result.reason || 'unknown error'}.`);
       }
       refresh();
+    } finally {
+      setTransportBusy(false);
+    }
+  };
+
+  const saveTelegramCredentials = () => {
+    const token = telegramBotToken.trim();
+    const chatIds = telegramChatIds.trim();
+    if (!token) {
+      setNotice('Bot token is required.');
+      return;
+    }
+    saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', token);
+    saveConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS', chatIds);
+    updateConnectorAuthProfile('telegram', { enabled: true, allowlist: chatIds.split(/[,\n]/).map((s) => s.trim()).filter(Boolean) });
+    setTelegramBotVerified(null);
+    setNotice('Telegram credentials saved. Click Verify Bot to test the connection.');
+    refresh();
+  };
+
+  const verifyTelegramBot = async () => {
+    const token = telegramBotToken.trim() || getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
+    if (!token) {
+      setNotice('Enter a bot token first.');
+      return;
+    }
+    setTransportBusy(true);
+    try {
+      const result = await verifyTelegramBotEnvironment({ botToken: token });
+      setTelegramBotVerified(result);
+      if (result.ok) {
+        setNotice(`Telegram bot verified: @${result.botUsername}`);
+      } else {
+        setNotice(`Telegram bot verify failed: ${result.error}`);
+      }
     } finally {
       setTransportBusy(false);
     }
@@ -516,6 +556,52 @@ export function ConnectorSetupPanel() {
             <option value="unlisted">unlisted</option>
             <option value="public">public</option>
           </select>
+        </div>
+      )}
+
+      {connectorId === 'telegram' && (
+        <div className="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-500/8 p-4">
+          <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-cyan-200/80">
+            Telegram Bot Credentials
+          </div>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
+            <input
+              type="password"
+              value={telegramBotToken}
+              onChange={(event) => setTelegramBotToken(event.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+              placeholder="Bot token from @BotFather"
+              autoComplete="off"
+            />
+            <input
+              type="text"
+              value={telegramChatIds}
+              onChange={(event) => setTelegramChatIds(event.target.value)}
+              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+              placeholder="Allowed chat IDs (comma-separated)"
+            />
+            <button
+              onClick={saveTelegramCredentials}
+              className="rounded-xl bg-cyan-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/30"
+            >
+              Save &amp; Enable
+            </button>
+            <button
+              onClick={verifyTelegramBot}
+              disabled={transportBusy}
+              className="rounded-xl bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-100 hover:bg-emerald-500/30 disabled:opacity-50"
+            >
+              Verify Bot
+            </button>
+          </div>
+          {telegramBotVerified !== null && (
+            <div className={`mt-2 text-[11px] ${telegramBotVerified.ok ? 'text-emerald-300' : 'text-red-400'}`}>
+              {telegramBotVerified.ok ? `Connected: @${telegramBotVerified.botUsername}` : `Error: ${telegramBotVerified.error}`}
+            </div>
+          )}
+          <p className="mt-2 text-[10px] text-zinc-500">
+            Commands: /start /help /status /ask &lt;text&gt; — token is stored in localStorage + SQLite, never committed to git.
+          </p>
         </div>
       )}
 

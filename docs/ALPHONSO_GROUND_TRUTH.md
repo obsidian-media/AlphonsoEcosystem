@@ -453,7 +453,43 @@ Before writing any new service or feature, verify it does not already exist:
 
 ---
 
-## 11. Known Audit Errors (for future reference)
+## 11. TODO — Deferred Work (confirmed gaps, not forgotten)
+
+These items were explicitly deferred by the product owner. Do not skip them permanently — revisit when the milestone conditions are met.
+
+### Gap 5 — macOS Support (deferred until Windows is fully mature)
+**Decision (2026-06-20):** Focus on Windows first. Once the app reaches maturity on Windows, backport macOS support in a single focused effort.
+**What will be needed when the time comes:**
+- Tauri `[bundle]` targets: add `"dmg"`, `"app"` to `src-tauri/tauri.conf.json`
+- CI: add `macos-latest` runner to `ci.yml` and `release.yml`
+- Code-sign with Apple Developer certificate in GitHub Secrets
+- Test native IPC (Ollama, SQLite, kv_store, connector sockets) on Darwin
+- Replace any Windows-path assumptions in `workspace.rs` (path separators, home dir)
+- Test installer flow on macOS (DMG notarization)
+
+### UI / UX Improvements (next UI sprint)
+The following improvements were noted but deferred to a dedicated UI sprint:
+- **Onboarding flow** — first-launch experience: Ollama offline detection → model pull prompt → connector setup wizard
+- **Ollama offline state** — currently fails silently or shows cryptic errors; needs a visible banner/prompt when Ollama is unreachable
+- **Composio onboarding** — user must know to enter API key at composio.dev and then in Settings → Composio; no in-app guide
+- **WhatsApp gateway deploy guide** — in-app instructions for Railway deployment of `gateway/whatsapp-cloud/`
+- **Component test coverage** — currently ~6%; target 15% minimum for UI components
+
+### Railway Deployment (ready, but requires manual setup)
+**Two Railway configs exist:**
+1. **Root `railway.json`** → deploys React frontend as static web app (no Rust/Ollama)
+2. **`gateway/whatsapp-cloud/railway.json`** → deploys WhatsApp Cloud webhook gateway (24/7 microservice)
+
+**The gateway is fully code-complete and can be deployed now.** Required env vars to set in Railway dashboard:
+- `WHATSAPP_VERIFY_TOKEN` — your webhook verify token (any string)
+- `WHATSAPP_APP_SECRET` — from Meta App Dashboard → App Settings
+- `ALPHONSO_FORWARD_URL` — the Alphonso desktop app's local endpoint (or a relay URL)
+
+After deploy: point Meta webhook to `https://<your-railway-url>/webhook`.
+
+---
+
+## 12. Known Audit Errors (for future reference)
 
 These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_SUBAGENTS_2026-05-31.md`. They are recorded here so future sessions do not repeat them.
 

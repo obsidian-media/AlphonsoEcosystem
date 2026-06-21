@@ -242,6 +242,32 @@ struct ClipboardProof {
   trust: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FolderPickProof {
+  path: String,
+  picked: bool,
+  picked_at_ms: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ServiceLaunchProof {
+  service: String,
+  launched: bool,
+  already_running: bool,
+  message: String,
+  launched_at_ms: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SaveImageProof {
+  path: String,
+  saved: bool,
+  saved_at_ms: u64,
+}
+
 pub(crate) fn now_ms() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)
@@ -1131,6 +1157,127 @@ fn write_clipboard(_content: String) -> Result<ClipboardProof, String> {
   }
 }
 
+#[tauri::command]
+fn pick_folder() -> Result<FolderPickProof, String> {
+  #[cfg(target_os = "windows")]
+  {
+    use std::process::Command;
+    let script = concat!(
+      "Add-Type -AssemblyName System.Windows.Forms; ",
+      "$b = New-Object System.Windows.Forms.FolderBrowserDialog; ",
+      "$b.Description = 'Select output folder'; ",
+      "if ($b.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $b.SelectedPath } else { '' }"
+    );
+    let output = Command::new("powershell")
+      .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", script])
+      .output()
+      .map_err(|e| e.to_string())?;
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let picked = !path.is_empty();
+    return Ok(FolderPickProof { path, picked, picked_at_ms: now_ms() });
+  }
+  #[allow(unreachable_code)]
+  Err("Folder picker is Windows-only".to_string())
+}
+
+#[tauri::command]
+async fn launch_ollama() -> Result<ServiceLaunchProof, String> {
+  let client = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_millis(800))
+    .build()
+    .map_err(|e| e.to_string())?;
+  if client.get("http://localhost:11434/api/tags").send().await.is_ok() {
+    return Ok(ServiceLaunchProof {
+      service: "ollama".to_string(),
+      launched: false,
+      already_running: true,
+      message: "Ollama is already running on localhost:11434".to_string(),
+      launched_at_ms: now_ms(),
+    });
+  }
+  use std::process::Command;
+  if cfg!(target_os = "windows") {
+    Command::new("cmd").args(["/C", "start", "/B", "ollama", "serve"]).spawn()
+      .map_err(|e| format!("Failed to launch Ollama: {}", e))?;
+  } else {
+    Command::new("sh").args(["-c", "ollama serve &"]).spawn()
+      .map_err(|e| format!("Failed to launch Ollama: {}", e))?;
+  }
+  Ok(ServiceLaunchProof {
+    service: "ollama".to_string(),
+    launched: true,
+    already_running: false,
+    message: "Ollama launch requested — allow a few seconds.".to_string(),
+    launched_at_ms: now_ms(),
+  })
+}
+
+#[tauri::command]
+async fn launch_comfyui(comfyui_dir: String, python_exe: String) -> Result<ServiceLaunchProof, String> {
+  let dir = comfyui_dir.trim().to_string();
+  if dir.is_empty() {
+    return Err("ComfyUI directory is not configured. Set it in Settings → Local Services.".to_string());
+  }
+  let client = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_millis(800))
+    .build()
+    .map_err(|e| e.to_string())?;
+  if client.get("http://localhost:8188/system_stats").send().await.is_ok() {
+    return Ok(ServiceLaunchProof {
+      service: "comfyui".to_string(),
+      launched: false,
+      already_running: true,
+      message: "ComfyUI is already running on localhost:8188".to_string(),
+      launched_at_ms: now_ms(),
+    });
+  }
+  let py = if python_exe.trim().is_empty() { "python".to_string() } else { python_exe.trim().to_string() };
+  use std::process::Command;
+  Command::new(&py).arg("main.py").current_dir(&dir).spawn()
+    .map_err(|e| format!("Failed to launch ComfyUI from '{}' using '{}': {}", dir, py, e))?;
+  Ok(ServiceLaunchProof {
+    service: "comfyui".to_string(),
+    launched: true,
+    already_running: false,
+    message: format!("ComfyUI launched from '{}'. Allow 10–20 seconds to start.", dir),
+    launched_at_ms: now_ms(),
+  })
+}
+
+#[tauri::command]
+fn save_image_to_folder(base64_data: String, filename: String, folder: String) -> Result<SaveImageProof, String> {
+  let folder = folder.trim().to_string();
+  if folder.is_empty() {
+    return Err("No output folder configured".to_string());
+  }
+  let raw = base64_data.trim_start_matches("data:image/png;base64,")
+    .trim_start_matches("data:image/jpeg;base64,")
+    .to_string();
+  let path = std::path::Path::new(&folder).join(&filename);
+  let path_str = path.to_string_lossy().to_string();
+  #[cfg(target_os = "windows")]
+  {
+    use std::process::Command;
+    let escaped_path = path_str.replace('\'', "''");
+    let script = format!(
+      "[System.IO.File]::WriteAllBytes('{}', [Convert]::FromBase64String('{}'))",
+      escaped_path, raw
+    );
+    Command::new("powershell")
+      .args(["-NoProfile", "-Command", &script])
+      .output()
+      .map_err(|e| e.to_string())?;
+    return Ok(SaveImageProof { path: path_str, saved: true, saved_at_ms: now_ms() });
+  }
+  #[allow(unreachable_code)]
+  {
+    use std::process::Command;
+    let script = format!("printf '%s' '{}' | base64 -d > '{}'", raw, path_str);
+    Command::new("sh").args(["-c", &script]).output().map_err(|e| e.to_string())?;
+    Ok(SaveImageProof { path: path_str, saved: true, saved_at_ms: now_ms() })
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -1555,7 +1702,11 @@ pub fn run() {
       open_url,
       fetch_url_content,
       read_clipboard,
-      write_clipboard
+      write_clipboard,
+      pick_folder,
+      launch_ollama,
+      launch_comfyui,
+      save_image_to_folder
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

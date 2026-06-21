@@ -12,6 +12,66 @@ import {
   writeRows
 } from './connectorRegistry.js';
 
+// ── Credential storage (actual values, not just presence flags) ───────────────
+// Separate from auth profiles — stores real tokens/keys entered via UI.
+const CREDS_KEY = 'alphonso_connector_credentials_v1';
+
+function readAllCredentials() {
+  try {
+    const raw = localStorage.getItem(CREDS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeAllCredentials(creds) {
+  localStorage.setItem(CREDS_KEY, JSON.stringify(creds));
+  try {
+    invoke('kv_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => {});
+  } catch {
+    // SQLite not available outside Tauri
+  }
+}
+
+export function saveConnectorCredential(connectorId, key, value) {
+  const all = readAllCredentials();
+  if (!all[connectorId]) all[connectorId] = {};
+  all[connectorId][key] = String(value || '').trim();
+  writeAllCredentials(all);
+}
+
+export function getConnectorCredential(connectorId, key) {
+  try {
+    const all = readAllCredentials();
+    return all?.[connectorId]?.[key] || '';
+  } catch {
+    return '';
+  }
+}
+
+export function getConnectorCredentials(connectorId) {
+  try {
+    const all = readAllCredentials();
+    return all?.[connectorId] || {};
+  } catch {
+    return {};
+  }
+}
+
+export async function hydrateConnectorCredentialsFromSqlite() {
+  try {
+    const json = await invoke('kv_get', { key: CREDS_KEY });
+    if (!json) return;
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === 'object') {
+      localStorage.setItem(CREDS_KEY, JSON.stringify(parsed));
+    }
+  } catch {
+    // ignore — localStorage fallback already in place
+  }
+}
+
 export const DEFAULT_AUTH_PROFILES = {
   telegram: { enabled: false, allowlist: [], mode: 'allowlist_required' },
   whatsapp: { enabled: false, allowlist: [], mode: 'allowlist_required' },

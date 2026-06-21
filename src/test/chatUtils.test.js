@@ -46,8 +46,10 @@ describe('chatUtils', () => {
       expect(shouldRouteThroughJose('hello how are you')).toBe(false);
     });
 
-    it('returns true for messages containing tech keywords', () => {
-      expect(shouldRouteThroughJose('what is the capital of France')).toBe(true);
+    it('routes conversational questions directly to Ollama', () => {
+      expect(shouldRouteThroughJose('what is the capital of France')).toBe(false);
+      expect(shouldRouteThroughJose('how does AI work?')).toBe(false);
+      expect(shouldRouteThroughJose('explain machine learning')).toBe(false);
     });
 
     it('returns false for empty string', () => {

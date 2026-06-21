@@ -36,6 +36,7 @@ export interface RuntimePolicySettings {
   zeroCostMode: boolean;
   safeMode: boolean;
   localOnlyMode: boolean;
+  previewMode: boolean;
 }
 
 export type ConnectorRiskLevel = 'high' | 'medium' | 'low';
@@ -68,7 +69,8 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
     approvalMode: true,
     zeroCostMode: true,
     safeMode: true,
-    localOnlyMode: true
+    localOnlyMode: true,
+    previewMode: true
   };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -77,7 +79,8 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
       approvalMode: parsed.approvalMode !== false,
       zeroCostMode: parsed.zeroCostMode !== false,
       safeMode: parsed.safeMode !== false,
-      localOnlyMode: parsed.localOnlyMode !== false
+      localOnlyMode: parsed.localOnlyMode !== false,
+      previewMode: parsed.previewMode !== false
     };
   } catch {
     return defaults;
@@ -89,7 +92,8 @@ export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySett
     approvalMode: true,
     zeroCostMode: true,
     safeMode: true,
-    localOnlyMode: true
+    localOnlyMode: true,
+    previewMode: true
   };
   try {
     const raw = await invoke<string | null>('kv_get', { key: SETTINGS_KEY });
@@ -99,7 +103,8 @@ export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySett
         approvalMode: parsed.approvalMode !== false,
         zeroCostMode: parsed.zeroCostMode !== false,
         safeMode: parsed.safeMode !== false,
-        localOnlyMode: parsed.localOnlyMode !== false
+        localOnlyMode: parsed.localOnlyMode !== false,
+        previewMode: parsed.previewMode !== false
       };
     }
   } catch {}

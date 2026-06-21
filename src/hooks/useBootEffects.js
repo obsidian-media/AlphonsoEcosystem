@@ -125,6 +125,27 @@ export function useBootEffects({
     return () => { if (idleId) cancelIdle(idleId); };
   }, [setIsOnline]);
 
+  // Phase 1 (idle): Auto-launch local services (Ollama + optionally ComfyUI)
+  useEffect(() => {
+    if (!settings.autoLaunchServices) return;
+    let idleId;
+    async function launch() {
+      try {
+        await invoke('launch_ollama');
+      } catch { /* not in Tauri or command not available */ }
+      if (settings.comfyuiDir) {
+        try {
+          await invoke('launch_comfyui', {
+            comfyuiDir: settings.comfyuiDir,
+            pythonExe: settings.comfyuiPython || 'python'
+          });
+        } catch { /* ignore */ }
+      }
+    }
+    idleId = onIdle(launch);
+    return () => { if (idleId) cancelIdle(idleId); };
+  }, [settings.autoLaunchServices, settings.comfyuiDir, settings.comfyuiPython]);
+
   // Phase 1 (idle): Desktop bridge inspection
   useEffect(() => {
     let cancelled = false;
