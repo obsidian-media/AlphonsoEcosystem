@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
@@ -11,6 +11,7 @@ import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
+import { CrashLogView } from './CrashLogView';
 
 function EchoTimeline() {
   const items = listMemoryItems()
@@ -1018,6 +1019,11 @@ export function SettingsView({
       <div className="border-t border-white/5 pt-4">
         <WorkspaceExportImportView />
       </div>
+
+      <section className="space-y-4">
+        <SectionHeader icon={ScrollText} label="Logs" />
+        <CrashLogView />
+      </section>
     </div>
   );
 }
