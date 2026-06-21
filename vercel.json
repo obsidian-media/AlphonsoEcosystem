@@ -7,7 +7,9 @@
     },
     "whatsapp-cloud": {
       "root": "gateway/whatsapp-cloud",
-      "routePrefix": "/_/whatsapp-cloud"
+      "routePrefix": "/_/whatsapp-cloud",
+      "builder": "@vercel/node",
+      "entrypoint": "src/server.js"
     }
   }
 }
