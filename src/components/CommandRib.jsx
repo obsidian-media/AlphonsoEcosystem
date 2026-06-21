@@ -1,13 +1,6 @@
 import React from 'react';
-import { Moon, Palette, Sparkles, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatar';
-
-const themes = [
-  { id: 'deep_space', label: 'Space' },
-  { id: 'neon_studio', label: 'Studio' },
-  { id: 'orchestrator_gold', label: 'Gold' },
-  { id: 'minimal_runtime', label: 'Clean' }
-];
 
 const AGENT_MAP = {
   chat: { id: 'alphonso', label: 'Alphonso' },
@@ -27,7 +20,7 @@ const AGENT_MAP = {
 
 export function CommandRib({ activeTab, settings, setSettings, ollamaStatus }) {
   const agent = AGENT_MAP[activeTab] || { id: 'alphonso', label: 'Alphonso' };
-  const currentTheme = settings.environmentTheme || 'deep_space';
+  const isLight = settings.colorScheme === 'light';
 
   return (
     <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] bg-surface-0/80 backdrop-blur-sm">
@@ -39,23 +32,16 @@ export function CommandRib({ activeTab, settings, setSettings, ollamaStatus }) {
         <span className="text-2xs text-zinc-500 capitalize">{activeTab?.replace(/_/g, ' ')}</span>
       </div>
 
-      {/* Right: Theme + status */}
+      {/* Right: Theme toggle + Ollama status */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 rounded-lg bg-surface-2 border border-white/[0.06] px-2 py-1">
-          {themes.map((theme) => (
-            <button
-              key={theme.id}
-              onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
-              className={`px-2 py-0.5 rounded-md text-2xs font-medium transition-all ${
-                currentTheme === theme.id
-                  ? 'bg-accent text-white'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              {theme.label}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setSettings({ ...settings, colorScheme: isLight ? 'dark' : 'light' })}
+          className="flex items-center gap-1.5 rounded-lg bg-surface-2 border border-white/[0.06] px-2 py-1 text-2xs text-zinc-400 hover:text-zinc-200 transition-colors"
+          title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+        >
+          {isLight ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+          {isLight ? 'Light' : 'Dark'}
+        </button>
 
         <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-2 border border-white/[0.06]">
           <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-success' : 'bg-danger'}`} />

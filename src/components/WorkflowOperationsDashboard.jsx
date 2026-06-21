@@ -87,7 +87,7 @@ export function WorkflowOperationsDashboard({ settings }) {
         Workflow Operations Dashboard
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-zinc-500">
-        Truth labels: confirmed, partial, setup_required, blocked, failed. Runs and receipts reload from local storage after refresh. A run is confirmed only when status is completed with zero blocked stages.
+        Select a workflow to start a governed run. Completed runs are confirmed; partial or blocked runs need connector setup or approval.
       </p>
       <div className="mb-4 grid grid-cols-2 gap-2 text-[11px] md:grid-cols-4">
         <Metric label="Persisted Runs" value={durabilitySummary.runs} />

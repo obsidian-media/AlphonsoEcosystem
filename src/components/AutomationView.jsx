@@ -79,8 +79,8 @@ export function AutomationView() {
           {ops.slice(0, 20).map((op) => (
             <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-white/[0.05] bg-zinc-900/60">
               <div className="text-sm font-medium text-zinc-300">{op.name || op.id}</div>
-              <span className={`text-[10px] px-2 py-0.5 rounded border ${op.enabled ? 'border-emerald-600/30 text-emerald-400' : 'border-zinc-700 text-zinc-500'}`}>
-                {op.enabled ? 'enabled' : 'disabled'}
+              <span className={`text-[10px] px-2 py-0.5 rounded border ${op.status === 'active' || op.enabled ? 'border-emerald-600/30 text-emerald-400' : 'border-zinc-700 text-zinc-500'}`}>
+                {op.status === 'active' || op.enabled ? 'active' : op.status || 'inactive'}
               </span>
             </div>
           ))}

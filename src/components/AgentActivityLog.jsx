@@ -2,6 +2,33 @@ import React, { useEffect, useState } from 'react';
 import { Activity } from 'lucide-react';
 import { listAgentActivity } from '../services/agentActivityService';
 
+const AGENT_COLORS = {
+  alphonso: 'text-indigo-400',
+  jose: 'text-amber-400',
+  miya: 'text-fuchsia-400',
+  hector: 'text-cyan-400',
+  echo: 'text-violet-400',
+  sentinel: 'text-red-400',
+  nova: 'text-emerald-400',
+  maria: 'text-sky-400',
+  marcus: 'text-orange-400',
+};
+
+function friendlyAction(action) {
+  if (!action) return 'Action';
+  return action
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .slice(0, 60);
+}
+
+function friendlyDetail(detail) {
+  if (!detail) return null;
+  const s = String(detail).trim();
+  if (s.length < 4) return null;
+  return s.slice(0, 80);
+}
+
 export function AgentActivityLog() {
   const [entries, setEntries] = useState([]);
 
@@ -20,15 +47,29 @@ export function AgentActivityLog() {
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {entries.length === 0 && (
-          <div className="text-[11px] text-zinc-600 text-center py-8">No agent activity yet</div>
-        )}
-        {entries.map((e, i) => (
-          <div key={i} className="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-900/40 transition-colors">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-cyan-500 w-12 shrink-0 mt-0.5">{e.agent}</span>
-            <span className="text-[10px] text-zinc-400 flex-1 min-w-0 truncate">{e.action}{e.detail ? ` — ${e.detail}` : ''}</span>
-            <span className="text-[9px] text-zinc-600 shrink-0">{new Date(e.ts).toLocaleTimeString()}</span>
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <Activity className="w-5 h-5 text-zinc-700" />
+            <div className="text-[12px] text-zinc-600">No activity yet</div>
+            <div className="text-[11px] text-zinc-700 text-center max-w-xs">Agent actions will appear here as you use Alphonso — send a message, run a workflow, or trigger a connector.</div>
           </div>
-        ))}
+        )}
+        {entries.map((e, i) => {
+          const agentLabel = String(e.agent || 'system').toLowerCase();
+          const agentColor = AGENT_COLORS[agentLabel] || 'text-zinc-400';
+          const detail = friendlyDetail(e.detail);
+          return (
+            <div key={i} className="group flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-zinc-900/40 transition-colors">
+              <div className="shrink-0 mt-0.5 flex flex-col items-end gap-0.5">
+                <span className={`text-[9px] font-bold uppercase tracking-widest ${agentColor}`}>{agentLabel}</span>
+                <span className="text-[9px] text-zinc-700">{new Date(e.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] text-zinc-200 leading-snug">{friendlyAction(e.action)}</div>
+                {detail && <div className="mt-0.5 text-[11px] text-zinc-500 leading-snug">{detail}</div>}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

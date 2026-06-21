@@ -37,7 +37,6 @@ import { appendSessionEvent, listSessionEvents, summarizeSession } from '../serv
 import { collectResourceSnapshot, listResourceSnapshots, summarizeResourceUsage } from '../services/resourceCostService';
 import { listMarketplaceItems, setMarketplaceItemStatus } from '../services/localMarketplaceService';
 import { listSnapshots } from '../services/recoveryService';
-import { ConnectorSetupPanel } from './ConnectorSetupPanel';
 import { ProductionReadinessPanel } from './ProductionReadinessPanel';
 import { SelfDevelopmentPanel } from './SelfDevelopmentPanel';
 import { EcosystemMaturityPanelsGate } from './EcosystemMaturityPanelsGate';
@@ -229,36 +228,37 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
         onRefresh={refreshAll}
       />
       {showAdvancedSections && (
-        <Suspense
-          fallback={
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3 text-sm text-zinc-400">
-              Loading advanced ecosystem tools...
-            </div>
-          }
-        >
-          <WorkflowOperationsDashboard settings={settings} />
-        </Suspense>
+        <>
+          <Suspense
+            fallback={
+              <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3 text-sm text-zinc-400">
+                Loading advanced ecosystem tools...
+              </div>
+            }
+          >
+            <WorkflowOperationsDashboard settings={settings} />
+          </Suspense>
+          <ProductionReadinessPanel
+            settings={settings}
+            setSettings={setSettings}
+            ollamaStatus={ollamaStatus}
+            verificationLogs={verificationLogs}
+            workspaceFoundation={workspaceFoundation}
+            updateCheckState={updateCheckState}
+            nativeSelfDevProof={nativeSelfDevProof}
+          />
+          <SelfDevelopmentPanel
+            settings={settings}
+            setSettings={setSettings}
+            verificationLogs={verificationLogs}
+            workspaceFoundation={workspaceFoundation}
+            updateCheckState={updateCheckState}
+            nativeSelfDevProof={nativeSelfDevProof}
+            setNativeSelfDevProof={setNativeSelfDevProof}
+            nativeProofHooks={nativeProofHooks}
+          />
+        </>
       )}
-      <ConnectorSetupPanel />
-      <ProductionReadinessPanel
-        settings={settings}
-        setSettings={setSettings}
-        ollamaStatus={ollamaStatus}
-        verificationLogs={verificationLogs}
-        workspaceFoundation={workspaceFoundation}
-        updateCheckState={updateCheckState}
-        nativeSelfDevProof={nativeSelfDevProof}
-      />
-      <SelfDevelopmentPanel
-        settings={settings}
-        setSettings={setSettings}
-        verificationLogs={verificationLogs}
-        workspaceFoundation={workspaceFoundation}
-        updateCheckState={updateCheckState}
-        nativeSelfDevProof={nativeSelfDevProof}
-        setNativeSelfDevProof={setNativeSelfDevProof}
-        nativeProofHooks={nativeProofHooks}
-      />
 
       {showAdvancedSections && (
         <>

@@ -835,7 +835,9 @@ export function ChatView({
           <div className="mt-1 text-2xs text-zinc-500">
             {ollamaStatus.state === 'connected' && !selectedModelMissing
               ? `Message ${settings.selectedModel || 'local model'}`
-              : 'Ollama is setup_required. Check runtime, then choose a local model.'}
+              : ollamaStatus.state !== 'connected'
+                ? 'Start Ollama to enable local AI responses.'
+                : 'Choose a local model in Settings to start chatting.'}
           </div>
 
           <div className="absolute bottom-3 right-3 flex items-center gap-2">

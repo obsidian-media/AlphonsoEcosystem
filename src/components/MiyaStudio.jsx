@@ -795,7 +795,6 @@ export function MiyaStudio({
 
       <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-5 space-y-5">
         <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
-        <ProductionPipelineMatrix activeTab={activeTab} canGenerate={canGenerate} />
 
         {activeTab === 'brand' ? (
           <BrandKitEditor brandKit={brandKit} setBrandKit={setBrandKit} onSave={saveBrandKit} />
@@ -901,39 +900,19 @@ function ProductionPipelineMatrix({ activeTab, canGenerate }) {
 }
 
 function ExportPackageReadiness({ output, canGenerate }) {
-  const targets = [
-    ['CapCut', Boolean(output?.export_package?.capcut)],
-    ['Runway', Boolean(output?.export_package?.runway)],
-    ['Pika', Boolean(output?.export_package?.pika)],
-    ['Luma', Boolean(output?.export_package?.luma)],
-    ['ComfyUI', false]
-  ];
-
   return (
-    <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-fuchsia-200">Miya Production Pipeline</div>
-          <p className="mt-1 text-[11px] text-zinc-500">
-            Script-to-video package wiring is local and supervised. Local ComfyUI image/workflow adapters are available, and Runway cloud draft generation is backend-backed.
-          </p>
-        </div>
-        <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
-          canGenerate ? 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200' : 'border-amber-300/20 bg-amber-500/10 text-amber-200'
-        }`}>
-          {canGenerate ? 'local model available' : 'generation engine not connected yet'}
-        </span>
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-zinc-900/40 px-4 py-3">
+      <div>
+        <div className="text-xs font-bold uppercase tracking-widest text-fuchsia-200">Production Pipeline</div>
+        <p className="mt-0.5 text-[11px] text-zinc-500">
+          ComfyUI local images · Runway cloud video · CapCut & YouTube export handoffs
+        </p>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-5">
-        {targets.map(([target, ready]) => (
-          <div key={target} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-            <div className="text-[11px] font-semibold text-zinc-200">{target}</div>
-            <div className={`mt-1 text-[10px] ${ready ? 'text-emerald-300' : 'text-zinc-500'}`}>
-              {ready ? 'package fields ready' : 'setup required'}
-            </div>
-          </div>
-        ))}
-      </div>
+      <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+        canGenerate ? 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200' : 'border-amber-300/20 bg-amber-500/10 text-amber-200'
+      }`}>
+        {canGenerate ? 'model ready' : 'model not connected'}
+      </span>
     </div>
   );
 }

@@ -150,7 +150,7 @@ function AppShell() {
   }
 
   return (
-    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30 ${themeClassFromSettings(settings)}`}>
+    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-indigo-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-zinc-950 text-zinc-100'} ${themeClassFromSettings(settings)}`}>
       <Suspense fallback={null}>
         <CoachHardInterruptOverlay intervention={coachIntervention} pauseUntilMs={coachPauseUntilMs} onAction={handleCoachInterventionAction} />
       </Suspense>

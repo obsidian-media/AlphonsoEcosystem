@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   hectorCompanionPinned: true,
   focusMode: 'mission_control',
   environmentTheme: 'minimal_runtime',
+  colorScheme: 'dark',
   desktopMode: true,
   localOnlyMode: true,
   zeroCostMode: true,
