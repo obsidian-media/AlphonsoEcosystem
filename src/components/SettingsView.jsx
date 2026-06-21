@@ -8,6 +8,59 @@ import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
+import { listMemoryItems } from '../services/memoryService';
+import { WorkspaceExportImportView } from './WorkspaceExportImportView';
+
+function EchoTimeline() {
+  const items = listMemoryItems()
+    .filter(m => m.agent === 'echo' || m.category === 'knowledge_preservation' || m.retentionTier)
+    .slice(-15)
+    .reverse();
+
+  const tierConfig = {
+    permanent: { label: 'Permanent', color: 'emerald', icon: '♾' },
+    standard_180d: { label: '180 days', color: 'indigo', icon: '📅' },
+    ephemeral_7d: { label: '7 days', color: 'amber', icon: '⏳' },
+  };
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-8 text-zinc-600 text-xs">
+        No Echo-preserved memories yet. Echo synthesizes and classifies memories after agent activity.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-h-64 overflow-y-auto">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Echo Memory Timeline ({items.length})</p>
+      {items.map((m, i) => {
+        const tier = m.retentionTier || 'standard_180d';
+        const tc = tierConfig[tier] || tierConfig.standard_180d;
+        const expiryMs = tier === 'ephemeral_7d' ? 7 * 24 * 3600 * 1000 : tier === 'standard_180d' ? 180 * 24 * 3600 * 1000 : null;
+        const createdAt = m.timestampMs || m.createdAtMs || 0;
+        const expiresIn = expiryMs ? Math.max(0, Math.round((createdAt + expiryMs - Date.now()) / (24 * 3600 * 1000))) : null;
+        return (
+          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-zinc-900/40 border border-white/[0.04]">
+            <span className="text-base shrink-0">{tc.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                  tc.color === 'emerald' ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300' :
+                  tc.color === 'indigo' ? 'bg-indigo-500/10 border-indigo-400/20 text-indigo-300' :
+                  'bg-amber-500/10 border-amber-400/20 text-amber-300'
+                }`}>{tc.label}</span>
+                {expiresIn !== null && <span className="text-[10px] text-zinc-600">expires in {expiresIn}d</span>}
+              </div>
+              <p className="text-xs text-zinc-300 truncate">{m.title || m.content?.slice(0, 80) || 'Untitled'}</p>
+              {m.category && <p className="text-[10px] text-zinc-600">{m.category}</p>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
   return (
@@ -196,6 +249,20 @@ export function SettingsView({
   const [composioHealth, setComposioHealth] = useState(null);
   const [composioChecking, setComposioChecking] = useState(false);
   const [composioToolkits, setComposioToolkits] = useState([]);
+
+  const COMPOSIO_ENABLED_KEY = 'alphonso_composio_toolkits_enabled_v1';
+  const [enabledToolkits, setEnabledToolkits] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('alphonso_composio_toolkits_enabled_v1') || '[]')); }
+    catch { return new Set(); }
+  });
+  const toggleComposioToolkit = (key) => {
+    setEnabledToolkits(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      localStorage.setItem(COMPOSIO_ENABLED_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const status = getComposioStatus();
@@ -680,11 +747,29 @@ export function SettingsView({
 
           {isComposioEnabled() && composioToolkits.length > 0 && (
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-zinc-400">Available Toolkits ({composioToolkits.length})</div>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {composioToolkits.slice(0, 20).map((tk) => (
-                  <span key={tk.key} className="px-2 py-1 bg-zinc-800 border border-white/5 rounded-lg text-[10px] text-zinc-300">{tk.name}</span>
-                ))}
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold text-zinc-400">Available Toolkits ({composioToolkits.length})</div>
+                <span className="text-[10px] text-zinc-600">{enabledToolkits.size} enabled</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                {composioToolkits.slice(0, 20).map((tk) => {
+                  const key = tk.key || tk.name;
+                  const enabled = enabledToolkits.has(key);
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => toggleComposioToolkit(key)}
+                      className={`text-left px-3 py-2 rounded-xl border text-[10px] transition-all ${
+                        enabled
+                          ? 'bg-indigo-500/10 border-indigo-400/20 text-indigo-300'
+                          : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:border-white/10'
+                      }`}
+                    >
+                      <div className="font-semibold truncate">{tk.name || key}</div>
+                      {enabled && <div className="text-[9px] text-indigo-400 mt-0.5">Active</div>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -880,6 +965,11 @@ export function SettingsView({
       </section>
 
       <section className="space-y-4">
+        <SectionHeader icon={Activity} label="Echo Memory Timeline" />
+        <EchoTimeline />
+      </section>
+
+      <section className="space-y-4">
         <SectionHeader icon={Palette} label="Appearance" />
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -918,6 +1008,10 @@ export function SettingsView({
           ))}
         </div>
       </section>
+
+      <div className="border-t border-white/5 pt-4">
+        <WorkspaceExportImportView />
+      </div>
     </div>
   );
 }

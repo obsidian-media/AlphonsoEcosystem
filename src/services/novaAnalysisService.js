@@ -267,3 +267,17 @@ export async function runNovaAnalysis(commandText, assignment, priorOutputs, opt
     schema
   };
 }
+
+const NOVA_HISTORY_KEY = 'alphonso_nova_history_v1';
+const MAX_HISTORY = 30;
+
+export function saveOpportunityScore(score, recommendation) {
+  const history = getOpportunityHistory();
+  history.push({ score, recommendation, timestamp: Date.now() });
+  if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
+  try { localStorage.setItem(NOVA_HISTORY_KEY, JSON.stringify(history)); } catch {}
+}
+
+export function getOpportunityHistory() {
+  try { return JSON.parse(localStorage.getItem(NOVA_HISTORY_KEY) ?? '[]'); } catch { return []; }
+}

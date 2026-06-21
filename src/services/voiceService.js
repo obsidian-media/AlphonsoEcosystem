@@ -10,17 +10,17 @@ export const VOICE_STATES = {
   ERROR: 'error'
 };
 
-export const TRANSCRIPTION_PIPELINE_STATUS = {
-  available: false,
-  engine: null,
-  message: 'Microphone works. Speech-to-text engine not connected yet.',
-  futureEngines: [
-    'Whisper',
-    'faster-whisper',
-    'wake-word detection',
-    'local-only transcription pipeline'
-  ]
-};
+export const TRANSCRIPTION_PIPELINE_STATUS = (() => {
+  const hasSpeechRecognition = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+  return {
+    available: hasSpeechRecognition,
+    engine: hasSpeechRecognition ? 'WebSpeechAPI' : null,
+    message: hasSpeechRecognition
+      ? 'Speech recognition ready. Click mic to start dictating.'
+      : 'Microphone works. Speech-to-text engine not connected yet.',
+    futureEngines: ['Whisper', 'faster-whisper', 'wake-word detection', 'local-only transcription pipeline'],
+  };
+})();
 
 export function supportsMicrophoneCapture() {
   return Boolean(navigator.mediaDevices?.getUserMedia);
@@ -97,4 +97,39 @@ export function getVoicePrivacyLabel(state) {
     default:
       return 'Mic Off';
   }
+}
+
+// SpeechRecognition detection
+const SpeechRecognitionClass = (typeof window !== 'undefined')
+  ? (window.SpeechRecognition || window.webkitSpeechRecognition || null)
+  : null;
+
+export function supportsSpeechRecognition() {
+  return Boolean(SpeechRecognitionClass);
+}
+
+// Start speech recognition. Returns a stop function.
+// onTranscript(text, isFinal) called on each result
+// onEnd() called when recognition ends
+// onError(errorEvent) called on error
+export function startSpeechRecognition({ onTranscript, onEnd, onError, lang = 'en-US', continuous = true }) {
+  if (!SpeechRecognitionClass) {
+    onError?.({ error: 'not-supported', message: 'Speech recognition not supported' });
+    return () => {};
+  }
+  const rec = new SpeechRecognitionClass();
+  rec.lang = lang;
+  rec.continuous = continuous;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.onresult = (event) => {
+    const result = event.results[event.results.length - 1];
+    const transcript = result[0].transcript;
+    const isFinal = result.isFinal;
+    onTranscript?.(transcript, isFinal);
+  };
+  rec.onend = () => onEnd?.();
+  rec.onerror = (e) => onError?.(e);
+  rec.start();
+  return () => { try { rec.stop(); } catch { /* ignore */ } };
 }

@@ -18,6 +18,7 @@ import { sendNativeNotification } from './services/notificationService';
 import { listAgentProfiles } from './agents/agentRegistry';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { getStorage } from './lib/appStorage';
+import { UpdaterNotification } from './components/UpdaterNotification';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
@@ -86,6 +87,7 @@ function AppShell() {
   const { coachMode, coachAlwaysOnTop, coachMiniMode, coachSnapCorner, coachIntervention, coachPauseUntilMs, setCoachMode, setCoachMiniMode, setCoachAlwaysOnTop, handleToggleCoachMode, handleToggleCoachTop, handleCoachInterventionAction, minimizeToCoach } = useCoach();
   const voice = useVoiceInput();
   const toast = useToast();
+  const [updaterVersion, setUpdaterVersion] = useState(null);
 
   const {
     activeTab, isSidebarOpen, conversations, activeChatId,
@@ -151,6 +153,7 @@ function AppShell() {
 
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-indigo-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-zinc-950 text-zinc-100'} ${themeClassFromSettings(settings)}`}>
+      <UpdaterNotification version={updaterVersion} onUpdate={() => {}} onDismiss={() => setUpdaterVersion(null)} />
       <Suspense fallback={null}>
         <CoachHardInterruptOverlay intervention={coachIntervention} pauseUntilMs={coachPauseUntilMs} onAction={handleCoachInterventionAction} />
       </Suspense>
@@ -217,7 +220,7 @@ function AppShell() {
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState label="Chat" />}>
-                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))} />
+                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} />
                   </Suspense>
                 )}
                 {activeTab === 'miya' && (

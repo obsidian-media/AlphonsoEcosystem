@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 1100 tests across 81 files — all should pass
+npm run test             # Run all 1439+ tests across 101 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + test + build in one command
@@ -50,7 +50,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **14 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~1,585 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 1324 tests are in `src/test/`** — 89 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 1439+ tests are in `src/test/`** — 100 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
@@ -94,37 +94,54 @@ Before writing any new service, component, or feature, check this list:
 | Echo memory preservation runtime | `src/services/echoMemoryService.js` — Ollama synthesis, retention classification, confidence normalization |
 | Marcus distribution execution runtime | `src/services/marcusExecutionService.js` — governance-gated GitHub/Slack/publish dispatch |
 | Connector credential UI (all 9 API connectors) | `src/components/ConnectorSetupPanel.jsx` `CredentialSection` — saves via `saveConnectorCredential()` |
+| Telegram companion bot commands | `src/services/telegramCompanionService.js` — `/help`, `/report`, `/files`, `/status`, `/memory` |
+| Voice STT pipeline | `src/services/voiceService.js` + `src/hooks/useVoiceInput.js` — SpeechRecognition with fallback |
+| Workflow visual builder UI | `src/components/WorkflowBuilderView.jsx` — two-panel editor, 9 node types, reorder, save |
+| Nova insight card | `src/components/ChatView.jsx` — `novaInsight` state, score ring, fires after Jose pipeline |
+| Sentinel quick-scan in sidebar | `src/components/RightPanel.jsx` — `sentinelScan` state, `runQuickScan()`, Security section |
+| Echo memory timeline | `src/components/SettingsView.jsx` — `EchoTimeline` component, retention tier grouping |
+| Composio toolkit toggles | `src/components/SettingsView.jsx` — `enabledToolkits` Set, `toggleComposioToolkit()` |
+| Hector RSS failover | `src/services/hectorResearchService.js` — `RSS_FEED_CATALOG`, `fetchRssSources`, `parseRssItems` |
 
 ---
 
 ## Before Making Changes
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
-2. Check `src/services/` for an existing service before writing a new one — there are 130 services
-3. Check `src/test/` — there are 81 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 1100 tests must continue to pass
+2. Check `src/services/` for an existing service before writing a new one — there are 130+ services
+3. Check `src/test/` — there are 101 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 1439+ tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
 ---
 
-## Real Gaps (as of 2026-06-21 — v2.0.2)
+## Real Gaps (as of 2026-06-21 — v2.0.5 + Direction 3 & 4 complete)
 
 These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current state before working on any of them:
 
-- ~~WhatsApp Cloud inbound webhook~~ — **CLOSED** (Railway gateway + `browserPollWhatsAppGateway`, no `ALPHONSO_FORWARD_URL` needed)
-- ~~Auto-updater~~ — **CLOSED** (keypair in GitHub Secrets, v2.0.2 released, future updates detected automatically)
-- ~~Maria runtime~~ — **CLOSED Phase 3** (`src/services/mariaAuditService.js` — Ollama-powered governance audit)
-- ~~Echo runtime~~ — **CLOSED Phase 3** (`src/services/echoMemoryService.js` — Ollama memory synthesis)
-- ~~Marcus runtime~~ — **CLOSED Phase 3** (`src/services/marcusExecutionService.js` — governance-gated distribution)
-- ~~Connector credential UI gap~~ — **CLOSED Phase 3** (all 9 API-key connectors now have input panels in ConnectorSetupPanel)
-- ~~claudeService/chatgptService credential inconsistency~~ — **CLOSED Phase 3** (both now use `getConnectorCredential()`)
-- localStorage → SQLite migration — completed for 5 keys. Remaining: durable runtime data migration
-- Coverage at ~28% — next staged target 30%
-- TypeScript migration — partial; 9 .ts services exist in src/services/, components still .jsx
-- Component test coverage at ~6%
+- ~~WhatsApp Cloud inbound webhook~~ — **CLOSED** (Railway gateway + `browserPollWhatsAppGateway`)
+- ~~Auto-updater~~ — **CLOSED** (keypair in GitHub Secrets, v2.0.2 released)
+- ~~Maria runtime~~ — **CLOSED Phase 3** (`src/services/mariaAuditService.js`)
+- ~~Echo runtime~~ — **CLOSED Phase 3** (`src/services/echoMemoryService.js`)
+- ~~Marcus runtime~~ — **CLOSED Phase 3** (`src/services/marcusExecutionService.js`)
+- ~~Connector credential UI gap~~ — **CLOSED Phase 3** (all 9 connectors in ConnectorSetupPanel)
+- ~~claudeService/chatgptService credential inconsistency~~ — **CLOSED Phase 3**
 - ~~Sentinel runtime~~ — **CLOSED Phase 1** (`src/services/sentinelSecurityService.js`)
 - ~~Nova runtime~~ — **CLOSED Phase 1** (`src/services/novaAnalysisService.js`)
+- ~~Telegram companion commands~~ — **CLOSED Direction 1** (`/help`, `/report`, `/files` in telegramCompanionService)
+- ~~Voice STT~~ — **CLOSED Direction 1** (SpeechRecognition wired into useVoiceInput + voiceService)
+- ~~Nova insight card~~ — **CLOSED Direction 4** (ChatView shows card when score > 65 after Jose pipeline)
+- ~~Maria risk ring~~ — **CLOSED Direction 4** (ScoreRing SVG + mariaScore prop in ApprovalModal)
+- ~~Sentinel dashboard~~ — **CLOSED Direction 4** (RightPanel Security section with re-scan)
+- ~~Echo memory timeline~~ — **CLOSED Direction 4** (EchoTimeline in SettingsView by retention tier)
+- ~~Composio toolkit toggles~~ — **CLOSED Direction 4** (toggleable cards in SettingsView)
+- ~~Hector RSS failover~~ — **CLOSED Direction 4** (12 curated feeds, parseRssItems, fetchRssSources)
+- ~~WorkflowBuilderView~~ — **CLOSED Direction 4** (new component + AutomationView Builder tab)
+- ~~Component test coverage at ~6%~~ — **CLOSED Direction 3** (100 test files / 1425 tests; ~12% component coverage)
+- localStorage → SQLite migration — completed for 5 keys. Remaining: durable runtime data migration
+- Coverage at ~30% — next staged target 35%
+- TypeScript migration — partial; 9 .ts services exist in src/services/, components still .jsx
 
 ---
 
@@ -142,7 +159,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                89 test files (Vitest, vitest.config.js)
+  test/                100 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
@@ -185,4 +202,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-21 — Phase 1 complete (all stages). 89 test files, 1324 tests, all passing. All 9 agents have production runtimes. Coverage ~30%+ (threshold 20%). v2.0.4 release tag pushed. cargo clippy clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-21 — All 5 Directions complete. 101 test files, 1439+ tests, all passing. All 9 agents have production runtimes + UI surfaces. Coverage ~30%+ (threshold 20%). v2.0.5 live. cargo clippy clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

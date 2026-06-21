@@ -12,7 +12,7 @@ import {
   classifyOllamaError,
   generateOllamaChatStream
 } from '../lib/ollama';
-import { ModelSwitcher } from './ModelSwitcher';
+import { OllamaModelPicker } from './ModelSwitcher';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
 import { PipelineResultCard } from './PipelineResultCard';
@@ -20,12 +20,13 @@ import { listOrchestrationReceipts } from '../services/orchestrationReceiptServi
 import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
 import { startProactiveWatcher } from '../services/proactiveAgentService';
 import { MemorySearch } from './MemorySearch';
+import { runNovaAnalysis, computeOpportunityScores, classifyPriorityTier } from '../services/novaAnalysisService';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
 const VoiceInputButton = lazy(() => import('./VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
 
-function buildProjectSummary(result, commandText, baseSummary) {
+function buildProjectSummary(result, commandText, baseSummary, screenContext = []) {
   const receipts = result?.executionReceipts || [];
   const allArtifacts = receipts.flatMap((r) => r.artifacts || []);
   const brainArtifacts = allArtifacts.filter((a) => a.type === 'brain_generation' || a.type === 'project_scaffold');
@@ -100,6 +101,15 @@ function buildProjectSummary(result, commandText, baseSummary) {
     }
   }
 
+  if (screenContext.length > 0) {
+    const recent = screenContext.slice(-3);
+    lines.push('**Screen context:**');
+    for (const e of recent) {
+      lines.push(`  ${e.type || 'screen'}: ${String(e.text || e.description || '').slice(0, 100)}`);
+    }
+    lines.push('');
+  }
+
   lines.push('**Next steps:**');
   if (autoRunArtifact?.url) {
     lines.push(`  Open ${autoRunArtifact.url} in your browser`);
@@ -126,12 +136,16 @@ export function ChatView({
   onRetryOllama,
   onJoseExecutionState,
   onOpenSettings,
-  onModelChange
+  onModelChange,
+  screenObserverLogs = []
 }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [attachedFile, setAttachedFile] = useState(null);
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [hectorBriefing, setHectorBriefing] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState(null);
@@ -149,6 +163,8 @@ export function ChatView({
   const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
   const [showMemorySearch, setShowMemorySearch] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [novaInsight, setNovaInsight] = useState(null);
+  const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -200,6 +216,10 @@ export function ChatView({
     }, 1000);
     return () => clearInterval(interval);
   }, [streamingStartTime]);
+
+  useEffect(() => {
+    if (ollamaStatus.state === 'connected') setOllamaBannerDismissed(false);
+  }, [ollamaStatus.state]);
 
   const handleFileAttach = (event) => {
     const file = event.target.files?.[0];
@@ -275,9 +295,20 @@ export function ChatView({
 
   const modelReady = settings.selectedModel && !selectedModelMissing;
 
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) setAttachedFiles((prev) => [...prev, ...files]);
+  };
+
   const handleSend = async () => {
     if (!inputValue.trim() || isGenerating) return;
-    const cleanInput = inputValue.trim();
+    setNovaInsight(null);
+    const filesSuffix = attachedFiles.length
+      ? `\n\n[Attached files: ${attachedFiles.map((f) => f.name).join(', ')}]`
+      : '';
+    const cleanInput = inputValue.trim() + filesSuffix;
     const joseCommand = isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput);
 
     if (joseCommand) {
@@ -285,6 +316,7 @@ export function ChatView({
       setMessages((current) => [...current, userMessage]);
       setInputValue('');
       setAttachedFile(null);
+      setAttachedFiles([]);
       setIsGenerating(true);
       onGenerationChange(true);
       onJoseExecutionState?.('thinking', 'Jose is decomposing and distributing the command.');
@@ -342,7 +374,7 @@ export function ChatView({
           ? '\nApprove the pending tasks below to continue.'
           : '';
 
-        const richSummary = buildProjectSummary(result, cleanInput, baseSummary);
+        const richSummary = buildProjectSummary(result, cleanInput, baseSummary, screenObserverLogs);
 
         setMessages((current) => [...current, {
           id: nextMsgId(),
@@ -361,6 +393,10 @@ export function ChatView({
         if (result?.commandId) {
           const receipts = listOrchestrationReceipts({ commandId: result.commandId });
           setExecutionReceipts(receipts);
+          const hectorReceipt = result?.executionReceipts?.find((r) => r.agent === 'hector');
+          if (hectorReceipt?.payload?.sources?.length || hectorReceipt?.details?.sources?.length) {
+            setHectorBriefing({ sources: hectorReceipt?.payload?.sources || hectorReceipt?.details?.sources || [] });
+          }
         }
 
         onJoseExecutionState?.(
@@ -370,6 +406,16 @@ export function ChatView({
             : 'Jose completed routing and merged reports.'
         );
         onTaskComplete();
+
+        // Fire Nova analysis in background — non-blocking
+        try {
+          const novaScores = computeOpportunityScores(cleanInput, {});
+          if (novaScores.valueScore > 60) {
+            runNovaAnalysis(cleanInput, null, {}, { skipOllama: true }).then(novaResult => {
+              if (novaResult?.score > 65) setNovaInsight(novaResult);
+            }).catch(() => {});
+          }
+        } catch { /* non-critical */ }
       } catch (error) {
         setMessages((current) => [...current, {
           id: nextMsgId(),
@@ -407,6 +453,7 @@ export function ChatView({
     setMessages((current) => [...current, userMessage]);
     setInputValue('');
     setAttachedFile(null);
+    setAttachedFiles([]);
     setIsGenerating(true);
     onGenerationChange(true);
 
@@ -500,7 +547,7 @@ export function ChatView({
               <History className="w-3.5 h-3.5 text-zinc-500" />
               <span className="text-xs text-zinc-500 font-medium">CHAT SESSION: {activeChatId}</span>
             </div>
-            <ModelSwitcher
+            <OllamaModelPicker
               initialModel={settings.selectedModel}
               onModelChange={onModelChange}
             />
@@ -581,6 +628,30 @@ export function ChatView({
             onOpenSettings={onOpenSettings}
           />
         </Suspense>
+      )}
+
+      {compactChat && ollamaStatus.state !== 'connected' && !ollamaBannerDismissed && (
+        <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-amber-400/20 bg-amber-500/8 px-3 py-2 text-[11px] text-amber-200/80">
+          <span className="shrink-0">⚠</span>
+          <span className="flex-1">
+            {ollamaStatus.state === 'not_running' || ollamaStatus.state === 'disconnected'
+              ? 'Ollama is offline — start it to enable local AI.'
+              : `Ollama: ${ollamaStatus.state}`}
+          </span>
+          <button
+            onClick={onRetryOllama}
+            className="rounded px-2 py-0.5 text-[10px] font-bold text-amber-300 hover:bg-amber-400/10 transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            onClick={() => setOllamaBannerDismissed(true)}
+            className="rounded px-1 text-amber-400/60 hover:text-amber-300 transition-colors"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       <div className={`flex-1 overflow-y-auto scroll-smooth ${compactChat ? 'p-3 space-y-3' : 'p-5 space-y-6'}`}>
@@ -707,6 +778,30 @@ export function ChatView({
           </div>
         )}
 
+        {novaInsight && !isGenerating && (
+          <div className="mx-auto w-full max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Nova Insight</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    novaInsight.score >= 80 ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300' :
+                    novaInsight.score >= 60 ? 'bg-amber-500/10 border-amber-400/20 text-amber-300' :
+                    'bg-zinc-500/10 border-zinc-400/20 text-zinc-400'
+                  }`}>Score {novaInsight.score}/100</span>
+                </div>
+                <button onClick={() => setNovaInsight(null)} className="text-zinc-600 hover:text-zinc-400 rounded">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {novaInsight.recommendation && (
+                <p className="text-xs text-zinc-300 leading-relaxed">{novaInsight.recommendation}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {liveProgress && isGenerating && (
           <div className="flex gap-4 max-w-3xl mx-auto w-full">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
@@ -793,7 +888,24 @@ export function ChatView({
       </div>
 
       <div className={`${compactChat ? 'p-3' : 'p-5'} shrink-0 max-w-4xl mx-auto w-full`}>
-        <div className="relative bg-zinc-900/80 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all">
+        {hectorBriefing && (
+          <div className="mx-4 mb-2 rounded-xl border border-sky-400/20 bg-sky-500/5 p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Hector Research</span>
+              <button onClick={() => setHectorBriefing(null)} className="text-zinc-500 hover:text-zinc-300 text-xs">×</button>
+            </div>
+            {hectorBriefing.sources?.slice(0, 3).map((src, i) => (
+              <div key={i} className="text-[11px] text-zinc-400 truncate">{src.title || src.url}</div>
+            ))}
+          </div>
+        )}
+        <div
+          className={`relative bg-zinc-900/80 border rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all ${isDragging ? 'border-amber-400/30 border-dashed' : 'border-white/10'}`}
+          onDragEnter={() => setIsDragging(true)}
+          onDragLeave={() => setIsDragging(false)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+        >
           <input
             ref={fileInputRef}
             type="file"
@@ -832,6 +944,16 @@ export function ChatView({
             }}
             className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
           />
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-4 pb-1">
+              {attachedFiles.map((f, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-800 border border-white/10 text-[11px] text-zinc-300">
+                  {f.name}
+                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-zinc-500 hover:text-zinc-200 ml-0.5" aria-label={`Remove ${f.name}`}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="mt-1 text-2xs text-zinc-500">
             {ollamaStatus.state === 'connected' && !selectedModelMissing
               ? `Message ${settings.selectedModel || 'local model'}`

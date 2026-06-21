@@ -94,7 +94,16 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
-import { createResearchDraft, isBraveSearchConfigured, listHectorReports, runHectorLiveResearch } from '../services/hectorResearchService';
+import {
+  createResearchDraft,
+  fetchRssSources,
+  isBraveSearchConfigured,
+  listHectorReports,
+  parseRssItems,
+  RSS_FEED_CATALOG,
+  runHectorLiveResearch,
+  scoreRssFeed
+} from '../services/hectorResearchService';
 
 describe('hector research provider failover', () => {
   beforeEach(() => {
@@ -145,5 +154,78 @@ describe('hector research provider failover', () => {
     braveEnabled = false;
     const result = await isBraveSearchConfigured();
     expect(result).toBe(false);
+  });
+});
+
+const rssXml = `<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <item>
+    <title>Test Article</title>
+    <link>https://example.com/article</link>
+    <description>A test snippet.</description>
+  </item>
+</channel></rss>`;
+
+describe('RSS failover', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('RSS_FEED_CATALOG is an array with at least 5 items', () => {
+    expect(Array.isArray(RSS_FEED_CATALOG)).toBe(true);
+    expect(RSS_FEED_CATALOG.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('RSS_FEED_CATALOG items have url, name, and topics fields', () => {
+    for (const feed of RSS_FEED_CATALOG) {
+      expect(typeof feed.url).toBe('string');
+      expect(feed.url.length).toBeGreaterThan(0);
+      expect(typeof feed.name).toBe('string');
+      expect(feed.name.length).toBeGreaterThan(0);
+      expect(Array.isArray(feed.topics)).toBe(true);
+      expect(feed.topics.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('scoreRssFeed returns > 0 when topics overlap with query words', () => {
+    const score = scoreRssFeed({ topics: ['tech', 'ai'] }, 'ai tech research');
+    expect(score).toBeGreaterThan(0);
+  });
+
+  it('scoreRssFeed returns 0 when no topics overlap with query', () => {
+    const score = scoreRssFeed({ topics: ['cooking'] }, 'artificial intelligence');
+    expect(score).toBe(0);
+  });
+
+  it('parseRssItems parses a minimal RSS XML string into items', () => {
+    const items = parseRssItems(rssXml, 'https://example.com/feed', 10);
+    expect(Array.isArray(items)).toBe(true);
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0].title).toBe('Test Article');
+    expect(items[0].url).toBe('https://example.com/article');
+    expect(items[0].source).toBe('rss');
+  });
+
+  it('parseRssItems returns empty array for empty or invalid XML', () => {
+    expect(parseRssItems('', 'https://example.com/feed', 10)).toEqual([]);
+    expect(Array.isArray(parseRssItems('<not-rss>', 'https://example.com/feed', 10))).toBe(true);
+  });
+
+  it('fetchRssSources calls fetch and returns results', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => rssXml
+    });
+    const results = await fetchRssSources('artificial intelligence tech', 8);
+    expect(global.fetch).toHaveBeenCalled();
+    expect(Array.isArray(results)).toBe(true);
+  });
+
+  it('fetchRssSources handles fetch failure gracefully and returns empty array', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    const results = await fetchRssSources('artificial intelligence tech', 8);
+    expect(Array.isArray(results)).toBe(true);
+    expect(results).toEqual([]);
   });
 });
