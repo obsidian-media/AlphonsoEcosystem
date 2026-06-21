@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-21 — All 5 Directions sprint complete  
-**Verified by:** Claude Code session (101 test files, 1439+ tests passing, cargo clippy clean)  
-**Version:** 2.0.5 (All 9 agents have production runtimes; v2.0.5 NSIS installer live on GitHub Releases)  
+**Last verified:** 2026-06-21 — Sprint Next-10 complete  
+**Verified by:** Claude Code session (111 test files, 1621+ tests passing, cargo clippy clean)  
+**Version:** 2.0.5 (All 9 agents have production runtimes; Sprint Next-10 complete; v2.0.5 NSIS installer live on GitHub Releases)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -134,12 +134,12 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 101 Files in `src/test/` (not zero)
+## 4. Test Suite — 111 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-21 Direction 3 sprint, all passing):**
-- 101 test files, 1439+ tests passing
+- 111 test files, 1621+ tests passing
 - 14 Rust unit tests passing
 ```
 accBridgeService.test.js
@@ -244,6 +244,16 @@ workflowOperationsRegistryService.test.js
 workspaceRootService.test.js
 agentAuditService.test.js      ← added Direction 5 (5 tests)
 workspaceExportService.test.js ← added Direction 5 (9 tests)
+agentBrainService.test.js      ← added Sprint Next-10 T3 (27 tests)
+workspaceFileService.test.js   ← added Sprint Next-10 T3 (17 tests)
+proactiveAgentService.test.js  ← added Sprint Next-10 T3 (14 tests)
+streamingService.test.js       ← added Sprint Next-10 T3 (19 tests)
+browserAutomationService.test.js ← added Sprint Next-10 T3 (16 tests)
+backupService.test.js          ← added Sprint Next-10 T3 (16 tests)
+composioService.test.js        ← added Sprint Next-10 T3 (26 tests)
+agentActivityService.test.js   ← added Sprint Next-10 T3 (9 tests)
+resourceCostService.test.js    ← added Sprint Next-10 T3 (16 tests)
+marcusPublishService.test.js   ← added Sprint Next-10 T3 (22 tests)
 ```
 
 **Rust tests (verified 2026-06-15, Session 13):**
@@ -251,7 +261,7 @@ workspaceExportService.test.js ← added Direction 5 (9 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- Coverage is at ~30%+ (threshold 20%) — next staged target is 35%
+- Coverage is at ~35%+ (threshold 20%) — next staged target is 40%
 - Component test coverage improved to ~12% with 11 new component test files (Direction 3)
 - Run `npm run test:coverage` to see current state
 
@@ -380,7 +390,7 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **`cargo test` + `cargo clippy` in CI** — `rust-quality` job passing; `clippy -- -D warnings` now clean.
 - [x] **Rust unit tests** — 14 tests added, all passing.
 - [x] **Playwright scaffold** — `playwright.config.js` + `e2e/smoke.spec.js` created (2026-06-01). `@playwright/test` added to `package.json`. To run: `npm install --save-dev @playwright/test && npx playwright install chromium && npm run test:e2e`. Requires: dev server on :5173 and Ollama running.
-- [x] **Test suite confirmed passing** — **101 test files, 1439+ tests, all passing** (verified 2026-06-21 Direction 3 sprint). 14 Rust unit tests also passing. Direction 3 additions: `ApprovalModal.test.jsx` (10), `RightPanel.test.jsx` (8), `ChatView.test.jsx` (8), `ConnectorSetupPanel.test.jsx` (7), `WorkflowBuilderView.test.jsx` (7), `useVoiceInput.test.js` (7), `AgentActivityLog.test.jsx` (6), `VoiceInputButton.test.jsx` (6), `voiceService.test.js` (10), `MicrophoneStatus.test.jsx` (5), plus 8 RSS tests added to `hectorResearchService.test.js`. Earlier: `sentinelSecurityService.test.js` (33), `novaAnalysisService.test.js` (36), `mariaAuditService.test.js` (33), `echoMemoryService.test.js` (35), `marcusExecutionService.test.js` (23), `githubConnector.test.js` (20), `slackConnector.test.js` (16).
+- [x] **Test suite confirmed passing** — **111 test files, 1621+ tests, all passing** (verified 2026-06-21 Sprint Next-10). 14 Rust unit tests also passing. Sprint Next-10 additions (10 new files): `agentBrainService.test.js` (27), `workspaceFileService.test.js` (17), `proactiveAgentService.test.js` (14), `streamingService.test.js` (19), `browserAutomationService.test.js` (16), `backupService.test.js` (16), `composioService.test.js` (26), `agentActivityService.test.js` (9), `resourceCostService.test.js` (16), `marcusPublishService.test.js` (22).
 
 ### CONNECTORS & FEATURES
 - [x] **Claude + ChatGPT structured error handling** — both connectors now return `{ success, code, error }` with codes `MISSING_KEY`, `TIMEOUT`, `RATE_LIMITED`. 30s timeout, pre-flight key check (2026-05-31, Agent F)
@@ -438,11 +448,17 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **workspaceExportService** — **CLOSED Direction 5** `src/services/workspaceExportService.js` — `exportWorkspace()` (all `alphonso_*` keys as JSON), `importWorkspace(jsonString)` (validates prefix, returns `{ imported, errors }`).
 - [x] **WorkspaceExportImportView** — **CLOSED Direction 5** `src/components/WorkspaceExportImportView.jsx` — export via Blob download, import via FileReader, emerald/red status feedback; rendered at bottom of SettingsView.
 - [x] **RightPanel Audit tab** — **CLOSED Direction 5** System/Audit tab switcher in RightPanel header; Audit tab shows last 10 approval events with emerald/red outcome badges and relative timestamps.
-- [x] **AgentPerformanceView** — **CLOSED Direction 5** `src/components/AgentPerformanceView.jsx` — per-agent success/error counts + avg latency computed from orchestration receipt data; props: `receipts`.
-- [ ] **Gateway Dockerfile** — `gateway/` service not containerized
-- [ ] **Branch protection on `main`** — CI not yet required before merge
-- [ ] **TypeScript migration** — partial; 9 .ts services exist in src/services/, components still .jsx
-- [ ] **localStorage → SQLite remaining keys** — durable runtime data migration incomplete
+- [x] **AgentPerformanceView** — **CLOSED Direction 5** `src/components/AgentPerformanceView.tsx` — per-agent success/error counts + avg latency computed from orchestration receipt data; props: `receipts`. (Migrated to .tsx in Sprint Next-10.)
+- [x] **Onboarding connector step** — **CLOSED Sprint Next-10 T1** `OnboardingWizard.jsx` now has 4 steps; step 3 = "Connect a channel" with Telegram/WhatsApp/Skip cards; saves preference to `alphonso_onboarding_connector_v1`.
+- [x] **CrashLogView** — **CLOSED Sprint Next-10 T5** `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as "Logs" tab in SettingsView.
+- [x] **NovaHistoryChart** — **CLOSED Sprint Next-10 T6** `src/components/NovaHistoryChart.jsx` — SVG sparkline of last 10 opportunity scores (indigo polyline + dots), most-recent recommendation; wired in SettingsView.
+- [x] **Gateway Dockerfile** — **CLOSED Sprint Next-10 T7** `gateway/whatsapp-cloud/Dockerfile` multi-stage Node 20 Alpine build + `.dockerignore`.
+- [x] **TypeScript migration (5 components)** — **CLOSED Sprint Next-10 T8** AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar migrated to `.tsx` with full prop interfaces. SVG type declaration added to `src/types/declarations.d.ts`. Old `.jsx` files removed.
+- [x] **SentinelFindingModal** — **CLOSED Sprint Next-10 T9** `src/components/SentinelFindingModal.jsx` — fixed overlay modal, severity badge, pattern + recommendation rows. RightPanel findings now clickable to open modal.
+- [x] **durableStore / SQLite dual-write** — **CLOSED Sprint Next-10 T10** `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; applied to crashLogService, agentAuditService, novaAnalysisService.
+- [x] **Test coverage push** — **CLOSED Sprint Next-10 T3** 10 new service test files → 111 total / 1621+ tests: agentBrainService, workspaceFileService, proactiveAgentService, streamingService, browserAutomationService, backupService, composioService, agentActivityService, resourceCostService, marcusPublishService.
+- [ ] **Branch protection on `main`** — CI not yet required before merge (GitHub settings, manual step)
+- [ ] **TypeScript migration (continued)** — 5 components migrated; remaining: ChatView, RightPanel, SettingsView, App, Sidebar
 
 ### PERFORMANCE
 - [x] **Lazy loading** — 20+ heavy views lazy-loaded. Main chunk: **288KB** (budget 550KB). Code splitting applied to ChatView, WorkflowPanel, coach components.
@@ -537,6 +553,13 @@ Before writing any new service or feature, verify it does not already exist:
 - **OllamaModelPicker** → `src/components/ModelSwitcher.jsx` also exports `OllamaModelPicker` (legacy Ollama model selector). The default export `ModelSwitcher` is the 3-pill switcher (Ollama/Claude/ChatGPT). ChatView imports both.
 - **sentinelSecurityService scheduled scans** → `src/services/sentinelSecurityService.js` — `startScheduledScans(intervalMs, onResult)` returns a cleanup function. Do NOT create another scheduled scan loop.
 - **novaAnalysisService opportunity history** → `src/services/novaAnalysisService.js` — `saveOpportunityScore(score, recommendation)` + `getOpportunityHistory()` persist last 30 scores to `alphonso_nova_history_v1`. Do NOT recreate.
+- **OnboardingWizard connector step** → `src/components/OnboardingWizard.jsx` — 4-step wizard; step 3 = "Connect a channel" (Telegram/WhatsApp/Skip), saves to `alphonso_onboarding_connector_v1`. Do NOT add another onboarding flow.
+- **CrashLogView** → `src/components/CrashLogView.jsx` — entry list with timestamp/message/context keys, "Clear" button; rendered in SettingsView "Logs" tab. Do NOT duplicate.
+- **NovaHistoryChart** → `src/components/NovaHistoryChart.jsx` — SVG sparkline (last 10 scores, indigo polyline), latest score + recommendation, wired in SettingsView. Do NOT recreate.
+- **SentinelFindingModal** → `src/components/SentinelFindingModal.jsx` — fixed overlay, severity badge (critical/high/medium/low), pattern + recommendation; triggered from RightPanel. Do NOT duplicate.
+- **durableStore** → `src/lib/durableStore.js` — `durableGet/Set/Remove` sync to localStorage + async fire-and-forget to Tauri `kv_set`. Use this for any new service that persists data. Do NOT call `localStorage` directly in new services.
+- **Gateway Dockerfile** → `gateway/whatsapp-cloud/Dockerfile` — multi-stage Node 20 Alpine. `.dockerignore` alongside. Do NOT create another container config.
+- **TypeScript components (.tsx)** → AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar are now `.tsx` with typed props. Do NOT recreate as `.jsx`. Remaining large components (ChatView, RightPanel, SettingsView, App, Sidebar) still `.jsx`.
 
 ---
 
