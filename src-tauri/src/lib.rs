@@ -26,8 +26,6 @@ mod whatsapp_webhook;
 mod workspace;
 mod youtube;
 
-pub(crate) use utils::*;
-
 pub(crate) use audit_log::*;
 pub(crate) use connector_commands::*;
 pub(crate) use kv_store::{kv_get, kv_set, load_settings, save_settings};

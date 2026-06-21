@@ -1,3 +1,5 @@
+#![expect(dead_code)]
+
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub(crate) fn now_ms() -> u64 {
