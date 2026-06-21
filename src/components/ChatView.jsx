@@ -149,6 +149,7 @@ export function ChatView({
   const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
   const [showMemorySearch, setShowMemorySearch] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -200,6 +201,10 @@ export function ChatView({
     }, 1000);
     return () => clearInterval(interval);
   }, [streamingStartTime]);
+
+  useEffect(() => {
+    if (ollamaStatus.state === 'connected') setOllamaBannerDismissed(false);
+  }, [ollamaStatus.state]);
 
   const handleFileAttach = (event) => {
     const file = event.target.files?.[0];
@@ -581,6 +586,30 @@ export function ChatView({
             onOpenSettings={onOpenSettings}
           />
         </Suspense>
+      )}
+
+      {compactChat && ollamaStatus.state !== 'connected' && !ollamaBannerDismissed && (
+        <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-amber-400/20 bg-amber-500/8 px-3 py-2 text-[11px] text-amber-200/80">
+          <span className="shrink-0">⚠</span>
+          <span className="flex-1">
+            {ollamaStatus.state === 'not_running' || ollamaStatus.state === 'disconnected'
+              ? 'Ollama is offline — start it to enable local AI.'
+              : `Ollama: ${ollamaStatus.state}`}
+          </span>
+          <button
+            onClick={onRetryOllama}
+            className="rounded px-2 py-0.5 text-[10px] font-bold text-amber-300 hover:bg-amber-400/10 transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            onClick={() => setOllamaBannerDismissed(true)}
+            className="rounded px-1 text-amber-400/60 hover:text-amber-300 transition-colors"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       <div className={`flex-1 overflow-y-auto scroll-smooth ${compactChat ? 'p-3 space-y-3' : 'p-5 space-y-6'}`}>

@@ -106,7 +106,10 @@ Commands:
 /memory — last 5 memory items
 /stop — pause notifications
 /resume — resume notifications
-/resetowner — re-register this chat as owner`;
+/resetowner — re-register this chat as owner
+/help — show all commands
+/report — full summary: status + queue + recent activity
+/files — list recent workspace files`;
 }
 
 export async function handleStatusCommand(token, chatId) {
@@ -239,6 +242,118 @@ ${lines.join('\n')}`
   return sendTelegramMessageInternal({ token, chatId, text: memoryText });
 }
 
+export async function handleHelpCommand(token, chatId) {
+  return sendTelegramMessageInternal({ token, chatId, text: formatCommandList() });
+}
+
+export async function handleReportCommand(token, chatId) {
+  let ollamaOnline = false;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch('http://localhost:11434/api/tags', {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    ollamaOnline = response.ok;
+  } catch {
+    ollamaOnline = false;
+  }
+
+  const approvalQueue = listApprovalQueue();
+  const pendingApprovals = approvalQueue.length;
+
+  const activity = listAgentActivity();
+  const recentActivity = activity.filter(
+    a => (Date.now() - a.ts) < 60 * 60 * 1000
+  ).length;
+
+  const commands = listJoseCommands();
+  const todayCommands = commands.filter(
+    c => (Date.now() - c.createdAtMs) < 24 * 60 * 60 * 1000
+  ).length;
+
+  const statusSection = `Local AI: ${ollamaOnline ? 'Online' : 'Offline'}
+Pending approvals: ${pendingApprovals}
+Recent activity: ${recentActivity} events in last hour
+Jose commands today: ${todayCommands}`;
+
+  let queueSection;
+  if (approvalQueue.length === 0) {
+    queueSection = 'No pending approvals.';
+  } else {
+    const lines = approvalQueue.slice(0, 3).map(p => {
+      const shortId = formatShortId(p.id);
+      const title = p.title || 'Untitled';
+      const risk = p.riskLevel || 'unknown';
+      return `[${shortId}] ${title} | Risk: ${risk}`;
+    });
+    queueSection = lines.join('\n');
+    if (approvalQueue.length > 3) {
+      queueSection += `\n…and ${approvalQueue.length - 3} more. /queue for full list.`;
+    }
+  }
+
+  const recentEntries = activity.slice(-5).reverse();
+  let activitySection;
+  if (recentEntries.length === 0) {
+    activitySection = 'No recent activity.';
+  } else {
+    activitySection = recentEntries.map(a => {
+      const agent = a.agent || 'unknown';
+      const action = a.action || 'unknown';
+      const detail = a.detail ? ` — ${a.detail}` : '';
+      return `[${agent}] ${action}${detail}`;
+    }).join('\n');
+  }
+
+  const reportText = `📊 Alphonso Report
+
+${statusSection}
+
+📥 Queue:
+${queueSection}
+
+📡 Activity:
+${activitySection}`;
+
+  return sendTelegramMessageInternal({ token, chatId, text: reportText.slice(0, 3800) });
+}
+
+export async function handleFilesCommand(token, chatId) {
+  if (!isTauriAvailable()) {
+    return sendTelegramMessageInternal({
+      token,
+      chatId,
+      text: 'Workspace files only available on desktop.'
+    });
+  }
+
+  const entries = await telegramInvoke('list_workspace_directory', { path: '', maxDepth: 1 });
+
+  if (!entries || !Array.isArray(entries) || entries.length === 0) {
+    return sendTelegramMessageInternal({
+      token,
+      chatId,
+      text: '📂 No workspace files found.'
+    });
+  }
+
+  const lines = entries.slice(0, 15).map(entry => {
+    if (entry.isDir) {
+      return `📁 ${entry.path}/`;
+    }
+    const kb = entry.sizeBytes != null ? Math.round(entry.sizeBytes / 1024) : 0;
+    return `📄 ${entry.path} (${kb} KB)`;
+  });
+
+  const filesText = `📂 Workspace Files (${Math.min(entries.length, 15)} of ${entries.length})
+
+${lines.join('\n')}`;
+
+  return sendTelegramMessageInternal({ token, chatId, text: filesText });
+}
+
 export async function processInboundCommands(token, updates) {
   if (!updates || !updates.ok) return;
 
@@ -331,6 +446,18 @@ export async function processInboundCommands(token, updates) {
 
       if (cmd === 'memory') {
         return handleMemoryCommand(token, chatId);
+      }
+
+      if (cmd === 'help') {
+        return handleHelpCommand(token, chatId);
+      }
+
+      if (cmd === 'report') {
+        return handleReportCommand(token, chatId);
+      }
+
+      if (cmd === 'files') {
+        return handleFilesCommand(token, chatId);
       }
 
       if (cmd === 'stop') {
