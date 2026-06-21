@@ -40,11 +40,7 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "targets": [
-      "nsis",
-      "dmg",
-      "app",
-      "deb",
-      "AppImage"
+      "nsis"
     ],
     "icon": [
       "icons/32x32.png",
