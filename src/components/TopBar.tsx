@@ -2,7 +2,28 @@ import React from 'react';
 import { ArrowUpCircle, WifiOff } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 
-const PAGE_TITLES = {
+interface Settings {
+  selectedModel?: string;
+  zeroCostMode?: boolean;
+}
+
+interface OllamaStatus {
+  state: string;
+  label?: string;
+}
+
+interface TopBarProps {
+  settings: Settings;
+  ollamaStatus: OllamaStatus;
+  operatorMode?: boolean;
+  activeTab: string;
+  updateAvailable?: boolean;
+  updateVersion?: string;
+  isOnline?: boolean;
+  onOpenSettings: () => void;
+}
+
+const PAGE_TITLES: Record<string, string> = {
   chat: 'Chat',
   mission: 'Dashboard',
   orchestrator: 'Orchestrator',
@@ -21,7 +42,16 @@ const PAGE_TITLES = {
   workflows: 'Workflows',
 };
 
-export function TopBar({ settings, ollamaStatus, operatorMode, activeTab, updateAvailable, updateVersion, isOnline = true, onOpenSettings }) {
+export function TopBar({
+  settings,
+  ollamaStatus,
+  operatorMode,
+  activeTab,
+  updateAvailable,
+  updateVersion,
+  isOnline = true,
+  onOpenSettings,
+}: TopBarProps) {
   return (
     <header className="h-12 flex items-center justify-between px-5 border-b border-white/[0.06] bg-surface-0/80 backdrop-blur-sm z-20 sticky top-0">
       <div className="flex items-center gap-3">

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle, Download, RefreshCw, Sparkles, Zap } from 'lucide-react';
+import { ArrowRight, CheckCircle, Download, MessageCircle, Phone, RefreshCw, Sparkles, Zap } from 'lucide-react';
 import { checkOllama, fetchOllamaModels, normalizeEndpoint, pullOllamaModel } from '../lib/ollama';
 import { setStorage } from '../lib/appStorage';
 import { buildOllamaPreflightEvent, recordEvent as recordOllamaPreflightEvent } from '../services/eventsService';
@@ -10,7 +10,7 @@ const PREFERRED_PRESELECT = 'llama3.2:3b';
 // ─── Step indicator ──────────────────────────────────────────────────────────
 
 function StepIndicator({ currentStep }) {
-  const steps = ['Check Ollama', 'Pick a model', "You're ready"];
+  const steps = ['Check Ollama', 'Pick a model', 'Connect a channel', "You're ready"];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((label, i) => (
@@ -331,7 +331,93 @@ function PickModelStep({ onNext }) {
   );
 }
 
-// ─── Step 3: You're ready ─────────────────────────────────────────────────────
+// ─── Step 3: Connect a channel ───────────────────────────────────────────────
+
+const CHANNEL_OPTIONS = [
+  {
+    id: 'telegram',
+    name: 'Telegram',
+    description: 'Send and receive messages via Telegram Bot API.',
+    Icon: MessageCircle,
+    iconColor: 'text-sky-400',
+    iconBg: 'bg-sky-500/10',
+    iconBorder: 'border-sky-500/20',
+  },
+  {
+    id: 'whatsapp',
+    name: 'WhatsApp',
+    description: 'Connect WhatsApp Cloud for messaging.',
+    Icon: Phone,
+    iconColor: 'text-emerald-400',
+    iconBg: 'bg-emerald-500/10',
+    iconBorder: 'border-emerald-500/20',
+  },
+  {
+    id: 'none',
+    name: 'Skip for now',
+    description: 'You can configure channels later in Settings.',
+    Icon: ArrowRight,
+    iconColor: 'text-zinc-400',
+    iconBg: 'bg-zinc-800',
+    iconBorder: 'border-white/[0.06]',
+  },
+];
+
+function ConnectChannelStep({ onNext }) {
+  const [selected, setSelected] = useState(null);
+
+  const handleContinue = () => {
+    const value = selected ?? 'none';
+    localStorage.setItem('alphonso_onboarding_connector_v1', value);
+    onNext();
+  };
+
+  return (
+    <div className="flex flex-col">
+      <h2 className="text-lg font-bold text-white mb-1">Connect a channel</h2>
+      <p className="text-zinc-400 text-sm mb-6">
+        Choose a messaging channel to connect. No API keys needed right now — just pick your preference.
+      </p>
+
+      <div className="space-y-2 mb-6">
+        {CHANNEL_OPTIONS.map(({ id, name, description, Icon, iconColor, iconBg, iconBorder }) => {
+          const isSelected = selected === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setSelected(id)}
+              className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 text-left transition-all ${
+                isSelected
+                  ? 'border-emerald-500/50 bg-emerald-500/10 ring-1 ring-emerald-500/20'
+                  : 'border-white/[0.06] bg-zinc-900/60 hover:border-white/10 hover:bg-zinc-800/60'
+              }`}
+            >
+              <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconBg} ${iconBorder}`}>
+                <Icon className={`w-4 h-4 ${iconColor}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-zinc-100">{name}</div>
+                <div className="text-[11px] text-zinc-500 mt-0.5">{description}</div>
+              </div>
+              {isSelected && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleContinue}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors"
+        >
+          Continue <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 4: You're ready ─────────────────────────────────────────────────────
 
 function ReadyStep({ selectedModel, onFinish }) {
   return (
@@ -374,6 +460,8 @@ export function OnboardingWizard({ onComplete }) {
     setStep(2);
   };
 
+  const handleConnectorNext = () => setStep(3);
+
   const handleFinish = () => {
     setStorage('alphonso_onboarding_complete_v1', true);
     onComplete(selectedModel);
@@ -399,7 +487,8 @@ export function OnboardingWizard({ onComplete }) {
 
           {step === 0 && <CheckOllamaStep onNext={handleOllamaNext} />}
           {step === 1 && <PickModelStep onNext={handleModelNext} />}
-          {step === 2 && <ReadyStep selectedModel={selectedModel} onFinish={handleFinish} />}
+          {step === 2 && <ConnectChannelStep onNext={handleConnectorNext} />}
+          {step === 3 && <ReadyStep selectedModel={selectedModel} onFinish={handleFinish} />}
         </div>
         <div className="mt-4 text-center text-[10px] text-zinc-600">
           Local-first · Zero cloud · All data stays on your machine

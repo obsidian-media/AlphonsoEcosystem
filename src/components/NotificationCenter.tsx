@@ -1,19 +1,35 @@
 import React from 'react';
 
-const BORDER_COLOR = {
+type NotificationType = 'success' | 'warning' | 'error' | 'info';
+
+interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: number;
+}
+
+interface NotificationCenterProps {
+  notifications: Notification[];
+  onDismiss: (id: string) => void;
+  onClearAll: () => void;
+}
+
+const BORDER_COLOR: Record<NotificationType, string> = {
   success: 'border-emerald-500',
   warning: 'border-amber-500',
   error: 'border-red-500',
   info: 'border-zinc-500',
 };
 
-function relativeTime(timestamp) {
+function relativeTime(timestamp: number): string {
   const diff = Math.floor((Date.now() - timestamp) / 1000);
   if (diff < 60) return `${diff}s ago`;
   return `${Math.floor(diff / 60)}m ago`;
 }
 
-export function NotificationCenter({ notifications, onDismiss, onClearAll }) {
+export function NotificationCenter({ notifications, onDismiss, onClearAll }: NotificationCenterProps) {
   if (!notifications || notifications.length === 0) return null;
 
   const visible = notifications.slice(0, 5);
@@ -31,7 +47,7 @@ export function NotificationCenter({ notifications, onDismiss, onClearAll }) {
       {visible.map((n) => (
         <div
           key={n.id}
-          className={`bg-zinc-900 border border-zinc-700 border-l-4 ${BORDER_COLOR[n.type] || BORDER_COLOR.info} rounded-lg p-3 flex items-start gap-2 shadow-lg`}
+          className={`bg-zinc-900 border border-zinc-700 border-l-4 ${BORDER_COLOR[n.type] ?? BORDER_COLOR.info} rounded-lg p-3 flex items-start gap-2 shadow-lg`}
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-zinc-100 truncate">{n.title}</p>

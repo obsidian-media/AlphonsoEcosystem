@@ -6,6 +6,40 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.5-next10] - 2026-06-21 — Sprint Next-10
+
+### Added — Task 1 (Onboarding)
+- **OnboardingWizard** — 4th step "Connect a channel" with Telegram/WhatsApp/Skip cards; preference saved to `alphonso_onboarding_connector_v1`
+
+### Added — Task 3 (Test Coverage → 35%+)
+- 10 new service test files: agentBrainService (27), streamingService (19), composioService (26), marcusPublishService (22), workspaceFileService (17), browserAutomationService (16), backupService (16), resourceCostService (16), proactiveAgentService (14), agentActivityService (9)
+- **111 total test files, 1621+ tests** (up from 101/1439)
+
+### Added — Task 5 (Crash Log UI)
+- **CrashLogView** — timestamped entry list with context, "Clear" button; wired as "Logs" tab in SettingsView
+
+### Added — Task 6 (Nova History Chart)
+- **NovaHistoryChart** — SVG sparkline of last 10 opportunity scores (indigo polyline + dots), latest recommendation; wired in SettingsView
+
+### Added — Task 7 (Gateway Dockerfile)
+- **gateway/whatsapp-cloud/Dockerfile** — multi-stage Node 20 Alpine production build
+- **gateway/whatsapp-cloud/.dockerignore**
+
+### Added — Task 8 (TypeScript Migration)
+- Migrated 5 components to `.tsx` with full prop interfaces: AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar
+- Added SVG + WebP module declarations to `src/types/declarations.d.ts`
+- Removed superseded `.jsx` files
+
+### Added — Task 9 (Sentinel Findings Modal)
+- **SentinelFindingModal** — fixed overlay modal, color-coded severity badge, pattern (monospace) + recommendation rows
+- RightPanel findings now clickable to open the modal
+
+### Added — Task 10 (SQLite Dual-Write)
+- **durableStore** (`src/lib/durableStore.js`) — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`
+- crashLogService, agentAuditService, novaAnalysisService migrated to use durableStore
+
+---
+
 ## [2.0.5-d1d2d3d4d5] - 2026-06-21 — All 5 Directions Sprint
 
 ### Added — Direction 1 (UX): New Components

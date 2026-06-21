@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 1439+ tests across 101 files — all should pass
+npm run test             # Run all 1621+ tests across 111 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + test + build in one command
@@ -50,7 +50,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **14 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~1,585 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 1439+ tests are in `src/test/`** — 101 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 1621+ tests are in `src/test/`** — 111 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
@@ -118,6 +118,13 @@ Before writing any new service, component, or feature, check this list:
 | Nova opportunity history | `src/services/novaAnalysisService.js` — `saveOpportunityScore` / `getOpportunityHistory`, 30-entry localStorage |
 | RightPanel audit tab | `src/components/RightPanel.jsx` — System/Audit tab switcher, last 10 approval events with outcome badges |
 | RightPanel auto-refresh | `src/components/RightPanel.jsx` — 10-min `setInterval` calling `runQuickScan()` |
+| Onboarding connector step | `src/components/OnboardingWizard.jsx` — step 3 "Connect a channel" with Telegram/WhatsApp/Skip cards, saves to `alphonso_onboarding_connector_v1` |
+| Crash log viewer | `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as Logs tab in SettingsView |
+| Nova history chart | `src/components/NovaHistoryChart.jsx` — SVG sparkline of last 10 scores, most-recent recommendation, wired in SettingsView |
+| Sentinel findings modal | `src/components/SentinelFindingModal.jsx` — fixed overlay, severity badge, pattern + recommendation rows; triggered by clicking findings in RightPanel |
+| Gateway Dockerfile | `gateway/whatsapp-cloud/Dockerfile` — multi-stage Node 20 Alpine build; `.dockerignore` alongside |
+| durableStore (SQLite dual-write) | `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; used by crashLogService, agentAuditService, novaAnalysisService |
+| TypeScript components (.tsx) | `AgentStatusStrip.tsx`, `UpdaterNotification.tsx`, `NotificationCenter.tsx`, `AgentPerformanceView.tsx`, `TopBar.tsx` — migrated with full prop interfaces; old .jsx files removed |
 
 ---
 
@@ -125,14 +132,14 @@ Before writing any new service, component, or feature, check this list:
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
 2. Check `src/services/` for an existing service before writing a new one — there are 130+ services
-3. Check `src/test/` — there are 101 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 1439+ tests must continue to pass
+3. Check `src/test/` — there are 111 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 1621+ tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
 ---
 
-## Real Gaps (as of 2026-06-21 — v2.0.5 + All 5 Directions complete)
+## Real Gaps (as of 2026-06-21 — v2.0.5 + Sprint Next-10 complete)
 
 These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current state before working on any of them:
 
@@ -170,9 +177,17 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Agent approval audit trail~~ — **CLOSED Direction 5 (All 5 Sprint)** (`src/services/agentAuditService.js` + RightPanel Audit tab)
 - ~~Workspace export/import~~ — **CLOSED Direction 5 (All 5 Sprint)** (`workspaceExportService.js` + `WorkspaceExportImportView.jsx`)
 - ~~RightPanel auto-refresh + audit tab~~ — **CLOSED Direction 5 (All 5 Sprint)** (10-min interval + System/Audit tab switcher)
-- localStorage → SQLite migration — completed for 5 keys. Remaining: durable runtime data migration
-- Coverage at ~30% — next staged target 35%
-- TypeScript migration — partial; 9 .ts services exist in src/services/, components still .jsx
+- ~~Onboarding connector step~~ — **CLOSED Sprint Next-10 T1** (4th step "Connect a channel" added to OnboardingWizard with Telegram/WhatsApp/Skip cards)
+- ~~CrashLogView UI~~ — **CLOSED Sprint Next-10 T5** (`CrashLogView.jsx` + Logs tab in SettingsView)
+- ~~Nova opportunity history chart~~ — **CLOSED Sprint Next-10 T6** (`NovaHistoryChart.jsx` SVG sparkline + wired in SettingsView)
+- ~~Gateway Dockerfile~~ — **CLOSED Sprint Next-10 T7** (`gateway/whatsapp-cloud/Dockerfile` + `.dockerignore`)
+- ~~TypeScript migration (components)~~ — **CLOSED Sprint Next-10 T8** (5 components migrated: AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar → `.tsx`)
+- ~~Sentinel findings drill-down~~ — **CLOSED Sprint Next-10 T9** (`SentinelFindingModal.jsx` + clickable findings in RightPanel)
+- ~~SQLite dual-write for remaining keys~~ — **CLOSED Sprint Next-10 T10** (`src/lib/durableStore.js` + migrated crashLogService, agentAuditService, novaAnalysisService)
+- ~~Test coverage at ~30%~~ — **CLOSED Sprint Next-10 T3** (111 test files / 1621+ tests; 10 new service test files)
+- Branch protection on `main` — manual GitHub step (MCP doesn't expose branch protection API); require CI pass before merge
+- Coverage at ~35%+ — next staged target 40%
+- TypeScript migration — continued; 5 more components migrated. Remaining: ChatView, RightPanel, SettingsView, App, Sidebar
 
 ---
 
@@ -190,7 +205,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                101 test files (Vitest, vitest.config.js)
+  test/                111 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/

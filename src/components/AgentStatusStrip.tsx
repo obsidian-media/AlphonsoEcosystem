@@ -1,6 +1,16 @@
 import React from 'react';
 
-export function AgentStatusStrip({ activeAgents, compact = false }) {
+interface Agent {
+  name: string;
+  status: string;
+}
+
+interface AgentStatusStripProps {
+  activeAgents: Agent[];
+  compact?: boolean;
+}
+
+export function AgentStatusStrip({ activeAgents, compact = false }: AgentStatusStripProps) {
   if (!activeAgents || activeAgents.length === 0) return null;
 
   return (

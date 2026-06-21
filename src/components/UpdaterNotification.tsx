@@ -1,6 +1,12 @@
 import React from 'react';
 
-export function UpdaterNotification({ version, onUpdate, onDismiss }) {
+interface UpdaterNotificationProps {
+  version: string | null | undefined;
+  onUpdate: () => void;
+  onDismiss: () => void;
+}
+
+export function UpdaterNotification({ version, onUpdate, onDismiss }: UpdaterNotificationProps) {
   if (!version) return null;
 
   return (
