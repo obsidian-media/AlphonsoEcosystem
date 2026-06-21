@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS = {
   coachAgent: 'alphonso',
   autoUpdateEnabled: true,
   updaterEndpoint: 'https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json',
-  updaterPubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOEVDRjc2ODY2MzIyN0YKUldSL0ltT0dkcytPN1FSV0JrbUovUzNjQXc2YTJEYWgrTG9UdHdNZC9BZTk5M0Z1VkF6eTlmelUK',
+  updaterPubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJENzgyMEY4MkZGMTE3OUMKUldTY0YvRXYrQ0I0TGRlVWt2cmZhcGVaUVRtQ0lZcDZkZUl5YmxqcEZvbjFYTG01ZnJvWVgwMUgK',
   updaterTarget: '',
   idleTimeoutMinutes: 15,
   autoLaunchServices: false,
