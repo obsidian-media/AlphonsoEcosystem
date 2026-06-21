@@ -77,7 +77,7 @@ export function OrchestratorView({
   const [whatsappAudit, setWhatsappAudit] = useState(() => listConnectorAudit().filter((e) => e.connectorId === 'whatsapp').slice(-30).reverse());
   const [whatsappPolling, setWhatsappPolling] = useState(false);
   const [focusMode, setFocusMode] = useState(() => localStorage.getItem('alphonso_jose_density_v1') !== 'full');
-  const [openPanels, setOpenPanels] = useState(() => new Set(['jose-task-queue', 'jose-intake', 'pending-approvals', 'active-handoffs']));
+  const [openPanels, setOpenPanels] = useState(() => new Set(['jose-task-queue', 'jose-intake', 'pending-approvals']));
   const whatsappConfigured = isConnectorAuthenticated('whatsapp');
 
   const approvalQueue = useMemo(() => listApprovalQueue(), [packets]);
@@ -304,32 +304,29 @@ export function OrchestratorView({
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-8 py-8 space-y-6">
-      <header className="overflow-hidden rounded-2xl border border-amber-200/15 bg-gradient-to-br from-zinc-950 via-amber-950/20 to-zinc-950 p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div className="mx-auto max-w-6xl px-6 py-8 space-y-4">
+      <header className="pb-6 border-b border-white/[0.06]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-200/70">
-              <Crown className="h-4 w-4" />
-              Jose Orchestrator Workspace
+            <div className="flex items-center gap-2 mb-2">
+              <Crown className="h-4 w-4 text-amber-400/70" />
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Jose Orchestrator</span>
             </div>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white">Governance, routing, and agent balance</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-400">
-              Jose coordinates Alphonso and Miya through supervised packets, approvals, memory governance, and runtime balance. This is a local UI and ledger layer; it does not execute hidden actions.
+            <h1 className="text-2xl font-bold tracking-tight text-white">Governance &amp; routing</h1>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 max-w-2xl">
+              Supervise agent handoffs, review approvals, and route tasks. No automatic execution.
             </p>
           </div>
-          <div className="space-y-3 lg:min-w-[34rem]">
-            <div className="grid grid-cols-2 gap-2 text-right sm:grid-cols-4">
-              <Metric label="Packets" value={packets.length} />
-              <Metric label="Approvals" value={approvalQueue.length} tone={approvalQueue.length ? 'amber' : 'zinc'} />
-              <Metric label="Workflows" value={workflows.length} />
-              <Metric label="Runtime" value={ollamaStatus.label} tone={runtimeState === 'failed' ? 'red' : runtimeState === 'verified' ? 'green' : 'amber'} />
-            </div>
+          <div className="flex items-center gap-6 shrink-0">
+            <Metric label="Packets" value={packets.length} />
+            <Metric label="Approvals" value={approvalQueue.length} tone={approvalQueue.length ? 'amber' : 'zinc'} />
+            <Metric label="Runtime" value={ollamaStatus.label} tone={runtimeState === 'failed' ? 'red' : runtimeState === 'verified' ? 'green' : 'amber'} />
             <button
               type="button"
               onClick={() => setFocusMode((current) => !current)}
-              className="w-full rounded-xl border border-amber-200/15 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-100 hover:bg-amber-500/20"
+              className="rounded-xl border border-white/[0.08] bg-zinc-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 hover:text-zinc-200 hover:border-white/[0.12] transition-colors"
             >
-              {focusMode ? 'Focus view: critical panels only' : 'Full view: all panels visible'}
+              {focusMode ? 'Focus' : 'Full'}
             </button>
           </div>
         </div>
@@ -445,18 +442,15 @@ export function OrchestratorView({
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <CollapsiblePanel icon={Users} title="Agent Workload" id="agent-workload" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2">
+          <div className="divide-y divide-white/[0.05]">
             {workload.map((row) => (
-              <div key={row.agent} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold capitalize text-zinc-100">{row.agent}</span>
-                  <TrustBadge state={row.pending ? 'temporary' : 'verified'} />
-                </div>
-                <div className="mt-2 grid grid-cols-4 gap-2 text-center text-[10px] text-zinc-500">
-                  <MiniStat label="In" value={row.inbound} />
-                  <MiniStat label="Out" value={row.outbound} />
-                  <MiniStat label="Pending" value={row.pending} />
-                  <MiniStat label="Done" value={row.completed} />
+              <div key={row.agent} className="flex items-center justify-between py-2.5">
+                <span className="text-[12px] font-medium capitalize text-zinc-300 w-24">{row.agent}</span>
+                <div className="flex items-center gap-4 text-[11px] text-zinc-600">
+                  <span>{row.inbound} in</span>
+                  <span>{row.outbound} out</span>
+                  <span className={row.pending ? 'text-amber-400' : ''}>{row.pending} pending</span>
+                  <span className="text-emerald-600">{row.completed} done</span>
                 </div>
               </div>
             ))}
@@ -791,9 +785,9 @@ export function OrchestratorView({
 
 function Panel({ icon: Icon, title, children }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4 shadow-[0_0_50px_rgba(0,0,0,0.22)]">
-      <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-        <Icon className="h-4 w-4 text-amber-200/80" />
+    <section className="rounded-2xl border border-white/[0.07] bg-zinc-900/40 p-5">
+      <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+        <Icon className="h-3.5 w-3.5 text-amber-400/70" />
         {title}
       </div>
       {children}
@@ -804,56 +798,48 @@ function Panel({ icon: Icon, title, children }) {
 function CollapsiblePanel({ icon: Icon, title, id, focusMode, openPanels, onToggle, children }) {
   const open = !focusMode || openPanels.has(id);
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4 shadow-[0_0_50px_rgba(0,0,0,0.22)]">
+    <section className="rounded-2xl border border-white/[0.07] bg-zinc-900/40">
       <button
         type="button"
         onClick={() => onToggle?.(id)}
-        className="mb-0 flex w-full items-center justify-between gap-3 text-left text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 hover:text-amber-100"
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
       >
-        <span className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-amber-200/80" />
+        <span className="flex items-center gap-2 text-[11px] font-semibold text-zinc-300">
+          <Icon className="h-3.5 w-3.5 text-amber-400/70 shrink-0" />
           {title}
         </span>
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-zinc-600" /> : <ChevronRight className="h-3.5 w-3.5 text-zinc-600" />}
       </button>
-      {open ? <div className="mt-4">{children}</div> : <div className="mt-2 text-[11px] text-zinc-600">Collapsed in Focus view.</div>}
+      {open && <div className="border-t border-white/[0.06] px-5 py-4">{children}</div>}
     </section>
   );
 }
 
 function Metric({ label, value, tone = 'zinc' }) {
-  const toneClass = tone === 'green'
-    ? 'text-emerald-100 border-emerald-300/15 bg-emerald-500/10'
-    : tone === 'red'
-      ? 'text-red-100 border-red-300/15 bg-red-500/10'
-      : tone === 'amber'
-        ? 'text-amber-100 border-amber-300/15 bg-amber-500/10'
-        : tone === 'fuchsia'
-          ? 'text-fuchsia-100 border-fuchsia-300/15 bg-fuchsia-500/10'
-          : 'text-zinc-100 border-white/10 bg-zinc-900/60';
+  const valueColor = tone === 'green' ? 'text-emerald-300' : tone === 'red' ? 'text-red-300' : tone === 'amber' ? 'text-amber-300' : tone === 'fuchsia' ? 'text-fuchsia-300' : 'text-zinc-100';
   return (
-    <div className={`rounded-xl border p-3 ${toneClass}`}>
-      <div className="text-[10px] uppercase tracking-widest opacity-60">{label}</div>
-      <div className="mt-1 truncate text-lg font-bold">{value}</div>
+    <div>
+      <div className="text-[10px] font-medium text-zinc-600 uppercase tracking-widest">{label}</div>
+      <div className={`mt-0.5 text-lg font-bold truncate ${valueColor}`}>{value}</div>
     </div>
   );
 }
 
 function MiniStat({ label, value }) {
   return (
-    <div className="rounded-lg bg-black/20 px-2 py-1">
-      <div className="font-bold text-zinc-200">{value}</div>
-      <div>{label}</div>
+    <div className="text-center">
+      <div className="text-base font-bold text-zinc-100">{value}</div>
+      <div className="text-[10px] text-zinc-600 mt-0.5">{label}</div>
     </div>
   );
 }
 
 function RuntimeRow({ label, value, trust }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-zinc-900/55 px-3 py-2">
-      <span className="text-zinc-400">{label}</span>
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-white/[0.05] last:border-0">
+      <span className="text-[12px] text-zinc-500">{label}</span>
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-xs font-semibold text-zinc-100">{value}</span>
+        <span className="truncate text-[12px] font-medium text-zinc-200">{value}</span>
         <TrustBadge state={trust} />
       </div>
     </div>
@@ -862,23 +848,21 @@ function RuntimeRow({ label, value, trust }) {
 
 function TrustBadge({ state }) {
   const color = state === 'verified'
-    ? 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200'
+    ? 'text-emerald-400'
     : state === 'failed'
-      ? 'border-red-300/20 bg-red-500/10 text-red-200'
+      ? 'text-red-400'
       : state === 'temporary' || state === 'pending'
-        ? 'border-amber-300/20 bg-amber-500/10 text-amber-200'
-        : state === 'placeholder'
-          ? 'border-indigo-300/20 bg-indigo-500/10 text-indigo-200'
-        : 'border-zinc-500/20 bg-zinc-700/20 text-zinc-300';
-  return <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${color}`}>{state || 'unverified'}</span>;
+        ? 'text-amber-400'
+        : 'text-zinc-600';
+  return <span className={`text-[10px] font-semibold ${color}`}>{state || 'unverified'}</span>;
 }
 
 function GovernanceRow({ label, value, state }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-zinc-900/55 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-white/[0.05] last:border-0">
       <div>
-        <div className="text-xs font-semibold text-zinc-200">{label}</div>
-        <div className="mt-0.5 text-[11px] text-zinc-500">{value}</div>
+        <div className="text-[12px] font-medium text-zinc-300">{label}</div>
+        <div className="text-[11px] text-zinc-600 mt-0.5">{value}</div>
       </div>
       <TrustBadge state={state} />
     </div>
@@ -887,9 +871,9 @@ function GovernanceRow({ label, value, state }) {
 
 function FlowStep({ label, text }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-200/25 bg-amber-500/10 text-[10px] font-bold text-amber-100">{label}</span>
-      <span>{text}</span>
+    <div className="flex items-start gap-3 py-1.5">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-[9px] font-bold text-amber-300">{label}</span>
+      <span className="text-[12px] text-zinc-400">{text}</span>
     </div>
   );
 }

@@ -1,30 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, GripHorizontal, Minus } from 'lucide-react';
+import { GripHorizontal, Minus, ChevronDown, Wifi, WifiOff } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { AgentAvatar } from './AgentAvatar';
 
 const STORAGE_KEY = 'alphonso_agent_dock_minimized_v1';
 const POSITION_STORAGE_KEY = 'alphonso_agent_dock_position_v1';
-
 const DEFAULT_POSITION = { x: 16, y: 16 };
 
 function readStoredPosition() {
   try {
     const parsed = JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) || 'null');
     if (Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y)) return parsed;
-  } catch {
-    // Ignore corrupted storage and fall back to safe top-left default.
-  }
+  } catch { /* ignore */ }
   return DEFAULT_POSITION;
 }
 
 function clampPosition(position) {
   if (typeof window === 'undefined') return position;
-  const maxX = Math.max(8, window.innerWidth - 96);
-  const maxY = Math.max(8, window.innerHeight - 56);
   return {
-    x: Math.min(Math.max(8, position.x), maxX),
-    y: Math.min(Math.max(8, position.y), maxY)
+    x: Math.min(Math.max(8, position.x), Math.max(8, window.innerWidth - 96)),
+    y: Math.min(Math.max(8, position.y), Math.max(8, window.innerHeight - 56))
   };
 }
 
@@ -47,26 +42,44 @@ function useOllamaStatus() {
   return online;
 }
 
+// Map raw agent states to calm display labels
+function friendlyState(state) {
+  const s = String(state || '').toLowerCase();
+  if (!s || s === 'idle' || s === 'offline' || s === 'ready') return 'Ready';
+  if (s === 'active' || s === 'working' || s === 'thinking' || s === 'running') return 'Active';
+  if (s === 'listening') return 'Listening';
+  if (s === 'rendering' || s === 'creating') return 'Creating';
+  if (s === 'researching') return 'Researching';
+  if (s === 'directing' || s === 'routing') return 'Routing';
+  if (s === 'warning') return 'Needs attention';
+  if (s === 'error' || s === 'failed') return 'Error';
+  if (s === 'approval') return 'Waiting';
+  return 'Ready';
+}
+
+function isAgentActive(state) {
+  const s = String(state || '').toLowerCase();
+  return ['active', 'working', 'thinking', 'running', 'listening', 'rendering', 'creating', 'researching', 'directing', 'routing'].includes(s);
+}
+
 export function AgentDock({ companions }) {
   const [minimized, setMinimized] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       return stored === null ? true : stored === 'true';
-    } catch {
-      return true;
-    }
+    } catch { return true; }
   });
   const [position, setPosition] = useState(() => clampPosition(readStoredPosition()));
   const dragRef = useRef(null);
   const registryAgents = listAgentProfiles();
   const activeIds = new Set(companions.map((item) => item.agentId));
   const otherAgents = registryAgents.filter((agent) => !activeIds.has(agent.id));
-  const summary = companions.map((item) => item.name).join(' · ');
   const ollamaOnline = useOllamaStatus();
+  const busyCount = companions.filter((c) => isAgentActive(c.state)).length;
 
   useEffect(() => {
-    const onResize = () => setPosition((current) => {
-      const next = clampPosition(current);
+    const onResize = () => setPosition((curr) => {
+      const next = clampPosition(curr);
       try { localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(next)); } catch { /* no-op */ }
       return next;
     });
@@ -77,140 +90,145 @@ export function AgentDock({ companions }) {
   function toggle() {
     setMinimized((prev) => {
       const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch { return next; }
+      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch { /* no-op */ }
       return next;
     });
   }
 
-  function startDrag(event) {
-    if (event.button !== undefined && event.button !== 0) return;
-    event.preventDefault();
-    dragRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: position.x,
-      originY: position.y
-    };
+  function startDrag(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startY: e.clientY, originX: position.x, originY: position.y };
   }
 
   useEffect(() => {
-    function onPointerMove(event) {
+    function onMove(e) {
       if (!dragRef.current) return;
-      const next = clampPosition({
-        x: dragRef.current.originX + event.clientX - dragRef.current.startX,
-        y: dragRef.current.originY + event.clientY - dragRef.current.startY
-      });
-      setPosition(next);
+      setPosition(clampPosition({
+        x: dragRef.current.originX + e.clientX - dragRef.current.startX,
+        y: dragRef.current.originY + e.clientY - dragRef.current.startY,
+      }));
     }
-    function onPointerUp() {
+    function onUp() {
       if (!dragRef.current) return;
       dragRef.current = null;
-      setPosition((current) => {
-        const next = clampPosition(current);
+      setPosition((curr) => {
+        const next = clampPosition(curr);
         try { localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(next)); } catch { /* no-op */ }
         return next;
       });
     }
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
   }, []);
 
   return (
     <div
-      className={`pointer-events-auto fixed z-50 rounded-xl border border-white/10 bg-zinc-950/95 shadow-xl backdrop-blur-xl overflow-hidden ${minimized ? 'w-[12.5rem]' : 'w-[17.5rem]'}`}
-      style={{ left: `${position.x}px`, top: `${position.y}px` }}
+      className="pointer-events-auto fixed z-50 overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-950/90 shadow-2xl backdrop-blur-xl"
+      style={{ left: `${position.x}px`, top: `${position.y}px`, width: minimized ? '11rem' : '16rem' }}
     >
-      {/* Header — always visible */}
-      <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+      {/* Header */}
+      <div className="flex items-center gap-1.5 px-3 py-2.5">
         <button
           type="button"
           onPointerDown={startDrag}
-          title="Move agent dock"
-          className="cursor-grab rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 active:cursor-grabbing"
+          className="cursor-grab rounded p-0.5 text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
         >
           <GripHorizontal className="h-3 w-3" />
         </button>
-        <div
-          className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 flex-1 cursor-grab select-none active:cursor-grabbing"
-          onPointerDown={startDrag}
-          title="Drag to move agent dock"
-        >Agent Dock</div>
 
-        {/* Ollama connectivity pill */}
-        <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold uppercase tracking-wider border ${
-          ollamaOnline === null
-            ? 'border-zinc-700 bg-zinc-900/60 text-zinc-500'
-            : ollamaOnline
-            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-            : 'border-red-500/30 bg-red-500/10 text-red-400'
-        }`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${
-            ollamaOnline === null ? 'bg-zinc-600' : ollamaOnline ? 'bg-emerald-400' : 'bg-red-400'
-          }`} />
-          {ollamaOnline === null ? 'checking' : ollamaOnline ? 'Ollama' : 'offline'}
+        <div
+          className="flex-1 cursor-grab select-none text-[10px] font-semibold tracking-widest text-zinc-400 uppercase"
+          onPointerDown={startDrag}
+        >
+          Agents
         </div>
 
-        {/* Minimize / expand button */}
-        <button
-          onClick={toggle}
-          title={minimized ? 'Expand agent dock' : 'Minimize agent dock'}
-          className="p-0.5 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-        >
-          {minimized ? <ChevronDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+        {/* Ollama status — compact */}
+        <div className="flex items-center gap-1">
+          {ollamaOnline === null ? (
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-600 animate-pulse" />
+          ) : ollamaOnline ? (
+            <Wifi className="h-3 w-3 text-emerald-400" />
+          ) : (
+            <WifiOff className="h-3 w-3 text-zinc-600" />
+          )}
+        </div>
+
+        <button onClick={toggle} className="p-0.5 rounded text-zinc-600 hover:text-zinc-300 transition-colors">
+          {minimized ? <ChevronDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
         </button>
       </div>
 
-      {/* Body — hidden when minimized */}
-      {!minimized && (
-        <div className="space-y-2 p-2.5">
-          {/* Active companions summary row */}
-          <div className="flex items-center gap-2 overflow-hidden rounded-lg border border-white/8 bg-zinc-900/60 px-2.5 py-2">
-            <div className="flex -space-x-2 shrink-0">
-              {companions.map((item) => (
-                <div key={item.agentId} className="rounded-full border border-zinc-950 bg-zinc-950 p-0.5 shadow-md">
-                  <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-6 w-6" />
-                </div>
-              ))}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-2xs font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{summary}</div>
-              <div className="text-2xs text-zinc-400 truncate">Active companions</div>
-            </div>
+      {/* Minimized: just avatar strip */}
+      {minimized && (
+        <div className="px-3 pb-2.5">
+          <div className="flex items-center gap-1.5">
+            {companions.slice(0, 4).map((item) => (
+              <div key={item.agentId} className="relative">
+                <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-6 w-6" />
+                {isAgentActive(item.state) && (
+                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-zinc-950" />
+                )}
+              </div>
+            ))}
+            {companions.length > 4 && (
+              <span className="text-[10px] text-zinc-600">+{companions.length - 4}</span>
+            )}
           </div>
+          {busyCount > 0 && (
+            <div className="mt-1.5 text-[10px] text-emerald-400">{busyCount} active</div>
+          )}
+          {!ollamaOnline && ollamaOnline !== null && (
+            <div className="mt-1 text-[10px] text-zinc-600">Local AI offline</div>
+          )}
+        </div>
+      )}
 
-          {/* Per-agent state grid */}
-          <div className="grid grid-cols-2 gap-1.5">
-            {companions.map((item) => (
-              <div key={item.agentId} className="rounded-lg border border-white/8 bg-zinc-900/45 px-2 py-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="shrink-0">
-                    <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-2xs font-bold uppercase tracking-[0.12em] text-zinc-200 truncate">{item.name}</div>
-                    <div className="text-2xs text-zinc-500 truncate">{item.state}</div>
+      {/* Expanded */}
+      {!minimized && (
+        <div className="px-3 pb-3 space-y-2">
+          {/* Active companions */}
+          {companions.map((item) => {
+            const active = isAgentActive(item.state);
+            return (
+              <div key={item.agentId} className="flex items-center gap-2.5">
+                <div className="relative shrink-0">
+                  <AgentAvatar agentId={item.agentId} name={item.name} sizeClass="h-7 w-7" />
+                  {active && (
+                    <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-zinc-950" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-semibold text-zinc-200 truncate">{item.name}</div>
+                  <div className={`text-[10px] truncate ${active ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                    {friendlyState(item.state)}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
 
-          {/* Other (inactive) agents */}
+          {/* Divider + other agents (compact) */}
           {otherAgents.length > 0 && (
-            <div className="rounded-lg border border-white/8 bg-zinc-900/35 p-2">
-              <div className="mb-1 text-2xs font-bold uppercase tracking-[0.14em] text-zinc-500">Other agents</div>
-              <div className="flex flex-wrap gap-1">
+            <>
+              <div className="border-t border-white/[0.06]" />
+              <div className="flex flex-wrap gap-1.5">
                 {otherAgents.map((agent) => (
-                  <div key={agent.id} className="flex items-center gap-1 rounded-full border border-white/8 bg-zinc-950/60 px-1.5 py-1">
-                    <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-4 w-4" />
-                    <span className="max-w-[4.5rem] truncate text-2xs font-semibold uppercase tracking-[0.12em] text-zinc-300">{agent.name}</span>
+                  <div key={agent.id} className="flex items-center gap-1">
+                    <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-5 w-5" />
+                    <span className="text-[10px] text-zinc-600 truncate max-w-[4rem]">{agent.name}</span>
                   </div>
                 ))}
               </div>
+            </>
+          )}
+
+          {/* Ollama state — only show if relevant */}
+          {ollamaOnline === false && (
+            <div className="rounded-lg bg-zinc-900/60 px-2.5 py-2 text-[10px] text-zinc-500">
+              Local AI is offline — start Ollama to enable agent reasoning.
             </div>
           )}
         </div>

@@ -1,66 +1,13 @@
 import React, { useMemo } from 'react';
-import { Activity, AlertTriangle, Bot, CheckCircle2, Clapperboard, Crown, Gauge, MessageSquare, RadioTower, Shield, Sparkles, Terminal } from 'lucide-react';
+import {
+  Activity, AlertTriangle, Bot, CheckCircle2, Clapperboard, Crown,
+  Gauge, MessageSquare, RadioTower, Shield, Sparkles, Terminal, ArrowRight
+} from 'lucide-react';
 import { listApprovalQueue, listAgentPackets } from '../services/agentBusService';
 import { listAgentActivity } from '../services/agentActivityService';
 import alphonsoBanner from '../../logo-banner-thumbnail-media/ALPHONSO_BANNER.webp';
 import alphonsoIcon from '../../logo-banner-thumbnail-media/ALPHONSO_ICON.webp';
 import alphonsoLogo from '../../logo-banner-thumbnail-media/ALPHONSO_LOGO.webp';
-import alphonsoThumbnail from '../../logo-banner-thumbnail-media/ALPHONSO_THUMBNAIL.webp';
-
-function toneClass(tone = 'zinc') {
-  if (tone === 'green') return 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100';
-  if (tone === 'amber') return 'border-amber-400/20 bg-amber-500/10 text-amber-100';
-  if (tone === 'red') return 'border-red-400/20 bg-red-500/10 text-red-100';
-  if (tone === 'cyan') return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-100';
-  if (tone === 'fuchsia') return 'border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-100';
-  return 'border-white/10 bg-zinc-900/50 text-zinc-200';
-}
-
-function StatCard({ icon: Icon, label, value, detail, tone }) {
-  return (
-    <div className={`rounded-2xl border p-4 ${toneClass(tone)}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[10px] font-black uppercase tracking-[0.18em] opacity-75">{label}</div>
-        <Icon className="h-4 w-4 opacity-80" />
-      </div>
-      <div className="mt-2 text-2xl font-black tracking-tight">{value}</div>
-      <div className="mt-1 text-xs opacity-70">{detail}</div>
-    </div>
-  );
-}
-
-function ActionCard({ title, detail, cta, tab, icon: Icon, tone, onNavigate }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onNavigate?.(tab)}
-      className={`group rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(0,0,0,0.22)] ${toneClass(tone)}`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-black text-white">{title}</div>
-          <div className="mt-1 text-xs leading-relaxed opacity-70">{detail}</div>
-        </div>
-        <Icon className="h-5 w-5 opacity-80" />
-      </div>
-      <div className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] opacity-80 group-hover:opacity-100">{cta}</div>
-    </button>
-  );
-}
-
-function FeedItem({ label, detail, time, tone = 'zinc' }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-zinc-950/45 px-3 py-2">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold text-zinc-100">{label}</div>
-          <div className="mt-0.5 text-[11px] text-zinc-500">{detail}</div>
-        </div>
-        <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${toneClass(tone)}`}>{time}</span>
-      </div>
-    </div>
-  );
-}
 
 export function MissionControlHome({
   settings,
@@ -76,132 +23,211 @@ export function MissionControlHome({
   const snapshot = useMemo(() => {
     const approvals = listApprovalQueue();
     const packets = listAgentPackets();
-    const activity = listAgentActivity().slice(-6).reverse();
-    const recentLogs = verificationLogs.slice(-6).reverse();
+    const activity = listAgentActivity().slice(-5).reverse();
+    const recentLogs = verificationLogs.slice(-5).reverse();
     return { approvals, packets, activity, recentLogs };
   }, [verificationLogs]);
 
   const nextActions = useMemo(() => {
     const items = [];
     if (snapshot.approvals.length > 0) {
-      items.push({ title: 'Review pending approvals', detail: `${snapshot.approvals.length} agent handoff${snapshot.approvals.length === 1 ? '' : 's'} need a decision.`, cta: 'Open Jose', tab: 'orchestrator', icon: Crown, tone: 'amber' });
+      items.push({ title: 'Review approvals', detail: `${snapshot.approvals.length} agent handoff${snapshot.approvals.length === 1 ? '' : 's'} need a decision`, cta: 'Open Jose', tab: 'orchestrator', icon: Crown, accent: 'text-amber-400' });
     }
     if (coachIntervention?.level === 'hard' || coachIntervention?.level === 'firm') {
-      items.push({ title: 'Check Coach intervention', detail: coachIntervention.message || 'Coach has an active protective intervention.', cta: 'Open Operator', tab: 'operator', icon: Shield, tone: coachIntervention.level === 'hard' ? 'red' : 'amber' });
+      items.push({ title: 'Coach intervention', detail: coachIntervention.message || 'Active protective intervention', cta: 'Open Operator', tab: 'operator', icon: Shield, accent: 'text-red-400' });
     }
     if (ollamaStatus?.state !== 'connected') {
-      items.push({ title: 'Restore local runtime', detail: `Ollama is ${ollamaStatus?.label || 'not verified'}. Local chat quality may be limited.`, cta: 'Open Settings', tab: 'settings', icon: Terminal, tone: 'red' });
+      items.push({ title: 'Start Ollama', detail: 'Local AI is not running — agent reasoning is limited', cta: 'Open Settings', tab: 'settings', icon: Terminal, accent: 'text-zinc-500' });
     }
-    if (settings?.zeroCostMode) {
-      items.push({ title: 'Zero-cost mode is protecting spend', detail: 'Cloud lanes such as Qwen remain blocked unless intentionally approved.', cta: 'Open Connectors', tab: 'connectors', icon: RadioTower, tone: 'cyan' });
-    }
-    items.push({ title: 'Continue building the mission', detail: 'Use Project Execution for structured work packets and proof-first planning.', cta: 'Open Project Exec', tab: 'project_execution', icon: Sparkles, tone: 'fuchsia' });
+    items.push({ title: 'Continue your mission', detail: 'Use Project Execution for structured work packets and proof-first planning', cta: 'Open Project Exec', tab: 'project_execution', icon: Sparkles, accent: 'text-indigo-400' });
+    items.push({ title: 'Talk to Alphonso', detail: 'Direct commands, research, and Jose delegation', cta: 'Open Chat', tab: 'chat', icon: MessageSquare, accent: 'text-cyan-400' });
     return items.slice(0, 4);
-  }, [snapshot.approvals.length, coachIntervention, ollamaStatus, settings?.zeroCostMode]);
+  }, [snapshot.approvals.length, coachIntervention, ollamaStatus]);
 
   const feed = useMemo(() => {
     const activityItems = snapshot.activity.map((item) => ({
       label: `${item.agent || 'agent'}: ${item.action || 'activity'}`,
-      detail: item.detail || 'No detail recorded.',
+      detail: item.detail || '',
       ts: item.ts,
-      tone: 'cyan'
     }));
     const logItems = snapshot.recentLogs.map((log) => ({
       label: log.type || 'verification',
-      detail: `${log.source || 'system'} · ${log.trust || 'unverified'}`,
+      detail: `${log.source || 'system'}`,
       ts: log.timestampMs,
-      tone: log.trust === 'verified' ? 'green' : 'zinc'
     }));
     return [...activityItems, ...logItems]
       .filter((item) => item.ts)
       .sort((a, b) => b.ts - a.ts)
-      .slice(0, 8);
+      .slice(0, 6);
   }, [snapshot.activity, snapshot.recentLogs]);
 
+  const ollamaConnected = ollamaStatus?.state === 'connected';
+
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6 space-y-6 alphonso-premium-ui">
-      <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-950/70 shadow-[0_0_90px_rgba(0,0,0,0.34)]">
-        <div className="relative min-h-[420px] p-6 md:p-8">
-          <img src={alphonsoBanner} alt="ALPHONSO command banner" className="absolute inset-0 h-full w-full object-cover opacity-35 saturate-125" />
-          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/82 to-zinc-950/35" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.16),transparent_34%)]" />
-          <div className="relative flex min-h-[360px] flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-3 rounded-full border border-cyan-300/20 bg-black/40 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-100 backdrop-blur-md">
-                <img src={alphonsoIcon} alt="" className="h-6 w-6 rounded-full object-cover" /> ALPHONSO Command
-              </div>
-              <img src={alphonsoLogo} alt="ALPHONSO" className="mt-5 max-h-24 max-w-[24rem] rounded-2xl object-cover object-left shadow-[0_0_45px_rgba(34,211,238,0.12)]" />
-              <h1 className="mt-5 text-4xl font-black tracking-[-0.05em] text-white md:text-6xl">Executor online.</h1>
-              <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-300/90">
-                ALPHONSO is the main operator: execute locally, coordinate Jose, watch Coach, and keep the next move obvious.
-              </p>
-            </div>
-            <div className="w-full max-w-sm rounded-[1.5rem] border border-white/10 bg-black/35 p-3 shadow-[0_0_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-              <img src={alphonsoThumbnail} alt="ALPHONSO thumbnail" className="h-40 w-full rounded-2xl object-cover" />
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                <div className="text-[10px] uppercase tracking-widest text-zinc-500">Mode</div>
-                <div className="mt-1 font-bold text-zinc-100">{settings?.focusMode || 'mission_control'}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                <div className="text-[10px] uppercase tracking-widest text-zinc-500">Railway</div>
-                <div className="mt-1 font-bold text-emerald-200">auto-deploy</div>
-              </div>
-              </div>
-            </div>
+    <div className="mx-auto max-w-6xl px-6 py-8 space-y-10">
+
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl">
+        <img
+          src={alphonsoBanner}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-25 saturate-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/80 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.12),transparent_50%)]" />
+        <div className="relative px-8 py-10 md:px-12 md:py-14">
+          <div className="flex items-center gap-2.5 mb-6">
+            <img src={alphonsoIcon} alt="" className="h-7 w-7 rounded-full object-cover" />
+            <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-zinc-400">Alphonso</span>
+            <span className="h-1 w-1 rounded-full bg-zinc-700" />
+            <span className={`text-[11px] font-semibold ${ollamaConnected ? 'text-emerald-400' : 'text-zinc-600'}`}>
+              {ollamaConnected ? 'Local AI online' : 'Local AI offline'}
+            </span>
+          </div>
+          <img src={alphonsoLogo} alt="Alphonso" className="mb-5 h-10 object-contain object-left" />
+          <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
+            Executor online.
+          </h1>
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
+            Coordinate your 9 agents, manage approvals, and keep the next move clear.
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <button
+              onClick={() => onNavigate?.('chat')}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Open Chat
+            </button>
+            <button
+              onClick={() => onNavigate?.('orchestrator')}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-zinc-200 hover:bg-white/10 transition-colors"
+            >
+              <Crown className="h-4 w-4" />
+              Orchestrator
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Gauge} label="Runtime" value={ollamaStatus?.label || 'unknown'} detail="Local Ollama lane" tone={ollamaStatus?.state === 'connected' ? 'green' : 'red'} />
-        <StatCard icon={Crown} label="Approvals" value={snapshot.approvals.length} detail="Jose decisions waiting" tone={snapshot.approvals.length ? 'amber' : 'green'} />
-        <StatCard icon={Shield} label="Coach" value={coachMode ? 'on' : 'off'} detail={coachIntervention ? `${coachIntervention.level} intervention` : 'No active intervention'} tone={coachIntervention?.level === 'hard' ? 'red' : coachMode ? 'cyan' : 'zinc'} />
-        <StatCard icon={Bot} label="Operator" value={operatorMode ? 'on' : 'off'} detail={`${memoryItems.length} memory items · updates ${updateCheckState?.available ? 'ready' : 'clear'}`} tone={operatorMode ? 'green' : 'zinc'} />
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-3xl border border-white/10 bg-zinc-950/65 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Next Actions</div>
-              <div className="mt-1 text-sm text-zinc-400">The app’s recommended loop right now.</div>
+      {/* ── Status strip ── */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[
+          {
+            label: 'Local AI',
+            value: ollamaConnected ? 'Online' : 'Offline',
+            dot: ollamaConnected ? 'bg-emerald-400' : 'bg-zinc-600',
+            sub: ollamaStatus?.label || 'Ollama',
+          },
+          {
+            label: 'Approvals',
+            value: snapshot.approvals.length || '—',
+            dot: snapshot.approvals.length ? 'bg-amber-400' : 'bg-zinc-700',
+            sub: snapshot.approvals.length ? 'waiting' : 'queue clear',
+          },
+          {
+            label: 'Coach',
+            value: coachMode ? 'On' : 'Off',
+            dot: coachIntervention ? 'bg-red-400' : coachMode ? 'bg-cyan-400' : 'bg-zinc-700',
+            sub: coachIntervention ? `${coachIntervention.level} intervention` : 'no intervention',
+          },
+          {
+            label: 'Memory',
+            value: memoryItems.length,
+            dot: 'bg-violet-400',
+            sub: updateCheckState?.available ? 'update ready' : 'up to date',
+          },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl border border-white/[0.07] bg-zinc-900/40 px-4 py-3.5">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">{s.label}</span>
             </div>
-            <CheckCircle2 className="h-5 w-5 text-emerald-300/70" />
+            <div className="text-xl font-bold text-zinc-100">{s.value}</div>
+            <div className="mt-0.5 text-[11px] text-zinc-600">{s.sub}</div>
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {nextActions.map((action) => <ActionCard key={`${action.tab}-${action.title}`} {...action} onNavigate={onNavigate} />)}
-          </div>
-        </div>
+        ))}
+      </div>
 
-        <div className="rounded-3xl border border-white/10 bg-zinc-950/65 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Recent Pulse</div>
-              <div className="mt-1 text-sm text-zinc-400">Agent activity and verification receipts.</div>
-            </div>
-            <Activity className="h-5 w-5 text-cyan-300/70" />
+      {/* ── Next actions + recent feed ── */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
+
+        {/* Next actions */}
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">What to do next</h2>
           </div>
           <div className="space-y-2">
-            {feed.length === 0 && <FeedItem label="No recent pulse yet" detail="Run a chat, proof, or Jose task and it will appear here." time="idle" />}
-            {feed.map((item) => (
-              <FeedItem
-                key={`${item.label}-${item.ts}`}
-                label={item.label}
-                detail={item.detail}
-                time={new Date(item.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                tone={item.tone}
-              />
+            {nextActions.map((action) => (
+              <button
+                key={`${action.tab}-${action.title}`}
+                type="button"
+                onClick={() => onNavigate?.(action.tab)}
+                className="group flex w-full items-center gap-4 rounded-2xl border border-white/[0.06] bg-zinc-900/40 px-4 py-3.5 text-left transition hover:border-white/[0.10] hover:bg-zinc-900/60"
+              >
+                <action.icon className={`h-4 w-4 shrink-0 ${action.accent}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-zinc-100">{action.title}</div>
+                  <div className="mt-0.5 text-[12px] text-zinc-500 truncate">{action.detail}</div>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0">
+                  {action.cta}
+                  <ArrowRight className="h-3 w-3" />
+                </div>
+              </button>
             ))}
           </div>
         </div>
-      </section>
 
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <ActionCard title="Talk to ALPHONSO" detail="Use chat for direct commands and Jose delegation." cta="Open Chat" tab="chat" icon={MessageSquare} tone="cyan" onNavigate={onNavigate} />
-        <ActionCard title="Create with Miya" detail="Local media lane and ComfyUI presets live here." cta="Open Miya" tab="miya" icon={Clapperboard} tone="fuchsia" onNavigate={onNavigate} />
-        <ActionCard title="Check connectors" detail="Qwen, Notion, Telegram, ComfyUI and public deploy posture." cta="Open Connectors" tab="connectors" icon={RadioTower} tone="amber" onNavigate={onNavigate} />
-      </section>
+        {/* Recent pulse */}
+        <div>
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Recent activity</h2>
+            <Activity className="h-3.5 w-3.5 text-zinc-600" />
+          </div>
+          {feed.length === 0 ? (
+            <p className="text-[12px] text-zinc-600">No activity yet. Run a command or task to see it here.</p>
+          ) : (
+            <div className="space-y-3">
+              {feed.map((item) => (
+                <div key={`${item.label}-${item.ts}`}>
+                  <div className="text-[12px] font-medium text-zinc-300 leading-snug">{item.label}</div>
+                  {item.detail && <div className="text-[11px] text-zinc-600 mt-0.5">{item.detail}</div>}
+                  <div className="text-[10px] text-zinc-700 mt-0.5">
+                    {new Date(item.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Quick launch ── */}
+      <div>
+        <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Quick launch</h2>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {[
+            { title: 'Miya Studio', detail: 'Create images and video locally', tab: 'miya', icon: Clapperboard, color: 'text-fuchsia-400' },
+            { title: 'Connectors', detail: 'Telegram, Slack, YouTube and more', tab: 'connectors', icon: RadioTower, color: 'text-cyan-400' },
+            { title: 'Operator', detail: 'Settings, Coach, and memory', tab: 'operator', icon: Bot, color: 'text-violet-400' },
+          ].map((item) => (
+            <button
+              key={item.tab}
+              type="button"
+              onClick={() => onNavigate?.(item.tab)}
+              className="group flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-zinc-900/40 px-4 py-3.5 text-left transition hover:border-white/[0.10] hover:bg-zinc-900/60"
+            >
+              <item.icon className={`h-4 w-4 shrink-0 ${item.color}`} />
+              <div>
+                <div className="text-sm font-semibold text-zinc-100">{item.title}</div>
+                <div className="text-[11px] text-zinc-600 mt-0.5">{item.detail}</div>
+              </div>
+              <ArrowRight className="ml-auto h-3.5 w-3.5 text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0" />
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

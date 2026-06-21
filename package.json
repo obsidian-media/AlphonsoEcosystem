@@ -33,6 +33,8 @@
     "version:bump": "node scripts/bump-version.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@tauri-apps/api": "^2.0.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",

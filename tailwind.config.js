@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
-        heading: ['Space Grotesk', 'Manrope', 'system-ui', 'sans-serif'],
+        sans: ['Inter Variable', 'Plus Jakarta Sans Variable', 'system-ui', 'sans-serif'],
+        heading: ['Plus Jakarta Sans Variable', 'Inter Variable', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       colors: {
