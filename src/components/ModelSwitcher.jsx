@@ -1,18 +1,39 @@
-import React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Cpu } from 'lucide-react';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
 const FETCH_TIMEOUT_MS = 3000;
 
-export function ModelSwitcher({ onModelChange, initialModel }) {
+const AI_MODELS = ['ollama', 'claude', 'chatgpt'];
+const AI_MODEL_LABELS = { ollama: 'Ollama', claude: 'Claude', chatgpt: 'ChatGPT' };
+
+export function ModelSwitcher({ currentModel, onSwitch, compact = false }) {
+  return (
+    <div className={`flex rounded-lg overflow-hidden border border-zinc-700 ${compact ? 'text-xs' : 'text-sm'}`}>
+      {AI_MODELS.map((model) => (
+        <button
+          key={model}
+          onClick={() => onSwitch(model)}
+          className={`${compact ? 'px-2 py-0.5' : 'px-3 py-1.5'} transition-colors ${
+            currentModel === model
+              ? 'bg-amber-500 text-black font-bold'
+              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+          }`}
+        >
+          {AI_MODEL_LABELS[model]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function OllamaModelPicker({ onModelChange, initialModel }) {
   const [models, setModels] = useState([]);
   const [selected, setSelected] = useState(
     () => initialModel || localStorage.getItem(STORAGE_KEY) || ''
   );
   const [ollamaOnline, setOllamaOnline] = useState(null);
-  // Ref so the effect never needs onModelChange in its dep array
   const onModelChangeRef = useRef(onModelChange);
   onModelChangeRef.current = onModelChange;
 
@@ -36,16 +57,11 @@ export function ModelSwitcher({ onModelChange, initialModel }) {
 
         if (names.length > 0) {
           const stored = localStorage.getItem(STORAGE_KEY);
-          // Pick stored if valid, else first available
           const resolved = (stored && names.includes(stored)) ? stored : names[0];
           if (!stored || !names.includes(stored)) {
             setSelected(resolved);
             localStorage.setItem(STORAGE_KEY, resolved);
           }
-          // Always sync parent — this is the critical fix:
-          // ModelSwitcher reads localStorage on init but the parent settings.selectedModel
-          // starts as '' (from persisted app settings), so modelReady stays false
-          // until we explicitly push the resolved model up.
           onModelChangeRef.current?.(resolved);
         }
       } catch {
@@ -59,7 +75,7 @@ export function ModelSwitcher({ onModelChange, initialModel }) {
 
     void fetchModels();
     return () => { cancelled = true; };
-  }, []); // stable — uses ref for callback
+  }, []);
 
   function handleChange(event) {
     const name = event.target.value;
@@ -68,7 +84,6 @@ export function ModelSwitcher({ onModelChange, initialModel }) {
     onModelChange?.(name);
   }
 
-  // Still loading
   if (ollamaOnline === null) {
     return (
       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/5 rounded-lg text-[10px] text-zinc-500 font-medium uppercase tracking-widest">
@@ -78,7 +93,6 @@ export function ModelSwitcher({ onModelChange, initialModel }) {
     );
   }
 
-  // Ollama not running
   if (!ollamaOnline) {
     return (
       <div

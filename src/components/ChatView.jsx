@@ -12,7 +12,7 @@ import {
   classifyOllamaError,
   generateOllamaChatStream
 } from '../lib/ollama';
-import { ModelSwitcher } from './ModelSwitcher';
+import { OllamaModelPicker } from './ModelSwitcher';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
 import { PipelineResultCard } from './PipelineResultCard';
@@ -547,7 +547,7 @@ export function ChatView({
               <History className="w-3.5 h-3.5 text-zinc-500" />
               <span className="text-xs text-zinc-500 font-medium">CHAT SESSION: {activeChatId}</span>
             </div>
-            <ModelSwitcher
+            <OllamaModelPicker
               initialModel={settings.selectedModel}
               onModelChange={onModelChange}
             />
