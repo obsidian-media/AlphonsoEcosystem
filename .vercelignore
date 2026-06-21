@@ -1,0 +1,17 @@
+# Rust/Tauri — not needed for Vercel
+src-tauri/
+.tauri/
+
+# Docs and archives — large binaries in here
+docs/
+scripts/
+
+# Test files
+e2e/
+src/test/
+
+# Local dev
+node_modules/
+dist/
+.env
+.env.*
