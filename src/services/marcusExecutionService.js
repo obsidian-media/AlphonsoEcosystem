@@ -299,3 +299,116 @@ export async function runMarcusDistribution(commandText, assignment, priorOutput
     schema
   };
 }
+
+// ── Scheduled Publishing ──────────────────────────────────────────────────────
+
+const MARCUS_SCHEDULE_KEY = 'alphonso_marcus_schedule_v1';
+const MARCUS_SCHEDULE_MAX = 100;
+
+/** @typedef {{ id: string, content: string, platform: string, scheduledAt: number, agentId: string, createdAt: number, status: 'pending' | 'executed' | 'cancelled', executedAt?: number }} ScheduledPublish */
+
+function _loadSchedule() {
+  try {
+    return JSON.parse(localStorage.getItem(MARCUS_SCHEDULE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function _saveSchedule(items) {
+  try {
+    localStorage.setItem(MARCUS_SCHEDULE_KEY, JSON.stringify(items.slice(-MARCUS_SCHEDULE_MAX)));
+  } catch { /* ignore */ }
+}
+
+/**
+ * Schedule a publish action for future execution.
+ * @param {{ content: string, platform: string, scheduledAt: number, agentId: string }} params
+ * @returns {ScheduledPublish} The created schedule entry
+ */
+export function schedulePublish({ content, platform, scheduledAt, agentId }) {
+  const entry = {
+    id: `marcus_sched_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    content: String(content || ''),
+    platform: String(platform || ''),
+    scheduledAt: Number(scheduledAt) || Date.now(),
+    agentId: String(agentId || 'marcus'),
+    createdAt: Date.now(),
+    status: 'pending'
+  };
+  const items = _loadSchedule();
+  items.push(entry);
+  _saveSchedule(items);
+  return entry;
+}
+
+/**
+ * Get all scheduled publishes (all statuses).
+ * @returns {ScheduledPublish[]}
+ */
+export function getScheduledPublishes() {
+  return _loadSchedule();
+}
+
+/**
+ * Cancel a scheduled publish by id.
+ * @param {string} id
+ * @returns {boolean} Whether the item was found and cancelled
+ */
+export function cancelScheduledPublish(id) {
+  const items = _loadSchedule();
+  const idx = items.findIndex((item) => item.id === id);
+  if (idx === -1) return false;
+  items[idx] = { ...items[idx], status: 'cancelled' };
+  _saveSchedule(items);
+  return true;
+}
+
+let _schedulerInterval = null;
+
+/**
+ * Start the scheduler — checks every `intervalMs` (default 60s) for pending
+ * items past their `scheduledAt` time and calls `executeMarcusPublish` on them.
+ * Safe to call multiple times — stops any previous interval first.
+ * @param {number} [intervalMs=60000]
+ */
+export function startScheduler(intervalMs = 60_000) {
+  stopScheduler();
+  _schedulerInterval = setInterval(async () => {
+    const now = Date.now();
+    const items = _loadSchedule();
+    let changed = false;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.status !== 'pending') continue;
+      if (item.scheduledAt > now) continue;
+
+      // Mark as executed optimistically before async call
+      items[i] = { ...item, status: 'executed', executedAt: now };
+      changed = true;
+
+      try {
+        await executeMarcusPublish({
+          platform: item.platform,
+          payload: { text: item.content, content: item.content },
+          commandId: item.id,
+          workflowId: `scheduler_${item.id}`,
+          preApproved: false
+        });
+      } catch { /* best-effort; item is already marked executed */ }
+    }
+
+    if (changed) _saveSchedule(items);
+  }, intervalMs);
+}
+
+/**
+ * Stop the scheduler interval if running.
+ */
+export function stopScheduler() {
+  if (_schedulerInterval !== null) {
+    clearInterval(_schedulerInterval);
+    _schedulerInterval = null;
+  }
+}

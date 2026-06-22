@@ -5,7 +5,7 @@ let tauriInvoke = null;
 try {
   // Dynamic import so web builds don't break
   import('@tauri-apps/api/core').then(m => { tauriInvoke = m.invoke; });
-} catch {}
+} catch { /* tauri not available */ }
 
 export function durableGet(key) {
   return localStorage.getItem(key);

@@ -13,13 +13,35 @@ import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
 
+interface MemoryItem {
+  id?: string;
+  agent?: string;
+  category?: string;
+  retentionTier?: string;
+  timestampMs?: number;
+  createdAtMs?: number;
+  title?: string;
+  content?: string;
+  [key: string]: unknown;
+}
+
+interface TierConfig {
+  label: string;
+  color: string;
+  icon: string;
+}
+
+interface TierConfigMap {
+  [key: string]: TierConfig;
+}
+
 function EchoTimeline() {
-  const items = listMemoryItems()
-    .filter(m => m.agent === 'echo' || m.category === 'knowledge_preservation' || m.retentionTier)
+  const items: MemoryItem[] = listMemoryItems()
+    .filter((m: MemoryItem) => m.agent === 'echo' || m.category === 'knowledge_preservation' || m.retentionTier)
     .slice(-15)
     .reverse();
 
-  const tierConfig = {
+  const tierConfig: TierConfigMap = {
     permanent: { label: 'Permanent', color: 'emerald', icon: '♾' },
     standard_180d: { label: '180 days', color: 'indigo', icon: '📅' },
     ephemeral_7d: { label: '7 days', color: 'amber', icon: '⏳' },
@@ -38,7 +60,7 @@ function EchoTimeline() {
       <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Echo Memory Timeline ({items.length})</p>
       {items.map((m, i) => {
         const tier = m.retentionTier || 'standard_180d';
-        const tc = tierConfig[tier] || tierConfig.standard_180d;
+        const tc = tierConfig[tier] || tierConfig['standard_180d'];
         const expiryMs = tier === 'ephemeral_7d' ? 7 * 24 * 3600 * 1000 : tier === 'standard_180d' ? 180 * 24 * 3600 * 1000 : null;
         const createdAt = m.timestampMs || m.createdAtMs || 0;
         const expiresIn = expiryMs ? Math.max(0, Math.round((createdAt + expiryMs - Date.now()) / (24 * 3600 * 1000))) : null;
@@ -54,7 +76,7 @@ function EchoTimeline() {
                 }`}>{tc.label}</span>
                 {expiresIn !== null && <span className="text-[10px] text-zinc-600">expires in {expiresIn}d</span>}
               </div>
-              <p className="text-xs text-zinc-300 truncate">{m.title || m.content?.slice(0, 80) || 'Untitled'}</p>
+              <p className="text-xs text-zinc-300 truncate">{m.title || (typeof m.content === 'string' ? m.content.slice(0, 80) : 'Untitled')}</p>
               {m.category && <p className="text-[10px] text-zinc-600">{m.category}</p>}
             </div>
           </div>
@@ -64,7 +86,19 @@ function EchoTimeline() {
   );
 }
 
-function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }) {
+interface InstalledModel {
+  name: string;
+  size: number;
+}
+
+interface ModelSelectorProps {
+  models: InstalledModel[];
+  selectedModel?: string;
+  selectedModelMissing?: boolean;
+  onSelectModel: (model: string) => void;
+}
+
+function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectModel }: ModelSelectorProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -103,7 +137,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
 
 const SUGGESTED_MODELS = ['llama3.2', 'llama3.1:8b', 'mistral', 'phi3.5', 'codellama', 'deepseek-r1:7b'];
 
-function ModelPullHelper({ onRefresh }) {
+function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
   const [modelName, setModelName] = useState('');
   const [copied, setCopied] = useState(false);
   const cmd = `ollama pull ${modelName.trim() || '<model-name>'}`;
@@ -161,14 +195,19 @@ const AVATAR_AGENTS = [
   { id: 'nova',     label: 'Nova' }
 ];
 
-function AgentAvatarCard({ agentId, label }) {
-  const fileRef = useRef(null);
-  const [preview, setPreview] = useState(() => getAgentMascotPath(agentId));
-  const [hasCustom, setHasCustom] = useState(() => Boolean(getCustomAvatarDataUrl(agentId)));
+interface AgentAvatarCardProps {
+  agentId: string;
+  label: string;
+}
+
+function AgentAvatarCard({ agentId, label }: AgentAvatarCardProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string>(() => getAgentMascotPath(agentId));
+  const [hasCustom, setHasCustom] = useState<boolean>(() => Boolean(getCustomAvatarDataUrl(agentId)));
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleFile = useCallback(async (e) => {
+  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
@@ -178,8 +217,8 @@ function AgentAvatarCard({ agentId, label }) {
       const dataUrl = await setCustomAvatar(agentId, file);
       setPreview(dataUrl);
       setHasCustom(true);
-    } catch (err) {
-      setError(String(err.message || err));
+    } catch (err: unknown) {
+      setError(String((err as Error).message || err));
     } finally {
       setUploading(false);
     }
@@ -228,6 +267,91 @@ function AgentAvatarCard({ agentId, label }) {
   );
 }
 
+interface OllamaStatus {
+  state: string;
+  label: string;
+  message?: string;
+}
+
+interface UpdateCheckState {
+  available?: boolean;
+  checking?: boolean;
+  configured?: boolean;
+  currentVersion?: string;
+  latestVersion?: string;
+  error?: string;
+}
+
+interface AppSettings {
+  endpoint?: string;
+  workspaceRoot?: string;
+  ocrEnginePath?: string;
+  selectedModel?: string;
+  autoUpdateEnabled?: boolean;
+  updaterEndpoint?: string;
+  updaterPubkey?: string;
+  updaterTarget?: string;
+  desktopMode?: boolean;
+  localOnlyMode?: boolean;
+  zeroCostMode?: boolean;
+  approvalMode?: boolean;
+  safeMode?: boolean;
+  privacyShieldActive?: boolean;
+  miyaCompanionPinned?: boolean;
+  joseCompanionPinned?: boolean;
+  autoLaunchServices?: boolean;
+  outputFolder?: string;
+  comfyuiDir?: string;
+  comfyuiPython?: string;
+  environmentTheme?: string;
+  colorScheme?: string;
+  idleTimeoutMinutes?: number;
+  [key: string]: unknown;
+}
+
+interface SettingsViewProps {
+  settings: AppSettings;
+  setSettings: (settings: AppSettings | ((prev: AppSettings) => AppSettings)) => void;
+  ollamaStatus: OllamaStatus;
+  installedModels: InstalledModel[];
+  selectedModelMissing?: boolean;
+  onCheckOllama: () => void;
+  onCopyTroubleshootingCommand: () => void;
+  copyState?: string;
+  updateCheckState?: UpdateCheckState;
+  onCheckUpdates?: () => void;
+  normalizeEndpoint?: (endpoint: string) => string;
+  ollamaTroubleshootingCommand?: string;
+  braveSearchConfigured?: boolean;
+}
+
+interface LaunchStatus {
+  service: 'ollama' | 'comfyui';
+  state: 'launching' | 'launched' | 'running' | 'done' | 'error';
+  message?: string;
+}
+
+interface BackupResult {
+  type: 'success' | 'error';
+  message: string;
+}
+
+interface BackupSizeEstimate {
+  kb: number;
+  [key: string]: unknown;
+}
+
+interface ComposioHealth {
+  status: string;
+  message: string;
+}
+
+interface ComposioToolkit {
+  key?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
 export function SettingsView({
   settings,
   setSettings,
@@ -242,22 +366,22 @@ export function SettingsView({
   normalizeEndpoint,
   ollamaTroubleshootingCommand,
   braveSearchConfigured = false
-}) {
+}: SettingsViewProps) {
   const resolvedNormalizeEndpoint = normalizeEndpoint || _normalizeEndpoint;
-  const folderPickerRef = useRef(null);
+  const folderPickerRef = useRef<HTMLInputElement>(null);
 
-  const [composioApiKey, setComposioApiKey] = useState(() => getComposioConfig().apiKey || '');
-  const [composioUserId, setComposioUserId] = useState(() => getComposioConfig().userId || 'alphonso-user');
-  const [composioHealth, setComposioHealth] = useState(null);
+  const [composioApiKey, setComposioApiKey] = useState<string>(() => getComposioConfig().apiKey || '');
+  const [composioUserId, setComposioUserId] = useState<string>(() => getComposioConfig().userId || 'alphonso-user');
+  const [composioHealth, setComposioHealth] = useState<ComposioHealth | null>(null);
   const [composioChecking, setComposioChecking] = useState(false);
-  const [composioToolkits, setComposioToolkits] = useState([]);
+  const [composioToolkits, setComposioToolkits] = useState<ComposioToolkit[]>([]);
 
   const COMPOSIO_ENABLED_KEY = 'alphonso_composio_toolkits_enabled_v1';
-  const [enabledToolkits, setEnabledToolkits] = useState(() => {
+  const [enabledToolkits, setEnabledToolkits] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('alphonso_composio_toolkits_enabled_v1') || '[]')); }
     catch { return new Set(); }
   });
-  const toggleComposioToolkit = (key) => {
+  const toggleComposioToolkit = (key: string) => {
     setEnabledToolkits(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
@@ -282,34 +406,35 @@ export function SettingsView({
       checkComposioHealth().then((health) => {
         setComposioHealth(health);
         setComposioChecking(false);
-        fetchComposioToolkits().then((result) => {
+        fetchComposioToolkits().then((result: any) => {
           if (result.toolkits) setComposioToolkits(result.toolkits);
         });
       });
     }
   };
 
-  const handleFolderPick = (e) => {
+  const handleFolderPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const path = files[0].path || files[0].webkitRelativePath?.split('/')[0] || '';
+    const file = files[0] as File & { path?: string; webkitRelativePath?: string };
+    const path = file.path || file.webkitRelativePath?.split('/')[0] || '';
     if (path) setSettings({ ...settings, workspaceRoot: path });
     e.target.value = '';
   };
 
   // Local services state
-  const [launchStatus, setLaunchStatus] = useState(null);
+  const [launchStatus, setLaunchStatus] = useState<LaunchStatus | null>(null);
 
   const handlePickOutputFolder = async () => {
     try {
-      const result = await invoke('pick_folder');
+      const result = await invoke<{ picked: boolean; path: string }>('pick_folder');
       if (result?.picked && result.path) setSettings({ ...settings, outputFolder: result.path });
     } catch { /* Tauri not available */ }
   };
 
   const handlePickComfyUIDir = async () => {
     try {
-      const result = await invoke('pick_folder');
+      const result = await invoke<{ picked: boolean; path: string }>('pick_folder');
       if (result?.picked && result.path) setSettings({ ...settings, comfyuiDir: result.path });
     } catch { /* Tauri not available */ }
   };
@@ -317,14 +442,14 @@ export function SettingsView({
   const handleLaunchOllama = async () => {
     setLaunchStatus({ service: 'ollama', state: 'launching' });
     try {
-      const result = await invoke('launch_ollama');
+      const result = await invoke<{ launched?: boolean; already_running?: boolean; message?: string }>('launch_ollama');
       setLaunchStatus({
         service: 'ollama',
         state: result?.launched ? 'launched' : result?.already_running ? 'running' : 'done',
         message: result?.message || 'Done'
       });
-    } catch (err) {
-      setLaunchStatus({ service: 'ollama', state: 'error', message: String(err?.message || err) });
+    } catch (err: unknown) {
+      setLaunchStatus({ service: 'ollama', state: 'error', message: String((err as Error)?.message || err) });
     }
   };
 
@@ -335,7 +460,7 @@ export function SettingsView({
     }
     setLaunchStatus({ service: 'comfyui', state: 'launching' });
     try {
-      const result = await invoke('launch_comfyui', {
+      const result = await invoke<{ launched?: boolean; already_running?: boolean; message?: string }>('launch_comfyui', {
         comfyuiDir: settings.comfyuiDir,
         pythonExe: settings.comfyuiPython || 'python'
       });
@@ -344,17 +469,17 @@ export function SettingsView({
         state: result?.launched ? 'launched' : result?.already_running ? 'running' : 'done',
         message: result?.message || 'Done'
       });
-    } catch (err) {
-      setLaunchStatus({ service: 'comfyui', state: 'error', message: String(err?.message || err) });
+    } catch (err: unknown) {
+      setLaunchStatus({ service: 'comfyui', state: 'error', message: String((err as Error)?.message || err) });
     }
   };
 
   // Backup/restore state
-  const [backupSize, setBackupSize] = useState(() => getBackupSizeEstimate());
+  const [backupSize, setBackupSize] = useState<BackupSizeEstimate>(() => getBackupSizeEstimate());
   const [backupCreating, setBackupCreating] = useState(false);
   const [backupRestoring, setBackupRestoring] = useState(false);
-  const [backupResult, setBackupResult] = useState(null);
-  const backupFileRef = useRef(null);
+  const [backupResult, setBackupResult] = useState<BackupResult | null>(null);
+  const backupFileRef = useRef<HTMLInputElement>(null);
 
   const handleCreateBackup = async () => {
     setBackupCreating(true);
@@ -363,14 +488,14 @@ export function SettingsView({
       const data = await createBackup();
       exportBackupToFile(data);
       setBackupResult({ type: 'success', message: `Backup created — ${backupSize.kb} KB exported` });
-    } catch (err) {
-      setBackupResult({ type: 'error', message: `Backup failed: ${err.message || err}` });
+    } catch (err: unknown) {
+      setBackupResult({ type: 'error', message: `Backup failed: ${(err as Error).message || err}` });
     } finally {
       setBackupCreating(false);
     }
   };
 
-  const handleImportBackup = async (e) => {
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setBackupRestoring(true);
@@ -384,8 +509,8 @@ export function SettingsView({
       });
       // Reload page to apply restored settings
       setTimeout(() => window.location.reload(), 1500);
-    } catch (err) {
-      setBackupResult({ type: 'error', message: `Restore failed: ${err.message || err}` });
+    } catch (err: unknown) {
+      setBackupResult({ type: 'error', message: `Restore failed: ${(err as Error).message || err}` });
     } finally {
       setBackupRestoring(false);
       e.target.value = '';
@@ -421,7 +546,7 @@ export function SettingsView({
                 onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
                 className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
               />
-              <input ref={folderPickerRef} type="file" webkitdirectory="" onChange={handleFolderPick} className="hidden" />
+              <input ref={folderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleFolderPick} className="hidden" />
               <button
                 onClick={() => folderPickerRef.current?.click()}
                 className="px-3 py-2 rounded-xl border border-white/10 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
@@ -470,9 +595,9 @@ export function SettingsView({
               <div className="flex items-center gap-2">
                 <StatusDot state={ollamaStatus.state} />
                 <span className="text-sm font-semibold text-white">{ollamaStatus.label}</span>
-                <Badge color={statusColors[ollamaStatus.state]}>{ollamaStatus.state}</Badge>
+                <Badge color={(statusColors as any)[ollamaStatus.state]}>{ollamaStatus.state}</Badge>
               </div>
-              <span className="text-[11px] text-zinc-500">{resolvedNormalizeEndpoint(settings.endpoint)}/api/tags</span>
+              <span className="text-[11px] text-zinc-500">{resolvedNormalizeEndpoint(settings.endpoint || '')}/api/tags</span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-zinc-400">{ollamaStatus.message}</p>
             <div className="mt-4 rounded-xl bg-black/30 border border-white/5 px-3 py-2 font-mono text-[11px] text-zinc-400 whitespace-pre-wrap">
@@ -755,7 +880,7 @@ export function SettingsView({
               </div>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                 {composioToolkits.slice(0, 20).map((tk) => {
-                  const key = tk.key || tk.name;
+                  const key = tk.key || tk.name || '';
                   const enabled = enabledToolkits.has(key);
                   return (
                     <button

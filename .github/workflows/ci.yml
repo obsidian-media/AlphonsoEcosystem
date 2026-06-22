@@ -38,6 +38,11 @@ jobs:
       - name: Web build
         run: npm run build
 
+      - name: Check bundle size
+        shell: bash
+        run: |
+          find dist/assets -name "*.js" -size +1024k | grep . && echo "Bundle size exceeded 1MB limit" && exit 1 || echo "Bundle size OK"
+
   rust-quality:
     name: Rust Tests & Clippy
     runs-on: ubuntu-latest

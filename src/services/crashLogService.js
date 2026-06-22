@@ -12,7 +12,7 @@ export function logError(error, context = {}) {
     context
   });
   if (entries.length > MAX_ENTRIES) entries.splice(0, entries.length - MAX_ENTRIES);
-  try { durableSet(LOG_KEY, JSON.stringify(entries)); } catch {}
+  try { durableSet(LOG_KEY, JSON.stringify(entries)); } catch { /* ignore */ }
 }
 
 export function getCrashLog() {

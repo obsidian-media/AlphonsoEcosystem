@@ -276,7 +276,7 @@ export function saveOpportunityScore(score, recommendation) {
   const history = getOpportunityHistory();
   history.push({ score, recommendation, timestamp: Date.now() });
   if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
-  try { durableSet(NOVA_HISTORY_KEY, JSON.stringify(history)); } catch {}
+  try { durableSet(NOVA_HISTORY_KEY, JSON.stringify(history)); } catch { /* ignore */ }
 }
 
 export function getOpportunityHistory() {
