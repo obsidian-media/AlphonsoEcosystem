@@ -7,7 +7,7 @@
 > **v2.0.5** — Local-first AI desktop companion powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.0.5-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.5)
-[![Tests](https://img.shields.io/badge/tests-1324%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Tests](https://img.shields.io/badge/tests-1621%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
@@ -220,8 +220,8 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 1,324 tests across 89 files
-npm run test:coverage  # Coverage report (~30%; threshold 20%)
+npm run test           # 1,621+ tests across 112 files
+npm run test:coverage  # Coverage report (~35%+; threshold 20%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + test + build in one command
 npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
@@ -261,7 +261,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.0.5** | June 21, 2026 | All 9 agent runtimes, connector credential UI, coverage ~30%, 1,324 tests |
+| **v2.0.5** | June 21, 2026 | All 9 agent runtimes, Sprint Next-10 complete, 112 test files, 1,621+ tests, coverage ~35%+, TypeScript migration (5 components), SQLite dual-write, rustfmt CI fix |
 | v2.0.2 | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |
 | v1.0.3 | June 15, 2026 | Installer update |
 | v1.0.2 | June 15, 2026 | WebView2 zombie process fix, boot optimizations |

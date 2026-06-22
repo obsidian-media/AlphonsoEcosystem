@@ -178,6 +178,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
 - Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`)
-- Component test coverage at ~6% — 4 agent modules at 0%
-- Mascot images not compressed (jose: 236KB, alphonso: 243KB)
-- GitHub connector tests: 20 tests in `githubConnector.test.js` (PR #41); Slack connector tests: 16 tests in `slackConnector.test.js` (PR #41)
+- Component test coverage improved to ~12%+ (11 new component test files added in Direction 3 sprint)
+- Overall coverage ~35%+ (threshold 20%), 112 test files, 1621+ tests (Sprint Next-10)
+- GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
+- `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI

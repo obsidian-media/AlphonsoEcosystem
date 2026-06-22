@@ -667,13 +667,13 @@ Object.keys(localStorage)
 ```
 src/
   agents/           9 agent profiles, permissions, schemas
-  components/       82+ UI components
-  services/         130 services (policy-gated)
+  components/       82+ UI components (5 migrated to .tsx)
+  services/         ~126 services (policy-gated)
     connectors/     GitHub, Slack, and other connector implementations
   hooks/            14 custom React hooks
-  lib/              Utilities (ollama.js, chatUtils.js)
+  lib/              Utilities (ollama.js, chatUtils.js, durableStore.js)
   features/         Content Catalyst, etc.
-  test/             81 test files (1100 tests)
+  test/             112 test files (1621+ tests)
 
 src-tauri/
   src/lib.rs        Rust backend (~1,713 lines, 18 modules)

@@ -19,7 +19,8 @@ npm run lint             # ESLint on src/
 
 # Rust (run from src-tauri/ directory)
 cargo check              # Verify Rust compiles
-cargo test               # Run 60 Rust unit tests
+cargo test               # Run Rust unit tests
+cargo fmt --all -- --check   # Format check (rustfmt.toml sets tab_spaces=2)
 cargo clippy -- -D warnings  # Lint Rust — must be zero warnings (CI enforces this)
 
 # Updater / release
@@ -31,7 +32,7 @@ npm run updater:verify   # Verify updater readiness
 npm run auth:youtube     # OAuth flow for YouTube
 npm run auth:meta        # OAuth flow for Meta/Instagram
 
-# Coverage (actual measured: 27.97%, threshold: 20%, scoped to src/)
+# Coverage (actual measured: ~35%+, threshold: 20%, scoped to src/)
 npm run test:coverage    # Run tests with coverage report
 
 # E2E — Playwright installed (no extra install needed)
@@ -248,4 +249,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-21 — All 5 Directions complete. 101 test files, 1439+ tests, all passing. All 9 agents have production runtimes + UI surfaces. Coverage ~30%+ (threshold 20%). v2.0.5 live. cargo clippy clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-22 — Sprint Next-10 complete + rustfmt CI fix. 112 test files, 1621+ tests, all passing. All 9 agents have production runtimes + UI surfaces. Coverage ~35%+ (threshold 20%). v2.0.5 live. cargo clippy clean. cargo fmt --check clean (rustfmt.toml added). CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
