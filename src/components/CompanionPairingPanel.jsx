@@ -9,6 +9,7 @@ export function CompanionPairingPanel() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [discoveryStarted, setDiscoveryStarted] = useState(false);
 
   const refreshStatus = async () => {
     try {
@@ -28,6 +29,15 @@ export function CompanionPairingPanel() {
       setPin('');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startDiscovery = async () => {
+    try {
+      await invoke('companion_start_discovery', { port: status?.port || 8765 });
+      setDiscoveryStarted(true);
+    } catch {
+      setDiscoveryStarted(false);
     }
   };
 
@@ -63,14 +73,24 @@ export function CompanionPairingPanel() {
             <div className="text-sm font-semibold text-white">Remote Access PIN</div>
             <div className="text-xs text-zinc-500 mt-0.5">Connect iOS companion to this desktop</div>
           </div>
-          <button
-            onClick={generatePin}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white text-xs font-medium transition-colors"
-          >
-            <Key className="w-3.5 h-3.5" />
-            {loading ? 'Generating...' : 'Generate PIN'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={startDiscovery}
+              disabled={discoveryStarted}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 disabled:bg-emerald-600/20 text-white text-xs font-medium transition-colors"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              {discoveryStarted ? 'Discovering' : 'Start Discovery'}
+            </button>
+            <button
+              onClick={generatePin}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white text-xs font-medium transition-colors"
+            >
+              <Key className="w-3.5 h-3.5" />
+              {loading ? 'Generating...' : 'Generate PIN'}
+            </button>
+          </div>
         </div>
 
         {pin && (

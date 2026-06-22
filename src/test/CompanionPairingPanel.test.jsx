@@ -102,4 +102,15 @@ describe('CompanionPairingPanel', () => {
       expect(screen.getByText('2')).toBeTruthy();
     });
   });
+
+  it('starts discovery when Start Discovery button clicked', async () => {
+    invoke.mockResolvedValue({ running: true, port: 8765, connected_clients: 0 });
+    render(<CompanionPairingPanel />);
+    await waitFor(() => screen.getByRole('button', { name: /Start Discovery/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Start Discovery/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Discovering/i })).toBeTruthy();
+    });
+    expect(invoke).toHaveBeenCalledWith('companion_start_discovery', { port: 8765 });
+  });
 });

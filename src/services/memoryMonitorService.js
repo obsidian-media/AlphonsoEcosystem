@@ -27,7 +27,7 @@ export function getUsageStats() {
       usedBytes += size;
       keySizes.push({ key, sizeKB: parseFloat((size / 1024).toFixed(2)) });
     }
-  } catch {}
+  } catch { /* localStorage unavailable */ }
 
   keySizes.sort((a, b) => b.sizeKB - a.sizeKB);
   const largestKeys = keySizes.slice(0, 10);
@@ -50,7 +50,7 @@ export function getAlphonsoKeys() {
       const sizeKB = parseFloat(((byteSize(key) + byteSize(val)) / 1024).toFixed(2));
       result.push({ key, sizeKB });
     }
-  } catch {}
+  } catch { /* localStorage unavailable */ }
   result.sort((a, b) => b.sizeKB - a.sizeKB);
   return result;
 }
@@ -66,7 +66,7 @@ export function checkThresholds() {
     lastWarningState = true;
     const stats = { usedBytes, usedPercent, warning, critical };
     for (const cb of subscribers) {
-      try { cb(stats); } catch {}
+      try { cb(stats); } catch { /* subscriber error ignored */ }
     }
   } else if (!warning) {
     lastWarningState = false;
@@ -87,7 +87,7 @@ export function pruneOldest(targetKey, keepCount = 50) {
     // Assume entries are ordered oldest-first (push-appended rings)
     entries.splice(0, entries.length - keepCount);
     localStorage.setItem(targetKey, JSON.stringify(entries));
-  } catch {}
+  } catch { /* localStorage unavailable */ }
 }
 
 // ── Subscription ───────────────────────────────────────────────────────────────

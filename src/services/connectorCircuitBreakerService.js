@@ -9,7 +9,7 @@ function loadAll() {
 }
 
 function saveAll(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* localStorage unavailable */ }
 }
 
 function defaultState() {
