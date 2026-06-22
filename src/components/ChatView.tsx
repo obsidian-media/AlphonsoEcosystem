@@ -788,7 +788,10 @@ export function ChatView({
         {searchQuery && visibleMessages.length === 0 && (
           <div className="text-center text-xs text-zinc-600 py-8">No messages match "{searchQuery}"</div>
         )}
-        {visibleMessages.map((message) => (
+        {visibleMessages.map((message) => {
+          const lastAssistantIdx = messages.length - 1 - [...messages].reverse().findIndex((m) => m.role === 'assistant');
+          const isLastAssistantMessage = message.role === 'assistant' && messages.indexOf(message) === lastAssistantIdx;
+          return (
           <div key={message.id} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (
               <div className={`w-8 h-8 rounded-lg ${message.isError ? 'bg-red-500/10 border-red-500/20' : 'bg-indigo-500/10 border-indigo-500/20'} border flex items-center justify-center shrink-0 mt-1 shadow-sm`}>
@@ -801,6 +804,26 @@ export function ChatView({
                   <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20 text-[13px] leading-relaxed whitespace-pre-wrap' : 'text-zinc-300'}`}>
                     {message.isError ? message.content : <MarkdownMessage content={message.content} />}
                   </div>
+                  {/* Inline Hector citations on last assistant message */}
+                  {hectorBriefing && isLastAssistantMessage && hectorBriefing.sources?.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {hectorBriefing.sources.slice(0, 3).map((src, i) => {
+                        const domain = src.url ? (() => { try { return new URL(src.url).hostname.replace('www.', ''); } catch { return src.url; } })() : null;
+                        return (
+                          <a
+                            key={i}
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-900/40 border border-sky-700/50 rounded text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/60"
+                            title={src.url}
+                          >
+                            <span>↗</span>
+                            <span>{src.title || domain || `Source ${i + 1}`}</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
@@ -837,7 +860,8 @@ export function ChatView({
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {isGenerating && (
           <div className="flex gap-4 max-w-3xl mx-auto w-full" aria-live="polite" aria-label="Streaming response">
@@ -1036,9 +1060,20 @@ export function ChatView({
               <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Hector Research</span>
               <button onClick={() => setHectorBriefing(null)} className="text-zinc-500 hover:text-zinc-300 text-xs">×</button>
             </div>
-            {hectorBriefing.sources?.slice(0, 3).map((src, i) => (
-              <div key={i} className="text-[11px] text-zinc-400 truncate">{src.title || src.url}</div>
-            ))}
+            {hectorBriefing.sources?.slice(0, 3).map((src, i) => {
+              const domain = src.url ? (() => { try { return new URL(src.url).hostname.replace('www.', ''); } catch { return src.url; } })() : null;
+              return (
+                <a
+                  key={i}
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
+                  className="text-sky-400 hover:text-sky-300 underline text-xs truncate block"
+                  title={src.url}
+                >
+                  {src.title || domain || src.url}
+                </a>
+              );
+            })}
           </div>
         )}
         <div
