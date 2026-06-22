@@ -11,7 +11,12 @@ vi.mock('lucide-react', () => ({
   Copy: () => <span data-testid="copy-icon">Copy</span>,
   Wifi: () => <span data-testid="wifi-icon">Wifi</span>,
   Shield: () => <span data-testid="shield-icon">Shield</span>,
+  QrCode: () => <span data-testid="qr-icon">QR</span>,
   CheckCircle2: () => <span data-testid="check-icon">Check</span>
+}));
+
+vi.mock('qrcode.react', () => ({
+  default: ({ value }) => <span data-testid="qr-code">{value}</span>,
 }));
 
 import { invoke } from '@tauri-apps/api/core';
@@ -75,6 +80,19 @@ describe('CompanionPairingPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /Generate PIN/i }));
     expect(screen.getByRole('button', { name: /Generating.../i })).toBeTruthy();
     await waitFor(() => screen.getByText('123456'));
+  });
+
+  it('displays QR code when PIN is generated', async () => {
+    invoke
+      .mockResolvedValueOnce({ running: true, port: 8765, connected_clients: 0 })
+      .mockResolvedValueOnce('123456');
+    render(<CompanionPairingPanel />);
+    await waitFor(() => screen.getByRole('button', { name: /Generate PIN/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate PIN/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId('qr-code')).toBeTruthy();
+      expect(screen.getByTestId('qr-code').textContent).toBe('123456');
+    });
   });
 
   it('displays connected clients count', async () => {

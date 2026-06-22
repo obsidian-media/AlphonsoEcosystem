@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Key, Copy, Wifi, Shield } from 'lucide-react';
-import { CheckCircle2 } from 'lucide-react';
+import { Key, Copy, Wifi, Shield, QrCode, CheckCircle2 } from 'lucide-react';
+import QRCode from 'qrcode.react';
 
 export function CompanionPairingPanel() {
   const [pin, setPin] = useState('');
@@ -74,15 +74,20 @@ export function CompanionPairingPanel() {
         </div>
 
         {pin && (
-          <div className="flex items-center gap-3 p-4 bg-black/30 rounded-xl">
-            <div className="text-3xl font-mono font-bold tracking-wider text-emerald-400">{pin}</div>
-            <button
-              onClick={copyPin}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-              title="Copy PIN"
-            >
-              {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-zinc-400" />}
-            </button>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-4 bg-black/30 rounded-xl">
+              <div className="text-3xl font-mono font-bold tracking-wider text-emerald-400">{pin}</div>
+              <button
+                onClick={copyPin}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                title="Copy PIN"
+              >
+                {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-zinc-400" />}
+              </button>
+            </div>
+            <div className="flex justify-center p-4 bg-zinc-900/70 rounded-xl">
+              <QRCode value={pin} size={128} bgColor="#18181b" fgColor="#34d399" />
+            </div>
           </div>
         )}
 
