@@ -61,7 +61,7 @@ NODE_OPTIONS="--max-old-space-size=4096" npm run build
 ## Runtime Issues
 
 ### App freezes on startup
-- This was fixed in v1.0.3 — ensure you're on the latest version (v2.0.2)
+- This was fixed in v1.0.3 — ensure you're on the latest version (v2.0.5)
 - Heavy startup work is now deferred to prevent UI freeze
 - The auto-updater will notify you of new versions automatically (requires v2.0.2+ installed)
 

@@ -25,11 +25,11 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.0.2 |
+| Version | 2.0.5 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
-| Frontend | React 18, Vite 5, Tailwind 3, Lucide React — currently `.jsx` (not `.tsx`) |
+| Frontend | React 18, Vite 5, Tailwind 3, Lucide React — primarily `.jsx`; AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar migrated to `.tsx` |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Deployment | Windows NSIS + MSI installer, Railway static serve (gateway) |
 
@@ -52,12 +52,10 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 | **Echo** | Knowledge Historian — memory synthesis, retention classification, archival | Knowledge preservation only; Ollama-powered with deterministic fallback |
 | **Sentinel** | Security Monitor — threat detection, permission audit, automation safety | Ollama-powered + deterministic scan; blocks on critical risk or secret detection |
 | **Nova** | Opportunity Analyst — scoring, prioritization, strategic analysis | 4-dimension scoring (value/risk/timing/effort); Ollama-powered with deterministic fallback |
-| **Sentinel** | Security monitoring, automation safety | Safety checks only, no destructive execution |
-| **Nova** | Scoring, analysis, opportunity prioritization | Analysis only |
 
 ---
 
-## 3. Service Layer — 130 Services in `src/services/`
+## 3. Service Layer — ~126 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
@@ -134,13 +132,13 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 111 Files in `src/test/` (not zero)
+## 4. Test Suite — 112 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-21 Direction 3 sprint, all passing):**
-- 111 test files, 1621+ tests passing
-- 14 Rust unit tests passing
+**Test files (verified 2026-06-21 Sprint Next-10, all passing):**
+- 112 test files (111 top-level + `services/agentContract.test.ts`), 1621+ tests passing
+- 14 Rust unit tests passing (`cargo test` in src-tauri/)
 ```
 accBridgeService.test.js
 agentBusService.test.js
@@ -274,10 +272,9 @@ marcusPublishService.test.js   ← added Sprint Next-10 T3 (22 tests)
 - `rust-quality` job: runs on **ubuntu-latest** (Windows App Control was blocking DLL loading), `cargo clippy -- -D warnings` + `cargo test`
 - On main branch only: Tauri desktop build + NSIS artifact upload
 
-**`.github/workflows/verify-app.yml`** — runs on push/PR to main:
-- `npm ci` → `npm run verify:app` (lint + test + build in one command)
+**Note:** `verify-app.yml` does NOT exist as a separate workflow file. `npm run verify:app` (lint + test + build) is run as part of `ci.yml`. Do not reference `verify-app.yml`.
 
-**CI status as of 2026-06-08:** `test` job passing green on `main`. `rust-quality` switched to ubuntu-latest to avoid Windows App Control DLL blocking. `npm audit` fixed (vite 8.0.16, vitest 4.1.8 — 0 vulnerabilities).
+**CI status as of 2026-06-22:** `test` job passing green on `main`. `rust-quality` switched to ubuntu-latest to avoid Windows App Control DLL blocking. `npm audit` fixed (vite 8.0.16, vitest 4.1.8 — 0 vulnerabilities).
 
 **`.npmrc`** — `legacy-peer-deps=true` required because `@eslint/js@10.x` and `eslint@9.x` are in `package.json` together (peer dep mismatch). Without this, `npm ci` fails with ERESOLVE.
 
@@ -528,7 +525,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **Brave Search** → already wired in `hectorResearchService.js` with Rust + VITE_ fallback
 - **Auth scripts** → `auth:youtube`, `auth:meta`, `auth:outlook` already exist
 - **Desktop preflight/verify** → `verify:desktop:preflight`, `verify:desktop` already exist
-- **CI workflows** → `ci.yml` and `verify-app.yml` already exist and passing green (extend, do not replace)
+- **CI workflows** → `ci.yml` and `release.yml` already exist and passing green (extend, do not replace). Note: `verify-app.yml` does NOT exist as a file — `npm run verify:app` runs inside `ci.yml`.
 - **WhatsApp webhook Rust module** → `src-tauri/src/whatsapp_webhook.rs` — `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs live here. Do not re-add to `lib.rs`.
 - **WhatsApp browser connector** → `src/services/whatsappBrowserConnector.js` — `browserSendWhatsApp` (outbound via Meta Graph API v17.0) and `browserPollWhatsAppGateway` (inbound via Railway gateway `/queue/drain`). Reads credentials from `connectorAuth.js` (`getConnectorCredential`). Do NOT recreate.
 - **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `save_settings`, `load_settings`, `ensure_kv_table`. Do not re-add to `lib.rs`.
@@ -629,13 +626,13 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 | "Testing score: 4.0/10 F" | The gap is Rust tests + coverage thresholds + E2E, not absence of tests |
 | "Claude and ChatGPT connectors are frontend-only stubs" | Both run through `policyEnforcementService.js` and `connectorRegistryService.js` with policy gating, audit receipts, and fail-closed behavior |
 | "4 agent personas: Alphonso, Jose, Hector, Miya" | 9 agents: + Maria, Marcus, Echo, Sentinel, Nova — all with profile + permissions files and `agentContractService.js` enforcement |
-| "No CI/CD" (implied by Testing F grade) | Two GitHub Actions workflows already exist: `ci.yml` and `verify-app.yml` |
+| "No CI/CD" (implied by Testing F grade) | Two GitHub Actions workflows exist: `ci.yml` (lint + test + build + Tauri artifact + cargo clippy/test) and `release.yml` (tag-triggered build + sign + publish) |
 | ".env not in .gitignore" (implied) | `.env` and `.env.*` are correctly listed in `.gitignore`; the concern is git history, not current config |
 
 **Root cause of all errors:** The audit was produced without reading `src/test/`, `src/agents/`, all of `src/services/`, or `.github/workflows/`. Future audits must verify all four directories before scoring any dimension.
 
 ---
 
-_Last verified: 2026-06-21 — Session complete. 81 test files, 1100 tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB), `cargo clippy -- -D warnings` clean. `lib.rs` ~1,455 lines (16 extracted modules). Coverage ~28% (threshold 20%, src/ scoped). Version 2.0.2. WhatsApp Cloud API fully wired: `browserSendWhatsApp` (outbound), `browserPollWhatsAppGateway` (inbound via Railway queue drain). Auto-updater operational: keypair in GitHub Secrets, v2.0.2 release triggered. GitHub/Slack connector tests added (36 tests, PR #41). Run `npm run verify:app` to re-verify._
+_Last verified: 2026-06-22 — Sprint Next-10 + rustfmt CI fix complete. 112 test files (111 + services/agentContract.test.ts), 1621+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB), `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean (rustfmt.toml added). `lib.rs` ~1,585 lines (18 extracted modules). Coverage ~35%+ (threshold 20%, src/ scoped). Version 2.0.5. All 9 agent runtimes live. rustfmt.toml in src-tauri/. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
