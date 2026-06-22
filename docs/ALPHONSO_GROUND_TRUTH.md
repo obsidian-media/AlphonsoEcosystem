@@ -535,6 +535,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **Playwright config** → `playwright.config.js` at project root; tests in `e2e/`. Do not create another E2E config.
 - **`.npmrc`** — `legacy-peer-deps=true` already set at project root. Do not remove.
 - **Companion WebSocket server** → Phase 1 implemented in `src-tauri/src/companion_*.rs` (5 Rust modules: `companion_types`, `companion_auth`, `companion_discovery`, `companion_router`, `companion_server`). Provides PIN auth, JSON-RPC routing, and mDNS discovery. Do not recreate.
+- **CompanionPairingPanel** → `src/components/CompanionPairingPanel.jsx` — Remote Access PIN display, copy-to-clipboard, connected clients count. Integrated in SettingsView. Do NOT create another pairing UI.
 - **NotificationCenter** → `src/components/NotificationCenter.jsx` — fixed top-right panel, max 5 visible, colored left borders by type (emerald/amber/red/zinc), relative timestamps, dismiss X, "Clear all". Do NOT create another notification system.
 - **AgentStatusStrip** → `src/components/AgentStatusStrip.jsx` — horizontal flex strip of agent badges with pulsing emerald dot for running agents, compact mode, returns null when empty. Do NOT duplicate.
 - **UpdaterNotification** → `src/components/UpdaterNotification.jsx` — amber fixed banner, "Update & Restart" + "Later" buttons, wired into App.jsx via `updaterVersion` state. Do NOT recreate updater UI.
