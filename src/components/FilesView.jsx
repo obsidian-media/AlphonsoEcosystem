@@ -60,7 +60,13 @@ export function FilesView({ memoryItems = [] }) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {filtered.length === 0 && (
+        {memoryItems.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-40 text-zinc-600">
+            <Database className="w-8 h-8 mb-2 opacity-30" />
+            <p className="text-xs text-center">No files yet — attach files in chat to see them here.</p>
+          </div>
+        )}
+        {memoryItems.length > 0 && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center h-40 text-zinc-600">
             <Database className="w-8 h-8 mb-2 opacity-30" />
             <p className="text-xs">No memories match your filter.</p>

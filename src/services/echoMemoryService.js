@@ -233,3 +233,29 @@ export async function runEchoPreservation(commandText, assignment, priorOutputs,
     schema
   };
 }
+
+// ── Session synthesis (end-of-session hook) ───────────────────────────────────
+// Takes the last N chat messages and synthesizes them into a memory entry.
+
+export async function synthesizeSession(recentMessages) {
+  const messages = Array.isArray(recentMessages) ? recentMessages.slice(-20) : [];
+  if (messages.length === 0) return null;
+
+  const commandText = messages
+    .map((m) => `[${m.role || 'user'}] ${String(m.content || '').slice(0, 300)}`)
+    .join('\n');
+
+  const priorOutputs = {};
+  for (const msg of messages) {
+    if (msg.role === 'assistant' && msg.content) {
+      priorOutputs['session'] = { summary: String(msg.content).slice(0, 400), resultState: 'completed' };
+      break;
+    }
+  }
+
+  try {
+    return await runEchoPreservation(commandText, { commandId: `session_${Date.now()}`, actionType: 'session_synthesis' }, priorOutputs, { draftDisabled: false });
+  } catch {
+    return null;
+  }
+}

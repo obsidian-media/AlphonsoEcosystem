@@ -5,6 +5,7 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { durableGet, durableSet } from '../lib/durableStore';
+import { appendNotification } from './notificationService';
 
 // ── Opportunity scoring (deterministic) ───────────────────────────────────────
 
@@ -270,13 +271,40 @@ export async function runNovaAnalysis(commandText, assignment, priorOutputs, opt
 }
 
 const NOVA_HISTORY_KEY = 'alphonso_nova_history_v1';
+const NOVA_THRESHOLD_KEY = 'alphonso_nova_threshold_v1';
 const MAX_HISTORY = 30;
+const DEFAULT_ALERT_THRESHOLD = 75;
+
+export function setAlertThreshold(n) {
+  const value = Math.min(100, Math.max(0, Number(n) || DEFAULT_ALERT_THRESHOLD));
+  try { localStorage.setItem(NOVA_THRESHOLD_KEY, String(value)); } catch { /* storage */ }
+}
+
+export function getAlertThreshold() {
+  try {
+    const raw = localStorage.getItem(NOVA_THRESHOLD_KEY);
+    if (raw !== null) return Math.min(100, Math.max(0, Number(raw) || DEFAULT_ALERT_THRESHOLD));
+  } catch { /* storage */ }
+  return DEFAULT_ALERT_THRESHOLD;
+}
 
 export function saveOpportunityScore(score, recommendation) {
   const history = getOpportunityHistory();
   history.push({ score, recommendation, timestamp: Date.now() });
   if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
   try { durableSet(NOVA_HISTORY_KEY, JSON.stringify(history)); } catch {}
+
+  // Threshold alert
+  const threshold = getAlertThreshold();
+  if (Number(score) >= threshold) {
+    try {
+      appendNotification({
+        type: 'nova',
+        title: 'Nova: High-opportunity signal detected',
+        message: `Nova scored ${score}/100 — above threshold of ${threshold}. ${recommendation ? recommendation.slice(0, 200) : ''}`
+      });
+    } catch { /* non-critical */ }
+  }
 }
 
 export function getOpportunityHistory() {

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useMemo, useRef, useState, useTransition } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useVoiceInput } from './hooks/useVoiceInput';
 import { listMemoryItems, pushMemoryItem } from './services/memoryService';
@@ -126,6 +126,37 @@ function AppShell() {
 
   useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab });
   useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
+
+  // Echo end-of-session synthesis on window close
+  useEffect(() => {
+    let unlisten = null;
+    let registered = false;
+    (async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        const { synthesizeSession } = await import('./services/echoMemoryService');
+        unlisten = await listen('tauri://close-requested', async () => {
+          try {
+            const rawMessages = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('alphonso_messages_')) {
+                try {
+                  const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+                  if (Array.isArray(parsed)) rawMessages.push(...parsed.slice(-20));
+                } catch { /* skip */ }
+              }
+            }
+            await synthesizeSession(rawMessages.slice(-20));
+          } catch { /* non-critical */ }
+        });
+        registered = true;
+      } catch { /* Tauri API not available in browser */ }
+    })();
+    return () => {
+      if (registered && unlisten) { try { unlisten(); } catch { /* ignore */ } }
+    };
+  }, []);
 
   if (isCoachWindow) {
     return (

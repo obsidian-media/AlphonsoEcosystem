@@ -125,7 +125,7 @@ export function MemorySearch({ onClose, onSelect }) {
         {/* Results */}
         <div className="max-h-96 overflow-y-auto">
           {results.length === 0 && query.length >= 2 && (
-            <div className="p-8 text-center text-zinc-600 text-sm">No results for "{query}"</div>
+            <div className="p-8 text-center text-zinc-600 text-sm">No memories found for this query.</div>
           )}
           {results.length === 0 && query.length < 2 && (
             <div className="p-8 text-center text-zinc-600 text-sm">Type at least 2 characters to search</div>

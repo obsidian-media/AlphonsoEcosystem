@@ -1,7 +1,8 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
+import { Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard, Zap as ZapIcon } from 'lucide-react';
+import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
 import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
@@ -13,6 +14,7 @@ import {
   generateOllamaChatStream
 } from '../lib/ollama';
 import { OllamaModelPicker } from './ModelSwitcher';
+import { listConnectors } from '../services/connectorRegistryService';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
 import { PipelineResultCard } from './PipelineResultCard';
@@ -25,6 +27,41 @@ import { runNovaAnalysis, computeOpportunityScores, classifyPriorityTier } from 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
 const VoiceInputButton = lazy(() => import('./VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
+
+// D2T9: Connector degradation banner — shown when Ollama is online but connectors are unavailable
+function ConnectorDegradationBanner({ onDismiss }) {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    try {
+      const connectors = listConnectors();
+      const liveCount = connectors.filter((c) => {
+        const status = String(c.status || '').toLowerCase();
+        const envPresence = c.envPresence || {};
+        const allEnv = (c.requiredEnv || []).every((k) => Boolean(envPresence[k]));
+        return status === 'configured' && allEnv && c.lastTestStatus === 'verified';
+      }).length;
+      setShow(liveCount === 0 && connectors.length > 0);
+    } catch {
+      setShow(false);
+    }
+  }, []);
+
+  if (!show) return null;
+  return (
+    <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-amber-400/20 bg-amber-500/8 px-3 py-2 text-[11px] text-amber-200/80">
+      <span className="shrink-0">⚠</span>
+      <span className="flex-1">Some connectors are unavailable — results may be limited.</span>
+      <button
+        onClick={onDismiss}
+        className="rounded px-1 text-amber-400/60 hover:text-amber-300 transition-colors"
+        aria-label="Dismiss"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
 
 function buildProjectSummary(result, commandText, baseSummary, screenContext = []) {
   const receipts = result?.executionReceipts || [];
@@ -165,12 +202,36 @@ export function ChatView({
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [novaInsight, setNovaInsight] = useState(null);
   const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
+  const [connectorBannerDismissed, setConnectorBannerDismissed] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
+  const [directMode, setDirectMode] = useState(false);
+  const [directAgent, setDirectAgent] = useState('Alphonso');
+  const [pinnedMessages, setPinnedMessages] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('alphonso_pinned_messages_v1') || '[]'); } catch { return []; }
+  });
+  const [showPinned, setShowPinned] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const abortRef = useRef(null);
   const streamControllerRef = useRef(null);
   const inputRef = useRef(null);
+
+  const pinMessage = (message) => {
+    setPinnedMessages((prev) => {
+      if (prev.some((p) => p.id === message.id)) return prev;
+      const next = [...prev, { id: message.id, content: message.content, role: message.role, timestamp: Date.now(), pinnedAt: Date.now() }];
+      try { localStorage.setItem('alphonso_pinned_messages_v1', JSON.stringify(next)); } catch { /* storage */ }
+      return next;
+    });
+  };
+
+  const unpinMessage = (messageId) => {
+    setPinnedMessages((prev) => {
+      const next = prev.filter((p) => p.id !== messageId);
+      try { localStorage.setItem('alphonso_pinned_messages_v1', JSON.stringify(next)); } catch { /* storage */ }
+      return next;
+    });
+  };
 
   const handleAbortStream = () => {
     if (streamControllerRef.current) {
@@ -218,7 +279,10 @@ export function ChatView({
   }, [streamingStartTime]);
 
   useEffect(() => {
-    if (ollamaStatus.state === 'connected') setOllamaBannerDismissed(false);
+    if (ollamaStatus.state === 'connected') {
+      setOllamaBannerDismissed(false);
+      setConnectorBannerDismissed(false);
+    }
   }, [ollamaStatus.state]);
 
   const handleFileAttach = (event) => {
@@ -308,8 +372,9 @@ export function ChatView({
     const filesSuffix = attachedFiles.length
       ? `\n\n[Attached files: ${attachedFiles.map((f) => f.name).join(', ')}]`
       : '';
-    const cleanInput = inputValue.trim() + filesSuffix;
-    const joseCommand = isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput);
+    const rawInput = inputValue.trim() + filesSuffix;
+    const cleanInput = directMode ? `[DIRECT:${directAgent}] ${rawInput}` : rawInput;
+    const joseCommand = !directMode && (isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput));
 
     if (joseCommand) {
       const userMessage = { id: nextMsgId(), role: 'user', content: cleanInput };
@@ -551,8 +616,28 @@ export function ChatView({
               initialModel={settings.selectedModel}
               onModelChange={onModelChange}
             />
+            {/* D1T7: Direct mode toggle */}
+            <button
+              onClick={() => setDirectMode((d) => !d)}
+              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded border transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${directMode ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300' : 'border-white/5 text-zinc-600 hover:text-zinc-400'}`}
+              aria-label={directMode ? `Direct mode on (${directAgent})` : 'Direct mode off'}
+              title={directMode ? `Direct to ${directAgent} — bypasses Jose routing` : 'Enable direct agent mode'}
+            >
+              <Zap className="w-2.5 h-2.5" />
+              Direct
+            </button>
+            {/* D1T4: Connector status dots */}
+            <div className="flex items-center gap-1" title="Connector status: Ollama · Telegram">
+              <ConnectorStatusDot connectorId="ollama" />
+              <ConnectorStatusDot connectorId="telegram" />
+            </div>
           </div>
           <div className="flex items-center gap-3">
+            {directMode && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-bold uppercase tracking-widest">
+                Direct
+              </span>
+            )}
             <button
               onClick={() => { setSearchOpen((o) => !o); setSearchQuery(''); }}
               className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${searchOpen ? 'text-indigo-400' : 'text-zinc-500 hover:text-indigo-400'}`}
@@ -654,11 +739,48 @@ export function ChatView({
         </div>
       )}
 
+      {/* D1T8: Pinned messages section */}
+      {pinnedMessages.length > 0 && (
+        <div className="mx-3 mt-2 shrink-0">
+          <button
+            onClick={() => setShowPinned((s) => !s)}
+            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors mb-1"
+          >
+            <Pin className="w-3 h-3" />
+            {pinnedMessages.length} Pinned {showPinned ? '▲' : '▼'}
+          </button>
+          {showPinned && (
+            <div className="space-y-1 max-h-40 overflow-y-auto rounded-xl border border-white/[0.05] bg-zinc-900/30 p-2">
+              {pinnedMessages.map((pm) => (
+                <div key={pm.id} className="flex items-start gap-2 group">
+                  <div className="flex-1 text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">{pm.content}</div>
+                  <button
+                    onClick={() => unpinMessage(pm.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-zinc-600 hover:text-amber-400"
+                    aria-label="Unpin message"
+                  >
+                    <PinOff className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* D2T9: Connector degradation banner */}
+      {compactChat && ollamaStatus.state === 'connected' && !connectorBannerDismissed && (
+        <ConnectorDegradationBanner onDismiss={() => setConnectorBannerDismissed(true)} />
+      )}
+
       <div className={`flex-1 overflow-y-auto scroll-smooth ${compactChat ? 'p-3 space-y-3' : 'p-5 space-y-6'}`}>
-        {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-50 select-none">
-            <Bot className="w-16 h-16 mb-4" />
-            <p className="text-sm font-medium">Local chat ready when Ollama is connected</p>
+        {messages.length === 0 && !inputValue && (
+          <div className="h-full flex flex-col items-center justify-center select-none py-16">
+            <div className="flex flex-col items-center gap-3 opacity-40">
+              <Bot className="w-12 h-12 text-zinc-500" />
+              <p className="text-sm font-medium text-zinc-400">Start a conversation</p>
+              <p className="text-xs text-zinc-600">Type a command or ask anything.</p>
+            </div>
           </div>
         )}
 
@@ -678,20 +800,39 @@ export function ChatView({
                   <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20 text-[13px] leading-relaxed whitespace-pre-wrap' : 'text-zinc-300'}`}>
                     {message.isError ? message.content : <MarkdownMessage content={message.content} />}
                   </div>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(message.content);
-                      setCopiedMsgId(message.id);
-                      setTimeout(() => setCopiedMsgId((id) => id === message.id ? null : id), 1500);
-                    }}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
-                    aria-label={copiedMsgId === message.id ? 'Copied' : 'Copy message to clipboard'}
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
+                      className="p-1 rounded text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                      aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
+                      title={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin' : 'Pin'}
+                    >
+                      {pinnedMessages.some((p) => p.id === message.id) ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(message.content);
+                        setCopiedMsgId(message.id);
+                        setTimeout(() => setCopiedMsgId((id) => id === message.id ? null : id), 1500);
+                      }}
+                      className="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                      aria-label={copiedMsgId === message.id ? 'Copied' : 'Copy message to clipboard'}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ) : (
-                    <div className={`px-3 py-2 text-xs ${compactChat ? '' : ''}`}>{message.content}</div>
+                <div className="relative group">
+                  <div className={`px-3 py-2 text-xs ${compactChat ? '' : ''}`}>{message.content}</div>
+                  <button
+                    onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-600 hover:text-amber-400 hover:bg-zinc-800"
+                    aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
+                  >
+                    {pinnedMessages.some((p) => p.id === message.id) ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+                  </button>
+                </div>
               )}
             </div>
           </div>
