@@ -249,4 +249,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-22 — v2.0.7. Sprint Next-50 complete (46 tasks executed). 120 test files, 1737+ tests, all passing. 10 TSX components. 131 services. 5 new resilience services. 5 new UI components. All 9 agents have production runtimes + UI surfaces. Coverage ~38%+ (threshold 20%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-22 — v2.0.8. Sprint Next-50 complete (46 tasks executed). 120 test files, 1737+ tests, all passing. 10 TSX components. 131 services. 5 new resilience services. 5 new UI components. All 9 agents have production runtimes + UI surfaces. Coverage ~38%+ (threshold 20%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

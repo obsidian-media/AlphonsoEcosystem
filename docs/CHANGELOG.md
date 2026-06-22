@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.0.7] - 2026-06-22 — Sprint Next-50
+## [2.0.8] - 2026-06-22 — Sprint Next-50
 
 ### Added — Resilience Services
 - **`connectorCircuitBreakerService.js`** — localStorage-backed circuit breaker; 5-failure threshold opens, 60s cooldown, half-open recovery
