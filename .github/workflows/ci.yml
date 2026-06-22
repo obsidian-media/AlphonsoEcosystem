@@ -35,6 +35,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Check test coverage
+        run: npm run test:coverage
+
       - name: Web build
         run: npm run build
 
@@ -60,8 +63,8 @@ jobs:
           workspaces: src-tauri -> target
 
       - name: Security audit (cargo)
-        run: cargo install cargo-audit && cargo audit --file src-tauri/Cargo.lock
-        continue-on-error: true
+        run: cargo install cargo-audit && cargo audit --file src-tauri/Cargo.lock --deny warnings
+        continue-on-error: false
 
       - name: Install Tauri Linux dependencies
         run: |
