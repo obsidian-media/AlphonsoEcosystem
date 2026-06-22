@@ -1,0 +1,117 @@
+import React, { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { Key, Copy, QrCode, Wifi, Shield } from 'lucide-react';
+import { SectionHeader } from './ui/Badge';
+
+interface CompanionStatus {
+  running: boolean;
+  port: number;
+  connected_clients: number;
+}
+
+export function CompanionPairingPanel() {
+  const [pin, setPin] = useState<string>('');
+  const [status, setStatus] = useState<CompanionStatus | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const refreshStatus = async () => {
+    try {
+      const result = await invoke<CompanionStatus>('companion_get_status');
+      setStatus(result);
+    } catch {
+      setStatus(null);
+    }
+  };
+
+  const generatePin = async () => {
+    setLoading(true);
+    try {
+      const result = await invoke<string>('companion_get_pin');
+      setPin(result);
+    } catch {
+      setPin('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyPin = async () => {
+    if (!pin) return;
+    await navigator.clipboard.writeText(pin);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  useEffect(() => {
+    refreshStatus();
+    const interval = setInterval(refreshStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!status?.running) {
+    return (
+      <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+        <div className="flex items-center gap-2 text-zinc-400">
+          <Shield className="w-4 h-4" />
+          <span className="text-xs">Companion server not running</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-white">Remote Access PIN</div>
+            <div className="text-xs text-zinc-500 mt-0.5">Connect iOS companion to this desktop</div>
+          </div>
+          <button
+            onClick={generatePin}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white text-xs font-medium transition-colors"
+          >
+            <Key className="w-3.5 h-3.5" />
+            {loading ? 'Generating...' : 'Generate PIN'}
+          </button>
+        </div>
+
+        {pin && (
+          <div className="flex items-center gap-3 p-4 bg-black/30 rounded-xl">
+            <div className="text-3xl font-mono font-bold tracking-wider text-emerald-400">{pin}</div>
+            <button
+              onClick={copyPin}
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              title="Copy PIN"
+            >
+              {copied ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-zinc-400" />}
+            </button>
+          </div>
+        )}
+
+        <div className="text-[11px] text-zinc-500">
+          Enter this 6-digit PIN in the iOS app to pair. The PIN expires in 5 minutes.
+        </div>
+      </div>
+
+      <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+        <div className="flex items-center gap-2 text-xs">
+          <Wifi className="w-3.5 h-3.5" />
+          <span className="text-zinc-400">
+            Connected clients: <span className="text-white font-medium">{status.connected_clients}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CheckCircle({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 1118 0 9 9 0 1118 0 9 9 0 1118 0" />
+    </svg>
+  );
+}

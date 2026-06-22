@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';

@@ -1999,7 +1999,8 @@ pub fn run() {
       launch_comfyui,
       save_image_to_folder,
       companion_server::companion_get_pin,
-      companion_server::companion_get_status
+      companion_server::companion_get_status,
+      companion_server::companion_start_discovery
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

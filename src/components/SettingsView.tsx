@@ -12,6 +12,7 @@ import { listMemoryItems } from '../services/memoryService';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
+import { CompanionPairingPanel } from './CompanionPairingPanel';
 
 interface MemoryItem {
   id?: string;
@@ -1028,6 +1029,11 @@ export function SettingsView({
       </section>
 
       <section className="space-y-4">
+        <SectionHeader icon={Key} label="Remote Access" />
+        <CompanionPairingPanel />
+      </section>
+
+      <section className="space-y-4">
         <SectionHeader icon={Database} label="Backup & Restore" />
         <div className="space-y-4">
           <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
@@ -1149,6 +1155,55 @@ export function SettingsView({
         <SectionHeader icon={ScrollText} label="Logs" />
         <CrashLogView />
       </section>
+
+      <section className="space-y-4">
+        <SectionHeader icon={Activity} label="Performance Diagnostics" />
+        <PerformanceDiagnosticsPanel />
+      </section>
+    </div>
+  );
+}
+
+function PerformanceDiagnosticsPanel() {
+  const [stats, setStats] = React.useState<{ bootMs: number | null; storageKB: number; storagePercent: number; itemCount: number } | null>(null);
+
+  function run() {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const bootMs = nav ? Math.round(nav.domContentLoadedEventEnd) : null;
+    try {
+      const { getUsageStats } = require('../services/memoryMonitorService');
+      const s = getUsageStats();
+      setStats({ bootMs, storageKB: s.usedKB, storagePercent: Math.round((s.usedKB / 10000) * 100), itemCount: s.itemCount });
+    } catch {
+      setStats({ bootMs, storageKB: 0, storagePercent: 0, itemCount: 0 });
+    }
+  }
+
+  React.useEffect(() => { run(); }, []);
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+      {stats ? (
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex flex-col gap-1">
+            <span className="text-zinc-500 text-xs uppercase tracking-wide">Boot time</span>
+            <span className="text-white font-mono">{stats.bootMs != null ? `${stats.bootMs}ms` : 'N/A'}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-zinc-500 text-xs uppercase tracking-wide">localStorage</span>
+            <span className="text-white font-mono">{stats.storageKB} KB / 10,000 KB ({stats.storagePercent}%)</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-zinc-500 text-xs uppercase tracking-wide">Storage items</span>
+            <span className="text-white font-mono">{stats.itemCount}</span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-zinc-500 text-sm">Loading diagnostics…</p>
+      )}
+      <button onClick={run} className="text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded transition-colors">
+        Run diagnostics
+      </button>
     </div>
   );
 }

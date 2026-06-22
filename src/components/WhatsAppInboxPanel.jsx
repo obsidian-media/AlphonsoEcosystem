@@ -6,7 +6,21 @@ function relativeTime(timestamp) {
   return `${Math.floor(diff / 60)}m ago`;
 }
 
-export function WhatsAppInboxPanel({ messages, onReply }) {
+function StatusTick({ status, onRetry, msgId }) {
+  if (!status || status === 'sending') return <span className="text-xs text-zinc-500">⏳</span>;
+  if (status === 'sent') return <span className="text-xs text-zinc-400" title="Sent">✓</span>;
+  if (status === 'delivered') return <span className="text-xs text-zinc-400" title="Delivered">✓✓</span>;
+  if (status === 'read') return <span className="text-xs text-blue-400" title="Read">✓✓</span>;
+  if (status === 'failed') return (
+    <span className="flex items-center gap-1">
+      <span className="text-xs text-red-400" title="Failed">✗</span>
+      <button onClick={() => onRetry(msgId)} className="text-xs text-red-400 hover:text-red-300 underline">Retry</button>
+    </span>
+  );
+  return null;
+}
+
+export function WhatsAppInboxPanel({ messages, onReply, onRetry }) {
   const [openReplyId, setOpenReplyId] = useState(null);
   const [replyText, setReplyText] = useState('');
 
@@ -36,7 +50,12 @@ export function WhatsAppInboxPanel({ messages, onReply }) {
         <div key={msg.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium text-emerald-400">{msg.from}</span>
-            <span className="text-xs text-zinc-500">{relativeTime(msg.timestamp)}</span>
+            <div className="flex items-center gap-2">
+              {msg.direction === 'outbound' && (
+                <StatusTick status={msg.status} onRetry={onRetry} msgId={msg.id} />
+              )}
+              <span className="text-xs text-zinc-500">{relativeTime(msg.timestamp)}</span>
+            </div>
           </div>
           <p className="text-sm text-zinc-300 mb-2">{msg.body}</p>
           {openReplyId === msg.id ? (

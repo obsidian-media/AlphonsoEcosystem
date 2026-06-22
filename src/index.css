@@ -39,6 +39,23 @@
     --success: #22c55e;
     --warning: #f59e0b;
     --danger: #ef4444;
+    /* Extended color token suite for light mode */
+    --color-bg: #f8f9fa;
+    --color-surface: #ffffff;
+    --color-surface-2: #f1f3f5;
+    --color-border: #dee2e6;
+    --color-text: #212529;
+    --color-text-muted: #6c757d;
+    --color-accent: #3b82f6;
+    --color-accent-hover: #2563eb;
+    --color-btn-bg: #ffffff;
+    --color-btn-border: #ced4da;
+    --color-btn-text: #212529;
+    --color-input-bg: #ffffff;
+    --color-input-border: #ced4da;
+    --color-input-text: #212529;
+    --color-card-bg: #ffffff;
+    --color-card-border: #e9ecef;
   }
 
   .light * {

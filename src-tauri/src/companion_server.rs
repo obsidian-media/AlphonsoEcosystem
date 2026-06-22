@@ -184,3 +184,16 @@ pub async fn companion_get_status(
       "connected_clients": connected,
   }))
 }
+
+#[tauri::command]
+pub async fn companion_start_discovery(port: u16) -> Result<(), String> {
+  use crate::companion_discovery::CompanionDiscovery;
+  let discovery = CompanionDiscovery::new().map_err(|e| e.to_string())?;
+  let hostname = hostname::get()
+    .map(|h| h.to_string_lossy().to_string())
+    .unwrap_or("alphonso-desktop".to_string());
+  discovery
+    .advertise(port, &hostname)
+    .map_err(|e| e.to_string())?;
+  Ok(())
+}

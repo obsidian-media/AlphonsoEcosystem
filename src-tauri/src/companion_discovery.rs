@@ -1,11 +1,9 @@
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 
-#[allow(dead_code)]
 pub struct CompanionDiscovery {
   daemon: ServiceDaemon,
 }
 
-#[allow(dead_code)]
 impl CompanionDiscovery {
   pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
     let daemon = ServiceDaemon::new()?;
@@ -30,6 +28,7 @@ impl CompanionDiscovery {
     Ok(())
   }
 
+  #[allow(dead_code)]
   pub fn stop(&self) {
     let _ = self.daemon.shutdown();
   }
