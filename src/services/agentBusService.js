@@ -1,14 +1,14 @@
-import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 import { validateAgentExecutionContract } from './agentContractService';
+import { durableGet, durableSet } from '../lib/durableStore';
 
 const PACKET_KEY = 'alphonso_agent_bus_packets_v1';
 export const PACKET_SCOPE = 'agent_bus_packets_v1';
 
 function readPackets() {
   try {
-    const raw = localStorage.getItem(PACKET_KEY);
+    const raw = durableGet(PACKET_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -18,12 +18,7 @@ function readPackets() {
 
 function writePackets(items) {
   const rows = items.slice(-800);
-  try {
-    invoke('kv_set', { key: PACKET_KEY, value: JSON.stringify(rows) }).catch(() => {});
-  } catch {
-    // SQLite not available in browser
-  }
-  localStorage.setItem(PACKET_KEY, JSON.stringify(rows));
+  durableSet(PACKET_KEY, JSON.stringify(rows));
   persistScopeRows(PACKET_SCOPE, rows, (row) => ({
     id: row.id,
     data: row,
