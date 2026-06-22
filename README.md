@@ -23,11 +23,16 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 ---
 
-## What's New in v2.0.6
+## What's New in v2.0.7
 
-- **CI rustfmt fix** — `src-tauri/rustfmt.toml` added; all 19 Rust source files formatted to 2-space standard; `cargo fmt --check` now passes in CI
-- **Documentation accuracy pass** — all test counts, version numbers, and CI workflow references corrected across 6 doc files
-- **Mobile companion sprint plan** — `docs/MOBILE_COMPANION_SPRINT.md` — full 5-phase iOS companion implementation guide with complete Rust + Swift code templates ready for parallel development
+- **Sprint Next-50 complete** — 46 of 50 proposed tasks executed (4 already existed): 5 new resilience services, 5 new UI components, 8 new test files, 9 ChatView enhancements, 5 TypeScript migrations
+- **Resilience layer** — `connectorCircuitBreakerService`, `connectorRateLimiterService`, `memoryMonitorService` — connectors now self-heal with backoff, rate limits, and storage alerts
+- **Agent intelligence** — Nova threshold alerts, Echo close-session synthesis, Jose escalation + parallel dispatch, Marcus scheduled publishing
+- **New UI panels** — SessionHistoryView, OrchestratorQueueView, DeadLetterQueueView, SentinelAllowlistPanel, AgentPairingView
+- **ChatView** — empty states, connector status dots, direct-agent mode, pin messages, degradation banner
+- **TypeScript** — App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx` (10 total TSX components)
+- **Test coverage** — 120 test files / 1737+ tests (~38%+ coverage)
+- **Platform** — Husky pre-commit hook, bundle size CI guard, root docker-compose, vitest ts/tsx include, ESLint no-console
 
 ---
 
@@ -216,7 +221,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 1,621+ tests across 112 files
+npm run test           # 1,737+ tests across 120 files
 npm run test:coverage  # Coverage report (~35%+; threshold 20%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + test + build in one command
@@ -257,7 +262,8 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.0.6** | June 22, 2026 | CI rustfmt fix, documentation accuracy pass, mobile companion sprint plan |
+| **v2.0.7** | June 22, 2026 | Sprint Next-50: 5 resilience services, 5 new UI panels, 8 test files, ChatView enhancements, 10 TSX components, 1,737+ tests |
+| v2.0.6 | June 22, 2026 | CI rustfmt fix, documentation accuracy pass, mobile companion sprint plan |
 | v2.0.5 | June 21, 2026 | All 9 agent runtimes, Sprint Next-10 complete, 112 test files, 1,621+ tests, coverage ~35%+, TypeScript migration (5 components), SQLite dual-write |
 | v2.0.2 | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |
 | v1.0.3 | June 15, 2026 | Installer update |

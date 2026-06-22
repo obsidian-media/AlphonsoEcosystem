@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 1621+ tests across 111 files — all should pass
+npm run test             # Run all 1737+ tests across 120 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + test + build in one command
@@ -51,7 +51,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **14 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~1,585 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 1621+ tests are in `src/test/`** — 111 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 1737+ tests are in `src/test/`** — 120 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
@@ -134,7 +134,7 @@ Before writing any new service, component, or feature, check this list:
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
 2. Check `src/services/` for an existing service before writing a new one — there are 130+ services
 3. Check `src/test/` — there are 111 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 1621+ tests must continue to pass
+4. Run `npm run test` before and after any change; all 1737+ tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -187,8 +187,8 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~SQLite dual-write for remaining keys~~ — **CLOSED Sprint Next-10 T10** (`src/lib/durableStore.js` + migrated crashLogService, agentAuditService, novaAnalysisService)
 - ~~Test coverage at ~30%~~ — **CLOSED Sprint Next-10 T3** (111 test files / 1621+ tests; 10 new service test files)
 - Branch protection on `main` — manual GitHub step (MCP doesn't expose branch protection API); require CI pass before merge
-- Coverage at ~35%+ — next staged target 40%
-- TypeScript migration — continued; 5 more components migrated. Remaining: ChatView, RightPanel, SettingsView, App, Sidebar
+- Coverage at ~38%+ — next staged target 40%
+- TypeScript migration — 10 components migrated (all major ones done). Remaining: bulk of 63 .jsx component files
 
 ---
 
@@ -201,7 +201,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
     ConnectorHealthPanel.jsx        — full connector panel (lazy chunk)
     ConnectorStatusIndicators.jsx   — small dot/strip components (static-safe import)
     AgentActivityLog.jsx            — activity timeline tab (appendAgentActivity wired)
-  services/            130 services
+  services/            ~131 services
     connectors/        GitHub, Slack, and other connector implementations
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
@@ -249,4 +249,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-22 — v2.0.6. Sprint Next-10 complete, rustfmt CI fix, mobile companion sprint plan. 112 test files, 1621+ tests, all passing. All 9 agents have production runtimes + UI surfaces. Coverage ~35%+ (threshold 20%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-22 — v2.0.7. Sprint Next-50 complete (46 tasks executed). 120 test files, 1737+ tests, all passing. 10 TSX components. 131 services. 5 new resilience services. 5 new UI components. All 9 agents have production runtimes + UI surfaces. Coverage ~38%+ (threshold 20%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

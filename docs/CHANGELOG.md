@@ -6,6 +6,59 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.7] - 2026-06-22 — Sprint Next-50
+
+### Added — Resilience Services
+- **`connectorCircuitBreakerService.js`** — localStorage-backed circuit breaker; 5-failure threshold opens, 60s cooldown, half-open recovery
+- **`connectorRateLimiterService.js`** — in-memory token-bucket rate limiter; 60 req/min default, per-connector configurable
+- **`memoryMonitorService.js`** — localStorage usage monitor; byte counts, subscriber callbacks at 5MB warn / 8MB critical, pruneOldest ring helper
+- **`hectorBookmarkService.js`** — Hector research bookmark ring (200 cap); tag/search filter, JSON export, stats
+- **`mariaWeeklyReportService.js`** — Maria governance weekly report; reads audit + receipt logs, risk breakdown, recommendations, scheduleWeeklyGeneration
+
+### Added — UI Components
+- **`SessionHistoryView.jsx`** — orchestration session history grouped by session, search/filter, export, expand details
+- **`OrchestratorQueueView.jsx`** — live queue dashboard (6-stat summary, active packets, dead-letter section), 5s auto-refresh
+- **`DeadLetterQueueView.jsx`** — focused dead-letter panel with per-item and bulk retry, empty state
+- **`SentinelAllowlistPanel.jsx`** — allowlist manager (domain/path/ip patterns), Test Pattern input, add/remove entries
+- **`AgentPairingView.jsx`** — agent collaboration pairing UI; 3-step guided flow, alphonso_agent_pairs_v1 persistence
+
+### Added — ChatView Enhancements
+- Empty state cards (Chat, Files, MemorySearch)
+- Ollama + Telegram connector status dots in header
+- Direct-agent mode toggle (bypasses Jose, [DIRECT:AgentName] prefix)
+- Pin/unpin per message (alphonso_pinned_messages_v1, collapsible pinned section)
+- Connector degradation banner (amber, shows when Ollama online but connectors down)
+
+### Added — Agent Intelligence
+- **Nova threshold alerts** — `setAlertThreshold(n)` + notification fire when score ≥ threshold (default 75)
+- **Echo end-of-session synthesis** — `synthesizeSession(recentMessages)` export; App.tsx close-requested listener
+- **Jose escalation** — consecutive failure tracking, warning notification after 2 failures, `getEscalationLog()`
+- **Jose parallel dispatch** — `Promise.all` when multiple agent assignments; `parallelDispatch: true` flag on result
+- **Marcus scheduled publishing** — `schedulePublish`, `startScheduler`, `cancelScheduledPublish`, `stopScheduler`
+
+### Added — Tests (8 new files, ~116 tests)
+- gitService, skillPackService, workspaceIntelligenceService, screenIntelligenceService, scaffoldTemplatesService, metaPublishService, workspaceArtifactService, telegramBrowserConnector
+
+### Added — Platform
+- Husky pre-commit hook (`npm run lint` before every commit)
+- Bundle size CI guard (ci.yml — fails if any JS chunk > 1MB)
+- Root `docker-compose.yml` (builds WhatsApp gateway)
+- Retry backoff on Telegram + WhatsApp send (3 attempts, 1s/2s/4s exponential, no retry on 400/401/403)
+- AgentStatusStrip `useAutoFeed` prop (polls agentActivityService every 3s)
+- ErrorBoundary + ViewErrorBoundary wired to `logError` in crashLogService
+- Boot time diagnostics panel in SettingsView
+
+### Changed
+- vitest.config.js include now covers `.ts`/`.tsx` test files
+- ESLint `no-console` changed from `off` to `warn` (allow `warn`/`error`)
+- Light mode CSS: extended `.light{}` with full `--color-*` token suite
+
+### Migrated to TypeScript
+- App.jsx → App.tsx, Sidebar.jsx → Sidebar.tsx, RightPanel.jsx → RightPanel.tsx, SettingsView.jsx → SettingsView.tsx, ChatView.jsx → ChatView.tsx
+- Total: 10 TSX components (was 5)
+
+---
+
 ## [2.0.6] - 2026-06-22 — CI Fix + Docs Cleanup + Mobile Companion Sprint Plan
 
 ### Fixed

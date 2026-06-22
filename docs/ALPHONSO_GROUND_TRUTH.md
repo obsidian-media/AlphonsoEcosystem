@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-21 — Sprint Next-10 complete  
-**Verified by:** Claude Code session (111 test files, 1621+ tests passing, cargo clippy clean)  
-**Version:** 2.0.6 (All 9 agents have production runtimes; Sprint Next-10 complete; mobile companion sprint plan published; v2.0.6 NSIS installer live on GitHub Releases)  
+**Last verified:** 2026-06-22 — Sprint Next-50 complete  
+**Verified by:** Claude Code session (120 test files, 1737+ tests passing, cargo clippy clean)  
+**Version:** 2.0.7 (All 9 agents have production runtimes; Sprint Next-50 complete; 10 TSX components; companion server wired)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,11 +25,11 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.0.6 |
+| Version | 2.0.7 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
-| Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
-| Frontend | React 18, Vite 5, Tailwind 3, Lucide React — primarily `.jsx`; AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar migrated to `.tsx` |
+| Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
+| Frontend | React 18, Vite 5, Tailwind 3, Lucide React — 63 `.jsx` + 10 `.tsx` components (App, Sidebar, RightPanel, SettingsView, ChatView, AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Deployment | Windows NSIS + MSI installer, Railway static serve (gateway) |
 
@@ -55,7 +55,7 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 
 ---
 
-## 3. Service Layer — ~126 Services in `src/services/`
+## 3. Service Layer — ~131 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
@@ -119,6 +119,15 @@ Key services that past audits missed or underestimated:
 - `gitService.js` — git revert, log, status, diff for rollback
 - `scaffoldTemplatesService.js` — 8 project templates (React, Next.js, Express, full-stack, vanilla)
 
+### Resilience & Monitoring (added Sprint Next-50)
+- `connectorCircuitBreakerService.js` — localStorage-backed circuit breaker per connector; 5-failure threshold, 60s cooldown, half-open recovery
+- `connectorRateLimiterService.js` — in-memory token-bucket rate limiter; 60 req/min default, per-connector config
+- `memoryMonitorService.js` — localStorage usage monitor; byte counts, threshold alerts (5MB warn / 8MB critical), pruneOldest helper
+
+### Agent Intelligence (added Sprint Next-50)
+- `hectorBookmarkService.js` — Hector research bookmark ring (200 cap); tag/search filter, JSON export
+- `mariaWeeklyReportService.js` — Maria governance weekly report; reads audit + receipt logs, risk breakdown, scheduleWeeklyGeneration
+
 ### Other
 - `pluginSandboxService.js`, `pluginRegistryService.js`
 - `recoveryService.js`, `runtimeLedgerService.js`
@@ -128,16 +137,15 @@ Key services that past audits missed or underestimated:
 - `localMarketplaceService.js`, `resourceCostService.js`
 - `devPacketService.js`, `serviceScopes.js`
 - `agentAvatarService.js`, `agentVisualService.js`
-- `devPacketService.js`
 
 ---
 
-## 4. Test Suite — 112 Files in `src/test/` (not zero)
+## 4. Test Suite — 120 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-21 Sprint Next-10, all passing):**
-- 112 test files (111 top-level + `services/agentContract.test.ts`), 1621+ tests passing
+**Test files (verified 2026-06-22 Sprint Next-50, all passing):**
+- 120 test files (119 top-level + `services/agentContract.test.ts`), 1737+ tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
 ```
 accBridgeService.test.js
@@ -252,6 +260,14 @@ composioService.test.js        ← added Sprint Next-10 T3 (26 tests)
 agentActivityService.test.js   ← added Sprint Next-10 T3 (9 tests)
 resourceCostService.test.js    ← added Sprint Next-10 T3 (16 tests)
 marcusPublishService.test.js   ← added Sprint Next-10 T3 (22 tests)
+gitService.test.js             ← added Sprint Next-50 D3 (12 tests)
+skillPackService.test.js       ← added Sprint Next-50 D3 (12 tests)
+workspaceIntelligenceService.test.js ← added Sprint Next-50 D3 (11 tests)
+screenIntelligenceService.test.js    ← added Sprint Next-50 D3 (11 tests)
+scaffoldTemplatesService.test.js     ← added Sprint Next-50 D3 (12 tests)
+metaPublishService.test.js           ← added Sprint Next-50 D3 (11 tests)
+workspaceArtifactService.test.js     ← added Sprint Next-50 D3 (8 tests)
+telegramBrowserConnector.test.js     ← added Sprint Next-50 D3 (19 tests)
 ```
 
 **Rust tests (verified 2026-06-15, Session 13):**
@@ -259,8 +275,8 @@ marcusPublishService.test.js   ← added Sprint Next-10 T3 (22 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- Coverage is at ~35%+ (threshold 20%) — next staged target is 40%
-- Component test coverage improved to ~12% with 11 new component test files (Direction 3)
+- Coverage is at ~38%+ (threshold 20%) — next staged target is 40%
+- Component test coverage ~12%; 8 new service test files added in Sprint Next-50
 - Run `npm run test:coverage` to see current state
 
 ---
@@ -455,7 +471,41 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **durableStore / SQLite dual-write** — **CLOSED Sprint Next-10 T10** `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; applied to crashLogService, agentAuditService, novaAnalysisService.
 - [x] **Test coverage push** — **CLOSED Sprint Next-10 T3** 10 new service test files → 111 total / 1621+ tests: agentBrainService, workspaceFileService, proactiveAgentService, streamingService, browserAutomationService, backupService, composioService, agentActivityService, resourceCostService, marcusPublishService.
 - [ ] **Branch protection on `main`** — CI not yet required before merge (GitHub settings, manual step)
-- [ ] **TypeScript migration (continued)** — 5 components migrated; remaining: ChatView, RightPanel, SettingsView, App, Sidebar
+- [x] **TypeScript migration (continued)** — **CLOSED Sprint Next-50 D5** App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx`. Total: 10 TSX components. Remaining JSX: 63 components.
+
+### Sprint Next-50 Additions (2026-06-22)
+- [x] **connectorCircuitBreakerService** — **CLOSED D2T1** localStorage-backed per-connector circuit breaker
+- [x] **connectorRateLimiterService** — **CLOSED D2T7** token-bucket rate limiter (in-memory, 60 req/min default)
+- [x] **memoryMonitorService** — **CLOSED D2T8** localStorage usage monitor with threshold alerts
+- [x] **hectorBookmarkService** — **CLOSED D4T3** Hector research bookmark ring (200 cap)
+- [x] **mariaWeeklyReportService** — **CLOSED D4T6** Maria governance weekly report generator
+- [x] **SessionHistoryView** — **CLOSED D1T1** orchestration session history with search/filter/expand
+- [x] **OrchestratorQueueView** — **CLOSED D2T5** live queue dashboard with 5s auto-refresh
+- [x] **DeadLetterQueueView** — **CLOSED D2T6** dead-letter retry panel
+- [x] **SentinelAllowlistPanel** — **CLOSED D4T5** allowlist manager with pattern test
+- [x] **AgentPairingView** — **CLOSED D4T7** agent collaboration pairing UI
+- [x] **ErrorBoundary → crashLogService** — **CLOSED D1T9** both ErrorBoundary + ViewErrorBoundary wire to logError
+- [x] **Telegram/WhatsApp retry backoff** — **CLOSED D2T2/T3** 3-attempt exponential backoff (1s/2s/4s) on send
+- [x] **AgentStatusStrip live feed** — **CLOSED D4T8** useAutoFeed polling every 3s from agentActivityService
+- [x] **vitest ts/tsx include** — **CLOSED D5T6** include pattern covers .ts/.tsx test files
+- [x] **ESLint no-console warn** — **CLOSED D5T7** console.log warns (warn/error allowed)
+- [x] **Root docker-compose** — **CLOSED D5T10** docker-compose.yml at repo root builds gateway
+- [x] **Nova threshold alerts** — **CLOSED D4T1** fires notification when score ≥ threshold (default 75)
+- [x] **Echo end-of-session synthesis** — **CLOSED D4T2** synthesizeSession export; App.tsx wires close-requested
+- [x] **Jose escalation** — **CLOSED D4T9** tracks consecutive failures, fires warning notification at 2
+- [x] **Jose parallel dispatch** — **CLOSED D4T10** Promise.all when multiple agent assignments, parallelDispatch flag
+- [x] **ChatView empty states** — **CLOSED D1T3** empty state cards in Chat/Files/MemorySearch
+- [x] **ChatView connector badge** — **CLOSED D1T4** Ollama+Telegram status dots in header
+- [x] **ChatView direct mode** — **CLOSED D1T7** bypass Jose pipeline, prefix [DIRECT:Agent]
+- [x] **ChatView pin messages** — **CLOSED D1T8** pin/unpin per message, alphonso_pinned_messages_v1
+- [x] **ChatView degradation banner** — **CLOSED D2T10** amber banner when connectors down but Ollama online
+- [x] **Marcus scheduled publishing** — **CLOSED D4T4** schedulePublish, startScheduler, cancelScheduledPublish
+- [x] **Husky pre-commit** — **CLOSED D5T8** runs npm run lint before every commit
+- [x] **Bundle size CI guard** — **CLOSED D5T9** ci.yml checks no JS chunk > 1MB
+- [x] **WhatsApp read status** — **CLOSED D1T10** ✓/✓✓/✓✓(blue)/✗+retry ticks on outbound messages
+- [x] **Boot time diagnostics** — **CLOSED D2T9** PerformanceDiagnosticsPanel in SettingsView
+- [x] **Light mode CSS tokens** — **CLOSED D1T2** --color-* suite added to .light{} in index.css
+- [x] **8 new test files** — **CLOSED D3T3–T10** gitService, skillPack, workspaceIntelligence, screenIntelligence, scaffoldTemplates, metaPublish, workspaceArtifact, telegramBrowserConnector
 
 ### PERFORMANCE
 - [x] **Lazy loading** — 20+ heavy views lazy-loaded. Main chunk: **288KB** (budget 550KB). Code splitting applied to ChatView, WorkflowPanel, coach components.
