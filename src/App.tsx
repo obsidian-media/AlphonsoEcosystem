@@ -1,23 +1,11 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useVoiceInput } from './hooks/useVoiceInput';
-import { listMemoryItems, pushMemoryItem } from './services/memoryService';
-import { listSnapshots, createSnapshot, restoreSnapshotById, backupMemoryLedger } from './services/recoveryService';
+import { getVerificationLogs } from './services/verificationService';
+import { appendVerificationLog } from './services/verificationService';
 import { TRUST_STATES } from './services/trustModel';
-import { appendVerificationLog, getVerificationLogs, readDurableAuditLog } from './services/verificationService';
-import { updateWorkspaceFoundation } from './services/workspaceIntelligenceService';
-import {
-  getScreenObserverLogs,
-  getScreenObserverState,
-  requestScreenNotificationPermission,
-  startScreenObserver,
-  stopScreenObserver,
-  updateScreenObserverState
-} from './services/screenIntelligenceService';
 import { sendNativeNotification } from './services/notificationService';
-import { listAgentProfiles } from './agents/agentRegistry';
 import { needsHighRiskApproval } from './lib/chatUtils';
-import { getStorage } from './lib/appStorage';
 import { UpdaterNotification } from './components/UpdaterNotification';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
@@ -30,16 +18,9 @@ import { useIdleLock } from './hooks/useIdleLock';
 import { useAppShellState } from './hooks/useAppShellState';
 
 import {
-  INITIAL_CONVERSATION_ID,
   VERIFICATION_LOG_CAP,
-  AUDIT_LOG_FETCH_LIMIT,
-  SNAPSHOT_HISTORY_CAP,
-  SCREEN_OBSERVER_INTERVAL_MS,
-  MEMORY_EXPIRY_MS,
   themeClassFromSettings,
   getCompanionState,
-  companionStateFromVoice,
-  coachMessageFromVoice
 } from './constants/appConstants';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { OllamaProvider, useOllama } from './contexts/OllamaContext';
@@ -67,7 +48,6 @@ const OrchestratorView = lazy(() => import('./components/OrchestratorView').then
 const ProjectExecutionMode = lazy(() => import('./components/projectExecution/ProjectExecutionMode').then((mod) => ({ default: mod.ProjectExecutionMode })));
 const CommandRib = lazy(() => import('./components/CommandRib').then((mod) => ({ default: mod.CommandRib })));
 const AgentDock = lazy(() => import('./components/AgentDock').then((mod) => ({ default: mod.AgentDock })));
-const MicrophoneStatus = lazy(() => import('./components/MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
 const SettingsView = lazy(() => import('./components/SettingsView').then((mod) => ({ default: mod.SettingsView })));
 const RightPanel = lazy(() => import('./components/RightPanel').then((mod) => ({ default: mod.RightPanel })));
 const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then((mod) => ({ default: mod.AgentActivityLog })));
@@ -75,6 +55,31 @@ const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
 const COACH_AGENT_FROM_QUERY = parsedSearchParams.get('coachAgent');
+
+// Context value types
+interface VerificationLogsBridgeValue {
+  verificationLogs: unknown[];
+  setVerificationLogs: React.Dispatch<React.SetStateAction<unknown[]>>;
+  durableAuditLogs: unknown[];
+  setDurableAuditLogs: React.Dispatch<React.SetStateAction<unknown[]>>;
+  auditChainProof: unknown;
+  setAuditChainProof: React.Dispatch<React.SetStateAction<unknown>>;
+  approvalRequiredNotice: boolean;
+  setApprovalRequiredNotice: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+interface RequestApprovalBridgeValue {
+  approvalPending: string | null;
+  setApprovalPending: React.Dispatch<React.SetStateAction<string | null>>;
+  requestApproval: (actionLabel: string) => Promise<boolean>;
+  approvalResolveRef: React.MutableRefObject<((value: boolean) => void) | null>;
+}
+
+const VerificationLogsBridge = React.createContext<VerificationLogsBridgeValue | null>(null);
+export function useVerificationLogsBridge() { return React.useContext(VerificationLogsBridge); }
+
+const RequestApprovalBridge = React.createContext<RequestApprovalBridgeValue | null>(null);
+export function useRequestApprovalBridge() { return React.useContext(RequestApprovalBridge); }
 
 function AppShell() {
   const isCoachWindow = IS_COACH_WINDOW;
@@ -87,7 +92,7 @@ function AppShell() {
   const { coachMode, coachAlwaysOnTop, coachMiniMode, coachSnapCorner, coachIntervention, coachPauseUntilMs, setCoachMode, setCoachMiniMode, setCoachAlwaysOnTop, handleToggleCoachMode, handleToggleCoachTop, handleCoachInterventionAction, minimizeToCoach } = useCoach();
   const voice = useVoiceInput();
   const toast = useToast();
-  const [updaterVersion, setUpdaterVersion] = useState(null);
+  const [updaterVersion, setUpdaterVersion] = useState<string | null>(null);
 
   const {
     activeTab, isSidebarOpen, conversations, activeChatId,
@@ -173,8 +178,8 @@ function AppShell() {
     return (
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
         <OnboardingWizard
-          onComplete={(chosenModel) => {
-            if (chosenModel) setSettings((current) => ({ ...current, selectedModel: chosenModel }));
+          onComplete={(chosenModel: string) => {
+            if (chosenModel) setSettings((current: any) => ({ ...current, selectedModel: chosenModel }));
             setShowOnboarding(false);
           }}
         />
@@ -210,7 +215,7 @@ function AppShell() {
         activeTab={activeTab}
         setActiveTab={switchTab}
         isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen((v) => !v)}
+        onToggle={() => setIsSidebarOpen((v: boolean) => !v)}
         conversations={conversations}
         activeChatId={activeChatId}
         setActiveChatId={setActiveChatId}
@@ -251,17 +256,17 @@ function AppShell() {
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState label="Chat" />}>
-                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state, message) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName) => setSettings((current) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} />
+                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} />
                   </Suspense>
                 )}
                 {activeTab === 'miya' && (
-                  <MiyaStudio settings={settings} ollamaStatus={ollamaStatus} onStudioStateChange={(state, message) => setMiyaCompanionState({ state, message })} onPacketCreated={() => { const log = appendVerificationLog({ type: 'miya_handoff_packet_created', source: 'miya-studio', trust: TRUST_STATES.TEMPORARY, payload: { selectedModel: settings.selectedModel || null } }); setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
+                  <MiyaStudio settings={settings} ollamaStatus={ollamaStatus} onStudioStateChange={(state: string, message: string) => setMiyaCompanionState({ state, message })} onPacketCreated={() => { const log = appendVerificationLog({ type: 'miya_handoff_packet_created', source: 'miya-studio', trust: TRUST_STATES.TEMPORARY, payload: { selectedModel: settings.selectedModel || null } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
                 )}
                 {activeTab === 'content' && (
-                  <ContentCatalystWorkspace settings={settings} onJobChange={(job) => { if (!job) return; const log = appendVerificationLog({ type: 'content_catalyst_job_update', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: { jobId: job.id, status: job.status, currentStep: job.currentStep } }); setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} onApprovalRequest={(approval) => { if (!approval) return; const log = appendVerificationLog({ type: 'content_catalyst_publish_approval', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: approval }); setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
+                  <ContentCatalystWorkspace settings={settings} onJobChange={(job: any) => { if (!job) return; const log = appendVerificationLog({ type: 'content_catalyst_job_update', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: { jobId: job.id, status: job.status, currentStep: job.currentStep } }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} onApprovalRequest={(approval: any) => { if (!approval) return; const log = appendVerificationLog({ type: 'content_catalyst_publish_approval', source: 'content-catalyst', trust: TRUST_STATES.TEMPORARY, payload: approval }); setVerificationLogs((current: unknown[]) => [...current, log].slice(-VERIFICATION_LOG_CAP)); }} />
                 )}
                 {activeTab === 'hector' && (
-                  <HectorResearchDesk onHectorStateChange={(payload) => { if (!payload) return; setHectorCompanionState((current) => ({ ...current, ...payload })); }} />
+                  <HectorResearchDesk onHectorStateChange={(payload: any) => { if (!payload) return; setHectorCompanionState((current: any) => ({ ...current, ...payload })); }} />
                 )}
                 {activeTab === 'automation' && <AutomationView />}
                 {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
@@ -270,7 +275,7 @@ function AppShell() {
                 )}
                 {activeTab === 'project_execution' && <ProjectExecutionMode />}
                 {activeTab === 'orchestrator' && (
-                  <OrchestratorView settings={settings} ollamaStatus={ollamaStatus} onJoseStateChange={(state, message) => setJoseCompanionState({ state, message })} />
+                  <OrchestratorView settings={settings} ollamaStatus={ollamaStatus} onJoseStateChange={(state: string, message: string) => setJoseCompanionState({ state, message })} />
                 )}
                 {activeTab === 'workflows' && (
                   <AutomationView />
@@ -280,7 +285,7 @@ function AppShell() {
                 )}
                 {activeTab === 'settings' && (
                   <Suspense fallback={null}>
-                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} normalizeEndpoint={(e) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} />
+                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} normalizeEndpoint={(e: string) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} />
                   </Suspense>
                 )}
                 {activeTab === 'connectors' && (
@@ -305,19 +310,19 @@ function AppShell() {
       </Suspense>
       {showWorkflowPanel && (
         <Suspense fallback={<ViewLoadingState label="Workflows" />}>
-          <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(workflowId) => switchTab('activity')} />
+          <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(_workflowId: string) => switchTab('activity')} />
         </Suspense>
       )}
     </div>
   );
 }
 
-function VerificationLogsProvider({ children }) {
-  const [verificationLogs, setVerificationLogs] = useState(() => getVerificationLogs());
-  const [durableAuditLogs, setDurableAuditLogs] = useState([]);
-  const [auditChainProof, setAuditChainProof] = useState(null);
+function VerificationLogsProvider({ children }: { children: React.ReactNode }) {
+  const [verificationLogs, setVerificationLogs] = useState<unknown[]>(() => getVerificationLogs());
+  const [durableAuditLogs, setDurableAuditLogs] = useState<unknown[]>([]);
+  const [auditChainProof, setAuditChainProof] = useState<unknown>(null);
   const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
-  const bridgeValue = React.useMemo(() => ({ verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice }), [verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice]);
+  const bridgeValue = React.useMemo<VerificationLogsBridgeValue>(() => ({ verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice }), [verificationLogs, setVerificationLogs, durableAuditLogs, setDurableAuditLogs, auditChainProof, setAuditChainProof, approvalRequiredNotice, setApprovalRequiredNotice]);
 
   return (
     <VerificationLogsBridge.Provider value={bridgeValue}>
@@ -326,21 +331,18 @@ function VerificationLogsProvider({ children }) {
   );
 }
 
-const VerificationLogsBridge = React.createContext(null);
-export function useVerificationLogsBridge() { return React.useContext(VerificationLogsBridge); }
+function RequestApprovalProvider({ children }: { children: React.ReactNode }) {
+  const [approvalPending, setApprovalPending] = useState<string | null>(null);
+  const approvalResolveRef = useRef<((value: boolean) => void) | null>(null);
 
-function RequestApprovalProvider({ children }) {
-  const [approvalPending, setApprovalPending] = useState(null);
-  const approvalResolveRef = useRef(null);
-
-  const requestApproval = useCallback((actionLabel) => {
+  const requestApproval = useCallback((actionLabel: string): Promise<boolean> => {
     return new Promise((resolve) => {
       approvalResolveRef.current = resolve;
       setApprovalPending(actionLabel);
     });
   }, []);
 
-  const approvalValue = React.useMemo(() => ({ approvalPending, setApprovalPending, requestApproval, approvalResolveRef }), [approvalPending, setApprovalPending, requestApproval]);
+  const approvalValue = React.useMemo<RequestApprovalBridgeValue>(() => ({ approvalPending, setApprovalPending, requestApproval, approvalResolveRef }), [approvalPending, setApprovalPending, requestApproval]);
 
   return (
     <RequestApprovalBridge.Provider value={approvalValue}>
@@ -348,9 +350,6 @@ function RequestApprovalProvider({ children }) {
     </RequestApprovalBridge.Provider>
   );
 }
-
-const RequestApprovalBridge = React.createContext(null);
-export function useRequestApprovalBridge() { return React.useContext(RequestApprovalBridge); }
 
 export default function App() {
   return (
@@ -376,9 +375,8 @@ export default function App() {
 
 const NOOP_MEMORY = () => {};
 
-function OllamaProviderInner({ children }) {
-  const bridge = useVerificationLogsBridge();
-  const approval = useRequestApprovalBridge();
+function OllamaProviderInner({ children }: { children: React.ReactNode }) {
+  const bridge = useVerificationLogsBridge()!;
   return (
     <OllamaProvider setVerificationLogs={bridge.setVerificationLogs} setMemoryItems={NOOP_MEMORY}>
       {children}
@@ -386,9 +384,9 @@ function OllamaProviderInner({ children }) {
   );
 }
 
-function PluginProviderInner({ children }) {
-  const bridge = useVerificationLogsBridge();
-  const approval = useRequestApprovalBridge();
+function PluginProviderInner({ children }: { children: React.ReactNode }) {
+  const bridge = useVerificationLogsBridge()!;
+  const approval = useRequestApprovalBridge()!;
   return (
     <PluginProvider requestApproval={approval.requestApproval} setVerificationLogs={bridge.setVerificationLogs} setDurableAuditLogs={bridge.setDurableAuditLogs} setApprovalRequiredNotice={bridge.setApprovalRequiredNotice}>
       {children}
@@ -396,9 +394,9 @@ function PluginProviderInner({ children }) {
   );
 }
 
-function WorkspaceProviderInner({ children }) {
-  const bridge = useVerificationLogsBridge();
-  const approval = useRequestApprovalBridge();
+function WorkspaceProviderInner({ children }: { children: React.ReactNode }) {
+  const bridge = useVerificationLogsBridge()!;
+  const approval = useRequestApprovalBridge()!;
   return (
     <WorkspaceProvider requestApproval={approval.requestApproval} setVerificationLogs={bridge.setVerificationLogs} setDurableAuditLogs={bridge.setDurableAuditLogs}>
       {children}
@@ -406,9 +404,9 @@ function WorkspaceProviderInner({ children }) {
   );
 }
 
-function VerificationProviderInner({ children }) {
-  const bridge = useVerificationLogsBridge();
-  const approval = useRequestApprovalBridge();
+function VerificationProviderInner({ children }: { children: React.ReactNode }) {
+  const bridge = useVerificationLogsBridge()!;
+  const approval = useRequestApprovalBridge()!;
   return (
     <VerificationProvider
       requestApproval={approval.requestApproval}

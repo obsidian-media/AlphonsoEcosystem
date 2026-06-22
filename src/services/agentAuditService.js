@@ -7,7 +7,7 @@ export function logApprovalEvent(packetId, agent, action, outcome) {
   const log = getAuditLog();
   log.push({ packetId, agent, action, outcome, timestamp: Date.now() });
   if (log.length > MAX_ENTRIES) log.splice(0, log.length - MAX_ENTRIES);
-  try { durableSet(AUDIT_KEY, JSON.stringify(log)); } catch {}
+  try { durableSet(AUDIT_KEY, JSON.stringify(log)); } catch { /* ignore */ }
 }
 
 export function getAuditLog() {

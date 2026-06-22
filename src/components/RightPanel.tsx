@@ -1,12 +1,90 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, ChevronLeft, ChevronRight, Cpu, Shield, Wifi, WifiOff } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, Cpu, Shield } from 'lucide-react';
 import { formatModelSize } from '../lib/ollama';
 import { scanForThreats } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
 import { SentinelFindingModal } from './SentinelFindingModal';
 
-function StatusDot({ state }) {
-  const colors = {
+type ConnectionState = 'connected' | 'connecting' | 'warning' | 'disconnected' | 'idle' | 'model_missing' | 'no_models';
+
+interface OllamaStatus {
+  state: ConnectionState;
+  label: string;
+  message?: string;
+  scannedAt?: number;
+}
+
+interface DesktopBridge {
+  state: string;
+  label: string;
+}
+
+interface InstalledModel {
+  name: string;
+  size: number;
+}
+
+interface AppSettings {
+  selectedModel?: string;
+  workspaceRoot?: string;
+  [key: string]: unknown;
+}
+
+interface UpdateCheckState {
+  available?: boolean;
+  latestVersion?: string;
+  checking?: boolean;
+  configured?: boolean;
+  currentVersion?: string;
+  error?: string;
+}
+
+interface SentinelFinding {
+  type?: string;
+  pattern?: string;
+  severity?: string;
+  recommendation?: string;
+  [key: string]: unknown;
+}
+
+interface SentinelScan {
+  riskLevel?: string;
+  findings?: SentinelFinding[];
+  scannedAt?: number;
+}
+
+interface AuditEntry {
+  agent: string;
+  action: string;
+  outcome: string;
+  timestamp: number;
+}
+
+interface RightPanelProps {
+  settings: AppSettings;
+  ollamaStatus: OllamaStatus;
+  installedModels: InstalledModel[];
+  desktopBridge: DesktopBridge;
+  selectedModelMissing?: boolean;
+  onCheckOllama: () => void;
+  operatorMode?: boolean;
+  updateCheckState?: UpdateCheckState;
+  // Additional props passed from App but not destructured in original
+  voiceStatus?: string;
+  lastCheckedAt?: number;
+  onCopyTroubleshootingCommand?: () => void;
+  copyState?: string;
+  onMinimizeToCoach?: () => void;
+  approvalRequiredNotice?: boolean;
+  miyaCompanionState?: unknown;
+  joseCompanionState?: unknown;
+  hectorCompanionState?: unknown;
+  screenObserverState?: unknown;
+  onCheckUpdates?: () => void;
+}
+
+function StatusDot({ state }: { state: string }) {
+  const colors: Record<string, string> = {
     connected: 'bg-success',
     connecting: 'bg-accent',
     warning: 'bg-warning',
@@ -15,10 +93,16 @@ function StatusDot({ state }) {
     model_missing: 'bg-warning',
     no_models: 'bg-warning',
   };
-  return <span className={`h-2 w-2 rounded-full ${colors[state] || colors.idle}`} />;
+  return <span className={`h-2 w-2 rounded-full ${colors[state] || colors['idle']}`} />;
 }
 
-function DiagnosticRow({ label, value, state }) {
+interface DiagnosticRowProps {
+  label: string;
+  value: string;
+  state: string;
+}
+
+function DiagnosticRow({ label, value, state }: DiagnosticRowProps) {
   return (
     <div className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-surface-3/50 transition-colors">
       <StatusDot state={state} />
@@ -39,10 +123,10 @@ export function RightPanel({
   onCheckOllama,
   operatorMode,
   updateCheckState,
-}) {
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('alphonso_right_panel_collapsed_v1') === 'true');
-  const [activeTab, setActiveTab] = useState('system');
-  const setPanelCollapsed = (value) => {
+}: RightPanelProps) {
+  const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('alphonso_right_panel_collapsed_v1') === 'true');
+  const [activeTab, setActiveTab] = useState<'system' | 'audit'>('system');
+  const setPanelCollapsed = (value: boolean) => {
     setCollapsed(value);
     localStorage.setItem('alphonso_right_panel_collapsed_v1', String(value));
   };
@@ -52,23 +136,23 @@ export function RightPanel({
     return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const compact = (text, max = 36) => {
+  const compact = (text: unknown, max = 36): string => {
     const v = String(text || '');
     return v.length <= max ? v : `${v.slice(0, max - 1)}...`;
   };
 
-  const [sentinelScan, setSentinelScan] = useState(() => {
+  const [sentinelScan, setSentinelScan] = useState<SentinelScan | null>(() => {
     try {
       const stored = localStorage.getItem('alphonso_sentinel_last_scan_v1');
       return stored ? JSON.parse(stored) : null;
     } catch { return null; }
   });
 
-  const [selectedFinding, setSelectedFinding] = useState(null);
+  const [selectedFinding, setSelectedFinding] = useState<SentinelFinding | null>(null);
 
   const runQuickScan = () => {
     const result = scanForThreats('', {});
-    const scan = { ...result, scannedAt: Date.now() };
+    const scan: SentinelScan = { ...result, scannedAt: Date.now() };
     setSentinelScan(scan);
     localStorage.setItem('alphonso_sentinel_last_scan_v1', JSON.stringify(scan));
   };
@@ -121,9 +205,9 @@ export function RightPanel({
     );
   }
 
-  const auditEntries = getAuditLog().slice(-10).reverse();
+  const auditEntries: AuditEntry[] = getAuditLog().slice(-10).reverse();
 
-  const relativeTime = (ts) => {
+  const relativeTime = (ts: number): string => {
     const diff = Math.floor((Date.now() - ts) / 1000);
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
@@ -218,13 +302,13 @@ export function RightPanel({
                     <p className="text-xs font-medium text-zinc-200 capitalize">{sentinelScan.riskLevel || 'clean'}</p>
                   </div>
                 </div>
-                {sentinelScan.findings?.length > 0 ? (
+                {sentinelScan.findings && sentinelScan.findings.length > 0 ? (
                   <div className="px-3 py-1.5">
                     <p className="text-[10px] text-zinc-500">{sentinelScan.findings.length} finding{sentinelScan.findings.length > 1 ? 's' : ''}</p>
                     {sentinelScan.findings.slice(0, 2).map((f, i) => (
                       <button
                         key={i}
-                        onClick={() => setSelectedFinding(sentinelScan.findings[i])}
+                        onClick={() => setSelectedFinding(sentinelScan.findings![i])}
                         className="block w-full text-left text-[10px] text-zinc-600 truncate cursor-pointer hover:text-zinc-400 transition-colors"
                       >
                         • {f.type || f.pattern || 'threat'}

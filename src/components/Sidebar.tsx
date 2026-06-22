@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Bot,
   ChevronDown,
@@ -14,11 +14,45 @@ import {
   Terminal,
   Trash2
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { ConnectorStatusStrip } from './ConnectorStatusIndicators';
 
-const NAV_SECTIONS = [
+interface NavItem {
+  id: string;
+  icon: React.ElementType;
+  label: string;
+  showStatusDot?: boolean;
+}
+
+interface NavSection {
+  label: string | null;
+  items: NavItem[];
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+}
+
+interface AppSettings {
+  zeroCostMode?: boolean;
+  [key: string]: unknown;
+}
+
+interface SidebarProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  conversations: Conversation[];
+  activeChatId: string | null;
+  setActiveChatId: (id: string) => void;
+  onCreateChat: () => void;
+  onDeleteChat: (id: string, e: React.MouseEvent) => void;
+  settings: AppSettings;
+}
+
+const NAV_SECTIONS: NavSection[] = [
   {
     label: null,
     items: [
@@ -50,10 +84,10 @@ const NAV_SECTIONS = [
   }
 ];
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings }) {
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
 
-  const [isLight, setIsLight] = useState(() => {
+  const [isLight, setIsLight] = useState<boolean>(() => {
     try { return localStorage.getItem('alphonso_theme_v1') === 'light'; } catch { return false; }
   });
 
