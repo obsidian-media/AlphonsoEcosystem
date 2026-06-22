@@ -133,19 +133,45 @@ export async function browserSendTelegram({ botToken, chatId, text }) {
   if (!token) return { ok: false, error: 'bot_token_missing' };
 
   const endpoint = `https://api.telegram.org/bot${token}/sendMessage`;
+  const NON_RETRYABLE = new Set([400, 401, 403]);
+  const MAX_ATTEMPTS = 3;
   let response;
-  try {
-    response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: target, text: body, disable_web_page_preview: true })
-    });
-  } catch (error) {
-    appendAudit({ at: timestampMs(), kind: 'send_failed', reason: String(error), chatId: target });
-    return { ok: false, error: String(error) };
+  let data = {};
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: target, text: body, disable_web_page_preview: true })
+      });
+    } catch (error) {
+      if (attempt === MAX_ATTEMPTS) {
+        appendAudit({ at: timestampMs(), kind: 'send_failed', reason: String(error), chatId: target });
+        return { ok: false, error: String(error) };
+      }
+      const backoff = 1000 * Math.pow(2, attempt - 1);
+      console.warn(`[Telegram] send attempt ${attempt} failed (network error), retrying in ${backoff}ms`, error);
+      await new Promise((r) => setTimeout(r, backoff));
+      continue;
+    }
+
+    if (NON_RETRYABLE.has(response.status)) {
+      data = await response.json().catch(() => ({}));
+      const description = data?.description || `http_${response.status}`;
+      appendAudit({ at: timestampMs(), kind: 'send_failed', reason: description, chatId: target });
+      return { ok: false, error: description };
+    }
+
+    data = await response.json().catch(() => ({}));
+    if (response.ok && data?.ok) break;
+
+    if (attempt < MAX_ATTEMPTS) {
+      const backoff = 1000 * Math.pow(2, attempt - 1);
+      console.warn(`[Telegram] send attempt ${attempt} failed (HTTP ${response.status}), retrying in ${backoff}ms`);
+      await new Promise((r) => setTimeout(r, backoff));
+    }
   }
 
-  const data = await response.json().catch(() => ({}));
   if (!response.ok || !data?.ok) {
     const description = data?.description || `http_${response.status}`;
     appendAudit({ at: timestampMs(), kind: 'send_failed', reason: description, chatId: target });

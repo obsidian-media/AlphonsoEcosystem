@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Copy } from 'lucide-react';
+import { logError } from '../services/crashLogService.js';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,6 +15,7 @@ export class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     this.setState({ error, errorInfo });
     console.error(`[ErrorBoundary: ${this.props.label || 'unknown'}]`, error, errorInfo);
+    logError(error.message, { componentStack: errorInfo?.componentStack, source: 'ErrorBoundary' });
   }
 
   handleReset = () => {
