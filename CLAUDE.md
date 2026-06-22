@@ -249,4 +249,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-22 — Sprint Next-10 complete + rustfmt CI fix. 112 test files, 1621+ tests, all passing. All 9 agents have production runtimes + UI surfaces. Coverage ~35%+ (threshold 20%). v2.0.5 live. cargo clippy clean. cargo fmt --check clean (rustfmt.toml added). CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-22 — v2.0.6. Sprint Next-10 complete, rustfmt CI fix, mobile companion sprint plan. 112 test files, 1621+ tests, all passing. All 9 agents have production runtimes + UI surfaces. Coverage ~35%+ (threshold 20%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

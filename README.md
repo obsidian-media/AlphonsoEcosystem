@@ -6,7 +6,7 @@
 
 > **v2.0.5** — Local-first AI desktop companion powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.0.5-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.5)
+[![Version](https://img.shields.io/badge/version-2.0.6-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.6)
 [![Tests](https://img.shields.io/badge/tests-1621%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -17,21 +17,17 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 14 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.0.5**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.5) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.0.6**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.6) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
 
-## What's New in v2.0.5
+## What's New in v2.0.6
 
-- **Working Dark/Light Theme** — replaced non-functional Space/Studio/Gold/Clean buttons with a real Dark/Light toggle; full app switches including sidebar and chrome
-- **Chat hints fixed** — "Ollama is setup_required" jargon replaced with clear context-aware messages ("Start Ollama" vs "Choose a model in Settings")
-- **Workflow operations fixed** — all operations were showing "disabled" due to a logic bug; now correctly show "active"
-- **Activity log overhauled** — agent color coding, friendly action labels, proper empty state with guidance
-- **MiyaStudio simplified** — removed decorative 8-panel grid; cleaner single-page creative workspace
-- **Ecosystem page simplified** — ConnectorSetupPanel removed from Ecosystem (it has its own tab); heavy panels moved to Advanced mode only
-- **rustfmt compliance** — all 19 Rust source files formatted to match CI standard
+- **CI rustfmt fix** — `src-tauri/rustfmt.toml` added; all 19 Rust source files formatted to 2-space standard; `cargo fmt --check` now passes in CI
+- **Documentation accuracy pass** — all test counts, version numbers, and CI workflow references corrected across 6 doc files
+- **Mobile companion sprint plan** — `docs/MOBILE_COMPANION_SPRINT.md` — full 5-phase iOS companion implementation guide with complete Rust + Swift code templates ready for parallel development
 
 ---
 
@@ -57,7 +53,7 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 ### Download the Installer (Windows)
 
 1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.5)
-1. Download `Alphonso_2.0.5_x64-setup.exe`
+1. Download `Alphonso_2.0.6_x64-setup.exe`
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
 
@@ -261,7 +257,8 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.0.5** | June 21, 2026 | All 9 agent runtimes, Sprint Next-10 complete, 112 test files, 1,621+ tests, coverage ~35%+, TypeScript migration (5 components), SQLite dual-write, rustfmt CI fix |
+| **v2.0.6** | June 22, 2026 | CI rustfmt fix, documentation accuracy pass, mobile companion sprint plan |
+| v2.0.5 | June 21, 2026 | All 9 agent runtimes, Sprint Next-10 complete, 112 test files, 1,621+ tests, coverage ~35%+, TypeScript migration (5 components), SQLite dual-write |
 | v2.0.2 | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |
 | v1.0.3 | June 15, 2026 | Installer update |
 | v1.0.2 | June 15, 2026 | WebView2 zombie process fix, boot optimizations |

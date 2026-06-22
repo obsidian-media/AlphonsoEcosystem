@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.6] - 2026-06-22 — CI Fix + Docs Cleanup + Mobile Companion Sprint Plan
+
+### Fixed
+- **CI rustfmt** — Added `src-tauri/rustfmt.toml` (`tab_spaces = 2`); ran `cargo fmt --all` across all 19 Rust source files. `cargo fmt --check` now passes in CI (PR #58).
+- **Documentation accuracy** — All stale numbers corrected across 6 files (PR #59):
+  - ALPHONSO_GROUND_TRUTH.md: version 2.0.2→2.0.5, duplicate agent rows removed, service count, test file count 111→112, ghost `verify-app.yml` reference removed, footer updated
+  - README.md: badge 1324→1621+, test count 89→112 files
+  - ARCHITECTURE.md: component coverage note updated
+  - CLAUDE.md: coverage percentage updated, `cargo fmt` command added
+  - USER_MANUAL.md + TROUBLESHOOTING.md: test counts and version reference corrected
+
+### Added
+- **`docs/MOBILE_COMPANION_SPRINT.md`** — Full executable sprint plan for the iOS/mobile WebSocket companion: 5 phases, complete Rust and Swift code templates, JSON-RPC protocol, mDNS discovery, PIN auth, Cargo.toml additions, wscat test procedure, iOS Xcode project structure, SwiftUI component code, push notification setup, offline queue, and definition-of-done checklist for each phase.
+
+---
+
 ## [2.0.5-next10] - 2026-06-21 — Sprint Next-10
 
 ### Added — Task 1 (Onboarding)
