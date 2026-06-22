@@ -207,6 +207,7 @@ MicrophoneStatus.test.jsx          ← added Direction 3 (5 tests)
 RightPanel.test.jsx                ← added Direction 3 (8 tests)
 VoiceInputButton.test.jsx          ← added Direction 3 (6 tests)
 voiceService.test.js               ← added Direction 3 (10 tests)
+CompanionPairingPanel.test.jsx      ← added companion Phase 2 (7 tests)
 WorkflowBuilderView.test.jsx       ← added Direction 3 (7 tests)
 useVoiceInput.test.js              ← added Direction 3 (7 tests)
 telegramCompanionService.test.js   ← added Direction 1
