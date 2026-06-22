@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Key, Copy, Wifi, Shield, QrCode, CheckCircle2 } from 'lucide-react';
-import QRCode from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 export function CompanionPairingPanel() {
   const [pin, setPin] = useState('');

@@ -16,7 +16,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 vi.mock('qrcode.react', () => ({
-  default: ({ value }) => <span data-testid="qr-code">{value}</span>,
+  QRCodeCanvas: ({ value }) => <span data-testid="qr-code">{value}</span>,
 }));
 
 import { invoke } from '@tauri-apps/api/core';
