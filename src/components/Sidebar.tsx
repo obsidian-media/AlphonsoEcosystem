@@ -16,7 +16,7 @@ import {
   Trash2
 } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
-import { ConnectorStatusStrip } from './ConnectorStatusIndicators';
+import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
 
 interface NavItem {
   id: string;
@@ -127,7 +127,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                  className={`relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                     activeTab === item.id
                       ? 'bg-accent/10 text-white border border-accent/20'
                       : 'text-zinc-400 hover:bg-surface-3 hover:text-zinc-200 border border-transparent'
@@ -138,6 +138,11 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                   {isOpen && <span className="font-medium">{item.label}</span>}
                   {isOpen && item.showStatusDot && (
                     <ConnectorStatusStrip zeroCostMode={zeroCostMode} />
+                  )}
+                  {!isOpen && item.showStatusDot && (
+                    <span className="absolute top-1 right-1">
+                      <ConnectorStatusDot connectorId="whatsapp" />
+                    </span>
                   )}
                 </button>
               ))}
