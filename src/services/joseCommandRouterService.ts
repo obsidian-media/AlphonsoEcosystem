@@ -122,6 +122,7 @@ export interface JoseCommand {
   trust: string;
   confirmedAtMs?: number;
   shayanReport?: ShayanReport | null;
+  parallelDispatch?: boolean;
 }
 
 export interface ShayanReport {
@@ -173,6 +174,7 @@ export interface JoseCommandRouteResult {
   deadLetters: any[];
   retryPolicy: { maxRetries: number; staleAfterMs: number };
   trust: string;
+  parallelDispatch?: boolean;
 }
 
 function readCommands(): JoseCommand[] {
@@ -653,6 +655,8 @@ export async function createJoseCommandRoute({ commandText, source = 'shayan', z
   });
 
   command.assignments = routed;
+  // Flag parallel dispatch when there are multiple distinct agent tasks
+  const parallelDispatch = routed.length > 1;
   const rows = readCommands();
   rows.push(command);
   writeCommands(rows);
@@ -686,7 +690,7 @@ export async function createJoseCommandRoute({ commandText, source = 'shayan', z
     verificationState: TRUST_STATES.UNVERIFIED
   });
 
-  return command;
+  return { ...command, parallelDispatch };
 }
 
 interface ContractValidation {

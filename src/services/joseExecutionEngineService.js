@@ -1,4 +1,5 @@
 import { appendAgentActivity } from './agentActivityService';
+import { appendNotification } from './notificationService';
 import { invoke } from '@tauri-apps/api/core';
 import {
   AGENTS,
@@ -282,6 +283,39 @@ const JOSE_EXECUTION_DLQ_KEY = 'alphonso_jose_execution_dlq_v1';
 export const JOSE_EXECUTION_DLQ_SCOPE = 'jose_execution_dead_letters_v1';
 const MAX_TASK_RETRIES = 3;
 const TASK_RETRY_BACKOFF_MS = [1000, 2000, 4000];
+
+// ── Escalation tracking ───────────────────────────────────────────────────────
+// Tracks consecutive failures per command key; escalates after 2 failures.
+const _escalationFailCounts = new Map(); // key: commandText → count
+const _escalationLog = []; // recent escalation records (max 50)
+const MAX_ESCALATION_LOG = 50;
+const ESCALATION_THRESHOLD = 2;
+
+function _recordEscalationFailure(commandText) {
+  const key = String(commandText || '').slice(0, 200);
+  const current = (_escalationFailCounts.get(key) || 0) + 1;
+  _escalationFailCounts.set(key, current);
+  if (current >= ESCALATION_THRESHOLD) {
+    const entry = { commandText: key, failCount: current, escalatedAt: Date.now() };
+    _escalationLog.push(entry);
+    if (_escalationLog.length > MAX_ESCALATION_LOG) _escalationLog.splice(0, _escalationLog.length - MAX_ESCALATION_LOG);
+    try {
+      appendNotification({
+        type: 'warning',
+        title: 'Jose escalation: command failed twice',
+        message: `Manual review recommended. Command: ${key.slice(0, 150)}`
+      });
+    } catch { /* non-critical */ }
+  }
+}
+
+function _resetEscalationCount(commandText) {
+  _escalationFailCounts.delete(String(commandText || '').slice(0, 200));
+}
+
+export function getEscalationLog() {
+  return _escalationLog.slice();
+}
 const MAX_DLQ_ENTRIES = 250;
 
 let joseExecutionDlq = readJoseExecutionDlq();
@@ -376,6 +410,7 @@ async function executeAssignmentWithRetries(packet, assignment, commandText, opt
       if (isRetryableTaskFailure(result)) {
         throw new Error(result.summary || `Task "${instruction}" returned a failed result.`);
       }
+      _resetEscalationCount(commandText);
       return {
         ok: true,
         attempts: attempt,
@@ -390,6 +425,7 @@ async function executeAssignmentWithRetries(packet, assignment, commandText, opt
       }
     }
   }
+  _recordEscalationFailure(commandText);
 
   const errorMessage = String(lastError?.message || lastError || `Task "${instruction}" failed.`);
   const dlqEntry = upsertJoseExecutionDlqEntry({
