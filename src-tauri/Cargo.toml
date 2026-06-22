@@ -32,7 +32,7 @@ tokio = { version = "1", features = ["time", "rt", "macros", "net"] }
 tokio-tungstenite = "0.21"
 futures-util = "0.3"
 uuid = { version = "1", features = ["v4"] }
-rand = "0.8"
+rand = "0.9"
 mdns-sd = "0.10"
 hostname = "0.3"
 subtle = "2"
