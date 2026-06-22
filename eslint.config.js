@@ -41,7 +41,7 @@ export default [
       'no-undef': 'error',
       'react-hooks/rules-of-hooks': 'error',
       'no-unused-vars': 'off',
-      'no-console': 'off',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-useless-assignment': 'off'
     }
   },

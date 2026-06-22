@@ -15,21 +15,55 @@ export async function browserSendWhatsApp({ to, text }) {
   }
 
   const toNorm = normalizePhone(to);
-  const response = await fetch(`${GRAPH_API_BASE}/${phoneNumberId}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to: toNorm,
-      type: 'text',
-      text: { body: String(text || '') }
-    })
-  });
+  const NON_RETRYABLE = new Set([400, 401, 403]);
+  const MAX_ATTEMPTS = 3;
+  let response;
+  let data = {};
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      response = await fetch(`${GRAPH_API_BASE}/${phoneNumberId}/messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: toNorm,
+          type: 'text',
+          text: { body: String(text || '') }
+        })
+      });
+    } catch (error) {
+      if (attempt === MAX_ATTEMPTS) throw error;
+      const backoff = 1000 * Math.pow(2, attempt - 1);
+      console.warn(`[WhatsApp] send attempt ${attempt} failed (network error), retrying in ${backoff}ms`, error);
+      await new Promise((r) => setTimeout(r, backoff));
+      continue;
+    }
 
-  const data = await response.json().catch(() => ({}));
+    if (NON_RETRYABLE.has(response.status)) {
+      data = await response.json().catch(() => ({}));
+      return {
+        ok: false,
+        connectorId: 'whatsapp',
+        externalId: null,
+        httpStatus: response.status,
+        error: data?.error?.message || `HTTP ${response.status}`,
+        trust: 'failed'
+      };
+    }
+
+    data = await response.json().catch(() => ({}));
+    if (response.ok) break;
+
+    if (attempt < MAX_ATTEMPTS) {
+      const backoff = 1000 * Math.pow(2, attempt - 1);
+      console.warn(`[WhatsApp] send attempt ${attempt} failed (HTTP ${response.status}), retrying in ${backoff}ms`);
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+
   return {
     ok: response.ok,
     connectorId: 'whatsapp',

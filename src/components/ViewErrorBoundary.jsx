@@ -1,6 +1,7 @@
 import React from 'react';
 import { Component } from 'react';
 import { AlertCircle, RefreshCw, Copy, ChevronDown } from 'lucide-react';
+import { logError } from '../services/crashLogService.js';
 
 export class ViewErrorBoundary extends Component {
   constructor(props) {
@@ -14,6 +15,7 @@ export class ViewErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error(`[Alphonso] ${this.props.label || 'View'} crashed:`, error, info?.componentStack);
+    logError(error.message, { componentStack: info?.componentStack, source: 'ErrorBoundary' });
   }
 
   handleReset = () => {

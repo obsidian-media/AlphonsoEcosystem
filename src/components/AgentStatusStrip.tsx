@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { listAgentActivity } from '../services/agentActivityService.js';
 
 interface Agent {
   name: string;
@@ -6,11 +7,49 @@ interface Agent {
 }
 
 interface AgentStatusStripProps {
-  activeAgents: Agent[];
+  activeAgents?: Agent[];
   compact?: boolean;
+  useAutoFeed?: boolean;
+  onAgentsChange?: (agents: Agent[]) => void;
 }
 
-export function AgentStatusStrip({ activeAgents, compact = false }: AgentStatusStripProps) {
+export function AgentStatusStrip({
+  activeAgents: activeAgentsProp,
+  compact = false,
+  useAutoFeed = true,
+  onAgentsChange
+}: AgentStatusStripProps) {
+  const [derivedAgents, setDerivedAgents] = useState<Agent[]>([]);
+
+  useEffect(() => {
+    if (!useAutoFeed) return;
+
+    function deriveActiveAgents(): Agent[] {
+      const WINDOW_MS = 30_000;
+      const now = Date.now();
+      const activity = listAgentActivity();
+      const recentMap = new Map<string, number>();
+      for (const entry of activity) {
+        if (now - entry.ts <= WINDOW_MS) {
+          recentMap.set(entry.agent, entry.ts);
+        }
+      }
+      return Array.from(recentMap.keys()).map((name) => ({ name, status: 'running' }));
+    }
+
+    const update = () => {
+      const agents = deriveActiveAgents();
+      setDerivedAgents(agents);
+      onAgentsChange?.(agents);
+    };
+
+    update();
+    const id = setInterval(update, 3000);
+    return () => clearInterval(id);
+  }, [useAutoFeed, onAgentsChange]);
+
+  const activeAgents = useAutoFeed ? derivedAgents : (activeAgentsProp ?? []);
+
   if (!activeAgents || activeAgents.length === 0) return null;
 
   return (
