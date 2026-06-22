@@ -34,7 +34,7 @@ function BootReadySignal() {
         const mainStart = performance.getEntriesByName('alphonso:main:start')[0]?.startTime || 0;
         const renderStart = performance.getEntriesByName('alphonso:main:render-start')[0]?.startTime || 0;
         const bootReady = performance.getEntriesByName('alphonso:main:boot-ready')[0]?.startTime || 0;
-        console.log(`[Alphonso Boot] main→render: ${(renderStart - mainStart).toFixed(0)}ms, render→ready: ${(bootReady - renderStart).toFixed(0)}ms, total: ${(bootReady - mainStart).toFixed(0)}ms`);
+        console.warn(`[Alphonso Boot] main→render: ${(renderStart - mainStart).toFixed(0)}ms, render→ready: ${(bootReady - renderStart).toFixed(0)}ms, total: ${(bootReady - mainStart).toFixed(0)}ms`);
       } catch { /* ignore */ }
     }
     window.__ALPHONSO_BOOT_READY__?.();

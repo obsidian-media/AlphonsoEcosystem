@@ -11,7 +11,7 @@ function loadReports() {
 }
 
 function storeReports(reports) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reports)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reports)); } catch { /* localStorage unavailable */ }
 }
 
 function loadReceipts() {
@@ -105,7 +105,7 @@ export function scheduleWeeklyGeneration(callback) {
       const report = generateWeeklyReport();
       saveReport(report);
       if (typeof callback === 'function') callback(report);
-    } catch {}
+    } catch { /* report generation error ignored */ }
   }, WEEK_MS);
   return () => clearInterval(id);
 }

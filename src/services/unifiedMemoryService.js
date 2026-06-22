@@ -66,8 +66,6 @@ function logMemory(level, message, data) {
     console.error(prefix, message, data || '');
   } else if (level === 'warn') {
     console.warn(prefix, message, data || '');
-  } else {
-    console.log(prefix, message, data || '');
   }
 }
 

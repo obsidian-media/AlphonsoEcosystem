@@ -8,7 +8,7 @@ function loadBookmarks() {
 }
 
 function saveBookmarks(bookmarks) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks)); } catch { /* localStorage unavailable */ }
 }
 
 function makeId() {
