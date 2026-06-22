@@ -4,7 +4,7 @@
 
 # Alphonso
 
-> **v2.0.5** — Local-first AI desktop companion powered by Ollama
+> **v2.0.6** — Local-first AI desktop companion powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.0.6-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.6)
 [![Tests](https://img.shields.io/badge/tests-1621%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
