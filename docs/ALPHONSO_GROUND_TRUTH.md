@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
 **Last verified:** 2026-06-21 — Sprint Next-10 complete  
 **Verified by:** Claude Code session (111 test files, 1621+ tests passing, cargo clippy clean)  
-**Version:** 2.0.5 (All 9 agents have production runtimes; Sprint Next-10 complete; v2.0.5 NSIS installer live on GitHub Releases)  
+**Version:** 2.0.6 (All 9 agents have production runtimes; Sprint Next-10 complete; mobile companion sprint plan published; v2.0.6 NSIS installer live on GitHub Releases)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.0.5 |
+| Version | 2.0.6 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest |
@@ -633,6 +633,6 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-22 — Sprint Next-10 + rustfmt CI fix complete. 112 test files (111 + services/agentContract.test.ts), 1621+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB), `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean (rustfmt.toml added). `lib.rs` ~1,585 lines (18 extracted modules). Coverage ~35%+ (threshold 20%, src/ scoped). Version 2.0.5. All 9 agent runtimes live. rustfmt.toml in src-tauri/. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-22 — v2.0.6: Sprint Next-10 complete, rustfmt CI fix, docs accuracy pass, mobile companion sprint plan. 112 test files (111 + services/agentContract.test.ts), 1621+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB), `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean (rustfmt.toml added). `lib.rs` ~1,585 lines (18 extracted modules). Coverage ~35%+ (threshold 20%, src/ scoped). Version 2.0.5. All 9 agent runtimes live. rustfmt.toml in src-tauri/. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
