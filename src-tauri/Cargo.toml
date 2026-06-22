@@ -28,7 +28,12 @@ sha2 = "0.11"
 rusqlite = { version = "0.40", features = ["bundled"] }
 tauri-plugin-updater = "2"
 hmac = "0.13"
-tokio = { version = "1", features = ["time", "rt", "macros"] }
+tokio = { version = "1", features = ["time", "rt", "macros", "net"] }
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+uuid = { version = "1", features = ["v4"] }
+rand = "0.8"
+mdns-sd = "0.10"
 subtle = "2"
 dotenvy = "0.15"
 tauri-plugin-notification = "2.3.3"

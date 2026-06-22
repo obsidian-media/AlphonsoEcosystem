@@ -10,6 +10,11 @@ use tauri::{Emitter, Listener, Manager, WindowEvent};
 use tauri_plugin_updater::UpdaterExt;
 
 mod audit_log;
+mod companion_auth;
+mod companion_discovery;
+mod companion_router;
+mod companion_server;
+mod companion_types;
 mod connector_commands;
 mod kv_store;
 mod memory_store;
@@ -1825,6 +1830,18 @@ pub fn run() {
         )?;
       }
 
+      // Start companion WebSocket server
+      let config = crate::companion_types::CompanionConfig::default();
+      let (server, _rx) = crate::companion_server::CompanionServer::new(config);
+      let companion_server = std::sync::Arc::new(server);
+      let companion_server_clone = std::sync::Arc::clone(&companion_server);
+      app.manage(companion_server_clone);
+      tauri::async_runtime::spawn(async move {
+        if let Err(e) = companion_server.run().await {
+          log::error!("Companion server error: {}", e);
+        }
+      });
+
       use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
       let shortcut: Shortcut = "Ctrl+Shift+Space".parse().unwrap_or_else(|_| {
         "CommandOrControl+Shift+Space"
@@ -1980,7 +1997,9 @@ pub fn run() {
       pick_folder,
       launch_ollama,
       launch_comfyui,
-      save_image_to_folder
+      save_image_to_folder,
+      companion_server::companion_get_pin,
+      companion_server::companion_get_status
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
