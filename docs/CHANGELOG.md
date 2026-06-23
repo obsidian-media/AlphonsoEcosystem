@@ -6,6 +6,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.9] - 2026-06-23 — Runtime Hub (9 Gaps Fixed)
+
+### Fixed — AI Runtime Manager (all 9 production gaps)
+- **Gap 1 — Python detection**: `find_python()` searches PATH + `%LOCALAPPDATA%\Programs\Python\Python31x\` + `C:\Python31x\`; `runtime_check_prerequisites` command returns full status
+- **Gap 2 — Git detection**: `find_git()` searches PATH + `C:\Program Files\Git\cmd\git.exe`; `runtime_install_prerequisite` uses winget (Windows) / brew (Mac)
+- **Gap 3 — Ollama detection**: `find_ollama()` searches PATH + `%LOCALAPPDATA%\Programs\Ollama\ollama.exe` + `C:\Program Files\Ollama\` — no more silent failure
+- **Gap 4 — Real async streaming**: `run_streaming()` uses `tokio::process::Command` + `AsyncBufReadExt` line-by-line; each line emitted as `runtime://log` Tauri event; `LiveLogPanel` shows live in UI
+- **Gap 5 — Venv isolation**: `ensure_venv()` creates `<tool_dir>/venv/` before pip; all pip install/start operations use venv Python
+- **Gap 6 — AudioCraft args**: fixed from broken `-m demos.musicgen_app` to `demos/musicgen_app.py --server_name 127.0.0.1 --server_port 8765`
+- **Gap 7 — InvokeAI exe path**: `resolve_exe()` checks `venv/Scripts/invokeai-web.exe` (Windows) / `venv/bin/invokeai-web` (Linux) before PATH fallback
+- **Gap 8 — Boot status events**: `autostart_all(state, app_handle)` emits `runtime://boot_status` per tool; new `BootStatusBanner.jsx` shows fixed bottom-right overlay auto-dismissing after 6s
+- **Gap 9 — Autostart toggle**: `load_autostart_prefs()` / `save_autostart_prefs_to_disk()` persists JSON at `%APPDATA%\Alphonso\runtimes\autostart_prefs.json`; default Ollama=true rest=false; per-tool toggle in `RuntimeManagerView`
+
+### Added
+- **`BootStatusBanner.jsx`** — real-time boot overlay; status dot (starting/started/skipped/failed) per tool; auto-dismiss 6s after all done
+- **`runtime_check_prerequisites`** Tauri command — returns `PrereqStatus` with python/git/ollama found flags, paths, versions, missing list, install hint
+- **`runtime_install_prerequisite`** Tauri command — winget/brew install for python, git, ollama with streaming progress
+- **`runtime_get_autostart_prefs`** / **`runtime_save_autostart_pref`** Tauri commands — read/write per-tool autostart JSON
+- **Prereq warning panel** in `RuntimeManagerView` — amber banner with one-click install buttons when Python/Git/Ollama missing
+- **Live log panel** in `RuntimeManagerView` — `LiveLogPanel` subscribes to `runtime://log` events during install
+- **Autostart toggle** in each `ToolCard` — `ToggleRight`/`ToggleLeft` icon, optimistic update, persisted immediately
+- 5 new exports in `runtimeManagerService.js`: `checkPrerequisites`, `installPrerequisite`, `getAutostartPrefs`, `saveAutostartPref`, `onLogLine`
+
+### Tests
+- `runtimeManagerService.test.js` expanded to 17 tests (added prereq/autostart coverage)
+- Rust: 9 unit tests in `runtime_manager::tests` — all pass
+
+---
+
 ## [2.0.8] - 2026-06-22 — Sprint Next-50
 
 ### Added — Resilience Services

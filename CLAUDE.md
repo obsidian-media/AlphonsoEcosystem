@@ -79,6 +79,11 @@ Before writing any new service, component, or feature, check this list:
 | Agent contract boundaries | `src/services/agentContractService.ts` |
 | 10 workflow operations | `src/services/workflowOperationsRegistryService.js` |
 | AI runtime manager (7 tools) | `src-tauri/src/runtime_manager.rs` + `src/services/runtimeManagerService.js` + `src/components/RuntimeManagerView.jsx` |
+| Prereq detection (Python/Git/Ollama) | `runtime_manager::find_python()` / `find_git()` / `find_ollama()` + `runtime_check_prerequisites` Tauri command |
+| Prereq auto-install (winget/brew) | `runtime_install_prerequisite` Tauri command — do not add a separate install flow |
+| Boot status banner | `src/components/BootStatusBanner.jsx` — listens to `runtime://boot_status` events |
+| Autostart prefs (per-tool) | `runtime_get_autostart_prefs` / `runtime_save_autostart_pref` + JSON at `%APPDATA%\Alphonso\runtimes\autostart_prefs.json` |
+| Live install log streaming | `runtime://log` Tauri events + `onLogLine()` in runtimeManagerService + `LiveLogPanel` in RuntimeManagerView |
 | Updater release script | `npm run release:updater` |
 | Auth scripts (YouTube, Meta) | `npm run auth:youtube`, `npm run auth:meta` |
 | Desktop preflight / verify | `npm run verify:desktop:preflight`, `npm run verify:desktop` |
@@ -189,6 +194,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Test coverage at ~30%~~ — **CLOSED Sprint Next-10 T3** (111 test files / 1621+ tests; 10 new service test files)
 - Branch protection on `main` — manual GitHub step (MCP doesn't expose branch protection API); require CI pass before merge
 - Coverage at ~38%+ — next staged target 40%
+- ~~Runtime Manager 9 gaps~~ — **CLOSED 2026-06-23** (prereq detection, async streaming, venv isolation, AudioCraft fix, InvokeAI venv exe, boot status banner, autostart prefs JSON)
 - TypeScript migration — 10 components migrated (all major ones done). Remaining: bulk of 63 .jsx component files
 
 ---
@@ -250,4 +256,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-22 — v2.0.8. Sprint Next-50 complete (46 tasks executed). 120 test files, 1737+ tests, all passing. 10 TSX components. 131 services. 5 new resilience services. 5 new UI components. All 9 agents have production runtimes + UI surfaces. Coverage ~38%+ (threshold 20%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-23 — v2.0.8 + Runtime Hub (9 gaps fixed). 120 test files, 1737+ tests, all passing. 10 TSX components. 131 services. All 9 agents have production runtimes + UI surfaces. Runtime Hub: 7 AI tools auto-managed (Ollama, ComfyUI, A1111, Fooocus, InvokeAI, Whisper, AudioCraft) with prereq detection, venv isolation, async streaming, autostart prefs, boot status banner. Coverage ~38%+ (threshold 20%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
