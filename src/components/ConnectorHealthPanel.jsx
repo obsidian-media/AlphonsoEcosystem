@@ -1,5 +1,6 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
+import { ConnectorSetupPanel } from './ConnectorSetupPanel';
 import {
   Bot,
   CheckCircle,
@@ -441,6 +442,14 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
   const [connectors, setConnectors] = useState(() => listConnectors());
   const [probing, setProbing] = useState(false);
 
+  // Default to Setup tab when no credentials have been saved yet
+  const hasAnyCreds = (() => {
+    try {
+      return Object.keys(localStorage).some((k) => k.startsWith('alphonso_connector_') || k.startsWith('alphonso_telegram_') || k.startsWith('alphonso_composio_'));
+    } catch { return false; }
+  })();
+  const [activeTab, setActiveTab] = useState(hasAnyCreds ? 'health' : 'setup');
+
   // Run env verification for all connectors on mount (best-effort)
   useEffect(() => {
     let cancelled = false;
@@ -466,6 +475,34 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
 
   return (
     <section className="space-y-4">
+      {/* Tab switcher */}
+      <div className="flex gap-1 p-1 bg-zinc-900/60 border border-white/[0.06] rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab('setup')}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'setup' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}`}
+        >
+          ⚙ Setup &amp; Credentials
+        </button>
+        <button
+          onClick={() => setActiveTab('health')}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'health' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}`}
+        >
+          ● Health Monitor
+        </button>
+      </div>
+
+      {/* Setup tab — credential entry for all connectors */}
+      {activeTab === 'setup' && (
+        <div>
+          <div className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-2.5 text-[11px] text-indigo-200/80 leading-relaxed">
+            Enter API credentials here. Credentials are stored locally in encrypted storage and never sent to any server except the connector's own API.
+          </div>
+          <ConnectorSetupPanel />
+        </div>
+      )}
+
+      {/* Health tab — existing content */}
+      {activeTab === 'health' && (<>
       {/* Panel header */}
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -518,6 +555,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
         &quot;live&quot; only when all required env vars are present and the last test returned verified.
         Use &quot;Test Connection&quot; to check key presence or local endpoint reachability without sending data.
       </p>
+      </>)}
     </section>
   );
 }
