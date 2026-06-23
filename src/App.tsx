@@ -144,15 +144,6 @@ function AppShell() {
     return () => { cancelled = true; clearInterval(id); };
   }, [addNotification]);
 
-  // Push notification when approval is required
-  const prevApprovalPending = useRef<string | null>(null);
-  useEffect(() => {
-    if (approvalRequiredNotice && !prevApprovalPending.current) {
-      addNotification({ type: 'warning', title: 'Approval needed', message: 'A task is waiting for your review.' });
-    }
-    prevApprovalPending.current = approvalRequiredNotice ? 'pending' : null;
-  }, [approvalRequiredNotice, addNotification]);
-
   const {
     activeTab, isSidebarOpen, conversations, activeChatId,
     isGeneratingResponse, setIsGeneratingResponse, lastTaskCompletedAt, isOnline, isLocked,
@@ -180,6 +171,15 @@ function AppShell() {
     coachMode, coachAlwaysOnTop, coachMiniMode, coachSnapCorner, coachIntervention, coachPauseUntilMs, setCoachMode, setCoachMiniMode, setCoachAlwaysOnTop, handleToggleCoachMode, handleToggleCoachTop, handleCoachInterventionAction, minimizeToCoach,
     voice, toast
   });
+
+  // Push notification when approval is required — must be after useAppShellState
+  const prevApprovalPending = useRef<string | null>(null);
+  useEffect(() => {
+    if (approvalRequiredNotice && !prevApprovalPending.current) {
+      addNotification({ type: 'warning', title: 'Approval needed', message: 'A task is waiting for your review.' });
+    }
+    prevApprovalPending.current = approvalRequiredNotice ? 'pending' : null;
+  }, [approvalRequiredNotice, addNotification]);
 
   const companion = getCompanionState({
     ollamaStatus, voiceStatus: voice.voiceStatus, isGeneratingResponse,
