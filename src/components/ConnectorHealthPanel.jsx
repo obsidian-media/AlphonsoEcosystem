@@ -288,7 +288,7 @@ function ConnectorCard({ connector, zeroCostMode }) {
 
         {/* Status badge */}
         <span className={`shrink-0 flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${badge}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+          <span className={`w-2 h-2 rounded-full shrink-0 transition-colors duration-500 ${dot}`} />
           {label}
         </span>
       </div>

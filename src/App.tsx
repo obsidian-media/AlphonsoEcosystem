@@ -103,6 +103,7 @@ function AppShell() {
   interface AppNotification { id: string; type: NotificationType; title: string; message: string; timestamp: number; }
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState<number>(0);
 
   const addNotification = useCallback((n: Omit<AppNotification, 'id' | 'timestamp'>) => {
     setNotifications((prev) => [
@@ -316,6 +317,7 @@ function AppShell() {
         onCreateChat={createNewChat}
         onDeleteChat={deleteChat}
         settings={settings}
+        pendingApprovalCount={pendingApprovalCount}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar
@@ -357,7 +359,7 @@ function AppShell() {
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState label="Chat" />}>
-                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} />
+                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
                   </Suspense>
                 )}
                 {activeTab === 'miya' && (

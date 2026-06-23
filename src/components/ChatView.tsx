@@ -193,7 +193,8 @@ export function ChatView({
   onOpenSettings,
   onModelChange,
   screenObserverLogs = [],
-  setActiveTab
+  setActiveTab,
+  onPendingCountChange
 }: any) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -320,6 +321,11 @@ export function ChatView({
     );
     return () => { timers.forEach(clearTimeout); };
   }, [newMessageIds]);
+
+  // Sync pending approval count to parent sidebar badge
+  useEffect(() => {
+    onPendingCountChange?.(pendingApprovals.length);
+  }, [pendingApprovals.length, onPendingCountChange]);
 
   const handleFileAttach = (event) => {
     const file = event.target.files?.[0];
