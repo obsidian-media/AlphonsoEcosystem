@@ -16,6 +16,13 @@ src/                   React frontend (.jsx, not .tsx)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
   test/                81 test files, 1,100 tests (Vitest, all passing)
+ios/                   iOS companion app (SwiftUI)
+  AlphonsoCompanion/
+    AlphonsoCompanionApp.swift    — @main entry point
+    ContentView.swift             — tab view container
+    Views/                        — PairingView, ChatView, AgentDockView, BoardroomView, SettingsView
+    Services/                     — WebSocketService.swift, MDNSService.swift
+    Models/                       — ConnectionState.swift
 src-tauri/             Rust backend
   src/lib.rs           ~1,584 lines, 82 Tauri commands (across 18 modules)
   src/utils.rs         Shared utilities
