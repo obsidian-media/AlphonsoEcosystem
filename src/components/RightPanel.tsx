@@ -4,6 +4,7 @@ import { formatModelSize } from '../lib/ollama';
 import { scanForThreats } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
 import { SentinelFindingModal } from './SentinelFindingModal';
+import { SentinelAllowlistPanel } from './SentinelAllowlistPanel';
 import { Badge } from './ui/Badge';
 
 type ConnectionState = 'connected' | 'connecting' | 'warning' | 'disconnected' | 'idle' | 'model_missing' | 'no_models';
@@ -339,6 +340,10 @@ export function RightPanel({
             </button>
           </div>
           <SentinelFindingModal finding={selectedFinding} onClose={() => setSelectedFinding(null)} />
+          <div className="mt-3 pt-3 border-t border-[var(--border)] px-3">
+            <p className="section-label mb-2">Allowlist</p>
+            <SentinelAllowlistPanel />
+          </div>
         </>
       )}
 

@@ -13,6 +13,8 @@ import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
 import { CompanionPairingPanel } from './CompanionPairingPanel';
+import { ConnectorSetupPanel } from './ConnectorSetupPanel';
+import { SessionHistoryView } from './SessionHistoryView';
 
 interface MemoryItem {
   id?: string;
@@ -869,6 +871,10 @@ export function SettingsView({
   {activeSection === 'connectors' && (
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
+        <SectionHeader icon={Key} label="API Credentials" />
+        <ConnectorSetupPanel />
+      </section>
+      <section className="space-y-4">
         <SectionHeader icon={Plug} label="External Tools (Composio)" />
         <div className="space-y-4">
           <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
@@ -1105,6 +1111,10 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Activity} label="Echo Memory Timeline" />
         <EchoTimeline />
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={Database} label="Session History" />
+        <SessionHistoryView />
       </section>
     </div>
   )}
