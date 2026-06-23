@@ -16,10 +16,10 @@ export default defineConfig({
       include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: ['src/test/**', 'src/**/*.test.{js,jsx}', 'src/**/*.spec.{js,jsx}'],
       thresholds: {
-        lines: 30,
-        branches: 30,
-        functions: 30,
-        statements: 30
+        lines: 35,
+        branches: 35,
+        functions: 35,
+        statements: 35
       }
     }
   }

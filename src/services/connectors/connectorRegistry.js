@@ -6,6 +6,7 @@ import { persistScopeRows } from '../runtimeLedgerService';
 import { evaluatePolicyGate } from '../policyEnforcementService';
 import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { requireApproval } from '../approval/approvalService';
+import { hydrateConnectorAuthProfilesFromSqlite } from './connectorAuth.js';
 
 export const CONNECTOR_KEY = 'alphonso_connector_registry_v2';
 export const CONNECTOR_AUDIT_KEY = 'alphonso_connector_audit_v2';
@@ -284,7 +285,7 @@ export async function initializeConnectorRegistryFromSqlite() {
     const [registry, audit, auth] = await Promise.all([
       hydrateConnectorRegistryFromSqlite(),
       hydrateConnectorAuditFromSqlite(),
-      import('./connectorAuth.js').then((m) => m.hydrateConnectorAuthProfilesFromSqlite())
+      hydrateConnectorAuthProfilesFromSqlite()
     ]);
     if (registry && registry.length > 0) {
       const existing = readRows(CONNECTOR_KEY);

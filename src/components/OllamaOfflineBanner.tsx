@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from 'react';
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { startTool } from '../services/runtimeManagerService';

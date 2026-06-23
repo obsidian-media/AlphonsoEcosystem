@@ -32,7 +32,7 @@ npm run updater:verify   # Verify updater readiness
 npm run auth:youtube     # OAuth flow for YouTube
 npm run auth:meta        # OAuth flow for Meta/Instagram
 
-# Coverage (actual measured: ~35%+, threshold: 20%, scoped to src/)
+# Coverage (actual measured: ~38%+, threshold: 35%, scoped to src/)
 npm run test:coverage    # Run tests with coverage report
 
 # E2E — Playwright installed (no extra install needed)
@@ -54,7 +54,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **All 1737+ tests are in `src/test/`** — 120 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
-- **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.jsx` captures history snapshot before React state updates.
+- **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.tsx` captures history snapshot before React state updates.
 - **appendAgentActivity**: wired in `joseExecutionEngineService.js` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Activity tab now shows live data.
 
 ---
@@ -95,6 +95,7 @@ Before writing any new service, component, or feature, check this list:
 | KV store Rust commands | `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `save_settings`, `load_settings` |
 | Playwright config + E2E test | `playwright.config.js` + `e2e/smoke.spec.js` (Chromium installed) |
 | Multi-turn Ollama chat | `generateOllamaChatStream` in `src/lib/ollama.js` (uses `/api/chat`) |
+| JSON response parser | `src/lib/jsonUtils.js` — `parseJsonResponse` (strips ``` fences, parses JSON). Do not re-add to joseExecutionEngineService. |
 | Agent activity log wiring | `appendAgentActivity` imported in `joseExecutionEngineService` + `connectorRegistryService` |
 | GitHub connector | `src/services/connectors/githubConnector.ts` — issues, PRs, releases, code search, workflows |
 | Slack connector | `src/services/connectors/slackConnector.ts` — messages, channels, files, reactions, webhooks |
@@ -107,10 +108,10 @@ Before writing any new service, component, or feature, check this list:
 | Telegram companion bot commands | `src/services/telegramCompanionService.js` — `/help`, `/report`, `/files`, `/status`, `/memory` |
 | Voice STT pipeline | `src/services/voiceService.js` + `src/hooks/useVoiceInput.js` — SpeechRecognition with fallback |
 | Workflow visual builder UI | `src/components/WorkflowBuilderView.jsx` — two-panel editor, 9 node types, reorder, save |
-| Nova insight card | `src/components/ChatView.jsx` — `novaInsight` state, score ring, fires after Jose pipeline |
-| Sentinel quick-scan in sidebar | `src/components/RightPanel.jsx` — `sentinelScan` state, `runQuickScan()`, Security section |
-| Echo memory timeline | `src/components/SettingsView.jsx` — `EchoTimeline` component, retention tier grouping |
-| Composio toolkit toggles | `src/components/SettingsView.jsx` — `enabledToolkits` Set, `toggleComposioToolkit()` |
+| Nova insight card | `src/components/ChatView.tsx` — `novaInsight` state, score ring, fires after Jose pipeline |
+| Sentinel quick-scan in sidebar | `src/components/RightPanel.tsx` — `sentinelScan` state, `runQuickScan()`, Security section |
+| Echo memory timeline | `src/components/SettingsView.tsx` — `EchoTimeline` component, retention tier grouping |
+| Composio toolkit toggles | `src/components/SettingsView.tsx` — `enabledToolkits` Set, `toggleComposioToolkit()` |
 | Hector RSS failover | `src/services/hectorResearchService.js` — `RSS_FEED_CATALOG`, `fetchRssSources`, `parseRssItems` |
 | Notification center | `src/components/NotificationCenter.jsx` — fixed top-right panel, colored borders per type, relative timestamps, "Clear all" |
 | Agent status strip | `src/components/AgentStatusStrip.jsx` — horizontal badge strip with pulsing dot per running agent |
@@ -122,12 +123,12 @@ Before writing any new service, component, or feature, check this list:
 | Workspace export/import service | `src/services/workspaceExportService.js` — `exportWorkspace` / `importWorkspace` over all `alphonso_*` localStorage keys |
 | Workspace export/import UI | `src/components/WorkspaceExportImportView.jsx` — Export (JSON download) + Import (file picker), wired in SettingsView |
 | Agent performance view | `src/components/AgentPerformanceView.jsx` — per-agent success/error/avg-latency from `orchestrationReceipts` |
-| ChatView drag-and-drop | `src/components/ChatView.jsx` — `attachedFiles` state, drag-zone, pill badges, filenames appended to command |
-| Hector briefing card | `src/components/ChatView.jsx` — sky-tinted `hectorBriefing` card after pipeline, shows top 3 sources |
+| ChatView drag-and-drop | `src/components/ChatView.tsx` — `attachedFiles` state, drag-zone, pill badges, filenames appended to command |
+| Hector briefing card | `src/components/ChatView.tsx` — sky-tinted `hectorBriefing` card after pipeline, shows top 3 sources |
 | Sentinel scheduled scans | `src/services/sentinelSecurityService.js` — `startScheduledScans(intervalMs, onResult)` interval export |
 | Nova opportunity history | `src/services/novaAnalysisService.js` — `saveOpportunityScore` / `getOpportunityHistory`, 30-entry localStorage |
-| RightPanel audit tab | `src/components/RightPanel.jsx` — System/Audit tab switcher, last 10 approval events with outcome badges |
-| RightPanel auto-refresh | `src/components/RightPanel.jsx` — 10-min `setInterval` calling `runQuickScan()` |
+| RightPanel audit tab | `src/components/RightPanel.tsx` — System/Audit tab switcher, last 10 approval events with outcome badges |
+| RightPanel auto-refresh | `src/components/RightPanel.tsx` — 10-min `setInterval` calling `runQuickScan()` |
 | Onboarding connector step | `src/components/OnboardingWizard.jsx` — step 3 "Connect a channel" with Telegram/WhatsApp/Skip cards, saves to `alphonso_onboarding_connector_v1` |
 | Crash log viewer | `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as Logs tab in SettingsView |
 | Nova history chart | `src/components/NovaHistoryChart.jsx` — SVG sparkline of last 10 scores, most-recent recommendation, wired in SettingsView |
@@ -262,4 +263,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-23 — v2.0.10 — Design system + UI phases 1-5 complete. 133 test files, 1854+ tests, all passing. 10 TSX components. 131 services. All 9 agents have production runtimes + UI surfaces. Design token system in `src/styles/tokens.css`. Component library in `src/components/ui/` (11 components + barrel export). All deferred panels now wired (ConnectorSetupPanel, SentinelAllowlistPanel, WhatsAppInboxPanel, OrchestratorQueueView, SessionHistoryView). Coverage ~38%+ (threshold 30%). cargo clippy clean. cargo fmt --check clean. CI: ci.yml + release.yml. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-23 — v2.0.10 — Boot TDZ crash fixed (circular deps joseExecutionEngineService ↔ agentBrainService/batchOrchestratorService — extracted parseJsonResponse to src/lib/jsonUtils.js). 134 test files, 1861+ tests, all passing. 10 TSX components (15 after T3 migration). 131 services. Coverage ~38%+ (threshold raised to 35%). Source maps: hidden (added to vite.config.js). Ineffective dynamic import in connectorRegistry.js converted to static. Design system + UI phases 1-5 complete. All 9 agents live. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

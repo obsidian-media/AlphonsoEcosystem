@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';

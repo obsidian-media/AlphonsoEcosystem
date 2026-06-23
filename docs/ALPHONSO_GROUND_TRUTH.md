@@ -277,7 +277,7 @@ telegramBrowserConnector.test.js     ← added Sprint Next-50 D3 (19 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- Coverage is at ~38%+ (threshold 20%) — next staged target is 40%
+- Coverage is at ~38%+ (threshold raised to 35%) — next staged target is 40%
 - Component test coverage ~12%; 8 new service test files added in Sprint Next-50
 - Run `npm run test:coverage` to see current state
 
@@ -705,7 +705,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-22 — v2.0.6: Sprint Next-10 complete, rustfmt CI fix, docs accuracy pass, mobile companion sprint plan. 112 test files (111 + services/agentContract.test.ts), 1621+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB), `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean (rustfmt.toml added). `lib.rs` ~1,585 lines (18 extracted modules). Coverage ~35%+ (threshold 20%, src/ scoped). Version 2.0.5. All 9 agent runtimes live. rustfmt.toml in src-tauri/. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-23 — v2.0.10: Boot TDZ crash fixed. Circular dep cycles broken: joseExecutionEngineService ↔ agentBrainService and ↔ batchOrchestratorService. `parseJsonResponse` extracted to `src/lib/jsonUtils.js`. 134 test files, 1861+ tests passing. Coverage ~38%+ (threshold 35%). Source maps hidden (`sourcemap: 'hidden'` in vite.config.js). connectorRegistry.js dynamic import of connectorAuth.js converted to static. All 9 agent runtimes live. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

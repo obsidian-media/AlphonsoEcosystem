@@ -7,6 +7,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
+    sourcemap: 'hidden',
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
