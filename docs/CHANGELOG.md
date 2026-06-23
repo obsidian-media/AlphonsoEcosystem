@@ -6,6 +6,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.10] - 2026-06-23 — Design System + Full UI Phases 1–5
+
+### Design Token System (Phase 1)
+- **`src/styles/tokens.css`** — complete CSS custom property system: surfaces 0–4, accent/accent-hover/accent-dim/accent-border, semantic colors (success/warning/error/info + dim variants), text scale (1–4), border/border-strong, spacing scale, radius scale, shadows, transitions
+- **`tailwind.config.js`** extended — `surface`, `accent`, `border` color keys backed by CSS tokens; `shimmer` and `border-fade` keyframes/animations added
+
+### Component Library (Phase 2) — `src/components/ui/`
+- **`Button.tsx`** — 5 variants (primary/secondary/ghost/danger/success), 3 sizes, loading spinner, icon support
+- **`Badge.tsx`** — 6 variants (default/success/warning/error/info/accent), dot support; exports `SectionHeader`, `StatusDot`, `statusColors`
+- **`Card.tsx`** — Card + CardHeader + CardContent, elevated prop, onClick support
+- **`Input.tsx`** — label, hint, error, icon slot; focus ring, error state, token-backed colors
+- **`Tabs.tsx`** — controlled/uncontrolled, token-backed active indicator
+- **`Modal.tsx`** — focus-trapped overlay, close on backdrop/Escape, size variants
+- **`EmptyState.tsx`** — icon + title + description + action slot
+- **`StatusDot.tsx`** — semantic colored dot with optional pulse
+- **`LoadingState.tsx`** — `Spinner` (sm/md/lg) + `LoadingState` wrapper
+- **`ProgressRing.tsx`** — SVG ring with percentage and label
+- **`Skeleton.tsx`** — `Skeleton`, `SkeletonList`, `SkeletonCard` shimmer components
+- **`index.ts`** — barrel export for all components
+
+### Screen Tokenization (Phase 3)
+- All hardcoded `bg-zinc-*`, `text-zinc-*`, `border-white/[n]` replaced with CSS token vars across: ChatView, ConnectorHealthPanel, MissionControlHome, ApprovalCenterPanel, and all major views
+
+### View Redesign (Phase 4)
+- **ChatView** — error message redesign with AlertCircle + retry button; new-message flash (left border fade); shimmer progress bar during generation; simplified streaming indicator
+- **WorkflowBuilderView** — horizontal pipeline layout (cards + ChevronRight arrows) instead of vertical step list; fully token-backed
+- **Sidebar** — `pendingApprovalCount` prop + animated badge on Chat nav item when approvals pending
+- **ConnectorHealthPanel** — Setup & Credentials tab surfaces ConnectorSetupPanel by default
+- **TopBar** — Bell icon with numeric badge (capped at 9+), `notificationsOpen` toggle
+
+### Panel Wiring (deferred T1 tasks, unblocked by Phase 3)
+- **`ConnectorSetupPanel`** → Settings > Connectors tab ("API Credentials" section)
+- **`SessionHistoryView`** → Settings > Memory tab
+- **`SentinelAllowlistPanel`** → RightPanel Security section
+- **`WhatsAppInboxPanel`** → OrchestratorView WhatsApp Inbound panel
+- **`OrchestratorQueueView`** → OrchestratorView collapsible "Orchestration Queue" panel
+
+### Polish (Phase 5)
+- **`Skeleton.tsx`** — shimmer loading placeholders for panels loading async data
+- `EmptyState` component adopted in NotificationCenter, DeadLetterQueueView, AgentActivityLog
+- `custom-scrollbar` CSS utility defined (was referenced in ChatView but missing)
+- `focus-ring` CSS utility for accessible focus states
+- Token conflict resolved — `index.css` no longer re-declares surface/text tokens that `tokens.css` owns
+- `Badge.jsx` consolidated into `Badge.tsx`
+
+### Tests
+- 133 test files, 1854+ tests — all passing
+- Coverage threshold maintained at ≥30%
+
+---
+
 ## [2.0.9] - 2026-06-23 — Runtime Hub + Onboarding Overhaul
 
 ### Added — Onboarding Overhaul

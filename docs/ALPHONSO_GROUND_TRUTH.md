@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-22 — Sprint Next-50 complete  
-**Verified by:** Claude Code session (120 test files, 1737+ tests passing, cargo clippy clean)  
-**Version:** 2.0.8 (All 9 agents have production runtimes; Sprint Next-50 complete; 10 TSX components; companion Phase 1–2 complete with QR + mDNS UI)  
+**Last verified:** 2026-06-23 — v2.0.10 Design System + Full UI Phase 1-5 complete  
+**Verified by:** Claude Code session (133 test files, 1854+ tests passing, cargo clippy clean)  
+**Version:** 2.0.10 (Design token system + component library complete; all deferred panels wired; UI phases 1-5 done)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,11 +25,12 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.0.8 |
+| Version | 2.0.10 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
 | Frontend | React 18, Vite 5, Tailwind 3, Lucide React — 63 `.jsx` + 10 `.tsx` components (App, Sidebar, RightPanel, SettingsView, ChatView, AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar) |
+| UI System | CSS design token system (`src/styles/tokens.css`), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Deployment | Windows NSIS + MSI installer, Railway static serve (gateway) |
 
