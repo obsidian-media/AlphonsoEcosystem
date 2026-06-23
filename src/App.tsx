@@ -35,6 +35,8 @@ const CoachHardInterruptOverlay = lazy(() => import('./components/CoachHardInter
 const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod) => ({ default: mod.ApprovalModal })));
 const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
 const ConnectorHealthPanel = lazy(() => import('./components/ConnectorHealthPanel').then((mod) => ({ default: mod.ConnectorHealthPanel })));
+const RuntimeManagerView = lazy(() => import('./components/RuntimeManagerView'));
+const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then((mod) => ({ default: mod.BootStatusBanner })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const AutomationView = lazy(() => import('./components/AutomationView').then((mod) => ({ default: mod.AutomationView })));
@@ -295,6 +297,11 @@ function AppShell() {
                     </React.Suspense>
                   </div>
                 )}
+                {activeTab === 'runtimes' && (
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading runtimes…</div>}>
+                    <RuntimeManagerView />
+                  </React.Suspense>
+                )}
                 {activeTab === 'activity' && (
                   <Suspense fallback={null}>
                     <AgentActivityLog />
@@ -307,6 +314,9 @@ function AppShell() {
       </div>
       <Suspense fallback={null}>
         <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <BootStatusBanner />
       </Suspense>
       {showWorkflowPanel && (
         <Suspense fallback={<ViewLoadingState label="Workflows" />}>

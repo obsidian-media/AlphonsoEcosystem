@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Bot,
   ChevronDown,
+  Cpu,
   FolderOpen,
   Home,
   MessageSquare,
@@ -77,6 +78,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'System',
     items: [
+      { id: 'runtimes', icon: Cpu, label: 'Runtimes' },
       { id: 'connectors', icon: FolderOpen, label: 'Connectors', showStatusDot: true },
       { id: 'activity', icon: FolderOpen, label: 'Activity' },
       { id: 'workflows', icon: FolderOpen, label: 'Workflows' },

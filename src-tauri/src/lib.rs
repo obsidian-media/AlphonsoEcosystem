@@ -11,6 +11,7 @@ use tauri_plugin_updater::UpdaterExt;
 
 mod audit_log;
 mod companion_auth;
+mod runtime_manager;
 mod companion_discovery;
 mod companion_router;
 mod companion_server;
@@ -1517,8 +1518,12 @@ pub fn run() {
     .timeout(std::time::Duration::from_secs(30))
     .build()
     .expect("Failed to build shared HTTP client");
+  let runtime_mgr_autostart = std::sync::Arc::new(runtime_manager::RuntimeManager::new());
+  let runtime_mgr_state = std::sync::Arc::clone(&runtime_mgr_autostart);
+
   tauri::Builder::default()
     .manage(http_client)
+    .manage(runtime_manager::RuntimeManager::new())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_updater::Builder::new().build())
@@ -1830,6 +1835,9 @@ pub fn run() {
         )?;
       }
 
+      // Auto-start AI runtimes (Ollama always; others if already installed)
+      runtime_manager::autostart_all(runtime_mgr_state, app.handle().clone());
+
       // Start companion WebSocket server
       let config = crate::companion_types::CompanionConfig::default();
       let (server, _rx) = crate::companion_server::CompanionServer::new(config);
@@ -1997,6 +2005,15 @@ pub fn run() {
       pick_folder,
       launch_ollama,
       launch_comfyui,
+      runtime_manager::runtime_get_all_status,
+      runtime_manager::runtime_install_tool,
+      runtime_manager::runtime_start_tool,
+      runtime_manager::runtime_stop_tool,
+      runtime_manager::runtime_list_tools,
+      runtime_manager::runtime_check_prerequisites,
+      runtime_manager::runtime_install_prerequisite,
+      runtime_manager::runtime_get_autostart_prefs,
+      runtime_manager::runtime_save_autostart_pref,
       save_image_to_folder,
       companion_server::companion_get_pin,
       companion_server::companion_get_status,

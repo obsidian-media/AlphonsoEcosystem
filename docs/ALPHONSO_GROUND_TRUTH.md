@@ -474,6 +474,24 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [ ] **Branch protection on `main`** — CI not yet required before merge (GitHub settings, manual step)
 - [x] **TypeScript migration (continued)** — **CLOSED Sprint Next-50 D5** App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx`. Total: 10 TSX components. Remaining JSX: 63 components.
 
+### Runtime Hub (2026-06-23) — All 9 Gaps Fixed
+- [x] **runtime_manager.rs** — full rewrite; all 9 gaps addressed:
+  1. `find_python()` — PATH + Windows LOCALAPPDATA common paths + winget fallback
+  2. `find_git()` — PATH + `C:\Program Files\Git` + winget fallback
+  3. `find_ollama()` — PATH + `%LOCALAPPDATA%\Programs\Ollama\ollama.exe` + C:\Program Files\Ollama
+  4. `run_streaming()` async — `tokio::process::Command` + `AsyncBufReadExt` line-by-line; emits `runtime://log` per line
+  5. `ensure_venv()` — per-tool venv at `<install_dir>/venv/`; all pip via venv python
+  6. AudioCraft args fixed — `demos/musicgen_app.py --server_name 127.0.0.1 --server_port 8765` (no `-m` module)
+  7. InvokeAI resolved from `venv/Scripts/invokeai-web.exe` via `resolve_exe()`
+  8. `autostart_all(state, app_handle)` — emits `runtime://boot_status` events per tool (starting/started/skipped/failed)
+  9. `load_autostart_prefs()` / `save_autostart_prefs_to_disk()` — JSON at `%APPDATA%\Alphonso\runtimes\autostart_prefs.json`; new commands: `runtime_check_prerequisites`, `runtime_install_prerequisite`, `runtime_get_autostart_prefs`, `runtime_save_autostart_pref`
+  — `cargo clippy -D warnings` clean
+- [x] **runtimeManagerService.js** — 9 exported functions: `getAllStatus`, `listTools`, `installTool`, `startTool`, `stopTool`, `waitForTool`, `checkPrerequisites`, `installPrerequisite`, `getAutostartPrefs`, `saveAutostartPref`, `onLogLine`, `onAnyProgress`
+- [x] **RuntimeManagerView.jsx** — prereq warning panel (Gap 1/2), live log via `LiveLogPanel` (Gap 4), autostart toggles per tool (Gap 9), `BootStatusBanner` wired
+- [x] **BootStatusBanner.jsx** — fixed bottom-right banner showing real-time boot events from `runtime://boot_status` events (Gap 8)
+- [x] **Sidebar Runtimes tab** — `Cpu` icon nav item wired to `runtimes` activeTab
+- [x] **runtimeManagerService.test.js** — 22 tests covering all exported functions including 4 new prereq/autostart APIs
+
 ### Sprint Next-50 Additions (2026-06-22)
 - [x] **connectorCircuitBreakerService** — **CLOSED D2T1** localStorage-backed per-connector circuit breaker
 - [x] **connectorRateLimiterService** — **CLOSED D2T7** token-bucket rate limiter (in-memory, 60 req/min default)

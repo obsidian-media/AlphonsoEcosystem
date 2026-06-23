@@ -78,6 +78,7 @@ Before writing any new service, component, or feature, check this list:
 | Zero-cost mode logic | `policyEnforcementService.js` + Jose routing |
 | Agent contract boundaries | `src/services/agentContractService.ts` |
 | 10 workflow operations | `src/services/workflowOperationsRegistryService.js` |
+| AI runtime manager (7 tools) | `src-tauri/src/runtime_manager.rs` + `src/services/runtimeManagerService.js` + `src/components/RuntimeManagerView.jsx` |
 | Updater release script | `npm run release:updater` |
 | Auth scripts (YouTube, Meta) | `npm run auth:youtube`, `npm run auth:meta` |
 | Desktop preflight / verify | `npm run verify:desktop:preflight`, `npm run verify:desktop` |
