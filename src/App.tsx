@@ -221,6 +221,35 @@ function AppShell() {
     };
   }, []);
 
+  // Wire background services: Sentinel scheduled scans + Maria weekly report
+  useEffect(() => {
+    let scanStop: (() => void) | null = null;
+    let weeklyStop: (() => void) | null = null;
+    (async () => {
+      try {
+        const { startScheduledScans } = await import('./services/sentinelSecurityService');
+        scanStop = startScheduledScans(10 * 60 * 1000, (result: any) => {
+          if (result?.findings?.length) {
+            addNotification({ type: 'warning', title: 'Sentinel scan complete', message: `${result.findings.length} finding(s) detected.` });
+          }
+        });
+      } catch { /* non-critical */ }
+      try {
+        const { scheduleWeeklyGeneration } = await import('./services/mariaWeeklyReportService');
+        weeklyStop = scheduleWeeklyGeneration((report: any) => {
+          if (report) {
+            addNotification({ type: 'info', title: 'Maria weekly report ready', message: report.summary || 'Governance report generated.' });
+          }
+        });
+      } catch { /* non-critical */ }
+    })();
+    return () => {
+      try { scanStop?.(); } catch { /* ignore */ }
+      try { weeklyStop?.(); } catch { /* ignore */ }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (isCoachWindow) {
     return (
       <CoachWindow

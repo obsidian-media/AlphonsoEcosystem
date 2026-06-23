@@ -41,7 +41,7 @@ import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { executeWithBrain } from './agentBrainService';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
-import { generateComfyUiImage, generateSdWebUiImage } from './connectorRegistryService';
+import { generateComfyUiImage, generateSdWebUiImage } from './connectors/connectorImageGenerators';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
 import { executeParallel } from './parallelExecutionService';
@@ -479,32 +479,32 @@ async function executeImageGeneration(prompts, options = {}) {
   if (promptList.length === 0) return results;
 
   for (const promptText of promptList) {
+    let imageResult = null;
+    let provider = 'unknown';
     try {
-      const imageResult = await generateComfyUiImage({
+      // Try SD WebUI first (port 7860), fall back to ComfyUI (port 8188)
+      const sdResult = await generateSdWebUiImage({
         prompt: promptText,
         negativePrompt: 'blurry, low quality, watermark, text, deformed',
         width: 512,
         height: 512,
         steps: 20,
         cfgScale: 7
-      }, { endpoint: options.endpoint || 'http://127.0.0.1:8188' });
-      if (imageResult?.ok) {
-        results.push({
-          prompt: promptText,
-          status: 'generated',
-          imageUrls: imageResult.imageUrls || [],
-          previewBase64: imageResult.previewBase64 || null,
-          outputPaths: imageResult.outputPaths || [],
-          provider: imageResult.provider || 'comfyui',
-          checkpoint: imageResult.checkpoint || null
-        });
+      });
+      if (sdResult?.ok) {
+        imageResult = sdResult;
+        provider = 'sd_webui';
       } else {
-        results.push({
+        const comfyResult = await generateComfyUiImage({
           prompt: promptText,
-          status: 'failed',
-          error: imageResult?.error || 'Generation failed',
-          provider: imageResult?.provider || 'comfyui'
-        });
+          negativePrompt: 'blurry, low quality, watermark, text, deformed',
+          width: 512,
+          height: 512,
+          steps: 20,
+          cfgScale: 7
+        }, { endpoint: options.endpoint || 'http://127.0.0.1:8188' });
+        imageResult = comfyResult;
+        provider = 'comfyui';
       }
     } catch (error) {
       results.push({
@@ -512,6 +512,25 @@ async function executeImageGeneration(prompts, options = {}) {
         status: 'error',
         error: String(error?.message || error || 'Unknown error'),
         provider: 'comfyui'
+      });
+      continue;
+    }
+    if (imageResult?.ok) {
+      results.push({
+        prompt: promptText,
+        status: 'generated',
+        imageUrls: imageResult.imageUrls || [],
+        previewBase64: imageResult.previewBase64 || null,
+        outputPaths: imageResult.outputPaths || [],
+        provider,
+        checkpoint: imageResult.checkpoint || null
+      });
+    } else {
+      results.push({
+        prompt: promptText,
+        status: 'failed',
+        error: imageResult?.error || 'Generation failed',
+        provider
       });
     }
   }
@@ -786,7 +805,7 @@ async function executeMiyaAssignment(commandText, assignment, options = {}) {
   });
   const generatedCount = generatedImages.filter((g) => g.status === 'generated').length;
   const allImagesFailed = generatedImages.length > 0 && generatedCount === 0;
-  const connectionFailed = allImagesFailed && generatedImages.some((g) => g.error && /connect|ECONNREFUSED|fetch|network|queue/i.test(String(g.error)));
+  const connectionFailed = allImagesFailed;
   const summaryParts = [];
   if (shouldGenerateImages && connectionFailed) {
     summaryParts.push('Image generation requires ComfyUI or AUTOMATIC1111 to be running. Open the Runtime Hub to install and start them.');

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2, Save, GitBranch, Play } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, Save, GitBranch, Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import {
   WORKFLOW_NODE_LIBRARY,
   listWorkflows,
@@ -7,6 +7,7 @@ import {
   updateWorkflow,
   addWorkflowNode,
 } from '../services/workflowBuilderService';
+import { runVisualWorkflow } from '../services/workflowExecutionService';
 
 // Node type → color + icon letter
 const NODE_STYLE = {
@@ -27,6 +28,8 @@ export function WorkflowBuilderView() {
   const [newName, setNewName] = useState('');
   const [showAddNode, setShowAddNode] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+  const [runState, setRunState] = useState(null); // null | 'running' | 'done' | 'error'
+  const [runMessage, setRunMessage] = useState('');
 
   const selected = workflows.find(w => w.id === selectedId) || null;
 
@@ -68,6 +71,22 @@ export function WorkflowBuilderView() {
     updateWorkflow(selectedId, { updatedAtMs: Date.now() });
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2000);
+  };
+
+  const handleRun = async () => {
+    if (!selectedId || !selected?.nodes?.length) return;
+    setRunState('running');
+    setRunMessage('');
+    try {
+      const result = runVisualWorkflow(selectedId, { initiatedBy: 'user' });
+      setRunState('done');
+      setRunMessage(result?.runId ? `Run started (${result.runId.slice(-6)})` : 'Workflow queued');
+    } catch (err) {
+      setRunState('error');
+      setRunMessage(err?.message || 'Run failed');
+    } finally {
+      setTimeout(() => { setRunState(null); setRunMessage(''); }, 4000);
+    }
   };
 
   return (
@@ -133,6 +152,11 @@ export function WorkflowBuilderView() {
               </div>
               <div className="flex items-center gap-2">
                 {savedNotice && <span className="text-[10px] text-emerald-400 font-medium">Saved ✓</span>}
+                {runMessage && (
+                  <span className={`text-[10px] font-medium ${runState === 'error' ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {runMessage}
+                  </span>
+                )}
                 <button
                   onClick={() => setShowAddNode(!showAddNode)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/80 text-white text-xs font-bold hover:bg-indigo-500 transition-colors"
@@ -145,6 +169,23 @@ export function WorkflowBuilderView() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 text-zinc-200 text-xs font-bold hover:bg-zinc-700 transition-colors border border-white/5"
                 >
                   <Save className="w-3.5 h-3.5" /> Save
+                </button>
+                <button
+                  onClick={handleRun}
+                  disabled={!selected?.nodes?.length || runState === 'running'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/90 text-white text-xs font-bold hover:bg-emerald-500 disabled:opacity-40 transition-colors"
+                  title={!selected?.nodes?.length ? 'Add at least one step before running' : 'Run workflow'}
+                >
+                  {runState === 'running' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : runState === 'done' ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : runState === 'error' ? (
+                    <XCircle className="w-3.5 h-3.5" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5" />
+                  )}
+                  {runState === 'running' ? 'Running…' : 'Run'}
                 </button>
               </div>
             </div>
