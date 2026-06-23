@@ -2,7 +2,7 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard, Zap as ZapIcon } from 'lucide-react';
+import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard, Zap as ZapIcon } from 'lucide-react';
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
@@ -221,6 +221,7 @@ export function ChatView({
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [novaInsight, setNovaInsight] = useState(null);
   const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
   const [connectorBannerDismissed, setConnectorBannerDismissed] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
   const [directMode, setDirectMode] = useState(false);
@@ -304,6 +305,21 @@ export function ChatView({
       setConnectorBannerDismissed(false);
     }
   }, [ollamaStatus.state]);
+
+  // Clear new message flash after 1 second
+  useEffect(() => {
+    if (newMessageIds.size === 0) return;
+    const timers = Array.from(newMessageIds).map((id) =>
+      setTimeout(() => {
+        setNewMessageIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 1000)
+    );
+    return () => { timers.forEach(clearTimeout); };
+  }, [newMessageIds]);
 
   const handleFileAttach = (event) => {
     const file = event.target.files?.[0];
@@ -463,10 +479,13 @@ export function ChatView({
         const needsRuntimeHub = richSummary.startsWith('__RUNTIME_HUB_REQUIRED__');
         const displaySummary = needsRuntimeHub ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
 
+        const newMsgId = nextMsgId();
+        setNewMessageIds((prev) => new Set(prev).add(newMsgId));
         setMessages((current) => [...current, {
-          id: nextMsgId(),
+          id: newMsgId,
           role: 'assistant',
           content: displaySummary + hintLine,
+          isNew: true,
           ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
         }]);
 
@@ -606,6 +625,14 @@ export function ChatView({
     } finally {
       setIsGenerating(false);
       onGenerationChange(false);
+    }
+  };
+
+  const retryLastMessage = () => {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    if (lastUser) {
+      setInputValue(lastUser.content);
+      handleSend();
     }
   };
 
@@ -847,9 +874,27 @@ export function ChatView({
             <div className={`flex flex-col gap-1.5 ${message.role === 'user' ? 'items-end' : 'items-start'} max-w-[90%]`}>
               {message.role === 'assistant' ? (
                 <div className="relative group">
-                  <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-[var(--surface-1)] border-[var(--border)] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20 text-[13px] leading-relaxed whitespace-pre-wrap' : 'text-[var(--text-1)]'}`}>
-                    {message.isError ? message.content : <MarkdownMessage content={message.content} />}
-                  </div>
+                  {message.isError ? (
+                    <div className="flex flex-col gap-2 px-4 py-3 bg-[var(--error-dim)] border border-red-500/20 rounded-[var(--radius-md)] text-sm">
+                      <div className="flex items-center gap-2 text-[var(--error)]">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span className="font-medium">Something went wrong</span>
+                      </div>
+                      <p className="text-[var(--text-2)] text-xs leading-relaxed">{message.content}</p>
+                      {message.retryable !== false && (
+                        <button
+                          onClick={() => retryLastMessage?.()}
+                          className="self-start text-xs text-[var(--error)] hover:text-red-300 underline"
+                        >
+                          Try again
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-[var(--surface-1)] border-[var(--border)] rounded-tl-sm ${message.isNew ? 'border-l-2 border-[var(--success)] animate-border-fade' : ''} text-[var(--text-1)]`}>
+                      <MarkdownMessage content={message.content} />
+                    </div>
+                  )}
                   {/* Runtime Hub action button — shown when image generation needs ComfyUI/A1111 */}
                   {message.actionType === 'open_runtime_hub' && (
                     <div className="mt-2">
@@ -922,60 +967,14 @@ export function ChatView({
         })}
 
         {isGenerating && (
-          <div className="flex gap-4 max-w-3xl mx-auto w-full" aria-live="polite" aria-label="Streaming response">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
+          <div className="flex gap-3 max-w-3xl mx-auto w-full py-2" aria-live="polite" aria-label="Streaming response">
+            <div className="w-6 h-6 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center shrink-0">
+              <span className="text-[9px] font-bold text-[var(--accent)]">A</span>
             </div>
-            <div className="bg-[var(--surface-1)] border border-[var(--border)] p-3 rounded-2xl rounded-tl-sm flex-1">
-              {streamingText ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px] text-[var(--text-3)] px-1">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        Streaming
-                      </span>
-                      <span className="text-[var(--text-4)]">|</span>
-                      <span>{streamingTokens.toLocaleString()} tokens</span>
-                      {streamingStartTime && (
-                        <>
-                          <span className="text-[var(--text-4)]">|</span>
-                          <span>{streamingElapsed}s elapsed</span>
-                        </>
-                      )}
-                    </div>
-                    <button
-                      onClick={handleAbortStream}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-                      aria-label="Stop generation"
-                    >
-                      <Square className="w-2.5 h-2.5" />
-                      Stop
-                    </button>
-                  </div>
-                  <div className="text-[var(--text-1)] text-xs whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
-                    {streamingText}
-                    <span className="inline-block w-1.5 h-4 bg-indigo-400 ml-0.5 animate-pulse" />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
-                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
-                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
-                  </div>
-                  <span className="text-[10px] text-[var(--text-3)]">Initializing... {streamingElapsed}s</span>
-                  <button
-                    onClick={handleAbortStream}
-                    className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-                    aria-label="Cancel generation"
-                  >
-                    <Square className="w-2.5 h-2.5" />
-                    Cancel
-                  </button>
-                </div>
-              )}
+            <div className="flex items-center gap-1.5 pt-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:0ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:300ms]" />
             </div>
           </div>
         )}
@@ -1197,6 +1196,11 @@ export function ChatView({
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
+          {isGenerating && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--accent-dim)] overflow-hidden rounded-t-2xl">
+              <div className="h-full bg-[var(--accent)] animate-shimmer" style={{ width: '40%' }} />
+            </div>
+          )}
           <input
             ref={fileInputRef}
             type="file"

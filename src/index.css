@@ -5,23 +5,7 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --surface-0: #09090b;
-    --surface-1: #0f0f12;
-    --surface-2: #161619;
-    --surface-3: #1c1c20;
-    --surface-4: #232328;
-    --border-subtle: rgba(255, 255, 255, 0.06);
-    --border-default: rgba(255, 255, 255, 0.1);
-    --text-primary: #f4f4f5;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
-    --accent: #6366f1;
-    --accent-light: #818cf8;
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-  }
+  /* Dark-mode tokens are canonical in src/styles/tokens.css — do not redeclare here */
 
   .light {
     --surface-0: #fafafa;
@@ -74,7 +58,7 @@
     margin: 0;
     font-family: 'Inter Variable', 'Plus Jakarta Sans Variable', system-ui, sans-serif;
     background: var(--surface-0);
-    color: var(--text-primary);
+    color: var(--text-1);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
@@ -192,6 +176,19 @@
 
   .section-label {
     @apply text-xs font-bold text-zinc-500 uppercase tracking-wider;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--surface-0)];
   }
 }
 

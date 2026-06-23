@@ -44,6 +44,8 @@ export default {
         'fade-in': 'fadeIn 0.2s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+        shimmer: 'shimmer 1.5s ease-in-out infinite',
+        'border-fade': 'borderFade 1s ease-out forwards',
       },
       keyframes: {
         fadeIn: {
@@ -57,6 +59,14 @@ export default {
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.7' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(350%)' },
+        },
+        borderFade: {
+          '0%': { borderLeftColor: 'var(--success)' },
+          '100%': { borderLeftColor: 'transparent' },
         },
       },
     },

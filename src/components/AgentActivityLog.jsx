@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Activity } from 'lucide-react';
 import { listAgentActivity } from '../services/agentActivityService';
+import { EmptyState } from './ui/EmptyState';
 
 const AGENT_COLORS = {
   alphonso: 'text-indigo-400',
@@ -47,11 +48,11 @@ export function AgentActivityLog() {
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {entries.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <Activity className="w-5 h-5 text-zinc-700" />
-            <div className="text-[12px] text-zinc-600">No activity yet</div>
-            <div className="text-[11px] text-zinc-700 text-center max-w-xs">Agent actions will appear here as you use Alphonso — send a message, run a workflow, or trigger a connector.</div>
-          </div>
+          <EmptyState
+            icon={<Activity className="w-full h-full" />}
+            title="No activity yet"
+            description="Agent actions will appear here as you use Alphonso — send a message, run a workflow, or trigger a connector."
+          />
         )}
         {entries.map((e, i) => {
           const agentLabel = String(e.agent || 'system').toLowerCase();

@@ -52,6 +52,7 @@ interface SidebarProps {
   onCreateChat: () => void;
   onDeleteChat: (id: string, e: React.MouseEvent) => void;
   settings: AppSettings;
+  pendingApprovalCount?: number;
 }
 
 const NAV_SECTIONS: NavSection[] = [
@@ -87,7 +88,7 @@ const NAV_SECTIONS: NavSection[] = [
   }
 ];
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0 }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
 
   const [isLight, setIsLight] = useState<boolean>(() => {
@@ -144,6 +145,11 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 >
                   <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-[var(--accent)]' : ''}`} />
                   {isOpen && <span className="font-medium">{item.label}</span>}
+                  {isOpen && item.id === 'chat' && pendingApprovalCount > 0 && (
+                    <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-[var(--warning)] text-[8px] font-bold text-black animate-pulse">
+                      {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
+                    </span>
+                  )}
                   {isOpen && item.showStatusDot && (
                     <ConnectorStatusStrip zeroCostMode={zeroCostMode} />
                   )}
