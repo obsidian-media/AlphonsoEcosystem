@@ -4,10 +4,10 @@ import { listPendingApprovals } from '../../services/approval/approvalService';
 export function ApprovalCenterPanel() {
   const pending = listPendingApprovals();
   return (
-    <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Approval Center</div>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-2">Approval Center</div>
       {pending.length === 0 ? (
-        <div className="text-sm text-zinc-500">No pending requests in Project Execution Mode.</div>
+        <div className="text-sm text-[var(--text-3)]">No pending requests in Project Execution Mode.</div>
       ) : (
         <div className="space-y-2">
           {pending.map((item) => (

@@ -98,27 +98,27 @@ function deriveStatus(connector) {
 const STATUS_BADGE = {
   live: {
     dot: 'bg-emerald-400',
-    badge: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+    badge: 'border-[var(--success-dim)] bg-[var(--success-dim)] text-[var(--success)]',
     label: 'Live'
   },
   missing_config: {
     dot: 'bg-amber-400',
-    badge: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+    badge: 'border-[var(--warning-dim)] bg-[var(--warning-dim)] text-[var(--warning)]',
     label: 'Missing Config'
   },
   foundation_only: {
     dot: 'bg-slate-400',
-    badge: 'border-slate-500/30 bg-slate-500/10 text-slate-300',
+    badge: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]',
     label: 'Local Only'
   },
   placeholder: {
-    dot: 'bg-zinc-500',
-    badge: 'border-zinc-500/30 bg-zinc-700/20 text-zinc-300',
+    dot: 'bg-[var(--text-3)]',
+    badge: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]',
     label: 'Placeholder'
   },
   disabled: {
-    dot: 'bg-zinc-600',
-    badge: 'border-zinc-600/30 bg-zinc-800/40 text-zinc-500',
+    dot: 'bg-[var(--text-3)]',
+    badge: 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-3)]',
     label: 'Disabled'
   }
 };
@@ -267,12 +267,12 @@ function ConnectorCard({ connector, zeroCostMode }) {
   return (
     <div className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
       status === 'live'
-        ? 'border-emerald-500/20 bg-emerald-500/5'
+        ? 'border-emerald-500/20 bg-[var(--success-dim)]'
         : status === 'missing_config'
-          ? 'border-amber-500/20 bg-amber-500/5'
+          ? 'border-[var(--warning-dim)] bg-[var(--warning-dim)]'
           : status === 'foundation_only'
             ? 'border-slate-500/20 bg-slate-500/5'
-            : 'border-white/[0.06] bg-zinc-900/40'
+            : 'border-[var(--border)] bg-[var(--surface-1)]'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
@@ -281,9 +281,9 @@ function ConnectorCard({ connector, zeroCostMode }) {
             status === 'live' ? 'text-emerald-400' :
             status === 'missing_config' ? 'text-amber-400' :
             status === 'foundation_only' ? 'text-slate-400' :
-            'text-zinc-600'
+            'text-[var(--text-4)]'
           }`} />
-          <span className="text-sm font-semibold text-zinc-100 leading-tight">{displayName}</span>
+          <span className="text-sm font-semibold text-[var(--text-1)] leading-tight">{displayName}</span>
         </div>
 
         {/* Status badge */}
@@ -294,13 +294,13 @@ function ConnectorCard({ connector, zeroCostMode }) {
       </div>
 
       {/* Transport */}
-      <div className="text-[10px] text-zinc-600 font-mono leading-relaxed truncate">
+      <div className="text-[10px] text-[var(--text-4)] font-mono leading-relaxed truncate">
         {connector.transport || 'unknown'}
       </div>
 
       {/* Zero-cost mode warning */}
       {zeroCostBlocking && (
-        <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] text-amber-300/90">
+        <div className="flex items-center gap-1.5 rounded-lg border border-[var(--warning-dim)] bg-[var(--warning-dim)] px-2 py-1.5 text-[10px] text-[var(--warning)]">
           <ZapOff className="w-3 h-3 shrink-0" />
           Blocked by zero-cost mode
         </div>
@@ -309,13 +309,13 @@ function ConnectorCard({ connector, zeroCostMode }) {
       {/* Env keys */}
       {requiredEnv.length > 0 && (
         <div className="space-y-1">
-          <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-600">Required env</div>
+          <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--text-4)]">Required env</div>
           {requiredEnv.map((key) => {
             const present = Boolean(envPresence[key]);
             return (
-              <div key={key} className="flex items-center justify-between rounded bg-black/20 px-2 py-0.5 font-mono text-[9px]">
-                <span className="text-zinc-500 truncate">{key}</span>
-                <span className={`shrink-0 ml-2 ${present ? 'text-emerald-400' : 'text-zinc-700'}`}>
+              <div key={key} className="flex items-center justify-between rounded bg-[var(--surface-0)] px-2 py-0.5 font-mono text-[9px]">
+                <span className="text-[var(--text-3)] truncate">{key}</span>
+                <span className={`shrink-0 ml-2 ${present ? 'text-emerald-400' : 'text-[var(--text-4)]'}`}>
                   {present ? 'present' : 'missing'}
                 </span>
               </div>
@@ -325,11 +325,11 @@ function ConnectorCard({ connector, zeroCostMode }) {
       )}
 
       {requiredEnv.length === 0 && (
-        <div className="text-[10px] text-zinc-600 italic">No credentials required</div>
+        <div className="text-[10px] text-[var(--text-4)] italic">No credentials required</div>
       )}
 
       {/* Last test */}
-      <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+      <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-4)]">
         {status === 'live' ? (
           <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
         ) : (
@@ -343,7 +343,7 @@ function ConnectorCard({ connector, zeroCostMode }) {
 
       {/* Disabled reason */}
       {status !== 'live' && connector.disabledReason && (
-        <div className="text-[10px] text-zinc-600 leading-relaxed line-clamp-2">
+        <div className="text-[10px] text-[var(--text-4)] leading-relaxed line-clamp-2">
           {connector.disabledReason}
         </div>
       )}
@@ -357,12 +357,12 @@ function ConnectorCard({ connector, zeroCostMode }) {
             title="Test connector connectivity"
             className={`flex-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               testState === 'loading'
-                ? 'border-zinc-600/40 bg-zinc-800/60 text-zinc-500 cursor-wait'
+                ? 'border-zinc-600/40 bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
                 : testState === 'ok'
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 cursor-default'
+                  ? 'border-emerald-500/40 bg-[var(--success-dim)] text-[var(--success)] cursor-default'
                   : testState === 'fail'
                     ? 'border-red-500/40 bg-red-500/10 text-red-400 cursor-default'
-                    : 'border-white/[0.08] bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200 cursor-pointer'
+                    : 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
             }`}
           >
             {testState === 'loading' ? '…testing' : testState === 'ok' ? 'OK' : testState === 'fail' ? 'FAIL' : 'Test'}
@@ -373,12 +373,12 @@ function ConnectorCard({ connector, zeroCostMode }) {
             title="Validate credentials via Tauri env check"
             className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               validateState === 'loading'
-                ? 'border-zinc-600/40 bg-zinc-800/60 text-zinc-500 cursor-wait'
+                ? 'border-zinc-600/40 bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
                 : validateResult
                   ? validateResult.ok
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 cursor-default'
+                    ? 'border-emerald-500/40 bg-[var(--success-dim)] text-[var(--success)] cursor-default'
                     : 'border-red-500/40 bg-red-500/10 text-red-400 cursor-default'
-                  : 'border-white/[0.08] bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200 cursor-pointer'
+                  : 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
             }`}
           >
             <Key className="w-2.5 h-2.5" />
@@ -411,10 +411,10 @@ function StatusSummaryBar({ connectors, zeroCostMode }) {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/50 px-4 py-2.5 text-[10px] font-semibold">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-2.5 text-[10px] font-semibold">
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-emerald-400" />
-        <span className="text-emerald-300">{counts.live || 0} live</span>
+        <span className="text-[var(--success)]">{counts.live || 0} live</span>
       </div>
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-amber-400" />
@@ -425,8 +425,8 @@ function StatusSummaryBar({ connectors, zeroCostMode }) {
         <span className="text-slate-300">{counts.foundation_only || 0} local only</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-zinc-600" />
-        <span className="text-zinc-500">{counts.disabled || 0} disabled</span>
+        <span className="h-2 w-2 rounded-full bg-[var(--text-4)]" />
+        <span className="text-[var(--text-3)]">{counts.disabled || 0} disabled</span>
       </div>
       {zeroCostMode && (
         <div className="ml-auto flex items-center gap-1.5 text-amber-400/80">
@@ -476,16 +476,16 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
   return (
     <section className="space-y-4">
       {/* Tab switcher */}
-      <div className="flex gap-1 p-1 bg-zinc-900/60 border border-white/[0.06] rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl w-fit">
         <button
           onClick={() => setActiveTab('setup')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'setup' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}`}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'setup' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)]'}`}
         >
           ⚙ Setup &amp; Credentials
         </button>
         <button
           onClick={() => setActiveTab('health')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'health' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}`}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'health' ? 'bg-[var(--surface-4)] text-white shadow-sm' : 'text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)]'}`}
         >
           ● Health Monitor
         </button>
@@ -494,7 +494,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
       {/* Setup tab — credential entry for all connectors */}
       {activeTab === 'setup' && (
         <div>
-          <div className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-2.5 text-[11px] text-indigo-200/80 leading-relaxed">
+          <div className="mb-3 rounded-xl border border-[var(--accent-dim)] bg-[var(--accent-dim)] px-4 py-2.5 text-[11px] text-[var(--accent)] leading-relaxed">
             Enter API credentials here. Credentials are stored locally in encrypted storage and never sent to any server except the connector's own API.
           </div>
           <ConnectorSetupPanel />
@@ -508,15 +508,15 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
         <div>
           <div className="flex items-center gap-2">
             {probing ? (
-              <WifiOff className="w-4 h-4 text-zinc-500 animate-pulse" />
+              <WifiOff className="w-4 h-4 text-[var(--text-3)] animate-pulse" />
             ) : (
-              <Wifi className="w-4 h-4 text-teal-400" />
+              <Wifi className="w-4 h-4 text-[var(--accent)]" />
             )}
-            <h2 className="text-sm font-bold tracking-widest text-zinc-200 uppercase">
+            <h2 className="text-sm font-bold tracking-widest text-[var(--text-1)] uppercase">
               Connector Health
             </h2>
           </div>
-          <p className="mt-0.5 text-[11px] text-zinc-500 leading-relaxed">
+          <p className="mt-0.5 text-[11px] text-[var(--text-3)] leading-relaxed">
             {probing
               ? 'Probing connector environments…'
               : 'Live status of connector paths. Local/private keys should stay local; Railway/public builds should remain demo-safe unless intentionally promoted.'}
@@ -526,13 +526,13 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
           onClick={() => {
             setConnectors(listConnectors());
           }}
-          className="shrink-0 rounded-lg border border-white/[0.06] bg-zinc-800 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-zinc-300 hover:bg-zinc-700 transition-colors"
+          className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-4)] transition-colors"
         >
           Refresh
         </button>
       </div>
 
-      <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-[11px] leading-relaxed text-amber-100/85">
+      <div className="rounded-xl border border-[var(--warning-dim)] bg-[var(--warning-dim)] px-4 py-2 text-[11px] leading-relaxed text-[var(--warning)]">
         Public deploy note: this app auto-deploys from GitHub main to Railway. Do not add real connector secrets to browser-exposed env vars unless that connector is meant to be public/cloud-facing.
       </div>
 
@@ -550,7 +550,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
         ))}
       </div>
 
-      <p className="text-[10px] text-zinc-700 leading-relaxed">
+      <p className="text-[10px] text-[var(--text-4)] leading-relaxed">
         Status is derived from the connector registry and Tauri env probe. A connector is marked
         &quot;live&quot; only when all required env vars are present and the last test returned verified.
         Use &quot;Test Connection&quot; to check key presence or local endpoint reachability without sending data.
