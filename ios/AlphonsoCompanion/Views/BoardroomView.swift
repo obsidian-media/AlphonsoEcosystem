@@ -3,64 +3,112 @@ import SwiftUI
 struct BoardroomView: View {
     @EnvironmentObject var webSocketService: WebSocketService
 
-    @State private var projects: [Project] = []
+    @State private var goals: [Goal] = []
+    @State private var batches: [Batch] = []
+    @State private var tasks: [TaskItem] = []
     @State private var isLoading = false
 
     var body: some View {
         NavigationStack {
             List {
-                if isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
+                Section("Goals") {
+                    if goals.isEmpty {
+                        Text("No goals yet")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(goals) { goal in
+                            GoalRow(goal: goal)
+                        }
                     }
-                    .padding()
-                } else if projects.isEmpty {
-                    Text("No projects yet")
-                        .foregroundStyle(.secondary)
-                        .padding()
-                } else {
-                    ForEach(projects) { project in
-                        ProjectRow(project: project)
+                }
+
+                Section("Batches") {
+                    if batches.isEmpty {
+                        Text("No batches")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(batches) { batch in
+                            BatchRow(batch: batch)
+                        }
+                    }
+                }
+
+                Section("Tasks") {
+                    if tasks.isEmpty {
+                        Text("No tasks")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(tasks) { task in
+                            TaskRow(task: task)
+                        }
                     }
                 }
             }
             .navigationTitle("Boardroom")
             .refreshable {
-                await loadProjects()
+                await loadBoardroom()
             }
             .task {
-                await loadProjects()
+                await loadBoardroom()
             }
         }
     }
 
-    private func loadProjects() async {
-        // TODO: Wire to WebSocket get_projects method
-        projects = []
+    private func loadBoardroom() async {
+        let msg = #"{"id":"boardroom","method":"get_boardroom","params":{}}"#
+        webSocketService.sendRaw(text: msg)
     }
 }
 
-struct ProjectRow: View {
-    let project: Project
+struct GoalRow: View {
+    let goal: Goal
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(project.name)
+            Text(goal.title)
                 .font(.headline)
-            Text(project.description)
+            Text(goal.description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            ProgressView(value: project.progress)
         }
         .padding(.vertical, 4)
     }
 }
 
-struct Project: Identifiable {
-    let id = UUID()
-    let name: String
-    let description: String
-    let progress: Double
+struct BatchRow: View {
+    let batch: Batch
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(batch.title)
+                .font(.subheadline)
+            Text("Tasks: \(batch.tasks.count)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct TaskRow: View {
+    let task: TaskItem
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(task.title)
+                    .font(.subheadline)
+                Text("Owner: \(task.owner)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(task.status)
+                .font(.caption)
+                .padding(4)
+                .background(Color.secondary.opacity(0.2))
+                .cornerRadius(4)
+        }
+        .padding(.vertical, 4)
+    }
 }

@@ -7,6 +7,8 @@ class WebSocketService: ObservableObject {
     @Published var messages: [Message] = []
     @Published var agentStatuses: [String: AgentStatus] = [:]
     @Published var errorMessage: String?
+    @Published var tokenCount: Int = 0
+    @Published var isStreaming: Bool = false
 
     private var webSocketTask: URLSessionWebSocketTask?
     private let session = URLSession(configuration: .default)
@@ -52,6 +54,10 @@ class WebSocketService: ObservableObject {
         {"id":"abort","method":"abort_command","params":{"commandId":"\(commandId)"}}
         """
         send(text: msg)
+    }
+
+    func sendRaw(text: String) {
+        send(text: text)
     }
 
     private func send(text: String) {
@@ -108,7 +114,16 @@ class WebSocketService: ObservableObject {
         if let result = json["result"] as? [String: Any] {
             if result["authenticated"] as? Bool == true {
                 connectionState = .authenticated
+            } else if let goals = result["goals"] as? [[String: Any]] {
+                parseBoardroomResponse(result)
             }
+        }
+    }
+
+    private func parseBoardroomResponse(_ json: [String: Any]) {
+        // Parse boardroom data and update published state
+        if let goals = json["goals"] as? [[String: Any]] {
+            // TODO: Update goals state if BoardroomView observes via @Published
         }
     }
 
