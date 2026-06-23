@@ -6,7 +6,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.0.9] - 2026-06-23 — Runtime Hub (9 Gaps Fixed)
+## [2.0.9] - 2026-06-23 — Runtime Hub + Onboarding Overhaul
+
+### Added — Onboarding Overhaul
+- **`OllamaOfflineBanner.jsx`** — global amber banner shown in app shell when Ollama is not connected; "Start Ollama" button calls `startTool('ollama')` via Runtime Hub + auto-retries after 3s; "Retry" pings `runOllamaCheck`; "Runtime Hub" navigates to runtimes tab; hidden when connected
+- **OnboardingWizard Step 1 enhanced** — `checkPrerequisites()` distinguishes *not installed* vs *not running*; "Start automatically" button calls `startTool('ollama')` + `waitForTool()` poll then re-checks; "Download Ollama" link (via `open_url` Tauri command) shown when binary missing
+- **OnboardingWizard Step 3 — Telegram guide** — collapsible @BotFather instructions (4 steps), inline bot token entry saved to `alphonso_telegram_bot_token_v1`
+- **OnboardingWizard Step 3 — WhatsApp guide** — collapsible Railway deploy guide (5 steps with copy-able paths), triggered when WhatsApp option selected
+- **OnboardingWizard Step 3 — Composio option** — 4th channel card; inline 3-step setup guide with API key input; saves via `setComposioConfig({ apiKey, enabled: true })` to correct `alphonso_composio_config_v1` key
+- All external links use `invoke('open_url', { url })` Tauri command (not bare `<a>` tags which fail silently in Tauri webview)
+- **`OnboardingWizard.test.jsx`** — 14 tests covering all 4 steps, all 3 connector guides, Composio save, start-Ollama flow
+
+### Fixed — Runtime Hub (all 9 production gaps)
 
 ### Fixed — AI Runtime Manager (all 9 production gaps)
 - **Gap 1 — Python detection**: `find_python()` searches PATH + `%LOCALAPPDATA%\Programs\Python\Python31x\` + `C:\Python31x\`; `runtime_check_prerequisites` command returns full status

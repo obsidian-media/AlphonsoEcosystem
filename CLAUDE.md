@@ -82,6 +82,9 @@ Before writing any new service, component, or feature, check this list:
 | Prereq detection (Python/Git/Ollama) | `runtime_manager::find_python()` / `find_git()` / `find_ollama()` + `runtime_check_prerequisites` Tauri command |
 | Prereq auto-install (winget/brew) | `runtime_install_prerequisite` Tauri command — do not add a separate install flow |
 | Boot status banner | `src/components/BootStatusBanner.jsx` — listens to `runtime://boot_status` events |
+| Ollama offline global banner | `src/components/OllamaOfflineBanner.jsx` — shown in App.tsx shell; Start/Retry/Open Runtime Hub; uses `startTool('ollama')` |
+| Onboarding wizard | `src/components/OnboardingWizard.jsx` — 4 steps: Ollama check (auto-start via Runtime Hub), model picker, connect (Telegram/WhatsApp/Composio guides inline), ready |
+| External URL opening (Tauri) | Use `invoke('open_url', { url })` — NOT bare `<a href target="_blank">` which fails silently in Tauri webview |
 | Autostart prefs (per-tool) | `runtime_get_autostart_prefs` / `runtime_save_autostart_pref` + JSON at `%APPDATA%\Alphonso\runtimes\autostart_prefs.json` |
 | Live install log streaming | `runtime://log` Tauri events + `onLogLine()` in runtimeManagerService + `LiveLogPanel` in RuntimeManagerView |
 | Updater release script | `npm run release:updater` |
@@ -194,7 +197,10 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Test coverage at ~30%~~ — **CLOSED Sprint Next-10 T3** (111 test files / 1621+ tests; 10 new service test files)
 - Branch protection on `main` — manual GitHub step (MCP doesn't expose branch protection API); require CI pass before merge
 - Coverage at ~38%+ — next staged target 40%
-- ~~Runtime Manager 9 gaps~~ — **CLOSED 2026-06-23** (prereq detection, async streaming, venv isolation, AudioCraft fix, InvokeAI venv exe, boot status banner, autostart prefs JSON)
+- ~~Runtime Manager 9 gaps~~ — **CLOSED 2026-06-23**
+- ~~Onboarding flow~~ — **CLOSED 2026-06-23** (Ollama auto-start, not-installed detection, Telegram/WhatsApp/Composio inline guides, `OllamaOfflineBanner` in main shell)
+- ~~Ollama offline state~~ — **CLOSED 2026-06-23** (`OllamaOfflineBanner.jsx` — global, persistent, Start/Retry/Runtime Hub)
+- ~~Composio onboarding~~ — **CLOSED 2026-06-23** (inline API key entry in OnboardingWizard Step 3, saves via `setComposioConfig`) (prereq detection, async streaming, venv isolation, AudioCraft fix, InvokeAI venv exe, boot status banner, autostart prefs JSON)
 - TypeScript migration — 10 components migrated (all major ones done). Remaining: bulk of 63 .jsx component files
 
 ---

@@ -18,7 +18,13 @@ import {
 import { checkOllama, fetchOllamaModels, normalizeEndpoint, pullOllamaModel } from '../lib/ollama';
 import { setStorage } from '../lib/appStorage';
 import { buildOllamaPreflightEvent, recordEvent as recordOllamaPreflightEvent } from '../services/eventsService';
+import { invoke } from '@tauri-apps/api/core';
 import { checkPrerequisites, startTool, waitForTool } from '../services/runtimeManagerService';
+import { setComposioConfig } from '../services/composioService';
+
+function openExternal(url) {
+  invoke('open_url', { url }).catch(() => { window.open(url, '_blank'); });
+}
 
 const DEFAULT_ENDPOINT = 'http://localhost:11434';
 const PREFERRED_PRESELECT = 'llama3.2:3b';
@@ -205,14 +211,12 @@ function CheckOllamaStep({ onNext }) {
           <p className="text-xs text-zinc-400">
             Download and run the Ollama installer, then come back and click Retry.
           </p>
-          <a
-            href="https://ollama.com/download"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={() => openExternal('https://ollama.com/download')}
             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
           >
             <ExternalLink size={11} /> Download Ollama
-          </a>
+          </button>
         </div>
       )}
 
@@ -470,7 +474,7 @@ function WhatsAppDeployGuide() {
       {open && (
         <div className="px-4 pb-4 space-y-3 text-xs text-zinc-400">
           <ol className="space-y-2 list-none">
-            <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">1.</span> Create a Meta App at <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="text-emerald-400 underline">developers.facebook.com</a> → Add WhatsApp product.</li>
+            <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">1.</span> Create a Meta App at <button onClick={() => openExternal('https://developers.facebook.com')} className="text-emerald-400 underline hover:text-emerald-300 transition-colors">developers.facebook.com</button> → Add WhatsApp product.</li>
             <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">2.</span> Deploy the Alphonso gateway to Railway (one-click from your repo):</li>
           </ol>
           <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-lg px-3 py-2 font-mono text-emerald-400">
@@ -490,6 +494,66 @@ function WhatsAppDeployGuide() {
   );
 }
 
+// Telegram bot setup guide (inline, collapsible)
+function TelegramSetupGuide() {
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (token.trim()) {
+      try {
+        localStorage.setItem('alphonso_telegram_bot_token_v1', token.trim());
+      } catch { /* ignore */ }
+      setSaved(true);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-sky-500/20 bg-sky-500/5 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/5 transition-colors"
+      >
+        <span>How to create a Telegram Bot</span>
+        {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3 text-xs text-zinc-400">
+          <ol className="space-y-2 list-none">
+            <li className="flex gap-2"><span className="text-sky-400 font-bold shrink-0">1.</span> Open Telegram and search for <button onClick={() => openExternal('https://t.me/BotFather')} className="text-sky-400 underline hover:text-sky-300 transition-colors">@BotFather</button>.</li>
+            <li className="flex gap-2"><span className="text-sky-400 font-bold shrink-0">2.</span> Send <code className="text-emerald-400 font-mono">/newbot</code> and follow the prompts to name your bot.</li>
+            <li className="flex gap-2"><span className="text-sky-400 font-bold shrink-0">3.</span> BotFather will send you a token like <code className="text-emerald-400 font-mono">123456:ABC-DEF…</code> — paste it below.</li>
+            <li className="flex gap-2"><span className="text-sky-400 font-bold shrink-0">4.</span> Send <code className="text-emerald-400 font-mono">/start</code> to your new bot in Telegram to activate it.</li>
+          </ol>
+          {saved ? (
+            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+              <CheckCircle size={12} /> Token saved. Finish setup in Settings → Connectors → Telegram.
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="password"
+                placeholder="123456:ABC-DEFGHIJKLMNOPabcdefghijklmnop"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                className="flex-1 min-w-0 rounded-lg bg-zinc-900 border border-white/10 text-xs px-3 py-1.5 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-sky-500/50"
+              />
+              <button
+                onClick={handleSave}
+                disabled={!token.trim()}
+                className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-bold transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Composio setup guide (inline)
 function ComposioSetupGuide() {
   const [apiKey, setApiKey] = useState('');
@@ -497,9 +561,7 @@ function ComposioSetupGuide() {
 
   const handleSave = () => {
     if (apiKey.trim()) {
-      try {
-        localStorage.setItem('alphonso_composio_api_key_v1', apiKey.trim());
-      } catch { /* ignore */ }
+      setComposioConfig({ apiKey: apiKey.trim(), enabled: true });
       setSaved(true);
     }
   };
@@ -508,7 +570,7 @@ function ComposioSetupGuide() {
     <div className="mt-3 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 space-y-3">
       <div className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Composio Setup</div>
       <ol className="space-y-1.5 text-xs text-zinc-400 list-none">
-        <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">1.</span> Sign up at <a href="https://composio.dev" target="_blank" rel="noreferrer" className="text-violet-400 underline">composio.dev</a> (free tier available).</li>
+        <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">1.</span> Sign up at <button onClick={() => openExternal('https://composio.dev')} className="text-violet-400 underline hover:text-violet-300 transition-colors">composio.dev</button> (free tier available).</li>
         <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">2.</span> Copy your API key from Dashboard → Settings.</li>
         <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">3.</span> Paste it below — you can also set it later in Settings → Composio.</li>
       </ol>
@@ -578,6 +640,7 @@ function ConnectChannelStep({ onNext }) {
               </button>
 
               {/* Inline expanded guides when selected */}
+              {isSelected && id === 'telegram' && <TelegramSetupGuide />}
               {isSelected && id === 'whatsapp' && <WhatsAppDeployGuide />}
               {isSelected && id === 'composio' && <ComposioSetupGuide />}
             </div>
