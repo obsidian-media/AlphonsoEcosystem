@@ -275,7 +275,7 @@ function AppShell() {
   }
 
   return (
-    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-indigo-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-zinc-950 text-zinc-100'} ${themeClassFromSettings(settings)}`}>
+    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-indigo-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-[var(--surface-0)] text-[var(--text-1)]'} ${themeClassFromSettings(settings)}`}>
       <UpdaterNotification version={updaterVersion} onUpdate={() => {}} onDismiss={() => setUpdaterVersion(null)} />
       {notificationsOpen && (
         <NotificationCenter
@@ -317,7 +317,7 @@ function AppShell() {
         onDeleteChat={deleteChat}
         settings={settings}
       />
-      <div className="flex flex-col flex-1 relative min-w-0 border-x border-white/[0.05]">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar
           settings={settings}
           ollamaStatus={ollamaStatus}
@@ -339,7 +339,7 @@ function AppShell() {
           onRetry={runOllamaCheck}
           onOpenRuntimes={() => switchTab('runtimes')}
         />
-        <main className="flex-1 overflow-y-auto relative bg-zinc-950/50">
+        <main className="flex-1 overflow-hidden relative bg-[var(--surface-0)]">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
           <div className="absolute left-4 top-4 z-20">
             <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-xs text-zinc-400">Loading agent dock...</div>}>

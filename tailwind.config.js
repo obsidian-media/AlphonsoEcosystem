@@ -25,6 +25,7 @@ export default {
           dim: 'var(--accent-dim)',
         },
         border: { DEFAULT: 'var(--border)', strong: 'var(--border-strong)' },
+      },
       fontSize: {
         '2xs': ['0.6875rem', { lineHeight: '1rem' }],
         'xs2': ['0.75rem', { lineHeight: '1.125rem' }],

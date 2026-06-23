@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowUpCircle, Bell, WifiOff } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
+import { Badge } from './ui/Badge';
 
 interface Settings {
   selectedModel?: string;
@@ -58,9 +59,9 @@ export function TopBar({
   onToggleNotifications,
 }: TopBarProps) {
   return (
-    <header className="h-12 flex items-center justify-between px-5 border-b border-white/[0.06] bg-surface-0/80 backdrop-blur-sm z-20 sticky top-0">
+    <header className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--surface-0)] z-20 sticky top-0">
       <div className="flex items-center gap-3">
-        <h1 className="font-heading font-bold text-base text-white">
+        <h1 className="text-sm font-medium text-[var(--text-1)]">
           {PAGE_TITLES[activeTab] || 'Alphonso'}
         </h1>
 
@@ -80,8 +81,8 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
-        {operatorMode && <span className="badge-neutral">Operator</span>}
-        {settings.zeroCostMode && <span className="badge-success">Free</span>}
+        {operatorMode && <Badge variant="default">Operator</Badge>}
+        {settings.zeroCostMode && <Badge variant="success">Free</Badge>}
 
         {onToggleNotifications && (
           <button
@@ -98,9 +99,9 @@ export function TopBar({
           </button>
         )}
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-2 border border-white/[0.06]">
-          <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-success' : 'bg-danger'}`} />
-          <span className="text-2xs text-zinc-400">{settings.selectedModel || 'No model'}</span>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+          <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-[var(--success)]' : 'bg-[var(--error)]'}`} />
+          <span className="text-2xs text-[var(--text-3)]">{settings.selectedModel || 'No model'}</span>
         </div>
 
         <img src={alphonsoIcon} alt="" className="w-6 h-6 rounded-full opacity-80" />
