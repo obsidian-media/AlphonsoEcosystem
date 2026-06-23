@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
 **Last verified:** 2026-06-22 — Sprint Next-50 complete  
 **Verified by:** Claude Code session (120 test files, 1737+ tests passing, cargo clippy clean)  
-**Version:** 2.0.8 (All 9 agents have production runtimes; Sprint Next-50 complete; 10 TSX components; companion server wired)  
+**Version:** 2.0.8 (All 9 agents have production runtimes; Sprint Next-50 complete; 10 TSX components; companion Phase 1–2 complete with QR + mDNS UI)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
