@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpCircle, WifiOff } from 'lucide-react';
+import { ArrowUpCircle, Bell, WifiOff } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 
 interface Settings {
@@ -21,6 +21,9 @@ interface TopBarProps {
   updateVersion?: string;
   isOnline?: boolean;
   onOpenSettings: () => void;
+  notificationCount?: number;
+  onToggleNotifications?: () => void;
+  selectedModelMissing?: boolean;
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -51,6 +54,8 @@ export function TopBar({
   updateVersion,
   isOnline = true,
   onOpenSettings,
+  notificationCount = 0,
+  onToggleNotifications,
 }: TopBarProps) {
   return (
     <header className="h-12 flex items-center justify-between px-5 border-b border-white/[0.06] bg-surface-0/80 backdrop-blur-sm z-20 sticky top-0">
@@ -77,6 +82,21 @@ export function TopBar({
       <div className="flex items-center gap-2">
         {operatorMode && <span className="badge-neutral">Operator</span>}
         {settings.zeroCostMode && <span className="badge-success">Free</span>}
+
+        {onToggleNotifications && (
+          <button
+            onClick={onToggleNotifications}
+            className="relative p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            aria-label="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {notificationCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-accent text-[10px] font-bold text-white flex items-center justify-center leading-none">
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </span>
+            )}
+          </button>
+        )}
 
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-2 border border-white/[0.06]">
           <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-success' : 'bg-danger'}`} />

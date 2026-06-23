@@ -6,7 +6,7 @@ import { Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Pa
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
-import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
+import { isJoseIntakeCommand, runJoseCommandExecutionPipeline, executeApprovedPackets } from '../services/joseExecutionEngineService';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
@@ -73,6 +73,23 @@ function buildProjectSummary(result, commandText, baseSummary, screenContext = [
   const planArtifact = allArtifacts.find((a) => a.type === 'plan_preview');
   const securityArtifacts = allArtifacts.filter((a) => a.type === 'security_assessment');
   const commandArtifacts = allArtifacts.filter((a) => a.type === 'command_execution');
+  const runtimeHubArtifact = allArtifacts.find((a) => a.type === 'open_runtime_hub');
+  const miyaReceipt = receipts.find((r) => r.agent === 'miya');
+  const generatedImagesArtifact = allArtifacts.find((a) => a.type === 'generated_images');
+
+  // If image generation was blocked by missing runtime, return a special marker
+  if (runtimeHubArtifact) {
+    return `__RUNTIME_HUB_REQUIRED__${baseSummary}`;
+  }
+
+  // If Miya ran and generated images or a creative package, surface it
+  if (miyaReceipt && !brainArtifacts.length) {
+    const lines: string[] = [baseSummary];
+    if (generatedImagesArtifact?.count > 0) {
+      lines.push(`\n🎨 ${generatedImagesArtifact.count} image(s) generated.`);
+    }
+    return lines.join('');
+  }
 
   const files = brainArtifacts.flatMap((a) => a.filesGenerated || []);
   const scaffoldArtifact = allArtifacts.find((a) => a.type === 'project_scaffold');
@@ -175,8 +192,9 @@ export function ChatView({
   onJoseExecutionState,
   onOpenSettings,
   onModelChange,
-  screenObserverLogs = []
-}) {
+  screenObserverLogs = [],
+  setActiveTab
+}: any) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -216,6 +234,7 @@ export function ChatView({
   const abortRef = useRef(null);
   const streamControllerRef = useRef(null);
   const inputRef = useRef(null);
+  const approvalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pinMessage = (message) => {
     setPinnedMessages((prev) => {
@@ -441,11 +460,14 @@ export function ChatView({
           : '';
 
         const richSummary = buildProjectSummary(result, cleanInput, baseSummary, screenObserverLogs);
+        const needsRuntimeHub = richSummary.startsWith('__RUNTIME_HUB_REQUIRED__');
+        const displaySummary = needsRuntimeHub ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
 
         setMessages((current) => [...current, {
           id: nextMsgId(),
           role: 'assistant',
-          content: richSummary + hintLine
+          content: displaySummary + hintLine,
+          ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
         }]);
 
         if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
@@ -453,6 +475,30 @@ export function ChatView({
           if (pending.length > 0) {
             setPendingApprovals(pending);
             setApprovalCommandId(result.commandId);
+
+            // Inject in-chat notification so the user knows approval is needed
+            const agentNames = [...new Set(pending.map((r) => r.agent).filter(Boolean))].join(', ');
+            setMessages((current) => [...current, {
+              id: nextMsgId(),
+              role: 'assistant',
+              content: `⏳ **${agentNames || 'Agent'} ${pending.length === 1 ? 'is' : 'are'} waiting for your approval** — review the task${pending.length !== 1 ? 's' : ''} below and approve or deny to continue.`
+            }]);
+
+            // 10-minute timeout — clear approval panel and notify user
+            if (approvalTimeoutRef.current) clearTimeout(approvalTimeoutRef.current);
+            approvalTimeoutRef.current = setTimeout(() => {
+              setPendingApprovals((prev) => {
+                if (prev.length > 0) {
+                  setMessages((current) => [...current, {
+                    id: `timeout-${Date.now()}`,
+                    role: 'assistant',
+                    content: '⏸ Approval timed out after 10 minutes. Resubmit your request to try again.'
+                  }]);
+                }
+                return [];
+              });
+              setApprovalCommandId(null);
+            }, 10 * 60 * 1000);
           }
         }
 
@@ -804,6 +850,18 @@ export function ChatView({
                   <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20 text-[13px] leading-relaxed whitespace-pre-wrap' : 'text-zinc-300'}`}>
                     {message.isError ? message.content : <MarkdownMessage content={message.content} />}
                   </div>
+                  {/* Runtime Hub action button — shown when image generation needs ComfyUI/A1111 */}
+                  {message.actionType === 'open_runtime_hub' && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setActiveTab?.('runtimes')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 border border-indigo-500/40 rounded-lg text-xs text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition-colors"
+                      >
+                        <ArrowRight className="w-3 h-3" />
+                        Open Runtime Hub to install ComfyUI or AUTOMATIC1111
+                      </button>
+                    </div>
+                  )}
                   {/* Inline Hector citations on last assistant message */}
                   {hectorBriefing && isLastAssistantMessage && hectorBriefing.sources?.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -997,16 +1055,72 @@ export function ChatView({
               <ApprovalPanel
                 pendingApprovals={pendingApprovals}
                 commandId={approvalCommandId}
-                onAllResolved={(cmdId, results) => {
-                  const approved = Object.values(results).filter((s) => s === 'approved').length;
+                onAllResolved={async (cmdId, results) => {
+                  if (approvalTimeoutRef.current) {
+                    clearTimeout(approvalTimeoutRef.current);
+                    approvalTimeoutRef.current = null;
+                  }
+                  const approvedIds = Object.entries(results).filter(([, s]) => s === 'approved').map(([id]) => id);
                   const denied = Object.values(results).filter((s) => s === 'rejected').length;
+                  setPendingApprovals([]);
+                  setApprovalCommandId(null);
+
+                  if (approvedIds.length === 0) {
+                    setMessages((current) => [...current, {
+                      id: nextMsgId(),
+                      role: 'assistant',
+                      content: `All ${denied} task${denied !== 1 ? 's' : ''} denied. Nothing was executed.`
+                    }]);
+                    return;
+                  }
+
                   setMessages((current) => [...current, {
                     id: nextMsgId(),
                     role: 'assistant',
-                    content: `Approval complete: ${approved} approved, ${denied} denied.\n\nCommand ID: ${cmdId}`
+                    content: `✅ ${approvedIds.length} task${approvedIds.length !== 1 ? 's' : ''} approved${denied > 0 ? `, ${denied} denied` : ''}. Running now...`
                   }]);
-                  setPendingApprovals([]);
-                  setApprovalCommandId(null);
+                  setIsGenerating(true);
+                  onJoseExecutionState?.('thinking', 'Running approved tasks...');
+
+                  try {
+                    const execResult = await executeApprovedPackets(approvedIds, {
+                      endpoint: settings?.endpoint,
+                      conversationHistory,
+                      onProgress: (progress) => {
+                        setLiveProgress(progress);
+                      },
+                      onToken: (tokenData) => {
+                        if (tokenData?.token) {
+                          setMessages((current) => {
+                            const last = current[current.length - 1];
+                            if (last?.role === 'assistant' && last?.streaming) {
+                              return [...current.slice(0, -1), { ...last, content: last.content + tokenData.token }];
+                            }
+                            return [...current, { id: nextMsgId(), role: 'assistant', content: tokenData.token, streaming: true }];
+                          });
+                        }
+                      }
+                    });
+                    // Close any open streaming message
+                    setMessages((current) => current.map((m) => m.streaming ? { ...m, streaming: false } : m));
+                    setMessages((current) => [...current, {
+                      id: nextMsgId(),
+                      role: 'assistant',
+                      content: execResult.summary || 'Approved tasks completed.'
+                    }]);
+                    onJoseExecutionState?.('task_complete', 'Approved tasks completed.');
+                  } catch (err) {
+                    setMessages((current) => [...current, {
+                      id: nextMsgId(),
+                      role: 'assistant',
+                      content: `Error running approved tasks: ${err?.message || String(err)}`,
+                      isError: true
+                    }]);
+                  } finally {
+                    setIsGenerating(false);
+                    setLiveProgress(null);
+                    onTaskComplete();
+                  }
                 }}
               />
             </div>

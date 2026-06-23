@@ -12,6 +12,7 @@ import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { OllamaOfflineBanner } from './components/OllamaOfflineBanner';
+import { NotificationCenter } from './components/NotificationCenter';
 import { CoachWindow } from './components/CoachWindow';
 import { ViewLoadingState } from './components/ViewLoadingState';
 import { useAppKeyboardShortcuts } from './hooks/useAppKeyboardShortcuts';
@@ -96,6 +97,60 @@ function AppShell() {
   const voice = useVoiceInput();
   const toast = useToast();
   const [updaterVersion, setUpdaterVersion] = useState<string | null>(null);
+
+  // Notification center state
+  type NotificationType = 'success' | 'warning' | 'error' | 'info';
+  interface AppNotification { id: string; type: NotificationType; title: string; message: string; timestamp: number; }
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const addNotification = useCallback((n: Omit<AppNotification, 'id' | 'timestamp'>) => {
+    setNotifications((prev) => [
+      { ...n, id: `notif-${Date.now()}-${Math.random()}`, timestamp: Date.now() },
+      ...prev,
+    ].slice(0, 50));
+  }, []);
+
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const clearAllNotifications = useCallback(() => setNotifications([]), []);
+
+  // Poll orchestration receipts every 30s and push notifications for new completions/approvals
+  const lastReceiptCountRef = useRef(0);
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const { listOrchestrationReceipts } = await import('./services/orchestrationReceiptService');
+        const receipts = listOrchestrationReceipts ? listOrchestrationReceipts() : [];
+        if (receipts.length > lastReceiptCountRef.current) {
+          const newOnes = receipts.slice(lastReceiptCountRef.current);
+          newOnes.forEach((r: any) => {
+            if (r.status === 'completed') {
+              addNotification({ type: 'success', title: `${r.agent || 'Agent'} completed`, message: r.details?.summary || r.eventType || 'Task finished.' });
+            } else if (r.status === 'failed' || r.blocked) {
+              addNotification({ type: 'error', title: `${r.agent || 'Agent'} failed`, message: r.details?.error || r.eventType || 'Task failed.' });
+            }
+          });
+          lastReceiptCountRef.current = receipts.length;
+        }
+      } catch { /* non-critical */ }
+    };
+    const id = setInterval(poll, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [addNotification]);
+
+  // Push notification when approval is required
+  const prevApprovalPending = useRef<string | null>(null);
+  useEffect(() => {
+    if (approvalRequiredNotice && !prevApprovalPending.current) {
+      addNotification({ type: 'warning', title: 'Approval needed', message: 'A task is waiting for your review.' });
+    }
+    prevApprovalPending.current = approvalRequiredNotice ? 'pending' : null;
+  }, [approvalRequiredNotice, addNotification]);
 
   const {
     activeTab, isSidebarOpen, conversations, activeChatId,
@@ -193,6 +248,13 @@ function AppShell() {
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-indigo-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-zinc-950 text-zinc-100'} ${themeClassFromSettings(settings)}`}>
       <UpdaterNotification version={updaterVersion} onUpdate={() => {}} onDismiss={() => setUpdaterVersion(null)} />
+      {notificationsOpen && (
+        <NotificationCenter
+          notifications={notifications}
+          onDismiss={dismissNotification}
+          onClearAll={clearAllNotifications}
+        />
+      )}
       <Suspense fallback={null}>
         <CoachHardInterruptOverlay intervention={coachIntervention} pauseUntilMs={coachPauseUntilMs} onAction={handleCoachInterventionAction} />
       </Suspense>
@@ -237,6 +299,8 @@ function AppShell() {
           updateVersion={updateCheckState.latestVersion}
           isOnline={isOnline}
           onOpenSettings={() => switchTab('settings')}
+          notificationCount={notifications.length}
+          onToggleNotifications={() => setNotificationsOpen((v) => !v)}
         />
         <Suspense fallback={null}>
           <CommandRib activeTab={activeTab} setActiveTab={switchTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} />
@@ -264,7 +328,7 @@ function AppShell() {
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState label="Chat" />}>
-                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} />
+                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} />
                   </Suspense>
                 )}
                 {activeTab === 'miya' && (

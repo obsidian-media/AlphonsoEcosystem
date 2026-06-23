@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
+import { AgentStatusStrip } from './AgentStatusStrip';
 
 interface NavItem {
   id: string;
@@ -114,6 +115,13 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           </button>
         </div>
       </div>
+
+      {/* Agent status strip — shows pulsing badges for agents active in last 30s */}
+      {isOpen && (
+        <div className="px-3 py-2 border-b border-white/[0.04] min-h-0">
+          <AgentStatusStrip compact useAutoFeed />
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden">

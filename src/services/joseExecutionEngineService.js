@@ -785,15 +785,23 @@ async function executeMiyaAssignment(commandText, assignment, options = {}) {
     verificationState: TRUST_STATES.UNVERIFIED
   });
   const generatedCount = generatedImages.filter((g) => g.status === 'generated').length;
-  const summaryParts = [`Miya generated a structured creative package for "${creativePackage.title}".`];
-  if (generatedCount > 0) summaryParts.push(`${generatedCount} image(s) generated via ComfyUI.`);
-  const failedCount = generatedImages.filter((g) => g.status !== 'generated').length;
-  if (failedCount > 0) summaryParts.push(`${failedCount} image generation(s) failed.`);
+  const allImagesFailed = generatedImages.length > 0 && generatedCount === 0;
+  const connectionFailed = allImagesFailed && generatedImages.some((g) => g.error && /connect|ECONNREFUSED|fetch|network|queue/i.test(String(g.error)));
+  const summaryParts = [];
+  if (shouldGenerateImages && connectionFailed) {
+    summaryParts.push('Image generation requires ComfyUI or AUTOMATIC1111 to be running. Open the Runtime Hub to install and start them.');
+  } else {
+    summaryParts.push(`Miya generated a structured creative package for "${creativePackage.title}".`);
+    if (generatedCount > 0) summaryParts.push(`${generatedCount} image(s) generated via ComfyUI.`);
+    const failedCount = generatedImages.filter((g) => g.status !== 'generated').length;
+    if (failedCount > 0 && !connectionFailed) summaryParts.push(`${failedCount} image generation(s) failed.`);
+  }
   return {
     summary: summaryParts.join(' '),
-    resultState: 'completed',
+    resultState: connectionFailed ? 'needs_setup' : 'completed',
     resultUrl: null,
     artifacts: [
+      ...(connectionFailed ? [{ type: 'open_runtime_hub', reason: 'image_generation_unavailable' }] : []),
       creativePackage,
       {
         type: 'comfyui_local_generation_options',
@@ -1712,4 +1720,87 @@ export async function retryDLQ(taskId) {
     attempts: taskResult.attempts,
     result
   };
+}
+
+/**
+ * Re-execute packets that the user just approved in the ApprovalPanel.
+ * Looks up each packet, extracts its stored assignment + commandText from the
+ * payload written by joseCommandRouterService, marks it approved, and runs it
+ * through the normal execution pipeline.
+ *
+ * @param {string[]} packetIds - IDs of packets the user approved
+ * @param {{ endpoint?: string, onProgress?: Function, onToken?: Function, conversationHistory?: any[] }} options
+ * @returns {Promise<{ ok: boolean, summary: string, results: object[] }>}
+ */
+export async function executeApprovedPackets(packetIds, options = {}) {
+  const { endpoint, onProgress, onToken, conversationHistory } = options;
+  const results = [];
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const packetId of packetIds) {
+    const packet = getPacketById(packetId);
+    if (!packet) {
+      results.push({ packetId, ok: false, error: 'Packet not found' });
+      failed += 1;
+      continue;
+    }
+
+    const assignment = packet.payload?.assignment;
+    const commandText = packet.payload?.originalCommand || '';
+
+    if (!assignment) {
+      results.push({ packetId, ok: false, error: 'Assignment missing from packet payload' });
+      failed += 1;
+      continue;
+    }
+
+    // Mark approved so the execution gate allows it
+    approvePacket(packetId, 'operator');
+    requestPacketRetry(packetId, 'Re-executing after operator approval');
+
+    appendAgentActivity({ agent: assignment.agent || 'jose', action: 'approved_reexecute', detail: commandText.slice(0, 80) });
+
+    const draftDisabled = !(await checkOllamaAvailable(endpoint));
+
+    try {
+      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, {
+        endpoint,
+        draftDisabled,
+        onProgress,
+        onToken,
+        conversationHistory
+      });
+
+      if (taskResult.ok) {
+        succeeded += 1;
+        // Report back to Jose so the command can be confirmed
+        createAgentReportToJose({
+          packetId,
+          reportingAgent: assignment.agent,
+          summary: taskResult.result?.summary || 'Task completed after approval.',
+          resultState: taskResult.result?.resultState || 'completed',
+          resultUrl: taskResult.result?.resultUrl || null,
+          artifacts: taskResult.result?.artifacts || [],
+          sources: taskResult.result?.sources || []
+        });
+        results.push({ packetId, ok: true, agent: assignment.agent, summary: taskResult.result?.summary || 'Done.' });
+      } else {
+        failed += 1;
+        results.push({ packetId, ok: false, agent: assignment.agent, error: taskResult.error || 'Execution failed.' });
+      }
+    } catch (err) {
+      failed += 1;
+      results.push({ packetId, ok: false, agent: assignment.agent, error: String(err?.message || err) });
+    }
+  }
+
+  const agentNames = [...new Set(results.map((r) => r.agent).filter(Boolean))].join(', ');
+  const summary = results.length === 0
+    ? 'No packets to execute.'
+    : succeeded === results.length
+      ? `${agentNames || 'Agent'} completed ${succeeded} approved task${succeeded !== 1 ? 's' : ''} successfully.`
+      : `${succeeded} task${succeeded !== 1 ? 's' : ''} completed, ${failed} failed. ${results.filter((r) => !r.ok).map((r) => r.error).join(' | ')}`;
+
+  return { ok: failed === 0, summary, results };
 }
