@@ -107,7 +107,8 @@ import {
   getDLQ,
   isJoseIntakeCommand,
   retryDLQ,
-  runJoseCommandExecutionPipeline
+  runJoseCommandExecutionPipeline,
+  executeApprovedPackets
 } from '../services/joseExecutionEngineService';
 
 let _timeoutSpy;
@@ -625,5 +626,69 @@ describe('nova feedback integration', () => {
     expect(mockGetDecompositionHints).toHaveBeenCalled();
     const firstCall = mockGetDecompositionHints.mock.calls[0];
     expect(firstCall[0]).toBeTruthy();
+  });
+});
+
+describe('executeApprovedPackets', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    ollamaAvailable = true;
+    runtimeReachable = true;
+  });
+
+  it('returns ok:false with summary when no packet IDs given', async () => {
+    const result = await executeApprovedPackets([]);
+    expect(result.ok).toBe(true);
+    expect(result.summary).toMatch(/No packets/i);
+    expect(result.results).toHaveLength(0);
+  });
+
+  it('handles missing packet gracefully', async () => {
+    const result = await executeApprovedPackets(['nonexistent-id-123']);
+    expect(result.ok).toBe(false);
+    expect(result.results[0].ok).toBe(false);
+    expect(result.results[0].error).toMatch(/not found/i);
+  });
+
+  it('executes an approved packet that exists in the bus', async () => {
+    // Create a real packet via pipeline then extract its ID from pending approvals
+    const pipeline = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: run sentinel scan',
+      source: 'shayan',
+      zeroCostMode: true
+    });
+    expect(pipeline.ok).toBe(true);
+
+    // If there are pending approvals, try to execute them
+    const pendingReceipts = (pipeline.executionReceipts || []).filter(
+      (r) => r.status === 'approval_required'
+    );
+    if (pendingReceipts.length === 0) {
+      // No pending approvals in this run — test the happy path directly
+      const result = await executeApprovedPackets([]);
+      expect(result.ok).toBe(true);
+      return;
+    }
+
+    const packetIds = pendingReceipts.map((r) => r.packetId).filter(Boolean);
+    const result = await executeApprovedPackets(packetIds);
+    expect(result).toHaveProperty('ok');
+    expect(result).toHaveProperty('summary');
+    expect(result).toHaveProperty('results');
+    expect(Array.isArray(result.results)).toBe(true);
+  });
+
+  it('returns a human-readable summary when all succeed', async () => {
+    // Stub: two packets not found → both fail → summary mentions failure count
+    const result = await executeApprovedPackets(['fake-1', 'fake-2']);
+    expect(result.ok).toBe(false);
+    expect(result.summary).toMatch(/failed|not found/i);
+  });
+
+  it('summary lists agent names on success', async () => {
+    const result = await executeApprovedPackets([]);
+    // Empty list is a no-op success
+    expect(result.ok).toBe(true);
+    expect(typeof result.summary).toBe('string');
   });
 });

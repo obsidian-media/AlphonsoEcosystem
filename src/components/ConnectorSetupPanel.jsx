@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
-  Github, MessageSquare, Bot, Zap, Database, ListTodo, Phone, Youtube,
-  Cpu, Slack, Search, Smartphone, Settings2, MessageCircle
+  GitBranch, MessageSquare, Bot, Zap, Database, ListTodo, Phone, Video,
+  Cpu, Search, Smartphone, Settings2, MessageCircle, Hash
 } from 'lucide-react';
 import { ToolConnectionsPanel } from './ToolConnectionsPanel';
 import {
@@ -36,13 +36,13 @@ import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnect
 const CONNECTOR_ICONS = {
   telegram: MessageSquare,
   whatsapp: Phone,
-  github: Github,
-  slack: Slack,
+  github: GitBranch,
+  slack: Hash,
   claude: Bot,
   chatgpt: Bot,
   notion: Database,
   clickup: ListTodo,
-  youtube: Youtube,
+  youtube: Video,
   qwen: Cpu,
   brave_search: Search,
   ollama: Cpu,
@@ -553,7 +553,7 @@ export function ConnectorSetupPanel() {
           {/* GitHub */}
           <CredentialSection
             title="GitHub"
-            icon={Github}
+            icon={GitBranch}
             borderColor="border-violet-300/20"
             bgColor="bg-violet-500/8"
             accentColor="text-violet-400"
@@ -566,7 +566,7 @@ export function ConnectorSetupPanel() {
           {/* Slack */}
           <CredentialSection
             title="Slack"
-            icon={Slack}
+            icon={Hash}
             borderColor="border-green-300/20"
             bgColor="bg-green-500/8"
             accentColor="text-green-400"
@@ -654,7 +654,7 @@ export function ConnectorSetupPanel() {
           {/* YouTube */}
           <CredentialSection
             title="YouTube"
-            icon={Youtube}
+            icon={Video}
             borderColor="border-red-300/20"
             bgColor="bg-red-500/8"
             accentColor="text-red-400"

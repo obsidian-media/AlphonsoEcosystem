@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Alphonso",
-  "version": "2.0.8",
+  "version": "2.0.10",
   "identifier": "com.shayan.alphonso",
   "build": {
     "frontendDist": "../dist",
@@ -87,3 +87,4 @@
     }
   }
 }
+

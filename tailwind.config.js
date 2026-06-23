@@ -13,20 +13,18 @@ export default {
       },
       colors: {
         surface: {
-          0: '#09090b',
-          1: '#0f0f12',
-          2: '#161619',
-          3: '#1c1c20',
-          4: '#232328',
+          0: 'var(--surface-0)',
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+          4: 'var(--surface-4)',
         },
         accent: {
-          DEFAULT: '#6366f1',
-          light: '#818cf8',
-          dim: '#4f46e5',
+          DEFAULT: 'var(--accent)',
+          hover: 'var(--accent-hover)',
+          dim: 'var(--accent-dim)',
         },
-        success: { DEFAULT: '#22c55e', dim: '#16a34a' },
-        warning: { DEFAULT: '#f59e0b', dim: '#d97706' },
-        danger: { DEFAULT: '#ef4444', dim: '#dc2626' },
+        border: { DEFAULT: 'var(--border)', strong: 'var(--border-strong)' },
       },
       fontSize: {
         '2xs': ['0.6875rem', { lineHeight: '1rem' }],
@@ -46,6 +44,8 @@ export default {
         'fade-in': 'fadeIn 0.2s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+        shimmer: 'shimmer 1.5s ease-in-out infinite',
+        'border-fade': 'borderFade 1s ease-out forwards',
       },
       keyframes: {
         fadeIn: {
@@ -59,6 +59,14 @@ export default {
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.7' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(350%)' },
+        },
+        borderFade: {
+          '0%': { borderLeftColor: 'var(--success)' },
+          '100%': { borderLeftColor: 'transparent' },
         },
       },
     },

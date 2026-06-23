@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Bot,
   ChevronDown,
+  Cpu,
   FolderOpen,
   Home,
   MessageSquare,
@@ -15,7 +16,8 @@ import {
   Trash2
 } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
-import { ConnectorStatusStrip } from './ConnectorStatusIndicators';
+import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
+import { AgentStatusStrip } from './AgentStatusStrip';
 
 interface NavItem {
   id: string;
@@ -50,6 +52,7 @@ interface SidebarProps {
   onCreateChat: () => void;
   onDeleteChat: (id: string, e: React.MouseEvent) => void;
   settings: AppSettings;
+  pendingApprovalCount?: number;
 }
 
 const NAV_SECTIONS: NavSection[] = [
@@ -77,6 +80,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'System',
     items: [
+      { id: 'runtimes', icon: Cpu, label: 'Runtimes' },
       { id: 'connectors', icon: FolderOpen, label: 'Connectors', showStatusDot: true },
       { id: 'activity', icon: FolderOpen, label: 'Activity' },
       { id: 'workflows', icon: FolderOpen, label: 'Workflows' },
@@ -84,7 +88,7 @@ const NAV_SECTIONS: NavSection[] = [
   }
 ];
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0 }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
 
   const [isLight, setIsLight] = useState<boolean>(() => {
@@ -97,9 +101,9 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
   }, [isLight]);
 
   return (
-    <aside className={`${isOpen ? 'w-60' : 'w-16'} flex flex-col transition-all duration-300 ease-in-out bg-surface-1 shrink-0 border-r border-white/[0.06]`}>
+    <aside className={`${isOpen ? 'w-52' : 'w-14'} flex flex-col transition-all duration-300 ease-in-out bg-[var(--surface-1)] shrink-0 border-r border-[var(--border)]`}>
       {/* Logo */}
-      <div className="h-14 flex items-center px-3 border-b border-white/[0.06] shrink-0">
+      <div className="h-14 flex items-center px-4 py-3 border-b border-[var(--border)] shrink-0">
         <div className="flex items-center gap-2.5 w-full">
           <img src={alphonsoIcon} alt="Alphonso" className="w-7 h-7 rounded-lg shrink-0 shadow-glow-sm" />
           {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-white">ALPHONSO</span>}
@@ -113,6 +117,13 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </div>
       </div>
 
+      {/* Agent status strip — shows pulsing badges for agents active in last 30s */}
+      {isOpen && (
+        <div className="px-3 py-2 border-b border-[var(--border)] min-h-0">
+          <AgentStatusStrip compact useAutoFeed />
+        </div>
+      )}
+
       {/* Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="py-3 px-2 flex flex-col gap-0.5 shrink-0">
@@ -125,17 +136,27 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                  className={`relative flex items-center gap-2.5 px-3 py-2 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                     activeTab === item.id
-                      ? 'bg-accent/10 text-white border border-accent/20'
-                      : 'text-zinc-400 hover:bg-surface-3 hover:text-zinc-200 border border-transparent'
+                      ? 'bg-[var(--surface-3)] text-[var(--text-1)] border-l-2 border-[var(--accent)] pl-[calc(0.75rem-2px)]'
+                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] border-l-2 border-transparent'
                   }`}
                   aria-current={activeTab === item.id ? 'page' : undefined}
                 >
-                  <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-accent-light' : ''}`} />
+                  <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-[var(--accent)]' : ''}`} />
                   {isOpen && <span className="font-medium">{item.label}</span>}
+                  {isOpen && item.id === 'chat' && pendingApprovalCount > 0 && (
+                    <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-[var(--warning)] text-[8px] font-bold text-black animate-pulse">
+                      {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
+                    </span>
+                  )}
                   {isOpen && item.showStatusDot && (
                     <ConnectorStatusStrip zeroCostMode={zeroCostMode} />
+                  )}
+                  {!isOpen && item.showStatusDot && (
+                    <span className="absolute top-1 right-1">
+                      <ConnectorStatusDot connectorId="whatsapp" />
+                    </span>
                   )}
                 </button>
               ))}
@@ -159,8 +180,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                   onClick={() => { setActiveChatId(chat.id); setActiveTab('chat'); }}
                   className={`group flex items-center justify-between px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all ${
                     activeChatId === chat.id && activeTab === 'chat'
-                      ? 'bg-accent/10 text-accent-light'
-                      : 'text-zinc-500 hover:bg-surface-3 hover:text-zinc-300'
+                      ? 'bg-[var(--surface-3)] text-[var(--accent)]'
+                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
                   }`}
                 >
                   <span className="truncate">{chat.title}</span>
@@ -179,11 +200,11 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-white/[0.06] space-y-0.5">
+      <div className="p-2 border-t border-[var(--border)] space-y-0.5">
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
-            activeTab === 'settings' ? 'bg-surface-3 text-white' : 'text-zinc-400 hover:bg-surface-3'
+          className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+            activeTab === 'settings' ? 'bg-[var(--surface-3)] text-[var(--text-1)] border-l-2 border-[var(--accent)] pl-[calc(0.75rem-2px)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] border-l-2 border-transparent'
           }`}
           aria-label="Open settings"
         >
@@ -192,7 +213,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </button>
         <button
           onClick={() => setIsLight((v) => !v)}
-          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm text-zinc-400 hover:bg-surface-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 border-l-2 border-transparent"
           aria-label={isLight ? 'Switch to dark theme' : 'Switch to light theme'}
         >
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}

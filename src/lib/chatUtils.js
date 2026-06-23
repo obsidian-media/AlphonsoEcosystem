@@ -19,6 +19,10 @@ export function shouldRouteThroughJose(text) {
   // Explicit Jose invocation — always route
   if (/^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(lower)) return true;
 
+  // Image/creative generation requests always go through Jose even when phrased as questions
+  const isImageRequest = /(?:generate|create|make|draw|show me|give me|can you make|can you create|can you generate)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:photo|image|picture|illustration|artwork?|render|graphic|visual)/i.test(lower);
+  if (isImageRequest) return true;
+
   // Pure questions → direct to Ollama regardless of topic
   if (lower.endsWith('?')) return false;
 
@@ -27,14 +31,17 @@ export function shouldRouteThroughJose(text) {
 
   // Explicit task/action phrases — things the user wants DONE (not just discussed)
   return [
-    'create a', 'create an', 'create the',
-    'build a', 'build an', 'build the',
-    'make a', 'make an', 'make the',
-    'generate a', 'generate an', 'generate the',
+    'create a', 'create an', 'create the', 'create me',
+    'build a', 'build an', 'build the', 'build me',
+    'make a', 'make an', 'make the', 'make me a', 'make me an',
+    'generate a', 'generate an', 'generate the', 'generate me',
     'write a', 'write an', 'write the', 'write code', 'write me',
-    'design a', 'design an', 'design the',
+    'design a', 'design an', 'design the', 'design me',
     'develop a', 'develop an', 'develop the',
     'set up a', 'set up an', 'set up the',
+    'show me a photo', 'show me an image', 'show me a picture',
+    'a photo of', 'an image of', 'a picture of',
+    'photo of', 'image of', 'picture of',
     'scaffold', 'implement a', 'implement an', 'implement the',
     'deploy', 'publish to', 'upload to', 'post to', 'send to',
     'install ', 'npm run', 'npm install', 'yarn run', 'yarn add',

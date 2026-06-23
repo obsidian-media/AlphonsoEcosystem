@@ -1,7 +1,7 @@
-import { invoke } from '@tauri-apps/api/core';
 import { getPacketById, listAgentPackets, requestPacketRetry, sendPacketToDeadLetter, updatePacketStatus } from './agentBusService';
 import { persistScopeRows } from './runtimeLedgerService';
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { durableGet, durableSet } from '../lib/durableStore';
 
 const QUEUE_KEY = 'alphonso_orchestration_queue_transitions_v1';
 const JOSE_COMMAND_KEY = 'alphonso_jose_command_routes_v2';
@@ -57,7 +57,7 @@ export interface ForceDeadLetterResult {
 
 function readTransitions(): QueueTransition[] {
   try {
-    const raw = localStorage.getItem(QUEUE_KEY);
+    const raw = durableGet(QUEUE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -77,12 +77,7 @@ function readJoseCommands(): any[] {
 
 function writeTransitions(rows: QueueTransition[]): void {
   const next = rows.slice(-MAX_TRANSITIONS);
-  try {
-    invoke('kv_set', { key: QUEUE_KEY, value: JSON.stringify(next) }).catch(() => {});
-  } catch {
-    // SQLite not available in browser
-  }
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(next));
+  durableSet(QUEUE_KEY, JSON.stringify(next));
   persistScopeRows(ORCHESTRATION_QUEUE_SCOPE, next, (row: QueueTransition) => ({
     id: row.id,
     data: row,

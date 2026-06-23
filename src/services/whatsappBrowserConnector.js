@@ -6,7 +6,14 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/^\+/, '').replace(/\D/g, '');
 }
 
-export async function browserSendWhatsApp({ to, text }) {
+/**
+ * Send a WhatsApp message via the Meta Graph API.
+ * @param {object} params
+ * @param {string} params.to - Recipient phone number (with or without leading +)
+ * @param {string} params.text - Message body
+ * @param {string} [params.replyToId] - Optional WhatsApp message ID to reply to (adds threading context)
+ */
+export async function browserSendWhatsApp({ to, text, replyToId }) {
   const accessToken = getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN');
   const phoneNumberId = getConnectorCredential('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID');
 
@@ -31,7 +38,8 @@ export async function browserSendWhatsApp({ to, text }) {
           messaging_product: 'whatsapp',
           to: toNorm,
           type: 'text',
-          text: { body: String(text || '') }
+          text: { body: String(text || '') },
+          ...(replyToId ? { context: { message_id: replyToId } } : {})
         })
       });
     } catch (error) {

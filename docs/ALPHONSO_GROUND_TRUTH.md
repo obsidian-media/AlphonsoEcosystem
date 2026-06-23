@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-22 — Sprint Next-50 complete  
-**Verified by:** Claude Code session (120 test files, 1737+ tests passing, cargo clippy clean)  
-**Version:** 2.0.8 (All 9 agents have production runtimes; Sprint Next-50 complete; 10 TSX components; companion Phase 1–2 complete with QR + mDNS UI)  
+**Last verified:** 2026-06-23 — v2.0.10 Design System + Full UI Phase 1-5 complete  
+**Verified by:** Claude Code session (133 test files, 1854+ tests passing, cargo clippy clean)  
+**Version:** 2.0.10 (Design token system + component library complete; all deferred panels wired; UI phases 1-5 done)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,11 +25,12 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.0.8 |
+| Version | 2.0.10 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
 | Frontend | React 18, Vite 5, Tailwind 3, Lucide React — 63 `.jsx` + 10 `.tsx` components (App, Sidebar, RightPanel, SettingsView, ChatView, AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar) |
+| UI System | CSS design token system (`src/styles/tokens.css`), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Deployment | Windows NSIS + MSI installer, Railway static serve (gateway) |
 
@@ -474,6 +475,24 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [ ] **Branch protection on `main`** — CI not yet required before merge (GitHub settings, manual step)
 - [x] **TypeScript migration (continued)** — **CLOSED Sprint Next-50 D5** App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx`. Total: 10 TSX components. Remaining JSX: 63 components.
 
+### Runtime Hub (2026-06-23) — All 9 Gaps Fixed
+- [x] **runtime_manager.rs** — full rewrite; all 9 gaps addressed:
+  1. `find_python()` — PATH + Windows LOCALAPPDATA common paths + winget fallback
+  2. `find_git()` — PATH + `C:\Program Files\Git` + winget fallback
+  3. `find_ollama()` — PATH + `%LOCALAPPDATA%\Programs\Ollama\ollama.exe` + C:\Program Files\Ollama
+  4. `run_streaming()` async — `tokio::process::Command` + `AsyncBufReadExt` line-by-line; emits `runtime://log` per line
+  5. `ensure_venv()` — per-tool venv at `<install_dir>/venv/`; all pip via venv python
+  6. AudioCraft args fixed — `demos/musicgen_app.py --server_name 127.0.0.1 --server_port 8765` (no `-m` module)
+  7. InvokeAI resolved from `venv/Scripts/invokeai-web.exe` via `resolve_exe()`
+  8. `autostart_all(state, app_handle)` — emits `runtime://boot_status` events per tool (starting/started/skipped/failed)
+  9. `load_autostart_prefs()` / `save_autostart_prefs_to_disk()` — JSON at `%APPDATA%\Alphonso\runtimes\autostart_prefs.json`; new commands: `runtime_check_prerequisites`, `runtime_install_prerequisite`, `runtime_get_autostart_prefs`, `runtime_save_autostart_pref`
+  — `cargo clippy -D warnings` clean
+- [x] **runtimeManagerService.js** — 9 exported functions: `getAllStatus`, `listTools`, `installTool`, `startTool`, `stopTool`, `waitForTool`, `checkPrerequisites`, `installPrerequisite`, `getAutostartPrefs`, `saveAutostartPref`, `onLogLine`, `onAnyProgress`
+- [x] **RuntimeManagerView.jsx** — prereq warning panel (Gap 1/2), live log via `LiveLogPanel` (Gap 4), autostart toggles per tool (Gap 9), `BootStatusBanner` wired
+- [x] **BootStatusBanner.jsx** — fixed bottom-right banner showing real-time boot events from `runtime://boot_status` events (Gap 8)
+- [x] **Sidebar Runtimes tab** — `Cpu` icon nav item wired to `runtimes` activeTab
+- [x] **runtimeManagerService.test.js** — 22 tests covering all exported functions including 4 new prereq/autostart APIs
+
 ### Sprint Next-50 Additions (2026-06-22)
 - [x] **connectorCircuitBreakerService** — **CLOSED D2T1** localStorage-backed per-connector circuit breaker
 - [x] **connectorRateLimiterService** — **CLOSED D2T7** token-bucket rate limiter (in-memory, 60 req/min default)
@@ -689,3 +708,4 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 _Last verified: 2026-06-22 — v2.0.6: Sprint Next-10 complete, rustfmt CI fix, docs accuracy pass, mobile companion sprint plan. 112 test files (111 + services/agentContract.test.ts), 1621+ tests passing. 14 Rust unit tests passing. `npm run lint` clean, `npm run build` clean (main chunk **288KB**, budget 550KB), `cargo clippy -- -D warnings` clean, `cargo fmt --check` clean (rustfmt.toml added). `lib.rs` ~1,585 lines (18 extracted modules). Coverage ~35%+ (threshold 20%, src/ scoped). Version 2.0.5. All 9 agent runtimes live. rustfmt.toml in src-tauri/. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
+

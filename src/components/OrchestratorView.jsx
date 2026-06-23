@@ -53,6 +53,8 @@ import { isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } f
 import { getOrchestrationQueueSnapshot, listOrchestrationQueueTransitions, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
 import { AgentAvatar } from './AgentAvatar';
 import { JoseTaskQueue } from './JoseTaskQueue';
+import { WhatsAppInboxPanel } from './WhatsAppInboxPanel';
+import { OrchestratorQueueView } from './OrchestratorQueueView';
 
 export function OrchestratorView({
   settings,
@@ -386,6 +388,18 @@ export function OrchestratorView({
             </button>
           </div>
 
+          <WhatsAppInboxPanel
+            messages={whatsappAudit.map((e) => ({
+              id: e.id || String(Math.random()),
+              from: e.details?.from || 'WhatsApp',
+              body: e.details?.body || e.action || 'event',
+              timestamp: e.timestampMs || Date.now(),
+              direction: e.details?.direction || 'inbound',
+              status: e.details?.status,
+            }))}
+            onReply={(_id, _text) => { pollWhatsAppNow(); }}
+            onRetry={(_id) => pollWhatsAppNow()}
+          />
           {whatsappAudit.length === 0 ? (
             <div className="rounded-xl border border-white/[0.04] bg-zinc-900/40 px-4 py-6 text-center text-xs text-zinc-600">
               No WhatsApp activity yet. Messages routed from WhatsApp will appear here.
@@ -731,6 +745,10 @@ export function OrchestratorView({
           </div>
         </CollapsiblePanel>
       </div>
+
+      <CollapsiblePanel icon={Route} title="Orchestration Queue" id="orchestration-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
+        <OrchestratorQueueView />
+      </CollapsiblePanel>
 
       <CollapsiblePanel icon={ClipboardList} title="Jose Command Ledger" id="jose-command-ledger" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">

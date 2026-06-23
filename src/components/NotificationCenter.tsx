@@ -1,4 +1,6 @@
 import React from 'react';
+import { Bell } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 
 type NotificationType = 'success' | 'warning' | 'error' | 'info';
 
@@ -30,7 +32,13 @@ function relativeTime(timestamp: number): string {
 }
 
 export function NotificationCenter({ notifications, onDismiss, onClearAll }: NotificationCenterProps) {
-  if (!notifications || notifications.length === 0) return null;
+  if (!notifications || notifications.length === 0) {
+    return (
+      <div className="fixed top-4 right-4 z-50 w-80">
+        <EmptyState icon={<Bell className="w-full h-full" />} title="No notifications" description="You're all caught up." />
+      </div>
+    );
+  }
 
   const visible = notifications.slice(0, 5);
 

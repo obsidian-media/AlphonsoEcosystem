@@ -35,3 +35,28 @@ struct AgentStatus: Codable {
     let status: String
     let detail: String?
 }
+
+struct Goal: Identifiable, Codable {
+    let id = UUID()
+    let title: String
+    let description: String
+    let status: String
+    let createdAt: Date
+}
+
+struct Batch: Identifiable, Codable {
+    let id = UUID()
+    let goalId: String
+    let title: String
+    let status: String
+    let tasks: [String]
+}
+
+struct TaskItem: Identifiable, Codable {
+    let id = UUID()
+    let batchId: String
+    let title: String
+    let status: String
+    let owner: String
+    let risk: String
+}

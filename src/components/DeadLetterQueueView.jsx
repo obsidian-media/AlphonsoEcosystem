@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { RotateCcw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 import { retryDeadLetter, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
 import { listAgentPackets } from '../services/agentBusService';
 
@@ -108,9 +109,12 @@ export function DeadLetterQueueView() {
       )}
 
       {items.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
-          <CheckCircle className="w-10 h-10 text-emerald-500/40" />
-          <p className="text-sm text-zinc-400">No failed tasks — everything is running smoothly.</p>
+        <div className="flex-1 flex items-center justify-center">
+          <EmptyState
+            icon={<CheckCircle className="w-full h-full text-[var(--success)]" />}
+            title="No failed tasks"
+            description="Everything is running smoothly."
+          />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto space-y-2 pr-1">

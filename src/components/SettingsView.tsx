@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
@@ -13,6 +13,8 @@ import { WorkspaceExportImportView } from './WorkspaceExportImportView';
 import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
 import { CompanionPairingPanel } from './CompanionPairingPanel';
+import { ConnectorSetupPanel } from './ConnectorSetupPanel';
+import { SessionHistoryView } from './SessionHistoryView';
 
 interface MemoryItem {
   id?: string;
@@ -310,6 +312,17 @@ interface AppSettings {
   [key: string]: unknown;
 }
 
+const SETTINGS_SECTIONS = [
+  { id: 'general',     label: 'General',      Icon: Settings2 },
+  { id: 'connectors',  label: 'Connectors',   Icon: Plug },
+  { id: 'agents',      label: 'Agents',       Icon: Bot },
+  { id: 'runtime',     label: 'Runtime',      Icon: Cpu },
+  { id: 'memory',      label: 'Memory',       Icon: Database },
+  { id: 'appearance',  label: 'Appearance',   Icon: Palette },
+  { id: 'logs',        label: 'Logs',         Icon: ScrollText },
+  { id: 'backup',      label: 'Backup',       Icon: Download },
+];
+
 interface SettingsViewProps {
   settings: AppSettings;
   setSettings: (settings: AppSettings | ((prev: AppSettings) => AppSettings)) => void;
@@ -378,6 +391,7 @@ export function SettingsView({
   const [composioToolkits, setComposioToolkits] = useState<ComposioToolkit[]>([]);
 
   const COMPOSIO_ENABLED_KEY = 'alphonso_composio_toolkits_enabled_v1';
+  const [activeSection, setActiveSection] = useState('general');
   const [enabledToolkits, setEnabledToolkits] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('alphonso_composio_toolkits_enabled_v1') || '[]')); }
     catch { return new Set(); }
@@ -519,14 +533,32 @@ export function SettingsView({
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-8 space-y-10">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-white">System Settings</h1>
-        <p className="text-sm text-zinc-500">Configure local Ollama inference and native runtime behavior.</p>
-      </div>
+    <div className="flex h-full overflow-hidden">
+      {/* Left nav rail */}
+      <nav className="w-44 shrink-0 border-r border-[var(--border)] py-4 overflow-y-auto bg-[var(--surface-1)]">
+        {SETTINGS_SECTIONS.map(section => (
+          <button key={section.id} onClick={() => setActiveSection(section.id)}
+            className={`w-full flex items-center gap-2.5 px-4 py-2 text-xs transition-colors ${
+              activeSection === section.id
+                ? 'text-[var(--text-1)] bg-[var(--surface-3)] border-l-2 border-[var(--accent)] pl-[calc(1rem-2px)]'
+                : 'text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[var(--surface-3)] border-l-2 border-transparent'
+            }`}>
+            <section.Icon className="w-3.5 h-3.5 shrink-0" />
+            {section.label}
+          </button>
+        ))}
+      </nav>
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto p-6 bg-[var(--surface-0)]">
+        {activeSection === 'general' && (
+          <div className="max-w-4xl mx-auto space-y-10">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-white">System Settings</h1>
+              <p className="text-sm text-zinc-500">Configure local Ollama inference and native runtime behavior.</p>
+            </div>
 
-      <section className="space-y-4">
-        <SectionHeader icon={Cpu} label="Ollama Runtime" />
+            <section className="space-y-4">
+              <SectionHeader icon={Cpu} label="Ollama Runtime" />
         <div className="grid grid-cols-1 gap-6">
           <div className="space-y-2">
             <label className="text-xs font-semibold text-zinc-300">Ollama API Endpoint</label>
@@ -831,6 +863,18 @@ export function SettingsView({
       </section>
 
       <section className="space-y-4">
+        <SectionHeader icon={Activity} label="Performance Diagnostics" />
+        <PerformanceDiagnosticsPanel />
+      </section>
+    </div>
+  )}
+  {activeSection === 'connectors' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
+        <SectionHeader icon={Key} label="API Credentials" />
+        <ConnectorSetupPanel />
+      </section>
+      <section className="space-y-4">
         <SectionHeader icon={Plug} label="External Tools (Composio)" />
         <div className="space-y-4">
           <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
@@ -907,7 +951,30 @@ export function SettingsView({
           </div>
         </div>
       </section>
-
+    </div>
+  )}
+  {activeSection === 'agents' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
+        <SectionHeader icon={UserRound} label="Agent Avatars" />
+        <p className="text-[11px] text-zinc-500">
+          Click an avatar to upload a custom mascot image (PNG, JPG, WebP). Images are resized to 256 × 256 and stored locally.
+          Click <strong className="text-zinc-400">Reset</strong> to restore the default.
+        </p>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-9">
+          {AVATAR_AGENTS.map((agent) => (
+            <AgentAvatarCard key={agent.id} agentId={agent.id} label={agent.label} />
+          ))}
+        </div>
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={BarChart3} label="Agent Performance" />
+        <AgentMetricsPanel />
+      </section>
+    </div>
+  )}
+  {activeSection === 'runtime' && (
+    <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
         <SectionHeader icon={Zap} label="Local Services" />
         <div className="space-y-4">
@@ -1034,6 +1101,64 @@ export function SettingsView({
       </section>
 
       <section className="space-y-4">
+        <SectionHeader icon={TrendingUp} label="Nova Opportunity History" />
+        <NovaHistoryChart />
+      </section>
+    </div>
+  )}
+  {activeSection === 'memory' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
+        <SectionHeader icon={Activity} label="Echo Memory Timeline" />
+        <EchoTimeline />
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={Database} label="Session History" />
+        <SessionHistoryView />
+      </section>
+    </div>
+  )}
+  {activeSection === 'appearance' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
+        <SectionHeader icon={Palette} label="Appearance" />
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { id: 'minimal_runtime', label: 'Minimal Runtime', preview: 'bg-zinc-900' },
+            { id: 'deep_space', label: 'Deep Space', preview: 'bg-indigo-950' },
+            { id: 'orchestrator_gold', label: 'Orchestrator Gold', preview: 'bg-amber-950' }
+          ].map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                settings.environmentTheme === theme.id
+                  ? 'border-indigo-500/50 bg-indigo-500/10 ring-1 ring-indigo-500/20'
+                  : 'border-white/5 bg-zinc-900/50 hover:border-white/10'
+              }`}
+            >
+              <div className={`w-full h-10 rounded-lg ${theme.preview} border border-white/10`} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{theme.label}</span>
+              {settings.environmentTheme === theme.id && (
+                <span className="text-[9px] text-indigo-400 font-bold">Active</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  )}
+  {activeSection === 'logs' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
+        <SectionHeader icon={ScrollText} label="Logs" />
+        <CrashLogView />
+      </section>
+    </div>
+  )}
+  {activeSection === 'backup' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
         <SectionHeader icon={Database} label="Backup & Restore" />
         <div className="space-y-4">
           <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
@@ -1092,74 +1217,12 @@ export function SettingsView({
         </div>
       </section>
 
-      <section className="space-y-4">
-        <SectionHeader icon={BarChart3} label="Agent Performance" />
-        <AgentMetricsPanel />
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeader icon={Activity} label="Echo Memory Timeline" />
-        <EchoTimeline />
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeader icon={TrendingUp} label="Nova Opportunity History" />
-        <NovaHistoryChart />
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeader icon={Palette} label="Appearance" />
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { id: 'minimal_runtime', label: 'Minimal Runtime', preview: 'bg-zinc-900' },
-            { id: 'deep_space', label: 'Deep Space', preview: 'bg-indigo-950' },
-            { id: 'orchestrator_gold', label: 'Orchestrator Gold', preview: 'bg-amber-950' }
-          ].map((theme) => (
-            <button
-              key={theme.id}
-              onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
-              className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                settings.environmentTheme === theme.id
-                  ? 'border-indigo-500/50 bg-indigo-500/10 ring-1 ring-indigo-500/20'
-                  : 'border-white/5 bg-zinc-900/50 hover:border-white/10'
-              }`}
-            >
-              <div className={`w-full h-10 rounded-lg ${theme.preview} border border-white/10`} />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{theme.label}</span>
-              {settings.environmentTheme === theme.id && (
-                <span className="text-[9px] text-indigo-400 font-bold">Active</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeader icon={UserRound} label="Agent Avatars" />
-        <p className="text-[11px] text-zinc-500">
-          Click an avatar to upload a custom mascot image (PNG, JPG, WebP). Images are resized to 256 × 256 and stored locally.
-          Click <strong className="text-zinc-400">Reset</strong> to restore the default.
-        </p>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-9">
-          {AVATAR_AGENTS.map((agent) => (
-            <AgentAvatarCard key={agent.id} agentId={agent.id} label={agent.label} />
-          ))}
-        </div>
-      </section>
-
       <div className="border-t border-white/5 pt-4">
         <WorkspaceExportImportView />
       </div>
-
-      <section className="space-y-4">
-        <SectionHeader icon={ScrollText} label="Logs" />
-        <CrashLogView />
-      </section>
-
-      <section className="space-y-4">
-        <SectionHeader icon={Activity} label="Performance Diagnostics" />
-        <PerformanceDiagnosticsPanel />
-      </section>
+    </div>
+  )}
+      </div>
     </div>
   );
 }

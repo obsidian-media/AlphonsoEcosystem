@@ -2,7 +2,7 @@
 
 **Prepared by:** Kilo CLI agent (2026-06-22)
 **Branch:** `feat/kilo-mobile-companion` (merged to `main`); iOS work continues on `feat/ios-companion`
-**Status:** Phases 1–3 complete; Phases 4–5 and final release pending
+**Status:** Phases 1–4 core complete; Phase 5 polish + final release pending
 **Single source of truth:** `docs/ALPHONSO_GROUND_TRUTH.md`
 
 ---
@@ -113,17 +113,15 @@ This file is the complete briefing for any agent (human or AI) picking up the iO
 
 ## What Remains — Phases 4–5 and Release
 
-### Phase 4 — iOS UI: Chat + Agents + Boardroom
+### Phase 4 — iOS UI: Chat + Agents + Boardroom (COMPLETE)
 
-Build these SwiftUI views using the existing React UI as a design reference:
+**Files modified:**
+- `src-tauri/src/companion_router.rs` — Added `get_boardroom` handler returning goals/batches/tasks structure
+- `iOS/AlphonsoCompanion/Views/BoardroomView.swift` — Goals/Batches/Tasks sections with GoalRow/BatchRow/TaskRow
+- `iOS/AlphonsoCompanion/Models/ConnectionState.swift` — Added Goal, Batch, TaskItem models
+- `iOS/AlphonsoCompanion/Services/WebSocketService.swift` — Added sendRaw(), tokenCount, isStreaming state, task_complete event
 
-- **ChatView.swift** — Message list (markdown), input field, send button, streaming indicator, abort button
-- **AgentDockView.swift** — Grid of 9 agents (Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova) with status badges from `agent_status` events
-- **BoardroomView.swift** — Goals → batches → tasks hierarchy using `get_boardroom` JSON-RPC; approve/reject buttons
-- **SettingsView.swift** — Connection status, disconnect, re-pair
-
-**Desktop-side work for Phase 4:**
-- The `get_boardroom` route in `companion_router.rs` currently returns `{ projects: [] }` — this needs to wire to actual mission room data from `missionRoomService.js` via a new Tauri command
+**What remains (desktop-side, macOS required for full testing):**
 - Token streaming (`token` events) needs to be wired from `generateOllamaChatStream` in `src/lib/ollama.js` through the WebSocket broadcast channel
 - Agent status events (`agent_status`) need to be emitted from the desktop when agent runtimes change state
 
@@ -186,8 +184,8 @@ cargo fmt --all -- --check   # Format check
 
 ### What Needs to Happen Next (in order)
 
-1. **Phase 4**: Build Chat, Agent Dock, Boardroom, Settings views. Wire `get_boardroom` on desktop if needed.
-2. **Phase 5**: Push notifications, offline queue, polish.
+1. **Phase 5**: Push notifications, offline queue, polish.
+2. **Simulator testing**: Verify mDNS discovery and WebSocket auth on iOS Simulator.
 3. **Release**: TestFlight → App Store.
 
 ### The Prompt to Give to the Next Agent

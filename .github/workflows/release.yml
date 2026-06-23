@@ -125,6 +125,18 @@ jobs:
           Get-Content $manifestPath
           "manifest_path=$manifestPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
+      - name: Validate updater manifest
+        shell: bash
+        run: |
+          MANIFEST="latest.json"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "ERROR: latest.json not found"
+            exit 1
+          fi
+          # Validate it's parseable JSON
+          python3 -c "import json,sys; d=json.load(open('$MANIFEST')); required=['version','platforms']; missing=[k for k in required if k not in d]; sys.exit(1) if missing else print('Manifest OK:', d['version'])"
+          echo "Updater manifest validated successfully"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

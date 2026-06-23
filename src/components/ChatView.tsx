@@ -2,11 +2,11 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard, Zap as ZapIcon } from 'lucide-react';
+import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard, Zap as ZapIcon } from 'lucide-react';
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
-import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
+import { isJoseIntakeCommand, runJoseCommandExecutionPipeline, executeApprovedPackets } from '../services/joseExecutionEngineService';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
 import {
@@ -73,6 +73,23 @@ function buildProjectSummary(result, commandText, baseSummary, screenContext = [
   const planArtifact = allArtifacts.find((a) => a.type === 'plan_preview');
   const securityArtifacts = allArtifacts.filter((a) => a.type === 'security_assessment');
   const commandArtifacts = allArtifacts.filter((a) => a.type === 'command_execution');
+  const runtimeHubArtifact = allArtifacts.find((a) => a.type === 'open_runtime_hub');
+  const miyaReceipt = receipts.find((r) => r.agent === 'miya');
+  const generatedImagesArtifact = allArtifacts.find((a) => a.type === 'generated_images');
+
+  // If image generation was blocked by missing runtime, return a special marker
+  if (runtimeHubArtifact) {
+    return `__RUNTIME_HUB_REQUIRED__${baseSummary}`;
+  }
+
+  // If Miya ran and generated images or a creative package, surface it
+  if (miyaReceipt && !brainArtifacts.length) {
+    const lines: string[] = [baseSummary];
+    if (generatedImagesArtifact?.count > 0) {
+      lines.push(`\n🎨 ${generatedImagesArtifact.count} image(s) generated.`);
+    }
+    return lines.join('');
+  }
 
   const files = brainArtifacts.flatMap((a) => a.filesGenerated || []);
   const scaffoldArtifact = allArtifacts.find((a) => a.type === 'project_scaffold');
@@ -175,8 +192,9 @@ export function ChatView({
   onJoseExecutionState,
   onOpenSettings,
   onModelChange,
-  screenObserverLogs = []
-}) {
+  screenObserverLogs = [],
+  setActiveTab
+}: any) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -203,6 +221,7 @@ export function ChatView({
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [novaInsight, setNovaInsight] = useState(null);
   const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
   const [connectorBannerDismissed, setConnectorBannerDismissed] = useState(false);
   const [previewMode, setPreviewMode] = useState(() => getRuntimePolicySettings().previewMode);
   const [directMode, setDirectMode] = useState(false);
@@ -216,6 +235,7 @@ export function ChatView({
   const abortRef = useRef(null);
   const streamControllerRef = useRef(null);
   const inputRef = useRef(null);
+  const approvalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pinMessage = (message) => {
     setPinnedMessages((prev) => {
@@ -285,6 +305,21 @@ export function ChatView({
       setConnectorBannerDismissed(false);
     }
   }, [ollamaStatus.state]);
+
+  // Clear new message flash after 1 second
+  useEffect(() => {
+    if (newMessageIds.size === 0) return;
+    const timers = Array.from(newMessageIds).map((id) =>
+      setTimeout(() => {
+        setNewMessageIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 1000)
+    );
+    return () => { timers.forEach(clearTimeout); };
+  }, [newMessageIds]);
 
   const handleFileAttach = (event) => {
     const file = event.target.files?.[0];
@@ -441,11 +476,17 @@ export function ChatView({
           : '';
 
         const richSummary = buildProjectSummary(result, cleanInput, baseSummary, screenObserverLogs);
+        const needsRuntimeHub = richSummary.startsWith('__RUNTIME_HUB_REQUIRED__');
+        const displaySummary = needsRuntimeHub ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
 
+        const newMsgId = nextMsgId();
+        setNewMessageIds((prev) => new Set(prev).add(newMsgId));
         setMessages((current) => [...current, {
-          id: nextMsgId(),
+          id: newMsgId,
           role: 'assistant',
-          content: richSummary + hintLine
+          content: displaySummary + hintLine,
+          isNew: true,
+          ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
         }]);
 
         if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
@@ -453,6 +494,30 @@ export function ChatView({
           if (pending.length > 0) {
             setPendingApprovals(pending);
             setApprovalCommandId(result.commandId);
+
+            // Inject in-chat notification so the user knows approval is needed
+            const agentNames = [...new Set(pending.map((r) => r.agent).filter(Boolean))].join(', ');
+            setMessages((current) => [...current, {
+              id: nextMsgId(),
+              role: 'assistant',
+              content: `⏳ **${agentNames || 'Agent'} ${pending.length === 1 ? 'is' : 'are'} waiting for your approval** — review the task${pending.length !== 1 ? 's' : ''} below and approve or deny to continue.`
+            }]);
+
+            // 10-minute timeout — clear approval panel and notify user
+            if (approvalTimeoutRef.current) clearTimeout(approvalTimeoutRef.current);
+            approvalTimeoutRef.current = setTimeout(() => {
+              setPendingApprovals((prev) => {
+                if (prev.length > 0) {
+                  setMessages((current) => [...current, {
+                    id: `timeout-${Date.now()}`,
+                    role: 'assistant',
+                    content: '⏸ Approval timed out after 10 minutes. Resubmit your request to try again.'
+                  }]);
+                }
+                return [];
+              });
+              setApprovalCommandId(null);
+            }, 10 * 60 * 1000);
           }
         }
 
@@ -563,6 +628,14 @@ export function ChatView({
     }
   };
 
+  const retryLastMessage = () => {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    if (lastUser) {
+      setInputValue(lastUser.content);
+      handleSend();
+    }
+  };
+
   const clearChat = () => {
     setMessages([]);
     setAttachedFile(null);
@@ -606,12 +679,12 @@ export function ChatView({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="border-b border-white/[0.03] shrink-0 bg-zinc-950/40">
+      <div className="border-b border-[var(--border)] shrink-0 bg-[var(--surface-0)]">
         <div className="h-12 flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <History className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="text-xs text-zinc-500 font-medium">CHAT SESSION: {activeChatId}</span>
+              <History className="w-3.5 h-3.5 text-[var(--text-3)]" />
+              <span className="text-xs text-[var(--text-3)] font-medium">CHAT SESSION: {activeChatId}</span>
             </div>
             <OllamaModelPicker
               initialModel={settings.selectedModel}
@@ -620,7 +693,7 @@ export function ChatView({
             {/* D1T7: Direct mode toggle */}
             <button
               onClick={() => setDirectMode((d) => !d)}
-              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded border transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${directMode ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300' : 'border-white/5 text-zinc-600 hover:text-zinc-400'}`}
+              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded border transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${directMode ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300' : 'border-white/5 text-[var(--text-4)] hover:text-[var(--text-2)]'}`}
               aria-label={directMode ? `Direct mode on (${directAgent})` : 'Direct mode off'}
               title={directMode ? `Direct to ${directAgent} — bypasses Jose routing` : 'Enable direct agent mode'}
             >
@@ -641,14 +714,14 @@ export function ChatView({
             )}
             <button
               onClick={() => { setSearchOpen((o) => !o); setSearchQuery(''); }}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${searchOpen ? 'text-indigo-400' : 'text-zinc-500 hover:text-indigo-400'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${searchOpen ? 'text-indigo-400' : 'text-[var(--text-3)] hover:text-indigo-400'}`}
               aria-label={searchOpen ? 'Close search' : 'Open search'}
             >
               <Search className="w-3 h-3" />
             </button>
             <button
               onClick={() => setCompactChat((current) => !current)}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${compactChat ? 'text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${compactChat ? 'text-emerald-400' : 'text-[var(--text-3)] hover:text-emerald-400'}`}
               aria-label={compactChat ? 'Expand chat spacing' : 'Compact chat spacing'}
             >
               {compactChat ? <ChevronsUp className="w-3 h-3" /> : <ChevronsDown className="w-3 h-3" />}
@@ -660,7 +733,7 @@ export function ChatView({
                 setPreviewMode(next);
                 setRuntimePolicySettings({ previewMode: next }).catch(() => {});
               }}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${previewMode ? 'text-amber-400' : 'text-zinc-500 hover:text-amber-400'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded ${previewMode ? 'text-amber-400' : 'text-[var(--text-3)] hover:text-amber-400'}`}
               aria-label={previewMode ? 'Preview mode on — approve before publishing' : 'Auto mode — publish without approval'}
               title={previewMode ? 'Preview mode: see results before publishing' : 'Auto mode: publish immediately'}
             >
@@ -670,14 +743,14 @@ export function ChatView({
             <button
               onClick={exportChat}
               disabled={messages.length === 0}
-              className="text-2xs text-zinc-500 hover:text-indigo-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded"
+              className="text-2xs text-[var(--text-3)] hover:text-indigo-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded"
               aria-label="Export chat as Markdown"
             >
               <Download className="w-3 h-3" /> Export
             </button>
             <button
               onClick={clearChat}
-              className="text-2xs text-zinc-500 hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded"
+              className="text-2xs text-[var(--text-3)] hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded"
               aria-label="Clear chat"
             >
               <Trash2 className="w-3 h-3" /> Clear
@@ -686,18 +759,18 @@ export function ChatView({
         </div>
         {searchOpen && (
           <div className="flex items-center gap-2 px-6 pb-2">
-            <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+            <Search className="w-3.5 h-3.5 text-[var(--text-3)] shrink-0" />
             <input
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search messages…"
-              className="flex-1 bg-transparent text-sm text-zinc-200 placeholder-zinc-600 outline-none"
+              className="flex-1 bg-transparent text-sm text-[var(--text-1)] placeholder-zinc-600 outline-none"
             />
             {searchQuery && (
-              <span className="text-2xs text-zinc-500">{visibleMessages.length} of {messages.length}</span>
+              <span className="text-2xs text-[var(--text-3)]">{visibleMessages.length} of {messages.length}</span>
             )}
-            <button onClick={() => setSearchQuery('')} className="text-zinc-600 hover:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded" aria-label="Clear search query">
+            <button onClick={() => setSearchQuery('')} className="text-[var(--text-4)] hover:text-[var(--text-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded" aria-label="Clear search query">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -745,19 +818,19 @@ export function ChatView({
         <div className="mx-3 mt-2 shrink-0">
           <button
             onClick={() => setShowPinned((s) => !s)}
-            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors mb-1"
+            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors mb-1"
           >
             <Pin className="w-3 h-3" />
             {pinnedMessages.length} Pinned {showPinned ? '▲' : '▼'}
           </button>
           {showPinned && (
-            <div className="space-y-1 max-h-40 overflow-y-auto rounded-xl border border-white/[0.05] bg-zinc-900/30 p-2">
+            <div className="space-y-1 max-h-40 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-2">
               {pinnedMessages.map((pm) => (
                 <div key={pm.id} className="flex items-start gap-2 group">
-                  <div className="flex-1 text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">{pm.content}</div>
+                  <div className="flex-1 text-[11px] text-[var(--text-2)] line-clamp-2 leading-relaxed">{pm.content}</div>
                   <button
                     onClick={() => unpinMessage(pm.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-zinc-600 hover:text-amber-400"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-[var(--text-4)] hover:text-amber-400"
                     aria-label="Unpin message"
                   >
                     <PinOff className="w-3 h-3" />
@@ -778,17 +851,20 @@ export function ChatView({
         {messages.length === 0 && !inputValue && (
           <div className="h-full flex flex-col items-center justify-center select-none py-16">
             <div className="flex flex-col items-center gap-3 opacity-40">
-              <Bot className="w-12 h-12 text-zinc-500" />
-              <p className="text-sm font-medium text-zinc-400">Start a conversation</p>
-              <p className="text-xs text-zinc-600">Type a command or ask anything.</p>
+              <Bot className="w-12 h-12 text-[var(--text-3)]" />
+              <p className="text-sm font-medium text-[var(--text-2)]">Start a conversation</p>
+              <p className="text-xs text-[var(--text-4)]">Type a command or ask anything.</p>
             </div>
           </div>
         )}
 
         {searchQuery && visibleMessages.length === 0 && (
-          <div className="text-center text-xs text-zinc-600 py-8">No messages match "{searchQuery}"</div>
+          <div className="text-center text-xs text-[var(--text-4)] py-8">No messages match "{searchQuery}"</div>
         )}
-        {visibleMessages.map((message) => (
+        {visibleMessages.map((message) => {
+          const lastAssistantIdx = messages.length - 1 - [...messages].reverse().findIndex((m) => m.role === 'assistant');
+          const isLastAssistantMessage = message.role === 'assistant' && messages.indexOf(message) === lastAssistantIdx;
+          return (
           <div key={message.id} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (
               <div className={`w-8 h-8 rounded-lg ${message.isError ? 'bg-red-500/10 border-red-500/20' : 'bg-indigo-500/10 border-indigo-500/20'} border flex items-center justify-center shrink-0 mt-1 shadow-sm`}>
@@ -798,13 +874,63 @@ export function ChatView({
             <div className={`flex flex-col gap-1.5 ${message.role === 'user' ? 'items-end' : 'items-start'} max-w-[90%]`}>
               {message.role === 'assistant' ? (
                 <div className="relative group">
-                  <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-zinc-900/30 border-white/[0.05] rounded-tl-sm ${message.isError ? 'text-red-300 border-red-500/20 text-[13px] leading-relaxed whitespace-pre-wrap' : 'text-zinc-300'}`}>
-                    {message.isError ? message.content : <MarkdownMessage content={message.content} />}
-                  </div>
+                  {message.isError ? (
+                    <div className="flex flex-col gap-2 px-4 py-3 bg-[var(--error-dim)] border border-red-500/20 rounded-[var(--radius-md)] text-sm">
+                      <div className="flex items-center gap-2 text-[var(--error)]">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span className="font-medium">Something went wrong</span>
+                      </div>
+                      <p className="text-[var(--text-2)] text-xs leading-relaxed">{message.content}</p>
+                      {message.retryable !== false && (
+                        <button
+                          onClick={() => retryLastMessage?.()}
+                          className="self-start text-xs text-[var(--error)] hover:text-red-300 underline"
+                        >
+                          Try again
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-[var(--surface-1)] border-[var(--border)] rounded-tl-sm ${message.isNew ? 'border-l-2 border-[var(--success)] animate-border-fade' : ''} text-[var(--text-1)]`}>
+                      <MarkdownMessage content={message.content} />
+                    </div>
+                  )}
+                  {/* Runtime Hub action button — shown when image generation needs ComfyUI/A1111 */}
+                  {message.actionType === 'open_runtime_hub' && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setActiveTab?.('runtimes')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 border border-indigo-500/40 rounded-lg text-xs text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition-colors"
+                      >
+                        <ArrowRight className="w-3 h-3" />
+                        Open Runtime Hub to install ComfyUI or AUTOMATIC1111
+                      </button>
+                    </div>
+                  )}
+                  {/* Inline Hector citations on last assistant message */}
+                  {hectorBriefing && isLastAssistantMessage && hectorBriefing.sources?.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {hectorBriefing.sources.slice(0, 3).map((src, i) => {
+                        const domain = src.url ? (() => { try { return new URL(src.url).hostname.replace('www.', ''); } catch { return src.url; } })() : null;
+                        return (
+                          <a
+                            key={i}
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-900/40 border border-sky-700/50 rounded text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/60"
+                            title={src.url}
+                          >
+                            <span>↗</span>
+                            <span>{src.title || domain || `Source ${i + 1}`}</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
-                      className="p-1 rounded text-zinc-600 hover:text-amber-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                      className="p-1 rounded text-[var(--text-4)] hover:text-amber-400 hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
                       aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
                       title={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin' : 'Pin'}
                     >
@@ -816,7 +942,7 @@ export function ChatView({
                         setCopiedMsgId(message.id);
                         setTimeout(() => setCopiedMsgId((id) => id === message.id ? null : id), 1500);
                       }}
-                      className="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                      className="p-1 rounded text-[var(--text-4)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
                       aria-label={copiedMsgId === message.id ? 'Copied' : 'Copy message to clipboard'}
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -828,7 +954,7 @@ export function ChatView({
                   <div className={`px-3 py-2 text-xs ${compactChat ? '' : ''}`}>{message.content}</div>
                   <button
                     onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
-                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-600 hover:text-amber-400 hover:bg-zinc-800"
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--text-4)] hover:text-amber-400 hover:bg-[var(--surface-3)]"
                     aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
                   >
                     {pinnedMessages.some((p) => p.id === message.id) ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
@@ -837,63 +963,18 @@ export function ChatView({
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {isGenerating && (
-          <div className="flex gap-4 max-w-3xl mx-auto w-full" aria-live="polite" aria-label="Streaming response">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
+          <div className="flex gap-3 max-w-3xl mx-auto w-full py-2" aria-live="polite" aria-label="Streaming response">
+            <div className="w-6 h-6 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center shrink-0">
+              <span className="text-[9px] font-bold text-[var(--accent)]">A</span>
             </div>
-            <div className="bg-zinc-900/30 border border-white/[0.05] p-3 rounded-2xl rounded-tl-sm flex-1">
-              {streamingText ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px] text-zinc-500 px-1">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        Streaming
-                      </span>
-                      <span className="text-zinc-600">|</span>
-                      <span>{streamingTokens.toLocaleString()} tokens</span>
-                      {streamingStartTime && (
-                        <>
-                          <span className="text-zinc-600">|</span>
-                          <span>{streamingElapsed}s elapsed</span>
-                        </>
-                      )}
-                    </div>
-                    <button
-                      onClick={handleAbortStream}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-                      aria-label="Stop generation"
-                    >
-                      <Square className="w-2.5 h-2.5" />
-                      Stop
-                    </button>
-                  </div>
-                  <div className="text-zinc-300 text-xs whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
-                    {streamingText}
-                    <span className="inline-block w-1.5 h-4 bg-indigo-400 ml-0.5 animate-pulse" />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s]" />
-                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]" />
-                    <div className="w-1.5 h-1.5 bg-indigo-500/50 rounded-full animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]" />
-                  </div>
-                  <span className="text-[10px] text-zinc-500">Initializing... {streamingElapsed}s</span>
-                  <button
-                    onClick={handleAbortStream}
-                    className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-                    aria-label="Cancel generation"
-                  >
-                    <Square className="w-2.5 h-2.5" />
-                    Cancel
-                  </button>
-                </div>
-              )}
+            <div className="flex items-center gap-1.5 pt-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:0ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:150ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:300ms]" />
             </div>
           </div>
         )}
@@ -930,15 +1011,15 @@ export function ChatView({
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                     novaInsight.score >= 80 ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300' :
                     novaInsight.score >= 60 ? 'bg-amber-500/10 border-amber-400/20 text-amber-300' :
-                    'bg-zinc-500/10 border-zinc-400/20 text-zinc-400'
+                    'bg-zinc-500/10 border-zinc-400/20 text-[var(--text-2)]'
                   }`}>Score {novaInsight.score}/100</span>
                 </div>
-                <button onClick={() => setNovaInsight(null)} className="text-zinc-600 hover:text-zinc-400 rounded">
+                <button onClick={() => setNovaInsight(null)} className="text-[var(--text-4)] hover:text-[var(--text-2)] rounded">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
               {novaInsight.recommendation && (
-                <p className="text-xs text-zinc-300 leading-relaxed">{novaInsight.recommendation}</p>
+                <p className="text-xs text-[var(--text-1)] leading-relaxed">{novaInsight.recommendation}</p>
               )}
             </div>
           </div>
@@ -949,10 +1030,10 @@ export function ChatView({
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
               <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
             </div>
-            <div className="flex-1 px-3 py-2 rounded-xl bg-zinc-900/40 border border-white/[0.04]">
+            <div className="flex-1 px-3 py-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-                <span className="text-xs text-zinc-400 font-medium">
+                <span className="text-xs text-[var(--text-2)] font-medium">
                   {liveProgress.stage === 'wave_start' && `Wave ${(liveProgress.wave || 0) + 1}: ${(liveProgress.agents || []).join(', ')}`}
                   {liveProgress.stage === 'executed' && `${liveProgress.assignment?.agent || 'Agent'} completed`}
                   {liveProgress.stage === 'generating_images' && `Generating ${liveProgress.promptCount || 0} image(s)...`}
@@ -973,16 +1054,72 @@ export function ChatView({
               <ApprovalPanel
                 pendingApprovals={pendingApprovals}
                 commandId={approvalCommandId}
-                onAllResolved={(cmdId, results) => {
-                  const approved = Object.values(results).filter((s) => s === 'approved').length;
+                onAllResolved={async (cmdId, results) => {
+                  if (approvalTimeoutRef.current) {
+                    clearTimeout(approvalTimeoutRef.current);
+                    approvalTimeoutRef.current = null;
+                  }
+                  const approvedIds = Object.entries(results).filter(([, s]) => s === 'approved').map(([id]) => id);
                   const denied = Object.values(results).filter((s) => s === 'rejected').length;
+                  setPendingApprovals([]);
+                  setApprovalCommandId(null);
+
+                  if (approvedIds.length === 0) {
+                    setMessages((current) => [...current, {
+                      id: nextMsgId(),
+                      role: 'assistant',
+                      content: `All ${denied} task${denied !== 1 ? 's' : ''} denied. Nothing was executed.`
+                    }]);
+                    return;
+                  }
+
                   setMessages((current) => [...current, {
                     id: nextMsgId(),
                     role: 'assistant',
-                    content: `Approval complete: ${approved} approved, ${denied} denied.\n\nCommand ID: ${cmdId}`
+                    content: `✅ ${approvedIds.length} task${approvedIds.length !== 1 ? 's' : ''} approved${denied > 0 ? `, ${denied} denied` : ''}. Running now...`
                   }]);
-                  setPendingApprovals([]);
-                  setApprovalCommandId(null);
+                  setIsGenerating(true);
+                  onJoseExecutionState?.('thinking', 'Running approved tasks...');
+
+                  try {
+                    const execResult = await executeApprovedPackets(approvedIds, {
+                      endpoint: settings?.endpoint,
+                      conversationHistory,
+                      onProgress: (progress) => {
+                        setLiveProgress(progress);
+                      },
+                      onToken: (tokenData) => {
+                        if (tokenData?.token) {
+                          setMessages((current) => {
+                            const last = current[current.length - 1];
+                            if (last?.role === 'assistant' && last?.streaming) {
+                              return [...current.slice(0, -1), { ...last, content: last.content + tokenData.token }];
+                            }
+                            return [...current, { id: nextMsgId(), role: 'assistant', content: tokenData.token, streaming: true }];
+                          });
+                        }
+                      }
+                    });
+                    // Close any open streaming message
+                    setMessages((current) => current.map((m) => m.streaming ? { ...m, streaming: false } : m));
+                    setMessages((current) => [...current, {
+                      id: nextMsgId(),
+                      role: 'assistant',
+                      content: execResult.summary || 'Approved tasks completed.'
+                    }]);
+                    onJoseExecutionState?.('task_complete', 'Approved tasks completed.');
+                  } catch (err) {
+                    setMessages((current) => [...current, {
+                      id: nextMsgId(),
+                      role: 'assistant',
+                      content: `Error running approved tasks: ${err?.message || String(err)}`,
+                      isError: true
+                    }]);
+                  } finally {
+                    setIsGenerating(false);
+                    setLiveProgress(null);
+                    onTaskComplete();
+                  }
                 }}
               />
             </div>
@@ -994,8 +1131,8 @@ export function ChatView({
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
               <Bot className="w-4 h-4 text-indigo-400" />
             </div>
-            <div className="flex-1 border border-white/[0.05] rounded-xl bg-zinc-900/20 p-3 space-y-2">
-              <div className="text-2xs font-bold uppercase tracking-widest text-zinc-500">
+            <div className="flex-1 border border-[var(--border)] rounded-xl bg-[var(--surface-0)] p-3 space-y-2">
+              <div className="text-2xs font-bold uppercase tracking-widest text-[var(--text-3)]">
                 Execution Receipts ({executionReceipts.length})
               </div>
               {executionReceipts.map((receipt) => (
@@ -1007,12 +1144,12 @@ export function ChatView({
                         ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                         : receipt.status === 'dead_letter' || receipt.status === 'failed'
                           ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          : 'bg-zinc-500/10 text-zinc-400 border border-white/10'
+                          : 'bg-zinc-500/10 text-[var(--text-2)] border border-white/10'
                   }`}>
                     {receipt.status}
                   </span>
-                  <span className="text-zinc-300 font-medium">{receipt.agent}</span>
-                  <span className="text-zinc-500 truncate">{receipt.actionType || receipt.eventType}</span>
+                  <span className="text-[var(--text-1)] font-medium">{receipt.agent}</span>
+                  <span className="text-[var(--text-3)] truncate">{receipt.actionType || receipt.eventType}</span>
                   {receipt.riskLevel && receipt.riskLevel !== 'low' && (
                     <span className={`px-1 py-0.5 rounded text-2xs font-bold uppercase ${
                       receipt.riskLevel === 'high'
@@ -1034,20 +1171,36 @@ export function ChatView({
           <div className="mx-4 mb-2 rounded-xl border border-sky-400/20 bg-sky-500/5 p-3 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Hector Research</span>
-              <button onClick={() => setHectorBriefing(null)} className="text-zinc-500 hover:text-zinc-300 text-xs">×</button>
+              <button onClick={() => setHectorBriefing(null)} className="text-[var(--text-3)] hover:text-[var(--text-1)] text-xs">×</button>
             </div>
-            {hectorBriefing.sources?.slice(0, 3).map((src, i) => (
-              <div key={i} className="text-[11px] text-zinc-400 truncate">{src.title || src.url}</div>
-            ))}
+            {hectorBriefing.sources?.slice(0, 3).map((src, i) => {
+              const domain = src.url ? (() => { try { return new URL(src.url).hostname.replace('www.', ''); } catch { return src.url; } })() : null;
+              return (
+                <a
+                  key={i}
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
+                  className="text-sky-400 hover:text-sky-300 underline text-xs truncate block"
+                  title={src.url}
+                >
+                  {src.title || domain || src.url}
+                </a>
+              );
+            })}
           </div>
         )}
         <div
-          className={`relative bg-zinc-900/80 border rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all ${isDragging ? 'border-amber-400/30 border-dashed' : 'border-white/10'}`}
+          className={`relative bg-[var(--surface-2)] border rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-indigo-500/50 transition-all ${isDragging ? 'border-amber-400/30 border-dashed' : 'border-white/10'}`}
           onDragEnter={() => setIsDragging(true)}
           onDragLeave={() => setIsDragging(false)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
+          {isGenerating && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-[var(--accent-dim)] overflow-hidden rounded-t-2xl">
+              <div className="h-full bg-[var(--accent)] animate-shimmer" style={{ width: '40%' }} />
+            </div>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -1058,12 +1211,12 @@ export function ChatView({
           <div className="absolute -top-10 left-0 flex gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border rounded-t-lg text-2xs font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
+              className={`flex items-center gap-1.5 px-3 py-1.5   bg-[var(--surface-3)] border rounded-t-lg text-2xs font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
                 attachedFile?.error
                   ? 'border-red-500/30 text-red-400'
                   : attachedFile?.name
                     ? 'border-emerald-500/30 text-emerald-400'
-                    : 'border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10'
+                    : 'border-white/5 text-[var(--text-3)] hover:text-[var(--text-1)] hover:border-white/10'
               }`}
               aria-label="Attach a file to your message"
             >
@@ -1084,19 +1237,19 @@ export function ChatView({
                 handleSend();
               }
             }}
-            className={`w-full bg-transparent text-zinc-100 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
+            className={`w-full bg-transparent text-[var(--text-1)] p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
           />
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 pb-1">
               {attachedFiles.map((f, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-800 border border-white/10 text-[11px] text-zinc-300">
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-3)] border border-white/10 text-[11px] text-[var(--text-1)]">
                   {f.name}
-                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-zinc-500 hover:text-zinc-200 ml-0.5" aria-label={`Remove ${f.name}`}>×</button>
+                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-[var(--text-3)] hover:text-[var(--text-1)] ml-0.5" aria-label={`Remove ${f.name}`}>×</button>
                 </span>
               ))}
             </div>
           )}
-          <div className="mt-1 text-2xs text-zinc-500">
+          <div className="mt-1 text-2xs text-[var(--text-3)]">
             {ollamaStatus.state === 'connected' && !selectedModelMissing
               ? `Message ${settings.selectedModel || 'local model'}`
               : ollamaStatus.state !== 'connected'
@@ -1108,7 +1261,7 @@ export function ChatView({
             {isGenerating && (
               <button
                 onClick={() => abortRef.current?.abort()}
-                className="h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest bg-zinc-800 text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                className="h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest bg-[var(--surface-3)] text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                 aria-label="Abort and stop"
               >
                 <Square className="w-3.5 h-3.5" />
@@ -1120,7 +1273,7 @@ export function ChatView({
               disabled={isGenerating || !inputValue.trim()}
               className={`h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
                 isGenerating || !inputValue.trim()
-                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
+                  ? 'bg-[var(--surface-3)] text-[var(--text-4)] cursor-not-allowed opacity-50'
                   : 'bg-white text-zinc-950 hover:bg-indigo-400 hover:text-white shadow-lg'
               }`}
               aria-label="Send message"
@@ -1147,7 +1300,7 @@ export function ChatView({
               <Lightbulb className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-amber-200">{proactiveSuggestion.title}</div>
-                <div className="text-xs text-zinc-400 mt-1">{proactiveSuggestion.message}</div>
+                <div className="text-xs text-[var(--text-2)] mt-1">{proactiveSuggestion.message}</div>
                 {proactiveSuggestion.actions && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {proactiveSuggestion.actions.map((action, i) => (
@@ -1171,7 +1324,7 @@ export function ChatView({
               </div>
               <button
                 onClick={() => setProactiveSuggestion(null)}
-                className="p-1 rounded hover:bg-zinc-800 text-zinc-600 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-4)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
                 aria-label="Dismiss suggestion"
               >
                 <X className="w-3.5 h-3.5" />
@@ -1196,27 +1349,27 @@ export function ChatView({
       {showShortcutHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutHelp(false)} role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
           <div
-            className="w-full max-w-md bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-md bg-[var(--surface-0)] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-white/5">
               <div className="flex items-center gap-2">
-                <Keyboard className="w-5 h-5 text-zinc-400" />
+                <Keyboard className="w-5 h-5 text-[var(--text-2)]" />
                 <div className="text-sm font-semibold text-white">Keyboard Shortcuts</div>
               </div>
-              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50" aria-label="Close keyboard shortcuts">
+              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50" aria-label="Close keyboard shortcuts">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
               {getShortcutList().map((shortcut, i) => (
                 <div key={i} className="flex items-center justify-between py-1">
-                  <span className="text-xs text-zinc-300">{shortcut.label}</span>
-                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{shortcut.keys}</span>
+                  <span className="text-xs text-[var(--text-1)]">{shortcut.label}</span>
+                  <span className="text-[10px] font-mono text-[var(--text-3)] bg-[var(--surface-3)] px-2 py-0.5 rounded">{shortcut.keys}</span>
                 </div>
               ))}
             </div>
-            <div className="p-3 border-t border-white/5 text-[10px] text-zinc-600 text-center">
+            <div className="p-3 border-t border-white/5 text-[10px] text-[var(--text-4)] text-center">
               Press ? to toggle this help
             </div>
           </div>

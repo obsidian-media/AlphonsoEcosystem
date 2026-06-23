@@ -6,6 +6,97 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.10] - 2026-06-23 — Design System + Full UI Phases 1–5
+
+### Design Token System (Phase 1)
+- **`src/styles/tokens.css`** — complete CSS custom property system: surfaces 0–4, accent/accent-hover/accent-dim/accent-border, semantic colors (success/warning/error/info + dim variants), text scale (1–4), border/border-strong, spacing scale, radius scale, shadows, transitions
+- **`tailwind.config.js`** extended — `surface`, `accent`, `border` color keys backed by CSS tokens; `shimmer` and `border-fade` keyframes/animations added
+
+### Component Library (Phase 2) — `src/components/ui/`
+- **`Button.tsx`** — 5 variants (primary/secondary/ghost/danger/success), 3 sizes, loading spinner, icon support
+- **`Badge.tsx`** — 6 variants (default/success/warning/error/info/accent), dot support; exports `SectionHeader`, `StatusDot`, `statusColors`
+- **`Card.tsx`** — Card + CardHeader + CardContent, elevated prop, onClick support
+- **`Input.tsx`** — label, hint, error, icon slot; focus ring, error state, token-backed colors
+- **`Tabs.tsx`** — controlled/uncontrolled, token-backed active indicator
+- **`Modal.tsx`** — focus-trapped overlay, close on backdrop/Escape, size variants
+- **`EmptyState.tsx`** — icon + title + description + action slot
+- **`StatusDot.tsx`** — semantic colored dot with optional pulse
+- **`LoadingState.tsx`** — `Spinner` (sm/md/lg) + `LoadingState` wrapper
+- **`ProgressRing.tsx`** — SVG ring with percentage and label
+- **`Skeleton.tsx`** — `Skeleton`, `SkeletonList`, `SkeletonCard` shimmer components
+- **`index.ts`** — barrel export for all components
+
+### Screen Tokenization (Phase 3)
+- All hardcoded `bg-zinc-*`, `text-zinc-*`, `border-white/[n]` replaced with CSS token vars across: ChatView, ConnectorHealthPanel, MissionControlHome, ApprovalCenterPanel, and all major views
+
+### View Redesign (Phase 4)
+- **ChatView** — error message redesign with AlertCircle + retry button; new-message flash (left border fade); shimmer progress bar during generation; simplified streaming indicator
+- **WorkflowBuilderView** — horizontal pipeline layout (cards + ChevronRight arrows) instead of vertical step list; fully token-backed
+- **Sidebar** — `pendingApprovalCount` prop + animated badge on Chat nav item when approvals pending
+- **ConnectorHealthPanel** — Setup & Credentials tab surfaces ConnectorSetupPanel by default
+- **TopBar** — Bell icon with numeric badge (capped at 9+), `notificationsOpen` toggle
+
+### Panel Wiring (deferred T1 tasks, unblocked by Phase 3)
+- **`ConnectorSetupPanel`** → Settings > Connectors tab ("API Credentials" section)
+- **`SessionHistoryView`** → Settings > Memory tab
+- **`SentinelAllowlistPanel`** → RightPanel Security section
+- **`WhatsAppInboxPanel`** → OrchestratorView WhatsApp Inbound panel
+- **`OrchestratorQueueView`** → OrchestratorView collapsible "Orchestration Queue" panel
+
+### Polish (Phase 5)
+- **`Skeleton.tsx`** — shimmer loading placeholders for panels loading async data
+- `EmptyState` component adopted in NotificationCenter, DeadLetterQueueView, AgentActivityLog
+- `custom-scrollbar` CSS utility defined (was referenced in ChatView but missing)
+- `focus-ring` CSS utility for accessible focus states
+- Token conflict resolved — `index.css` no longer re-declares surface/text tokens that `tokens.css` owns
+- `Badge.jsx` consolidated into `Badge.tsx`
+
+### Tests
+- 133 test files, 1854+ tests — all passing
+- Coverage threshold maintained at ≥30%
+
+---
+
+## [2.0.9] - 2026-06-23 — Runtime Hub + Onboarding Overhaul
+
+### Added — Onboarding Overhaul
+- **`OllamaOfflineBanner.jsx`** — global amber banner shown in app shell when Ollama is not connected; "Start Ollama" button calls `startTool('ollama')` via Runtime Hub + auto-retries after 3s; "Retry" pings `runOllamaCheck`; "Runtime Hub" navigates to runtimes tab; hidden when connected
+- **OnboardingWizard Step 1 enhanced** — `checkPrerequisites()` distinguishes *not installed* vs *not running*; "Start automatically" button calls `startTool('ollama')` + `waitForTool()` poll then re-checks; "Download Ollama" link (via `open_url` Tauri command) shown when binary missing
+- **OnboardingWizard Step 3 — Telegram guide** — collapsible @BotFather instructions (4 steps), inline bot token entry saved to `alphonso_telegram_bot_token_v1`
+- **OnboardingWizard Step 3 — WhatsApp guide** — collapsible Railway deploy guide (5 steps with copy-able paths), triggered when WhatsApp option selected
+- **OnboardingWizard Step 3 — Composio option** — 4th channel card; inline 3-step setup guide with API key input; saves via `setComposioConfig({ apiKey, enabled: true })` to correct `alphonso_composio_config_v1` key
+- All external links use `invoke('open_url', { url })` Tauri command (not bare `<a>` tags which fail silently in Tauri webview)
+- **`OnboardingWizard.test.jsx`** — 14 tests covering all 4 steps, all 3 connector guides, Composio save, start-Ollama flow
+
+### Fixed — Runtime Hub (all 9 production gaps)
+
+### Fixed — AI Runtime Manager (all 9 production gaps)
+- **Gap 1 — Python detection**: `find_python()` searches PATH + `%LOCALAPPDATA%\Programs\Python\Python31x\` + `C:\Python31x\`; `runtime_check_prerequisites` command returns full status
+- **Gap 2 — Git detection**: `find_git()` searches PATH + `C:\Program Files\Git\cmd\git.exe`; `runtime_install_prerequisite` uses winget (Windows) / brew (Mac)
+- **Gap 3 — Ollama detection**: `find_ollama()` searches PATH + `%LOCALAPPDATA%\Programs\Ollama\ollama.exe` + `C:\Program Files\Ollama\` — no more silent failure
+- **Gap 4 — Real async streaming**: `run_streaming()` uses `tokio::process::Command` + `AsyncBufReadExt` line-by-line; each line emitted as `runtime://log` Tauri event; `LiveLogPanel` shows live in UI
+- **Gap 5 — Venv isolation**: `ensure_venv()` creates `<tool_dir>/venv/` before pip; all pip install/start operations use venv Python
+- **Gap 6 — AudioCraft args**: fixed from broken `-m demos.musicgen_app` to `demos/musicgen_app.py --server_name 127.0.0.1 --server_port 8765`
+- **Gap 7 — InvokeAI exe path**: `resolve_exe()` checks `venv/Scripts/invokeai-web.exe` (Windows) / `venv/bin/invokeai-web` (Linux) before PATH fallback
+- **Gap 8 — Boot status events**: `autostart_all(state, app_handle)` emits `runtime://boot_status` per tool; new `BootStatusBanner.jsx` shows fixed bottom-right overlay auto-dismissing after 6s
+- **Gap 9 — Autostart toggle**: `load_autostart_prefs()` / `save_autostart_prefs_to_disk()` persists JSON at `%APPDATA%\Alphonso\runtimes\autostart_prefs.json`; default Ollama=true rest=false; per-tool toggle in `RuntimeManagerView`
+
+### Added
+- **`BootStatusBanner.jsx`** — real-time boot overlay; status dot (starting/started/skipped/failed) per tool; auto-dismiss 6s after all done
+- **`runtime_check_prerequisites`** Tauri command — returns `PrereqStatus` with python/git/ollama found flags, paths, versions, missing list, install hint
+- **`runtime_install_prerequisite`** Tauri command — winget/brew install for python, git, ollama with streaming progress
+- **`runtime_get_autostart_prefs`** / **`runtime_save_autostart_pref`** Tauri commands — read/write per-tool autostart JSON
+- **Prereq warning panel** in `RuntimeManagerView` — amber banner with one-click install buttons when Python/Git/Ollama missing
+- **Live log panel** in `RuntimeManagerView` — `LiveLogPanel` subscribes to `runtime://log` events during install
+- **Autostart toggle** in each `ToolCard` — `ToggleRight`/`ToggleLeft` icon, optimistic update, persisted immediately
+- 5 new exports in `runtimeManagerService.js`: `checkPrerequisites`, `installPrerequisite`, `getAutostartPrefs`, `saveAutostartPref`, `onLogLine`
+
+### Tests
+- `runtimeManagerService.test.js` expanded to 17 tests (added prereq/autostart coverage)
+- Rust: 9 unit tests in `runtime_manager::tests` — all pass
+
+---
+
 ## [2.0.8] - 2026-06-22 — Sprint Next-50
 
 ### Added — Resilience Services

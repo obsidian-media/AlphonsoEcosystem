@@ -1,6 +1,6 @@
-import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
+import { durableGet, durableSet } from '../lib/durableStore';
 
 const RECEIPT_KEY = 'alphonso_orchestration_receipts_v1';
 export const ORCHESTRATION_RECEIPT_SCOPE = 'orchestration_receipts_v1';
@@ -53,7 +53,7 @@ export interface AppendReceiptInput {
 
 function readReceipts(): OrchestrationReceipt[] {
   try {
-    const raw = localStorage.getItem(RECEIPT_KEY);
+    const raw = durableGet(RECEIPT_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -63,12 +63,7 @@ function readReceipts(): OrchestrationReceipt[] {
 
 function writeReceipts(rows: OrchestrationReceipt[]): void {
   const next = rows.slice(-3000);
-  try {
-    invoke('kv_set', { key: RECEIPT_KEY, value: JSON.stringify(next) }).catch(() => {});
-  } catch {
-    // SQLite not available in browser
-  }
-  localStorage.setItem(RECEIPT_KEY, JSON.stringify(next));
+  durableSet(RECEIPT_KEY, JSON.stringify(next));
   persistScopeRows(ORCHESTRATION_RECEIPT_SCOPE, next, (row: OrchestrationReceipt) => ({
     id: row.id,
     data: row,

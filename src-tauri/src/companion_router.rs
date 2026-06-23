@@ -8,6 +8,7 @@ pub async fn route(req: JsonRpcRequest) -> JsonRpcResponse {
     "abort_command" => handle_abort_command(req.params).await,
     "approve_task" => handle_approve_task(req.params).await,
     "get_projects" => handle_get_projects().await,
+    "get_boardroom" => handle_get_boardroom().await,
     _ => Err(JsonRpcError {
       code: -32601,
       message: format!("Method not found: {}", req.method),
@@ -62,4 +63,8 @@ async fn handle_approve_task(params: Value) -> Result<Value, JsonRpcError> {
 
 async fn handle_get_projects() -> Result<Value, JsonRpcError> {
   Ok(json!({ "projects": [] }))
+}
+
+async fn handle_get_boardroom() -> Result<Value, JsonRpcError> {
+  Ok(json!({ "goals": [], "batches": [], "tasks": [] }))
 }
