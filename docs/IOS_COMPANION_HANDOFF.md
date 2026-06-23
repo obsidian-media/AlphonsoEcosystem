@@ -1,8 +1,8 @@
 # Alphonso iOS Companion — Handoff Plan
 
 **Prepared by:** Kilo CLI agent (2026-06-22)
-**Branch:** `feat/kilo-mobile-companion` (merged to `main`)
-**Status:** Phases 1–3 complete; Phases 4–5 and final release pending
+**Branch:** `feat/kilo-mobile-companion` (merged to `main`); iOS work continues on `feat/ios-companion`
+**Status:** Phases 1–2 complete; Phase 3 scaffold exists (untracked `ios/` folder); Phases 4–5 and final release pending
 **Single source of truth:** `docs/ALPHONSO_GROUND_TRUTH.md`
 
 ---
@@ -87,57 +87,23 @@ This file is the complete briefing for any agent (human or AI) picking up the iO
 
 ---
 
-### Phase 3 — iOS App Core (Not Yet Started)
+### Phase 3 — iOS App Core (Scaffold Exists, Needs Completion)
 
-**What Phase 3 means:**
-This is the first phase that requires **Xcode and a Mac**. It is pure Swift/SwiftUI work with no changes to the Rust/React desktop code (the backend is already ready).
+**Current state:** An Xcode project skeleton already exists at `ios/AlphonsoCompanion/` (untracked in git). The following files are already scaffolded:
+- `AlphonsoCompanionApp.swift` — @main entry point with environment objects
+- `ContentView.swift` — root view
+- `WebSocketService.swift` — WebSocket client stub
+- `MDNSService.swift` — mDNS browser stub
+- `ChatView.swift`, `AgentDockView.swift`, `BoardroomView.swift`, `PairingView.swift` — view stubs
+- `Models/ConnectionState.swift` — connection state enum
+- `AlphonsoCompanionTests/`, `AlphonsoCompanionUITests/` — test directories
 
-**What needs to be built:**
-
-1. **Xcode project** at `ios/AlphonsoCompanion/` in the repo root:
-   ```
-   ios/
-     AlphonsoCompanion.xcodeproj
-     AlphonsoCompanion/
-       AlphonsoCompanionApp.swift    — @main entry point
-       ContentView.swift             — tab view: Chat | Agents | Boardroom | Settings
-       Views/
-         ChatView.swift
-         AgentDockView.swift
-         BoardroomView.swift
-         SettingsView.swift
-         PairingView.swift          — mDNS scan + PIN entry
-       Services/
-         WebSocketService.swift     — WebSocket client with auth + reconnect
-         MDNSService.swift          — Bonjour browser for _alphonso._tcp.local
-         CacheService.swift         — SwiftData local persistence
-       Models/
-         Message.swift
-         AgentModel.swift
-         ConnectionState.swift
-     AlphonsoCompanionTests/
-     AlphonsoCompanionUITests/
-   ```
-
-2. **WebSocketService.swift** — core networking:
-   - `URLSessionWebSocketTask` for WebSocket
-   - Auto-reconnect with exponential backoff (1s → 30s max)
-   - Authenticate immediately on connect
-   - Send commands as JSON-RPC
-   - Parse responses and update `@Published` state
-
-3. **MDNSService.swift** — discovery:
-   - `NWBrowser` with bonjour type `_alphonso._tcp`
-   - Publish discovered desktops as `@Published` array
-
-4. **PairingView.swift** — connection flow:
-   - mDNS scan results in a List
-   - PIN entry (numeric keypad)
-   - Connect button (disabled until host selected + 6-digit PIN)
-
-5. **WebSocket protocol** (already defined in `docs/IOS_COMPANION_PLAN.md`):
-   - Client → Desktop: `send_command`, `abort_command`, `get_status`, `stream_tokens`, `approve_task`, `get_projects`, `get_boardroom`, `execute_batch`
-   - Desktop → Client: `token`, `progress`, `task_complete`, `approval_needed`, `agent_status`, `state_update`
+**What needs to happen:**
+1. Add the Xcode project to git (`ios/AlphonsoCompanion.xcodeproj`)
+2. Complete the Swift implementations (currently stubs/placeholders)
+3. Verify the app builds in Xcode (no compile errors)
+4. Test in Simulator: PairingView loads, mDNS scan runs, manual PIN entry → WebSocket auth completes
+5. Ensure all existing 1,100+ JS tests still pass
 
 ---
 
