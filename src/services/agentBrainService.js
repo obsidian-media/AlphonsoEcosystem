@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaResponse, generateOllamaStream } from '../lib/ollama';
-import { parseJsonResponse } from './joseExecutionEngineService';
+import { parseJsonResponse } from '../lib/jsonUtils';
 import { verifyCommandExecution } from './verificationService';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { timestampMs, TRUST_STATES } from './trustModel';

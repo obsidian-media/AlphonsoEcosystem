@@ -1,6 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL, normalizeEndpoint } from '../lib/ollama';
-import { runJoseCommandExecutionPipeline } from './joseExecutionEngineService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 
 const GOALS_KEY = 'alphonso_boardroom_goals_v1';
@@ -473,6 +472,7 @@ export async function executeBatch(batchId, { endpoint, zeroCostMode, onProgress
     const commandText = `${task.agent}: ${task.title} — ${task.description}${dirContext}`;
 
     try {
+      const { runJoseCommandExecutionPipeline } = await import('./joseExecutionEngineService');
       const result = await runJoseCommandExecutionPipeline({
         commandText,
         source: 'boardroom',

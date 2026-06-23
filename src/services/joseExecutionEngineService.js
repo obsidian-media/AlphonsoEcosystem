@@ -44,6 +44,7 @@ import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../l
 import { generateComfyUiImage, generateSdWebUiImage } from './connectors/connectorImageGenerators';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
+import { parseJsonResponse } from '../lib/jsonUtils';
 import { executeParallel } from './parallelExecutionService';
 import { agentCache } from './cacheService';
 
@@ -225,12 +226,7 @@ export function draftPrompt(agent, task, context = {}) {
   return `You are an AI assistant helping with: ${taskText}${skillContext}`;
 }
 
-export function parseJsonResponse(text) {
-  const trimmed = String(text || '').trim();
-  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = fenceMatch ? fenceMatch[1] : trimmed;
-  return JSON.parse(raw);
-}
+export { parseJsonResponse };
 
 export function retrieveRelevantContext(text, memoryItems = []) {
   const query = String(text || '').toLowerCase().trim();
