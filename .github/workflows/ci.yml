@@ -124,6 +124,22 @@ jobs:
           path: src-tauri/target/release/bundle/nsis/Alphonso_*_x64-setup.exe
           retention-days: 14
 
+  secrets-scan:
+    name: Secrets Scan (TruffleHog)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
   doc-freshness:
     name: Doc Count Freshness
     runs-on: ubuntu-latest
