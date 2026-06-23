@@ -11,6 +11,7 @@ import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { OllamaOfflineBanner } from './components/OllamaOfflineBanner';
 import { CoachWindow } from './components/CoachWindow';
 import { ViewLoadingState } from './components/ViewLoadingState';
 import { useAppKeyboardShortcuts } from './hooks/useAppKeyboardShortcuts';
@@ -240,6 +241,11 @@ function AppShell() {
         <Suspense fallback={null}>
           <CommandRib activeTab={activeTab} setActiveTab={switchTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} />
         </Suspense>
+        <OllamaOfflineBanner
+          ollamaStatus={ollamaStatus}
+          onRetry={runOllamaCheck}
+          onOpenRuntimes={() => switchTab('runtimes')}
+        />
         <main className="flex-1 overflow-y-auto relative bg-zinc-950/50">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
           <div className="absolute left-4 top-4 z-20">

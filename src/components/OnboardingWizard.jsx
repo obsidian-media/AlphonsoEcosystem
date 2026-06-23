@@ -1,16 +1,32 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle, Download, MessageCircle, Phone, RefreshCw, Sparkles, Zap } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Download,
+  ExternalLink,
+  Loader2,
+  MessageCircle,
+  Phone,
+  RefreshCw,
+  Sparkles,
+  Wrench,
+  Zap,
+} from 'lucide-react';
 import { checkOllama, fetchOllamaModels, normalizeEndpoint, pullOllamaModel } from '../lib/ollama';
 import { setStorage } from '../lib/appStorage';
 import { buildOllamaPreflightEvent, recordEvent as recordOllamaPreflightEvent } from '../services/eventsService';
+import { checkPrerequisites, startTool, waitForTool } from '../services/runtimeManagerService';
 
 const DEFAULT_ENDPOINT = 'http://localhost:11434';
 const PREFERRED_PRESELECT = 'llama3.2:3b';
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
+// ─── Step indicator ───────────────────────────────────────────────────────────
 
 function StepIndicator({ currentStep }) {
-  const steps = ['Check Ollama', 'Pick a model', 'Connect a channel', "You're ready"];
+  const steps = ['Check Ollama', 'Pick a model', 'Connect', "You're ready"];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((label, i) => (
@@ -35,18 +51,34 @@ function StepIndicator({ currentStep }) {
   );
 }
 
-// ─── Step 1: Check Ollama ────────────────────────────────────────────────────
+// ─── Step 1: Check Ollama (enhanced with Runtime Hub auto-start) ──────────────
 
 function CheckOllamaStep({ onNext }) {
-  const [status, setStatus] = useState('checking'); // checking | connected | not_running | no_models | error
+  const [status, setStatus] = useState('checking'); // checking | connected | not_installed | not_running | no_models | error
   const [message, setMessage] = useState('Checking Ollama...');
   const [isRetrying, setIsRetrying] = useState(false);
+  const [prereqs, setPrereqs] = useState(null);
+  const [starting, setStarting] = useState(false);
+  const [startMsg, setStartMsg] = useState(null);
   const hasMountedRef = useRef(false);
 
   const runCheck = async () => {
     setStatus('checking');
     setMessage('Checking Ollama...');
     setIsRetrying(true);
+    setStartMsg(null);
+
+    // Gap fix: check if Ollama binary is installed at all (via runtime prereqs)
+    let pq = prereqs;
+    if (!pq) {
+      try {
+        pq = await checkPrerequisites();
+        setPrereqs(pq);
+      } catch {
+        // non-fatal — continue with ollama check
+      }
+    }
+
     const correlationId = `onboarding-ollama-preflight-${Date.now()}`;
     try {
       const result = await checkOllama(DEFAULT_ENDPOINT, '');
@@ -58,11 +90,11 @@ function CheckOllamaStep({ onNext }) {
           model: modelName,
           ok: okState,
           error: okState ? null : (result.error || result.message || result.state),
-          correlationId
+          correlationId,
         });
         await recordOllamaPreflightEvent(ev);
       } catch {
-        // non-blocking — preflight event is observability, not a gate
+        // observability only — non-blocking
       }
       if (result.state === 'connected' || result.state === 'model_missing') {
         setStatus('connected');
@@ -70,25 +102,27 @@ function CheckOllamaStep({ onNext }) {
       } else if (result.state === 'no_models') {
         setStatus('no_models');
         setMessage('Ollama is running but no models are installed yet.');
+      } else if (pq && !pq.ollamaFound) {
+        setStatus('not_installed');
+        setMessage('Ollama is not installed on this machine.');
       } else {
         setStatus('not_running');
-        setMessage(result.message || 'Ollama is not running. Start it with: ollama serve');
+        setMessage(result.message || 'Ollama is not running.');
       }
     } catch {
       try {
         const ev = buildOllamaPreflightEvent({
-          endpoint: DEFAULT_ENDPOINT,
-          model: '',
-          ok: false,
-          error: 'preflight_threw',
-          correlationId
+          endpoint: DEFAULT_ENDPOINT, model: '', ok: false, error: 'preflight_threw', correlationId,
         });
         await recordOllamaPreflightEvent(ev);
-      } catch {
-        // non-blocking
+      } catch { /* non-blocking */ }
+      if (pq && !pq.ollamaFound) {
+        setStatus('not_installed');
+        setMessage('Ollama is not installed on this machine.');
+      } else {
+        setStatus('not_running');
+        setMessage('Could not reach Ollama. Make sure it is running.');
       }
-      setStatus('error');
-      setMessage('Could not reach Ollama. Make sure it is running.');
     } finally {
       setIsRetrying(false);
     }
@@ -100,39 +134,105 @@ function CheckOllamaStep({ onNext }) {
     runCheck();
   }, []);
 
+  // Gap fix: auto-start Ollama via Runtime Hub, then poll until ready
+  const handleStartOllama = async () => {
+    setStarting(true);
+    setStartMsg('Starting Ollama via Runtime Hub…');
+    try {
+      const result = await startTool('ollama');
+      if (!result.ok) {
+        setStartMsg(result.message);
+        setStarting(false);
+        return;
+      }
+      setStartMsg('Ollama starting — waiting for it to come online…');
+      const up = await waitForTool('ollama', 30_000);
+      if (up) {
+        setStartMsg(null);
+        runCheck();
+      } else {
+        setStartMsg('Ollama did not respond in 30s. Try starting it manually.');
+      }
+    } catch (e) {
+      setStartMsg(String(e));
+    } finally {
+      setStarting(false);
+    }
+  };
+
   const canProceed = status === 'connected' || status === 'no_models';
 
   const statusConfig = {
-    checking: { dot: 'bg-zinc-500 animate-pulse', text: 'text-zinc-400', border: 'border-white/[0.06] bg-zinc-900/40' },
-    connected: { dot: 'bg-emerald-400', text: 'text-emerald-300', border: 'border-emerald-500/30 bg-emerald-500/10' },
-    no_models: { dot: 'bg-amber-400', text: 'text-amber-300', border: 'border-amber-500/30 bg-amber-500/10' },
-    not_running: { dot: 'bg-red-400', text: 'text-red-300', border: 'border-red-500/30 bg-red-500/10' },
-    error: { dot: 'bg-red-400', text: 'text-red-300', border: 'border-red-500/30 bg-red-500/10' },
+    checking:     { dot: 'bg-zinc-500 animate-pulse', text: 'text-zinc-400',    border: 'border-white/[0.06] bg-zinc-900/40' },
+    connected:    { dot: 'bg-emerald-400',             text: 'text-emerald-300', border: 'border-emerald-500/30 bg-emerald-500/10' },
+    no_models:    { dot: 'bg-amber-400',               text: 'text-amber-300',   border: 'border-amber-500/30 bg-amber-500/10' },
+    not_running:  { dot: 'bg-red-400',                 text: 'text-red-300',     border: 'border-red-500/30 bg-red-500/10' },
+    not_installed:{ dot: 'bg-red-400',                 text: 'text-red-300',     border: 'border-red-500/30 bg-red-500/10' },
+    error:        { dot: 'bg-red-400',                 text: 'text-red-300',     border: 'border-red-500/30 bg-red-500/10' },
   };
   const cfg = statusConfig[status] || statusConfig.checking;
+
+  const statusLabel = {
+    checking: 'Checking…',
+    connected: 'Connected',
+    no_models: 'Running (no models)',
+    not_running: 'Not running',
+    not_installed: 'Not installed',
+    error: 'Unreachable',
+  }[status] || status;
 
   return (
     <div className="flex flex-col">
       <h2 className="text-lg font-bold text-white mb-1">Check Ollama</h2>
       <p className="text-zinc-400 text-sm mb-6">
-        Alphonso needs Ollama running locally to power AI responses.
+        Alphonso needs Ollama running locally to power all AI responses.
       </p>
 
+      {/* Status card */}
       <div className={`flex items-start gap-3 rounded-xl border px-4 py-4 mb-4 transition-all ${cfg.border}`}>
         <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${cfg.dot}`} />
         <div>
-          <div className={`text-sm font-semibold ${cfg.text}`}>
-            {status === 'checking' ? 'Checking...' : status === 'connected' ? 'Connected' : status === 'no_models' ? 'Running (no models)' : 'Not running'}
-          </div>
+          <div className={`text-sm font-semibold ${cfg.text}`}>{statusLabel}</div>
           <div className="text-xs text-zinc-400 mt-0.5">{message}</div>
+          {startMsg && <div className="text-xs text-amber-300 mt-1">{startMsg}</div>}
         </div>
       </div>
 
-      {(status === 'not_running' || status === 'error') && (
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900/60 px-4 py-3 mb-4">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Start Ollama</div>
-          <div className="font-mono text-xs bg-black/40 border border-white/5 rounded-lg px-4 py-3 text-emerald-400 select-all">
-            ollama serve
+      {/* Not installed — download prompt */}
+      {status === 'not_installed' && (
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900/60 px-4 py-3 mb-4 space-y-3">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Install Ollama</div>
+          <p className="text-xs text-zinc-400">
+            Download and run the Ollama installer, then come back and click Retry.
+          </p>
+          <a
+            href="https://ollama.com/download"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+          >
+            <ExternalLink size={11} /> Download Ollama
+          </a>
+        </div>
+      )}
+
+      {/* Not running — auto-start via Runtime Hub */}
+      {status === 'not_running' && (
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900/60 px-4 py-3 mb-4 space-y-3">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Start Ollama</div>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleStartOllama}
+              disabled={starting}
+              className="flex items-center gap-2 w-fit text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white transition-colors"
+            >
+              {starting ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />}
+              Start automatically
+            </button>
+            <div className="text-[10px] text-zinc-500">Or start manually in a terminal:</div>
+            <div className="font-mono text-xs bg-black/40 border border-white/5 rounded-lg px-4 py-2 text-emerald-400 select-all">
+              ollama serve
+            </div>
           </div>
         </div>
       )}
@@ -140,7 +240,7 @@ function CheckOllamaStep({ onNext }) {
       <div className="flex justify-between items-center mt-2">
         <button
           onClick={runCheck}
-          disabled={isRetrying}
+          disabled={isRetrying || starting}
           className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
@@ -158,7 +258,7 @@ function CheckOllamaStep({ onNext }) {
   );
 }
 
-// ─── Step 2: Pick a model ────────────────────────────────────────────────────
+// ─── Step 2: Pick a model ─────────────────────────────────────────────────────
 
 function PickModelStep({ onNext }) {
   const [models, setModels] = useState([]);
@@ -186,9 +286,7 @@ function PickModelStep({ onNext }) {
       });
   }, []);
 
-  useEffect(() => {
-    refreshModels();
-  }, [refreshModels]);
+  useEffect(() => { refreshModels(); }, [refreshModels]);
 
   const handlePullModel = async () => {
     setPulling(true);
@@ -199,7 +297,7 @@ function PickModelStep({ onNext }) {
       await pullOllamaModel({
         endpoint: DEFAULT_ENDPOINT,
         model: PREFERRED_PRESELECT,
-        onProgress: (progress) => setPullProgress(progress)
+        onProgress: (progress) => setPullProgress(progress),
       });
       setPullComplete(true);
       refreshModels();
@@ -208,10 +306,6 @@ function PickModelStep({ onNext }) {
     } finally {
       setPulling(false);
     }
-  };
-
-  const handleNext = () => {
-    if (selected) onNext(selected);
   };
 
   return (
@@ -223,8 +317,7 @@ function PickModelStep({ onNext }) {
 
       {loading && (
         <div className="flex items-center gap-2 text-xs text-zinc-400 py-4">
-          <div className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse" />
-          Loading installed models...
+          <div className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse" /> Loading installed models...
         </div>
       )}
 
@@ -238,7 +331,8 @@ function PickModelStep({ onNext }) {
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-4">
           <div className="text-xs font-semibold text-amber-300 mb-1">No models installed</div>
           <div className="text-[11px] text-zinc-400 mb-3">
-            Download the recommended model or run <code className="font-mono text-emerald-400">ollama pull {PREFERRED_PRESELECT}</code> in a terminal.
+            Download the recommended model or run{' '}
+            <code className="font-mono text-emerald-400">ollama pull {PREFERRED_PRESELECT}</code> in a terminal.
           </div>
           <button
             onClick={handlePullModel}
@@ -246,20 +340,11 @@ function PickModelStep({ onNext }) {
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-bold rounded-xl transition-colors"
           >
             {pulling ? (
-              <>
-                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Downloading...
-              </>
+              <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Downloading...</>
             ) : pullComplete ? (
-              <>
-                <CheckCircle className="w-3.5 h-3.5" />
-                Downloaded
-              </>
+              <><CheckCircle className="w-3.5 h-3.5" /> Downloaded</>
             ) : (
-              <>
-                <Download className="w-3.5 h-3.5" />
-                Download {PREFERRED_PRESELECT}
-              </>
+              <><Download className="w-3.5 h-3.5" /> Download {PREFERRED_PRESELECT}</>
             )}
           </button>
           {pulling && pullProgress && (
@@ -272,12 +357,8 @@ function PickModelStep({ onNext }) {
               )}
             </div>
           )}
-          {pullComplete && (
-            <div className="text-[11px] text-emerald-400 mt-2">Model downloaded. Refreshing list...</div>
-          )}
-          {pullError && (
-            <div className="text-[11px] text-red-400 mt-2">Download failed: {pullError}</div>
-          )}
+          {pullComplete && <div className="text-[11px] text-emerald-400 mt-2">Model downloaded. Refreshing list...</div>}
+          {pullError && <div className="text-[11px] text-red-400 mt-2">Download failed: {pullError}</div>}
         </div>
       )}
 
@@ -291,9 +372,7 @@ function PickModelStep({ onNext }) {
                 key={model.name}
                 onClick={() => setSelected(model.name)}
                 className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all ${
-                  isSelected
-                    ? 'border-indigo-500/50 bg-indigo-500/10'
-                    : 'border-white/[0.06] bg-zinc-900/60 hover:border-white/10 hover:bg-zinc-800/60'
+                  isSelected ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-white/[0.06] bg-zinc-900/60 hover:border-white/10 hover:bg-zinc-800/60'
                 }`}
               >
                 <div className="flex flex-col gap-0.5">
@@ -305,11 +384,7 @@ function PickModelStep({ onNext }) {
                       </span>
                     )}
                   </div>
-                  {model.size > 0 && (
-                    <span className="text-[11px] text-zinc-500">
-                      {(model.size / 1e9).toFixed(1)} GB
-                    </span>
-                  )}
+                  {model.size > 0 && <span className="text-[11px] text-zinc-500">{(model.size / 1e9).toFixed(1)} GB</span>}
                 </div>
                 {isSelected && <CheckCircle className="w-4 h-4 text-indigo-400 shrink-0" />}
               </button>
@@ -320,7 +395,7 @@ function PickModelStep({ onNext }) {
 
       <div className="flex justify-end mt-2">
         <button
-          onClick={handleNext}
+          onClick={() => { if (selected) onNext(selected); }}
           disabled={!selected}
           className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-bold rounded-xl transition-colors"
         >
@@ -331,7 +406,7 @@ function PickModelStep({ onNext }) {
   );
 }
 
-// ─── Step 3: Connect a channel ───────────────────────────────────────────────
+// ─── Step 3: Connect (channel + Composio) ────────────────────────────────────
 
 const CHANNEL_OPTIONS = [
   {
@@ -353,15 +428,115 @@ const CHANNEL_OPTIONS = [
     iconBorder: 'border-emerald-500/20',
   },
   {
+    id: 'composio',
+    name: 'Composio (100+ tools)',
+    description: 'Connect GitHub, Notion, Slack, Gmail, and 100+ apps via Composio.',
+    Icon: Wrench,
+    iconColor: 'text-violet-400',
+    iconBg: 'bg-violet-500/10',
+    iconBorder: 'border-violet-500/20',
+  },
+  {
     id: 'none',
     name: 'Skip for now',
-    description: 'You can configure channels later in Settings.',
+    description: 'Configure channels later in Settings → Connectors.',
     Icon: ArrowRight,
     iconColor: 'text-zinc-400',
     iconBg: 'bg-zinc-800',
     iconBorder: 'border-white/[0.06]',
   },
 ];
+
+// WhatsApp Railway deploy guide (inline, collapsible)
+function WhatsAppDeployGuide() {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(null);
+
+  const copy = (text, key) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/5 transition-colors"
+      >
+        <span>How to set up WhatsApp Cloud</span>
+        {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3 text-xs text-zinc-400">
+          <ol className="space-y-2 list-none">
+            <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">1.</span> Create a Meta App at <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="text-emerald-400 underline">developers.facebook.com</a> → Add WhatsApp product.</li>
+            <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">2.</span> Deploy the Alphonso gateway to Railway (one-click from your repo):</li>
+          </ol>
+          <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-lg px-3 py-2 font-mono text-emerald-400">
+            <span className="flex-1 text-[10px] select-all">gateway/whatsapp-cloud/</span>
+            <button onClick={() => copy('gateway/whatsapp-cloud/', 'dir')} className="text-zinc-500 hover:text-white transition-colors">
+              {copied === 'dir' ? <CheckCircle size={11} className="text-emerald-400" /> : <Copy size={11} />}
+            </button>
+          </div>
+          <ol className="space-y-2 list-none">
+            <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">3.</span> Set Railway env vars: <code className="text-emerald-400">WHATSAPP_VERIFY_TOKEN</code>, <code className="text-emerald-400">WHATSAPP_APP_SECRET</code>, <code className="text-emerald-400">WHATSAPP_ALLOWED_NUMBERS</code>.</li>
+            <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">4.</span> Add your Railway URL as the Meta webhook URL. Verify token must match.</li>
+            <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">5.</span> In Alphonso Settings → Connectors → WhatsApp: enter your Access Token, Phone Number ID, Verify Token, and Gateway Drain URL.</li>
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Composio setup guide (inline)
+function ComposioSetupGuide() {
+  const [apiKey, setApiKey] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (apiKey.trim()) {
+      try {
+        localStorage.setItem('alphonso_composio_api_key_v1', apiKey.trim());
+      } catch { /* ignore */ }
+      setSaved(true);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 space-y-3">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Composio Setup</div>
+      <ol className="space-y-1.5 text-xs text-zinc-400 list-none">
+        <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">1.</span> Sign up at <a href="https://composio.dev" target="_blank" rel="noreferrer" className="text-violet-400 underline">composio.dev</a> (free tier available).</li>
+        <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">2.</span> Copy your API key from Dashboard → Settings.</li>
+        <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">3.</span> Paste it below — you can also set it later in Settings → Composio.</li>
+      </ol>
+      {saved ? (
+        <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+          <CheckCircle size={12} /> API key saved. Enable toolkits in Settings → Composio.
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="password"
+            placeholder="composio_api_key_…"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            className="flex-1 min-w-0 rounded-lg bg-zinc-900 border border-white/10 text-xs px-3 py-1.5 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-violet-500/50"
+          />
+          <button
+            onClick={handleSave}
+            disabled={!apiKey.trim()}
+            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-bold transition-colors"
+          >
+            Save
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ConnectChannelStep({ onNext }) {
   const [selected, setSelected] = useState(null);
@@ -374,33 +549,38 @@ function ConnectChannelStep({ onNext }) {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-lg font-bold text-white mb-1">Connect a channel</h2>
+      <h2 className="text-lg font-bold text-white mb-1">Connect</h2>
       <p className="text-zinc-400 text-sm mb-6">
-        Choose a messaging channel to connect. No API keys needed right now — just pick your preference.
+        Pick a channel or toolkit to extend Alphonso's reach. You can configure all of these later in Settings.
       </p>
 
-      <div className="space-y-2 mb-6">
+      <div className="space-y-2 mb-4">
         {CHANNEL_OPTIONS.map(({ id, name, description, Icon, iconColor, iconBg, iconBorder }) => {
           const isSelected = selected === id;
           return (
-            <button
-              key={id}
-              onClick={() => setSelected(id)}
-              className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 text-left transition-all ${
-                isSelected
-                  ? 'border-emerald-500/50 bg-emerald-500/10 ring-1 ring-emerald-500/20'
-                  : 'border-white/[0.06] bg-zinc-900/60 hover:border-white/10 hover:bg-zinc-800/60'
-              }`}
-            >
-              <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconBg} ${iconBorder}`}>
-                <Icon className={`w-4 h-4 ${iconColor}`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-zinc-100">{name}</div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">{description}</div>
-              </div>
-              {isSelected && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
-            </button>
+            <div key={id}>
+              <button
+                onClick={() => setSelected(id)}
+                className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 text-left transition-all ${
+                  isSelected
+                    ? 'border-emerald-500/50 bg-emerald-500/10 ring-1 ring-emerald-500/20'
+                    : 'border-white/[0.06] bg-zinc-900/60 hover:border-white/10 hover:bg-zinc-800/60'
+                }`}
+              >
+                <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconBg} ${iconBorder}`}>
+                  <Icon className={`w-4 h-4 ${iconColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-zinc-100">{name}</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">{description}</div>
+                </div>
+                {isSelected && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
+              </button>
+
+              {/* Inline expanded guides when selected */}
+              {isSelected && id === 'whatsapp' && <WhatsAppDeployGuide />}
+              {isSelected && id === 'composio' && <ComposioSetupGuide />}
+            </div>
           );
         })}
       </div>
@@ -447,20 +627,11 @@ function ReadyStep({ selectedModel, onFinish }) {
   );
 }
 
-// ─── Root wizard ─────────────────────────────────────────────────────────────
+// ─── Root wizard ──────────────────────────────────────────────────────────────
 
 export function OnboardingWizard({ onComplete }) {
   const [step, setStep] = useState(0);
   const [selectedModel, setSelectedModel] = useState('');
-
-  const handleOllamaNext = () => setStep(1);
-
-  const handleModelNext = (model) => {
-    setSelectedModel(model);
-    setStep(2);
-  };
-
-  const handleConnectorNext = () => setStep(3);
 
   const handleFinish = () => {
     setStorage('alphonso_onboarding_complete_v1', true);
@@ -485,9 +656,9 @@ export function OnboardingWizard({ onComplete }) {
 
           <StepIndicator currentStep={step} />
 
-          {step === 0 && <CheckOllamaStep onNext={handleOllamaNext} />}
-          {step === 1 && <PickModelStep onNext={handleModelNext} />}
-          {step === 2 && <ConnectChannelStep onNext={handleConnectorNext} />}
+          {step === 0 && <CheckOllamaStep onNext={() => setStep(1)} />}
+          {step === 1 && <PickModelStep onNext={(model) => { setSelectedModel(model); setStep(2); }} />}
+          {step === 2 && <ConnectChannelStep onNext={() => setStep(3)} />}
           {step === 3 && <ReadyStep selectedModel={selectedModel} onFinish={handleFinish} />}
         </div>
         <div className="mt-4 text-center text-[10px] text-zinc-600">
