@@ -47,13 +47,13 @@ function EchoTimeline() {
 
   const tierConfig: TierConfigMap = {
     permanent: { label: 'Permanent', color: 'emerald', icon: '♾' },
-    standard_180d: { label: '180 days', color: 'indigo', icon: '📅' },
-    ephemeral_7d: { label: '7 days', color: 'amber', icon: '⏳' },
+    standard_180d: { label: '180 days', color: 'info', icon: '📅' },
+    ephemeral_7d: { label: '7 days', color: 'warning', icon: '⏳' },
   };
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-8 text-zinc-600 text-xs">
+      <div className="text-center py-8 text-[var(--text-4)] text-xs">
         No Echo-preserved memories yet. Echo synthesizes and classifies memories after agent activity.
       </div>
     );
@@ -61,7 +61,7 @@ function EchoTimeline() {
 
   return (
     <div className="space-y-2 max-h-64 overflow-y-auto">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Echo Memory Timeline ({items.length})</p>
+      <p className="section-label mb-2">Echo Memory Timeline ({items.length})</p>
       {items.map((m, i) => {
         const tier = m.retentionTier || 'standard_180d';
         const tc = tierConfig[tier] || tierConfig['standard_180d'];
@@ -69,19 +69,19 @@ function EchoTimeline() {
         const createdAt = m.timestampMs || m.createdAtMs || 0;
         const expiresIn = expiryMs ? Math.max(0, Math.round((createdAt + expiryMs - Date.now()) / (24 * 3600 * 1000))) : null;
         return (
-          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-zinc-900/40 border border-white/[0.04]">
+          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
             <span className="text-base shrink-0">{tc.icon}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                  tc.color === 'emerald' ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300' :
-                  tc.color === 'indigo' ? 'bg-indigo-500/10 border-indigo-400/20 text-indigo-300' :
-                  'bg-amber-500/10 border-amber-400/20 text-amber-300'
+                  tc.color === 'success' ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' :
+                  tc.color === 'info' ? 'bg-[var(--info-dim)] border-[var(--info)]/20 text-[var(--info)]' :
+                  'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]'
                 }`}>{tc.label}</span>
-                {expiresIn !== null && <span className="text-[10px] text-zinc-600">expires in {expiresIn}d</span>}
+                {expiresIn !== null && <span className="text-[10px] text-[var(--text-4)]">expires in {expiresIn}d</span>}
               </div>
-              <p className="text-xs text-zinc-300 truncate">{m.title || (typeof m.content === 'string' ? m.content.slice(0, 80) : 'Untitled')}</p>
-              {m.category && <p className="text-[10px] text-zinc-600">{m.category}</p>}
+              <p className="text-xs text-[var(--text-2)] truncate">{m.title || (typeof m.content === 'string' ? m.content.slice(0, 80) : 'Untitled')}</p>
+              {m.category && <p className="text-[10px] text-[var(--text-4)]">{m.category}</p>}
             </div>
           </div>
         );
@@ -106,8 +106,8 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-zinc-300">Active Inference Model</label>
-        <span className="text-[11px] text-zinc-500">{models.length} installed model{models.length === 1 ? '' : 's'}</span>
+        <label className="text-xs font-semibold text-[var(--text-2)]">Active Inference Model</label>
+        <span className="text-[11px] text-[var(--text-3)]">{models.length} installed model{models.length === 1 ? '' : 's'}</span>
       </div>
       {models.length === 0 ? (
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
@@ -118,7 +118,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
           <select
             value={models.some((model) => model.name === selectedModel) ? selectedModel : ''}
             onChange={(event) => onSelectModel(event.target.value)}
-            className="w-full appearance-none bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            className="w-full appearance-none bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
           >
             {selectedModelMissing && <option value="">Model not found: {selectedModel}</option>}
             {models.map((model) => (
@@ -127,7 +127,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-3)]" />
         </div>
       )}
       {selectedModelMissing && (

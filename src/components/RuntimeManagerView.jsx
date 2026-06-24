@@ -2,18 +2,26 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
+  Bot,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Circle,
+  Cpu,
   Download,
   ExternalLink,
+  Image,
+  Layers,
   Loader2,
+  Mic,
+  Music,
   Play,
   RefreshCw,
+  Sparkles,
   Square,
   ToggleLeft,
   ToggleRight,
+  Wand2,
 } from 'lucide-react';
 import {
   checkPrerequisites,
@@ -30,53 +38,53 @@ import {
 
 const TOOL_META = {
   ollama: {
-    icon: '🦙',
+    icon: Bot,
     category: 'LLM',
     docsUrl: 'https://ollama.com',
-    color: 'text-violet-400',
-    bg: 'bg-violet-500/10 border-violet-500/20',
+    color: 'text-[var(--agent-alphonso)]',
+    bg: 'bg-[var(--accent-muted)] border-[var(--accent-border)]',
   },
   comfyui: {
-    icon: '🎨',
+    icon: Wand2,
     category: 'Image / Video',
     docsUrl: 'https://github.com/comfyanonymous/ComfyUI',
-    color: 'text-sky-400',
-    bg: 'bg-sky-500/10 border-sky-500/20',
+    color: 'text-[var(--agent-echo)]',
+    bg: 'bg-[var(--agent-echo-glow)] border-[var(--border)]',
   },
   automatic1111: {
-    icon: '🖼️',
+    icon: Image,
     category: 'Image',
     docsUrl: 'https://github.com/AUTOMATIC1111/stable-diffusion-webui',
-    color: 'text-pink-400',
-    bg: 'bg-pink-500/10 border-pink-500/20',
+    color: 'text-[var(--agent-miya)]',
+    bg: 'bg-[var(--agent-miya-glow)] border-[var(--border)]',
   },
   fooocus: {
-    icon: '✨',
+    icon: Sparkles,
     category: 'Image',
     docsUrl: 'https://github.com/lllyasviel/Fooocus',
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10 border-amber-500/20',
+    color: 'text-[var(--agent-jose)]',
+    bg: 'bg-[var(--agent-jose-glow)] border-[var(--border)]',
   },
   invokeai: {
-    icon: '🔮',
+    icon: Layers,
     category: 'Image',
     docsUrl: 'https://github.com/invoke-ai/InvokeAI',
-    color: 'text-indigo-400',
-    bg: 'bg-indigo-500/10 border-indigo-500/20',
+    color: 'text-[var(--agent-hector)]',
+    bg: 'bg-[var(--agent-hector-glow)] border-[var(--border)]',
   },
   whisper: {
-    icon: '🎤',
+    icon: Mic,
     category: 'Audio',
     docsUrl: 'https://github.com/openai/whisper',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10 border-emerald-500/20',
+    color: 'text-[var(--agent-maria)]',
+    bg: 'bg-[var(--agent-maria-glow)] border-[var(--border)]',
   },
   audiocraft: {
-    icon: '🎵',
+    icon: Music,
     category: 'Audio',
     docsUrl: 'https://github.com/facebookresearch/audiocraft',
-    color: 'text-orange-400',
-    bg: 'bg-orange-500/10 border-orange-500/20',
+    color: 'text-[var(--agent-marcus)]',
+    bg: 'bg-[var(--agent-marcus-glow)] border-[var(--border)]',
   },
 };
 
@@ -203,7 +211,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xl">{meta.icon || '⚙️'}</span>
+          {(() => { const ToolIcon = meta.icon ?? Cpu; return <ToolIcon className={`w-5 h-5 ${meta.color || 'text-[var(--text-3)]'}`} />; })()}
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`font-semibold text-sm ${meta.color || 'text-white'}`}>
