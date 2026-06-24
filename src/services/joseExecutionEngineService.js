@@ -1162,34 +1162,49 @@ export async function runJoseCommandExecutionPipeline({
   onToken,
   conversationHistory
 }) {
-  // Creative intent routing — detect image/video/audio requests early
+  // Creative intent routing — detect image/video/audio and dispatch to running Runtime Hub tool
   const creativeIntent = detectCreativeIntent(commandText);
-  if (creativeIntent) {
+  if (creativeIntent === 'image_generation') {
     const routing = await routeToCreativeTool(creativeIntent);
-    if (routing && !routing.ok) {
+    if (routing?.ok) {
+      const prompt = commandText;
+      let imageResult = null;
+      if (routing.tool === 'comfyui') {
+        imageResult = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: 'http://127.0.0.1:8188' });
+      } else {
+        // automatic1111, fooocus, invokeai all expose SD WebUI-compatible API
+        imageResult = await generateSdWebUiImage({ prompt, negativePrompt: 'blurry, low quality', width: 512, height: 512, steps: 20, cfgScale: 7 });
+      }
+      onProgress?.({ stage: 'creative_image_done', tool: routing.tool, result: imageResult });
+      return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, creativeResult: imageResult, command: null };
+    } else if (routing && !routing.ok) {
       onProgress?.({ stage: 'creative_routing_no_tool', intent: creativeIntent, error: routing.error });
+      return { ok: false, reason: routing.error, needsRuntime: true, command: null };
     }
-    // Note: if routing.ok, the tool name is in routing.tool — downstream connectors handle the call
-    // via existing generateComfyUiImage / generateSdWebUiImage paths in the pipeline
   }
 
-  // Workflow chat invocation — "run workflow [name]" or command matches workflow name
+  // Workflow chat invocation — match "run/start/execute workflow [name]" or just command containing workflow name
   const workflows = listWorkflows();
+  const lowerCommand = commandText.toLowerCase();
+  const hasWorkflowKeyword = /\b(run|start|execute|trigger)\b.{0,20}\bworkflow\b/i.test(commandText);
   const workflowMatch = workflows.find(w =>
-    commandText.toLowerCase().includes(w.name.toLowerCase()) &&
-    /run\s+workflow|start\s+workflow|execute\s+workflow/i.test(commandText)
+    w.name && lowerCommand.includes(w.name.toLowerCase()) &&
+    (hasWorkflowKeyword || lowerCommand.includes('workflow'))
   );
   if (workflowMatch) {
     const wfResult = await runVisualWorkflow(workflowMatch.id, { trigger: 'chat', command: commandText });
     onProgress?.({ stage: 'workflow_started', workflowId: workflowMatch.id, name: workflowMatch.name, result: wfResult });
+    return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, workflowResult: wfResult, command: null };
   }
 
-  // Coding agent shortcut — route code-related requests to Claude coding agent
-  if (isCodingRequest(commandText)) {
+  // Coding agent — only route if Claude connector is configured; return early with response
+  if (isCodingRequest(commandText) && !creativeIntent) {
     const codingResult = await runCodingAgent(commandText);
     if (codingResult?.ok) {
       onProgress?.({ stage: 'coding_agent_response', content: codingResult.content });
+      return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, codingResult, command: null };
     }
+    // If coding agent fails (e.g. Claude not configured), fall through to normal pipeline
   }
 
   const memoryItems = listMemoryItems();

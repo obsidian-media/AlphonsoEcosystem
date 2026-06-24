@@ -15,7 +15,7 @@ export function isCodingRequest(commandText) {
 export async function runCodingAgent(task, options = {}) {
   try {
     const response = await sendClaudeMessage(task, {
-      systemPrompt: CODING_SYSTEM_PROMPT,
+      system: CODING_SYSTEM_PROMPT,
       ...options,
     });
     if (response?.ok && response.content) {
