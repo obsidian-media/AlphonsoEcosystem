@@ -1037,7 +1037,103 @@ export function ChatView({
                   </button>
                 </div>
               )}
-            </div>
+            {/* ── Inline Jose pipeline results — everything in one place in the chat ── */}
+            {isLastAssistantMessage && !isGenerating && pipelineResult && (
+              <div className="w-full mt-2">
+                <PipelineResultCard
+                  result={pipelineResult}
+                  commandText={pipelineCommandText}
+                  outputFolder={settings.outputFolder as string || ''}
+                  onRetryAgent={(receipt) => {
+                    setMessages((current) => [...current, { id: nextMsgId(), role: 'user', content: `/jose retry ${receipt.agent} for: ${pipelineCommandText}` }]);
+                  }}
+                />
+              </div>
+            )}
+            {isLastAssistantMessage && executionReceipts.length > 0 && !isGenerating && !pipelineResult && (
+              <div className="w-full mt-2 border border-[var(--border)] rounded-xl bg-[var(--surface-0)] p-3 space-y-2">
+                <div className="text-2xs font-bold uppercase tracking-widest text-[var(--text-3)]">
+                  Execution Receipts ({executionReceipts.length})
+                </div>
+                {executionReceipts.map((receipt) => {
+                  const RECEIPT_STATUS_LABELS: Record<string, string> = { reported_to_jose: 'Reported', executed: 'Done', pending_approval: 'Approval', dead_letter: 'Failed', failed: 'Failed' };
+                  const statusLabel = RECEIPT_STATUS_LABELS[receipt.status as string] ?? (receipt.status as string);
+                  return (
+                    <div key={receipt.id as string} className="flex items-center gap-2 text-xs">
+                      <span className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase tracking-widest ${receipt.status === 'reported_to_jose' || receipt.status === 'executed' ? 'bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success)]/20' : receipt.status === 'pending_approval' ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning)]/20' : receipt.status === 'dead_letter' || receipt.status === 'failed' ? 'bg-[var(--error-dim)] text-[var(--error)] border border-[var(--error)]/20' : 'bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]'}`}>{statusLabel}</span>
+                      <span className="text-[var(--text-1)] font-medium">{receipt.agent as string}</span>
+                      <span className="text-[var(--text-3)] truncate">{(receipt.actionType || receipt.eventType) as string}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {isLastAssistantMessage && pendingApprovals.length > 0 && !isGenerating && (
+              <div className="w-full mt-2">
+                <ApprovalPanel
+                  pendingApprovals={pendingApprovals}
+                  commandId={approvalCommandId}
+                  onAllResolved={async (cmdId, results) => {
+                    if (approvalTimeoutRef.current) {
+                      clearTimeout(approvalTimeoutRef.current);
+                      approvalTimeoutRef.current = null;
+                    }
+                    const approvedIds = Object.entries(results).filter(([, s]) => s === 'approved').map(([id]) => id);
+                    const denied = Object.values(results).filter((s) => s === 'rejected').length;
+                    setPendingApprovals([]);
+                    setApprovalCommandId(null);
+                    if (approvedIds.length === 0) {
+                      setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: `All ${denied} task${denied !== 1 ? 's' : ''} denied. Nothing was executed.` }]);
+                      return;
+                    }
+                    setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: `✅ ${approvedIds.length} task${approvedIds.length !== 1 ? 's' : ''} approved${denied > 0 ? `, ${denied} denied` : ''}. Running now...` }]);
+                    setIsGenerating(true);
+                    onJoseExecutionState?.('thinking', 'Running approved tasks...');
+                    try {
+                      const execResult = await executeApprovedPackets(approvedIds, {
+                        endpoint: settings?.endpoint,
+                        conversationHistory: messages.slice(-20).filter((m) => !m.isError && m.role && m.content).map((m) => ({ role: m.role, content: m.content })),
+                        onProgress: (progress) => { setLiveProgress(progress); },
+                        onToken: (tokenData) => {
+                          if (tokenData?.token) {
+                            setMessages((current) => {
+                              const last = current[current.length - 1];
+                              if (last?.role === 'assistant' && (last as unknown as { streaming?: boolean }).streaming) {
+                                return [...current.slice(0, -1), { ...last, content: (last.content as string) + tokenData.token }];
+                              }
+                              return [...current, { id: nextMsgId(), role: 'assistant', content: tokenData.token, streaming: true }];
+                            });
+                          }
+                        }
+                      });
+                      setMessages((current) => current.map((m) => (m as unknown as { streaming?: boolean }).streaming ? { ...m, streaming: false } : m));
+                      setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: (execResult as unknown as { summary?: string }).summary || 'Approved tasks completed.' }]);
+                      onJoseExecutionState?.('task_complete', 'Approved tasks completed.');
+                    } catch (err) {
+                      setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: `Error running approved tasks: ${(err as Error)?.message || String(err)}`, isError: true }]);
+                    } finally {
+                      setIsGenerating(false);
+                      setLiveProgress(null);
+                      onTaskComplete();
+                    }
+                  }}
+                />
+              </div>
+            )}
+            {isLastAssistantMessage && novaInsight && !isGenerating && (
+              <div className="w-full mt-2 rounded-2xl border border-[var(--agent-nova-glow)] bg-[var(--surface-2)] p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                    <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-widest">Nova Insight</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.score as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' : (novaInsight.score as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]' : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'}`}>Score {novaInsight.score as number}/100</span>
+                  </div>
+                  <button onClick={() => setNovaInsight(null)} className="text-[var(--text-4)] hover:text-[var(--text-2)] rounded"><X className="w-3.5 h-3.5" /></button>
+                </div>
+                {novaInsight.recommendation && <p className="text-xs text-[var(--text-1)] leading-relaxed">{novaInsight.recommendation as string}</p>}
+              </div>
+            )}
+          </div>
           </motion.div>
           );
         })}
@@ -1053,52 +1149,6 @@ export function ChatView({
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:0ms]" />
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:150ms]" />
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:300ms]" />
-            </div>
-          </div>
-        )}
-
-        {pipelineResult && !isGenerating && (
-          <div className="flex gap-4 max-w-3xl mx-auto w-full">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-[var(--accent)]" />
-            </div>
-            <div className="flex-1">
-              <PipelineResultCard
-                result={pipelineResult}
-                commandText={pipelineCommandText}
-                outputFolder={settings.outputFolder || ''}
-                onRetryAgent={(receipt) => {
-                  setMessages((current) => [...current, {
-                    id: nextMsgId(),
-                    role: 'user',
-                    content: `/jose retry ${receipt.agent} for: ${pipelineCommandText}`
-                  }]);
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {novaInsight && !isGenerating && (
-          <div className="mx-auto w-full max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="rounded-2xl border border-[var(--agent-nova-glow)] bg-[var(--surface-2)] p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
-                  <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-widest">Nova Insight</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    (novaInsight.score as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' :
-                    (novaInsight.score as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]' :
-                    'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'
-                  }`}>Score {novaInsight.score as number}/100</span>
-                </div>
-                <button onClick={() => setNovaInsight(null)} className="text-[var(--text-4)] hover:text-[var(--text-2)] rounded">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              {novaInsight.recommendation && (
-                <p className="text-xs text-[var(--text-1)] leading-relaxed">{novaInsight.recommendation}</p>
-              )}
             </div>
           </div>
         )}
@@ -1119,134 +1169,6 @@ export function ChatView({
                   {!['wave_start', 'executed', 'generating_images', 'approval_required'].includes(liveProgress.stage) && 'Processing...'}
                 </span>
               </div>
-            </div>
-          </div>
-        )}
-
-        {pendingApprovals.length > 0 && !isGenerating && (
-          <div className={`flex gap-4 max-w-3xl mx-auto w-full ${compactChat ? '' : ''}`}>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="flex-1">
-              <ApprovalPanel
-                pendingApprovals={pendingApprovals}
-                commandId={approvalCommandId}
-                onAllResolved={async (cmdId, results) => {
-                  if (approvalTimeoutRef.current) {
-                    clearTimeout(approvalTimeoutRef.current);
-                    approvalTimeoutRef.current = null;
-                  }
-                  const approvedIds = Object.entries(results).filter(([, s]) => s === 'approved').map(([id]) => id);
-                  const denied = Object.values(results).filter((s) => s === 'rejected').length;
-                  setPendingApprovals([]);
-                  setApprovalCommandId(null);
-
-                  if (approvedIds.length === 0) {
-                    setMessages((current) => [...current, {
-                      id: nextMsgId(),
-                      role: 'assistant',
-                      content: `All ${denied} task${denied !== 1 ? 's' : ''} denied. Nothing was executed.`
-                    }]);
-                    return;
-                  }
-
-                  setMessages((current) => [...current, {
-                    id: nextMsgId(),
-                    role: 'assistant',
-                    content: `✅ ${approvedIds.length} task${approvedIds.length !== 1 ? 's' : ''} approved${denied > 0 ? `, ${denied} denied` : ''}. Running now...`
-                  }]);
-                  setIsGenerating(true);
-                  onJoseExecutionState?.('thinking', 'Running approved tasks...');
-
-                  try {
-                    const execResult = await executeApprovedPackets(approvedIds, {
-                      endpoint: settings?.endpoint,
-                      conversationHistory,
-                      onProgress: (progress) => {
-                        setLiveProgress(progress);
-                      },
-                      onToken: (tokenData) => {
-                        if (tokenData?.token) {
-                          setMessages((current) => {
-                            const last = current[current.length - 1];
-                            if (last?.role === 'assistant' && last?.streaming) {
-                              return [...current.slice(0, -1), { ...last, content: last.content + tokenData.token }];
-                            }
-                            return [...current, { id: nextMsgId(), role: 'assistant', content: tokenData.token, streaming: true }];
-                          });
-                        }
-                      }
-                    });
-                    // Close any open streaming message
-                    setMessages((current) => current.map((m) => m.streaming ? { ...m, streaming: false } : m));
-                    setMessages((current) => [...current, {
-                      id: nextMsgId(),
-                      role: 'assistant',
-                      content: execResult.summary || 'Approved tasks completed.'
-                    }]);
-                    onJoseExecutionState?.('task_complete', 'Approved tasks completed.');
-                  } catch (err) {
-                    setMessages((current) => [...current, {
-                      id: nextMsgId(),
-                      role: 'assistant',
-                      content: `Error running approved tasks: ${err?.message || String(err)}`,
-                      isError: true
-                    }]);
-                  } finally {
-                    setIsGenerating(false);
-                    setLiveProgress(null);
-                    onTaskComplete();
-                  }
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {executionReceipts.length > 0 && !isGenerating && (
-          <div className="flex gap-4 max-w-3xl mx-auto w-full">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-[var(--accent)]" />
-            </div>
-            <div className="flex-1 border border-[var(--border)] rounded-xl bg-[var(--surface-0)] p-3 space-y-2">
-              <div className="text-2xs font-bold uppercase tracking-widest text-[var(--text-3)]">
-                Execution Receipts ({executionReceipts.length})
-              </div>
-              {executionReceipts.map((receipt) => {
-                const RECEIPT_STATUS_LABELS: Record<string, string> = {
-                  reported_to_jose: 'Reported',
-                  executed: 'Done',
-                  pending_approval: 'Approval',
-                  dead_letter: 'Failed',
-                  failed: 'Failed',
-                };
-                const statusLabel = RECEIPT_STATUS_LABELS[receipt.status as string] ?? (receipt.status as string);
-                return (
-                <div key={receipt.id as string} className="flex items-center gap-2 text-xs">
-                  <span className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase tracking-widest ${
-                    receipt.status === 'reported_to_jose' || receipt.status === 'executed'
-                      ? 'bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success)]/20'
-                      : receipt.status === 'pending_approval'
-                        ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning)]/20'
-                        : receipt.status === 'dead_letter' || receipt.status === 'failed'
-                          ? 'bg-[var(--error-dim)] text-[var(--error)] border border-[var(--error)]/20'
-                          : 'bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]'
-                  }`}>
-                    {statusLabel}
-                  </span>
-                  <span className="text-[var(--text-1)] font-medium">{receipt.agent}</span>
-                  <span className="text-[var(--text-3)] truncate">{receipt.actionType || receipt.eventType}</span>
-                  {receipt.riskLevel && receipt.riskLevel !== 'low' && (
-                    <span className={`px-1 py-0.5 rounded text-2xs font-bold uppercase ${
-                      receipt.riskLevel === 'high'
-                        ? 'bg-[var(--error-dim)] text-[var(--error)]'
-                        : 'bg-[var(--warning-dim)] text-[var(--warning)]'
-                    }`}>{receipt.riskLevel as string}</span>
-                  )}
-                </div>
-                );
-              })}
             </div>
           </div>
         )}
