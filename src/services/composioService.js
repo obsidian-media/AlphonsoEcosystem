@@ -186,7 +186,7 @@ export async function executeViaComposio(commandText, agentName, options = {}) {
 
   // Ask LLM which tool to use
   const { generateOllamaResponse } = await import('../lib/ollama');
-  const { parseJsonResponse } = await import('./joseExecutionEngineService');
+  const { parseJsonResponse } = await import('../lib/jsonUtils');
   const { getModelForTask } = await import('./modelSelectionService');
 
   const prompt = [
