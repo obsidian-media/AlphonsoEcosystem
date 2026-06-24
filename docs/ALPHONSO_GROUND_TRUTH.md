@@ -1,6 +1,6 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
 **Last verified:** 2026-06-23 — v2.1.0 Stability, Performance & Test Coverage sprint  
-**Verified by:** Claude Code session (141 test files, 1908 tests passing, cargo clippy clean)  
+**Verified by:** Claude Code session (144 test files, 1930 tests passing, cargo clippy clean)  
 **Version:** 2.1.0 (Boot TDZ crashes fixed; ChatView windowing + profiler; E2E expanded; 170+ new tests; plugin-react-oxc; TruffleHog CI; 5 more TSX migrations)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
@@ -146,7 +146,7 @@ Key services that past audits missed or underestimated:
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-22 Sprint Next-50, all passing):**
-- 141 test files, 1908+ tests passing
+- 144 test files, 1930+ tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
 ```
 accBridgeService.test.js
@@ -277,7 +277,7 @@ telegramBrowserConnector.test.js     ← added Sprint Next-50 D3 (19 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- Coverage is at ~38%+ (threshold raised to 35%) — next staged target is 40%
+- Coverage is at ~38%+ (threshold raised to 45%) — actual target 45% (raised this sprint)
 - Component test coverage ~12%; 8 new service test files added in Sprint Next-50
 - Run `npm run test:coverage` to see current state
 
@@ -705,7 +705,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-23 — v2.1.0: Stability, Performance & Test Coverage sprint. Boot TDZ crashes fixed (two separate issues). ChatView message windowing (150 items), re-render O(n)→O(1) fix, React.Profiler in dev. E2E expanded: chat flow, workflow builder, connector health. 141 test files, 1908+ tests passing. Coverage threshold 35%+ (actual ~38%+). Source maps hidden. plugin-react-oxc replacing plugin-react (Vite 8/rolldown). TruffleHog secrets scan in CI. 15 TSX components. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-23 — v2.1.0: Stability, Performance & Test Coverage sprint. Boot TDZ crashes fixed (two separate issues). ChatView message windowing (150 items), re-render O(n)→O(1) fix, React.Profiler in dev. E2E expanded: chat flow, workflow builder, connector health. 144 test files, 1930+ tests passing. Coverage threshold 35%+ (actual ~38%+). Source maps hidden. plugin-react-oxc replacing plugin-react (Vite 8/rolldown). TruffleHog secrets scan in CI. 15 TSX components. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 
