@@ -1,20 +1,16 @@
-import subprocess
-import tempfile
-import wave
-import os
+import numpy as np
+from faster_whisper import WhisperModel
+from functools import lru_cache
 
-def transcribe(pcm: bytes):
-    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-        path = f.name
 
-    with wave.open(path, 'wb') as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(16000)
-        wf.writeframes(pcm)
+@lru_cache(maxsize=1)
+def _load_model() -> WhisperModel:
+    return WhisperModel("tiny.en", device="cpu", compute_type="int8")
 
-    cmd = ['./whisper.cpp/main', '-f', path, '-nt']
-    subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    txt = path + '.txt'
-    return open(txt).read().strip() if os.path.exists(txt) else ''
+def transcribe(pcm: bytes) -> str:
+    """Transcribe raw 16-bit 16kHz mono PCM bytes to text using faster-whisper."""
+    model = _load_model()
+    audio = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+    segments, _ = model.transcribe(audio, language="en", beam_size=1)
+    return " ".join(seg.text.strip() for seg in segments).strip()

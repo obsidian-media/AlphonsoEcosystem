@@ -1,49 +1,107 @@
-from fastapi import FastAPI, WebSocket
 import asyncio
+import json
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+
 from pipeline import run_pipeline
-from session import register
-from state import current_state
+from session import register, cancel, cleanup_done
+from state import get_state, set_state, remove_state
+from stt import _load_model as load_stt
+from tts import _load_piper as load_tts
 
-app = FastAPI()
 
-async def alphonso_llm(session_id, text, agent):
-    return f'Alphonso: I understood \"{text}\"'
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Preload models at startup so first request isn't slow
+    load_stt()
+    load_tts()
+    yield
+    cleanup_done()
 
-@app.websocket('/ws')
-async def ws(ws: WebSocket):
+
+app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
     await ws.accept()
-    session = ws.headers.get('x-session', 'anon')
+    session_id = ws.headers.get("x-session", "anon")
+    set_state(session_id, "idle")
 
     buffer = bytearray()
+    conversation_history: list[dict] = []
 
-    async def process(pcm):
-        global current_state
+    async def process(pcm: bytes) -> None:
+        async for event in run_pipeline(session_id, pcm, conversation_history):
+            etype = event.get("type")
+            try:
+                if etype == "tts":
+                    await ws.send_bytes(event["audio"])
+                else:
+                    await ws.send_json(event)
+            except Exception:
+                return
 
-        async for event in run_pipeline(session, pcm, alphonso_llm):
-            if event['type'] == 'stt':
-                await ws.send_json(event)
+            if etype == "state":
+                set_state(session_id, event["value"])
 
-            elif event['type'] == 'llm':
-                await ws.send_json(event)
+            if etype == "stt":
+                conversation_history.append({"role": "user", "content": event["text"]})
 
-            elif event['type'] == 'state':
-                current_state = event['value']
-                await ws.send_json(event)
+            if etype == "llm" and event.get("done"):
+                reply = event.get("full_reply", "")
+                if reply:
+                    conversation_history.append({"role": "assistant", "content": reply})
+                if len(conversation_history) > 20:
+                    conversation_history[:] = conversation_history[-20:]
 
-            elif event['type'] == 'tts':
-                await ws.send_bytes(event['audio'])
+    try:
+        while True:
+            msg = await ws.receive()
 
-    while True:
-        msg = await ws.receive()
+            if "bytes" in msg:
+                # Barge-in: cancel current task when assistant is speaking
+                if get_state(session_id) == "speaking":
+                    cancel(session_id)
+                    set_state(session_id, "idle")
+                    buffer = bytearray()
 
-        # 🔥 BARGE-IN SUPPORT (user interrupts speaking)
-        if current_state == 'speaking' and 'bytes' in msg:
-            buffer = bytearray()  # reset immediately
+                buffer.extend(msg["bytes"])
 
-        if 'bytes' in msg:
-            buffer.extend(msg['bytes'])
+                if len(buffer) >= 24000:  # ~1.5s of 16kHz 16-bit mono PCM
+                    data = bytes(buffer)
+                    buffer = bytearray()
+                    task = asyncio.create_task(process(data))
+                    register(session_id, task)
 
-            if len(buffer) > 24000:
-                task = asyncio.create_task(process(bytes(buffer)))
-                register(session, task)
-                buffer = bytearray()
+            elif "text" in msg:
+                try:
+                    ctrl = json.loads(msg["text"])
+                    if ctrl.get("type") == "reset":
+                        cancel(session_id)
+                        conversation_history.clear()
+                        buffer = bytearray()
+                        set_state(session_id, "idle")
+                        await ws.send_json({"type": "state", "value": "idle"})
+                except Exception:
+                    pass
+
+    except WebSocketDisconnect:
+        cancel(session_id)
+        remove_state(session_id)
+        cleanup_done()

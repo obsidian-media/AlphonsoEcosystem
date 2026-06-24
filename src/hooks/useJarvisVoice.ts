@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { PCM_WORKLET_CODE } from './pcm-processor.worklet';
 
-const WS_URL = 'ws://127.0.0.1:8765/ws';
+import { getVoiceWebSocketUrl } from '../services/voiceOsService.js';
+const WS_URL = getVoiceWebSocketUrl();
 
 export interface JarvisVoiceState {
   state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
