@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, ChevronLeft, ChevronRight, Cpu, Shield } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, Cpu, RefreshCw, Shield } from 'lucide-react';
 import { formatModelSize } from '../lib/ollama';
 import { scanForThreats } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
@@ -278,10 +278,11 @@ export function RightPanel({
               <p className="section-label">Security</p>
               <button
                 onClick={runQuickScan}
-                className="text-[10px] text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+                className="p-1 rounded text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
+                aria-label="Re-scan for security threats"
                 title="Re-scan"
               >
-                ↺
+                <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
             {sentinelScan ? (
@@ -324,7 +325,7 @@ export function RightPanel({
                 )}
               </div>
             ) : (
-              <p className="px-3 text-[10px] text-[var(--text-4)]">Click ↺ to scan</p>
+              <p className="px-3 text-[10px] text-[var(--text-4)]">Click the refresh button to scan</p>
             )}
           </div>
 
