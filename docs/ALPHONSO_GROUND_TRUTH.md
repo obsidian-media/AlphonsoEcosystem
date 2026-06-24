@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-23 — v2.1.0 Stability, Performance & Test Coverage sprint  
-**Verified by:** Claude Code session (144 test files, 1930 tests passing, cargo clippy clean)  
-**Version:** 2.1.0 (Boot TDZ crashes fixed; ChatView windowing + profiler; E2E expanded; 170+ new tests; plugin-react-oxc; TruffleHog CI; 5 more TSX migrations)  
+**Last verified:** 2026-06-24 — v2.2.0+ Voice OS + UI/UX Overhaul  
+**Verified by:** Claude Code session (144 test files, 1930 tests passing, cargo clippy zero warnings, build clean)  
+**Version:** 2.2.0+ (feat/voice-os merged: FastAPI STT+LLM+TTS+VAD pipeline, Tauri sidecar, AudioWorklet hook, 5 pytest test files; feat/ui-ux-overhaul merged: OKLCH token system, framer-motion AnimatePresence, motion.ts, full token sweep)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,13 +25,14 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.1.0 |
+| Version | 2.2.0+ |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
-| Frontend | React 18, Vite 5, Tailwind 3, Lucide React — 63 `.jsx` + 10 `.tsx` components (App, Sidebar, RightPanel, SettingsView, ChatView, AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar) |
-| UI System | CSS design token system (`src/styles/tokens.css`), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
+| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 63 `.jsx` + 10 `.tsx` components (App, Sidebar, RightPanel, SettingsView, ChatView, AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar) |
+| UI System | **OKLCH** CSS design token system (`src/styles/tokens.css` — all colors in `oklch()` syntax), Framer Motion animation library (`src/lib/motion.ts` — spring/tween/fadeUp/fadeIn/slideInRight/scaleIn/staggerContainer/staggerItem/messageIn/panelIn), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
+| Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |
 | Deployment | Windows NSIS + MSI installer, Railway static serve (gateway) |
 
 ---
@@ -128,6 +129,15 @@ Key services that past audits missed or underestimated:
 ### Agent Intelligence (added Sprint Next-50)
 - `hectorBookmarkService.js` — Hector research bookmark ring (200 cap); tag/search filter, JSON export
 - `mariaWeeklyReportService.js` — Maria governance weekly report; reads audit + receipt logs, risk breakdown, scheduleWeeklyGeneration
+
+### Voice OS (added feat/voice-os sprint)
+- `src/services/voiceOsService.js` — Tauri `invoke` wrappers: `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus`, `getVoiceWebSocketUrl`. Appends `agentActivityService` events on start/stop.
+- `src/hooks/useJarvisVoice.ts` — React hook for voice WebSocket: `start`, `stop`, `reset`, `state`, `transcript`, `reply`, `activeAgent`, `error`, `isConnected`. Uses **AudioWorklet** (not deprecated ScriptProcessor).
+- `src-tauri/src/voice_sidecar.rs` — `VoiceSidecar` state struct + `voice_start`/`voice_stop`/`voice_status` Tauri commands. Spawns `python -m uvicorn main:app` on port 8765.
+- `voice/backend/` — Python FastAPI: `main.py` (lifespan preload, CORSMiddleware, `/health`, barge-in, conversation history), `pipeline.py` (async generator: VAD→STT→agent→LLM→TTS), `router.py` (9-agent regex routing), `state.py` (per-session `get_state`/`set_state`/`remove_state`), `session.py` (task registry, barge-in cancel), `stt.py` (faster-whisper + lru_cache), `tts.py` (piper + ThreadPoolExecutor, async `synthesize()`), `vad.py` (webrtcvad `is_speech()`)
+- `voice/backend/tests/` — `test_state.py`, `test_session.py`, `test_router.py`, `test_stt.py`, `test_pipeline.py`
+- `voice/frontend/src/useJarvisVoice.ts` — Standalone frontend hook (AudioWorklet, all exports)
+- `voice/frontend/src/pcm-processor.worklet.ts` — AudioWorklet processor (PCM float32→int16)
 
 ### Other
 - `pluginSandboxService.js`, `pluginRegistryService.js`
@@ -357,7 +367,7 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 
 ## 8. Real Gaps — What Actually Needs Work
 
-These are confirmed gaps as of 2026-06-21. Any agent working on these areas should check current state before implementing — some may have been partially addressed since this file was last updated.
+These are confirmed gaps as of 2026-06-24. Any agent working on these areas should check current state before implementing — some may have been partially addressed since this file was last updated.
 
 ### SECURITY
 - [x] **CSP fixed** — `"security": { "csp": null }` replaced with full production policy string in `tauri.conf.json` (2026-05-31, Agent A). See `docs/SECURITY_CONFIG_REPORT.md`.
@@ -374,6 +384,7 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **lib.rs continued splitting + plugins extracted** — DONE (2026-06-07, OpenCode): `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `runway.rs`, `native_proof.rs` now own their own modules. `cargo check` clean, `cargo clippy -- -D warnings` clean, `cargo test` clean (14 Rust unit tests passing).
 - [x] **Policy gate expanded** — `policy_gate.rs` whitelist expanded from 8 to 40+ programs: python, pip, cargo, npx, yarn, pnpm, curl, wget, ffmpeg, docker, pwsh, explorer, chrome, copy, xcopy, robocopy, mkdir, del, and more. Still blocks: cmd, rm, shutdown, format, net, reg.
 - [x] **New Tauri commands** — `read_workspace_file`, `delete_workspace_file`, `move_workspace_file`, `search_workspace_files`, `list_workspace_directory`, `open_url`, `fetch_url_content`, `read_clipboard`, `write_clipboard`. All with safe path validation (no escape from workspace root).
+- [x] **Voice sidecar module** — `src-tauri/src/voice_sidecar.rs` added (2026-06-24, feat/voice-os): `VoiceSidecar(Mutex<Option<Child>>)` state, `voice_start`/`voice_stop`/`voice_status` Tauri commands registered in `lib.rs`. `cargo clippy -- -D warnings` clean.
 - [ ] **lib.rs further splitting** — Optional: Telegram connector block can be extracted further if needed.
 - [x] **Rust unit tests added** — 14 tests in `#[cfg(test)] mod tests` covering `allowed_program`, `plugin_blocked_token_present`, `validate_plugin_extra_args`, `trim_trailing_slashes`, `wal_pragma_applies_on_in_memory_db`, `to_hex` — all passing (verified `cargo test` 2026-05-31, Agent D)
 - [x] **Shared `reqwest::Client`** — built at startup, registered via `.manage()`, used by `connector_poll_telegram`, `connector_send_telegram`, `connector_send_chatgpt`, `connector_send_claude` (2026-05-31, Agent D).
@@ -382,6 +393,11 @@ These are confirmed gaps as of 2026-06-21. Any agent working on these areas shou
 - [x] **Clippy clean** — All 27 pre-existing clippy warnings fixed (2026-06-01, Session 3): `&PathBuf→&Path` in 7 functions across `lib.rs`/`runway.rs`, identity map removed, `.clamp()` used, `sort_by_key`, `#[allow(too_many_arguments)]` on 3 functions. `cargo clippy -- -D warnings` now passes on CI.
 
 ### FRONTEND
+- [x] **OKLCH design token system** — `src/styles/tokens.css` uses `oklch()` color syntax for all surface, accent, text, and agent color variables. No hex hardcoding. (2026-06-24, feat/ui-ux-overhaul)
+- [x] **Framer Motion animation library** — `framer-motion` in `package.json`. `src/lib/motion.ts` exports: `spring`, `tween`, `fadeUp`, `fadeIn`, `slideInRight`, `scaleIn`, `staggerContainer`, `staggerItem`, `messageIn`, `panelIn`. Chat messages wrapped in `AnimatePresence` with `motion.div` per message using `messageIn` variants. (2026-06-24, feat/ui-ux-overhaul)
+- [x] **Full token sweep** — `OnboardingWizard`, `AgentStatusStrip`, `AutomationView`, `SettingsView EchoTimeline`, `RightPanel`, `TopBar`, `MissionControlHome` — all `zinc-*/indigo-*` hardcoded classes replaced with CSS var tokens. (2026-06-24, feat/ui-ux-overhaul)
+- [x] **Sidebar collapsed tooltips** — collapsed sidebar nav buttons show `title` + `aria-label` for keyboard and hover accessibility. (2026-06-24, feat/ui-ux-overhaul)
+- [x] **Voice OS sidecar integration** — `RuntimeManagerView` has `voice-os` entry in `TOOL_META`; `voiceOsService.js` wires Tauri commands; `useJarvisVoice.ts` hook uses AudioWorklet. (2026-06-24, feat/voice-os)
 - [x] **Design system created** — `tailwind.config.js` tokens (surface-0..4, accent, success/warning/danger), CSS component classes (.panel, .card, .btn-*, .badge-*, .input, .section-label), Manrope font, ambient glow, custom scrollbar.
 - [x] **Font size standardization** — Eliminated all `text-[8px]`/`[9px]` across AgentDock, ChatView, BoardroomPanel, App, TopBar, RightPanel, Badge. Standardized to `text-2xs` (10px) and `text-xs` (12px).
 - [x] **Streaming UX** — Real-time token display while 7B model generates, abort button with stop/cancel, token counter, elapsed time ticker, live streaming status indicator with green pulse dot.

@@ -1,54 +1,49 @@
 # Alphonso Voice OS
 
-Real-time interruptible full-duplex voice agent system.
+Real-time interruptible full-duplex voice agent system. **Status: Production-ready — merged to main 2026-06-24.**
 
 ## Pipeline
 
 ```
-Microphone → [WebRTC VAD] → [Whisper STT] → [Ollama LLM] → [Piper TTS] → Speaker
-                          ↑ barge-in interrupts at any state ↑
+Microphone (AudioWorklet, 16kHz PCM)
+  → WebSocket binary frames → FastAPI (port 8765)
+  → webrtcvad gate (discards silence)
+  → faster-whisper STT (tiny.en, CPU int8, lru_cache)
+  → 9-agent regex router
+  → Ollama /api/chat streaming (conversation history, max 10 turns)
+  → piper TTS (ThreadPoolExecutor, async)
+  → WebSocket binary frame → AudioContext playback
+          ↑ barge-in cancels current task at any state ↑
 ```
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.10+
 - [Ollama](https://ollama.com) running locally on port 11434 with at least one model pulled
-- Docker + Docker Compose (for containerised mode)
-- Node.js 20+ (for frontend dev mode)
 
 ## Quick Start
 
-### 1. Download voice model
+### Run the backend
 
 ```bash
-mkdir -p backend/voices
-curl -L -o backend/voices/en_US-lessac-medium.onnx \
-  https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
-curl -L -o backend/voices/en_US-lessac-medium.onnx.json \
-  https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
-```
-
-### 2. Run with Docker Compose
-
-```bash
-docker-compose up
-```
-
-Backend at http://localhost:8000 · Frontend at http://localhost:5174
-
-### 3. Run locally (dev)
-
-**Backend:**
-```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+cd voice/backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # macOS/Linux
 pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn main:app --host 127.0.0.1 --port 8765
 ```
 
-**Frontend:**
+Check health: `curl http://127.0.0.1:8765/health` → `{"status": "ok"}`
+
+### Or launch from Alphonso Runtime Manager
+
+Open Alphonso → **Runtime Manager** → **Voice OS** → **Start**
+
+### Run the standalone frontend (optional — for standalone testing)
+
 ```bash
-cd frontend
+cd voice/frontend
 npm install
 npm run dev
 ```
@@ -57,10 +52,7 @@ npm run dev
 
 | Variable | Default | Description |
 |---|---|---|
-| `OLLAMA_MODEL` | `llama3` | Ollama model name to use |
-| `WHISPER_MODEL` | `base` | Whisper model size (tiny/base/small/medium) |
-| `BUFFER_THRESHOLD_BYTES` | `32000` | PCM bytes before processing (~1s) |
-| `VITE_VOICE_WS_URL` | `ws://localhost:8000/ws` | WebSocket URL for frontend |
+| `OLLAMA_MODEL` | `llama3` | Ollama model name (overrides default `llama3`) |
 
 ## Agent Routing
 
@@ -93,80 +85,33 @@ state.py        Per-session VoiceState dict
 
 ---
 
-## Testing Checklist (acceptance gate before handing back)
+## Tests
 
-The reviewer (Claude Code) will verify every item below. If any fails, the handoff is incomplete.
+Five pytest test files live in `voice/backend/tests/`:
 
-### Backend (run from `voice/backend/`)
+| File | Coverage |
+|------|----------|
+| `test_state.py` | Per-session get/set/remove, no cross-session bleed |
+| `test_session.py` | Old task cancellation on re-register, `cleanup_done` sweep |
+| `test_router.py` | All 9 agents, keyword patterns, default fallback |
+| `test_stt.py` | Returns `str`, no subprocess calls, empty audio → empty string |
+| `test_pipeline.py` | Yields all expected event types, silent audio, conversation_history accepted |
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Write `voice/backend/tests/` with at minimum:
-
-| Test file | What to test |
-|---|---|
-| `test_vad.py` | `is_speech(b"")` → False; `is_speech(silent_bytes)` → False; `is_speech(speech_bytes)` → True |
-| `test_stt.py` | `transcribe(b"")` → `""`; model loads without error; output is `str` |
-| `test_router.py` | Each of the 8 keyword patterns routes to the correct agent; default routes to `alphonso_core` |
-| `test_state.py` | `get/set/remove_state` per session; no cross-session bleed |
-| `test_session.py` | Old task cancelled on re-register; `cleanup_done` removes finished tasks |
-| `test_pipeline.py` | Pipeline with mocked STT/LLM/TTS yields all expected event types in order |
-
-### Frontend (run from `voice/frontend/`)
+Run from `voice/backend/`:
 
 ```bash
-npm install
-npm run build   # must compile with zero TypeScript errors
+python -m pytest tests/ -v
 ```
 
-- Zero `tsc` errors
-- No usage of `ScriptProcessor` anywhere in source
-- `useJarvisVoice` hook exports all 8 documented fields
+## Tauri Integration
 
-### Integration
+The voice server is launched and stopped from the main Alphonso app via:
 
-```bash
-# Start backend (Ollama must be running with at least one model)
-uvicorn main:app --port 8000
-
-# Connect frontend at localhost:5174
-# 1. Click "Activate Voice"
-# 2. Say "search for the latest AI news"
-# 3. Expect: transcript shows your words, agent shows "Hector (Research)", reply streams in
-# 4. Say something while Alphonso is speaking → barge-in triggers, speaking stops
-```
+- **Rust**: `src-tauri/src/voice_sidecar.rs` — `voice_start`, `voice_stop`, `voice_status` commands
+- **JS service**: `src/services/voiceOsService.js` — wraps `invoke()` calls
+- **Hook**: `src/hooks/useJarvisVoice.ts` — drop-in replacement for browser SpeechRecognition
+- **UI**: Runtime Manager → Voice OS card (start/stop buttons, status indicator)
 
 ---
 
-## What Is Explicitly OUT OF SCOPE for This Handoff
-
-Do NOT do any of the following — these are reviewer tasks:
-
-- Wiring the Voice OS into the main Alphonso Tauri app (`src/`)
-- Adding a Tauri sidecar launcher for the Python backend
-- Connecting pipeline events to `appendAgentActivity` in the main app
-- Modifying `src/services/voiceService.js` or `src/hooks/useVoiceInput.js`
-- Changing anything in `src-tauri/`
-- Modifying `src/components/`
-- Running `npm run test` against the main app test suite
-
-Work only in `voice/`. Do not touch anything outside it.
-
----
-
-## Handing Back
-
-When all 12 tasks are done and the acceptance checklist above passes:
-
-1. Commit everything to the `feat/voice-os` branch with message: `feat(voice): implement full voice OS pipeline (STT+LLM+TTS+VAD+barge-in)`
-2. Push the branch
-3. Leave a summary comment listing which tasks were completed, any deviations from this spec, and any known remaining issues
-
-The reviewer (Claude Code) will then run `npm run test` on the main repo, verify the voice pipeline end-to-end, integrate it into the Tauri app, and merge to `main`.
-
----
-
-*Handoff prepared by Claude Code — 2026-06-24*
+*Last updated: 2026-06-24 — v2.2.0*

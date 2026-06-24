@@ -6,6 +6,45 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-06-24 — Voice OS Pipeline + UI/UX Overhaul
+
+### Added — feat/voice-os (merged to main 2026-06-24)
+- **Voice OS backend** (`voice/`): Full real-time STT→LLM→TTS pipeline as a standalone Python FastAPI microservice.
+  - `main.py` — lifespan model preloading, `CORSMiddleware`, `/health` endpoint, per-session WebSocket, barge-in cancellation, conversation history accumulation (max 20 messages / 10 turns).
+  - `pipeline.py` — async generator: VAD gate → STT → agent routing → Ollama `/api/chat` streaming → TTS → event stream (`stt`/`agent`/`llm`/`state`/`tts`/`error`).
+  - `router.py` — regex routing to all 9 agents (`alphonso_core`, `jose`, `hector`, `miya`, `maria`, `marcus`, `echo`, `sentinel`, `nova`).
+  - `stt.py` — `faster-whisper` + `lru_cache`, no subprocess calls, no temp files.
+  - `tts.py` — `piper` + `ThreadPoolExecutor`, `async def synthesize()`, no subprocess calls.
+  - `vad.py` — `webrtcvad` `is_speech()` with frame splitting logic.
+  - `state.py` — per-session `get_state`/`set_state`/`remove_state` (no module-level global).
+  - `session.py` — task registry with `register`/`cancel`/`cleanup_done`, barge-in support.
+  - `requirements.txt` — `fastapi`, `uvicorn`, `faster-whisper`, `piper-tts`, `webrtcvad`, `httpx`, `pydantic`.
+- **Voice OS tests** (`voice/backend/tests/`): `test_state.py`, `test_session.py`, `test_router.py`, `test_stt.py`, `test_pipeline.py` — all passing via pytest.
+- **Tauri sidecar** (`src-tauri/src/voice_sidecar.rs`): `voice_start`/`voice_stop`/`voice_status` commands; `VoiceSidecar` state managed by Tauri. Registered in `lib.rs`.
+- **React voice service** (`src/services/voiceOsService.js`): Tauri `invoke` wrappers + `agentActivityService` logging on start/stop.
+- **React voice hook** (`src/hooks/useJarvisVoice.ts`): AudioWorklet-based recording (replaces deprecated ScriptProcessor); exports `start`, `stop`, `reset`, `state`, `transcript`, `reply`, `activeAgent`, `error`, `isConnected`.
+- **RuntimeManagerView**: `voice-os` entry added to `TOOL_META` (cyan theme, Voice category).
+- **Voice standalone frontend** (`voice/frontend/`): `useJarvisVoice.ts` (AudioWorklet), `pcm-processor.worklet.ts`, `App.tsx` (5 states, 4 suggestion cards, stop/reset).
+
+### Fixed — feat/ui-ux-overhaul (merged to main 2026-06-24)
+- **OKLCH token system**: All colors in `src/styles/tokens.css` use `oklch()` syntax — no hex values.
+- **Framer Motion**: `framer-motion` added to dependencies; `src/lib/motion.ts` created with 10 named exports. Chat messages wrapped in `AnimatePresence` + `motion.div` with `messageIn` variants.
+- **Token sweep — OnboardingWizard**: All `zinc-*/indigo-*` hardcoded Tailwind classes replaced with CSS var tokens.
+- **Token sweep — AgentStatusStrip**: Agent badge colors use `var(--agent-jose)` etc., not generic zinc.
+- **Token sweep — AutomationView tab bar**: No `zinc-900`/`zinc-500`.
+- **Token sweep — SettingsView EchoTimeline**: No `zinc-900`/`zinc-300`/`indigo-*`.
+- **Token sweep — RuntimeManagerView**: Emoji icons replaced with Lucide icon components.
+- **RightPanel**: `RefreshCw` Lucide icon used (not `↺` character); `aria-label` on refresh button; audit badge font size `text-[10px]` (was `text-[9px]`).
+- **TopBar**: Gradient separator line at bottom edge; no `<img>` SVG logo.
+- **Sidebar**: Collapsed nav buttons show `title` + `aria-label` (tooltip on hover); active item uses pill/glow with left border.
+- **ChatView empty state**: Actionable suggestion cards (Generate image, Write code, Research topic, Run workflow).
+- **MissionControlHome**: Hero padding reduced from `py-10 md:py-14` to `py-6 md:py-8`.
+- **Glassmorphism chat input**: `backdrop-blur-sm` + `focus-within:border-[var(--accent-border)]`.
+- **Button.tsx**: CSS var syntax `bg-[var(--surface-3)]` (not bare Tailwind class).
+- **`@ts-nocheck` removed** from `OnboardingWizard.tsx`.
+
+---
+
 ## [2.2.0] - 2026-06-24 — Premium UI, Creative Routing, Full Corner-Fix Sprint
 
 ### Added

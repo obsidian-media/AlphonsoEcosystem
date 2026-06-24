@@ -4,10 +4,10 @@
 
 # Alphonso
 
-> **v2.0.8** — Local-first AI desktop companion powered by Ollama
+> **v2.2.0+** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.0.8-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.8)
-[![Tests](https://img.shields.io/badge/tests-1737%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-1930%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
@@ -23,16 +23,14 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 ---
 
-## What's New in v2.0.8
+## What's New in v2.2.0+
 
-- **Sprint Next-50 complete** — 46 of 50 proposed tasks executed (4 already existed): 5 new resilience services, 5 new UI components, 8 new test files, 9 ChatView enhancements, 5 TypeScript migrations
-- **Resilience layer** — `connectorCircuitBreakerService`, `connectorRateLimiterService`, `memoryMonitorService` — connectors now self-heal with backoff, rate limits, and storage alerts
-- **Agent intelligence** — Nova threshold alerts, Echo close-session synthesis, Jose escalation + parallel dispatch, Marcus scheduled publishing
-- **New UI panels** — SessionHistoryView, OrchestratorQueueView, DeadLetterQueueView, SentinelAllowlistPanel, AgentPairingView
-- **ChatView** — empty states, connector status dots, direct-agent mode, pin messages, degradation banner
-- **TypeScript** — App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx` (10 total TSX components)
-- **Test coverage** — 120 test files / 1737+ tests (~38%+ coverage)
-- **Platform** — Husky pre-commit hook, bundle size CI guard, root docker-compose, vitest ts/tsx include, ESLint no-console
+- **Voice OS Pipeline** — Full real-time STT→LLM→TTS pipeline as a Python FastAPI microservice (`voice/`). Launched as a Tauri sidecar from the Runtime Manager. Uses faster-whisper for transcription, Ollama for agent-aware responses, and Piper for synthesis. Barge-in cancellation and conversation history included.
+- **AudioWorklet Voice Hook** — `useJarvisVoice.ts` uses the modern `AudioWorklet` API (replaces deprecated `ScriptProcessor`). Exports `start`/`stop`/`reset`/`state`/`transcript`/`reply`/`activeAgent`/`error`/`isConnected`.
+- **OKLCH Design System** — All UI colors migrated to perceptually-uniform `oklch()` syntax in `src/styles/tokens.css`. No hex values.
+- **Framer Motion** — `src/lib/motion.ts` with 10 named animation presets. Chat messages animate in/out with `AnimatePresence` + `motion.div`.
+- **Premium UI/UX** — Glassmorphism chat input, pill/glow sidebar active state, gradient TopBar separator, collapsed sidebar tooltips, full token sweep across all components.
+- **Test coverage** — 144 test files / 1930+ tests (~38%+ coverage). 5 new pytest files for Voice OS backend.
 
 ---
 
@@ -48,7 +46,8 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 - **SQLite Memory** — durable memory with governance metadata (owner, sensitivity, retention, privacy policy) in WAL mode
 - **Plugin System** — sandboxed plugin runtime + local marketplace
 - **Screen Intelligence** — `screenIntelligenceService.js` for on-screen context awareness
-- **Voice Service** — `voiceService.js` for voice interaction
+- **Voice OS** — Real-time STT→LLM→TTS pipeline (`voice/`) with faster-whisper, Ollama, and Piper. Launched from Runtime Manager as a Tauri sidecar. AudioWorklet-based `useJarvisVoice` hook with barge-in and conversation history.
+- **Premium Animated UI** — OKLCH design token system, Framer Motion animations (`AnimatePresence` on chat messages), glassmorphism input, sidebar tooltips.
 - **Desktop Native** — Tauri v2 (Rust 1.77) + React 18 + Vite 5; ~6.8MB NSIS/MSI installer for Windows
 
 ---
@@ -57,8 +56,8 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 ### Download the Installer (Windows)
 
-1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.8)
-1. Download `Alphonso_2.0.8_x64-setup.exe`
+1. Go to [Releases](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+1. Download the latest `Alphonso_x64-setup.exe`
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
 

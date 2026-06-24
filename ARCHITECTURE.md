@@ -10,8 +10,11 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite 5, Tailwind CSS 3, Lucide React — `.jsx` (not `.tsx`) |
+| Frontend | React 18, Vite 5, Tailwind CSS 3, Lucide React, Framer Motion — `.jsx` (most) + `.tsx` (10 key components) |
+| Animation | Framer Motion (`src/lib/motion.ts` — `spring`, `tween`, `fadeUp`, `messageIn`, `panelIn` etc.) |
+| Design Tokens | OKLCH CSS custom properties (`src/styles/tokens.css`) — all colors in perceptually-uniform `oklch()` syntax |
 | Backend | Rust 1.77, Tauri 2.11, tokio async runtime, reqwest HTTP client |
+| Voice OS | Python FastAPI (`voice/backend/`) — faster-whisper STT, piper TTS, webrtcvad VAD, Ollama LLM. Launched as a Tauri-managed sidecar process. WebSocket on port 8765. |
 | AI (local) | Ollama (`llama3.2:3b` default), runs on-device |
 | AI (cloud, optional) | Claude API (Anthropic), OpenAI API — policy-gated, approval-required |
 | Storage | SQLite via rusqlite (bundled), localStorage (session/UI state, migration ongoing) |
@@ -67,6 +70,30 @@ Shayan (user input or Telegram/WhatsApp inbound)
 ```
 
 Dead-letter path: failed packets move to `dead_letter` state with replay capability.
+
+---
+
+## Voice OS Flow
+
+```
+Microphone (browser MediaStream API)
+  → AudioWorklet (pcm-processor.worklet.ts — float32→int16 PCM at 16kHz)
+  → WebSocket (ws://127.0.0.1:8765/ws — binary frames)
+  → FastAPI voice server (voice/backend/main.py)
+  → VAD gate (webrtcvad — discards silent frames)
+  → STT (faster-whisper, tiny.en model, CPU int8)
+  → Agent routing (voice/backend/router.py — 9 regex patterns)
+  → Ollama /api/chat (same local model, streaming, conversation history)
+  → TTS (piper, ThreadPoolExecutor — non-blocking WAV synthesis)
+  → WebSocket binary frame back to browser
+  → AudioContext playback
+```
+
+Barge-in: if the voice state is `speaking` and a new PCM chunk arrives, the current Ollama + TTS task is cancelled immediately via `session.cancel()`.
+
+Conversation history: the server accumulates up to 20 messages (10 turns) per session; reset via `{"type": "reset"}` control message.
+
+Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process via `VoiceSidecar(Mutex<Option<Child>>)`. Commands: `voice_start`, `voice_stop`, `voice_status` — callable from the React layer via `invoke()`.
 
 ---
 

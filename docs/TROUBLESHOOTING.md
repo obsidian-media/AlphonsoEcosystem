@@ -145,6 +145,21 @@ WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP
 | `Gateway drain failed: HTTP 404` | Wrong drain URL | Use `https://<url>/queue/drain` (not `/webhook`) |
 | `sender_not_allowlisted` | Number not in allowlist | Add digits-only number to `WHATSAPP_ALLOWED_NUMBERS` |
 
+## Voice OS Issues
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| "Connection failed" in voice UI | Voice server not running | Start from Runtime Manager → Voice OS → Start, or `python -m uvicorn main:app --host 127.0.0.1 --port 8765` in `voice/backend/` |
+| No transcription produced | Ollama not running or no model pulled | Ensure `ollama serve` is running and `ollama pull llama3.2:3b` completed |
+| `ModuleNotFoundError: faster_whisper` | Python deps not installed | Run `pip install -r voice/backend/requirements.txt` in the voice venv |
+| `ModuleNotFoundError: piper` | piper-tts not installed | Run `pip install piper-tts` |
+| `webrtcvad` import error on Windows | MSVC build tools missing | Install [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
+| Microphone permission denied | Browser security | Allow microphone in system settings; Tauri WebView requires explicit permission |
+| High voice latency (>3s) | Model too large or slow hardware | Use `llama3.2:1b` in Ollama; set `beam_size=1` in `voice/backend/stt.py` (already default) |
+| Voice server exits immediately | Port 8765 already in use | Kill existing process: `netstat -ano | findstr 8765`, then `taskkill /PID <pid> /F` |
+| No audio playback | TTS model file missing | piper downloads the model on first use — ensure internet access for first run |
+| `/health` returns 500 | Model preload failed | Check terminal output for STT/TTS errors; ensure Python 3.10+ and all deps installed |
+
 ## Getting Help
 
 1. Check the [Activity tab](./AGENT_GUIDE.md#viewing-agent-activity) for audit logs

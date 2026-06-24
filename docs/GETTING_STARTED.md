@@ -79,6 +79,57 @@ Open **Settings → Connectors → WhatsApp** and enter:
 
 Alphonso will poll the gateway queue every 30 seconds for inbound messages and route them through Jose.
 
+## Voice OS (optional — real-time voice interface)
+
+Alphonso includes a full real-time voice pipeline: speech-to-text → agent routing → Ollama LLM → text-to-speech.
+
+### Prerequisites for Voice OS
+
+| Dependency | Install |
+|-----------|---------|
+| **Python 3.10+** | https://python.org |
+| **faster-whisper** | `pip install faster-whisper` |
+| **piper-tts** | `pip install piper-tts` |
+| **webrtcvad** | `pip install webrtcvad` |
+| **Ollama** | Running on `http://localhost:11434` |
+
+### Start the Voice Server
+
+```bash
+cd voice/backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+pip install -r requirements.txt
+python -m uvicorn main:app --host 127.0.0.1 --port 8765
+```
+
+Or launch it from within Alphonso: open **Runtime Manager → Voice OS → Start**.
+
+### First Use
+
+1. With the voice server running, open **Chat** in Alphonso
+2. Click the microphone button — it uses the `useJarvisVoice` hook (AudioWorklet)
+3. Speak naturally — Alphonso transcribes, routes to the right agent, and responds by voice
+4. Say anything to interrupt the response (barge-in is supported)
+
+### Voice Agent Routing
+
+The voice pipeline routes to the same 9 agents as the chat interface:
+
+| Say something like... | Routes to |
+|----------------------|-----------|
+| "Search for..." / "Find..." | Hector |
+| "Write..." / "Draft..." | Miya |
+| "Task..." / "Schedule..." / "Plan..." | Jose |
+| "Remember..." / "What did I..." | Echo |
+| "Scan for security..." | Sentinel |
+| "Market opportunity..." | Nova |
+| "Publish..." / "Post to..." | Marcus |
+| "Compliance..." / "Governance..." | Maria |
+| Anything else | Alphonso |
+
+---
+
 ## Key Concepts
 
 ### Approval Mode (on by default)

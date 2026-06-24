@@ -96,6 +96,24 @@ You: "Research AI trends and write a blog post"
 
 ✅ = Allowed | ⚠️ = Approval required | ❌ = Blocked
 
+## Agents in Voice OS
+
+When using the Voice OS pipeline, the same 9 agents handle voice requests. The `voice/backend/router.py` uses keyword regex patterns to route audio transcriptions:
+
+| Voice intent | Agent | Example phrase |
+|-------------|-------|----------------|
+| Search / research | **Hector** | "Find the latest news on..." |
+| Write / draft | **Miya** | "Write a blog post about..." |
+| Task / plan | **Jose** | "Schedule a task for tomorrow..." |
+| Memory / recall | **Echo** | "What did I say about...?" |
+| Security / scan | **Sentinel** | "Scan for vulnerabilities in..." |
+| Opportunity / market | **Nova** | "What are the growth opportunities for...?" |
+| Publish / distribute | **Marcus** | "Post this to Telegram..." |
+| Governance / compliance | **Maria** | "Review this for compliance..." |
+| Everything else | **Alphonso** | Default fallback |
+
+The Voice OS agent routing is stateless per utterance — each transcription is independently classified.
+
 ## Viewing Agent Activity
 
-Open the **Activity** tab to see real-time agent actions, decisions, and audit logs.
+Open the **Activity** tab to see real-time agent actions, decisions, and audit logs. Voice OS activity (server start/stop) is also logged here via `agentActivityService`.

@@ -1,7 +1,7 @@
 # Alphonso User Manual
 
-**Version**: 2.0.2
-**Last Updated**: 2026-06-21
+**Version**: 2.2.0+
+**Last Updated**: 2026-06-24
 **Status**: Production Ready
 
 ---
@@ -11,20 +11,21 @@
 1. [What is Alphonso](#1-what-is-alphonso)
 2. [Getting Started](#2-getting-started)
 3. [Chat Interface](#3-chat-interface)
-4. [Jose Command System](#4-jose-command-system)
-5. [9 Agents — Who Does What](#5-9-agents--who-does-what)
-6. [Boardroom Orchestrator](#6-boardroom-orchestrator)
-7. [Content Catalyst](#7-content-catalyst)
-8. [Connector System](#8-connector-system)
-9. [Approval & Governance](#9-approval--governance)
-10. [Memory & Knowledge](#10-memory--knowledge)
-11. [Operator Dashboard](#11-operator-dashboard)
-12. [Project Execution Mode](#12-project-execution-mode)
-13. [All Chat Commands](#13-all-chat-commands)
-14. [Keyboard Shortcuts](#14-keyboard-shortcuts)
-15. [License Tiers](#15-license-tiers)
-16. [Performance Features](#16-performance-features)
-17. [Troubleshooting](#17-troubleshooting)
+4. [Voice OS — Real-Time Voice Pipeline](#4-voice-os--real-time-voice-pipeline)
+5. [Jose Command System](#5-jose-command-system)
+6. [9 Agents — Who Does What](#6-9-agents--who-does-what)
+7. [Boardroom Orchestrator](#7-boardroom-orchestrator)
+8. [Content Catalyst](#8-content-catalyst)
+9. [Connector System](#9-connector-system)
+10. [Approval & Governance](#10-approval--governance)
+11. [Memory & Knowledge](#11-memory--knowledge)
+12. [Operator Dashboard](#12-operator-dashboard)
+13. [Project Execution Mode](#13-project-execution-mode)
+14. [All Chat Commands](#14-all-chat-commands)
+15. [Keyboard Shortcuts](#15-keyboard-shortcuts)
+16. [License Tiers](#16-license-tiers)
+17. [Performance Features](#17-performance-features)
+18. [Troubleshooting](#18-troubleshooting)
 
 ---
 
@@ -99,7 +100,86 @@ After agent execution, you'll see a **Pipeline Result Card** showing:
 
 ---
 
-## 4. Jose Command System
+## 4. Voice OS — Real-Time Voice Pipeline
+
+Alphonso includes a full real-time voice pipeline that lets you speak naturally and receive spoken responses. It runs as a Python microservice (`voice/backend/`) launched from the **Runtime Manager**.
+
+### How It Works
+
+```
+Microphone (AudioWorklet PCM)
+  → WebSocket → FastAPI voice server (port 8765)
+  → VAD gate (webrtcvad — discards silence)
+  → STT (faster-whisper, CPU, int8)
+  → Agent routing (9-agent regex patterns)
+  → Ollama /api/chat streaming (same local model as chat)
+  → TTS (piper — WAV audio back over WebSocket)
+  → Speakers
+```
+
+### Starting the Voice Server
+
+**From Runtime Manager (recommended):**
+1. Open Alphonso → Runtime Manager
+2. Find the **Voice OS** entry
+3. Click **Start** — the server launches on `ws://127.0.0.1:8765`
+
+**From terminal (development):**
+```bash
+cd voice/backend
+python -m venv .venv && .venv\Scripts\activate
+pip install -r requirements.txt
+python -m uvicorn main:app --host 127.0.0.1 --port 8765
+```
+
+### Using Voice in Chat
+
+Once the Voice OS server is running:
+
+1. Click the **microphone button** in the Chat input area
+2. Speak your request — the status indicator shows: `idle → listening → thinking → speaking`
+3. Alphonso transcribes, routes to the appropriate agent, generates a response, and plays it back
+4. **Barge in** at any time by speaking — the current response will be cancelled immediately
+5. Click **Stop** to end the voice session; click **Reset** to clear the conversation history
+
+### Voice Agent Routing
+
+The voice pipeline uses the same 9 agents as the chat interface. Routing is keyword-based:
+
+| Keywords | Agent routed to |
+|----------|----------------|
+| "search", "find", "research", "what is", "who is" | **Hector** |
+| "write", "draft", "create", "compose", "generate content" | **Miya** |
+| "publish", "post", "share", "distribute", "send to" | **Marcus** |
+| "remember", "recall", "memory", "what did I", "last time" | **Echo** |
+| "task", "assign", "schedule", "plan", "todo" | **Jose** |
+| "security", "scan", "vulnerability", "audit", "risk" | **Sentinel** |
+| "opportunity", "market", "trend", "analyse", "growth" | **Nova** |
+| "policy", "compliance", "governance", "approve", "review" | **Maria** |
+| Everything else | **Alphonso** |
+
+### Voice Health Check
+
+The server exposes a health endpoint:
+
+```bash
+curl http://127.0.0.1:8765/health
+# → {"status": "ok"}
+```
+
+### Voice Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| "Voice server not running" | Start it from Runtime Manager or terminal |
+| No transcription | Check Ollama is running and a model is pulled |
+| No audio output | Ensure `piper-tts` is installed (`pip install piper-tts`) |
+| Browser microphone blocked | Allow microphone permission in system settings |
+| High latency | Use a smaller Ollama model (`llama3.2:1b`) or reduce `beam_size` in `stt.py` |
+
+---
+
+## 5. Jose Command System
 
 Jose is the orchestrator agent. You can explicitly invoke Jose with these prefixes:
 
