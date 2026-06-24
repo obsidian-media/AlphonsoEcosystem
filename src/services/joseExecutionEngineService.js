@@ -31,7 +31,8 @@ import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutp
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
 import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
-import { listWorkflows, runVisualWorkflow } from './workflowBuilderService';
+import { listWorkflows } from './workflowBuilderService';
+import { runVisualWorkflow } from './workflowExecutionService';
 import { isCodingRequest, runCodingAgent } from './codingAgentService';
 import { runEchoPreservation } from './echoMemoryService';
 import { runMarcusDistribution } from './marcusExecutionService';
