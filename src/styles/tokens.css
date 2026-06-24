@@ -1,16 +1,16 @@
 :root {
-  /* Surfaces */
-  --surface-0: #050507;
-  --surface-1: #09090b;
-  --surface-2: #111113;
-  --surface-3: #18181c;
-  --surface-4: #232329;
+  /* Surfaces — deep navy, not pure black */
+  --surface-0: #0d0f14;
+  --surface-1: #13151c;
+  --surface-2: #1a1d28;
+  --surface-3: #222536;
+  --surface-4: #2a2e42;
 
-  /* Accent */
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-dim: rgba(99,102,241,0.12);
-  --accent-border: rgba(99,102,241,0.3);
+  /* Accent — cyan (mascot primary) */
+  --accent: #22d3ee;
+  --accent-hover: #38bdf8;
+  --accent-dim: rgba(34,211,238,0.12);
+  --accent-border: rgba(34,211,238,0.25);
 
   /* Semantic */
   --success: #22c55e;
@@ -22,11 +22,11 @@
   --info: #38bdf8;
   --info-dim: rgba(56,189,248,0.12);
 
-  /* Text */
-  --text-1: #f4f4f5;
-  --text-2: #a1a1aa;
-  --text-3: #52525b;
-  --text-4: #3f3f46;
+  /* Text — slightly warmer */
+  --text-1: #f0f2f8;
+  --text-2: #9ba3bc;
+  --text-3: #4f566b;
+  --text-4: #363d52;
 
   /* Border */
   --border: rgba(255,255,255,0.06);

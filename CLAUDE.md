@@ -263,4 +263,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-24 — v2.1.1 — Boot TDZ crashes fixed. ChatView message windowing, re-render O(n)→O(1) fix, React.Profiler in dev. Voice STT warning + text insertion wired, Sidebar Coach button added, Orchestrator execution result panel added, Windows CMD window spawning spam in Rust fixed. 141 test files, 1908+ tests passing. Coverage threshold 35%+ (actual ~38%+). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-24 — v2.2.0 — Premium cyan UI (accent #22d3ee, navy surfaces), creative intent routing (image/video/audio → Runtime Hub), workflow chat invocation, coding agent service, ACC bridge settings UI, scroll fix on 4 views, E2E CI gated, coverage threshold 45%. 144 test files, 1930+ tests passing. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

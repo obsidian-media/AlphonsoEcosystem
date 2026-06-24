@@ -759,6 +759,7 @@ export function MiyaStudio({
   };
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="max-w-6xl mx-auto px-8 py-8 space-y-6">
       <header className="rounded-2xl border border-fuchsia-400/20 bg-gradient-to-r from-fuchsia-950/40 via-zinc-950 to-zinc-950 p-6">
         <div className="flex items-center justify-between gap-6">
@@ -855,6 +856,7 @@ export function MiyaStudio({
       <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-4 text-xs text-zinc-400">
         State: <span className="font-semibold text-zinc-200">{companionState}</span> | Local model: {canGenerate ? settings.selectedModel : 'not available'}
       </div>
+    </div>
     </div>
   );
 }

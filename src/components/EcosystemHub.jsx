@@ -190,6 +190,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   };
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
       <header className="rounded-2xl border border-white/10 bg-zinc-950/70 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -395,6 +396,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
           <SnapshotDiffPanel snapshots={snapshots} />
         </>
       )}
+    </div>
     </div>
   );
 }

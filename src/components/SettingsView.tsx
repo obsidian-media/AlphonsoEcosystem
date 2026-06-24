@@ -7,6 +7,7 @@ import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../
 import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
+import { getAccBridgeConfig, updateAccBridgeConfig } from '../services/agentWorkshop/accBridgeService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
@@ -1220,10 +1221,55 @@ export function SettingsView({
       <div className="border-t border-white/5 pt-4">
         <WorkspaceExportImportView />
       </div>
+
+      <AccBridgeSettings />
     </div>
   )}
       </div>
     </div>
+  );
+}
+
+function AccBridgeSettings() {
+  const [cfg, setCfg] = React.useState(() => getAccBridgeConfig());
+  const [saved, setSaved] = React.useState(false);
+
+  const save = () => {
+    updateAccBridgeConfig(cfg);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <section className="mt-6 border-t border-white/5 pt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Plug className="w-4 h-4 text-[var(--accent)]" />
+        <span className="text-sm font-semibold text-[var(--text-1)]">ACC Bridge</span>
+      </div>
+      <p className="text-xs text-[var(--text-3)] mb-3">Connect to an external Agent Control Center bridge for remote orchestration.</p>
+      <div className="space-y-2">
+        <input
+          type="text"
+          value={cfg.baseUrl}
+          onChange={e => setCfg(c => ({ ...c, baseUrl: e.target.value }))}
+          placeholder="http://localhost:PORT  (ACC bridge base URL)"
+          className="w-full text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+        />
+        <input
+          type="password"
+          value={cfg.token}
+          onChange={e => setCfg(c => ({ ...c, token: e.target.value }))}
+          placeholder="Auth token (optional)"
+          className="w-full text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+        />
+        <button
+          onClick={save}
+          className="px-3 py-1.5 text-xs rounded bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors"
+        >
+          {saved ? 'Saved ✓' : 'Save Bridge Config'}
+        </button>
+      </div>
+    </section>
   );
 }
 

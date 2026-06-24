@@ -30,6 +30,9 @@ import { persistScopeRows } from './runtimeLedgerService';
 import { setAgentOutput, getPriorOutputs, buildExecutionPlan } from './agentOutputStoreService';
 import { shouldBlock as sentinelShouldBlock, checkSentinelAlerts } from './sentinelGateService';
 import { runMariaGovernanceAudit } from './mariaAuditService';
+import { detectCreativeIntent, routeToCreativeTool } from './creativeRoutingService';
+import { listWorkflows, runVisualWorkflow } from './workflowBuilderService';
+import { isCodingRequest, runCodingAgent } from './codingAgentService';
 import { runEchoPreservation } from './echoMemoryService';
 import { runMarcusDistribution } from './marcusExecutionService';
 import { runSentinelSecurityScan } from './sentinelSecurityService';
@@ -1159,6 +1162,36 @@ export async function runJoseCommandExecutionPipeline({
   onToken,
   conversationHistory
 }) {
+  // Creative intent routing — detect image/video/audio requests early
+  const creativeIntent = detectCreativeIntent(commandText);
+  if (creativeIntent) {
+    const routing = await routeToCreativeTool(creativeIntent);
+    if (routing && !routing.ok) {
+      onProgress?.({ stage: 'creative_routing_no_tool', intent: creativeIntent, error: routing.error });
+    }
+    // Note: if routing.ok, the tool name is in routing.tool — downstream connectors handle the call
+    // via existing generateComfyUiImage / generateSdWebUiImage paths in the pipeline
+  }
+
+  // Workflow chat invocation — "run workflow [name]" or command matches workflow name
+  const workflows = listWorkflows();
+  const workflowMatch = workflows.find(w =>
+    commandText.toLowerCase().includes(w.name.toLowerCase()) &&
+    /run\s+workflow|start\s+workflow|execute\s+workflow/i.test(commandText)
+  );
+  if (workflowMatch) {
+    const wfResult = await runVisualWorkflow(workflowMatch.id, { trigger: 'chat', command: commandText });
+    onProgress?.({ stage: 'workflow_started', workflowId: workflowMatch.id, name: workflowMatch.name, result: wfResult });
+  }
+
+  // Coding agent shortcut — route code-related requests to Claude coding agent
+  if (isCodingRequest(commandText)) {
+    const codingResult = await runCodingAgent(commandText);
+    if (codingResult?.ok) {
+      onProgress?.({ stage: 'coding_agent_response', content: codingResult.content });
+    }
+  }
+
   const memoryItems = listMemoryItems();
   const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
 

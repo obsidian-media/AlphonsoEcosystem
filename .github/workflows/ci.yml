@@ -161,7 +161,8 @@ jobs:
     name: Playwright E2E Smoke Test
     needs: [test]
     runs-on: windows-latest
-    continue-on-error: true
+    if: ${{ vars.ENABLE_E2E == 'true' }}
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v7
 

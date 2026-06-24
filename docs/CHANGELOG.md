@@ -6,6 +6,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.0] - 2026-06-24 — Premium UI, Creative Routing, Phase B–H Sprint
+
+### Added
+- **Premium Cyan UI**: Accent color migrated from indigo to cyan (#22d3ee); surfaces updated to deep navy (less harsh), ambient glow updated to match.
+- **Creative Intent Routing**: New `creativeRoutingService.js` — detects image/video/audio generation intents and routes to the running Runtime Hub tool (ComfyUI, A1111, MoneyPrinter, etc.).
+- **Workflow Chat Invocation**: "run workflow [name]" in chat now triggers `runVisualWorkflow()` directly from the jose pipeline.
+- **Coding Agent Service**: New `codingAgentService.js` — routes code/implement/debug requests to Claude coding agent via the pipeline.
+- **ACC Bridge Settings UI**: New "ACC Bridge" section in SettingsView with base URL + auth token inputs, backed by `accBridgeService.updateAccBridgeConfig`.
+- **Scroll Fix**: `EcosystemHub`, `MiyaStudio`, `MissionControlHome`, `HectorResearchDesk` now wrap content with `h-full overflow-y-auto`.
+- **E2E CI Gate**: E2E job now gated by `vars.ENABLE_E2E == 'true'` repo variable (requires Ollama); `continue-on-error: false`.
+- **Coverage Threshold Raised**: 35% → 45% in vitest.config.js.
+- **New Tests**: `creativeRoutingService.test.js`, `packetExecutionService.test.js`, `echoMemoryServiceExtra.test.js` — 1930 tests total.
+
+### Fixed
+- Light mode accent updated to cyan (#0891b2) to match dark mode branding.
+- All indigo accent references in App.tsx updated to cyan.
+
+---
+
 ## [2.1.1] - 2026-06-24 — UI, Scroll, Voice & Execution Enhancements
 
 ### Added

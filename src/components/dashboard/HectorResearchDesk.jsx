@@ -147,6 +147,7 @@ export function HectorResearchDesk({ onHectorStateChange }) {
   };
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-7xl space-y-6 px-8 py-8">
       <header className="rounded-2xl border border-teal-300/20 bg-gradient-to-br from-zinc-950 via-teal-950/25 to-zinc-950 p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -284,6 +285,7 @@ export function HectorResearchDesk({ onHectorStateChange }) {
       <div className="rounded-xl border border-teal-300/15 bg-teal-500/10 p-4 text-[11px] text-teal-100/75">
         {HECTOR_PROFILE.name}: {HECTOR_PROFILE.allowedSummary} {HECTOR_PROFILE.blockedSummary}
       </div>
+    </div>
     </div>
   );
 }
