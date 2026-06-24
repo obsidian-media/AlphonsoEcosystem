@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.2.0+** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
+> **v2.2.3** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.2.3-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-1930%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -17,11 +17,17 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 14 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.0.8**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.0.8) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.2.3**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.2.3) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
+
+## What's New in v2.2.3
+
+- **Chat UX — All Results in One Place** — Jose pipeline results (agent receipts, approval buttons, Nova insights) now appear inline in the chat thread, directly below the last assistant message. No more hunting through floating panels below the chat.
+- **Auto-Scroll Fixed** — Chat now scrolls to new messages automatically by default. Previously required opt-in via settings.
+- **Connector Verification Fixed** — Credentials saved in Settings → Connectors are now verified correctly. Previously, verification checked OS environment variables (always failing for UI-entered credentials). Now checks the UI credential store. Connectors also auto-verify immediately after you save.
 
 ## What's New in v2.2.0+
 
@@ -261,7 +267,9 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.0.8** | June 22, 2026 | Sprint Next-50: 5 resilience services, 5 new UI panels, 8 test files, ChatView enhancements, 10 TSX components, 1,737+ tests, mobile companion Phase 1–2 (Rust WebSocket server + React pairing UI with QR + mDNS) |
+| **v2.2.3** | June 24, 2026 | Chat UX consolidation: Jose pipeline/approval/Nova results inline in chat; connector verification fixed (UI credential store); auto-scroll fixed |
+| v2.2.2 | June 24, 2026 | Voice OS pipeline + OKLCH UI/UX overhaul — 144 test files, 1,930+ tests |
+| v2.0.8 | June 22, 2026 | Sprint Next-50: 5 resilience services, 5 new UI panels, 8 test files, ChatView enhancements, 10 TSX components, 1,737+ tests, mobile companion Phase 1–2 (Rust WebSocket server + React pairing UI with QR + mDNS) |
 | v2.0.6 | June 22, 2026 | CI rustfmt fix, documentation accuracy pass, mobile companion sprint plan executed (Phase 1–2 complete) |
 | v2.0.5 | June 21, 2026 | All 9 agent runtimes, Sprint Next-10 complete, 112 test files, 1,621+ tests, coverage ~35%+, TypeScript migration (5 components), SQLite dual-write |
 | v2.0.2 | June 21, 2026 | WhatsApp Cloud end-to-end, auto-updater operational, 1,100 tests |

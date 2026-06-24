@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.3] - 2026-06-24 — Chat UX Consolidation + Connector Verification Fix
+
+### Fixed
+- **Jose pipeline output in one place**: All Jose execution results — agent receipt cards (`PipelineResultCard`), approval panel (`ApprovalPanel`), execution receipts, and Nova insight — now render inline under the last assistant message in the chat thread. Previously they floated in separate panels below the message list (4 separate locations). Now everything is in one place, identical to how ChatGPT/Claude show results.
+- **Miya creative output in chat**: When Miya runs as a Jose pipeline agent, her creative packages and generated images appear inline in the chat via the same PipelineResultCard (was in a separate floating panel).
+- **Approval flow inline**: Approve/Deny buttons appear directly in the chat under the result, not in a separate window. No more hunting for where to approve.
+- **Approval conversation history bug**: The old approval callback referenced `conversationHistory` which was `undefined` at render time. Now correctly passes `messages.slice(-20)` so approved tasks execute with proper conversation context.
+- **Auto-scroll broken**: Chat never scrolled to new messages because `settings.autoScroll` was falsy by default. Changed to scroll unless `settings.autoScroll === false` (opt-out instead of opt-in).
+- **Connector verification always failing**: `verifyConnectorEnvironment` called `std::env::var_os()` via Tauri (OS-level environment variables), while credentials entered via the UI settings panel are stored in `localStorage`. These are two different stores — verification always returned "check failed" even with valid credentials. Fixed by merging the UI credential store into the env presence map before the ok/missing check. All 14 connectors (including WhatsApp Cloud + Twilio provider sets) now correctly verify against saved credentials.
+- **Connector auto-verify on save**: `saveConnectorApiKey` and `saveTelegramCredentials` now call `verifyConnectorEnvironment` immediately after saving, so connector cards flip to "Active ✓" without requiring a manual "Test Connection" step.
+
+---
+
 ## [Unreleased] - 2026-06-24 — Voice OS Pipeline + UI/UX Overhaul
 
 ### Added — feat/voice-os (merged to main 2026-06-24)

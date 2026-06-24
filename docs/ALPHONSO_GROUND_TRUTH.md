@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-24 — v2.2.0+ Voice OS + UI/UX Overhaul  
-**Verified by:** Claude Code session (144 test files, 1930 tests passing, cargo clippy zero warnings, build clean)  
-**Version:** 2.2.0+ (feat/voice-os merged: FastAPI STT+LLM+TTS+VAD pipeline, Tauri sidecar, AudioWorklet hook, 5 pytest test files; feat/ui-ux-overhaul merged: OKLCH token system, framer-motion AnimatePresence, motion.ts, full token sweep)  
+**Last verified:** 2026-06-24 — v2.2.3 Chat UX Consolidation + Connector Verification Fix  
+**Verified by:** Claude Code session (144 test files, 1930 tests passing, build clean)  
+**Version:** 2.2.3 (v2.2.2 base: Voice OS + UI/UX overhaul; v2.2.3 fixes: Jose pipeline output consolidated into chat stream, connector verification fixed to check UI credential store, auto-scroll fixed)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.2.0+ |
+| Version | 2.2.3 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -409,6 +409,9 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 - [x] **Composio settings** — API key input, user ID, health check, toolkit list display in SettingsView.
 - [x] **Navigation simplified** — 15 sidebar tabs → 8 items in 4 sections. CommandRib reduced to agent indicator + theme switcher + status dot. RightPanel reduced to 4 diagnostics.
 - [x] **Rich project summary** — `buildProjectSummary()` in ChatView constructs rich markdown from execution receipts (file explanations, run instructions, next steps).
+- [x] **Jose pipeline output consolidated** — All pipeline results (`PipelineResultCard`, `ApprovalPanel`, execution receipts, Nova insight) render inline under the last assistant message. Previously floated in 4 separate panels below the chat. Approval buttons appear directly in the chat thread. (2026-06-24, v2.2.3)
+- [x] **Auto-scroll fixed** — Chat now scrolls to new messages by default (`settings.autoScroll !== false`). Previously required opt-in via `settings.autoScroll === true`. (2026-06-24, v2.2.3)
+- [x] **Connector verification fixed** — `verifyConnectorEnvironment` now checks UI credential store (localStorage `alphonso_connector_credentials_v1`) in addition to OS env vars. Credentials entered in the settings panel now correctly verify. `saveConnectorApiKey` and `saveTelegramCredentials` auto-verify after save. (2026-06-24, v2.2.3)
 - [x] **`alphonso_settings` → SQLite** — already done (Sessions 3). Both persist to localStorage + SQLite; SQLite hydrated on boot.
 - [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.jsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
 - [x] **`alphonso_connector_auth_profiles_v1` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.

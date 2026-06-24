@@ -61,7 +61,7 @@ NODE_OPTIONS="--max-old-space-size=4096" npm run build
 ## Runtime Issues
 
 ### App freezes on startup
-- This was fixed in v1.0.3 — ensure you're on the latest version (v2.0.5)
+- This was fixed in v1.0.3 — ensure you're on the latest version (v2.2.3)
 - Heavy startup work is now deferred to prevent UI freeze
 - The auto-updater will notify you of new versions automatically (requires v2.0.2+ installed)
 
@@ -75,11 +75,26 @@ NODE_OPTIONS="--max-old-space-size=4096" npm run build
 3. Try switching models in Settings
 4. Check browser console (F12) for errors
 
-### Connectors showing "setup_required"
-1. Add required env vars to `.env` (copy from `.env.example`)
-2. Restart the app
-3. Verify in the Connector Setup panel that env keys are green
-4. See [CONNECTORS.md](./CONNECTORS.md) for per-connector setup
+### Connectors showing "setup_required" or failing verification (v2.2.3+)
+1. Go to **Settings → Connectors** and enter your credentials in the input fields
+2. Click **Save** — credentials are auto-verified immediately after saving
+3. A green "saved & verified ✓" notice confirms success
+4. If you still see "Not set up", double-check the credential values (no extra spaces)
+5. See [CONNECTORS.md](./CONNECTORS.md) for per-connector credential names
+
+> **Note**: In v2.2.3+ you do NOT need to set OS environment variables. Credentials entered in the UI are used directly.
+
+### Connector shows "Not set up" after saving credentials (pre-v2.2.3)
+In older versions, the connector verification checked OS environment variables instead of the UI credential store. Upgrade to v2.2.3+ to fix this permanently. Workaround: add credentials to the OS environment and restart the app.
+
+### Chat doesn't scroll to new messages
+- Fixed in v2.2.3 — upgrade to the latest version
+- Auto-scroll now fires by default; it was previously opt-in (broken by default)
+
+### Jose pipeline results / approval buttons not visible in chat (v2.2.3+)
+- All results now appear inline in the chat thread, directly below the last assistant message
+- Scroll down within the chat window to see pipeline receipts, approval buttons, and Nova insights
+- If results still don't appear, check the Ollama status — the pipeline requires Ollama to be running
 
 ### Approval modal keeps appearing
 - This is by design — Approval Mode is on by default

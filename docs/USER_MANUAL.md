@@ -1,6 +1,6 @@
 # Alphonso User Manual
 
-**Version**: 2.2.0+
+**Version**: 2.2.3
 **Last Updated**: 2026-06-24
 **Status**: Production Ready
 
@@ -389,6 +389,16 @@ WhatsApp uses Meta's Cloud API (free) + a small Railway gateway service for inbo
 
 See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment steps.
 
+### Setting Up Connectors
+
+1. Go to **Settings → Connectors** and select the connector you want to set up
+2. Enter the required credential(s) in the input fields
+3. Click **Save** — credentials are automatically verified immediately after saving
+4. A green "saved & verified ✓" notice confirms the connector is ready to use
+5. If verification fails, re-check your credential values and try again
+
+> **Note (v2.2.3+)**: Connectors now auto-verify when you save credentials. You no longer need to click "Test Connection" manually after saving.
+
 ### Connector Safety
 
 - Every connector call goes through `policyEnforcementService`
@@ -413,11 +423,13 @@ See [GETTING_STARTED.md](./GETTING_STARTED.md) for the full Railway deployment s
 
 ### Approval Panel
 
-When approval is required, an **Approval Panel** appears in chat with:
+When approval is required, an **Approval Panel** appears **directly in the chat thread**, inline below the last assistant message:
 - Risk level badge (color-coded)
 - Action description
 - **Approve** / **Deny** buttons
 - **Continue** button after all approvals resolved
+
+> **Note (v2.2.3+)**: All pipeline results (agent receipts, approval prompts, Nova insights) now appear inline in the chat thread — you no longer need to scroll below the chat or look at separate panels.
 
 ### Governance Agents
 

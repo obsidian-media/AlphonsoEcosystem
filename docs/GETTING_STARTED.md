@@ -47,9 +47,9 @@ On first launch, Alphonso will:
 
 ## What's Next
 
-- **Chat** — Type a message in the Chat tab. Alphonso routes your request to the right agent.
+- **Chat** — Type a message in the Chat tab. Alphonso routes your request to the right agent. All results (pipeline receipts, approval buttons, insights) appear inline in the chat thread.
 - **Agents** — 9 specialized agents handle different tasks. See [AGENT_GUIDE.md](./AGENT_GUIDE.md).
-- **Connectors** — Connect to Telegram, WhatsApp, Notion, and more. See [CONNECTORS.md](./CONNECTORS.md).
+- **Connectors** — Connect to Telegram, WhatsApp, Notion, and more. Enter credentials in **Settings → Connectors** and click Save — they are verified automatically. See [CONNECTORS.md](./CONNECTORS.md).
 - **Settings** — Configure approval mode, zero-cost mode, privacy shield, and more.
 
 ## WhatsApp Cloud Setup (optional)
