@@ -149,12 +149,14 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                   onClick={() => setActiveTab(item.id)}
                   whileHover={{ x: 2 }}
                   whileTap={{ scale: 0.97 }}
+                  title={!isOpen ? item.label : undefined}
                   className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
                     activeTab === item.id
                       ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)]'
                       : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
                   }`}
                   aria-current={activeTab === item.id ? 'page' : undefined}
+                  aria-label={!isOpen ? item.label : undefined}
                 >
                   <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-[var(--accent)]' : ''}`} />
                   {isOpen && <span className="font-medium">{item.label}</span>}

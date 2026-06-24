@@ -363,7 +363,7 @@ export function RightPanel({
                   <span className="text-[11px] text-[var(--text-2)] font-medium">{entry.agent}</span>
                   <span className="text-[10px] text-[var(--text-3)]">·</span>
                   <span className="text-[11px] text-[var(--text-3)] truncate max-w-[80px]">{entry.action}</span>
-                  <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${entry.outcome === 'approved' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${entry.outcome === 'approved' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
                     {entry.outcome}
                   </span>
                 </div>

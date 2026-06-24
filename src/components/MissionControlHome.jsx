@@ -76,7 +76,7 @@ export function MissionControlHome({
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[var(--surface-0)] via-[var(--surface-0)]/85 to-transparent" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--accent-glow),transparent_50%)]" />
-        <div className="relative px-8 py-10 md:px-12 md:py-14">
+        <div className="relative px-8 py-6 md:px-12 md:py-8">
           <div className="flex items-center gap-2.5 mb-6">
             <img src={alphonsoIcon} alt="" className="h-7 w-7 rounded-full object-cover" />
             <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-[var(--text-2)]">Alphonso</span>

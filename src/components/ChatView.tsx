@@ -1,5 +1,7 @@
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { messageIn } from '../lib/motion';
 
 // T10: dev-only profiler wrapper — logs ChatMessageList renders > 16ms (one frame)
 const onProfilerRender = import.meta.env.DEV
@@ -935,10 +937,11 @@ export function ChatView({
           </div>
         )}
         <MessageListProfiler msgCount={visibleMessages.length}>
+        <AnimatePresence initial={false}>
         {visibleMessages.map((message) => {
           const isLastAssistantMessage = message.role === 'assistant' && messages.indexOf(message) === lastAssistantIdx;
           return (
-          <div key={message.id} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
+          <motion.div key={message.id} variants={messageIn} initial="hidden" animate="visible" exit={{ opacity: 0, y: -4 }} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (
               <div className={`w-8 h-8 rounded-lg ${message.isError ? 'bg-red-500/10 border-red-500/20' : 'bg-[var(--accent-dim)] border-[var(--accent-border)]'} border flex items-center justify-center shrink-0 mt-1 shadow-sm`}>
                 <Bot className={`w-4 h-4 ${message.isError ? 'text-red-400' : 'text-[var(--accent)]'}`} />
@@ -1035,9 +1038,10 @@ export function ChatView({
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
           );
         })}
+        </AnimatePresence>
         </MessageListProfiler>
 
         {isGenerating && (
