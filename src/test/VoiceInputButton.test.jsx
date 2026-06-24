@@ -7,6 +7,7 @@ import { VOICE_STATES } from '../services/voiceService';
 vi.mock('lucide-react', () => ({
   Mic: () => <svg data-testid="icon-mic" />,
   MicOff: () => <svg data-testid="icon-mic-off" />,
+  AlertCircle: () => <svg data-testid="icon-alert-circle" />,
 }));
 
 const makeStatus = (state, message = 'test message', privacyLabel = 'Mic Off') => ({
