@@ -74,13 +74,13 @@ export function MissionControlHome({
           alt=""
           className="absolute inset-0 h-full w-full object-cover opacity-25 saturate-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/80 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.12),transparent_50%)]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--surface-0)] via-[var(--surface-0)]/85 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--accent-glow),transparent_50%)]" />
         <div className="relative px-8 py-10 md:px-12 md:py-14">
           <div className="flex items-center gap-2.5 mb-6">
             <img src={alphonsoIcon} alt="" className="h-7 w-7 rounded-full object-cover" />
             <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-[var(--text-2)]">Alphonso</span>
-            <span className="h-1 w-1 rounded-full bg-zinc-700" />
+            <span className="h-1 w-1 rounded-full bg-[var(--border-strong)]" />
             <span className={`text-[11px] font-semibold ${ollamaConnected ? 'text-[var(--success)]' : 'text-[var(--text-4)]'}`}>
               {ollamaConnected ? 'Local AI online' : 'Local AI offline'}
             </span>
@@ -95,7 +95,7 @@ export function MissionControlHome({
           <div className="mt-7 flex flex-wrap gap-3">
             <button
               onClick={() => onNavigate?.('chat')}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--surface-0)] hover:bg-[var(--accent-hover)] transition-colors"
             >
               <MessageSquare className="h-4 w-4" />
               Open Chat
@@ -117,19 +117,19 @@ export function MissionControlHome({
           {
             label: 'Local AI',
             value: ollamaConnected ? 'Online' : 'Offline',
-            dot: ollamaConnected ? 'bg-emerald-400' : 'bg-zinc-600',
+            dot: ollamaConnected ? 'bg-[var(--success)]' : 'bg-[var(--text-4)]',
             sub: ollamaStatus?.label || 'Ollama',
           },
           {
             label: 'Approvals',
             value: snapshot.approvals.length || '—',
-            dot: snapshot.approvals.length ? 'bg-amber-400' : 'bg-zinc-700',
+            dot: snapshot.approvals.length ? 'bg-[var(--warning)]' : 'bg-[var(--border-strong)]',
             sub: snapshot.approvals.length ? 'waiting' : 'queue clear',
           },
           {
             label: 'Coach',
             value: coachMode ? 'On' : 'Off',
-            dot: coachIntervention ? 'bg-red-400' : coachMode ? 'bg-cyan-400' : 'bg-zinc-700',
+            dot: coachIntervention ? 'bg-[var(--error)]' : coachMode ? 'bg-[var(--accent)]' : 'bg-[var(--border-strong)]',
             sub: coachIntervention ? `${coachIntervention.level} intervention` : 'no intervention',
           },
           {
@@ -194,7 +194,7 @@ export function MissionControlHome({
                 <div key={`${item.label}-${item.ts}`}>
                   <div className="text-[12px] font-medium text-[var(--text-1)] leading-snug">{item.label}</div>
                   {item.detail && <div className="text-[11px] text-[var(--text-4)] mt-0.5">{item.detail}</div>}
-                  <div className="text-[10px] text-zinc-700 mt-0.5">
+                  <div className="text-[10px] text-[var(--text-4)] mt-0.5">
                     {new Date(item.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -224,7 +224,7 @@ export function MissionControlHome({
                 <div className="text-sm font-semibold text-[var(--text-1)]">{item.title}</div>
                 <div className="text-[11px] text-[var(--text-4)] mt-0.5">{item.detail}</div>
               </div>
-              <ArrowRight className="ml-auto h-3.5 w-3.5 text-zinc-700 group-hover:text-[var(--text-2)] transition-colors shrink-0" />
+              <ArrowRight className="ml-auto h-3.5 w-3.5 text-[var(--text-4)] group-hover:text-[var(--text-2)] transition-colors shrink-0" />
             </button>
           ))}
         </div>
