@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, ChevronLeft, ChevronRight, Cpu, Shield } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, Cpu, RefreshCw, Shield } from 'lucide-react';
 import { formatModelSize } from '../lib/ollama';
 import { scanForThreats } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
@@ -278,10 +278,11 @@ export function RightPanel({
               <p className="section-label">Security</p>
               <button
                 onClick={runQuickScan}
-                className="text-[10px] text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+                className="p-1 rounded text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
+                aria-label="Re-scan for security threats"
                 title="Re-scan"
               >
-                ↺
+                <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
             {sentinelScan ? (
@@ -308,9 +309,13 @@ export function RightPanel({
                       <button
                         key={i}
                         onClick={() => setSelectedFinding(sentinelScan.findings![i])}
-                        className="block w-full text-left text-[10px] text-[var(--text-4)] truncate cursor-pointer hover:text-[var(--text-3)] transition-colors"
+                        className={`block w-full text-left text-[10px] truncate cursor-pointer hover:text-[var(--text-2)] transition-colors pl-2 border-l-2 my-0.5 ${
+                          f.severity === 'critical' || f.severity === 'high' ? 'border-[var(--error)] text-[var(--error)]' :
+                          f.severity === 'medium' ? 'border-[var(--warning)] text-[var(--warning)]' :
+                          'border-[var(--border-strong)] text-[var(--text-4)]'
+                        }`}
                       >
-                        • {f.type || f.pattern || 'threat'}
+                        {f.type || f.pattern || 'threat'}
                       </button>
                     ))}
                   </div>
@@ -324,7 +329,7 @@ export function RightPanel({
                 )}
               </div>
             ) : (
-              <p className="px-3 text-[10px] text-[var(--text-4)]">Click ↺ to scan</p>
+              <p className="px-3 text-[10px] text-[var(--text-4)]">Click the refresh button to scan</p>
             )}
           </div>
 
@@ -358,7 +363,7 @@ export function RightPanel({
                   <span className="text-[11px] text-[var(--text-2)] font-medium">{entry.agent}</span>
                   <span className="text-[10px] text-[var(--text-3)]">·</span>
                   <span className="text-[11px] text-[var(--text-3)] truncate max-w-[80px]">{entry.action}</span>
-                  <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${entry.outcome === 'approved' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${entry.outcome === 'approved' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
                     {entry.outcome}
                   </span>
                 </div>

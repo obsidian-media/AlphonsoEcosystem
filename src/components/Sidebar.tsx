@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
+  Activity,
   Bot,
   BrainCircuit,
   ChevronDown,
   Cpu,
-  FolderOpen,
-  Home,
+  Database,
+  FileText,
+  GitBranch,
+  LayoutDashboard,
+  Layers,
   MessageSquare,
   Moon,
+  Palette,
+  Plug,
   Plus,
   Settings,
   Sun,
@@ -25,6 +32,7 @@ interface NavItem {
   icon: React.ElementType;
   label: string;
   showStatusDot?: boolean;
+  showApprovalBadge?: boolean;
 }
 
 interface NavSection {
@@ -62,20 +70,24 @@ const NAV_SECTIONS: NavSection[] = [
     label: null,
     items: [
       { id: 'chat', icon: MessageSquare, label: 'Chat' },
-      { id: 'mission', icon: Home, label: 'Dashboard' },
+      { id: 'mission', icon: LayoutDashboard, label: 'Dashboard' },
     ]
   },
   {
-    label: 'Build',
+    label: 'Work',
     items: [
       { id: 'project_execution', icon: Terminal, label: 'Projects' },
-      { id: 'miya', icon: Sparkles, label: 'Creative' },
+      { id: 'hector', icon: Database, label: 'Research' },
+      { id: 'content', icon: FileText, label: 'Content' },
+      { id: 'automation', icon: GitBranch, label: 'Automation' },
+      { id: 'files', icon: Layers, label: 'Knowledge' },
     ]
   },
   {
     label: 'Agents',
     items: [
-      { id: 'orchestrator', icon: Shield, label: 'Orchestrator' },
+      { id: 'orchestrator', icon: Shield, label: 'Orchestrator', showApprovalBadge: true },
+      { id: 'miya', icon: Palette, label: 'Creative' },
       { id: 'ecosystem', icon: Bot, label: 'All Agents' },
     ]
   },
@@ -83,9 +95,8 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'System',
     items: [
       { id: 'runtimes', icon: Cpu, label: 'Runtimes' },
-      { id: 'connectors', icon: FolderOpen, label: 'Connectors', showStatusDot: true },
-      { id: 'activity', icon: FolderOpen, label: 'Activity' },
-      { id: 'workflows', icon: FolderOpen, label: 'Workflows' },
+      { id: 'connectors', icon: Plug, label: 'Connectors', showStatusDot: true },
+      { id: 'activity', icon: Activity, label: 'Activity' },
     ]
   }
 ];
@@ -111,7 +122,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-white">ALPHONSO</span>}
           <button
             onClick={onToggle}
-            className="ml-auto p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-3 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="ml-auto p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
             aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
@@ -120,11 +131,9 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       </div>
 
       {/* Agent status strip — shows pulsing badges for agents active in last 30s */}
-      {isOpen && (
-        <div className="px-3 py-2 border-b border-[var(--border)] min-h-0">
-          <AgentStatusStrip compact useAutoFeed />
-        </div>
-      )}
+      <div className={`border-b border-[var(--border)] min-h-0 ${isOpen ? 'px-3 py-2' : 'px-1.5 py-2 flex justify-center'}`}>
+        <AgentStatusStrip compact={!isOpen} useAutoFeed />
+      </div>
 
       {/* Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -135,20 +144,24 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 <div className="px-3 pt-4 pb-1.5 section-label">{section.label}</div>
               )}
               {section.items.map((item) => (
-                <button
+                <motion.button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`relative flex items-center gap-2.5 px-3 py-2 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.97 }}
+                  title={!isOpen ? item.label : undefined}
+                  className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
                     activeTab === item.id
-                      ? 'bg-[var(--surface-3)] text-[var(--text-1)] border-l-2 border-[var(--accent)] pl-[calc(0.75rem-2px)]'
-                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] border-l-2 border-transparent'
+                      ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)]'
+                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
                   }`}
                   aria-current={activeTab === item.id ? 'page' : undefined}
+                  aria-label={!isOpen ? item.label : undefined}
                 >
                   <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-[var(--accent)]' : ''}`} />
                   {isOpen && <span className="font-medium">{item.label}</span>}
-                  {isOpen && item.id === 'chat' && pendingApprovalCount > 0 && (
-                    <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-[var(--warning)] text-[8px] font-bold text-black animate-pulse">
+                  {isOpen && item.showApprovalBadge && pendingApprovalCount > 0 && (
+                    <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-[var(--warning)] text-[8px] font-bold text-[var(--surface-0)] animate-pulse">
                       {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
                     </span>
                   )}
@@ -160,7 +173,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                       <ConnectorStatusDot connectorId="whatsapp" />
                     </span>
                   )}
-                </button>
+                </motion.button>
               ))}
             </React.Fragment>
           ))}
@@ -171,7 +184,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           <div className="flex flex-col flex-1 px-2 mt-2 overflow-hidden">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="section-label">Recent Chats</span>
-              <button onClick={onCreateChat} className="p-1 hover:bg-surface-3 rounded-lg transition-colors text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50" aria-label="Create new chat">
+              <button onClick={onCreateChat} className="p-1 hover:bg-[var(--surface-3)] rounded-lg transition-colors text-[var(--text-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50" aria-label="Create new chat">
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -189,7 +202,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                   <span className="truncate">{chat.title}</span>
                   <button
                     onClick={(e) => onDeleteChat(chat.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-danger/20 hover:text-danger rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:opacity-100"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-danger/20 hover:text-danger rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:opacity-100"
                     aria-label={`Delete chat: ${chat.title}`}
                   >
                     <Trash2 className="w-3 h-3" />
@@ -206,7 +219,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         {onOpenCoach && (
           <button
             onClick={onOpenCoach}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 border-l-2 border-transparent"
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
             aria-label="Open Coach mode"
           >
             <BrainCircuit className="w-4 h-4" />
@@ -215,8 +228,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         )}
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
-            activeTab === 'settings' ? 'bg-[var(--surface-3)] text-[var(--text-1)] border-l-2 border-[var(--accent)] pl-[calc(0.75rem-2px)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] border-l-2 border-transparent'
+          className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+            activeTab === 'settings' ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)] rounded-lg' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] rounded-lg'
           }`}
           aria-label="Open settings"
         >
@@ -225,7 +238,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </button>
         <button
           onClick={() => setIsLight((v) => !v)}
-          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 border-l-2 border-transparent"
+          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
           aria-label={isLight ? 'Switch to dark theme' : 'Switch to light theme'}
         >
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}

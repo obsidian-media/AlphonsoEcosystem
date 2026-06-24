@@ -1,6 +1,5 @@
 import React from 'react';
 import { ArrowUpCircle, Bell, WifiOff } from 'lucide-react';
-import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { Badge } from './ui/Badge';
 
 interface Settings {
@@ -57,11 +56,13 @@ export function TopBar({
   onOpenSettings,
   notificationCount = 0,
   onToggleNotifications,
+  selectedModelMissing,
 }: TopBarProps) {
   return (
-    <header className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--surface-0)] z-20 sticky top-0">
+    <header className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--surface-glass)] backdrop-blur-xl z-20 sticky top-0 relative">
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-border)] to-transparent opacity-60" />
       <div className="flex items-center gap-3">
-        <h1 className="text-sm font-medium text-[var(--text-1)]">
+        <h1 className="text-sm font-semibold text-[var(--text-1)]">
           {PAGE_TITLES[activeTab] || 'Alphonso'}
         </h1>
 
@@ -81,30 +82,38 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
-        {operatorMode && <Badge variant="default">Operator</Badge>}
-        {settings.zeroCostMode && <Badge variant="success">Free</Badge>}
+        {operatorMode && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)]">
+            Operator
+          </span>
+        )}
+        {settings.zeroCostMode && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-[var(--success-dim)] border border-[var(--success)]/20 text-[var(--success)]">
+            Free
+          </span>
+        )}
 
         {onToggleNotifications && (
           <button
             onClick={onToggleNotifications}
-            className="relative p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="relative p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4" />
             {notificationCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-accent text-[10px] font-bold text-white flex items-center justify-center leading-none">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[var(--accent)] text-[10px] font-bold text-[var(--surface-0)] flex items-center justify-center leading-none">
                 {notificationCount > 9 ? '9+' : notificationCount}
               </span>
             )}
           </button>
         )}
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] border ${selectedModelMissing ? 'border-[var(--warning)]/30' : 'border-[var(--border)]'}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${ollamaStatus.state === 'connected' ? 'bg-[var(--success)]' : 'bg-[var(--error)]'}`} />
-          <span className="text-2xs text-[var(--text-3)]">{settings.selectedModel || 'No model'}</span>
+          <span className={`text-xs ${selectedModelMissing ? 'text-[var(--warning)]' : 'text-[var(--text-3)]'}`}>
+            {selectedModelMissing ? 'No model' : settings.selectedModel || 'No model'}
+          </span>
         </div>
-
-        <img src={alphonsoIcon} alt="" className="w-6 h-6 rounded-full opacity-80" />
       </div>
     </header>
   );

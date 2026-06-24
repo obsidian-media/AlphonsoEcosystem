@@ -1,6 +1,7 @@
-// @ts-nocheck
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { messageIn } from '../lib/motion';
 
 // T10: dev-only profiler wrapper — logs ChatMessageList renders > 16ms (one frame)
 const onProfilerRender = import.meta.env.DEV
@@ -192,6 +193,25 @@ function buildProjectSummary(result, commandText, baseSummary, screenContext = [
   return lines.join('\n');
 }
 
+interface ChatViewProps {
+  activeChatId: string;
+  settings: Record<string, unknown>;
+  setConversations: (fn: (prev: unknown[]) => unknown[]) => void;
+  ollamaStatus: { state: string; label?: string };
+  installedModels: string[];
+  selectedModelMissing?: boolean;
+  voice: { voiceStatus: string; toggleListening: () => void };
+  onGenerationChange?: (generating: boolean) => void;
+  onTaskComplete: () => void;
+  onRetryOllama: () => void;
+  onJoseExecutionState?: (state: string, detail?: string) => void;
+  onOpenSettings: () => void;
+  onModelChange?: (model: string) => void;
+  screenObserverLogs?: unknown[];
+  setActiveTab?: (tab: string) => void;
+  onPendingCountChange?: (count: number) => void;
+}
+
 export function ChatView({
   activeChatId,
   settings,
@@ -209,7 +229,7 @@ export function ChatView({
   screenObserverLogs = [],
   setActiveTab,
   onPendingCountChange
-}: any) {
+}: ChatViewProps) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -731,15 +751,10 @@ export function ChatView({
       <div className="border-b border-[var(--border)] shrink-0 bg-[var(--surface-0)]">
         <div className="h-12 flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <History className="w-3.5 h-3.5 text-[var(--text-3)]" />
-              <span className="text-xs text-[var(--text-3)] font-medium">CHAT SESSION: {activeChatId}</span>
-            </div>
             <OllamaModelPicker
-              initialModel={settings.selectedModel}
+              initialModel={settings.selectedModel as string | undefined}
               onModelChange={onModelChange}
             />
-            {/* D1T7: Direct mode toggle */}
             <button
               onClick={() => setDirectMode((d) => !d)}
               className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded border transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${directMode ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-white/5 text-[var(--text-4)] hover:text-[var(--text-2)]'}`}
@@ -749,18 +764,12 @@ export function ChatView({
               <Zap className="w-2.5 h-2.5" />
               Direct
             </button>
-            {/* D1T4: Connector status dots */}
             <div className="flex items-center gap-1" title="Connector status: Ollama · Telegram">
               <ConnectorStatusDot connectorId="ollama" />
               <ConnectorStatusDot connectorId="telegram" />
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {directMode && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)] font-bold uppercase tracking-widest">
-                Direct
-              </span>
-            )}
             <button
               onClick={() => { setSearchOpen((o) => !o); setSearchQuery(''); }}
               className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded ${searchOpen ? 'text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--accent)]'}`}
@@ -770,24 +779,11 @@ export function ChatView({
             </button>
             <button
               onClick={() => setCompactChat((current) => !current)}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded ${compactChat ? 'text-emerald-400' : 'text-[var(--text-3)] hover:text-emerald-400'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded ${compactChat ? 'text-[var(--success)]' : 'text-[var(--text-3)] hover:text-[var(--success)]'}`}
               aria-label={compactChat ? 'Expand chat spacing' : 'Compact chat spacing'}
             >
               {compactChat ? <ChevronsUp className="w-3 h-3" /> : <ChevronsDown className="w-3 h-3" />}
               {compactChat ? 'Focus' : 'Full'}
-            </button>
-            <button
-              onClick={() => {
-                const next = !previewMode;
-                setPreviewMode(next);
-                setRuntimePolicySettings({ previewMode: next }).catch(() => {});
-              }}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded ${previewMode ? 'text-amber-400' : 'text-[var(--text-3)] hover:text-amber-400'}`}
-              aria-label={previewMode ? 'Preview mode on — approve before publishing' : 'Auto mode — publish without approval'}
-              title={previewMode ? 'Preview mode: see results before publishing' : 'Auto mode: publish immediately'}
-            >
-              {previewMode ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-              {previewMode ? 'Preview' : 'Auto'}
             </button>
             <button
               onClick={exportChat}
@@ -898,11 +894,31 @@ export function ChatView({
 
       <div className={`flex-1 overflow-y-auto scroll-smooth ${compactChat ? 'p-3 space-y-3' : 'p-5 space-y-6'}`}>
         {messages.length === 0 && !inputValue && (
-          <div className="h-full flex flex-col items-center justify-center select-none py-16">
-            <div className="flex flex-col items-center gap-3 opacity-40">
-              <Bot className="w-12 h-12 text-[var(--text-3)]" />
-              <p className="text-sm font-medium text-[var(--text-2)]">Start a conversation</p>
-              <p className="text-xs text-[var(--text-4)]">Type a command or ask anything.</p>
+          <div className="h-full flex flex-col items-center justify-center select-none py-16 px-4">
+            <div className="flex flex-col items-center gap-6 w-full max-w-lg">
+              <div className="flex flex-col items-center gap-2 opacity-70">
+                <div className="w-10 h-10 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-[var(--accent)]" />
+                </div>
+                <p className="text-sm font-semibold text-[var(--text-1)]">What can I help you build?</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 w-full">
+                {[
+                  { label: 'Generate an image', cmd: 'generate an image of a sunset over mountains' },
+                  { label: 'Write some code', cmd: 'implement a React component that shows a data table with sorting' },
+                  { label: 'Research a topic', cmd: 'research the latest trends in AI agents' },
+                  { label: 'Run a workflow', cmd: 'run workflow' },
+                ].map((s) => (
+                  <button
+                    key={s.label}
+                    onClick={() => { setInputValue(s.cmd); inputRef.current?.focus(); }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-2)] hover:border-[var(--accent-border)] hover:text-[var(--text-1)] transition-all text-left"
+                  >
+                    <ArrowRight className="w-3 h-3 text-[var(--text-4)] shrink-0" />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -921,10 +937,11 @@ export function ChatView({
           </div>
         )}
         <MessageListProfiler msgCount={visibleMessages.length}>
+        <AnimatePresence initial={false}>
         {visibleMessages.map((message) => {
           const isLastAssistantMessage = message.role === 'assistant' && messages.indexOf(message) === lastAssistantIdx;
           return (
-          <div key={message.id} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
+          <motion.div key={message.id} variants={messageIn} initial="hidden" animate="visible" exit={{ opacity: 0, y: -4 }} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (
               <div className={`w-8 h-8 rounded-lg ${message.isError ? 'bg-red-500/10 border-red-500/20' : 'bg-[var(--accent-dim)] border-[var(--accent-border)]'} border flex items-center justify-center shrink-0 mt-1 shadow-sm`}>
                 <Bot className={`w-4 h-4 ${message.isError ? 'text-red-400' : 'text-[var(--accent)]'}`} />
@@ -1010,10 +1027,10 @@ export function ChatView({
                 </div>
               ) : (
                 <div className="relative group">
-                  <div className={`px-3 py-2 text-xs ${compactChat ? '' : ''}`}>{message.content}</div>
+                  <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--surface-0)] shadow-sm ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
                   <button
                     onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
-                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--text-4)] hover:text-amber-400 hover:bg-[var(--surface-3)]"
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--surface-0)]/60 hover:text-[var(--surface-0)]"
                     aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
                   >
                     {pinnedMessages.some((p) => p.id === message.id) ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
@@ -1021,9 +1038,10 @@ export function ChatView({
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
           );
         })}
+        </AnimatePresence>
         </MessageListProfiler>
 
         {isGenerating && (
@@ -1063,16 +1081,16 @@ export function ChatView({
 
         {novaInsight && !isGenerating && (
           <div className="mx-auto w-full max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-4 space-y-2">
+            <div className="rounded-2xl border border-[var(--agent-nova-glow)] bg-[var(--surface-2)] p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
                   <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-widest">Nova Insight</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    novaInsight.score >= 80 ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300' :
-                    novaInsight.score >= 60 ? 'bg-amber-500/10 border-amber-400/20 text-amber-300' :
-                    'bg-zinc-500/10 border-zinc-400/20 text-[var(--text-2)]'
-                  }`}>Score {novaInsight.score}/100</span>
+                    (novaInsight.score as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' :
+                    (novaInsight.score as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]' :
+                    'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'
+                  }`}>Score {novaInsight.score as number}/100</span>
                 </div>
                 <button onClick={() => setNovaInsight(null)} className="text-[var(--text-4)] hover:text-[var(--text-2)] rounded">
                   <X className="w-3.5 h-3.5" />
@@ -1195,30 +1213,40 @@ export function ChatView({
               <div className="text-2xs font-bold uppercase tracking-widest text-[var(--text-3)]">
                 Execution Receipts ({executionReceipts.length})
               </div>
-              {executionReceipts.map((receipt) => (
-                <div key={receipt.id} className="flex items-center gap-2 text-xs">
+              {executionReceipts.map((receipt) => {
+                const RECEIPT_STATUS_LABELS: Record<string, string> = {
+                  reported_to_jose: 'Reported',
+                  executed: 'Done',
+                  pending_approval: 'Approval',
+                  dead_letter: 'Failed',
+                  failed: 'Failed',
+                };
+                const statusLabel = RECEIPT_STATUS_LABELS[receipt.status as string] ?? (receipt.status as string);
+                return (
+                <div key={receipt.id as string} className="flex items-center gap-2 text-xs">
                   <span className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase tracking-widest ${
                     receipt.status === 'reported_to_jose' || receipt.status === 'executed'
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      ? 'bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success)]/20'
                       : receipt.status === 'pending_approval'
-                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning)]/20'
                         : receipt.status === 'dead_letter' || receipt.status === 'failed'
-                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          : 'bg-zinc-500/10 text-[var(--text-2)] border border-white/10'
+                          ? 'bg-[var(--error-dim)] text-[var(--error)] border border-[var(--error)]/20'
+                          : 'bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]'
                   }`}>
-                    {receipt.status}
+                    {statusLabel}
                   </span>
                   <span className="text-[var(--text-1)] font-medium">{receipt.agent}</span>
                   <span className="text-[var(--text-3)] truncate">{receipt.actionType || receipt.eventType}</span>
                   {receipt.riskLevel && receipt.riskLevel !== 'low' && (
                     <span className={`px-1 py-0.5 rounded text-2xs font-bold uppercase ${
                       receipt.riskLevel === 'high'
-                        ? 'bg-red-500/10 text-red-400'
-                        : 'bg-amber-500/10 text-amber-400'
-                    }`}>{receipt.riskLevel}</span>
+                        ? 'bg-[var(--error-dim)] text-[var(--error)]'
+                        : 'bg-[var(--warning-dim)] text-[var(--warning)]'
+                    }`}>{receipt.riskLevel as string}</span>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -1227,30 +1255,8 @@ export function ChatView({
       </div>
 
       <div className={`${compactChat ? 'p-3' : 'p-5'} shrink-0 max-w-4xl mx-auto w-full`}>
-        {hectorBriefing && (
-          <div className="mx-4 mb-2 rounded-xl border border-sky-400/20 bg-sky-500/5 p-3 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Hector Research</span>
-              <button onClick={() => setHectorBriefing(null)} className="text-[var(--text-3)] hover:text-[var(--text-1)] text-xs">×</button>
-            </div>
-            {hectorBriefing.sources?.slice(0, 3).map((src, i) => {
-              const domain = src.url ? (() => { try { return new URL(src.url).hostname.replace('www.', ''); } catch { return src.url; } })() : null;
-              return (
-                <a
-                  key={i}
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
-                  className="text-sky-400 hover:text-sky-300 underline text-xs truncate block"
-                  title={src.url}
-                >
-                  {src.title || domain || src.url}
-                </a>
-              );
-            })}
-          </div>
-        )}
         <div
-          className={`relative bg-[var(--surface-2)] border rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-[var(--accent-border)] transition-all ${isDragging ? 'border-amber-400/30 border-dashed' : 'border-white/10'}`}
+          className={`relative bg-[var(--surface-glass)] border rounded-2xl shadow-2xl backdrop-blur-xl group focus-within:border-[var(--accent-border)] focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-[var(--warning)]/30 border-dashed' : 'border-[var(--border)]'}`}
           onDragEnter={() => setIsDragging(true)}
           onDragLeave={() => setIsDragging(false)}
           onDragOver={(e) => e.preventDefault()}
@@ -1268,25 +1274,6 @@ export function ChatView({
             onChange={handleFileAttach}
             className="hidden"
           />
-          <div className="absolute -top-10 left-0 flex gap-2">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center gap-1.5 px-3 py-1.5   bg-[var(--surface-3)] border rounded-t-lg text-2xs font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
-                attachedFile?.error
-                  ? 'border-red-500/30 text-red-400'
-                  : attachedFile?.name
-                    ? 'border-emerald-500/30 text-emerald-400'
-                    : 'border-white/5 text-[var(--text-3)] hover:text-[var(--text-1)] hover:border-white/10'
-              }`}
-              aria-label="Attach a file to your message"
-            >
-              <Paperclip className="w-3 h-3" />
-              {attachedFile?.error ? attachedFile.error : attachedFile?.name ? attachedFile.name : 'ATTACH FILE'}
-            </button>
-            <Suspense fallback={null}>
-              <VoiceInputButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
-            </Suspense>
-          </div>
           <textarea
             ref={inputRef}
             value={inputValue}
@@ -1298,49 +1285,65 @@ export function ChatView({
               }
             }}
             placeholder="Ask anything… or try: 'run workflow [name]', 'generate an image of…', 'implement a function that…'"
-            className={`w-full bg-transparent text-[var(--text-1)] placeholder:text-[var(--text-4)] p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[68px]' : 'min-h-[100px]'}`}
+            className={`w-full bg-transparent text-[var(--text-1)] placeholder:text-[var(--text-4)] px-4 pt-4 pb-2 focus:outline-none text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[56px]' : 'min-h-[80px]'}`}
           />
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 pb-1">
               {attachedFiles.map((f, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-3)] border border-white/10 text-[11px] text-[var(--text-1)]">
-                  {f.name}
-                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-[var(--text-3)] hover:text-[var(--text-1)] ml-0.5" aria-label={`Remove ${f.name}`}>×</button>
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-3)] border border-[var(--border)] text-[11px] text-[var(--text-1)]">
+                  {(f as { name: string }).name}
+                  <button onClick={() => setAttachedFiles((prev) => prev.filter((_, idx) => idx !== i))} className="text-[var(--text-3)] hover:text-[var(--text-1)] ml-0.5" aria-label={`Remove ${(f as { name: string }).name}`}>×</button>
                 </span>
               ))}
             </div>
           )}
-          <div className="mt-1 text-2xs text-[var(--text-3)]">
-            {ollamaStatus.state === 'connected' && !selectedModelMissing
-              ? `Message ${settings.selectedModel || 'local model'}`
-              : ollamaStatus.state !== 'connected'
-                ? 'Start Ollama to enable local AI responses.'
-                : 'Choose a local model in Settings to start chatting.'}
-          </div>
-
-          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 pb-3 pt-1">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+                (attachedFile as { error?: string; name?: string } | null)?.error
+                  ? 'border-[var(--error)]/30 text-[var(--error)]'
+                  : (attachedFile as { error?: string; name?: string } | null)?.name
+                    ? 'border-[var(--success)]/30 text-[var(--success)]'
+                    : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
+              }`}
+              aria-label="Attach a file to your message"
+            >
+              <Paperclip className="w-3 h-3" />
+              {(attachedFile as { error?: string; name?: string } | null)?.error ? (attachedFile as { error: string }).error : (attachedFile as { error?: string; name?: string } | null)?.name ? (attachedFile as { name: string }).name : 'File'}
+            </button>
+            <Suspense fallback={null}>
+              <VoiceInputButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
+            </Suspense>
+            <span className="flex-1 text-2xs text-[var(--text-4)]">
+              {ollamaStatus.state === 'connected' && !selectedModelMissing
+                ? `${settings.selectedModel as string || 'local model'}`
+                : ollamaStatus.state !== 'connected'
+                  ? 'Start Ollama to enable AI'
+                  : 'Choose a model in Settings'}
+            </span>
             {isGenerating && (
               <button
                 onClick={() => abortRef.current?.abort()}
-                className="h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest bg-[var(--surface-3)] text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                className="h-7 px-3 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest bg-[var(--surface-3)] text-[var(--error)] hover:bg-[var(--error-dim)] border border-[var(--error)]/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--error)]/50"
                 aria-label="Abort and stop"
               >
-                <Square className="w-3.5 h-3.5" />
+                <Square className="w-3 h-3" />
                 Stop
               </button>
             )}
             <button
               onClick={handleSend}
               disabled={isGenerating || !inputValue.trim()}
-              className={`h-9 px-4 rounded-xl flex items-center gap-2 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+              className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
                 isGenerating || !inputValue.trim()
                   ? 'bg-[var(--surface-3)] text-[var(--text-4)] cursor-not-allowed opacity-50'
-                  : 'bg-white text-zinc-950 hover:bg-[var(--accent)] hover:text-white shadow-lg'
+                  : 'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)] shadow-sm'
               }`}
               aria-label="Send message"
             >
-              {isGenerating ? 'Computing...' : 'Run Prompt'}
-              <Send className="w-3.5 h-3.5" />
+              {isGenerating ? 'Generating…' : 'Send'}
+              <Send className="w-3 h-3" />
             </button>
           </div>
         </div>

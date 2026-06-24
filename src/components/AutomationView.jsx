@@ -29,13 +29,13 @@ export function AutomationView() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Tab bar */}
-      <div className="flex items-center gap-1 px-6 pt-4 pb-0 border-b border-white/[0.06] shrink-0">
+      <div className="flex items-center gap-1 px-6 pt-4 pb-0 border-b border-[var(--border)] shrink-0">
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
             activeTab === 'overview'
-              ? 'bg-zinc-900 border border-b-0 border-white/[0.08] text-zinc-100'
-              : 'text-zinc-500 hover:text-zinc-300'
+              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
+              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
           }`}
         >
           Overview
@@ -44,8 +44,8 @@ export function AutomationView() {
           onClick={() => setActiveTab('builder')}
           className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
             activeTab === 'builder'
-              ? 'bg-zinc-900 border border-b-0 border-white/[0.08] text-zinc-100'
-              : 'text-zinc-500 hover:text-zinc-300'
+              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
+              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
           }`}
         >
           Builder
@@ -60,58 +60,58 @@ export function AutomationView() {
     <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-zinc-100">Automation</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Build and run multi-agent workflows</p>
+          <h2 className="text-base font-bold text-[var(--text-1)]">Automation</h2>
+          <p className="text-xs text-[var(--text-3)] mt-0.5">Build and run multi-agent workflows</p>
         </div>
-        <button onClick={refresh} className="p-2 rounded-lg border border-white/10 bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors">
+        <button onClick={refresh} className="p-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors">
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-4 space-y-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">New Workflow</div>
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="section-label">New Workflow</div>
         <div className="flex gap-2">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             placeholder="Workflow name..."
-            className="flex-1 bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+            className="flex-1 bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
           />
           <button
             onClick={handleCreate}
             disabled={!newName.trim()}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
+            className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--surface-0)] text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
           >
             Create
           </button>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-4 space-y-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Workflows ({workflows.length})</div>
-        {workflows.length === 0 && <div className="text-xs text-zinc-600 py-2">No workflows yet. Create one above.</div>}
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="section-label">Workflows ({workflows.length})</div>
+        {workflows.length === 0 && <div className="text-xs text-[var(--text-4)] py-2">No workflows yet. Create one above.</div>}
         {workflows.map((wf) => (
-          <div key={wf.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-white/[0.05] bg-zinc-900/60">
+          <div key={wf.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
             <div>
-              <div className="text-sm font-medium text-zinc-200">{wf.name}</div>
-              <div className="text-[10px] text-zinc-600 font-mono">{wf.id}</div>
+              <div className="text-sm font-medium text-[var(--text-1)]">{wf.name}</div>
+              <div className="text-[10px] text-[var(--text-4)] font-mono">{wf.id}</div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-zinc-500">{wf.nodes?.length || 0} nodes</span>
-              <span className="text-[10px] px-2 py-0.5 rounded border border-zinc-700 text-zinc-400">{wf.agentScope || 'shared'}</span>
+              <span className="text-[10px] text-[var(--text-3)]">{wf.nodes?.length || 0} nodes</span>
+              <span className="text-[10px] px-2 py-0.5 rounded border border-[var(--border)] text-[var(--text-3)]">{wf.agentScope || 'shared'}</span>
             </div>
           </div>
         ))}
       </div>
 
       {ops.length > 0 && (
-        <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-4 space-y-3">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Registered Operations ({ops.length})</div>
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+          <div className="section-label">Registered Operations ({ops.length})</div>
           {ops.slice(0, 20).map((op) => (
-            <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-white/[0.05] bg-zinc-900/60">
-              <div className="text-sm font-medium text-zinc-300">{op.name || op.id}</div>
-              <span className={`text-[10px] px-2 py-0.5 rounded border ${op.status === 'active' || op.enabled ? 'border-emerald-600/30 text-emerald-400' : 'border-zinc-700 text-zinc-500'}`}>
+            <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
+              <div className="text-sm font-medium text-[var(--text-2)]">{op.name || op.id}</div>
+              <span className={`text-[10px] px-2 py-0.5 rounded border ${op.status === 'active' || op.enabled ? 'border-[var(--success)]/30 text-[var(--success)]' : 'border-[var(--border)] text-[var(--text-3)]'}`}>
                 {op.status === 'active' || op.enabled ? 'active' : op.status || 'inactive'}
               </span>
             </div>
@@ -120,18 +120,18 @@ export function AutomationView() {
       )}
 
       {runs.length > 0 && (
-        <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-4 space-y-3">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Recent Runs ({runs.length})</div>
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+          <div className="section-label">Recent Runs ({runs.length})</div>
           {runs.slice(0, 15).map((run) => (
-            <div key={run.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-white/[0.05] bg-zinc-900/60">
+            <div key={run.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
               <div>
-                <div className="text-xs font-medium text-zinc-300">{run.workflowId}</div>
-                <div className="text-[10px] text-zinc-600">{new Date(run.createdAtMs || 0).toLocaleString()}</div>
+                <div className="text-xs font-medium text-[var(--text-2)]">{run.workflowId}</div>
+                <div className="text-[10px] text-[var(--text-4)]">{new Date(run.createdAtMs || 0).toLocaleString()}</div>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded border ${
-                run.status === 'completed' ? 'border-emerald-600/30 text-emerald-400' :
-                run.status === 'failed' ? 'border-red-600/30 text-red-400' :
-                'border-zinc-700 text-zinc-400'
+                run.status === 'completed' ? 'border-[var(--success)]/30 text-[var(--success)]' :
+                run.status === 'failed' ? 'border-[var(--error)]/30 text-[var(--error)]' :
+                'border-[var(--border)] text-[var(--text-3)]'
               }`}>{run.status}</span>
             </div>
           ))}
