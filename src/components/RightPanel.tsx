@@ -180,7 +180,7 @@ export function RightPanel({
       state: settings.workspaceRoot ? 'connected' : 'idle'
     },
     {
-      label: 'Bridge',
+      label: 'Desktop',
       value: desktopBridge.label,
       state: desktopBridge.state === 'connected' ? 'connected' : 'disconnected'
     },

@@ -115,19 +115,21 @@ export async function executeWithRetry<T>(
 
 export function createTaskQueue<T>(maxConcurrency: number = 5) {
   const queue: ParallelTask<T>[] = [];
-  let isProcessing = false;
+  let currentRun: Promise<void> | null = null;
 
-  async function processQueue(): Promise<void> {
-    if (isProcessing || queue.length === 0) return;
+  function processQueue(): Promise<void> {
+    if (currentRun) return currentRun;
+    if (queue.length === 0) return Promise.resolve();
 
-    isProcessing = true;
+    currentRun = (async () => {
+      while (queue.length > 0) {
+        const batch = queue.splice(0, maxConcurrency);
+        await executeParallel(batch, { maxConcurrency });
+      }
+      currentRun = null;
+    })();
 
-    while (queue.length > 0) {
-      const batch = queue.splice(0, maxConcurrency);
-      await executeParallel(batch, { maxConcurrency });
-    }
-
-    isProcessing = false;
+    return currentRun;
   }
 
   return {
@@ -143,6 +145,7 @@ export function createTaskQueue<T>(maxConcurrency: number = 5) {
 
     async flush(): Promise<void> {
       await processQueue();
+      if (currentRun) await currentRun;
     },
 
     get size(): number {

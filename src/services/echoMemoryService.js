@@ -130,7 +130,7 @@ export function normalizeMemoryConfidence(entries) {
       : rank >= 2 ? TRUST_STATES.INFERRED
       : rank >= 1 ? TRUST_STATES.TEMPORARY
       : TRUST_STATES.UNVERIFIED;
-    return { ...entry, confidence: normalized, confidenceLevel: normalized };
+    return { ...entry, confidence: normalized, confidenceLevel: entry.confidenceLevel || normalized };
   });
 }
 

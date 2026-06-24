@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.1] - 2026-06-24 — UI, Scroll, Voice & Execution Enhancements
+
+### Added
+- **Coach Navigation**: Added a "Coach" footer button to the Sidebar that launches the Tauri coach window.
+- **Voice STT Integration**: Spoken voice input is now directly piped into the ChatView input box; VoiceInputButton shows an amber warning label `MIC (NO STT)` when speech-to-text is unavailable in WebView2.
+- **Execution Results Panel**: Added an "Execution Results" section at the bottom of OrchestratorView to display real-time statuses and summaries of packet execution.
+
+### Fixed
+- **Ollama Offline Banner**: False offline banner hidden during 'connecting' boot phase.
+- **Packet Execution Fallback**: Generic packet execution now successfully appends orchestration receipts and session events.
+- **Windows CMD Window Spawning**: Spawning visible CMD window spam in Rust fixed by adding the `CREATE_NO_WINDOW` flag.
+
+---
+
 ## [2.1.0] - 2026-06-23 — Stability, Performance & Test Coverage
 
 ### Boot Reliability

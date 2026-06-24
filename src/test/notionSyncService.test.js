@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../services/runtimeLedgerService.js', () => ({
+vi.mock('../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn(async () => ({ ok: true, written: 1 })),
   listScopeRecords: vi.fn(async () => [])
 }));
 
-vi.mock('../services/memoryService.js', () => ({
+vi.mock('../services/memoryService', () => ({
   pushMemoryItem: vi.fn((item) => item)
 }));
 
-vi.mock('../services/connectorRegistryService.js', () => ({
+vi.mock('../services/connectorRegistryService', () => ({
   sendNotionConnectorEntry: vi.fn(async () => ({ ok: true, externalId: 'page-123', error: null })),
   isConnectorAuthenticated: vi.fn(() => ({ ok: true, reason: 'configured' }))
 }));
 
-vi.mock('../services/approval/approvalService.js', () => ({
+vi.mock('../services/approval/approvalService', () => ({
   createApprovalRequest: vi.fn((payload) => ({
     id: `approval-${Date.now()}`,
     status: 'pending',
@@ -22,7 +22,7 @@ vi.mock('../services/approval/approvalService.js', () => ({
   }))
 }));
 
-vi.mock('../services/eventsService.js', () => ({
+vi.mock('../services/eventsService', () => ({
   buildNotionSyncEvent: vi.fn((overrides = {}) => ({
     id: `mock-evt-${Date.now()}`,
     eventType: `notion.sync.${overrides.direction || 'pull'}`,
@@ -557,13 +557,15 @@ describe('notionSyncService — slice 2: persistence + push + reconciliation', (
     });
 
     it('filters by source and conflict status', async () => {
-      listScopeRecords.mockResolvedValueOnce([
+      const mockRecords = [
         { id: 'a', data: { correlation: {}, sync: { source: 'notion_pull', conflict_status: 'clean' } }, timestampMs: 1 },
         { id: 'b', data: { correlation: {}, sync: { source: 'alphonso_local', conflict_status: 'pending_review' } }, timestampMs: 2 }
-      ]);
+      ];
+      listScopeRecords.mockResolvedValueOnce(mockRecords);
       const onlyPulls = await listNotionSyncRecords({ source: 'notion_pull' });
       expect(onlyPulls).toHaveLength(1);
 
+      listScopeRecords.mockResolvedValueOnce(mockRecords);
       const onlyPending = await listNotionSyncRecords({ conflictStatus: 'pending_review' });
       expect(onlyPending).toHaveLength(1);
     });

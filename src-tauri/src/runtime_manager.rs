@@ -19,6 +19,20 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
+// Windows: prevent child processes from opening visible console windows.
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// Apply CREATE_NO_WINDOW on Windows so child processes don't flash CMD windows.
+#[allow(unused_variables)]
+fn no_window(cmd: &mut Command) -> &mut Command {
+  #[cfg(target_os = "windows")]
+  cmd.creation_flags(CREATE_NO_WINDOW);
+  cmd
+}
+
 // ─────────────────────────────────────────────────────────
 // Static tool catalogue
 // ─────────────────────────────────────────────────────────
@@ -221,14 +235,12 @@ pub fn find_python() -> Option<String> {
   };
 
   for name in candidates {
-    if Command::new(name)
-      .arg("--version")
+    let mut cmd = Command::new(name);
+    cmd.arg("--version")
       .stdout(std::process::Stdio::null())
-      .stderr(std::process::Stdio::null())
-      .status()
-      .map(|s| s.success())
-      .unwrap_or(false)
-    {
+      .stderr(std::process::Stdio::null());
+    no_window(&mut cmd);
+    if cmd.status().map(|s| s.success()).unwrap_or(false) {
       return Some((*name).to_string());
     }
   }
@@ -257,9 +269,10 @@ pub fn find_python() -> Option<String> {
 }
 
 fn python_version(exe: &str) -> Option<String> {
-  Command::new(exe)
-    .arg("--version")
-    .output()
+  let mut cmd = Command::new(exe);
+  cmd.arg("--version");
+  no_window(&mut cmd);
+  cmd.output()
     .ok()
     .map(|o| {
       String::from_utf8_lossy(&o.stdout)
@@ -290,9 +303,10 @@ pub fn find_git() -> Option<String> {
 }
 
 fn git_version(exe: &str) -> Option<String> {
-  Command::new(exe)
-    .arg("--version")
-    .output()
+  let mut cmd = Command::new(exe);
+  cmd.arg("--version");
+  no_window(&mut cmd);
+  cmd.output()
     .ok()
     .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
     .filter(|s| !s.is_empty())
@@ -471,6 +485,9 @@ async fn run_streaming(
   cwd: Option<&Path>,
 ) -> Result<(), String> {
   use tokio::process::Command as TokioCommand;
+  #[cfg(target_os = "windows")]
+  #[allow(unused_imports)]
+  use std::os::windows::process::CommandExt as TokioCommandExt;
 
   let mut cmd = TokioCommand::new(program);
   cmd.args(args);
@@ -480,6 +497,8 @@ async fn run_streaming(
   cmd.stdout(std::process::Stdio::piped());
   cmd.stderr(std::process::Stdio::piped());
   cmd.kill_on_drop(true);
+  #[cfg(target_os = "windows")]
+  cmd.creation_flags(CREATE_NO_WINDOW);
 
   let mut child = cmd
     .spawn()
@@ -874,6 +893,7 @@ pub async fn runtime_start_tool(
   }
   cmd.stdout(std::process::Stdio::null());
   cmd.stderr(std::process::Stdio::null());
+  no_window(&mut cmd);
 
   let child = cmd.spawn().map_err(|e| {
     format!("Failed to start {} ('{}'):\n{}", def.display_name, exe, e)
@@ -1031,6 +1051,7 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
       }
       cmd.stdout(std::process::Stdio::null());
       cmd.stderr(std::process::Stdio::null());
+      no_window(&mut cmd);
 
       match cmd.spawn() {
         Ok(child) => {
@@ -1069,13 +1090,12 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
 // ─────────────────────────────────────────────────────────
 
 fn which_exe(name: &str) -> bool {
-  Command::new(if cfg!(target_os = "windows") { "where" } else { "which" })
-    .arg(name)
+  let mut cmd = Command::new(if cfg!(target_os = "windows") { "where" } else { "which" });
+  cmd.arg(name)
     .stdout(std::process::Stdio::null())
-    .stderr(std::process::Stdio::null())
-    .status()
-    .map(|s| s.success())
-    .unwrap_or(false)
+    .stderr(std::process::Stdio::null());
+  no_window(&mut cmd);
+  cmd.status().map(|s| s.success()).unwrap_or(false)
 }
 
 fn kill_pid(pid: u32) {

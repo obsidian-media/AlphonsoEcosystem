@@ -51,7 +51,7 @@ export function useVoiceInput({ onTranscript } = {}) {
     }
     stopAudioStream(streamRef.current);
     streamRef.current = null;
-    setLiveTranscript('');
+    // Don't clear liveTranscript here — keep final spoken text so ChatView can use it.
     updateState(VOICE_STATES.STOPPED, TRANSCRIPTION_PIPELINE_STATUS.message);
   }, [updateState]);
 
@@ -70,7 +70,8 @@ export function useVoiceInput({ onTranscript } = {}) {
           setLiveTranscript(text);
           if (isFinal) {
             onTranscript?.(text);
-            setLiveTranscript('');
+            // Keep final text in liveTranscript so ChatView can populate the input.
+            // ChatView should clear it after the user submits.
           }
         },
         onEnd: () => {

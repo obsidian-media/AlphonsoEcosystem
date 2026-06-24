@@ -263,4 +263,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-23 — v2.1.0 — Boot TDZ crashes fixed (2 separate issues). ChatView: message windowing (150 items), re-render optimization, React.Profiler in dev. E2E: chat flow + workflow builder + connector health tests. plugin-react-oxc (Vite 8/rolldown). TruffleHog CI. 141 test files, 1908+ tests. 15 TSX components. 131 services. Coverage ~38%+ (threshold 35%). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-24 — v2.1.1 — Boot TDZ crashes fixed. ChatView message windowing, re-render O(n)→O(1) fix, React.Profiler in dev. Voice STT warning + text insertion wired, Sidebar Coach button added, Orchestrator execution result panel added, Windows CMD window spawning spam in Rust fixed. 141 test files, 1908+ tests passing. Coverage threshold 35%+ (actual ~38%+). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

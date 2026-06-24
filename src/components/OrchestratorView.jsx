@@ -80,6 +80,8 @@ export function OrchestratorView({
   const [whatsappPolling, setWhatsappPolling] = useState(false);
   const [focusMode, setFocusMode] = useState(() => localStorage.getItem('alphonso_jose_density_v1') !== 'full');
   const [openPanels, setOpenPanels] = useState(() => new Set(['jose-task-queue', 'jose-intake', 'pending-approvals']));
+  const [executionResults, setExecutionResults] = useState([]);
+  const [executingPacketIds, setExecutingPacketIds] = useState(new Set());
   const whatsappConfigured = isConnectorAuthenticated('whatsapp');
 
   const approvalQueue = useMemo(() => listApprovalQueue(), [packets]);
@@ -288,7 +290,10 @@ export function OrchestratorView({
       refreshAll();
       return;
     }
+    setExecutingPacketIds((prev) => new Set(prev).add(packetId));
+    const startedAt = Date.now();
     const result = await executeApprovedPacket(packet);
+    setExecutingPacketIds((prev) => { const next = new Set(prev); next.delete(packetId); return next; });
     appendSessionEvent({
       category: 'task',
       title: result?.ok ? 'Jose executed approved packet' : 'Jose packet execution failed',
@@ -301,11 +306,21 @@ export function OrchestratorView({
       confidence: result?.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED,
       verificationState: result?.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED
     });
+    const summary = result?.ok
+      ? (result.setupRequired
+        ? `Task queued — no live runtime adapter yet for packet type "${packet.packetType}". Jose marked the packet executed. Check the Receipts panel or chat for follow-up.`
+        : (result.executionResult?.note || result.result?.message || `Packet "${packet.title}" executed successfully.`))
+      : (result?.error || 'Execution failed — check session events for details.');
+    setExecutionResults((prev) => [
+      { id: packetId, title: packet.title, packetType: packet.packetType, ok: Boolean(result?.ok), setupRequired: Boolean(result?.setupRequired), summary, ts: startedAt },
+      ...prev.slice(0, 9)
+    ]);
     onJoseStateChange?.(result?.ok ? 'task_complete' : 'warning', result?.ok ? 'Approved packet executed.' : 'Packet execution failed.');
     refreshAll();
   };
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-6xl px-6 py-8 space-y-4">
       <header className="pb-6 border-b border-white/[0.06]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -581,7 +596,13 @@ export function OrchestratorView({
                   <button onClick={() => approve(packet.id)} className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-100">Approve</button>
                   <button onClick={() => reject(packet.id)} className="rounded-lg bg-red-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-red-100">Reject</button>
                   <button onClick={() => queueForExecution(packet.id)} className="rounded-lg bg-zinc-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Queue</button>
-                  <button onClick={() => executePacketNow(packet.id)} className="rounded-lg bg-indigo-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Execute</button>
+                  <button
+                    onClick={() => executePacketNow(packet.id)}
+                    disabled={executingPacketIds.has(packet.id)}
+                    className="rounded-lg bg-indigo-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100 disabled:opacity-50 disabled:cursor-wait"
+                  >
+                    {executingPacketIds.has(packet.id) ? 'Running…' : 'Execute'}
+                  </button>
                 </div>
               </div>
             ))}
@@ -679,8 +700,12 @@ export function OrchestratorView({
                   </button>
                 )}
                 {['approved', 'queued'].includes(packet.status) && (
-                  <button onClick={() => executePacketNow(packet.id)} className="mt-2 ml-2 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100">
-                    Execute Now
+                  <button
+                    onClick={() => executePacketNow(packet.id)}
+                    disabled={executingPacketIds.has(packet.id)}
+                    className="mt-2 ml-2 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100 disabled:opacity-50 disabled:cursor-wait"
+                  >
+                    {executingPacketIds.has(packet.id) ? 'Running…' : 'Execute Now'}
                   </button>
                 )}
               </div>
@@ -797,6 +822,31 @@ export function OrchestratorView({
           ))}
         </div>
       </CollapsiblePanel>
+
+      {executionResults.length > 0 && (
+        <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-300">Execution Results</div>
+            <button onClick={() => setExecutionResults([])} className="text-[10px] text-zinc-500 hover:text-zinc-300">Clear</button>
+          </div>
+          {executionResults.map((r) => (
+            <div key={r.id + r.ts} className={`rounded-xl border p-3 ${r.ok ? 'border-emerald-400/20 bg-emerald-500/10' : 'border-red-400/20 bg-red-500/10'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-xs font-semibold ${r.ok ? 'text-emerald-200' : 'text-red-300'}`}>{r.ok ? (r.setupRequired ? '⏳ Queued' : '✓ Success') : '✗ Failed'}</span>
+                <span className="text-[10px] text-zinc-500">{new Date(r.ts).toLocaleTimeString()}</span>
+              </div>
+              <div className="mt-1 text-sm font-medium text-zinc-100">{r.title}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-zinc-400">{r.summary}</div>
+              {r.setupRequired && (
+                <div className="mt-2 text-[11px] text-amber-300/80">
+                  This packet type (<code className="text-amber-200">{r.packetType}</code>) needs a runtime adapter to produce live output. Go to <strong>Chat</strong> and ask Alphonso to execute the task directly — that path is fully wired.
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
     </div>
   );
 }

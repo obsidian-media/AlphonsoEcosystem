@@ -509,7 +509,14 @@ export async function persistNotionSyncRecord(syncRecord) {
   if (!syncRecord || typeof syncRecord !== 'object') {
     return { ok: false, written: 0, error: 'sync_record_required' };
   }
-  const correlation = buildCorrelationId(syncRecord.correlation || {});
+  const rawCorr = syncRecord.correlation || {};
+  const normalizedCorr = {
+    projectId: rawCorr.projectId ?? rawCorr.project_id ?? null,
+    taskId: rawCorr.taskId ?? rawCorr.task_id ?? null,
+    workflowId: rawCorr.workflowId ?? rawCorr.workflow_id ?? null,
+    notionPageId: rawCorr.notionPageId ?? rawCorr.notion_page_id ?? null
+  };
+  const correlation = buildCorrelationId(normalizedCorr);
   const sync = buildSyncMetadata(syncRecord.sync || {});
   const id = syncRecord.id || buildNotionSyncRecordId(correlation, sync.source);
   if (!id) {

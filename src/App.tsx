@@ -222,6 +222,21 @@ function AppShell() {
     };
   }, []);
 
+  // Boot-time autostart: start tools the user enabled autostart for
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getAutostartPrefs, startTool } = await import('./services/runtimeManagerService');
+        const prefs = await getAutostartPrefs();
+        for (const [name, enabled] of Object.entries(prefs)) {
+          if (enabled) {
+            startTool(name).catch(() => { /* best-effort */ });
+          }
+        }
+      } catch { /* Tauri not available or prefs unset */ }
+    })();
+  }, []);
+
   // Wire background services: Sentinel scheduled scans + Maria weekly report
   useEffect(() => {
     let scanStop: (() => void) | null = null;
@@ -318,6 +333,7 @@ function AppShell() {
         onDeleteChat={deleteChat}
         settings={settings}
         pendingApprovalCount={pendingApprovalCount}
+        onOpenCoach={handleToggleCoachMode}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar
@@ -392,7 +408,7 @@ function AppShell() {
                   </Suspense>
                 )}
                 {activeTab === 'connectors' && (
-                  <div className="p-6">
+                  <div className="h-full overflow-y-auto p-6">
                     <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading...</div>}>
                       <ConnectorHealthPanel zeroCostMode={settings.zeroCostMode} />
                     </React.Suspense>

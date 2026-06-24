@@ -11,7 +11,7 @@ export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }) {
   const [starting, setStarting] = useState(false);
   const [startMsg, setStartMsg] = useState(null);
 
-  if (!ollamaStatus || ollamaStatus.state === 'connected') return null;
+  if (!ollamaStatus || ollamaStatus.state === 'connected' || ollamaStatus.state === 'connecting') return null;
 
   const isNotRunning = ollamaStatus.state === 'not_running' || ollamaStatus.state === 'disconnected';
   const isNoModels = ollamaStatus.state === 'no_models' || ollamaStatus.state === 'model_missing';

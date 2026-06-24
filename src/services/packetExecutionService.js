@@ -171,17 +171,42 @@ export async function executeApprovedPacket(packet) {
     }
 
     const executionResult = buildExecutionResult(packet, {
-      note: 'No runtime executor is wired for this packet type yet.'
+      note: `Packet "${packet.title}" acknowledged. Type "${packet.packetType}" has no live runtime adapter — see Execution Results panel.`
     });
     markPacketExecuted(packet.id, executionResult, TRUST_STATES.TEMPORARY);
     appendSessionEvent({
       category: 'task',
-      title: 'Packet marked executed without runtime adapter',
+      title: `Packet acknowledged: ${packet.title}`,
       details: {
         packetId: packet.id,
-        packetType: packet.packetType
+        packetType: packet.packetType,
+        fromAgent: packet.fromAgent,
+        toAgent: packet.toAgent,
+        note: 'No live runtime adapter for this packet type. Packet marked executed locally.'
       },
       agent: AGENTS.JOSE,
+      confidence: TRUST_STATES.TEMPORARY,
+      verificationState: TRUST_STATES.UNVERIFIED
+    });
+    appendOrchestrationReceipt({
+      workflowId: 'packet_execution',
+      commandId: packet?.payload?.joseCommandId || packet?.payload?.commandId || null,
+      packetId: packet.id,
+      eventType: 'packet_acknowledged',
+      status: 'executed',
+      agent: packet.toAgent || AGENTS.JOSE,
+      actionType: packet.actionType || packet.packetType,
+      riskLevel: packet.riskLevel || 'low',
+      approved: true,
+      blocked: false,
+      setupRequired: true,
+      details: {
+        title: packet.title,
+        packetType: packet.packetType,
+        note: 'Packet acknowledged by Jose. No live runtime adapter wired for this type.',
+        fromAgent: packet.fromAgent,
+        toAgent: packet.toAgent
+      },
       confidence: TRUST_STATES.TEMPORARY,
       verificationState: TRUST_STATES.UNVERIFIED
     });

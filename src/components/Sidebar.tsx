@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Bot,
+  BrainCircuit,
   ChevronDown,
   Cpu,
   FolderOpen,
@@ -53,6 +54,7 @@ interface SidebarProps {
   onDeleteChat: (id: string, e: React.MouseEvent) => void;
   settings: AppSettings;
   pendingApprovalCount?: number;
+  onOpenCoach?: () => void;
 }
 
 const NAV_SECTIONS: NavSection[] = [
@@ -88,7 +90,7 @@ const NAV_SECTIONS: NavSection[] = [
   }
 ];
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0 }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
 
   const [isLight, setIsLight] = useState<boolean>(() => {
@@ -201,6 +203,16 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
 
       {/* Footer */}
       <div className="p-2 border-t border-[var(--border)] space-y-0.5">
+        {onOpenCoach && (
+          <button
+            onClick={onOpenCoach}
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 border-l-2 border-transparent"
+            aria-label="Open Coach mode"
+          >
+            <BrainCircuit className="w-4 h-4" />
+            {isOpen && <span>Coach</span>}
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('settings')}
           className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${

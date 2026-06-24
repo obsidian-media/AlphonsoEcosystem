@@ -348,7 +348,7 @@ export default function RuntimeManagerView() {
 
   useEffect(() => {
     load();
-    refreshTimer.current = setInterval(load, 8000);
+    refreshTimer.current = setInterval(load, 30000);
     onAnyProgress(() => {}).then((ul) => {
       unlistenRef.current = ul;
     });
@@ -423,6 +423,7 @@ export default function RuntimeManagerView() {
   const installedCount = tools.filter((t) => t.installed).length;
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="flex flex-col gap-5 p-5 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
@@ -540,6 +541,7 @@ export default function RuntimeManagerView() {
       <p className="text-zinc-600 text-xs text-center pt-2">
         Tools install to <code className="text-zinc-500">%APPDATA%\Alphonso\runtimes\</code> and are shared across Alphonso updates.
       </p>
+    </div>
     </div>
   );
 }

@@ -252,6 +252,13 @@ export function ChatView({
   const inputRef = useRef(null);
   const approvalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Wire live voice transcript into the chat input
+  useEffect(() => {
+    if (voice?.liveTranscript) {
+      setInputValue(voice.liveTranscript);
+    }
+  }, [voice?.liveTranscript]);
+
   const pinMessage = (message) => {
     setPinnedMessages((prev) => {
       if (prev.some((p) => p.id === message.id)) return prev;
