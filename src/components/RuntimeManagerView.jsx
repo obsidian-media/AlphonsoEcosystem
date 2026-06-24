@@ -78,6 +78,13 @@ const TOOL_META = {
     color: 'text-orange-400',
     bg: 'bg-orange-500/10 border-orange-500/20',
   },
+  'voice-os': {
+    icon: '🎙️',
+    category: 'Voice',
+    docsUrl: 'https://github.com/Thatisshayan/AlphonsoEcosystem',
+    color: 'text-cyan-400',
+    bg: 'bg-cyan-500/10 border-cyan-500/20',
+  },
 };
 
 function StatusDot({ running, installing }) {

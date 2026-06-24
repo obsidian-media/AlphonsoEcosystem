@@ -28,9 +28,11 @@ mod runway;
 mod search;
 mod telegram;
 mod utils;
+mod voice_sidecar;
 mod whatsapp_webhook;
 mod workspace;
 mod youtube;
+use voice_sidecar::VoiceSidecar;
 
 pub(crate) use audit_log::*;
 pub(crate) use connector_commands::*;
@@ -1524,6 +1526,7 @@ pub fn run() {
   tauri::Builder::default()
     .manage(http_client)
     .manage(runtime_manager::RuntimeManager::new())
+    .manage(VoiceSidecar(std::sync::Mutex::new(None)))
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_updater::Builder::new().build())
@@ -2017,7 +2020,10 @@ pub fn run() {
       save_image_to_folder,
       companion_server::companion_get_pin,
       companion_server::companion_get_status,
-      companion_server::companion_start_discovery
+      companion_server::companion_start_discovery,
+      voice_sidecar::voice_start,
+      voice_sidecar::voice_stop,
+      voice_sidecar::voice_status
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

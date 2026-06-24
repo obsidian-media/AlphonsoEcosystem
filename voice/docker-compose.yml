@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - BUFFER_THRESHOLD_BYTES=${BUFFER_THRESHOLD_BYTES:-32000}
+    volumes:
+      - ./backend/voices:/app/voices:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # lets container reach host Ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5174:5173"  # use 5174 to avoid conflict with main Alphonso app on 5173
+    environment:
+      - VITE_VOICE_WS_URL=ws://localhost:8000/ws
+    depends_on:
+      backend:
+        condition: service_healthy
