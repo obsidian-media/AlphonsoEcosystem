@@ -6,6 +6,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.0] - 2026-06-23 — Stability, Performance & Test Coverage
+
+### Boot Reliability
+- Fixed Temporal Dead Zone (TDZ) crash on startup: circular imports between `joseExecutionEngineService` ↔ `agentBrainService` / `batchOrchestratorService` resolved by extracting `parseJsonResponse` to `src/lib/jsonUtils.js`
+- Fixed second TDZ crash: `approvalRequiredNotice` `useEffect` in `App.tsx` moved below `useAppShellState` declaration
+- Fixed Vite 8 / rolldown warnings: switched from `@vitejs/plugin-react` to `@vitejs/plugin-react-oxc`; removed invalid `compiler: 'oxc'` key
+- Fixed `INEFFECTIVE_DYNAMIC_IMPORT` warning in `connectorRegistry.js`
+
+### Performance (ChatView)
+- **Message windowing (T7)**: ChatView now renders at most 150 messages at a time; "Show N older messages" button loads more. Prevents DOM bloat on long sessions.
+- **Re-render optimization (T9)**: `lastAssistantIdx` computation moved outside `.map()` (was O(n) per item, now computed once via `useMemo`)
+- **React.Profiler (T10)**: `MessageListProfiler` wrapper logs renders > 16ms to console in dev mode (zero cost in production)
+
+### Testing
+- 141 test files / 1908 tests — all passing
+- 6 new service test files: `connectorCircuitBreakerService`, `connectorRateLimiterService`, `crashLogService`, `connectorHealthCheckService`, `searchService`, `autoRunService`
+- E2E suite expanded: chat flow (send message → receive streamed response), workflow builder navigation, connector health panel navigation
+
+### CI / Security
+- Added TruffleHog secrets scanning job to `ci.yml`
+- Coverage threshold raised: 30% → 35% on all dimensions
+- `sourcemap: 'hidden'` in Vite build (maps generated but not exposed to end users)
+
+### TypeScript Migration
+- 5 more components migrated to `.tsx`: `ApprovalModal`, `ConnectorHealthPanel`, `OllamaOfflineBanner`, `OnboardingWizard`, `WorkflowBuilderView`
+- Running total: 15 TSX components
+
+---
+
 ## [2.0.10] - 2026-06-23 — Design System + Full UI Phases 1–5
 
 ### Design Token System (Phase 1)

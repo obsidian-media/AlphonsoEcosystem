@@ -24,4 +24,48 @@ test.describe('Alphonso E2E smoke tests', () => {
     await expect(page.locator('main')).toBeVisible();
   });
 
+  // Epic 1 Task 1: Chat flow
+  test('chat flow — send message and receive streamed response', async ({ page }) => {
+    // Navigate to Chat tab (default, but ensure it)
+    await page.getByRole('button', { name: /^Chat$/ }).click();
+
+    // Wait for ChatView textarea
+    const textarea = page.locator('textarea').last();
+    await expect(textarea).toBeVisible({ timeout: 10000 });
+
+    // Type a message
+    await textarea.fill('Hello Alphonso');
+
+    // Send via button
+    const sendBtn = page.getByRole('button', { name: /Send message/i });
+    await expect(sendBtn).toBeVisible();
+    await sendBtn.click();
+
+    // Mock returns { response: 'Hello!', done: true } — wait for it to appear in the message list
+    await expect(page.locator('text=Hello!').first()).toBeVisible({ timeout: 15000 });
+  });
+
+  // Epic 1 Task 2: Workflow builder
+  test('workflow builder — navigate and render', async ({ page }) => {
+    // Click Workflows in sidebar
+    await page.getByRole('button', { name: /^Workflows$/ }).click();
+
+    // AutomationView / WorkflowBuilderView should load
+    // Look for the "New Workflow" button or workflow list header that WorkflowBuilderView renders
+    await expect(
+      page.locator('text=New Workflow, text=Workflows, text=Build and run').first()
+    ).toBeVisible({ timeout: 15000 });
+  });
+
+  // Epic 1 Task 3: Connector health panel
+  test('connector health — navigate and render panel', async ({ page }) => {
+    // Click Connectors in sidebar
+    await page.getByRole('button', { name: /^Connectors$/ }).click();
+
+    // ConnectorHealthPanel should render with tabs
+    await expect(
+      page.locator('text=Health Monitor, text=Setup').first()
+    ).toBeVisible({ timeout: 15000 });
+  });
+
 });

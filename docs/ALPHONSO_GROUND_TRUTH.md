@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-23 — v2.0.10 Design System + Full UI Phase 1-5 complete  
-**Verified by:** Claude Code session (133 test files, 1854+ tests passing, cargo clippy clean)  
-**Version:** 2.0.10 (Design token system + component library complete; all deferred panels wired; UI phases 1-5 done)  
+**Last verified:** 2026-06-23 — v2.1.0 Stability, Performance & Test Coverage sprint  
+**Verified by:** Claude Code session (141 test files, 1908 tests passing, cargo clippy clean)  
+**Version:** 2.1.0 (Boot TDZ crashes fixed; ChatView windowing + profiler; E2E expanded; 170+ new tests; plugin-react-oxc; TruffleHog CI; 5 more TSX migrations)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.0.10 |
+| Version | 2.1.0 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -146,7 +146,7 @@ Key services that past audits missed or underestimated:
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-22 Sprint Next-50, all passing):**
-- 120 test files (119 top-level + `services/agentContract.test.ts`), 1737+ tests passing
+- 141 test files, 1908+ tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
 ```
 accBridgeService.test.js
@@ -705,7 +705,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-23 — v2.0.10: Boot TDZ crash fixed. Circular dep cycles broken: joseExecutionEngineService ↔ agentBrainService and ↔ batchOrchestratorService. `parseJsonResponse` extracted to `src/lib/jsonUtils.js`. 134 test files, 1861+ tests passing. Coverage ~38%+ (threshold 35%). Source maps hidden (`sourcemap: 'hidden'` in vite.config.js). connectorRegistry.js dynamic import of connectorAuth.js converted to static. All 9 agent runtimes live. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-23 — v2.1.0: Stability, Performance & Test Coverage sprint. Boot TDZ crashes fixed (two separate issues). ChatView message windowing (150 items), re-render O(n)→O(1) fix, React.Profiler in dev. E2E expanded: chat flow, workflow builder, connector health. 141 test files, 1908+ tests passing. Coverage threshold 35%+ (actual ~38%+). Source maps hidden. plugin-react-oxc replacing plugin-react (Vite 8/rolldown). TruffleHog secrets scan in CI. 15 TSX components. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

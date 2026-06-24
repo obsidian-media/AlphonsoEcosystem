@@ -69,7 +69,8 @@ vi.mock('../components/MarkdownMessage', () => ({
 }));
 
 vi.mock('../components/ModelSwitcher', () => ({
-  ModelSwitcher: ({ initialModel }) => <span data-testid="model-switcher">{initialModel}</span>
+  ModelSwitcher: ({ initialModel }) => <span data-testid="model-switcher">{initialModel}</span>,
+  OllamaModelPicker: ({ initialModel }) => <span data-testid="model-picker">{initialModel}</span>
 }));
 
 vi.mock('../components/ApprovalPanel', () => ({

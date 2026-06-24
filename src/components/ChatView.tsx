@@ -1,6 +1,20 @@
 // @ts-nocheck
 import React from 'react';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+
+// T10: dev-only profiler wrapper — logs ChatMessageList renders > 16ms (one frame)
+const onProfilerRender = import.meta.env.DEV
+  ? (_id, phase, actualDuration, _, __, msgCount) =>
+      actualDuration > 16 && console.debug(`[Profiler] ChatMessageList ${phase}: ${actualDuration.toFixed(1)}ms`)
+  : undefined;
+function MessageListProfiler({ children, msgCount }) {
+  if (!import.meta.env.DEV) return children;
+  return (
+    <React.Profiler id="ChatMessageList" onRender={(id, phase, actual) => onProfilerRender(id, phase, actual, null, null, msgCount)}>
+      {children}
+    </React.Profiler>
+  );
+}
 import { invoke } from '@tauri-apps/api/core';
 import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard, Zap as ZapIcon } from 'lucide-react';
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
@@ -372,6 +386,7 @@ export function ChatView({
       }
     }
     void load();
+    setMessageWindowStart(0);
     return () => { cancelled = true; };
   }, [activeChatId]);
 
@@ -677,11 +692,32 @@ export function ChatView({
     setStorage('alphonso_chat_compact_v1', compactChat);
   }, [compactChat]);
 
-  const visibleMessages = useMemo(() => {
+  const WINDOW_SIZE = 150;
+  const [messageWindowStart, setMessageWindowStart] = useState(0);
+
+  const filteredMessages = useMemo(() => {
     if (!searchQuery.trim()) return messages;
     const q = searchQuery.toLowerCase();
     return messages.filter((m) => m.content?.toLowerCase().includes(q));
   }, [messages, searchQuery]);
+
+  // T7: windowed rendering — only keep WINDOW_SIZE messages in DOM
+  const visibleMessages = useMemo(() => {
+    const start = searchQuery.trim() ? 0 : Math.max(0, filteredMessages.length - WINDOW_SIZE - messageWindowStart);
+    return filteredMessages.slice(start);
+  }, [filteredMessages, messageWindowStart, searchQuery]);
+
+  const hiddenCount = useMemo(() =>
+    searchQuery.trim() ? 0 : Math.max(0, messages.length - WINDOW_SIZE - messageWindowStart),
+    [messages.length, messageWindowStart, searchQuery]);
+
+  // T9: compute lastAssistantIdx once, not inside .map()
+  const lastAssistantIdx = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return i;
+    }
+    return -1;
+  }, [messages]);
 
   return (
     <div className="h-full flex flex-col">
@@ -867,8 +903,18 @@ export function ChatView({
         {searchQuery && visibleMessages.length === 0 && (
           <div className="text-center text-xs text-[var(--text-4)] py-8">No messages match "{searchQuery}"</div>
         )}
+        {hiddenCount > 0 && (
+          <div className="text-center py-2">
+            <button
+              onClick={() => setMessageWindowStart((n) => n + WINDOW_SIZE)}
+              className="text-xs text-[var(--text-3)] hover:text-indigo-400 transition-colors underline underline-offset-2"
+            >
+              Show {hiddenCount} older message{hiddenCount !== 1 ? 's' : ''}
+            </button>
+          </div>
+        )}
+        <MessageListProfiler msgCount={visibleMessages.length}>
         {visibleMessages.map((message) => {
-          const lastAssistantIdx = messages.length - 1 - [...messages].reverse().findIndex((m) => m.role === 'assistant');
           const isLastAssistantMessage = message.role === 'assistant' && messages.indexOf(message) === lastAssistantIdx;
           return (
           <div key={message.id} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${message.role === 'user' ? 'justify-end' : ''}`}>
@@ -971,6 +1017,7 @@ export function ChatView({
           </div>
           );
         })}
+        </MessageListProfiler>
 
         {isGenerating && (
           <div className="flex gap-3 max-w-3xl mx-auto w-full py-2" aria-live="polite" aria-label="Streaming response">

@@ -263,4 +263,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-23 — v2.0.10 — Boot TDZ crash fixed (circular deps joseExecutionEngineService ↔ agentBrainService/batchOrchestratorService — extracted parseJsonResponse to src/lib/jsonUtils.js). 134 test files, 1861+ tests, all passing. 10 TSX components (15 after T3 migration). 131 services. Coverage ~38%+ (threshold raised to 35%). Source maps: hidden (added to vite.config.js). Ineffective dynamic import in connectorRegistry.js converted to static. Design system + UI phases 1-5 complete. All 9 agents live. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-23 — v2.1.0 — Boot TDZ crashes fixed (2 separate issues). ChatView: message windowing (150 items), re-render optimization, React.Profiler in dev. E2E: chat flow + workflow builder + connector health tests. plugin-react-oxc (Vite 8/rolldown). TruffleHog CI. 141 test files, 1908+ tests. 15 TSX components. 131 services. Coverage ~38%+ (threshold 35%). Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
