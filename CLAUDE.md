@@ -107,6 +107,10 @@ Before writing any new service, component, or feature, check this list:
 | Connector credential UI (all 9 API connectors) | `src/components/ConnectorSetupPanel.jsx` `CredentialSection` — saves via `saveConnectorCredential()` |
 | Telegram companion bot commands | `src/services/telegramCompanionService.js` — `/help`, `/report`, `/files`, `/status`, `/memory` |
 | Voice STT pipeline | `src/services/voiceService.js` + `src/hooks/useVoiceInput.js` — SpeechRecognition with fallback |
+| Voice OS sidecar launcher | `src-tauri/src/voice_sidecar.rs` — `voice_start`/`voice_stop`/`voice_status` Tauri commands |
+| Voice OS React service | `src/services/voiceOsService.js` — `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus` |
+| Jarvis voice hook | `src/hooks/useJarvisVoice.ts` — AudioWorklet WebSocket voice hook (start/stop/reset/state/transcript/reply/activeAgent/error/isConnected) |
+| Voice OS backend | `voice/backend/` — FastAPI STT→LLM→TTS pipeline (faster-whisper, piper, webrtcvad, Ollama /api/chat) |
 | Workflow visual builder UI | `src/components/WorkflowBuilderView.jsx` — two-panel editor, 9 node types, reorder, save |
 | Nova insight card | `src/components/ChatView.tsx` — `novaInsight` state, score ring, fires after Jose pipeline |
 | Sentinel quick-scan in sidebar | `src/components/RightPanel.tsx` — `sentinelScan` state, `runQuickScan()`, Security section |
@@ -263,4 +267,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-24 — v2.2.0 — Premium cyan UI (all indigo hardcoding removed, CSS tokens throughout), creative routing dispatches to ComfyUI/SD WebUI + early return, coding agent false-positive blocklist, workflow chat invocation with early return, ChatView placeholder hint, ACC bridge settings UI, scroll fix 4 views, package.json+tauri.conf.json bumped to 2.2.0. 144 test files, 1930+ tests passing. Coverage threshold 38%. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-24 — v2.2.0+ — Voice OS pipeline (feat/voice-os merged): FastAPI STT+LLM+TTS+VAD+barge-in backend in voice/, Tauri voice_sidecar.rs commands, voiceOsService.js, useJarvisVoice.ts (AudioWorklet), RuntimeManagerView voice-os entry, 5 pytest test files. UI/UX overhaul (feat/ui-ux-overhaul merged): OKLCH token system, framer-motion AnimatePresence on chat messages, motion.ts, OnboardingWizard token sweep, collapsed sidebar tooltips, RightPanel badge fix. 144 test files, 1930+ tests passing. Coverage threshold 38%. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
