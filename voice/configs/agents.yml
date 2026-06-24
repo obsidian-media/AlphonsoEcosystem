@@ -1,2 +1,44 @@
 agents:
-  alphonso_core: true
+  alphonso_core:
+    enabled: true
+    description: "General-purpose Alphonso assistant"
+    ollama_model: "llama3"
+  jose:
+    enabled: true
+    description: "Task orchestration"
+    ollama_model: "llama3"
+  hector:
+    enabled: true
+    description: "Research and web search"
+    ollama_model: "llama3"
+  miya:
+    enabled: true
+    description: "Content creation"
+    ollama_model: "llama3"
+  maria:
+    enabled: true
+    description: "Governance and compliance"
+    ollama_model: "llama3"
+  marcus:
+    enabled: true
+    description: "Distribution and publishing"
+    ollama_model: "llama3"
+  echo:
+    enabled: true
+    description: "Memory and recall"
+    ollama_model: "llama3"
+  sentinel:
+    enabled: true
+    description: "Security scanning"
+    ollama_model: "llama3"
+  nova:
+    enabled: true
+    description: "Opportunity analysis"
+    ollama_model: "llama3"
+
+voice:
+  sample_rate: 16000
+  buffer_threshold_bytes: 32000
+  barge_in: true
+  whisper_model: "base"
+  tts_voice: "en_US-lessac-medium"
