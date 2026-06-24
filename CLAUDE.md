@@ -263,4 +263,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-24 — v2.2.0 — Premium cyan UI (accent #22d3ee, navy surfaces), creative intent routing (image/video/audio → Runtime Hub), workflow chat invocation, coding agent service, ACC bridge settings UI, scroll fix on 4 views, E2E CI gated, coverage threshold 45%. 144 test files, 1930+ tests passing. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-24 — v2.2.0 — Premium cyan UI (all indigo hardcoding removed, CSS tokens throughout), creative routing dispatches to ComfyUI/SD WebUI + early return, coding agent false-positive blocklist, workflow chat invocation with early return, ChatView placeholder hint, ACC bridge settings UI, scroll fix 4 views, package.json+tauri.conf.json bumped to 2.2.0. 144 test files, 1930+ tests passing. Coverage threshold 38%. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

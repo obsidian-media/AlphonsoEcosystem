@@ -1164,22 +1164,28 @@ export async function runJoseCommandExecutionPipeline({
 }) {
   // Creative intent routing — detect image/video/audio and dispatch to running Runtime Hub tool
   const creativeIntent = detectCreativeIntent(commandText);
-  if (creativeIntent === 'image_generation') {
+  if (creativeIntent) {
     const routing = await routeToCreativeTool(creativeIntent);
-    if (routing?.ok) {
-      const prompt = commandText;
-      let imageResult = null;
-      if (routing.tool === 'comfyui') {
-        imageResult = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: 'http://127.0.0.1:8188' });
-      } else {
-        // automatic1111, fooocus, invokeai all expose SD WebUI-compatible API
-        imageResult = await generateSdWebUiImage({ prompt, negativePrompt: 'blurry, low quality', width: 512, height: 512, steps: 20, cfgScale: 7 });
-      }
-      onProgress?.({ stage: 'creative_image_done', tool: routing.tool, result: imageResult });
-      return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, creativeResult: imageResult, command: null };
-    } else if (routing && !routing.ok) {
+    if (routing && !routing.ok) {
       onProgress?.({ stage: 'creative_routing_no_tool', intent: creativeIntent, error: routing.error });
       return { ok: false, reason: routing.error, needsRuntime: true, command: null };
+    }
+    if (routing?.ok) {
+      if (creativeIntent === 'image_generation') {
+        const prompt = commandText;
+        let imageResult = null;
+        if (routing.tool === 'comfyui') {
+          imageResult = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: 'http://127.0.0.1:8188' });
+        } else {
+          // automatic1111, fooocus, invokeai all expose SD WebUI-compatible API
+          imageResult = await generateSdWebUiImage({ prompt, negativePrompt: 'blurry, low quality', width: 512, height: 512, steps: 20, cfgScale: 7 });
+        }
+        onProgress?.({ stage: 'creative_image_done', tool: routing.tool, result: imageResult });
+        return { ok: true, executedCount: 1, pendingApprovalCount: 0, failedCount: 0, creativeResult: imageResult, command: null };
+      }
+      // video_generation and audio_generation: tool is identified but dispatch not yet implemented
+      // Fall through to main pipeline which may handle via agent assignments
+      onProgress?.({ stage: 'creative_tool_identified', intent: creativeIntent, tool: routing.tool });
     }
   }
 

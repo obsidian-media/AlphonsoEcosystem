@@ -6,22 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.2.0] - 2026-06-24 — Premium UI, Creative Routing, Phase B–H Sprint
+## [2.2.0] - 2026-06-24 — Premium UI, Creative Routing, Full Corner-Fix Sprint
 
 ### Added
-- **Premium Cyan UI**: Accent color migrated from indigo to cyan (#22d3ee); surfaces updated to deep navy (less harsh), ambient glow updated to match.
-- **Creative Intent Routing**: New `creativeRoutingService.js` — detects image/video/audio generation intents and routes to the running Runtime Hub tool (ComfyUI, A1111, MoneyPrinter, etc.).
-- **Workflow Chat Invocation**: "run workflow [name]" in chat now triggers `runVisualWorkflow()` directly from the jose pipeline.
-- **Coding Agent Service**: New `codingAgentService.js` — routes code/implement/debug requests to Claude coding agent via the pipeline.
-- **ACC Bridge Settings UI**: New "ACC Bridge" section in SettingsView with base URL + auth token inputs, backed by `accBridgeService.updateAccBridgeConfig`.
-- **Scroll Fix**: `EcosystemHub`, `MiyaStudio`, `MissionControlHome`, `HectorResearchDesk` now wrap content with `h-full overflow-y-auto`.
-- **E2E CI Gate**: E2E job now gated by `vars.ENABLE_E2E == 'true'` repo variable (requires Ollama); `continue-on-error: false`.
-- **Coverage Threshold Raised**: 35% → 45% in vitest.config.js.
+- **Premium Cyan UI**: Accent migrated from indigo to cyan (#22d3ee); surfaces deep navy; ambient glow updated; ChatView fully de-indigoed to CSS tokens.
+- **Creative Intent Routing**: `creativeRoutingService.js` detects image/video/audio intents; image generation dispatches to ComfyUI or SD WebUI and returns early; video/audio logs tool identified and falls through.
+- **Workflow Chat Invocation**: "run workflow [name]" (or any command containing "workflow" + name) triggers `runVisualWorkflow()` and returns early — no double-execution.
+- **Coding Agent Service**: `codingAgentService.js` routes code/implement/debug to Claude coding agent via `sendClaudeMessage`; falls through to main pipeline if Claude not configured.
+- **ACC Bridge Settings UI**: "ACC Bridge" section in SettingsView — base URL + auth token backed by `accBridgeService.updateAccBridgeConfig`.
+- **ChatView placeholder**: Main textarea now shows hint: "Ask anything… or try: 'run workflow [name]', 'generate an image of…', 'implement a function that…'"
+- **Scroll Fix**: `EcosystemHub`, `MiyaStudio`, `MissionControlHome`, `HectorResearchDesk` wrap with `h-full overflow-y-auto`.
+- **E2E CI Gate**: E2E gated by `vars.ENABLE_E2E == 'true'`; `continue-on-error: false`.
+- **Coverage Threshold**: 38% (matches measured actual).
 - **New Tests**: `creativeRoutingService.test.js`, `packetExecutionService.test.js`, `echoMemoryServiceExtra.test.js` — 1930 tests total.
 
 ### Fixed
-- Light mode accent updated to cyan (#0891b2) to match dark mode branding.
-- All indigo accent references in App.tsx updated to cyan.
+- `codingAgentService`: `systemPrompt` → `system` (was silently ignored by claudeService — responses never reached coding agent).
+- `codingAgentService`: Added `CONNECTOR_BLOCKLIST` — prevents "create a telegram bot script" / "create a video script" from false-routing to coding agent when they should go to connectors.
+- `codingAgentService`: Removed `script` from CODING_PATTERNS (too broad); kept `function`, `class`, `component`, `module` etc.
+- Jose pipeline: creative routing now returns early on no-tool-running (was falling through); coding agent guarded by `!creativeIntent` (was firing on video/audio generation commands).
+- Jose pipeline: workflow invocation now returns early (was also running main pipeline after starting workflow).
+- ChatView: all `indigo-*` hardcoded color classes replaced with `var(--accent)`, `var(--accent-dim)`, `var(--accent-border)` tokens.
+- Light mode accent updated to cyan (#0891b2).
+- `package.json` and `tauri.conf.json` bumped to 2.2.0.
 
 ---
 
