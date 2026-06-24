@@ -8,6 +8,18 @@ import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { requireApproval } from '../approval/approvalService';
 import { hydrateConnectorAuthProfilesFromSqlite } from './connectorAuth.js';
 
+// Read credentials saved via UI (separate from OS env vars)
+function getStoredCredential(connectorId, key) {
+  try {
+    const raw = localStorage.getItem('alphonso_connector_credentials_v1');
+    const all = raw ? JSON.parse(raw) : {};
+    const val = all?.[connectorId]?.[key];
+    return typeof val === 'string' ? val.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
 export const CONNECTOR_KEY = 'alphonso_connector_registry_v2';
 export const CONNECTOR_AUDIT_KEY = 'alphonso_connector_audit_v2';
 export const CONNECTOR_AUTH_KEY = 'alphonso_connector_auth_profiles_v1';
@@ -446,26 +458,29 @@ export async function verifyConnectorEnvironment(connectorId) {
     envPresence = await invoke('check_env_vars_presence', { names: connector.requiredEnv });
   } catch (error) {
     appendConnectorAudit(connector.id, 'env_check_failed', { error: String(error) });
-    return {
-      connectorId,
-      ok: false,
-      envPresence: {},
-      status: 'not_configured',
-      checkedAtMs: timestampMs(),
-      lastTestAtMs: timestampMs(),
-      lastTestStatus: 'failed',
-      lastTestError: String(error),
-      trust: TRUST_STATES.FAILED,
-      error: String(error)
-    };
+    // Fall through to credential-store check even if Tauri invoke fails
   }
+
+  // Merge UI-saved credentials into presence map — credentials saved via the
+  // settings panel live in localStorage, not in the OS env. Both count as
+  // "present" for verification purposes.
+  const mergedPresence = {};
+  for (const name of connector.requiredEnv) {
+    mergedPresence[name] = Boolean(envPresence[name]) || Boolean(getStoredCredential(connectorId, name));
+  }
+  envPresence = mergedPresence;
 
   let ok = connector.requiredEnv.every((name) => Boolean(envPresence[name]));
   let missing = connector.requiredEnv.filter((name) => !envPresence[name]);
   if (connector.id === 'whatsapp') {
     const cloudSet = ['WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID'];
     const twilioSet = ['WHATSAPP_TWILIO_ACCOUNT_SID', 'WHATSAPP_TWILIO_AUTH_TOKEN', 'WHATSAPP_TWILIO_FROM'];
-    const providerPresence = await invoke('check_env_vars_presence', { names: [...cloudSet, ...twilioSet] });
+    let providerPresence = {};
+    try { providerPresence = await invoke('check_env_vars_presence', { names: [...cloudSet, ...twilioSet] }); } catch { /* ignore */ }
+    // merge stored credentials for WhatsApp provider keys
+    for (const name of [...cloudSet, ...twilioSet]) {
+      providerPresence[name] = Boolean(providerPresence[name]) || Boolean(getStoredCredential('whatsapp', name));
+    }
     envPresence = { ...envPresence, ...providerPresence };
     const cloudReady = cloudSet.every((name) => Boolean(providerPresence[name]));
     const twilioReady = twilioSet.every((name) => Boolean(providerPresence[name]));

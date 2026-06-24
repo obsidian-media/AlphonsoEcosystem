@@ -436,7 +436,7 @@ export function ChatView({
   }, [messages, activeChatId, setConversations]);
 
   useEffect(() => {
-    if (settings.autoScroll) {
+    if (settings.autoScroll !== false) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isGenerating, settings.autoScroll]);

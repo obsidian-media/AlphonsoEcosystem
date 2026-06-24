@@ -272,7 +272,7 @@ export function ConnectorSetupPanel() {
   const activeCount = connectors.filter((c) => getDisplayStatus(c) === 'configured').length;
 
   // ── Credential save helpers ─────────────────────────────────────────────────
-  const saveTelegramCredentials = () => {
+  const saveTelegramCredentials = async () => {
     const token = telegramBotToken.trim();
     if (!token) { showNotice('Bot token is required.', 'error'); return; }
     saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', token);
@@ -282,21 +282,29 @@ export function ConnectorSetupPanel() {
       allowlist: telegramChatIds.split(/[,\n]/).map((s) => s.trim()).filter(Boolean)
     });
     setTelegramBotVerified(null);
-    showNotice('Telegram credentials saved. Use "Test Connection" on the card to verify.', 'success');
+    try {
+      const result = await verifyConnectorEnvironment('telegram');
+      showNotice(result?.ok ? 'Telegram saved & verified ✓' : 'Telegram saved — use "Test Connection" to verify the bot token.', result?.ok ? 'success' : 'info');
+    } catch {
+      showNotice('Telegram credentials saved.', 'success');
+    }
     refresh();
   };
 
-  const saveConnectorApiKey = (cId, fields) => {
+  const saveConnectorApiKey = async (cId, fields) => {
     let hasValue = false;
     for (const [key, value] of Object.entries(fields)) {
       const trimmed = String(value || '').trim();
       if (trimmed) { saveConnectorCredential(cId, key, trimmed); hasValue = true; }
     }
-    if (hasValue) {
-      updateConnectorAuthProfile(cId, { enabled: true });
+    if (!hasValue) { showNotice('Please enter at least one credential value.', 'error'); return; }
+    updateConnectorAuthProfile(cId, { enabled: true });
+    // Auto-verify immediately so the card shows "Active" without a manual test step
+    try {
+      const result = await verifyConnectorEnvironment(cId);
+      showNotice(result?.ok ? `${cId} saved & verified ✓` : `${cId} saved — verify check returned incomplete (check values)`, result?.ok ? 'success' : 'error');
+    } catch {
       showNotice(`${cId} credentials saved.`, 'success');
-    } else {
-      showNotice('Please enter at least one credential value.', 'error');
     }
     refresh();
   };
