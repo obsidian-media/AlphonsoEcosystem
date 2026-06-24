@@ -25,6 +25,17 @@ export default {
           dim: 'var(--accent-dim)',
         },
         border: { DEFAULT: 'var(--border)', strong: 'var(--border-strong)' },
+        agent: {
+          alphonso: 'var(--agent-alphonso)',
+          jose: 'var(--agent-jose)',
+          hector: 'var(--agent-hector)',
+          miya: 'var(--agent-miya)',
+          maria: 'var(--agent-maria)',
+          marcus: 'var(--agent-marcus)',
+          echo: 'var(--agent-echo)',
+          sentinel: 'var(--agent-sentinel)',
+          nova: 'var(--agent-nova)',
+        },
       },
       fontSize: {
         '2xs': ['0.6875rem', { lineHeight: '1rem' }],
@@ -36,9 +47,9 @@ export default {
         '3xl': '1.25rem',
       },
       boxShadow: {
-        'glow': '0 0 20px rgba(99, 102, 241, 0.15)',
-        'glow-sm': '0 0 10px rgba(99, 102, 241, 0.1)',
-        'inner-glow': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+        'glow': 'var(--shadow-glow-accent)',
+        'glow-sm': 'var(--shadow-glow-sm)',
+        'inner-glow': 'inset 0 1px 0 0 oklch(100% 0 0 / 0.05)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

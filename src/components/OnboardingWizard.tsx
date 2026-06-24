@@ -41,16 +41,16 @@ function StepIndicator({ currentStep }) {
           <div
             className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${
               i < currentStep
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-[var(--success)] text-[var(--surface-0)]'
                 : i === currentStep
-                  ? 'bg-indigo-500 text-white ring-2 ring-indigo-500/30'
-                  : 'bg-zinc-800 text-zinc-500'
+                  ? 'bg-[var(--accent)] text-[var(--surface-0)] ring-2 ring-[var(--accent)]/30'
+                  : 'bg-[var(--surface-3)] text-[var(--text-3)]'
             }`}
           >
             {i < currentStep ? <CheckCircle className="w-4 h-4" /> : i + 1}
           </div>
           {i < steps.length - 1 && (
-            <div className={`w-8 h-px transition-all ${i < currentStep ? 'bg-emerald-500' : 'bg-zinc-700'}`} />
+            <div className={`w-8 h-px transition-all ${i < currentStep ? 'bg-[var(--success)]' : 'bg-[var(--border-strong)]'}`} />
           )}
         </div>
       ))}
