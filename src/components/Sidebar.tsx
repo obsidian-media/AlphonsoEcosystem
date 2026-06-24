@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Activity,
   Bot,
@@ -143,13 +144,15 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 <div className="px-3 pt-4 pb-1.5 section-label">{section.label}</div>
               )}
               {section.items.map((item) => (
-                <button
+                <motion.button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`relative flex items-center gap-2.5 px-3 py-2 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
                     activeTab === item.id
-                      ? 'bg-[var(--surface-3)] text-[var(--text-1)] border-l-2 border-[var(--accent)] pl-[calc(0.75rem-2px)]'
-                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] border-l-2 border-transparent'
+                      ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)]'
+                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
                   }`}
                   aria-current={activeTab === item.id ? 'page' : undefined}
                 >
@@ -168,7 +171,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                       <ConnectorStatusDot connectorId="whatsapp" />
                     </span>
                   )}
-                </button>
+                </motion.button>
               ))}
             </React.Fragment>
           ))}
@@ -214,7 +217,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         {onOpenCoach && (
           <button
             onClick={onOpenCoach}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 border-l-2 border-transparent"
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
             aria-label="Open Coach mode"
           >
             <BrainCircuit className="w-4 h-4" />
@@ -224,7 +227,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         <button
           onClick={() => setActiveTab('settings')}
           className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
-            activeTab === 'settings' ? 'bg-[var(--surface-3)] text-[var(--text-1)] border-l-2 border-[var(--accent)] pl-[calc(0.75rem-2px)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] border-l-2 border-transparent'
+            activeTab === 'settings' ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)] rounded-lg' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] rounded-lg'
           }`}
           aria-label="Open settings"
         >
@@ -233,7 +236,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </button>
         <button
           onClick={() => setIsLight((v) => !v)}
-          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 border-l-2 border-transparent"
+          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
           aria-label={isLight ? 'Switch to dark theme' : 'Switch to light theme'}
         >
           {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}

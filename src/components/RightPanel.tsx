@@ -309,9 +309,13 @@ export function RightPanel({
                       <button
                         key={i}
                         onClick={() => setSelectedFinding(sentinelScan.findings![i])}
-                        className="block w-full text-left text-[10px] text-[var(--text-4)] truncate cursor-pointer hover:text-[var(--text-3)] transition-colors"
+                        className={`block w-full text-left text-[10px] truncate cursor-pointer hover:text-[var(--text-2)] transition-colors pl-2 border-l-2 my-0.5 ${
+                          f.severity === 'critical' || f.severity === 'high' ? 'border-[var(--error)] text-[var(--error)]' :
+                          f.severity === 'medium' ? 'border-[var(--warning)] text-[var(--warning)]' :
+                          'border-[var(--border-strong)] text-[var(--text-4)]'
+                        }`}
                       >
-                        • {f.type || f.pattern || 'threat'}
+                        {f.type || f.pattern || 'threat'}
                       </button>
                     ))}
                   </div>

@@ -1077,7 +1077,7 @@ export function ChatView({
 
         {novaInsight && !isGenerating && (
           <div className="mx-auto w-full max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-4 space-y-2">
+            <div className="rounded-2xl border border-[var(--agent-nova-glow)] bg-[var(--surface-2)] p-4 space-y-2" style={{ boxShadow: '0 0 20px var(--agent-nova-glow)' }}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
@@ -1252,7 +1252,7 @@ export function ChatView({
 
       <div className={`${compactChat ? 'p-3' : 'p-5'} shrink-0 max-w-4xl mx-auto w-full`}>
         <div
-          className={`relative bg-[var(--surface-2)] border rounded-2xl shadow-2xl backdrop-blur-sm group focus-within:border-[var(--accent-border)] transition-all ${isDragging ? 'border-[var(--warning)]/30 border-dashed' : 'border-[var(--border)]'}`}
+          className={`relative bg-[var(--surface-glass)] border rounded-2xl shadow-2xl backdrop-blur-xl group focus-within:border-[var(--accent-border)] focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-[var(--warning)]/30 border-dashed' : 'border-[var(--border)]'}`}
           onDragEnter={() => setIsDragging(true)}
           onDragLeave={() => setIsDragging(false)}
           onDragOver={(e) => e.preventDefault()}
