@@ -6,6 +6,8 @@ import {
   clearProactiveHistory,
   startProactiveWatcher
 } from '../services/proactiveAgentService';
+import { getAgentMetrics } from '../services/agentMetricsService';
+import { listMemory } from '../services/unifiedMemoryService';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -129,16 +131,14 @@ describe('runProactiveCheck', () => {
   });
 
   it('returns null when no issues detected (healthy metrics)', () => {
-    const { getAgentMetrics } = require('../services/agentMetricsService');
-    getAgentMetrics.mockReturnValue({
+    vi.mocked(getAgentMetrics).mockReturnValue({
       totalExecutions: 0,
       avgConfidence: 90,
       avgIterations: 1.0,
       validationPassRate: 95,
       errorPatterns: []
     });
-    const { listMemory } = require('../services/unifiedMemoryService');
-    listMemory.mockReturnValue([{ timestampMs: Date.now() }]); // recent activity
+    vi.mocked(listMemory).mockReturnValue([{ timestampMs: Date.now() }]); // recent activity
 
     setProactiveEnabled(true);
     const result = runProactiveCheck();
@@ -148,8 +148,7 @@ describe('runProactiveCheck', () => {
   });
 
   it('returns a suggestion object with type, title, message, actions', () => {
-    const { getAgentMetrics } = require('../services/agentMetricsService');
-    getAgentMetrics.mockReturnValue({
+    vi.mocked(getAgentMetrics).mockReturnValue({
       totalExecutions: 5,
       avgConfidence: 30, // Low confidence triggers suggestion
       avgIterations: 1.0,
@@ -177,8 +176,7 @@ describe('runProactiveCheck', () => {
   });
 
   it('detects build failures from error patterns', () => {
-    const { getAgentMetrics } = require('../services/agentMetricsService');
-    getAgentMetrics.mockReturnValue({
+    vi.mocked(getAgentMetrics).mockReturnValue({
       totalExecutions: 3,
       avgConfidence: 80,
       avgIterations: 1.0,

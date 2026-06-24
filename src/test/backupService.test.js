@@ -212,7 +212,7 @@ describe('importBackupFromFile', () => {
         }, 0);
       })
     };
-    vi.stubGlobal('FileReader', vi.fn(() => mockFileReader));
+    vi.stubGlobal('FileReader', vi.fn(function () { return mockFileReader; }));
 
     const result = await importBackupFromFile(mockFile);
     expect(result).toEqual(backupData);
@@ -229,7 +229,7 @@ describe('importBackupFromFile', () => {
         }, 0);
       })
     };
-    vi.stubGlobal('FileReader', vi.fn(() => mockFileReader));
+    vi.stubGlobal('FileReader', vi.fn(function () { return mockFileReader; }));
 
     await expect(importBackupFromFile(mockFile)).rejects.toThrow(/Invalid backup file/i);
   });
@@ -245,7 +245,7 @@ describe('importBackupFromFile', () => {
         }, 0);
       })
     };
-    vi.stubGlobal('FileReader', vi.fn(() => mockFileReader));
+    vi.stubGlobal('FileReader', vi.fn(function () { return mockFileReader; }));
 
     await expect(importBackupFromFile(mockFile)).rejects.toThrow(/Failed to read/i);
   });

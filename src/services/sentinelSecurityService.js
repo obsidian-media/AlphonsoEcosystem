@@ -57,7 +57,7 @@ export function scanForThreats(commandText, priorOutputs) {
 
   let severity;
   if (riskScore >= 70) severity = 'critical';
-  else if (riskScore >= 45) severity = 'high';
+  else if (riskScore >= 35) severity = 'high';
   else if (riskScore >= 20) severity = 'medium';
   else severity = 'low';
 

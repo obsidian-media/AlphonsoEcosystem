@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock global fetch so RSS feed requests return empty in test environment
+vi.stubGlobal('fetch', vi.fn(async (url) => {
+  // Return empty RSS XML for any feed URL
+  return new Response('<rss><channel></channel></rss>', {
+    status: 200,
+    headers: { 'Content-Type': 'application/rss+xml' }
+  });
+}));
+
 let braveEnabled = false;
 
 vi.mock('@tauri-apps/api/core', () => ({

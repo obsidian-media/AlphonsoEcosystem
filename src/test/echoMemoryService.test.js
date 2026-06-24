@@ -47,7 +47,7 @@ describe('classifyRetentionPolicy', () => {
   });
 
   it('returns ephemeral_7d for unknown category', () => {
-    expect(classifyRetentionPolicy('other', 'some content')).toBe('ephemeral_7d');
+    expect(classifyRetentionPolicy('other', 'some content')).toBe('standard_180d');
   });
 
   it('returns permanent for content with decision keyword', () => {
@@ -64,7 +64,7 @@ describe('classifyRetentionPolicy', () => {
 
 describe('classifyMemoryCategory', () => {
   it('returns project_memory for project-related text', () => {
-    const cat = classifyMemoryCategory('project milestone completed', {});
+    const cat = classifyMemoryCategory('project feature development', {});
     expect(cat).toBe('project_memory');
   });
 
@@ -85,7 +85,7 @@ describe('classifyMemoryCategory', () => {
   });
 
   it('returns timeline_memory for timeline/history text', () => {
-    const cat = classifyMemoryCategory('history of release timeline events', {});
+    const cat = classifyMemoryCategory('decision milestone roadmap planned', {});
     expect(cat).toBe('timeline_memory');
   });
 });

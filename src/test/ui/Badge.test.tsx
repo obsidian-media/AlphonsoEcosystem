@@ -60,7 +60,7 @@ describe('Badge', () => {
 describe('StatusDot', () => {
   it('renders online status', () => {
     render(<StatusDot status="online" />);
-    const dot = screen.getByRole('status') || document.querySelector('.bg-\\[--success\\]');
+    const dot = screen.queryByRole('status') || document.querySelector('.bg-\\[--success\\]');
     expect(document.querySelector('span')).toBeTruthy();
   });
 
@@ -78,6 +78,6 @@ describe('StatusDot', () => {
   it('renders md size when specified', () => {
     render(<StatusDot status="online" size="md" />);
     const dot = document.querySelector('span');
-    expect(dot?.className).toContain('w-2\\.5');
+    expect(dot?.className).toContain('w-2.5');
   });
 });

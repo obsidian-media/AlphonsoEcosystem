@@ -43,7 +43,6 @@ export function setNotificationsPaused(paused) {
 }
 
 async function telegramInvoke(command, payload) {
-  if (!isTauriAvailable()) return null;
   try {
     return await invoke(command, payload);
   } catch {

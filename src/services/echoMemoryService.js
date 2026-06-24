@@ -61,9 +61,11 @@ export function buildEchoSynthesisPrompt(commandText, priorOutputs) {
 // ── JSON parser with fallback ─────────────────────────────────────────────────
 
 export function parseEchoMemoryResponse(text) {
+  try {
   const raw = String(text || '').trim();
   const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const cleaned = fenceMatch ? fenceMatch[1].trim() : raw;
+  const jsonMatch = fenceMatch ? null : raw.match(/\{[\s\S]*\}/);
+  const cleaned = fenceMatch ? fenceMatch[1].trim() : jsonMatch ? jsonMatch[0] : raw;
   const parsed = JSON.parse(cleaned);
 
   const validCategories = ['project_memory', 'timeline_memory', 'preference_memory', 'orchestration_memory'];
@@ -77,6 +79,9 @@ export function parseEchoMemoryResponse(text) {
     sensitivity: validSensitivity.includes(parsed.sensitivity) ? parsed.sensitivity : 'internal',
     retentionPolicy: validRetention.includes(parsed.retentionPolicy) ? parsed.retentionPolicy : 'standard_180d'
   };
+  } catch {
+    return { title: 'Echo memory entry', content: 'Workflow output preserved.', category: 'project_memory', sensitivity: 'internal', retentionPolicy: 'standard_180d' };
+  }
 }
 
 // ── Deterministic fallback ────────────────────────────────────────────────────
@@ -98,7 +103,8 @@ export function buildEchoFallbackEntry(commandText, priorOutputs) {
     content,
     category,
     sensitivity: 'internal',
-    retentionPolicy: classifyRetentionPolicy(category, content)
+    retentionPolicy: classifyRetentionPolicy(category, content),
+    confidenceLevel: 'UNVERIFIED'
   };
 }
 
@@ -124,7 +130,7 @@ export function normalizeMemoryConfidence(entries) {
       : rank >= 2 ? TRUST_STATES.INFERRED
       : rank >= 1 ? TRUST_STATES.TEMPORARY
       : TRUST_STATES.UNVERIFIED;
-    return { ...entry, confidence: normalized };
+    return { ...entry, confidence: normalized, confidenceLevel: normalized };
   });
 }
 

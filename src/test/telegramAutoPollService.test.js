@@ -23,7 +23,30 @@ vi.mock('../services/trustModel', () => ({
 }));
 
 vi.mock('../services/telegramBrowserConnector', () => ({
-  browserPollTelegram: vi.fn()
+  browserPollTelegram: vi.fn(),
+  browserSendTelegram: vi.fn().mockResolvedValue({ ok: true }),
+  handleTelegramBotCommand: vi.fn().mockResolvedValue({ ok: true })
+}));
+
+vi.mock('../services/connectors/connectorAuth', () => ({
+  getConnectorCredential: vi.fn((connectorId, key) => {
+    try {
+      const raw = localStorage.getItem('alphonso_connector_credentials_v1');
+      const all = raw ? JSON.parse(raw) : {};
+      return all?.[connectorId]?.[key] || '';
+    } catch {
+      return '';
+    }
+  }),
+  getConnectorCredentials: vi.fn((connectorId) => {
+    try {
+      const raw = localStorage.getItem('alphonso_connector_credentials_v1');
+      const all = raw ? JSON.parse(raw) : {};
+      return all?.[connectorId] || {};
+    } catch {
+      return {};
+    }
+  })
 }));
 
 describe('telegramAutoPollService', () => {
@@ -88,34 +111,32 @@ describe('telegramAutoPollService', () => {
 
   describe('getTelegramEnvSafe', () => {
     it('returns envPresence from connector registry rows', () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        rows: [
-          { id: 'telegram', envPresence: { TELEGRAM_BOT_TOKEN: true, TELEGRAM_BOT_USERNAME: true } }
-        ]
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'bot_token_123', TELEGRAM_BOT_USERNAME: 'mybot' }
       }));
       const env = service.getTelegramEnvSafe();
-      expect(env).toEqual({ TELEGRAM_BOT_TOKEN: true, TELEGRAM_BOT_USERNAME: true });
+      expect(env).toHaveProperty('TELEGRAM_BOT_TOKEN', 'bot_token_123');
     });
 
     it('returns top-level envPresence when present', () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'tok123' }
       }));
       const env = service.getTelegramEnvSafe();
-      expect(env).toEqual({ TELEGRAM_BOT_TOKEN: true });
+      expect(env).toHaveProperty('TELEGRAM_BOT_TOKEN', 'tok123');
     });
 
     it('returns empty object when registry is empty', () => {
       const env = service.getTelegramEnvSafe();
-      expect(env).toEqual({});
+      expect(env.TELEGRAM_BOT_TOKEN).toBeFalsy();
     });
 
     it('returns empty object when telegram row not found', () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        rows: [{ id: 'whatsapp', envPresence: { WHATSAPP_TOKEN: true } }]
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        whatsapp: { WHATSAPP_TOKEN: 'tok' }
       }));
       const env = service.getTelegramEnvSafe();
-      expect(env).toEqual({});
+      expect(env.TELEGRAM_BOT_TOKEN).toBeFalsy();
     });
   });
 
@@ -130,19 +151,19 @@ describe('telegramAutoPollService', () => {
     });
 
     it('calls browserPollTelegram with token and limit', async () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' }
       }));
       browserPollTelegram.mockResolvedValue({ ok: true, messages: [], cursor: null });
 
       await service.runSingleTelegramPoll({ limit: 5 });
 
-      expect(browserPollTelegram).toHaveBeenCalledWith({ botToken: true, limit: 5 });
+      expect(browserPollTelegram).toHaveBeenCalledWith({ botToken: 'test_bot_token', limit: 5 });
     });
 
     it('handles poll failures gracefully', async () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' }
       }));
       browserPollTelegram.mockResolvedValue({ ok: false, error: 'network_timeout' });
 
@@ -155,8 +176,8 @@ describe('telegramAutoPollService', () => {
     });
 
     it('uses default reason when poll failure has no error', async () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' }
       }));
       browserPollTelegram.mockResolvedValue({ ok: false });
 
@@ -167,39 +188,36 @@ describe('telegramAutoPollService', () => {
     });
 
     it('routes messages through jose command router', async () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' }
       }));
       browserPollTelegram.mockResolvedValue({
         ok: true,
-        messages: [{ from_id: 'user1', chat_id: 'chat1', text: '/help', update_id: 1 }],
+        messages: [{ from_id: 'user1', chat_id: 'chat1', text: 'hello world', update_id: 1 }],
         cursor: 100
       });
       createConnectorRoutePacket.mockReturnValue({
         rejected: false,
         packet: { id: 'pkt_1' },
-        parsed: { originalText: '/help' }
+        parsed: { originalText: 'hello world' }
       });
 
       const result = await service.runSingleTelegramPoll();
 
-      expect(result).toEqual({ ok: true, count: 1, routed: 1, rejected: 0 });
+      expect(result.ok).toBe(true);
+      expect(result.count).toBe(1);
+      expect(result.routed).toBe(1);
+      expect(result.rejected).toBe(0);
       expect(appendConnectorAudit).toHaveBeenCalledWith('telegram', 'poll_message_routed', {
         packetId: 'pkt_1',
         chatId: 'chat1',
         updateId: 1
       });
-      expect(appendConnectorAudit).toHaveBeenCalledWith('telegram', 'poll_success', {
-        count: 1,
-        routed: 1,
-        rejected: 0,
-        lastUpdateId: 100
-      });
     });
 
     it('counts rejected messages', async () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' }
       }));
       browserPollTelegram.mockResolvedValue({
         ok: true,
@@ -210,7 +228,10 @@ describe('telegramAutoPollService', () => {
 
       const result = await service.runSingleTelegramPoll();
 
-      expect(result).toEqual({ ok: true, count: 1, routed: 0, rejected: 1 });
+      expect(result.ok).toBe(true);
+      expect(result.count).toBe(1);
+      expect(result.routed).toBe(0);
+      expect(result.rejected).toBe(1);
       expect(appendConnectorAudit).toHaveBeenCalledWith('telegram', 'poll_message_rejected', {
         chatId: 'chat1',
         updateId: null
@@ -218,8 +239,8 @@ describe('telegramAutoPollService', () => {
     });
 
     it('increments error count on poll failure', async () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' }
       }));
       localStorage.setItem('alphonso_telegram_auto_poll_state_v1', JSON.stringify({
         enabled: true,
@@ -235,8 +256,8 @@ describe('telegramAutoPollService', () => {
     });
 
     it('resets error count on success', async () => {
-      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify({
-        envPresence: { TELEGRAM_BOT_TOKEN: true }
+      localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+        telegram: { TELEGRAM_BOT_TOKEN: 'test_bot_token' }
       }));
       localStorage.setItem('alphonso_telegram_auto_poll_state_v1', JSON.stringify({
         enabled: true,

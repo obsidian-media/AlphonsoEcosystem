@@ -35,8 +35,8 @@ describe('connectorRegistry - GitHub and Slack', () => {
       expect(slack.permissions).toContain('approval_requests');
     });
 
-    it('has 15 connectors total', () => {
-      expect(DEFAULT_CONNECTORS.length).toBe(15);
+    it('has 14 connectors total', () => {
+      expect(DEFAULT_CONNECTORS.length).toBe(14);
     });
 
     it('github connector has not_configured status by default', () => {

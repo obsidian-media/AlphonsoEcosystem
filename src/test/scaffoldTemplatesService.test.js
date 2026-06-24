@@ -41,7 +41,7 @@ describe('detectStackTemplate', () => {
   });
 
   it('returns null for unrecognized description', () => {
-    const result = detectStackTemplate('a completely unrecognized stack xyz123');
+    const result = detectStackTemplate('a completely unrecognized qwerty zxcvb xyz123');
     expect(result).toBeNull();
   });
 

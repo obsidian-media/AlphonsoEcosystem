@@ -137,8 +137,8 @@ describe('getPerAgentBreakdown', () => {
 
   it('counts executions per agent correctly', () => {
     const breakdown = getPerAgentBreakdown();
-    expect(breakdown.sentinel.executions).toBe(2);
-    expect(breakdown.nova.executions).toBe(1);
+    expect(breakdown.sentinel.total).toBe(2);
+    expect(breakdown.nova.total).toBe(1);
   });
 
   it('computes per-agent successRate', () => {
@@ -164,7 +164,7 @@ describe('getTopCommands', () => {
 
   it('orders commands by frequency descending', () => {
     const top = getTopCommands(3);
-    expect(top[0].command).toBe('research AI');
+    expect(top[0].command).toBe('research ai');
     expect(top[0].count).toBe(3);
   });
 
@@ -191,6 +191,6 @@ describe('getSevenDayTrend', () => {
     recordAgentExecution({ agent: 'hector', command: 'task', success: true });
     const trend = getSevenDayTrend();
     expect(trend[6]).toHaveProperty('date');
-    expect(trend[6]).toHaveProperty('count');
+    expect(trend[6]).toHaveProperty('executions');
   });
 });

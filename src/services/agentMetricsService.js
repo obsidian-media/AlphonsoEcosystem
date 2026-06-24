@@ -224,3 +224,31 @@ export function getAgentApprovalRate(agentName) {
     totalExecutions: filtered.length
   };
 }
+
+export function getPerAgentBreakdown() {
+  const metrics = getAgentMetrics();
+  return metrics.byAgent;
+}
+
+export function getTopCommands(limit = 10) {
+  const metrics = getAgentMetrics();
+  return metrics.topCommands.slice(0, limit);
+}
+
+export function getSevenDayTrend() {
+  const now = Date.now();
+  const dayMs = 86_400_000;
+  const entries = readMetrics();
+  const trend = [];
+  for (let i = 6; i >= 0; i--) {
+    const dayStart = now - (i + 1) * dayMs;
+    const dayEnd = now - i * dayMs;
+    const dayEntries = entries.filter((e) => e.timestampMs >= dayStart && e.timestampMs < dayEnd);
+    trend.push({
+      date: new Date(dayStart).toISOString().slice(0, 10),
+      executions: dayEntries.length,
+      success: dayEntries.filter((e) => e.success).length
+    });
+  }
+  return trend;
+}

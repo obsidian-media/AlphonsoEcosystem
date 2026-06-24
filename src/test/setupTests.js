@@ -27,6 +27,12 @@ if (
       },
       clear() {
         Object.keys(memoryStore).forEach((key) => delete memoryStore[key]);
+      },
+      get length() {
+        return Object.keys(memoryStore).length;
+      },
+      key(i) {
+        return Object.keys(memoryStore)[i] ?? null;
       }
     },
     configurable: true

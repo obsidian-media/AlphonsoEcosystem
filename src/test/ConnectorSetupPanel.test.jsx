@@ -109,7 +109,7 @@ describe('ConnectorSetupPanel', () => {
   it('shows Telegram credential section', () => {
     render(<ConnectorSetupPanel />);
     // The Telegram section renders a "Bot Token" label
-    expect(screen.getByText('Bot Token')).toBeTruthy();
+    expect(screen.getAllByText('Bot Token').length).toBeGreaterThan(0);
     // And a Telegram heading inside the credential section
     expect(screen.getByText('Telegram')).toBeTruthy();
   });

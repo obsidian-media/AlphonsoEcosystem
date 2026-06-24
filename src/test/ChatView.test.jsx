@@ -17,7 +17,7 @@ vi.mock('../lib/ollama', () => ({
 
 // ── App storage mock ──────────────────────────────────────────────────────────
 vi.mock('../lib/appStorage', () => ({
-  getStorage: vi.fn().mockReturnValue(null),
+  getStorage: vi.fn().mockImplementation((_key, defaultVal) => defaultVal !== undefined ? defaultVal : null),
   setStorage: vi.fn()
 }));
 
@@ -97,6 +97,11 @@ vi.mock('../components/VoiceInputButton', () => ({
   VoiceInputButton: () => <button data-testid="voice-input-button">Voice</button>
 }));
 
+vi.mock('../components/ConnectorStatusIndicators', () => ({
+  ConnectorStatusDot: () => <span data-testid="connector-status-dot" />,
+  ConnectorStatusStrip: () => <span data-testid="connector-status-strip" />
+}));
+
 // ── Component under test ──────────────────────────────────────────────────────
 import { ChatView } from '../components/ChatView';
 
@@ -135,7 +140,7 @@ describe('ChatView', () => {
 
   it('shows empty state when no messages', () => {
     render(<ChatView {...makeProps()} />);
-    expect(screen.getByText('Local chat ready when Ollama is connected')).toBeTruthy();
+    expect(screen.getByText('Start a conversation')).toBeTruthy();
   });
 
   it('shows Ollama offline hint when not connected', () => {
@@ -185,6 +190,6 @@ describe('ChatView', () => {
         })}
       />
     );
-    expect(screen.getByText(/llama3\.2:3b/)).toBeTruthy();
+    expect(screen.getAllByText(/llama3\.2:3b/).length).toBeGreaterThan(0);
   });
 });

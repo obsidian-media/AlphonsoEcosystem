@@ -31,19 +31,30 @@ export function buildMariaAuditPrompt(commandText, priorOutputs) {
 // ── JSON parser with fallback ─────────────────────────────────────────────────
 
 export function parseMariaAuditResponse(text) {
-  const raw = String(text || '').trim();
-  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const cleaned = fenceMatch ? fenceMatch[1].trim() : raw;
-  const parsed = JSON.parse(cleaned);
+  try {
+    const raw = String(text || '').trim();
+    const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const jsonMatch = fenceMatch ? null : raw.match(/\{[\s\S]*\}/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : jsonMatch ? jsonMatch[0] : raw;
+    const parsed = JSON.parse(cleaned);
 
-  const validLevels = ['low', 'medium', 'high', 'critical'];
-  return {
-    riskLevel: validLevels.includes(parsed.riskLevel) ? parsed.riskLevel : 'medium',
-    approvalRequired: typeof parsed.approvalRequired === 'boolean' ? parsed.approvalRequired : true,
-    policyFindings: Array.isArray(parsed.policyFindings) ? parsed.policyFindings.map(String) : [],
-    complianceNotes: Array.isArray(parsed.complianceNotes) ? parsed.complianceNotes.map(String) : [],
-    summary: String(parsed.summary || '').slice(0, 500) || 'Maria governance audit completed.'
-  };
+    const validLevels = ['low', 'medium', 'high', 'critical'];
+    return {
+      riskLevel: validLevels.includes(parsed.riskLevel) ? parsed.riskLevel : 'medium',
+      approvalRequired: typeof parsed.approvalRequired === 'boolean' ? parsed.approvalRequired : true,
+      policyFindings: Array.isArray(parsed.policyFindings) ? parsed.policyFindings.map(String) : [],
+      complianceNotes: Array.isArray(parsed.complianceNotes) ? parsed.complianceNotes.map(String) : [],
+      summary: String(parsed.summary || '').slice(0, 500) || 'Maria governance audit completed.'
+    };
+  } catch {
+    return {
+      riskLevel: 'medium',
+      approvalRequired: true,
+      policyFindings: ['Analysis failed — defaulting to cautious posture.'],
+      complianceNotes: [],
+      summary: 'Maria audit failed to parse — manual review required.'
+    };
+  }
 }
 
 // ── Deterministic fallback ────────────────────────────────────────────────────
@@ -110,7 +121,8 @@ export function buildMariaFallbackAudit(commandText, assignment, priorOutputs) {
     approvalRequired,
     policyFindings,
     complianceNotes,
-    summary: summaryParts.join(' ')
+    summary: summaryParts.join(' '),
+    confidenceLevel: 'UNVERIFIED'
   };
 }
 
