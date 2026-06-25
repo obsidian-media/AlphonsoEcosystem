@@ -2045,6 +2045,8 @@ pub fn run() {
       workspace::move_workspace_file,
       workspace::search_workspace_files,
       workspace::list_workspace_directory,
+      workspace::watch_inbox_poll,
+      workspace::mark_inbox_file_processed,
       open_url,
       fetch_url_content,
       read_clipboard,
