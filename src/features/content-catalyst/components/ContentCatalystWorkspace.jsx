@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { requireApproval } from '../../../services/approval/approvalService';
 import {
   getAccBridgeConfig,
@@ -34,7 +34,6 @@ import {
 } from '../state/contentCatalystState';
 import { createDefaultContentRequest } from '../types/contentCatalystTypes';
 import { AnalyticsDashboard } from '../workspace/AnalyticsDashboard';
-import { BrandHeader } from '../workspace/BrandHeader';
 import { BrandSettings } from '../workspace/BrandSettings';
 import { ContentCalendar } from '../workspace/ContentCalendar';
 import { hydrateContentJobsFromSqlite, persistContentJobsToSqlite } from '../services/contentPersistenceService';
@@ -52,9 +51,6 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
   const [brandProfile, setBrandProfile] = useState(() => getBrandProfile());
   const [activeJobId, setActiveJobId] = useState(() => listContentJobs()[0]?.id || '');
   const [busy, setBusy] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showTrends, setShowTrends] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [injectedIdea, setInjectedIdea] = useState('');
   const [bridgeConfig, setBridgeConfig] = useState(() => getAccBridgeConfig());
   const [bridgeStatus, setBridgeStatus] = useState(() => getAccBridgeStatus());
@@ -224,50 +220,78 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
     refresh(activeJobId);
   };
 
+  const [contentTab, setContentTab] = useState('create');
+
+  const CONTENT_TABS = [
+    { id: 'create', label: 'Create' },
+    { id: 'drafts', label: 'Drafts' },
+    { id: 'calendar', label: 'Calendar' },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'brand', label: 'Brand' },
+  ];
+
   return (
     <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
-      <BrandHeader
-        brandProfile={brandProfile}
-        analytics={analytics}
-        onToggleSettings={() => {
-          setShowSettings((value) => !value);
-          setShowTrends(false);
-          setShowAnalytics(false);
-        }}
-        onToggleTrends={() => {
-          setShowTrends((value) => !value);
-          setShowSettings(false);
-          setShowAnalytics(false);
-        }}
-        onToggleAnalytics={() => {
-          setShowAnalytics((value) => !value);
-          setShowSettings(false);
-          setShowTrends(false);
-        }}
-        showSettings={showSettings}
-        showTrends={showTrends}
-        showAnalytics={showAnalytics}
-      />
 
-      {(showSettings || showTrends || showAnalytics) && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          {showSettings ? <BrandSettings brandProfile={brandProfile} onSave={handleBrandSave} /> : null}
-          {showTrends ? (
-            <TrendResearch
-              suggestions={trendSuggestions}
-              onUseIdea={(idea) => {
-                setInjectedIdea(idea);
-                setShowTrends(false);
-              }}
-            />
-          ) : null}
-          {showAnalytics ? <AnalyticsDashboard analytics={analytics} /> : null}
+      {/* Page header */}
+      <header className="pb-5 border-b border-white/[0.06] flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-[15px] font-bold tracking-tight text-white">Content Studio</h1>
+          <p className="mt-0.5 text-[11px] text-zinc-500">
+            {analytics?.totalDrafts ?? 0} drafts · {analytics?.publishedCount ?? 0} published
+          </p>
         </div>
-      )}
+        {/* ACC Bridge pill */}
+        <div className="flex items-center gap-2 shrink-0">
+          <CheckCircle2 className={`h-3.5 w-3.5 ${bridgeStatus.configured ? 'text-cyan-400' : 'text-zinc-600'}`} />
+          <span className="text-[11px] text-zinc-400">
+            {bridgeStatus.configured ? <span className="text-cyan-300">ACC Bridge connected</span> : 'ACC Bridge off'}
+          </span>
+          {activeJob && bridgeStatus.configured && (
+            <button
+              type="button"
+              disabled={bridgeBusy}
+              onClick={handleBridgeSyncActiveJob}
+              className="rounded-full border border-cyan-400/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200 transition hover:border-cyan-300 hover:text-cyan-100 disabled:opacity-50"
+            >
+              Sync
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={refreshBridge}
+            className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 transition hover:text-white"
+          >
+            ↺
+          </button>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-4">
+      {/* Tab bar */}
+      <div className="flex gap-1">
+        {CONTENT_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setContentTab(tab.id)}
+            className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+              contentTab === tab.id
+                ? 'bg-white/10 text-white'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            {tab.label}
+            {tab.id === 'drafts' && drafts.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-cyan-500/20 px-1.5 py-0.5 text-[9px] text-cyan-300">{drafts.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Create tab */}
+      {contentTab === 'create' && (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <GeneratorForm
             form={form}
             setForm={setForm}
@@ -280,94 +304,52 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
             onGenerate={createJob}
             isLoading={busy}
           />
+          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} />
+        </div>
+      )}
 
-          <ContentCalendar
-            drafts={drafts}
-            onAssignDay={handleAssignDay}
-            onSelectDraft={setActiveJobId}
-            onPublish={(draft, type) => {
-              const selected = drafts.find((item) => item.id === draft.id);
-              if (selected) setActiveJobId(selected.id);
-              if (type === 'video' && activeJob?.id === draft.id) runStep('video');
-              if (type === 'image' && activeJob?.id === draft.id) runStep('image');
+      {/* Drafts tab */}
+      {contentTab === 'drafts' && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1.1fr]">
+          <DraftList drafts={drafts} onSelect={(id) => { setActiveJobId(id); }} />
+          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} />
+        </div>
+      )}
+
+      {/* Calendar tab */}
+      {contentTab === 'calendar' && (
+        <ContentCalendar
+          drafts={drafts}
+          onAssignDay={handleAssignDay}
+          onSelectDraft={(id) => { setActiveJobId(id); setContentTab('drafts'); }}
+          onPublish={(draft, type) => {
+            const selected = drafts.find((item) => item.id === draft.id);
+            if (selected) setActiveJobId(selected.id);
+            if (type === 'video' && activeJob?.id === draft.id) runStep('video');
+            if (type === 'image' && activeJob?.id === draft.id) runStep('image');
+          }}
+        />
+      )}
+
+      {/* Analytics tab */}
+      {contentTab === 'analytics' && (
+        <AnalyticsDashboard analytics={analytics} />
+      )}
+
+      {/* Brand tab */}
+      {contentTab === 'brand' && (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <BrandSettings brandProfile={brandProfile} onSave={handleBrandSave} />
+          <TrendResearch
+            suggestions={trendSuggestions}
+            onUseIdea={(idea) => {
+              setInjectedIdea(idea);
+              setContentTab('create');
             }}
           />
         </div>
+      )}
 
-        <div className="space-y-4">
-          {/* ACC Bridge — compact 2-way status indicator. Full config is in Settings → Connectors */}
-          <div className="rounded-3xl border border-cyan-400/20 bg-zinc-950/90 px-5 py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className={`h-4 w-4 shrink-0 ${bridgeStatus.configured ? 'text-cyan-400' : 'text-zinc-600'}`} />
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">ACC Bridge</div>
-                <div className="text-sm text-zinc-300 mt-0.5">
-                  {bridgeStatus.configured
-                    ? <span className="text-cyan-300">Connected · {bridgeStatus.status || 'ok'}</span>
-                    : <span className="text-zinc-500">Not configured — set up in <span className="text-zinc-300">Settings → Connectors</span></span>
-                  }
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {activeJob && bridgeStatus.configured && (
-                <button
-                  type="button"
-                  disabled={bridgeBusy}
-                  onClick={handleBridgeSyncActiveJob}
-                  className="rounded-full border border-cyan-400/30 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-200 transition hover:border-cyan-300 hover:text-cyan-100 disabled:opacity-50"
-                >
-                  Sync
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={refreshBridge}
-                className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:border-cyan-400/40 hover:text-white"
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
-              <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Bridge response</span>
-            </div>
-            <div className="p-4">
-              {bridgeResponse ? (
-                <pre className="max-h-64 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--surface-3)] p-3 text-[10px] leading-relaxed text-[var(--text-2)]">
-                  {JSON.stringify(bridgeResponse, null, 2)}
-                </pre>
-              ) : (
-                <div className="text-[10px] text-[var(--text-4)]">Create a job to see the bridge contract response.</div>
-              )}
-            </div>
-          </div>
-
-          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <DraftList drafts={drafts} onSelect={setActiveJobId} />
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
-            <ArrowRight className="h-3.5 w-3.5 text-cyan-400" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Job detail</span>
-          </div>
-          <div className="p-4">
-            {activeJob ? (
-              <pre className="max-h-64 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--surface-3)] p-3 text-[10px] leading-relaxed text-[var(--text-2)]">
-                {JSON.stringify(activeJob, null, 2)}
-              </pre>
-            ) : (
-              <div className="text-[10px] text-[var(--text-4)]">Select a draft to inspect the full job payload.</div>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
     </div>
   );
