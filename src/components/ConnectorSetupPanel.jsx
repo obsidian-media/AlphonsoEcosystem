@@ -235,6 +235,7 @@ export function ConnectorSetupPanel() {
   const [youtubeChannelId, setYoutubeChannelId] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CHANNEL_ID'));
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
+  const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
 
   useEffect(() => {
@@ -704,6 +705,19 @@ export function ConnectorSetupPanel() {
             onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
             hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
             savedLabel="Brave Search key saved"
+          />
+
+          {/* Tavily Search */}
+          <CredentialSection
+            title="Tavily Search (Hector Fallback)"
+            icon={Search}
+            borderColor="border-sky-300/20"
+            bgColor="bg-sky-500/8"
+            accentColor="text-sky-400"
+            fields={[{ label: 'API Key', placeholder: 'tvly-...', value: tavilyApiKey, onChange: setTavilyApiKey, key: 'TAVILY_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
+            hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
+            savedLabel="Tavily key saved"
           />
 
           {/* Runway ML */}

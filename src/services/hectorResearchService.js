@@ -1,5 +1,6 @@
 import { appendAgentActivity } from './agentActivityService';
 import { getConnectorCredential } from './connectors/connectorAuth';
+import { isTavilyConfigured, searchTavily } from './connectors/tavilyConnector.js';
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
@@ -1115,7 +1116,24 @@ export async function runMultiSourceResearch(query) {
     }
   } catch { /* Brave unavailable — fall through */ }
 
-  // 2. Try Rust backend search_research_sources
+  // 2. Try Tavily (free tier: 1,000 searches/month — tier-2 fallback when Brave unconfigured)
+  if (allSources.length < 3 && isTavilyConfigured()) {
+    try {
+      const tavilyResult = await searchTavily(query, { maxResults: 8 });
+      if (tavilyResult?.sources?.length > 0) {
+        providerChain.push('tavily');
+        if (!preferredProvider) preferredProvider = 'tavily';
+        for (const src of tavilyResult.sources) {
+          if (!allSources.some(s => s.url === src.url)) {
+            allSources.push({ ...src, sourceType: 'public_web', provider: 'tavily' });
+            citations.push({ url: src.url, title: src.title || '', source: 'tavily', confidence: 'inferred' });
+          }
+        }
+      }
+    } catch { /* Tavily unavailable — fall through */ }
+  }
+
+  // 3. Try Rust backend search_research_sources
   try {
     const rustSources = await discoverResearchSources({
       researchQuestion: query,
