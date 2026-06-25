@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaResponse } from '../lib/ollama.js';
-import { synthesizeMemory } from './echoMemoryService.js';
+import { pushMemoryItem } from './memoryService.js';
 
 export async function transcribeAndIngest(audioFilePath, filename, onProgress) {
   onProgress?.('transcribing');
@@ -27,10 +27,19 @@ Format as short bullet points only.`;
   const summaryText = summary?.response?.trim() || transcript.slice(0, 800);
 
   onProgress?.('saving');
-  await synthesizeMemory(
-    `MEETING TRANSCRIPT — ${filename}\n\nSUMMARY:\n${summaryText}\n\nFULL TRANSCRIPT:\n${transcript.slice(0, 2000)}`,
-    `meeting-transcript:${filename}`
-  );
+  pushMemoryItem({
+    title: `Meeting: ${filename}`,
+    category: 'meeting_transcript',
+    content: {
+      synthesis: summaryText,
+      filename,
+      transcriptPreview: transcript.slice(0, 1000),
+    },
+    source: `meeting-transcript:${filename}`,
+    sourceAgent: 'echo',
+    confidence: 'inferred',
+    verificationState: 'unverified',
+  });
 
   return { transcript, summary: summaryText };
 }

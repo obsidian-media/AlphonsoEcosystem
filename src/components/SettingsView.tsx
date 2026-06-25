@@ -1158,6 +1158,7 @@ export function SettingsView({
       </section>
       <section className="space-y-4">
         <SectionHeader icon={Activity} label="Echo Memory Timeline" />
+        <ChromaDbStatus />
         <EchoTimeline />
       </section>
       <section className="space-y-4">
@@ -1342,6 +1343,27 @@ function PluginMarketplacePanel() {
           <span className="text-indigo-400 font-medium">How to install:</span> Obtain a signed plugin manifest from a trusted source, then use <span className="font-mono text-zinc-300">verifyAndAddPlugin(manifest)</span> from <span className="font-mono text-zinc-300">pluginSigningService</span>. Only ECDSA-signed plugins from trusted keys are accepted.
         </div>
       </section>
+    </div>
+  );
+}
+
+function ChromaDbStatus() {
+  const [healthy, setHealthy] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    import('../services/chromaDbService.js').then(({ isChromaHealthy }) => {
+      isChromaHealthy().then(setHealthy);
+    });
+  }, []);
+
+  if (healthy === null) return null;
+
+  return (
+    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${healthy ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}>
+      <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}`} />
+      {healthy
+        ? 'Vector search active — Echo uses ChromaDB for semantic memory retrieval'
+        : 'Vector search offline — start ChromaDB in Runtime Hub for smarter memory search'}
     </div>
   );
 }

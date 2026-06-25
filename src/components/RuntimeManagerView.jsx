@@ -102,6 +102,13 @@ const TOOL_META = {
     color: 'text-[var(--agent-nova)]',
     bg: 'bg-[var(--agent-nova-glow)] border-[var(--border)]',
   },
+  chromadb: {
+    icon: Layers,
+    category: 'Memory',
+    docsUrl: 'https://docs.trychroma.com',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10 border-emerald-500/20',
+  },
   openHands: {
     icon: Bot,
     category: 'Agent',

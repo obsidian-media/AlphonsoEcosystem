@@ -179,6 +179,37 @@ const TOOLS: &[ToolDef] = &[
     exe: "python",
     args: &["voice/backend/main.py", "--host", "127.0.0.1", "--port", "8765"],
   },
+  ToolDef {
+    name: "chromadb",
+    display_name: "ChromaDB",
+    description: "Local vector database — powers Echo semantic memory search (find related memories without exact keyword matching)",
+    repo_url: None,
+    pip_packages: &[],
+    requirements_file: None,
+    port: Some(8000),
+    health_path: Some("/api/v1/heartbeat"),
+    exe: "docker",
+    args: &["run", "--rm", "-p", "8000:8000", "--name", "alphonso-chroma", "chromadb/chroma"],
+  },
+  ToolDef {
+    name: "openHands",
+    display_name: "OpenHands",
+    description: "AI software agent — writes code, runs terminal commands, browses web in a Docker sandbox. Pairs with ACC Bridge for Jose delegation.",
+    repo_url: None,
+    pip_packages: &[],
+    requirements_file: None,
+    port: Some(3000),
+    health_path: Some("/api/health"),
+    exe: "docker",
+    args: &[
+      "run", "--rm", "-it",
+      "-p", "3000:3000",
+      "-e", "SANDBOX_RUNTIME_CONTAINER_IMAGE=ghcr.io/all-hands-ai/runtime:0.38",
+      "-v", "/var/run/docker.sock:/var/run/docker.sock",
+      "--add-host", "host.docker.internal:host-gateway",
+      "ghcr.io/all-hands-ai/openhands:main",
+    ],
+  },
 ];
 
 fn tool_def(name: &str) -> Option<&'static ToolDef> {

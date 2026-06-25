@@ -2,6 +2,7 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 import { generateOllamaResponse, PREFERRED_MODEL } from '../lib/ollama';
 import { pushMemoryItem, listMemoryItems } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
+import { addMemoryToChroma, semanticSearchMemory, isChromaHealthy } from './chromaDbService.js';
 
 // ── Retention policy classification ──────────────────────────────────────────
 
@@ -196,6 +197,9 @@ export async function runEchoPreservation(commandText, assignment, priorOutputs,
     verificationState: schema.verificationState
   });
 
+  // Mirror to ChromaDB for semantic search (fire-and-forget, non-blocking)
+  addMemoryToChroma({ id: schema.memoryId, title: schema.title, content: schema.content, category: schema.category, sourceAgent: 'echo', timestampMs: startMs });
+
   // Normalize confidence across recent memory entries (best-effort, non-blocking)
   try {
     const recent = listMemoryItems().slice(-50);
@@ -265,3 +269,25 @@ export async function synthesizeSession(recentMessages) {
     return null;
   }
 }
+
+// ── Semantic search via ChromaDB (falls back to keyword search if offline) ───
+
+export async function searchEchoMemorySemantic(query, limit = 10) {
+  const semanticResults = await semanticSearchMemory(query, limit);
+  if (semanticResults && semanticResults.length > 0) {
+    const allMemories = listMemoryItems();
+    return semanticResults
+      .map(r => allMemories.find(m => m.id === r.id || m.content?.memoryId === r.id))
+      .filter(Boolean);
+  }
+  // Keyword fallback
+  const q = query.toLowerCase();
+  return listMemoryItems()
+    .filter(m => {
+      const text = `${m.title || ''} ${JSON.stringify(m.content || '')} ${m.category || ''}`.toLowerCase();
+      return q.split(' ').some(word => word.length > 2 && text.includes(word));
+    })
+    .slice(-limit);
+}
+
+export { isChromaHealthy };
