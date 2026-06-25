@@ -1,10 +1,5 @@
-// AudioWorklet processor — runs in audio thread
+// AudioWorklet processor — worklet code shipped as a string blob, registered via addModule
 // NOTE: This file must NOT import anything — worklet scope is isolated
-class PcmProcessor extends AudioWorkletNode {
-  // This is a placeholder — the actual worklet runs as a string blob
-}
-
-// The worklet code as a string (injected at registration time)
 export const PCM_WORKLET_CODE = `
 class PcmProcessor extends AudioWorkletProcessor {
   process(inputs) {
