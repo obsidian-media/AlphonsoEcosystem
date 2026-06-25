@@ -290,4 +290,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-26 — v2.2.8 — JUNE CANDY sprint: Tavily search fallback (tavilyConnector.js, hectorResearchService tier-2 wired), Telegram 21 commands (research/memory/receipts/read added), OpenHands in Runtime Hub (TOOLS array + TOOL_META + ACC Bridge pre-fill), Whisper meeting transcription (transcribe_audio_file Rust cmd + whisperTranscriptionService.js + MeetingTranscriptionPanel in Settings Memory). 145 test files / 1935 tests passing. cargo check clean._
+_Last verified: 2026-06-26 — v2.2.9 — JUNE CANDY sprint complete: Tavily fallback, Telegram 21 commands, OpenHands + ChromaDB + MCP Server + Alphonso Bridge in Runtime Hub, Whisper meeting transcription → Echo, chromaDbService.js wired into echoMemoryService (fire-and-forget write + semantic search export), MCP server (mcp-server/ port 3333) + bridge (bridge/ port 4444) callable from Claude Desktop/Cursor/Windsurf. 146 test files / 1943 tests passing. cargo check clean._

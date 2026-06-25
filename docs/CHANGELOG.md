@@ -6,6 +6,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.9] - 2026-06-26 — JUNE CANDY Sprint Part 2: ChromaDB, MCP Server, Runtime Hub expansion
+
+### Added
+- **ChromaDB vector DB for Echo** (`src/services/chromaDbService.js`): Local vector database client (port 8000). `addMemoryToChroma` fire-and-forget on every Echo memory save. `semanticSearchMemory` does vector search, falls back to keyword if offline. `searchEchoMemorySemantic` export on echoMemoryService. ChromaDB status indicator in Settings → Memory. ChromaDB in Runtime Hub TOOLS (Docker, `/api/v1/heartbeat`). 8 new tests (`chromaDbService.test.js`).
+- **MCP Server** (`mcp-server/`): Node.js Express server on port 3333 exposing 5 Alphonso tools (`alphonso_run_pipeline`, `alphonso_search_memory`, `alphonso_research`, `alphonso_get_status`, `alphonso_get_receipts`) as MCP-compatible endpoints. Callable from Claude Desktop, Cursor, Windsurf. MCP Server added to Runtime Hub.
+- **Alphonso Bridge** (`bridge/`): HTTP bridge on port 4444 connecting MCP server to Alphonso frontend. In-memory task queue (Phase 1). Bridge added to Runtime Hub.
+- **MCP setup card** in Settings → Connectors: JSON config snippet, step-by-step instructions, tool list.
+- **Runtime Hub expansion**: Added `chromadb`, `mcp-server`, `alphonso-bridge`, `openHands` to Rust TOOLS array in `runtime_manager.rs`. Added corresponding TOOL_META entries (Memory/Integration/Agent categories).
+- **Whisper import fix** (`src/services/whisperTranscriptionService.js`): Replaced non-existent `synthesizeMemory` with correct `pushMemoryItem` from memoryService.
+
+### Tests
+- 146 test files / 1943 tests — all passing
+- Added: `src/test/chromaDbService.test.js` (8 tests)
+
+### Branches merged
+- `feat/chromadb-echo`, `feat/alphonso-mcp-server`
+
+---
+
 ## [2.2.8] - 2026-06-26 — JUNE CANDY Sprint: Tavily, Telegram+, OpenHands, Whisper
 
 ### Added
