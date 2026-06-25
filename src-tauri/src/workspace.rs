@@ -1,4 +1,5 @@
 use crate::{now_ms, write_native_proof_stage, NativeProofStageProof};
+use crate::runtime_manager::runtimes_dir;
 use serde::Serialize;
 use serde_json::Value;
 use std::fs;
@@ -1865,4 +1866,58 @@ pub(crate) fn inspect_updater_release(
     trust,
     error: manifest_error,
   })
+}
+
+/// Transcribe an audio file using the locally installed Whisper CLI.
+/// Whisper must be installed via Runtime Hub (pip install openai-whisper).
+/// Returns the full transcript text.
+#[tauri::command]
+pub(crate) async fn transcribe_audio_file(
+  audio_path: String,
+  model: Option<String>,
+) -> Result<String, String> {
+  let model_name = model.as_deref().unwrap_or("base");
+
+  // Resolve whisper exe: prefer venv inside runtimes/whisper/, then PATH
+  let whisper_dir = runtimes_dir().join("whisper");
+  let whisper_exe = {
+    let venv_bin = if cfg!(target_os = "windows") {
+      whisper_dir.join("venv").join("Scripts").join("whisper.exe")
+    } else {
+      whisper_dir.join("venv").join("bin").join("whisper")
+    };
+    if venv_bin.exists() {
+      venv_bin.to_string_lossy().to_string()
+    } else {
+      "whisper".to_string() // fall back to PATH
+    }
+  };
+
+  let out_dir = std::env::temp_dir();
+
+  let output = tokio::process::Command::new(&whisper_exe)
+    .args([
+      &audio_path,
+      "--model", model_name,
+      "--output_format", "txt",
+      "--output_dir", out_dir.to_str().unwrap_or("."),
+    ])
+    .output()
+    .await
+    .map_err(|e| format!("Failed to run whisper: {e}. Install it via Runtime Hub."))?;
+
+  if !output.status.success() {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    return Err(format!("Whisper error: {stderr}"));
+  }
+
+  // Whisper writes {stem}.txt next to the output dir
+  let audio_stem = Path::new(&audio_path)
+    .file_stem()
+    .unwrap_or_default()
+    .to_string_lossy()
+    .to_string();
+  let txt_path = out_dir.join(format!("{audio_stem}.txt"));
+  std::fs::read_to_string(&txt_path)
+    .map_err(|e| format!("Could not read whisper output at {}: {e}", txt_path.display()))
 }
