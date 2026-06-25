@@ -141,9 +141,14 @@ Before writing any new service, component, or feature, check this list:
 | Crash log viewer | `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as Logs tab in SettingsView |
 | Nova history chart | `src/components/NovaHistoryChart.jsx` — SVG sparkline of last 10 scores, most-recent recommendation, wired in SettingsView |
 | Sentinel findings modal | `src/components/SentinelFindingModal.jsx` — fixed overlay, severity badge, pattern + recommendation rows; triggered by clicking findings in RightPanel |
-| Gateway Dockerfile | `gateway/whatsapp-cloud/Dockerfile` — multi-stage Node 20 Alpine build; `.dockerignore` alongside |
+| Gateway Dockerfile | `gateway/whatsapp-cloud/Dockerfile` — single-stage Node 20 Alpine build (no multi-stage); `railway.json` uses DOCKERFILE builder |
 | durableStore (SQLite dual-write) | `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; used by crashLogService, agentAuditService, novaAnalysisService |
 | TypeScript components (.tsx) | `AgentStatusStrip.tsx`, `UpdaterNotification.tsx`, `NotificationCenter.tsx`, `AgentPerformanceView.tsx`, `TopBar.tsx` — migrated with full prop interfaces; old .jsx files removed |
+| Plugin registry service | `src/services/pluginRegistryService.js` — `listPlugins`, `togglePlugin`, `discoverDiskPluginManifests`, `executePluginToolRun`, `validatePluginManifestDisk` |
+| Plugin signing service | `src/services/pluginSigningService.js` — ECDSA P-256 keypair, `signPluginManifest`, `verifyPluginSignature`, `verifyAndAddPlugin`, trusted signer key management |
+| Plugin Marketplace UI | `src/components/SettingsView.tsx` — `PluginMarketplacePanel` component; Settings → Plugins nav section |
+| PWA service worker | `public/sw.js` — cache-first static, network-first nav, network-only API/invoke |
+| Offline chat service | `src/services/offlineChatService.js` — IndexedDB store (`alphonso-offline` DB) with `saveMessageOffline`/`getOfflineMessages`/`markMessageSynced` |
 
 ---
 
@@ -285,4 +290,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-25 — v2.2.5 — Boot fix: RightPanel hooks violation (auditEntries useMemo moved above early return). OpenWebUI added to Rust TOOLS + TOOL_META (LLM, port 3000). Brave Search CredentialSection in ConnectorSetupPanel + hectorResearchService credential fallback. Runtime catalog fallback in web mode. ContentCalendar real monthly grid with minimize/expand. Full content workspace polish (8 components: CSS vars, compact). 2 new E2E spec files (runtime-tools, content-pipeline). tauri-mock.js extended with runtime_* commands. 144 test files, 1930+ tests passing. cargo check clean._
+_Last verified: 2026-06-26 — v2.2.7 — Plugin Marketplace UI (Settings → Plugins, PluginMarketplacePanel). Voice OS added to Rust TOOLS in runtime_manager.rs (port 8765, pip: faster-whisper/piper-tts/webrtcvad). Railway Dockerfile single-stage fix + DOCKERFILE builder in railway.json. CI Railway URL updated to real endpoint. All pre-existing test failures fixed (8 files). pluginSigningService.js syntax repaired. PWA sw.js + offlineChatService.js added. 144 test files, 1930+ tests passing. cargo check clean._

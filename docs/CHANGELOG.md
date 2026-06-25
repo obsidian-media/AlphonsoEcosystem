@@ -6,6 +6,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.7] - 2026-06-26 — Plugin Marketplace UI, Voice OS in Runtime Hub, Railway Fix, Test Fixes
+
+### Added
+- **Plugin Marketplace UI** (`src/components/SettingsView.tsx`): New "Plugins" section in Settings nav. `PluginMarketplacePanel` component lists all installed plugins from `pluginRegistryService`, enable/disable toggle, search filter, signed-badge for ECDSA-verified plugins, empty-state with install instructions.
+- **Voice OS in Runtime Hub** (`src-tauri/src/runtime_manager.rs`): `voice-os` added to Rust `TOOLS` array. Runtime Manager can now Install (pip: faster-whisper, piper-tts, webrtcvad, fastapi, uvicorn, websockets, numpy) and Start/Stop Voice OS from the UI. Connects to `ws://127.0.0.1:8765` which `useJarvisVoice.ts` uses for the mic button in ChatView.
+- **PWA Service Worker + IndexedDB** (`public/sw.js`, `src/services/offlineChatService.js`): Cache-first static assets, network-first navigation, network-only for API/Tauri. IndexedDB store for offline message persistence with `synced` flag.
+- **Plugin signing service** (`src/services/pluginSigningService.js`): ECDSA P-256 keypair generation, `signPluginManifest`, `verifyPluginSignature`, `verifyAndAddPlugin`, trusted signer key management.
+
+### Fixed
+- **Railway build** (`gateway/whatsapp-cloud/Dockerfile`): Switched from multi-stage to single-stage build — eliminates stale cache bug where `COPY --from=deps /app/node_modules` failed with `/app/node_modules: not found`.
+- **Railway builder** (`gateway/whatsapp-cloud/railway.json`): Changed builder from `RAILPACK` to `DOCKERFILE` — RAILPACK was ignoring the Dockerfile.
+- **CI Railway URL** (`.github/workflows/ci.yml`): Replaced placeholder `your-railway-url.railway.app` with real `alphonsoecosystem-production-3ad1.up.railway.app`.
+- **All pre-existing test failures** (8 files fixed): `connectorOutbound` boolean-vs-credential bug; `notionSyncService` missing awaits + snake_case correlation + conflict shape; `josePipelineE2E` creative routing false-positive; `Button` CSS var assertions; `RightPanel` aria-label; `VoiceInputButton` labels; `echoMemoryServiceExtra` return type shape; `workflowDurabilityHydration` contradictory status assertion. All 144 files / 1930+ tests passing.
+- **pluginSigningService syntax** (`src/services/pluginSigningService.js`): Fixed truncated `signPluginManifest` function body that caused ESLint parse error.
+
+### Honest gap inventory (open as of v2.2.7)
+- DeepSeek: stub only — use Ollama `deepseek-r1:7b` locally
+- PWA IndexedDB not wired into ChatView save path
+- Plugin sandbox execution (pluginSandboxService) not called
+- Runway API key has no credential UI (env var only)
+- iOS companion has no backend connection path
+
+---
+
 ## [2.2.6] - 2026-06-25 — CI/CD Hardening Phase 1 (CI Enablement)
 
 ### Added

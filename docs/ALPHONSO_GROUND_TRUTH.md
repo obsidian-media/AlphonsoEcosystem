@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-25 -- v2.2.6 CI/CD hardening Phase 1
-**Verified by:** Claude Code full audit + Phase 1 execution session
-**Version:** 2.2.6 (CI/CD Hardening Phase 1: E2E CI on all PRs; cargo-tarpaulin Rust coverage; gateway-health job; ios-build job; test:rust npm script; comprehensive Celine audit report)
+**Last verified:** 2026-06-26 — v2.2.7
+**Verified by:** Claude Code full audit + Phase 1/4 execution + gap resolution session
+**Version:** 2.2.7 (Plugin Marketplace UI; Voice OS in Runtime Hub; Railway Dockerfile fix; real Railway URL in CI; all 1930+ tests passing; PWA service worker + IndexedDB offline; full honest gap audit)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.2.5 |
+| Version | 2.2.7 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -369,7 +369,17 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 
 ## 8. Real Gaps — What Actually Needs Work
 
-These are confirmed gaps as of 2026-06-24. Any agent working on these areas should check current state before implementing — some may have been partially addressed since this file was last updated.
+These are confirmed gaps as of 2026-06-26 (v2.2.7). Any agent working on these areas should check current state before implementing.
+
+### OPEN GAPS (as of v2.2.7)
+- [ ] **DeepSeek connector** — `externalAgentAdapter.js` has stub `{ id: 'deepseek', enabled: false, status: 'not_wired' }`. No service, no UI. Workaround: use Ollama with `deepseek-r1:7b` locally — works today.
+- [ ] **PWA offline ChatView wiring** — `public/sw.js` + `src/services/offlineChatService.js` exist but ChatView does not call `saveMessageOffline()`. Messages are not persisted to IndexedDB on disconnect.
+- [ ] **Plugin sandbox execution** — `pluginSandboxService.js` exists but is never imported or called. Plugin tools cannot actually run in isolation.
+- [ ] **Runway API key credential UI** — `runway_generate_video` reads `RUNWAYML_API_SECRET` from env var only (Rust side). There is no credential UI in ConnectorSetupPanel for Runway. Users must set env var manually before running the app.
+- [ ] **iOS companion backend** — `ios/AlphonsoCompanion/` has 11 Swift files (SwiftUI, WebSocket, mDNS) but there is no documented connection path to the Alphonso desktop. CI builds the scheme but the app has no working server to connect to.
+- [ ] **Voice OS Python dependency** — Voice OS in Runtime Hub can Install/Start, but requires Python 3.10+ on PATH. `find_python()` checks standard paths but won't auto-install Python itself. User must have Python installed first.
+
+### CLOSED (historical — do not re-implement)
 
 ### SECURITY
 - [x] **CSP fixed** — `"security": { "csp": null }` replaced with full production policy string in `tauri.conf.json` (2026-05-31, Agent A). See `docs/SECURITY_CONFIG_REPORT.md`.
@@ -755,7 +765,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-25 — v2.2.3-patch1: Full codebase bug audit + 16-bug fix session. Critical fixes: ChatView "Try Again" stale state, voice AudioWorklet missing worklet file, Tauri invoke→emit for native proof event, @types/react installed (1867 TS errors resolved), voice sidecar production path via resource_dir. Medium fixes: runtimeManagerService code splitting restored, O(n²)→O(1) chat render, connector status live refresh, SQLite kv_delete, audit log memoized. Low fixes: unused imports, stale closure dep. 144 test files, 1930+ tests passing. cargo clippy zero warnings. Build clean. typecheck added to verify:app. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-26 — v2.2.7: Plugin Marketplace UI added (Settings → Plugins, PluginMarketplacePanel, toggle/search/signed-badge). Voice OS registered in Rust TOOLS list (runtime_manager.rs) — can now be Installed/Started from Runtime Hub like any other tool (pip-install of faster-whisper/piper/webrtcvad handled automatically once Python is present). Railway Dockerfile fixed (single-stage, no multi-stage cache bug). railway.json switched from RAILPACK to DOCKERFILE builder. CI gateway-health job updated to real Railway URL alphonsoecosystem-production-3ad1.up.railway.app. All 144 test files / 1930+ tests passing. cargo check clean. Known honest gaps: DeepSeek is not_wired (Ollama deepseek-r1 works locally); PWA IndexedDB not yet wired into ChatView message save path; pluginSandboxService not called from anywhere; Runway API key has no credential UI (uses RUNWAYML_API_SECRET env var only); iOS companion has no backend connection path documented._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 
