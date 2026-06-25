@@ -6,6 +6,45 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.3-patch1] - 2026-06-25 — Full Codebase Bug Audit & Fix
+
+### Fixed — 16 confirmed bugs resolved after full codebase audit
+
+#### Critical
+- **"Try Again" button broken** (`ChatView.tsx`): `retryLastMessage` was calling `handleSend()` immediately after `setInputValue()`, reading stale state. `handleSend` now accepts an optional `overrideInput` parameter; retry passes content directly, bypassing stale state entirely.
+- **Voice AudioWorklet broken** (`useJarvisVoice.ts`): `pcm-processor.worklet.ts` was imported from `./pcm-processor.worklet` but that file only existed in `voice/frontend/src/`, not in `src/hooks/`. Added the file to `src/hooks/pcm-processor.worklet.ts`. `PCM_WORKLET_CODE` is now defined and the Jarvis voice pipeline starts correctly.
+
+#### High
+- **Native proof stages never written** (`useAppShellState.js`): `invoke('alphonso-native-proof-stage', ...)` was calling a Tauri command that doesn't exist — `alphonso-native-proof-stage` is a Tauri *event*, not a command. Changed to `emit('alphonso-native-proof-stage', ...)` from `@tauri-apps/api/event`. Added `emit` import. The `.catch(() => {})` was silently swallowing the failure.
+- **1,867 TypeScript errors hidden** (`package.json`): `@types/react`, `@types/react-dom`, and `@types/node` were missing from devDependencies. Installed all three. Added `typecheck` script (`tsc --noEmit`) and wired it into `verify:app` (now: `lint && typecheck && test && build`). CI will now surface type errors.
+- **Voice sidecar fails in production** (`voice_sidecar.rs`): `"voice/backend"` was a relative path resolved against process CWD. Works in dev (CWD = repo root) but fails in NSIS/MSI installs where CWD is the install directory. Fixed to use `app.path().resource_dir().join("voice/backend")` via Tauri's `Manager` trait. Added `voice/backend/**` to `tauri.conf.json` bundle resources so the directory is included in production builds.
+
+#### Medium
+- **runtimeManagerService in main bundle** (multiple files): Three static imports of `runtimeManagerService` (`OllamaOfflineBanner.tsx`, `OnboardingWizard.tsx`, `creativeRoutingService.js`) defeated Vite's dynamic code splitting. Converted all three to dynamic `await import()` calls at point of use. The `INEFFECTIVE_DYNAMIC_IMPORT` build warning is gone.
+- **O(n²) chat render** (`ChatView.tsx`): `messages.indexOf(message)` inside `visibleMessages.map()` was O(n) × O(n) = O(n²). Added a `useMemo` Map (`messageGlobalIndexMap`) keyed by message object reference; all render-time lookups are now O(1).
+- **Connector status dots never refresh** (`ConnectorStatusIndicators.jsx`): Both `ConnectorStatusDot` and `ConnectorStatusStrip` read connector state once and never updated. Added 5s polling interval and a `alphonso-connector-saved` CustomEvent listener. `ConnectorSetupPanel.refresh()` now dispatches the event so status dots update immediately after saving credentials.
+- **durableRemove creates ghost SQLite entries** (`durableStore.js`, `kv_store.rs`): `durableRemove` was calling `kv_set(key, '')` — setting the key to an empty string instead of deleting it. On cold boot, `kv_get` returned `''` which caused parse errors and phantom data. Added a `kv_delete` Tauri command to `kv_store.rs`, registered it in `lib.rs`, and updated `durableRemove` to call `kv_delete`.
+- **Audit log read in render body** (`RightPanel.tsx`): `getAuditLog()` (localStorage read) was called directly in the render path on every render. Wrapped in `useMemo([activeTab])` — re-reads only when the user switches to the Audit tab.
+- **`voice.liveTranscript` type error** (`ChatView.tsx`): The `voice` prop type was `{ voiceStatus: string; toggleListening: () => void }`. `useVoiceInput.js` returns `liveTranscript` and it is used via `voice?.liveTranscript` in a `useEffect`. Added `liveTranscript?: string` to the prop interface.
+
+#### Low
+- **Unused imports** (`ChatView.tsx`, `App.tsx`): Removed `Eye`, `EyeOff`, `History`, `Zap as ZapIcon` from lucide-react import in ChatView; removed `classifyPriorityTier` from novaAnalysisService import in ChatView; removed `useTransition` from React import in App.tsx.
+- **Stale closure in RightPanel interval** (`RightPanel.tsx`): `setInterval(onCheckOllama, ...)` had an empty dependency array `[]` with an `eslint-disable` comment. Changed to `[onCheckOllama]` — the callback is `useCallback`-stable so no extra re-subscriptions occur.
+
+### Added
+- `src/hooks/pcm-processor.worklet.ts` — PCM AudioWorklet processor string constant, required by `useJarvisVoice.ts`
+- `kv_delete` Tauri command in `src-tauri/src/kv_store.rs` — deletes a key from SQLite kv_store table
+- `typecheck` npm script — runs `tsc --noEmit` for full TypeScript checking
+- `docs/BUG_REPORT.md` — full codebase audit report with file:line citations for all 16 bugs
+- `docs/FIX_PLAN.md` — phased remediation plan used to guide this fix session
+
+### Changed
+- `verify:app` now runs: `lint && typecheck && test && build` (typecheck added)
+- `voice_sidecar.rs` `voice_start` signature: added `app: tauri::AppHandle` parameter for resource path resolution
+- `tauri.conf.json` bundle: added `resources: { "../voice/backend": "voice/backend" }`
+
+---
+
 ## [2.2.3] - 2026-06-24 — Chat UX Consolidation + Connector Verification Fix
 
 ### Fixed

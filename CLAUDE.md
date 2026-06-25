@@ -14,8 +14,9 @@ npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 firs
 npm run test             # Run all 1737+ tests across 120 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
-npm run verify:app       # lint + test + build in one command
+npm run verify:app       # lint + typecheck + test + build in one command
 npm run lint             # ESLint on src/
+npm run typecheck        # tsc --noEmit — full TypeScript check (1867 errors existed before @types/react install)
 
 # Rust (run from src-tauri/ directory)
 cargo check              # Verify Rust compiles
@@ -92,7 +93,7 @@ Before writing any new service, component, or feature, check this list:
 | Desktop preflight / verify | `npm run verify:desktop:preflight`, `npm run verify:desktop` |
 | CI workflows | `.github/workflows/ci.yml`, `.github/workflows/release.yml` |
 | WhatsApp webhook Rust commands | `src-tauri/src/whatsapp_webhook.rs` |
-| KV store Rust commands | `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `save_settings`, `load_settings` |
+| KV store Rust commands | `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `kv_delete`, `save_settings`, `load_settings` |
 | Playwright config + E2E test | `playwright.config.js` + `e2e/smoke.spec.js` (Chromium installed) |
 | Multi-turn Ollama chat | `generateOllamaChatStream` in `src/lib/ollama.js` (uses `/api/chat`) |
 | JSON response parser | `src/lib/jsonUtils.js` — `parseJsonResponse` (strips ``` fences, parses JSON). Do not re-add to joseExecutionEngineService. |
@@ -110,6 +111,7 @@ Before writing any new service, component, or feature, check this list:
 | Voice OS sidecar launcher | `src-tauri/src/voice_sidecar.rs` — `voice_start`/`voice_stop`/`voice_status` Tauri commands |
 | Voice OS React service | `src/services/voiceOsService.js` — `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus` |
 | Jarvis voice hook | `src/hooks/useJarvisVoice.ts` — AudioWorklet WebSocket voice hook (start/stop/reset/state/transcript/reply/activeAgent/error/isConnected) |
+| PCM worklet (required) | `src/hooks/pcm-processor.worklet.ts` — `PCM_WORKLET_CODE` string constant imported by `useJarvisVoice.ts`. Do NOT remove — voice breaks without it. |
 | Voice OS backend | `voice/backend/` — FastAPI STT→LLM→TTS pipeline (faster-whisper, piper, webrtcvad, Ollama /api/chat) |
 | Workflow visual builder UI | `src/components/WorkflowBuilderView.jsx` — two-panel editor, 9 node types, reorder, save |
 | Nova insight card | `src/components/ChatView.tsx` — `novaInsight` state, score ring, fires after Jose pipeline |
@@ -267,4 +269,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-24 — v2.2.3 — Voice OS pipeline (feat/voice-os merged): FastAPI STT+LLM+TTS+VAD+barge-in backend in voice/, Tauri voice_sidecar.rs commands, voiceOsService.js, useJarvisVoice.ts (AudioWorklet), RuntimeManagerView voice-os entry, 5 pytest test files. UI/UX overhaul (feat/ui-ux-overhaul merged): OKLCH token system, framer-motion AnimatePresence on chat messages, motion.ts, OnboardingWizard token sweep, collapsed sidebar tooltips, RightPanel badge fix. v2.2.3 Chat UX fixes: Jose pipeline results + ApprovalPanel + Nova insight + execution receipts consolidated inline in chat thread (isLastAssistantMessage guards), auto-scroll fixed (settings.autoScroll !== false), connector verification fixed to check localStorage credential store in addition to OS env vars, connector auto-verify on save. 144 test files, 1930+ tests passing. Coverage threshold 38%. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-25 — v2.2.3-patch1 — Full codebase bug audit + 16-bug fix session. Critical: ChatView "Try Again" stale state fixed (handleSend accepts overrideInput), pcm-processor.worklet.ts added to src/hooks/ (voice AudioWorklet now resolves), Tauri invoke→emit for native proof stage. High: @types/react/@types/react-dom/@types/node installed (1867 TS errors were hidden), typecheck script added to verify:app, voice_sidecar uses resource_dir for production path + voice/backend in bundle resources. Medium: runtimeManagerService code splitting restored (3 static→dynamic imports), O(n²)→O(1) chat render (Map useMemo), ConnectorStatusIndicators poll 5s + CustomEvent, kv_delete Tauri command added (durableRemove no longer creates ghost SQLite entries), audit log memoized in RightPanel. Low: unused imports removed, stale closure dep fixed. 144 test files, 1930+ tests passing. cargo clippy zero warnings. Build clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._

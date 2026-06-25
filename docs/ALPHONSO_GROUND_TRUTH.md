@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-24 — v2.2.3 Chat UX Consolidation + Connector Verification Fix  
-**Verified by:** Claude Code session (144 test files, 1930 tests passing, build clean)  
-**Version:** 2.2.3 (v2.2.2 base: Voice OS + UI/UX overhaul; v2.2.3 fixes: Jose pipeline output consolidated into chat stream, connector verification fixed to check UI credential store, auto-scroll fixed)  
+**Last verified:** 2026-06-25 — v2.2.3-patch1 Full Codebase Bug Audit & Fix  
+**Verified by:** Claude Code session (144 test files, 1930 tests passing, build clean, cargo clippy zero warnings)  
+**Version:** 2.2.3-patch1 (v2.2.3 base: Chat UX consolidation + connector verification; patch1: 16-bug audit — critical voice/retry/proof fixes, TS types restored, production voice path, code splitting, O(1) chat render, live connector status, SQLite delete, audit memoization)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -133,11 +133,12 @@ Key services that past audits missed or underestimated:
 ### Voice OS (added feat/voice-os sprint)
 - `src/services/voiceOsService.js` — Tauri `invoke` wrappers: `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus`, `getVoiceWebSocketUrl`. Appends `agentActivityService` events on start/stop.
 - `src/hooks/useJarvisVoice.ts` — React hook for voice WebSocket: `start`, `stop`, `reset`, `state`, `transcript`, `reply`, `activeAgent`, `error`, `isConnected`. Uses **AudioWorklet** (not deprecated ScriptProcessor).
-- `src-tauri/src/voice_sidecar.rs` — `VoiceSidecar` state struct + `voice_start`/`voice_stop`/`voice_status` Tauri commands. Spawns `python -m uvicorn main:app` on port 8765.
+- `src-tauri/src/voice_sidecar.rs` — `VoiceSidecar` state struct + `voice_start`/`voice_stop`/`voice_status` Tauri commands. `voice_start` accepts `app: tauri::AppHandle` and resolves the backend path via `app.path().resource_dir().join("voice/backend")` — works in both dev and production installs. `voice/backend/**` is included in bundle resources via `tauri.conf.json`.
 - `voice/backend/` — Python FastAPI: `main.py` (lifespan preload, CORSMiddleware, `/health`, barge-in, conversation history), `pipeline.py` (async generator: VAD→STT→agent→LLM→TTS), `router.py` (9-agent regex routing), `state.py` (per-session `get_state`/`set_state`/`remove_state`), `session.py` (task registry, barge-in cancel), `stt.py` (faster-whisper + lru_cache), `tts.py` (piper + ThreadPoolExecutor, async `synthesize()`), `vad.py` (webrtcvad `is_speech()`)
 - `voice/backend/tests/` — `test_state.py`, `test_session.py`, `test_router.py`, `test_stt.py`, `test_pipeline.py`
 - `voice/frontend/src/useJarvisVoice.ts` — Standalone frontend hook (AudioWorklet, all exports)
 - `voice/frontend/src/pcm-processor.worklet.ts` — AudioWorklet processor (PCM float32→int16)
+- `src/hooks/pcm-processor.worklet.ts` — **copy required by `useJarvisVoice.ts`** (the hook imports from `./pcm-processor.worklet`; the voice/frontend version is a separate package). Do NOT remove this file.
 
 ### Other
 - `pluginSandboxService.js`, `pluginRegistryService.js`
@@ -324,7 +325,8 @@ start                    node scripts/run-vite-preview.mjs
 test                     node scripts/run-vitest-programmatic.mjs src
 test:watch               node scripts/run-vitest-programmatic.mjs --watch src
 lint                     eslint src
-verify:app               npm run lint && npm run test && npm run build
+typecheck                tsc --noEmit
+verify:app               npm run lint && npm run typecheck && npm run test && npm run build
 verify:desktop:preflight node scripts/verify-desktop-preflight.mjs
 verify:desktop           node scripts/verify-desktop.mjs
 updater:keygen           node scripts/setup-updater-signing.mjs --generate-only
@@ -380,7 +382,7 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 
 ### RUST BACKEND
 - [x] **`lib.rs` modular split completed** — Phases 1+2 extraction done (2026-06-09): `lib.rs` is now ~2,024 lines (grew with Runtime Manager additions), down from original 7,078 (5,623 lines extracted across 16 modules: whatsapp_webhook, kv_store, native_proof, plugin_runtime, policy_gate, audit_log, ollama, memory_store, meta_publish, connector_commands, search, telegram, workspace, youtube, runway, main).
-- [x] **lib.rs KV store split** — `src-tauri/src/kv_store.rs` created (2026-06-01, Session 4): `ensure_kv_table`, `kv_set`, `kv_get`, `save_settings`, `load_settings` extracted. `open_memory_db` marked `pub(crate)`.
+- [x] **lib.rs KV store split** — `src-tauri/src/kv_store.rs` created (2026-06-01, Session 4): `ensure_kv_table`, `kv_set`, `kv_get`, `kv_delete`, `save_settings`, `load_settings` extracted. `kv_delete` added 2026-06-25 (previously missing — `durableRemove` was setting keys to `''` instead of deleting). `open_memory_db` marked `pub(crate)`.
 - [x] **lib.rs continued splitting + plugins extracted** — DONE (2026-06-07, OpenCode): `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `runway.rs`, `native_proof.rs` now own their own modules. `cargo check` clean, `cargo clippy -- -D warnings` clean, `cargo test` clean (14 Rust unit tests passing).
 - [x] **Policy gate expanded** — `policy_gate.rs` whitelist expanded from 8 to 40+ programs: python, pip, cargo, npx, yarn, pnpm, curl, wget, ffmpeg, docker, pwsh, explorer, chrome, copy, xcopy, robocopy, mkdir, del, and more. Still blocks: cmd, rm, shutdown, format, net, reg.
 - [x] **New Tauri commands** — `read_workspace_file`, `delete_workspace_file`, `move_workspace_file`, `search_workspace_files`, `list_workspace_directory`, `open_url`, `fetch_url_content`, `read_clipboard`, `write_clipboard`. All with safe path validation (no escape from workspace root).
@@ -412,6 +414,7 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 - [x] **Jose pipeline output consolidated** — All pipeline results (`PipelineResultCard`, `ApprovalPanel`, execution receipts, Nova insight) render inline under the last assistant message. Previously floated in 4 separate panels below the chat. Approval buttons appear directly in the chat thread. (2026-06-24, v2.2.3)
 - [x] **Auto-scroll fixed** — Chat now scrolls to new messages by default (`settings.autoScroll !== false`). Previously required opt-in via `settings.autoScroll === true`. (2026-06-24, v2.2.3)
 - [x] **Connector verification fixed** — `verifyConnectorEnvironment` now checks UI credential store (localStorage `alphonso_connector_credentials_v1`) in addition to OS env vars. Credentials entered in the settings panel now correctly verify. `saveConnectorApiKey` and `saveTelegramCredentials` auto-verify after save. (2026-06-24, v2.2.3)
+- [x] **Connector status live refresh** — `ConnectorStatusDot` and `ConnectorStatusStrip` now poll every 5s and listen for `alphonso-connector-saved` CustomEvent. `ConnectorSetupPanel.refresh()` dispatches this event so status dots update instantly after saving credentials, without requiring a page reload. (2026-06-25, patch1)
 - [x] **`alphonso_settings` → SQLite** — already done (Sessions 3). Both persist to localStorage + SQLite; SQLite hydrated on boot.
 - [x] **`alphonso_conversations` → SQLite** — DONE (2026-06-01, Session 4): `App.jsx` now calls `invoke('kv_set', ...)` on every conversations change and hydrates from `kv_get` on boot. localStorage kept as fallback.
 - [x] **`alphonso_connector_auth_profiles_v1` → SQLite** — DONE (2026-06-03, Session 5): persisted via `kv_set`/`kv_get` with localStorage fallback.
@@ -489,7 +492,7 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 - [x] **Gateway Dockerfile** — **CLOSED Sprint Next-10 T7** `gateway/whatsapp-cloud/Dockerfile` multi-stage Node 20 Alpine build + `.dockerignore`.
 - [x] **TypeScript migration (5 components)** — **CLOSED Sprint Next-10 T8** AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar migrated to `.tsx` with full prop interfaces. SVG type declaration added to `src/types/declarations.d.ts`. Old `.jsx` files removed.
 - [x] **SentinelFindingModal** — **CLOSED Sprint Next-10 T9** `src/components/SentinelFindingModal.jsx` — fixed overlay modal, severity badge, pattern + recommendation rows. RightPanel findings now clickable to open modal.
-- [x] **durableStore / SQLite dual-write** — **CLOSED Sprint Next-10 T10** `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; applied to crashLogService, agentAuditService, novaAnalysisService.
+- [x] **durableStore / SQLite dual-write** — **CLOSED Sprint Next-10 T10** `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; applied to crashLogService, agentAuditService, novaAnalysisService. **Bug fixed 2026-06-25 patch1:** `durableRemove` previously called `kv_set(key, '')` (ghost entries on cold boot). Now correctly calls `kv_delete(key)` which issues `DELETE FROM kv_store WHERE key = ?`.
 - [x] **Test coverage push** — **CLOSED Sprint Next-10 T3** 10 new service test files → 111 total / 1621+ tests: agentBrainService, workspaceFileService, proactiveAgentService, streamingService, browserAutomationService, backupService, composioService, agentActivityService, resourceCostService, marcusPublishService.
 - [ ] **Branch protection on `main`** — CI not yet required before merge (GitHub settings, manual step)
 - [x] **TypeScript migration (continued)** — **CLOSED Sprint Next-50 D5** App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx`. Total: 10 TSX components. Remaining JSX: 63 components.
@@ -547,7 +550,7 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 - [x] **8 new test files** — **CLOSED D3T3–T10** gitService, skillPack, workspaceIntelligence, screenIntelligence, scaffoldTemplates, metaPublish, workspaceArtifact, telegramBrowserConnector
 
 ### PERFORMANCE
-- [x] **Lazy loading** — 20+ heavy views lazy-loaded. Main chunk: **288KB** (budget 550KB). Code splitting applied to ChatView, WorkflowPanel, coach components.
+- [x] **Lazy loading** — 20+ heavy views lazy-loaded. Main chunk: **288KB** (budget 550KB). Code splitting applied to ChatView, WorkflowPanel, coach components. **Fixed 2026-06-25 patch1:** Three static imports of `runtimeManagerService` in `OllamaOfflineBanner`, `OnboardingWizard`, and `creativeRoutingService` were defeating code splitting (Vite `INEFFECTIVE_DYNAMIC_IMPORT` warning). Converted to dynamic `await import()` at point of use — warning is gone.
 - [x] **Image asset compression** — DONE (2026-06-03, Session 6): Logo/banner/icon/thumbnail PNGs converted to WebP (89% reduction, ~9MB saved). `miya-mascot.png` converted to WebP (77.7% reduction). Unused `ChatGPT Image Jun 1` deleted (2.7MB). Total savings: ~12MB.
 - [x] **Design system** — Custom Tailwind tokens reduce CSS duplication. Component classes (.panel, .card, .btn-*) eliminate inline style repetition.
 
@@ -555,6 +558,7 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 - [x] **eslint-plugin-security** — installed + wired in `eslint.config.js` (2026-05-31, autonomous)
 - [x] **eslint-plugin-react-hooks** — already in config pre-session; confirmed present
 - [x] **TypeScript** — installed as devDependency; `tsconfig.json` + `tsconfig.node.json` created (2026-05-31, Agent E)
+- [x] **`@types/react`, `@types/react-dom`, `@types/node`** — **added 2026-06-25 patch1**. Were missing from devDependencies; `tsc --noEmit` was producing 1,867 errors silently (Vite/OXC build skips type-checking). `typecheck` script added; `verify:app` now runs lint + typecheck + test + build.
 
 ### UX/UI
 - [x] **Connector health dashboard** — `src/components/ConnectorHealthPanel.jsx` created with `ConnectorHealthPanel` (full panel), `ConnectorStatusStrip` (compact sidebar count), `ConnectorStatusDot` (per-connector dot). Mounted as `connectors` tab in `src/App.jsx` (2026-05-31, Agent C)
@@ -617,7 +621,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **CI workflows** → `ci.yml` and `release.yml` already exist and passing green (extend, do not replace). Note: `verify-app.yml` does NOT exist as a file — `npm run verify:app` runs inside `ci.yml`.
 - **WhatsApp webhook Rust module** → `src-tauri/src/whatsapp_webhook.rs` — `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs live here. Do not re-add to `lib.rs`.
 - **WhatsApp browser connector** → `src/services/whatsappBrowserConnector.js` — `browserSendWhatsApp` (outbound via Meta Graph API v17.0) and `browserPollWhatsAppGateway` (inbound via Railway gateway `/queue/drain`). Reads credentials from `connectorAuth.js` (`getConnectorCredential`). Do NOT recreate.
-- **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `save_settings`, `load_settings`, `ensure_kv_table`. Do not re-add to `lib.rs`.
+- **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `kv_delete`, `save_settings`, `load_settings`, `ensure_kv_table`. `kv_delete` issues `DELETE FROM kv_store WHERE key = ?`. Do not re-add to `lib.rs`.
 - **Multi-turn Ollama chat** → `src/lib/ollama.js` — `generateOllamaChatStream` uses `/api/chat` endpoint with full `messages` array. `ChatView.jsx` captures history snapshot before state updates and passes it. Do not recreate.
 - **appendAgentActivity wiring** → wired in `joseExecutionEngineService.js` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Both import from `../components/AgentActivityLog`.
 - **Playwright browser installed** → `@playwright/test@1.60.0` + Chromium installed. `npm run test:e2e` is ready to run (needs dev server + Ollama).
@@ -724,7 +728,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-23 — v2.1.0: Stability, Performance & Test Coverage sprint. Boot TDZ crashes fixed (two separate issues). ChatView message windowing (150 items), re-render O(n)→O(1) fix, React.Profiler in dev. E2E expanded: chat flow, workflow builder, connector health. 144 test files, 1930+ tests passing. Coverage threshold 35%+ (actual ~38%+). Source maps hidden. plugin-react-oxc replacing plugin-react (Vite 8/rolldown). TruffleHog secrets scan in CI. 15 TSX components. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-25 — v2.2.3-patch1: Full codebase bug audit + 16-bug fix session. Critical fixes: ChatView "Try Again" stale state, voice AudioWorklet missing worklet file, Tauri invoke→emit for native proof event, @types/react installed (1867 TS errors resolved), voice sidecar production path via resource_dir. Medium fixes: runtimeManagerService code splitting restored, O(n²)→O(1) chat render, connector status live refresh, SQLite kv_delete, audit log memoized. Low fixes: unused imports, stale closure dep. 144 test files, 1930+ tests passing. cargo clippy zero warnings. Build clean. typecheck added to verify:app. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 
