@@ -1,9 +1,144 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Play, Trash2, Plus, Clock } from 'lucide-react';
 import { createWorkflow, listWorkflows } from '../services/workflowBuilderService';
 import { listWorkflowReceipts } from '../services/workflowReceiptService';
 import { listWorkflowOperations, updateWorkflowOperationStatus } from '../services/workflowOperationsRegistryService';
 import { WorkflowBuilderView } from './WorkflowBuilderView';
+import {
+  createSchedule,
+  listSchedules,
+  saveSchedule,
+  deleteSchedule,
+  SCHEDULE_PRESETS,
+} from '../services/joseSchedulerService';
+
+// ── JoseSchedulerPanel ────────────────────────────────────────────────────────
+
+function JoseSchedulerPanel() {
+  const [schedules, setSchedules] = React.useState(() => listSchedules());
+  const [newName, setNewName] = React.useState('');
+  const [newCommand, setNewCommand] = React.useState('');
+  const [newPreset, setNewPreset] = React.useState('hourly');
+
+  const refresh = () => setSchedules(listSchedules());
+
+  const handleCreate = () => {
+    if (!newName.trim() || !newCommand.trim()) return;
+    createSchedule({ name: newName, commandText: newCommand, presetId: newPreset });
+    setNewName('');
+    setNewCommand('');
+    setNewPreset('hourly');
+    refresh();
+  };
+
+  const handleToggle = (sched) => {
+    saveSchedule({ ...sched, enabled: !sched.enabled });
+    refresh();
+  };
+
+  const handleRunNow = (sched) => {
+    window.dispatchEvent(new CustomEvent('alphonso-schedule-run', { detail: sched }));
+  };
+
+  const handleDelete = (id) => {
+    deleteSchedule(id);
+    refresh();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* New schedule form */}
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="section-label">New Schedule</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Schedule name..."
+            className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+          />
+          <select
+            value={newPreset}
+            onChange={(e) => setNewPreset(e.target.value)}
+            className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] focus:outline-none focus:border-[var(--accent-border)]"
+          >
+            {SCHEDULE_PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
+        </div>
+        <textarea
+          value={newCommand}
+          onChange={(e) => setNewCommand(e.target.value)}
+          placeholder="Command text to execute on schedule..."
+          rows={2}
+          className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+        />
+        <button
+          onClick={handleCreate}
+          disabled={!newName.trim() || !newCommand.trim()}
+          className="px-4 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--surface-0)] text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-colors"
+        >
+          Create Schedule
+        </button>
+      </div>
+
+      {/* Schedule list */}
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+        <div className="section-label">Schedules ({schedules.length})</div>
+        {schedules.length === 0 && (
+          <div className="text-xs text-[var(--text-4)] py-2">No schedules yet. Create one above.</div>
+        )}
+        {schedules.map((sched) => (
+          <div key={sched.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[var(--text-1)]">{sched.name}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded border border-[var(--border)] text-[var(--text-3)]">
+                  {SCHEDULE_PRESETS.find((p) => p.id === sched.presetId)?.label || sched.presetId}
+                </span>
+              </div>
+              <div className="text-[10px] text-[var(--text-4)] mt-0.5 truncate">{sched.commandText}</div>
+              {sched.lastRunAtMs && (
+                <div className="text-[10px] text-[var(--text-4)] mt-0.5">
+                  Last run: {new Date(sched.lastRunAtMs).toLocaleString()}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              <button
+                onClick={() => handleRunNow(sched)}
+                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--success)] hover:border-[var(--success)]/30 transition-colors"
+                title="Run now"
+              >
+                <Play className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => handleToggle(sched)}
+                className={`text-[10px] px-2 py-1 rounded-lg border font-semibold transition-colors ${
+                  sched.enabled
+                    ? 'border-[var(--success)]/30 text-[var(--success)] hover:bg-[var(--success)]/10'
+                    : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--accent-border)]'
+                }`}
+              >
+                {sched.enabled ? 'On' : 'Off'}
+              </button>
+              <button
+                onClick={() => handleDelete(sched.id)}
+                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--error)] hover:border-[var(--error)]/30 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main AutomationView ───────────────────────────────────────────────────────
 
 export function AutomationView() {
   const [workflows, setWorkflows] = React.useState(() => listWorkflows());
@@ -50,11 +185,31 @@ export function AutomationView() {
         >
           Builder
         </button>
+        <button
+          onClick={() => setActiveTab('schedules')}
+          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
+            activeTab === 'schedules'
+              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
+              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+          }`}
+        >
+          Schedules
+        </button>
       </div>
 
       {activeTab === 'builder' ? (
         <div className="flex-1 overflow-hidden">
           <WorkflowBuilderView />
+        </div>
+      ) : activeTab === 'schedules' ? (
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-[var(--text-1)]">Jose Scheduler</h2>
+              <p className="text-xs text-[var(--text-3)] mt-0.5">Automated task execution on intervals</p>
+            </div>
+          </div>
+          <JoseSchedulerPanel />
         </div>
       ) : (
     <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full">
