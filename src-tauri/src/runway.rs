@@ -22,6 +22,8 @@ pub struct RunwayVideoRequest {
   pub duration: Option<u32>,
   pub output_dir: Option<String>,
   pub timeout_seconds: Option<u64>,
+  /// API key passed from the frontend (read from connector credentials store)
+  pub api_secret: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -316,35 +318,33 @@ async fn poll_and_download(
 #[tauri::command]
 pub async fn runway_generate_video(request: RunwayVideoRequest) -> RunwayVideoProof {
   let started_at_ms = now_ms();
-  let api_secret = match std::env::var("RUNWAYML_API_SECRET") {
-    Ok(value) if !value.trim().is_empty() => value,
-    _ => {
-      return RunwayVideoProof {
-        provider: "runway".to_string(),
-        ok: false,
-        task_id: None,
-        status: "setup_required".to_string(),
-        model: request
-          .model
-          .unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string()),
-        ratio: request
-          .ratio
-          .unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string()),
-        duration: request.duration.unwrap_or(DEFAULT_RUNWAY_DURATION),
-        output_dir: request
-          .output_dir
-          .unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
-        output_urls: Vec::new(),
-        output_files: Vec::new(),
-        setup_required: true,
-        trust: "setup_required".to_string(),
-        message: "RUNWAYML_API_SECRET is required for Runway generation.".to_string(),
-        error: Some("RUNWAYML_API_SECRET missing".to_string()),
-        started_at_ms,
-        finished_at_ms: now_ms(),
-      };
-    }
+  // Prefer key passed from frontend credentials store; fall back to env var
+  let api_secret_candidate = request.api_secret.as_deref().unwrap_or("").trim().to_string();
+  let api_secret = if !api_secret_candidate.is_empty() {
+    api_secret_candidate
+  } else {
+    std::env::var("RUNWAYML_API_SECRET").unwrap_or_default().trim().to_string()
   };
+  let api_secret = if api_secret.is_empty() {
+    return RunwayVideoProof {
+      provider: "runway".to_string(),
+      ok: false,
+      task_id: None,
+      status: "setup_required".to_string(),
+      model: request.model.clone().unwrap_or_else(|| DEFAULT_RUNWAY_MODEL.to_string()),
+      ratio: request.ratio.clone().unwrap_or_else(|| DEFAULT_RUNWAY_RATIO.to_string()),
+      duration: request.duration.unwrap_or(DEFAULT_RUNWAY_DURATION),
+      output_dir: request.output_dir.clone().unwrap_or_else(|| DEFAULT_OUTPUT_DIR.to_string()),
+      output_urls: Vec::new(),
+      output_files: Vec::new(),
+      setup_required: true,
+      trust: "setup_required".to_string(),
+      message: "Add your Runway API key in Settings → Connectors → Runway ML.".to_string(),
+      error: Some("RUNWAYML_API_SECRET missing — add in Settings → Connectors".to_string()),
+      started_at_ms,
+      finished_at_ms: now_ms(),
+    };
+  } else { api_secret };
 
   if request.prompt_text.trim().is_empty() {
     return RunwayVideoProof {

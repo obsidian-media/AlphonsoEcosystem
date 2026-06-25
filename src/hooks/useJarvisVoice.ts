@@ -70,6 +70,17 @@ export function useJarvisVoice() {
       };
 
       socket.onmessage = (e: MessageEvent) => {
+        if (e.data instanceof ArrayBuffer) {
+          // TTS audio: decode WAV bytes and play through speakers
+          const playCtx = audioCtx.current ?? new AudioContext();
+          playCtx.decodeAudioData(e.data.slice(0)).then(buf => {
+            const src = playCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(playCtx.destination);
+            src.start();
+          }).catch(() => {/* ignore decode errors on partial chunks */});
+          return;
+        }
         if (typeof e.data === 'string') {
           const msg = JSON.parse(e.data);
           if (msg.type === 'stt') setTranscript(msg.text);

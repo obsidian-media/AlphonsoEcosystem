@@ -235,6 +235,7 @@ export function ConnectorSetupPanel() {
   const [youtubeChannelId, setYoutubeChannelId] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CHANNEL_ID'));
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
+  const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
 
   useEffect(() => {
     let cancelled = false;
@@ -703,6 +704,19 @@ export function ConnectorSetupPanel() {
             onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
             hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
             savedLabel="Brave Search key saved"
+          />
+
+          {/* Runway ML */}
+          <CredentialSection
+            title="Runway ML (Video Generation)"
+            icon={Video}
+            borderColor="border-fuchsia-300/20"
+            bgColor="bg-fuchsia-500/8"
+            accentColor="text-fuchsia-400"
+            fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}
+            onSave={() => saveConnectorApiKey('runway', { RUNWAYML_API_SECRET: runwayApiKey })}
+            hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
+            savedLabel="Runway key saved"
           />
         </div>
       </div>

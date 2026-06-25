@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getConnectorCredential } from './connectors/connectorAuth.js';
 
 export function buildRunwayVideoRequest({
   promptText,
@@ -22,6 +23,8 @@ export function buildRunwayVideoRequest({
 
 export async function generateRunwayVideo(options = {}) {
   const request = buildRunwayVideoRequest(options);
+  // Pass stored API key so users don't need to set env vars
+  request.apiSecret = getConnectorCredential('runway', 'RUNWAYML_API_SECRET') || null;
   return invoke('runway_generate_video', { request });
 }
 
