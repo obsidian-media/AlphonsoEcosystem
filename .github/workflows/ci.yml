@@ -206,7 +206,7 @@ jobs:
     steps:
       - name: Check Gateway health endpoint
         run: |
-          curl -s -o /dev/null -w "%{http_code}" https://your-railway-url.railway.app/health || echo "Gateway health endpoint not reachable (this is expected if Railway is not deployed)"
+          curl -s -o /dev/null -w "%{http_code}" https://alphonsoecosystem-production-3ad1.up.railway.app/health || echo "Gateway health endpoint not reachable"
         continue-on-error: true
 
   ios-build:
