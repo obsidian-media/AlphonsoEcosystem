@@ -1994,7 +1994,7 @@ pub(crate) fn watch_inbox_poll(
 #[tauri::command]
 pub(crate) fn mark_inbox_file_processed(
   workspace_root: String,
-  inbox_path: String,
+  _inbox_path: String,
   relative_path: String,
 ) -> Result<WorkspaceWriteProof, String> {
   let root = PathBuf::from(&workspace_root);

@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-26 — v2.2.9
-**Verified by:** Claude Code — JUNE CANDY sprint complete
-**Version:** 2.2.9 (Tavily fallback; Telegram 21 commands; OpenHands+ChromaDB+MCP+Bridge in Runtime Hub; Whisper→Echo; MCP server callable from Claude Desktop/Cursor; 146 test files / 1943 tests passing)
+**Last verified:** 2026-06-26 — v2.3.0
+**Verified by:** Claude Code — JUNE CANDY sprint + OpenCode features merged
+**Version:** 2.3.0 (n8n Runtime Hub + Marcus connector; Jose cron scheduler; Echo inbox file watcher; Whisper file picker fix; MCP bridge live Ollama; 149 test files / 1983 tests passing)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.2.9 |
+| Version | 2.3.0 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -140,6 +140,16 @@ Key services that past audits missed or underestimated:
 - `voice/frontend/src/pcm-processor.worklet.ts` — AudioWorklet processor (PCM float32→int16)
 - `src/hooks/pcm-processor.worklet.ts` — **copy required by `useJarvisVoice.ts`** (the hook imports from `./pcm-processor.worklet`; the voice/frontend version is a separate package). Do NOT remove this file.
 
+### JUNE CANDY Additions (v2.2.8 – v2.3.0)
+- `src/services/connectors/tavilyConnector.js` — Tavily AI search (free tier 1K/mo), `searchTavily`, `isTavilyConfigured`. Wired as tier-2 fallback in `hectorResearchService.js` (Brave → Tavily → DuckDuckGo → RSS).
+- `src/services/chromaDbService.js` — ChromaDB local vector DB (port 8000): `addMemoryToChroma`, `semanticSearchMemory`, `deleteMemoryFromChroma`, `isChromaHealthy`. Fire-and-forget write from `echoMemoryService.runEchoPreservation`.
+- `src/services/whisperTranscriptionService.js` — Whisper meeting transcription: `transcribeAndIngest(audioFilePath, filename, onProgress)` — calls `transcribe_audio_file` Tauri command → Ollama summarize → Echo `pushMemoryItem`.
+- `src/services/connectors/n8nConnector.js` — n8n workflow automation: `isN8nHealthy`, `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`. Wired as Marcus distribution target (`n8n|workflow.*trigger`).
+- `src/services/joseSchedulerService.js` — Jose cron scheduler: `createSchedule`, `listSchedules`, `saveSchedule`, `deleteSchedule`, `startScheduler`, `stopScheduler`. `SCHEDULE_PRESETS`: 30min/hourly/daily/weekly. Polls every 60s, fires callback when due. Started in `App.tsx`.
+- `src/services/echoFileWatcherService.js` — Echo inbox file watcher: `startFileWatcher`, `stopFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`. Polls via `watch_inbox_poll` Tauri command every 30s, auto-summarizes with Ollama, saves to Echo via `runEchoPreservation`, deduplicates via `.processed` suffix. Started in `App.tsx`.
+- `mcp-server/server.js` — MCP server (port 3333): 5 tools (`alphonso_run_pipeline`, `alphonso_search_memory`, `alphonso_research`, `alphonso_get_status`, `alphonso_get_receipts`), callable from Claude Desktop/Cursor/Windsurf.
+- `bridge/server.js` — Alphonso Bridge (port 4444): proxies MCP tool calls to Ollama `/api/chat` for live responses; `alphonso_get_status` checks Ollama `/api/tags` for real health + model list.
+
 ### Other
 - `pluginSandboxService.js`, `pluginRegistryService.js`
 - `recoveryService.js`, `runtimeLedgerService.js`
@@ -152,12 +162,12 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 120 Files in `src/test/` (not zero)
+## 4. Test Suite — 149 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-22 Sprint Next-50, all passing):**
-- 144 test files, 1930+ tests passing
+**Test files (verified 2026-06-26 v2.3.0, all passing):**
+- 149 test files, 1983 tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
 ```
 accBridgeService.test.js
@@ -281,6 +291,11 @@ scaffoldTemplatesService.test.js     ← added Sprint Next-50 D3 (12 tests)
 metaPublishService.test.js           ← added Sprint Next-50 D3 (11 tests)
 workspaceArtifactService.test.js     ← added Sprint Next-50 D3 (8 tests)
 telegramBrowserConnector.test.js     ← added Sprint Next-50 D3 (19 tests)
+tavilyConnector.test.js              ← added JUNE CANDY v2.2.8 (5 tests)
+chromaDbService.test.js              ← added JUNE CANDY v2.2.9 (8 tests)
+n8nConnector.test.js                 ← added JUNE CANDY v2.3.0 (12 tests)
+joseSchedulerService.test.js         ← added JUNE CANDY v2.3.0 (14 tests)
+echoFileWatcherService.test.js       ← added JUNE CANDY v2.3.0 (14 tests)
 ```
 
 **Rust tests (verified 2026-06-15, Session 13):**
@@ -362,6 +377,9 @@ All outbound connector paths run through `policyEnforcementService.js` before an
 | ChatGPT/OpenAI | `connectorRegistryService.sendChatGptConnectorMessage` | Yes | API key-dependent |
 | SD WebUI | `connectorRegistryService.generateSdWebUiImage` | Yes | Local service-dependent |
 | ComfyUI | `connectorRegistryService.queueComfyUiVideo` | Yes | Local service-dependent |
+| Brave Search | `connectorRegistryService` via `hectorResearchService` | No | API key-dependent |
+| Tavily | `tavilyConnector.searchTavily` | No | API key-dependent (tier-2 Hector fallback) |
+| n8n | `n8nConnector.triggerN8nWebhook` | No | Local service at localhost:5678; Marcus distribution target |
 
 All paths: fail-closed on missing credentials, blocked in zero-cost mode unless explicitly overridden, approval-gated for risky external actions.
 
@@ -369,9 +387,9 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 
 ## 8. Real Gaps — What Actually Needs Work
 
-These are confirmed gaps as of 2026-06-26 (v2.2.7). Any agent working on these areas should check current state before implementing.
+These are confirmed gaps as of 2026-06-26 (v2.3.0). Any agent working on these areas should check current state before implementing.
 
-### OPEN GAPS (as of v2.2.7)
+### OPEN GAPS (as of v2.3.0)
 - [ ] **DeepSeek connector** — `externalAgentAdapter.js` has stub `{ id: 'deepseek', enabled: false, status: 'not_wired' }`. No service, no UI. Workaround: use Ollama with `deepseek-r1:7b` locally — works today.
 - [ ] **PWA offline ChatView wiring** — `public/sw.js` + `src/services/offlineChatService.js` exist but ChatView does not call `saveMessageOffline()`. Messages are not persisted to IndexedDB on disconnect.
 - [ ] **Plugin sandbox execution** — `pluginSandboxService.js` exists but is never imported or called. Plugin tools cannot actually run in isolation.

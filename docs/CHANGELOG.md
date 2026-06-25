@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.3.0] - 2026-06-26 — JUNE CANDY OpenCode Merge: n8n, Jose Scheduler, Echo File Watcher
+
+### Added
+- **n8n Runtime Hub + Marcus connector** (`feat/n8n-runtime`): n8n ToolDef in Runtime Hub (Docker, port 5678, `/healthz` health). `n8nConnector.js`: `isN8nHealthy`, `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`. Marcus `selectDistributionTarget` now routes `n8n|workflow.*trigger` actions to n8n. n8n credential section in ConnectorSetupPanel (Base URL field). 12 new tests.
+- **Jose cron scheduler** (`feat/jose-scheduler`): `joseSchedulerService.js` — `createSchedule`, `listSchedules`, `saveSchedule`, `deleteSchedule`, `startScheduler`/`stopScheduler`. 4 presets: 30min/hourly/daily/weekly. Polls every 60s, fires callback on due schedules. Wired in `App.tsx`. `AutomationView.jsx` gets new "Schedules" tab with full `JoseSchedulerPanel` (list, create, enable/disable, run-now, delete). 14 new tests.
+- **Echo inbox file watcher** (`feat/echo-file-watcher`): `echoFileWatcherService.js` — 30s polling via `watch_inbox_poll` Tauri command, auto-summarizes with Ollama, saves to Echo via `runEchoPreservation`, deduplicates via `.processed` suffix + localStorage cache. Config card in Settings → Memory (toggle, path, poll interval). Wired in `App.tsx`. New Tauri commands: `watch_inbox_poll`, `mark_inbox_file_processed` in `workspace.rs`. 14 new tests.
+
+### Fixed
+- **OpenHands Docker flag**: `runtime_manager.rs` ToolDef changed from `-it` (requires TTY) to `-d` (detached, headless — works with tokio::process::Command)
+- **Unused variable warning**: `mark_inbox_file_processed` `inbox_path` param prefixed with `_`; `cargo clippy -- -D warnings` now clean
+
+### Tests
+- 149 test files / 1983 tests — all passing
+- Added: `n8nConnector.test.js` (12), `joseSchedulerService.test.js` (14), `echoFileWatcherService.test.js` (14)
+
+---
+
 ## [2.2.10] - 2026-06-26 — JUNE CANDY Fixes: Whisper file picker, MCP bridge live Ollama, cargo check clean
 
 ### Fixed

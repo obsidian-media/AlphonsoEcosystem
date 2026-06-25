@@ -149,6 +149,15 @@ Before writing any new service, component, or feature, check this list:
 | Plugin Marketplace UI | `src/components/SettingsView.tsx` — `PluginMarketplacePanel` component; Settings → Plugins nav section |
 | PWA service worker | `public/sw.js` — cache-first static, network-first nav, network-only API/invoke |
 | Offline chat service | `src/services/offlineChatService.js` — IndexedDB store (`alphonso-offline` DB) with `saveMessageOffline`/`getOfflineMessages`/`markMessageSynced` |
+| Tavily search connector | `src/services/connectors/tavilyConnector.js` — `searchTavily`, `isTavilyConfigured`; wired as tier-2 Hector fallback |
+| ChromaDB vector DB | `src/services/chromaDbService.js` — `addMemoryToChroma`, `semanticSearchMemory`, `isChromaHealthy`; fire-and-forget write from Echo |
+| Whisper transcription service | `src/services/whisperTranscriptionService.js` — `transcribeAndIngest(audioFilePath, filename, onProgress)`; uses `pick_file` Tauri command |
+| n8n connector | `src/services/connectors/n8nConnector.js` — `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`, `isN8nHealthy` |
+| Jose cron scheduler | `src/services/joseSchedulerService.js` — `createSchedule`, `listSchedules`, `startScheduler`/`stopScheduler`; SCHEDULE_PRESETS; AutomationView Schedules tab |
+| Echo file watcher | `src/services/echoFileWatcherService.js` — `startFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`; polls `watch_inbox_poll` Tauri command every 30s |
+| MCP server | `mcp-server/server.js` — Express port 3333; 5 MCP tools callable from Claude Desktop/Cursor/Windsurf |
+| Alphonso Bridge | `bridge/server.js` — Express port 4444; proxies tool calls to Ollama `/api/chat`; `alphonso_get_status` checks `/api/tags` |
+| Native file picker | `pick_file` Tauri command in `src-tauri/src/lib.rs` — PowerShell OpenFileDialog, returns full path; used by Whisper transcription |
 
 ---
 
@@ -230,6 +239,13 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Knowledge/Files page too thin (standalone)~~ — **CLOSED 2026-06-25 v2.2.4** (Knowledge section in SettingsView renders `FilesView`; sidebar `files` item removed)
 - ~~Automation operations non-interactive (stubs)~~ — **CLOSED 2026-06-25 v2.2.4** (`AutomationView.jsx` operations now toggleable via `updateWorkflowOperationStatus`)
 - ~~Telegram commands limited to 13~~ — **CLOSED 2026-06-25 v2.2.4** (17 commands: +`/ping`, `/agents`, `/nova`, `/scan` in `telegramCompanionService.js`)
+- ~~Telegram companion expansion to 21 commands~~ — **CLOSED 2026-06-26 v2.2.8** (`/research`, `/memory`, `/receipts`, `/read` added; help text reorganized into categories)
+- ~~n8n workflow automation~~ — **CLOSED 2026-06-26 v2.3.0** (`n8nConnector.js` + Runtime Hub ToolDef + Marcus distribution target + ConnectorSetupPanel credential section)
+- ~~Jose scheduled tasks~~ — **CLOSED 2026-06-26 v2.3.0** (`joseSchedulerService.js` + AutomationView Schedules tab + App.tsx wiring)
+- ~~Echo file system watcher~~ — **CLOSED 2026-06-26 v2.3.0** (`echoFileWatcherService.js` + `watch_inbox_poll`/`mark_inbox_file_processed` Tauri commands + Settings config card)
+- ~~Whisper file path broken~~ — **CLOSED 2026-06-26 v2.2.10** (`pick_file` Tauri command via PowerShell OpenFileDialog; `MeetingTranscriptionPanel` uses `invoke('pick_file')`)
+- ~~MCP bridge stub responses~~ — **CLOSED 2026-06-26 v2.2.10** (`bridge/server.js` calls Ollama `/api/chat` for live responses; `alphonso_get_status` checks `/api/tags`)
+- ~~OpenHands -it flag (no TTY)~~ — **CLOSED 2026-06-26 v2.3.0** (changed to `-d` in `runtime_manager.rs` ToolDef)
 
 ---
 
@@ -290,4 +306,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-26 — v2.2.9 — JUNE CANDY sprint complete: Tavily fallback, Telegram 21 commands, OpenHands + ChromaDB + MCP Server + Alphonso Bridge in Runtime Hub, Whisper meeting transcription → Echo, chromaDbService.js wired into echoMemoryService (fire-and-forget write + semantic search export), MCP server (mcp-server/ port 3333) + bridge (bridge/ port 4444) callable from Claude Desktop/Cursor/Windsurf. 146 test files / 1943 tests passing. cargo check clean._
+_Last verified: 2026-06-26 — v2.3.0 — JUNE CANDY sprint complete + OpenCode merges: n8n in Runtime Hub + Marcus connector; Jose cron scheduler (AutomationView Schedules tab); Echo inbox file watcher (Tauri poll commands + 30s JS interval); Whisper pick_file fix; MCP bridge live Ollama responses; OpenHands -it→-d fix; cargo clippy -D warnings clean. 149 test files / 1983 tests passing._
