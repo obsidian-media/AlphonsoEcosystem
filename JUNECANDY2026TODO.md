@@ -8,6 +8,19 @@
 
 ---
 
+## Known Deferred Issues (tackle next session)
+
+These were discovered during the JUNE CANDY sprint and deferred. Fix before considering any item "fully closed":
+
+| Issue | Severity | File | Description |
+|---|---|---|---|
+| OpenHands `-it` flag | Medium | `src-tauri/src/runtime_manager.rs` | `openHands` ToolDef uses `-it` Docker flag which requires a real TTY. `tokio::process::Command` has none — Start button will fail. Fix: remove `-it`, keep only `--rm`, add `-d` for detached. |
+| ChromaDB ID matching | Low | `src/services/echoMemoryService.js` | `searchEchoMemorySemantic` matches by `m.id === r.id || m.content?.memoryId === r.id` without verifying `listMemoryItems()` shape. May silently return empty results. Verify against actual memoryService output shape. |
+| Telegram `/research` output quality | Low | `src/services/telegramCompanionService.js` | `/research` routes through generic `createJoseCommandRoute` — returns Jose pipeline summary, not actual Hector research content. Should call `researchWithHector()` directly and format the sources list for Telegram. |
+| MCP bridge Phase 2 — real kv_store | Medium | `bridge/server.js` | `alphonso_get_receipts` still returns empty. Phase 2: frontend polls bridge queue + bridge reads kv_store via SQLite directly. Requires implementing a shared SQLite path convention. |
+
+---
+
 ## Priority Order
 
 | # | Feature | Branch Name | Effort | Value |

@@ -1301,6 +1301,46 @@ fn write_clipboard(_content: String) -> Result<ClipboardProof, String> {
   }
 }
 
+/// Write raw audio bytes (from JS FileReader) to a temp file and return its path.
+/// This lets the browser hand a File object to Whisper without needing file.path.
+#[tauri::command]
+fn write_temp_audio_file(filename: String, bytes: Vec<u8>) -> Result<String, String> {
+  let ext = std::path::Path::new(&filename)
+    .extension()
+    .unwrap_or_default()
+    .to_string_lossy()
+    .to_lowercase();
+  let safe_ext = if ["mp3","wav","m4a","mp4","ogg","webm","flac"].contains(&ext.as_str()) { ext } else { "wav".into() };
+  let dest = std::env::temp_dir().join(format!("alphonso_audio_{}.{}", now_ms(), safe_ext));
+  std::fs::write(&dest, &bytes).map_err(|e| e.to_string())?;
+  Ok(dest.to_string_lossy().to_string())
+}
+
+/// Open a file-picker dialog and return the selected file path.
+#[tauri::command]
+fn pick_file(filters: Option<Vec<String>>) -> Result<String, String> {
+  let _ = filters; // used in future — currently opens any file
+  #[cfg(target_os = "windows")]
+  {
+    use std::process::Command;
+    let script = concat!(
+      "Add-Type -AssemblyName System.Windows.Forms; ",
+      "$d = New-Object System.Windows.Forms.OpenFileDialog; ",
+      "$d.Filter = 'Audio files|*.mp3;*.wav;*.m4a;*.mp4;*.ogg;*.webm;*.flac|All files|*.*'; ",
+      "if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $d.FileName } else { '' }"
+    );
+    let output = Command::new("powershell")
+      .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", script])
+      .output()
+      .map_err(|e| e.to_string())?;
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if path.is_empty() { return Err("cancelled".to_string()); }
+    return Ok(path);
+  }
+  #[allow(unreachable_code)]
+  Err("File picker is Windows-only in this build".to_string())
+}
+
 #[tauri::command]
 fn pick_folder() -> Result<FolderPickProof, String> {
   #[cfg(target_os = "windows")]
@@ -1999,6 +2039,8 @@ pub fn run() {
       connector_check_local_runtime_health,
       workspace::transcribe_audio_file,
       workspace::read_workspace_file,
+      write_temp_audio_file,
+      pick_file,
       workspace::delete_workspace_file,
       workspace::move_workspace_file,
       workspace::search_workspace_files,

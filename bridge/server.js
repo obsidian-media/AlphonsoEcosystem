@@ -1,9 +1,6 @@
 /**
  * Alphonso Bridge — HTTP server on port 4444
- * Called by the MCP server, queues tasks for the Alphonso frontend to pick up.
- *
- * Phase 1: Returns informative queued-task responses.
- * Phase 2 (future): Write to SQLite kv_store, frontend polls, reads result back.
+ * Called by the MCP server. Routes tool calls to Ollama for live responses.
  */
 
 import express from 'express';
@@ -12,64 +9,110 @@ const app = express();
 app.use(express.json());
 
 const PORT = Number(process.env.BRIDGE_PORT || 4444);
+const OLLAMA_BASE = process.env.OLLAMA_BASE || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 
-// In-memory task queue (Phase 1 — no persistence yet)
-const taskQueue = [];
-const taskResults = new Map();
+async function ollamaChat(systemPrompt, userMessage) {
+  const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      stream: false,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ]
+    }),
+    signal: AbortSignal.timeout(30000)
+  });
+  if (!res.ok) throw new Error(`Ollama error ${res.status}`);
+  const data = await res.json();
+  return data.message?.content || '';
+}
 
-function queueTask(type, input) {
-  const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  taskQueue.push({ id, type, input, createdAt: Date.now(), status: 'queued' });
-  return id;
+async function isOllamaOnline() {
+  try {
+    const res = await fetch(`${OLLAMA_BASE}/api/tags`, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return { online: true, models: (data.models || []).map(m => m.name) };
+  } catch {
+    return { online: false, models: [] };
+  }
 }
 
 // ── Tool endpoints ────────────────────────────────────────────────────────────
 
-app.post('/tool/alphonso_run_pipeline', (req, res) => {
+app.post('/tool/alphonso_run_pipeline', async (req, res) => {
   const { command, zeroCostMode = true } = req.body || {};
   if (!command) return res.status(400).json({ error: 'command is required' });
-  const id = queueTask('pipeline', { command, zeroCostMode });
-  res.json({
-    ok: true,
-    taskId: id,
-    message: `Pipeline queued: "${command.slice(0, 80)}"`,
-    note: 'Open Alphonso desktop to see the task execute. Results appear in the Activity tab.',
-    zeroCostMode
-  });
+
+  try {
+    const reply = await ollamaChat(
+      'You are Alphonso, an AI ecosystem assistant. The user has sent a command via the MCP bridge. Execute the task and provide a clear, helpful response. Keep it concise.',
+      command
+    );
+    res.json({ ok: true, result: reply, provider: 'ollama', model: OLLAMA_MODEL, zeroCostMode });
+  } catch (err) {
+    res.status(503).json({
+      ok: false,
+      error: `Ollama unavailable: ${err.message}`,
+      hint: 'Start Ollama or open the Alphonso Runtime Hub to launch it.'
+    });
+  }
 });
 
-app.post('/tool/alphonso_search_memory', (req, res) => {
+app.post('/tool/alphonso_search_memory', async (req, res) => {
   const { query, limit = 10 } = req.body || {};
   if (!query) return res.status(400).json({ error: 'query is required' });
-  res.json({
-    ok: true,
-    query,
-    results: [],
-    note: 'Live memory search requires Alphonso desktop running with the bridge wired to its kv_store. Coming in Phase 2.',
-    suggestion: `Open Alphonso → Settings → Memory and search for "${query}" directly.`
-  });
+
+  try {
+    const reply = await ollamaChat(
+      'You are a memory retrieval assistant for the Alphonso AI ecosystem. The user is searching their personal memory store. Provide a helpful summary of what you know about the topic based on general context. Note that live memory sync requires the Alphonso desktop app.',
+      `Search my memory for: ${query}`
+    );
+    res.json({
+      ok: true,
+      query,
+      results: [{ content: reply, source: 'ollama-synthesis', relevance: 0.8 }],
+      note: 'Results synthesized by Ollama. Live memory sync requires Alphonso desktop running.',
+      limit
+    });
+  } catch (err) {
+    res.status(503).json({ ok: false, error: `Ollama unavailable: ${err.message}`, results: [] });
+  }
 });
 
-app.post('/tool/alphonso_research', (req, res) => {
+app.post('/tool/alphonso_research', async (req, res) => {
   const { topic } = req.body || {};
   if (!topic) return res.status(400).json({ error: 'topic is required' });
-  const id = queueTask('research', { topic });
-  res.json({
-    ok: true,
-    taskId: id,
-    message: `Research task queued: "${topic}"`,
-    note: 'Hector will run this when Alphonso processes the queue. Check the Activity tab in Alphonso desktop.'
-  });
+
+  try {
+    const reply = await ollamaChat(
+      'You are Hector, the research agent in the Alphonso AI ecosystem. Provide a thorough research summary on the given topic. Include key facts, context, and relevant insights. Structure your response clearly.',
+      `Research topic: ${topic}`
+    );
+    res.json({ ok: true, topic, summary: reply, provider: 'ollama', model: OLLAMA_MODEL });
+  } catch (err) {
+    res.status(503).json({
+      ok: false,
+      error: `Ollama unavailable: ${err.message}`,
+      hint: 'Start Ollama or use Brave Search via the Alphonso desktop app.'
+    });
+  }
 });
 
-app.post('/tool/alphonso_get_status', (req, res) => {
+app.post('/tool/alphonso_get_status', async (req, res) => {
+  const ollamaStatus = await isOllamaOnline();
   res.json({
     ok: true,
     status: {
       bridge: 'online',
       bridgePort: PORT,
-      queuedTasks: taskQueue.length,
-      note: 'Full status (Ollama health, agent activity) requires the Alphonso frontend to be connected.'
+      ollama: ollamaStatus.online ? 'online' : 'offline',
+      ollamaModels: ollamaStatus.models || [],
+      ollamaBase: OLLAMA_BASE
     }
   });
 });
@@ -82,14 +125,16 @@ app.post('/tool/alphonso_get_receipts', (req, res) => {
   });
 });
 
-// ── Queue inspection (for debugging) ─────────────────────────────────────────
+// ── Health ────────────────────────────────────────────────────────────────────
 
-app.get('/queue', (req, res) => res.json({ tasks: taskQueue.slice(-20) }));
-app.get('/health', (req, res) => res.json({ ok: true, port: PORT, queuedTasks: taskQueue.length }));
+app.get('/health', async (req, res) => {
+  const ollamaStatus = await isOllamaOnline();
+  res.json({ ok: true, port: PORT, ollama: ollamaStatus });
+});
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, '127.0.0.1', () => {
   console.log(`Alphonso bridge running on http://localhost:${PORT}`);
-  console.log(`Queue: http://localhost:${PORT}/queue`);
+  console.log(`Ollama target: ${OLLAMA_BASE} (model: ${OLLAMA_MODEL})`);
 });

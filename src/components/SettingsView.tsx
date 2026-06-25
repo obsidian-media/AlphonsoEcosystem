@@ -1370,24 +1370,26 @@ function ChromaDbStatus() {
 }
 
 function MeetingTranscriptionPanel() {
-  const [status, setStatus] = React.useState<'idle' | 'transcribing' | 'summarizing' | 'saving' | 'done' | 'error'>('idle');
+  const [status, setStatus] = React.useState<'idle' | 'reading' | 'transcribing' | 'summarizing' | 'saving' | 'done' | 'error'>('idle');
   const [result, setResult] = React.useState<{ filename: string; summary: string } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const fileRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFile = async (file: File) => {
-    setStatus('transcribing');
+  const pickAndTranscribe = async () => {
+    setStatus('reading');
     setError(null);
     setResult(null);
     try {
+      // Use native file picker to get a real filesystem path — no file.path hack
+      const audioPath = await invoke<string>('pick_file', { filters: ['mp3', 'wav', 'm4a', 'mp4', 'ogg', 'webm', 'flac'] });
+      const filename = audioPath.split(/[/\\]/).pop() || audioPath;
       const { transcribeAndIngest } = await import('../services/whisperTranscriptionService.js');
-      // In Tauri, file objects from <input> have a .path property on Windows
-      const path = (file as File & { path?: string }).path || file.name;
-      const res = await transcribeAndIngest(path, file.name, (s: string) => setStatus(s as typeof status));
-      setResult({ filename: file.name, summary: res.summary });
+      const res = await transcribeAndIngest(audioPath, filename, (s: string) => setStatus(s as typeof status));
+      setResult({ filename, summary: res.summary });
       setStatus('done');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'cancelled') { setStatus('idle'); return; }
+      setError(msg);
       setStatus('error');
     }
   };
@@ -1398,18 +1400,11 @@ function MeetingTranscriptionPanel() {
   return (
     <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-white/5 space-y-3">
       <p className="text-xs text-[var(--text-3)]">
-        Drop an audio file (MP3, WAV, M4A). Whisper transcribes it, Ollama summarizes it, Echo remembers it.
+        Choose an audio file (MP3, WAV, M4A). Whisper transcribes it, Ollama summarizes it, Echo remembers it.
         Whisper must be installed via Runtime Hub first.
       </p>
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".mp3,.wav,.m4a,.mp4,.ogg,.webm"
-        className="hidden"
-        onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
-      />
       <button
-        onClick={() => { setStatus('idle'); setResult(null); setError(null); fileRef.current?.click(); }}
+        onClick={pickAndTranscribe}
         disabled={busy}
         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white text-xs rounded-xl transition-colors"
       >

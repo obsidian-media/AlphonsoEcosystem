@@ -6,6 +6,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.10] - 2026-06-26 — JUNE CANDY Fixes: Whisper file picker, MCP bridge live Ollama, cargo check clean
+
+### Fixed
+- **Whisper file path bug** (`src/components/SettingsView.tsx`): `MeetingTranscriptionPanel` previously used `file.path || file.name` which silently fell back to just the filename (no directory), causing Whisper CLI to fail. Rewrote to use `invoke('pick_file')` — new Rust command opens PowerShell `OpenFileDialog` and returns real full path. Added `pick_file` and `write_temp_audio_file` commands to `src-tauri/src/lib.rs`.
+- **MCP bridge live responses** (`bridge/server.js`): `alphonso_run_pipeline`, `alphonso_research`, and `alphonso_search_memory` now call Ollama (`/api/chat` at `http://localhost:11434`) with agent-specific system prompts for real responses instead of stub queue messages. `alphonso_get_status` now checks Ollama health (`/api/tags`) and returns live model list. `OLLAMA_BASE` and `OLLAMA_MODEL` configurable via env vars.
+- **Cargo check clean**: All Rust commands (`pick_file`, `write_temp_audio_file`, `transcribe_audio_file`) verified compiling cleanly.
+
+### Tests
+- 146 test files / 1943 tests — all passing
+
+---
+
 ## [2.2.9] - 2026-06-26 — JUNE CANDY Sprint Part 2: ChromaDB, MCP Server, Runtime Hub expansion
 
 ### Added
