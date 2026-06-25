@@ -147,6 +147,18 @@ const TOOLS: &[ToolDef] = &[
     // Gap 6 fix: correct entry point — file path, not module syntax
     args: &["demos/musicgen_app.py", "--server_name", "127.0.0.1", "--server_port", "8765"],
   },
+  ToolDef {
+    name: "openwebui",
+    display_name: "Open WebUI",
+    description: "ChatGPT-style web interface for Ollama and OpenAI-compatible models",
+    repo_url: Some("https://github.com/open-webui/open-webui"),
+    pip_packages: &["open-webui"],
+    requirements_file: None,
+    port: Some(3000),
+    health_path: Some("/health"),
+    exe: "open-webui",
+    args: &["serve", "--host", "127.0.0.1", "--port", "3000"],
+  },
 ];
 
 fn tool_def(name: &str) -> Option<&'static ToolDef> {
@@ -1144,6 +1156,7 @@ mod tests {
     assert!(tool_def("ollama").is_some());
     assert!(tool_def("comfyui").is_some());
     assert!(tool_def("audiocraft").is_some());
+    assert!(tool_def("openwebui").is_some());
     assert!(tool_def("nonexistent").is_none());
   }
 

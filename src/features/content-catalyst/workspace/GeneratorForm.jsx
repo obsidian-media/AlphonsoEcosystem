@@ -1,64 +1,91 @@
 import React from 'react';
+import { Sparkles } from 'lucide-react';
 
 export function GeneratorForm({ form, setForm, brandProfile, injectedIdea, onIdeaUsed, onGenerate, isLoading }) {
   const pillars = Array.isArray(brandProfile?.content_pillars) ? brandProfile.content_pillars : [];
   const pillarOptions = pillars.length > 0 ? pillars : [{ name: 'General', description: 'General brand content' }];
 
   return (
-    <div className="space-y-6 rounded-[3rem] border border-primary/20 bg-zinc-950/90 p-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-white">Generator Form</h2>
-        <p className="text-sm text-zinc-400">Brief, draft, asset, and preview generation all start here.</p>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">New Job</span>
       </div>
 
-      {injectedIdea ? (
-        <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-amber-200">Injected idea</div>
-          <div>{injectedIdea}</div>
-          <button type="button" className="mt-3 rounded-lg border border-amber-300/30 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-50" onClick={onIdeaUsed}>
-            Use idea
-          </button>
+      {injectedIdea && (
+        <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 flex items-start justify-between gap-2">
+          <span className="line-clamp-2">{injectedIdea}</span>
+          <button type="button" onClick={onIdeaUsed} className="shrink-0 text-[9px] font-bold uppercase tracking-widest border border-amber-300/30 rounded px-2 py-0.5 hover:bg-amber-400/10">Use</button>
         </div>
-      ) : null}
+      )}
 
-      <textarea value={form.idea} onChange={(event) => setForm((current) => ({ ...current, idea: event.target.value }))} rows={4} placeholder="Idea" className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" />
-      <textarea value={form.business_context} onChange={(event) => setForm((current) => ({ ...current, business_context: event.target.value }))} rows={3} placeholder="Business context" className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" />
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <input value={form.platform} onChange={(event) => setForm((current) => ({ ...current, platform: event.target.value }))} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="platform" />
-        <input value={form.format} onChange={(event) => setForm((current) => ({ ...current, format: event.target.value }))} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="format" />
-        <input value={form.tone} onChange={(event) => setForm((current) => ({ ...current, tone: event.target.value }))} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="tone" />
+      <textarea
+        value={form.idea}
+        onChange={(e) => setForm((c) => ({ ...c, idea: e.target.value }))}
+        rows={3}
+        placeholder="What's the idea? (required)"
+        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] resize-none focus:outline-none focus:border-[var(--accent-border)]"
+      />
+
+      <textarea
+        value={form.business_context}
+        onChange={(e) => setForm((c) => ({ ...c, business_context: e.target.value }))}
+        rows={2}
+        placeholder="Business context (optional)"
+        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] resize-none focus:outline-none focus:border-[var(--accent-border)]"
+      />
+
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { key: 'platform', placeholder: 'Platform (e.g. Instagram)' },
+          { key: 'format', placeholder: 'Format (e.g. Reel)' },
+          { key: 'tone', placeholder: 'Tone (e.g. Casual)' },
+        ].map(({ key, placeholder }) => (
+          <input
+            key={key}
+            value={form[key]}
+            onChange={(e) => setForm((c) => ({ ...c, [key]: e.target.value }))}
+            placeholder={placeholder}
+            className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2.5 py-1.5 text-xs text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+          />
+        ))}
       </div>
 
-      <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-        Content pillar
-        <select value={form.pillar || ''} onChange={(event) => setForm((current) => ({ ...current, pillar: event.target.value }))} className="mt-2 w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
-          <option value="">General</option>
-          {pillarOptions.map((pillar) => (
-            <option key={pillar.name} value={pillar.name}>{pillar.name}</option>
-          ))}
+      <div className="flex items-center gap-2">
+        <select
+          value={form.pillar || ''}
+          onChange={(e) => setForm((c) => ({ ...c, pillar: e.target.value }))}
+          className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2.5 py-1.5 text-xs text-[var(--text-1)] focus:outline-none"
+        >
+          <option value="">Pillar — General</option>
+          {pillarOptions.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
         </select>
-      </label>
+      </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {[
-          ['image', 'Image'],
-          ['video', 'Video'],
-          ['narration', 'Narration'],
-          ['publish', 'Publish']
-        ].map(([key, label]) => (
+      <div className="flex items-center gap-2 flex-wrap">
+        {[['image', 'Image'], ['video', 'Video'], ['narration', 'Narration'], ['publish', 'Publish']].map(([key, label]) => (
           <button
             key={key}
             type="button"
-            onClick={() => setForm((current) => ({ ...current, needs: { ...current.needs, [key]: !current.needs[key] } }))}
-            className={`rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-widest ${form.needs[key] ? 'border-cyan-400/30 bg-cyan-500/10 text-cyan-100' : 'border-white/10 bg-zinc-900 text-zinc-300'}`}
+            onClick={() => setForm((c) => ({ ...c, needs: { ...c.needs, [key]: !c.needs[key] } }))}
+            className={`rounded-md border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+              form.needs[key]
+                ? 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200'
+                : 'border-[var(--border)] text-[var(--text-4)] hover:text-[var(--text-2)]'
+            }`}
           >
-            {label}: {form.needs[key] ? 'on' : 'off'}
+            {label}
           </button>
         ))}
       </div>
 
-      <button type="button" disabled={isLoading || !form.idea.trim()} onClick={onGenerate} className="rounded-xl bg-cyan-300 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">
-        {isLoading ? 'Working...' : 'Create Content Job'}
+      <button
+        type="button"
+        disabled={isLoading || !form.idea.trim()}
+        onClick={onGenerate}
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-950 text-xs font-bold uppercase tracking-widest px-4 py-2.5 transition-colors"
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        {isLoading ? 'Generating…' : 'Create Content Job'}
       </button>
     </div>
   );

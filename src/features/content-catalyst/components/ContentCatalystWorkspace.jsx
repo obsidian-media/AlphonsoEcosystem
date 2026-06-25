@@ -225,7 +225,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="h-full overflow-y-auto space-y-6 p-6">
       <BrandHeader
         brandProfile={brandProfile}
         analytics={analytics}
@@ -329,38 +329,42 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
             </div>
           </div>
 
-          <div className="rounded-[3rem] border border-primary/20 bg-zinc-950/90 p-6">
-            <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-              <CheckCircle2 className="h-3.5 w-3.5 text-cyan-300" />
-              Bridge Response
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
+              <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Bridge response</span>
             </div>
-            {bridgeResponse ? (
-              <pre className="max-h-[30rem] overflow-auto rounded-2xl border border-white/10 bg-zinc-950/90 p-3 text-[11px] leading-relaxed text-zinc-200">
-                {JSON.stringify(bridgeResponse, null, 2)}
-              </pre>
-            ) : (
-              <div className="text-sm text-zinc-500">Create a job to see the bridge contract response.</div>
-            )}
+            <div className="p-4">
+              {bridgeResponse ? (
+                <pre className="max-h-64 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--surface-3)] p-3 text-[10px] leading-relaxed text-[var(--text-2)]">
+                  {JSON.stringify(bridgeResponse, null, 2)}
+                </pre>
+              ) : (
+                <div className="text-[10px] text-[var(--text-4)]">Create a job to see the bridge contract response.</div>
+              )}
+            </div>
           </div>
 
           <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <DraftList drafts={drafts} onSelect={setActiveJobId} />
-        <div className="rounded-[3rem] border border-primary/20 bg-zinc-950/90 p-6">
-          <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-            <ArrowRight className="h-3.5 w-3.5 text-cyan-300" />
-            Job detail
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
+            <ArrowRight className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Job detail</span>
           </div>
-          {activeJob ? (
-            <pre className="max-h-[30rem] overflow-auto rounded-2xl border border-white/10 bg-zinc-950/90 p-3 text-[11px] leading-relaxed text-zinc-200">
-              {JSON.stringify(activeJob, null, 2)}
-            </pre>
-          ) : (
-            <div className="text-sm text-zinc-500">Select a draft to inspect the full job payload.</div>
-          )}
+          <div className="p-4">
+            {activeJob ? (
+              <pre className="max-h-64 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--surface-3)] p-3 text-[10px] leading-relaxed text-[var(--text-2)]">
+                {JSON.stringify(activeJob, null, 2)}
+              </pre>
+            ) : (
+              <div className="text-[10px] text-[var(--text-4)]">Select a draft to inspect the full job payload.</div>
+            )}
+          </div>
         </div>
       </div>
     </div>

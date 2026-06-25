@@ -1,4 +1,5 @@
 import { appendAgentActivity } from './agentActivityService';
+import { getConnectorCredential } from './connectors/connectorAuth';
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
@@ -278,6 +279,9 @@ async function synthesizeHectorFallbackReport(researchQuestion, sourceType, prov
 }
 
 export async function isBraveSearchConfigured() {
+  // Check UI credential store first (set via Settings → Connectors)
+  if (getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY')) return true;
+  if (import.meta.env.VITE_BRAVE_SEARCH_API_KEY) return true;
   try {
     const presence = await invoke('check_env_vars_presence', { names: ['BRAVE_SEARCH_API_KEY'] });
     return Boolean(presence?.['BRAVE_SEARCH_API_KEY']);
@@ -292,9 +296,11 @@ export async function isBraveSearchConfigured() {
  * Use this when the Rust backend path is unavailable or for direct UI calls.
  */
 export async function searchBrave(query, count = 10) {
-  const apiKey = import.meta.env.VITE_BRAVE_SEARCH_API_KEY || '';
+  const apiKey = getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY')
+    || import.meta.env.VITE_BRAVE_SEARCH_API_KEY
+    || '';
   if (!apiKey) {
-    return { success: false, error: 'BRAVE_SEARCH_API_KEY not configured', results: [] };
+    return { success: false, error: 'BRAVE_SEARCH_API_KEY not configured — add it in Settings → Connectors', results: [] };
   }
   try {
     const resp = await retryWithBackoff(() => fetch(

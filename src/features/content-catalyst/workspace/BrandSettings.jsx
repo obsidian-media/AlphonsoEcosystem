@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Settings } from 'lucide-react';
 import { DEFAULT_BRAND_PROFILE } from '../state/contentCatalystState';
 
 function normalizePillars(text = '') {
@@ -13,8 +14,10 @@ function normalizePillars(text = '') {
 }
 
 function serializePillars(pillars = []) {
-  return pillars.map((pillar) => [pillar.name, pillar.description, pillar.example_topics].join(' | ')).join('\n');
+  return pillars.map((p) => [p.name, p.description, p.example_topics].join(' | ')).join('\n');
 }
+
+const inputCls = 'rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2.5 py-1.5 text-xs text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]';
 
 export function BrandSettings({ brandProfile = DEFAULT_BRAND_PROFILE, onSave }) {
   const initial = useMemo(() => ({
@@ -23,33 +26,28 @@ export function BrandSettings({ brandProfile = DEFAULT_BRAND_PROFILE, onSave }) 
     pillarsText: serializePillars(brandProfile.content_pillars || [])
   }), [brandProfile]);
   const [draft, setDraft] = useState(initial);
-
-  useEffect(() => {
-    setDraft(initial);
-  }, [initial]);
+  useEffect(() => { setDraft(initial); }, [initial]);
+  const set = (key) => (e) => setDraft((c) => ({ ...c, [key]: e.target.value }));
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2 mb-4">
-        <h2 className="text-3xl font-bold text-white">Brand settings</h2>
-        <p className="max-w-2xl text-sm text-zinc-400">Store the voice, audience, and pillar map used by the content generator.</p>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
+        <Settings className="h-3.5 w-3.5 text-[var(--accent)]" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Brand settings</span>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <input value={draft.brand_name} onChange={(event) => setDraft((current) => ({ ...current, brand_name: event.target.value }))} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Brand name" />
-        <input value={draft.industry} onChange={(event) => setDraft((current) => ({ ...current, industry: event.target.value }))} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Industry" />
-        <input value={draft.target_audience} onChange={(event) => setDraft((current) => ({ ...current, target_audience: event.target.value }))} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 md:col-span-2" placeholder="Target audience" />
-        <textarea value={draft.brand_voice} onChange={(event) => setDraft((current) => ({ ...current, brand_voice: event.target.value }))} rows={4} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 md:col-span-2" placeholder="Brand voice" />
-        <textarea value={draft.competitor_urls} onChange={(event) => setDraft((current) => ({ ...current, competitor_urls: event.target.value }))} rows={3} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 md:col-span-2" placeholder="Competitor URLs, comma-separated" />
-        <textarea value={draft.pillarsText} onChange={(event) => setDraft((current) => ({ ...current, pillarsText: event.target.value }))} rows={4} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 md:col-span-2" placeholder="content pillar per line: name | description | example topics" />
-      </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="p-4 space-y-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          <input value={draft.brand_name} onChange={set('brand_name')} className={inputCls} placeholder="Brand name" />
+          <input value={draft.industry} onChange={set('industry')} className={inputCls} placeholder="Industry" />
+        </div>
+        <input value={draft.target_audience} onChange={set('target_audience')} className={`${inputCls} w-full`} placeholder="Target audience" />
+        <textarea value={draft.brand_voice} onChange={set('brand_voice')} rows={3} className={`${inputCls} w-full resize-none`} placeholder="Brand voice (tone, style, personality)" />
+        <textarea value={draft.competitor_urls} onChange={set('competitor_urls')} rows={2} className={`${inputCls} w-full resize-none`} placeholder="Competitor URLs, comma-separated" />
+        <textarea value={draft.pillarsText} onChange={set('pillarsText')} rows={3} className={`${inputCls} w-full resize-none font-mono text-[10px]`} placeholder="pillar name | description | example topics (one per line)" />
         <button
           type="button"
-          onClick={() => onSave?.({
-            ...draft,
-            content_pillars: normalizePillars(draft.pillarsText)
-          })}
-          className="rounded-xl bg-cyan-300 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-cyan-200"
+          onClick={() => onSave?.({ ...draft, content_pillars: normalizePillars(draft.pillarsText) })}
+          className="w-full rounded-lg bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-[10px] font-bold uppercase tracking-widest px-4 py-2 transition-colors"
         >
           Save Brand Profile
         </button>

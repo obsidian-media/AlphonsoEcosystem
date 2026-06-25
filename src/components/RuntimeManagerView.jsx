@@ -95,6 +95,13 @@ const TOOL_META = {
     color: 'text-cyan-400',
     bg: 'bg-cyan-500/10 border-cyan-500/20',
   },
+  openwebui: {
+    icon: Bot,
+    category: 'LLM',
+    docsUrl: 'https://github.com/open-webui/open-webui',
+    color: 'text-[var(--agent-nova)]',
+    bg: 'bg-[var(--agent-nova-glow)] border-[var(--border)]',
+  },
 };
 
 function StatusDot({ running, installing }) {
@@ -427,18 +434,31 @@ export default function RuntimeManagerView() {
   }, [load]);
 
   const installAll = async () => {
-    const notInstalled = tools.filter((t) => !t.installed && t.name !== 'ollama');
+    const notInstalled = allTools.filter((t) => !t.installed && t.name !== 'ollama');
     for (const t of notInstalled) {
       await handleAction('install', t.name, () => {});
     }
   };
 
+  // When Tauri is unavailable, show catalog entries from TOOL_META so the UI isn't empty
+  const catalogFallback = !loading && tools.length === 0
+    ? Object.entries(TOOL_META).map(([name]) => ({
+        name,
+        installed: false,
+        running: false,
+        version: null,
+        installDir: null,
+        autostart: false,
+        display_name: name.charAt(0).toUpperCase() + name.slice(1),
+      }))
+    : [];
+  const allTools = tools.length > 0 ? tools : catalogFallback;
   const visible = filter === 'All'
-    ? tools
-    : tools.filter((t) => (TOOL_META[t.name]?.category || '') === filter);
+    ? allTools
+    : allTools.filter((t) => (TOOL_META[t.name]?.category || '') === filter);
 
-  const runningCount = tools.filter((t) => t.running).length;
-  const installedCount = tools.filter((t) => t.installed).length;
+  const runningCount = allTools.filter((t) => t.running).length;
+  const installedCount = allTools.filter((t) => t.installed).length;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -505,7 +525,7 @@ export default function RuntimeManagerView() {
           <span className="text-zinc-500 ml-1">installed</span>
         </div>
         <div>
-          <span className="text-zinc-500 font-semibold">{tools.length}</span>
+          <span className="text-zinc-500 font-semibold">{allTools.length}</span>
           <span className="text-zinc-500 ml-1">total tools</span>
         </div>
       </div>

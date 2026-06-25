@@ -234,6 +234,7 @@ export function ConnectorSetupPanel() {
   const [youtubeRefreshToken, setYoutubeRefreshToken] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_REFRESH_TOKEN'));
   const [youtubeChannelId, setYoutubeChannelId] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CHANNEL_ID'));
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
+  const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
 
   useEffect(() => {
     let cancelled = false;
@@ -689,6 +690,19 @@ export function ConnectorSetupPanel() {
             onSave={() => saveConnectorApiKey('qwen', { DASHSCOPE_API_KEY: qwenApiKey })}
             hint="Get your key at dashscope.aliyuncs.com. Alphonso uses the international endpoint automatically."
             savedLabel="Qwen key saved"
+          />
+
+          {/* Brave Search */}
+          <CredentialSection
+            title="Brave Search"
+            icon={Search}
+            borderColor="border-orange-300/20"
+            bgColor="bg-orange-500/8"
+            accentColor="text-orange-400"
+            fields={[{ label: 'API Key', placeholder: 'BSA...', value: braveApiKey, onChange: setBraveApiKey, key: 'BRAVE_SEARCH_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
+            hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
+            savedLabel="Brave Search key saved"
           />
         </div>
       </div>

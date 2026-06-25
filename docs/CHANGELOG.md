@@ -6,6 +6,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.5] - 2026-06-25 — Content Page Polish, OpenWebUI, RightPanel Boot Fix, Brave Search UI, Runtime Catalog Fallback
+
+### Fixed
+- **Boot crash: "Rendered more hooks than during the previous render"** (`RightPanel.tsx`): `auditEntries` useMemo was placed after the `if (collapsed) return` early return — violates React Rules of Hooks. Moved above the early return so hook call order is unconditional.
+- **Runtime Hub shows no tools in web/browser mode** (`RuntimeManagerView.jsx`): `getAllStatus()` returns `[]` outside Tauri. Added `catalogFallback` derived from `TOOL_META` keys so the tool grid always shows all available tools with their docs links.
+- **Content page scroll broken** (`ContentCatalystWorkspace.jsx`): Root div missing `h-full overflow-y-auto`. Fixed.
+
+### Added
+- **OpenWebUI in Runtime Hub** (`runtime_manager.rs` + `RuntimeManagerView.jsx`): Open WebUI (port 3000, `open-webui serve`) added as a new tool to the Rust TOOLS array and frontend TOOL_META under the LLM category.
+- **Brave Search API key input** (`ConnectorSetupPanel.jsx`): New CredentialSection for `brave_search` / `BRAVE_SEARCH_API_KEY`. Key is also picked up first by `hectorResearchService` before falling back to Vite env or OS env vars.
+- **Content Catalyst calendar grid** (`ContentCalendar.jsx`): Real monthly calendar with prev/next navigation, today highlight, draft dots on booked days, click-to-select day, minimize/expand toggle, and inline draft list per selected date.
+
+### Changed — Content page full visual polish
+- **BrandHeader.jsx** — compact single-row header; `text-base` brand name; inline stat numbers; CSS var theming throughout.
+- **GeneratorForm.jsx** — `rounded-xl` panel; compact `rows={3}`/`rows={2}` textareas; CSS var inputs; needs toggles as compact buttons; full-width generate CTA.
+- **DraftPreview.jsx** — `rounded-xl` card with compact step buttons (icon + label), CSS vars, empty state simplified.
+- **DraftList.jsx** — `rounded-xl` with flat list rows instead of `rounded-2xl` bubbles; CSS vars.
+- **BrandSettings.jsx** — `rounded-xl` card; compact 2-col grid inputs; full-width save button; CSS vars.
+- **AnalyticsDashboard.jsx** — `rounded-xl` card; `text-base` stat numbers instead of `text-2xl`; by-platform as key/value rows instead of JSON dump.
+- **TrendResearch.jsx** — `rounded-xl` card; compact `text-xs` seed buttons; CSS vars.
+- **ContentCatalystWorkspace.jsx** — bridge response and job detail panels use `rounded-xl` / CSS vars; DraftList+Job detail row changed to `md:grid-cols-2`.
+
+### Tests
+- **E2E: `e2e/runtime-tools.spec.js`** — 4 tests for ComfyUI and OpenWebUI tool cards, install button presence, and output path (set to `D:\AgentDevDev\phonso`).
+- **E2E: `e2e/content-pipeline.spec.js`** — 5 tests for Content Catalyst page load, idea form, job creation, calendar month render, and workspace output path.
+- **Tauri mock** (`e2e/tauri-mock.js`): Added `runtime_get_all_status`, `runtime_list_tools`, `runtime_start_tool`, `runtime_stop_tool`, `runtime_install_tool`, prereq commands, and autostart pref commands so RuntimeManagerView tests work without Tauri.
+
+---
+
 ## [2.2.4] - 2026-06-25 — UX Restructure: Navigation Consolidation, Coach Mode, ACC Bridge, AgentDock Integration
 
 ### Fixed

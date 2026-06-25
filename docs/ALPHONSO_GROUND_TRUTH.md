@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-25 — v2.2.4 Navigation consolidation, coach mode fix, ACC Bridge simplification, AgentDock embedded, Telegram 17 commands  
-**Verified by:** Claude Code session (144 test files, 1930 tests passing, build clean, typecheck clean)  
-**Version:** 2.2.4 (patch2: null-guard boot fixes, Browse fallbacks, Coach try/catch, Jarvis voice button, Agents tab in RightPanel; 2.2.4: navigation restructure, coach mode UX fix, ACC Bridge status-only view, AgentDock embedded mode, Telegram +4 commands, automation ops toggleable, Knowledge tab in Settings, Activity tab in Runtimes)  
+**Last verified:** 2026-06-25 — v2.2.5 Content page full polish, OpenWebUI added, RightPanel boot fix, Brave Search UI, runtime catalog fallback  
+**Verified by:** Claude Code session (144 test files, 1930 tests passing, cargo check clean)  
+**Version:** 2.2.5 (boot crash RightPanel hooks fix; ContentCalendar real grid; all content workspace components polished to CSS vars + compact; OpenWebUI added to Rust TOOLS + TOOL_META; Brave Search CredentialSection + hectorResearchService fallback; runtime catalog fallback in web mode; 2 new E2E spec files; tauri-mock.js runtime commands added)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.2.4 |
+| Version | 2.2.5 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -529,6 +529,16 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 - [x] **BootStatusBanner.jsx** — fixed bottom-right banner showing real-time boot events from `runtime://boot_status` events (Gap 8)
 - [x] **Sidebar Runtimes tab** — `Cpu` icon nav item wired to `runtimes` activeTab
 - [x] **runtimeManagerService.test.js** — 22 tests covering all exported functions including 4 new prereq/autostart APIs
+
+### v2.2.5 Fixes & Additions (2026-06-25)
+- [x] **Boot crash: hooks violation in RightPanel** — `auditEntries` useMemo moved above `if (collapsed) return` early return.
+- [x] **OpenWebUI added** — `runtime_manager.rs` TOOLS array + `RuntimeManagerView.jsx` TOOL_META (LLM category, port 3000, `open-webui serve`). Unit test `tool_def_lookup_works` updated.
+- [x] **Brave Search CredentialSection** — `ConnectorSetupPanel.jsx` + `hectorResearchService.js` checks credential store before env vars.
+- [x] **Runtime catalog fallback** — `RuntimeManagerView.jsx` shows `catalogFallback` from TOOL_META when `getAllStatus()` returns empty (web/browser mode).
+- [x] **ContentCalendar real grid** — monthly grid with prev/next navigation, today highlight, draft dots, minimize/expand toggle.
+- [x] **Content workspace full polish** — all 7 workspace components (BrandHeader, GeneratorForm, ContentCalendar, DraftPreview, DraftList, BrandSettings, AnalyticsDashboard, TrendResearch) rewritten to compact CSS-var-based design. Bridge/job-detail panels in ContentCatalystWorkspace also updated.
+- [x] **E2E specs added** — `e2e/runtime-tools.spec.js` (ComfyUI + OpenWebUI), `e2e/content-pipeline.spec.js` (5 pipeline tests). Output path set to `D:\AgentDevDev\phonso`.
+- [x] **Tauri mock runtime commands** — `e2e/tauri-mock.js` now includes all `runtime_*` commands with mock data.
 
 ### Sprint Next-50 Additions (2026-06-22)
 - [x] **connectorCircuitBreakerService** — **CLOSED D2T1** localStorage-backed per-connector circuit breaker

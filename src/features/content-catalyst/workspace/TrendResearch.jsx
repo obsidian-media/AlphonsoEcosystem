@@ -1,16 +1,24 @@
 import React from 'react';
+import { Radar } from 'lucide-react';
 
 export function TrendResearch({ suggestions = [], onUseIdea }) {
   return (
-    <div className="space-y-4 rounded-[3rem] border border-primary/20 bg-zinc-950/90 p-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white">Trend research</h2>
-        <p className="mt-2 text-sm text-zinc-400">Local research seeds based on brand pillars and recent draft history.</p>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
+        <Radar className="h-3.5 w-3.5 text-[var(--accent)]" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Trend seeds</span>
       </div>
-      <div className="space-y-2">
-        {suggestions.length === 0 && <div className="rounded-xl border border-white/10 bg-zinc-900/45 p-4 text-sm text-zinc-500">No trend seeds available yet.</div>}
+      <div className="p-3 space-y-1.5">
+        {suggestions.length === 0 && (
+          <p className="text-[10px] text-[var(--text-4)] py-2 px-1">No seeds yet — save a brand profile with pillars to generate ideas.</p>
+        )}
         {suggestions.map((idea) => (
-          <button key={idea} type="button" onClick={() => onUseIdea?.(idea)} className="w-full rounded-2xl border border-white/10 bg-zinc-900/45 p-3 text-left text-sm text-zinc-100 hover:bg-zinc-900/70">
+          <button
+            key={idea}
+            type="button"
+            onClick={() => onUseIdea?.(idea)}
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-left text-xs text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] transition-colors"
+          >
             {idea}
           </button>
         ))}

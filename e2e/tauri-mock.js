@@ -32,6 +32,24 @@
       if (cmd === 'alphonso-native-proof-stage') return Promise.resolve(null);
       if (cmd === 'connector_poll_whatsapp') return Promise.resolve(null);
       if (cmd === 'ollama_list_models') return Promise.resolve({ models: [], reason: 'mocked' });
+      if (cmd === 'runtime_get_all_status') return Promise.resolve([
+        { name: 'ollama', display_name: 'Ollama', installed: true, running: false, version: '0.3.0', install_dir: null, autostart: false },
+        { name: 'comfyui', display_name: 'ComfyUI', installed: false, running: false, version: null, install_dir: null, autostart: false },
+        { name: 'openwebui', display_name: 'Open WebUI', installed: false, running: false, version: null, install_dir: null, autostart: false },
+        { name: 'automatic1111', display_name: 'AUTOMATIC1111', installed: false, running: false, version: null, install_dir: null, autostart: false },
+        { name: 'fooocus', display_name: 'Fooocus', installed: false, running: false, version: null, install_dir: null, autostart: false },
+        { name: 'invokeai', display_name: 'InvokeAI', installed: false, running: false, version: null, install_dir: null, autostart: false },
+        { name: 'whisper', display_name: 'Whisper', installed: false, running: false, version: null, install_dir: null, autostart: false },
+        { name: 'audiocraft', display_name: 'AudioCraft / MusicGen', installed: false, running: false, version: null, install_dir: null, autostart: false },
+      ]);
+      if (cmd === 'runtime_list_tools') return Promise.resolve(['ollama', 'comfyui', 'openwebui', 'automatic1111', 'fooocus', 'invokeai', 'whisper', 'audiocraft']);
+      if (cmd === 'runtime_start_tool') return Promise.resolve({ ok: true });
+      if (cmd === 'runtime_stop_tool') return Promise.resolve({ ok: true });
+      if (cmd === 'runtime_install_tool') return Promise.resolve({ ok: true });
+      if (cmd === 'runtime_check_prerequisites') return Promise.resolve({ python: true, git: true, ollama: true });
+      if (cmd === 'runtime_install_prerequisite') return Promise.resolve({ ok: true });
+      if (cmd === 'runtime_get_autostart_prefs') return Promise.resolve({});
+      if (cmd === 'runtime_save_autostart_pref') return Promise.resolve(null);
       if (cmd && cmd.indexOf('plugin:window|') === 0) return Promise.resolve(null);
       if (cmd && cmd.indexOf('plugin:event|') === 0) return Promise.resolve(null);
       if (cmd && cmd.indexOf('plugin:resources|') === 0) return Promise.resolve(null);

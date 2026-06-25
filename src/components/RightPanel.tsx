@@ -190,6 +190,11 @@ export function RightPanel({
     },
   ], [ollamaStatus, selectedModelMissing, settings.selectedModel, settings.workspaceRoot, desktopBridge]);
 
+  const auditEntries: AuditEntry[] = useMemo(
+    () => getAuditLog().slice(-10).reverse(),
+    [activeTab]
+  );
+
   if (collapsed) {
     return (
       <aside className="w-10 bg-[var(--surface-1)] border-l border-[var(--border)] flex flex-col shrink-0 items-center py-3 gap-2">
@@ -210,11 +215,6 @@ export function RightPanel({
       </aside>
     );
   }
-
-  const auditEntries: AuditEntry[] = useMemo(
-    () => getAuditLog().slice(-10).reverse(),
-    [activeTab]
-  );
 
   const relativeTime = (ts: number): string => {
     const diff = Math.floor((Date.now() - ts) / 1000);
