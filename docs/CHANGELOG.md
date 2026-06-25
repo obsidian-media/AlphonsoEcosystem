@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.3.2] - 2026-06-27 — UI Polish v2: Design system + Framer Motion across all 6 pages
+
+### Changed
+- **All 6 pages**: `AnimatePresence` + `motion.div` tab content transitions (150ms fade + y-slide)
+- **All 6 pages**: Replaced ad-hoc `bg-zinc-950/60 border-white/[0.07]` strings with `.card` / `.panel-flat` design system classes
+- **All 6 pages**: Eyebrow typography standardized to `text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]`
+- **HectorResearchDesk**: `var(--agent-hector)` indigo accent on selected borders and focus rings; `BookOpen` icon + `.btn-primary` CTA on empty state
+- **MiyaStudio**: Flat `border-b` header, 56×56 avatar pill, `.btn-primary` on generate buttons
+- **OrchestratorView**: `ApproveBtn` = `var(--success)` green, `RejectBtn` = `var(--error)` red, `NeutralBtn` = `.btn-secondary`
+- **ContentCatalystWorkspace**: ACC Bridge pill uses `var(--accent-border)` token
+- **ProjectExecutionMode**: `EmptyState` upgraded with icon and `.btn-primary` CTA
+
+### Tests
+- 149 test files / 1982 passing (1 pre-existing flaky test in `echoFileWatcherService`)
+
+---
+
 ## [2.3.1] - 2026-06-27 — UI Polish Sprint: Tab-based layouts for 6 core pages
 
 ### Changed

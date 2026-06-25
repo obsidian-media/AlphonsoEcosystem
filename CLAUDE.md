@@ -307,4 +307,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-27 — v2.3.1 — UI Polish sprint: tab-based layouts for 6 core pages (Projects, Research, Orchestrator, Creative, All Agents, Content); perplexityConnector.js added; 15 connectors total. 149 test files / 1982 tests passing (1 pre-existing flaky test in echoFileWatcherService)._
+_Last verified: 2026-06-27 — v2.3.2 — UI Polish sprint: tab-based layouts + Framer Motion transitions + design system tokens applied to all 6 pages (Projects, Research, Orchestrator, Creative, All Agents, Content); perplexityConnector.js added; 15 connectors total. 149 test files / 1982 tests passing (1 pre-existing flaky test in echoFileWatcherService)._
