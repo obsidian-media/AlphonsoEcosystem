@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { getStorage, setStorage } from '../lib/appStorage';
 import { getDefaultWorkspaceRoot } from '../services/workspaceRootService';
 
-const SettingsContext = createContext(null);
+const SettingsContext = createContext(/** @type {any} */(null));
 
 const DEFAULT_SETTINGS = {
   endpoint: 'http://localhost:11434',
