@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.3-patch2] - 2026-06-25 — Boot Null-Guards, Jarvis Voice UI, RightPanel Agents Tab, Compact Allowlist
+
+### Fixed
+- **Boot crash: `tools.filter` of null** (`RuntimeManagerView.jsx`): `invoke('runtime_get_all_status')` can return `null` when not in Tauri context; `setTools(null)` made every `.filter()` call blow up on mount. Guard: `setTools(statuses ?? [])`.
+- **Boot crash: `null['TELEGRAM_BOT_TOKEN']`** (`connectorRegistry.js`): `invoke('check_env_vars_presence')` returns `null` in some environments (not throws — the catch block did not fire). Both call sites now use `?? {}` so `envPresence` is always an object.
+- **Boot crash: `null['WHATSAPP_ACCESS_TOKEN']`** (`connectorRegistry.js`): The WhatsApp-specific second `invoke('check_env_vars_presence')` call lacked the same null guard. Fixed with `?? {}` inline.
+- **Boot crash: `.map` of null in Tauri WebviewWindow** (`coachModeService.js`): `WebviewWindow.getByLabel()` calls `invoke` internally and maps over the window list. When running in web mode the list is null and Tauri's own code throws. Both the open-path and close-path `getByLabel` calls now use `.catch(() => null)`.
+- **Coach mode button does nothing in web mode** (`CoachContext.jsx`): `handleToggleCoachMode` and `handleToggleCoachTop` had no try/catch around `openCoachWindow()`. In web mode `new WebviewWindow()` throws; the error was swallowed silently, leaving the button unresponsive. Both handlers now wrapped in try/catch — no-op cleanly outside Tauri desktop runtime.
+- **Browse buttons do nothing in web mode** (`SettingsView.tsx`): Output Folder and ComfyUI Dir "Browse" buttons called `invoke('pick_folder')` which silently fails outside Tauri. Now fall back to a hidden `<input type="file" webkitdirectory>` element (same pattern already used for Workspace Root). Added: `outputFolderPickerRef`, `comfyuiDirPickerRef`, `handleOutputFolderPick`, `handleComfyUIDirPick`.
+- **Test failure: `AudioWorkletNode` not defined in jsdom** (`pcm-processor.worklet.ts`): A dead placeholder `class PcmProcessor extends AudioWorkletNode` existed at module top level. `AudioWorkletNode` is a browser-only Web Audio API class — jsdom does not define it. Adding `useJarvisVoice` to `ChatView.tsx` pulled this import into the test graph and caused 1 test file to fail. The class was entirely unused (only `PCM_WORKLET_CODE` string export matters). Removed.
+
+### Added
+- **Jarvis voice button in ChatView** (`ChatView.tsx`): A second mic button is now in the chat input bar, wired to `useJarvisVoice` (AudioWorklet WebSocket pipeline). Requires the FastAPI voice server running (`voice/backend/`). Button pulses while listening, changes color by state (listening/thinking/speaking/error), shows active agent name in tooltip. STT transcript from the WebSocket populates the text input field, same as the SpeechRecognition button does.
+- **Agents tab in RightPanel** (`RightPanel.tsx`): Tab bar is now **System | Audit | Agents**. The Agents tab renders `AgentStatusStrip useAutoFeed` — live pulsing agent badges directly in the right sidebar without navigating away.
+- **SentinelAllowlistPanel compact rewrite** (`SentinelAllowlistPanel.jsx`): Fully restyled for sidebar embedding. Inline form row (pattern + type + add button in one line), note field below, test URL inline row, entry list capped at `max-h-48` with overflow scroll, all sizing via CSS vars (`var(--surface-3)`, `var(--border)`, `var(--text-1)`, `var(--accent)`). No longer overflows RightPanel width.
+
+---
+
 ## [2.2.3-patch1] - 2026-06-25 — Full Codebase Bug Audit & Fix
 
 ### Fixed — 16 confirmed bugs resolved after full codebase audit

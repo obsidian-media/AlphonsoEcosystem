@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 1737+ tests across 120 files — all should pass
+npm run test             # Run all 1930+ tests across 144 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command
@@ -52,7 +52,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **14 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~2,024 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 1737+ tests are in `src/test/`** — 120 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 1930+ tests are in `src/test/`** — 144 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.tsx` captures history snapshot before React state updates.
@@ -133,7 +133,9 @@ Before writing any new service, component, or feature, check this list:
 | Hector briefing card | `src/components/ChatView.tsx` — sky-tinted `hectorBriefing` card after pipeline, shows top 3 sources |
 | Sentinel scheduled scans | `src/services/sentinelSecurityService.js` — `startScheduledScans(intervalMs, onResult)` interval export |
 | Nova opportunity history | `src/services/novaAnalysisService.js` — `saveOpportunityScore` / `getOpportunityHistory`, 30-entry localStorage |
-| RightPanel audit tab | `src/components/RightPanel.tsx` — System/Audit tab switcher, last 10 approval events with outcome badges |
+| RightPanel tabs | `src/components/RightPanel.tsx` — **System / Audit / Agents** (3 tabs); Audit: last 10 approval events; Agents: `AgentStatusStrip useAutoFeed`; Security + Allowlist in System tab |
+| Jarvis voice button (ChatView) | `src/components/ChatView.tsx` — `useJarvisVoice` WebSocket mic button; pulses on listening; transcript → input field |
+| Browse folder fallback (SettingsView) | `src/components/SettingsView.tsx` — hidden `<input webkitdirectory>` refs for Output Folder + ComfyUI Dir when `invoke('pick_folder')` fails |
 | RightPanel auto-refresh | `src/components/RightPanel.tsx` — 10-min `setInterval` calling `runQuickScan()` |
 | Onboarding connector step | `src/components/OnboardingWizard.jsx` — step 3 "Connect a channel" with Telegram/WhatsApp/Skip cards, saves to `alphonso_onboarding_connector_v1` |
 | Crash log viewer | `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as Logs tab in SettingsView |
@@ -149,8 +151,8 @@ Before writing any new service, component, or feature, check this list:
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
 2. Check `src/services/` for an existing service before writing a new one — there are 130+ services
-3. Check `src/test/` — there are 111 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 1737+ tests must continue to pass
+3. Check `src/test/` — there are 144 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 1930+ tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -209,6 +211,13 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Ollama offline state~~ — **CLOSED 2026-06-23** (`OllamaOfflineBanner.jsx` — global, persistent, Start/Retry/Runtime Hub)
 - ~~Composio onboarding~~ — **CLOSED 2026-06-23** (inline API key entry in OnboardingWizard Step 3, saves via `setComposioConfig`) (prereq detection, async streaming, venv isolation, AudioCraft fix, InvokeAI venv exe, boot status banner, autostart prefs JSON)
 - TypeScript migration — 10 components migrated (all major ones done). Remaining: bulk of 63 .jsx component files
+- ~~Boot null-guard crashes~~ — **CLOSED 2026-06-25 patch2** (3 `invoke()` calls returning `null` — `getAllStatus`, both `check_env_vars_presence` — guarded with `?? []/{}`)
+- ~~Coach mode button broken in web mode~~ — **CLOSED 2026-06-25 patch2** (`CoachContext` `handleToggleCoachMode/Top` wrapped in try/catch; `coachModeService` `getByLabel` gets `.catch(() => null)`)
+- ~~Browse buttons broken in web mode~~ — **CLOSED 2026-06-25 patch2** (Output Folder + ComfyUI Dir fallback to hidden `<input webkitdirectory>` in `SettingsView.tsx`)
+- ~~Jarvis voice unwired~~ — **CLOSED 2026-06-25 patch2** (`useJarvisVoice` mic button + transcript wiring added to `ChatView.tsx`)
+- ~~Agents tab missing from RightPanel~~ — **CLOSED 2026-06-25 patch2** (System | Audit | Agents, Agents tab shows `AgentStatusStrip useAutoFeed`)
+- ~~SentinelAllowlistPanel overflows sidebar~~ — **CLOSED 2026-06-25 patch2** (compact inline form rewrite with CSS var theming)
+- ~~pcm-processor.worklet.ts dead class breaking tests~~ — **CLOSED 2026-06-25 patch2** (removed `class PcmProcessor extends AudioWorkletNode` placeholder that caused jsdom test failures)
 
 ---
 
@@ -226,13 +235,13 @@ src/                   React frontend (all .jsx, 9 .ts services)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                111 test files (Vitest, vitest.config.js)
+  test/                144 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
     lib.rs             Rust backend (~2,024 lines)
     utils.rs           Shared utilities
-    kv_store.rs        KV store module — kv_set, kv_get, save_settings, load_settings
+    kv_store.rs        KV store module — kv_set, kv_get, kv_delete, save_settings, load_settings
     whatsapp_webhook.rs  WhatsApp webhook module (3 commands, 4 structs)
     native_proof.rs    Native proof module
     runway.rs          Runway video module
@@ -269,4 +278,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-25 — v2.2.3-patch1 — Full codebase bug audit + 16-bug fix session. Critical: ChatView "Try Again" stale state fixed (handleSend accepts overrideInput), pcm-processor.worklet.ts added to src/hooks/ (voice AudioWorklet now resolves), Tauri invoke→emit for native proof stage. High: @types/react/@types/react-dom/@types/node installed (1867 TS errors were hidden), typecheck script added to verify:app, voice_sidecar uses resource_dir for production path + voice/backend in bundle resources. Medium: runtimeManagerService code splitting restored (3 static→dynamic imports), O(n²)→O(1) chat render (Map useMemo), ConnectorStatusIndicators poll 5s + CustomEvent, kv_delete Tauri command added (durableRemove no longer creates ghost SQLite entries), audit log memoized in RightPanel. Low: unused imports removed, stale closure dep fixed. 144 test files, 1930+ tests passing. cargo clippy zero warnings. Build clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-25 — v2.2.3-patch2 — Boot null-guard fixes, Browse fallbacks, Coach try/catch, Jarvis voice button in ChatView, Agents tab in RightPanel, compact SentinelAllowlistPanel, dead AudioWorkletNode class removed from pcm-processor.worklet.ts. patch1 (same date): Full codebase bug audit + 16-bug fix session. Critical: ChatView "Try Again" stale state fixed, pcm-processor.worklet.ts added to src/hooks/, Tauri invoke→emit for native proof stage. High: @types/react/@types/react-dom/@types/node installed, typecheck script added to verify:app, voice_sidecar uses resource_dir for production path. Medium: runtimeManagerService code splitting restored, O(n²)→O(1) chat render, ConnectorStatusIndicators poll 5s + CustomEvent, kv_delete Tauri command added, audit log memoized in RightPanel. 144 test files, 1930+ tests passing. cargo clippy zero warnings. Build clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
