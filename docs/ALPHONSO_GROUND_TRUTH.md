@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-25 — v2.2.5 Content page full polish, OpenWebUI added, RightPanel boot fix, Brave Search UI, runtime catalog fallback  
-**Verified by:** Claude Code session (144 test files, 1930 tests passing, cargo check clean)  
-**Version:** 2.2.5 (boot crash RightPanel hooks fix; ContentCalendar real grid; all content workspace components polished to CSS vars + compact; OpenWebUI added to Rust TOOLS + TOOL_META; Brave Search CredentialSection + hectorResearchService fallback; runtime catalog fallback in web mode; 2 new E2E spec files; tauri-mock.js runtime commands added)  
+**Last verified:** 2026-06-25 -- v2.2.6 CI/CD hardening Phase 1
+**Verified by:** Claude Code full audit + Phase 1 execution session
+**Version:** 2.2.6 (CI/CD Hardening Phase 1: E2E CI on all PRs; cargo-tarpaulin Rust coverage; gateway-health job; ios-build job; test:rust npm script; comprehensive Celine audit report)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -758,4 +758,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 _Last verified: 2026-06-25 — v2.2.3-patch1: Full codebase bug audit + 16-bug fix session. Critical fixes: ChatView "Try Again" stale state, voice AudioWorklet missing worklet file, Tauri invoke→emit for native proof event, @types/react installed (1867 TS errors resolved), voice sidecar production path via resource_dir. Medium fixes: runtimeManagerService code splitting restored, O(n²)→O(1) chat render, connector status live refresh, SQLite kv_delete, audit log memoized. Low fixes: unused imports, stale closure dep. 144 test files, 1930+ tests passing. cargo clippy zero warnings. Build clean. typecheck added to verify:app. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
+
+
+
 

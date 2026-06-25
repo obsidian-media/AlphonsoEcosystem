@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.6] - 2026-06-25 — CI/CD Hardening Phase 1 (CI Enablement)
+
+### Added
+- **E2E tests run on all PRs by default** (`.github/workflows/ci.yml`): Changed E2E trigger from `vars.ENABLE_E2E == 'true'` to run on main pushes, all PRs, and manual dispatch. Added Playwright system dependencies install step.
+- **Rust coverage measurement** (`.github/workflows/ci.yml`): Added `cargo-tarpaulin` step in `rust-quality` job to generate XML coverage reports.
+- **Gateway health check** (`.github/workflows/ci.yml`): New `gateway-health` job curls Railway endpoint on main pushes and manual dispatch.
+- **iOS companion build check** (`.github/workflows/ci.yml`): New `ios-build` job on `macos-latest` builds AlphonsoCompanion scheme for iPhone 16 Simulator.
+- **`test:rust` npm script** (`package.json`): Added `"test:rust": "cd src-tauri && cargo test"` for convenient Rust test running.
+
+### Phase 4 Verification (Intelligence & Automation — All Pre-Completed)
+- **Hector RSS failover** — Verified: `RSS_FEED_CATALOG` (12 feeds), `fetchRssSources()`, `parseRssItems()` (DOMParser RSS+Atom), `scoreRssFeed()`, all wired as last-resort after Brave/DDG. Tests exist.
+- **Sentinel scheduled scans** — Verified: `startScheduledScans(intervalMs, onResult)` returns cleanup function; RightPanel auto-rescans every 10 min.
+- **Nova opportunity history** — Verified: `saveOpportunityScore`/`getOpportunityHistory` persist last 30 scores; `NovaHistoryChart.jsx` renders sparkline; threshold alerts via notification.
+- **Echo memory timeline** — Verified: `EchoTimeline` component in SettingsView groups by retentionTier (permanent/180d/7d) with live expiry countdown.
+
+### Docs
+- **Comprehensive audit report** — `25.06.2026CelineAudit.md` created with full codebase audit including architecture analysis, gap assessment, and 5-phase continuation plan.
+
+---
+
 ## [2.2.5] - 2026-06-25 — Content Page Polish, OpenWebUI, RightPanel Boot Fix, Brave Search UI, Runtime Catalog Fallback
 
 ### Fixed

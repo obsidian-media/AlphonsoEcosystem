@@ -43,36 +43,42 @@ describe('buildEchoSynthesisPrompt', () => {
 
 describe('parseEchoMemoryResponse', () => {
   it('parses valid JSON response', () => {
-    const json = JSON.stringify([{ category: 'task', content: 'did a thing', confidence: 0.9, retentionTier: 'session' }]);
+    const json = JSON.stringify({ category: 'project_memory', content: 'did a thing', sensitivity: 'internal', retentionPolicy: 'standard_180d' });
     const result = parseEchoMemoryResponse(json);
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toBeTruthy();
+    expect(typeof result).toBe('object');
+    expect(result.content).toBeTruthy();
   });
 
-  it('returns empty array for invalid response', () => {
+  it('returns fallback object for invalid response', () => {
     const result = parseEchoMemoryResponse('not json at all {{{');
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toBeTruthy();
+    expect(typeof result).toBe('object');
+    expect(result.category).toBe('project_memory');
   });
 });
 
 describe('buildEchoFallbackEntry', () => {
-  it('returns an array with at least one entry', () => {
+  it('returns an object with title and content', () => {
     const result = buildEchoFallbackEntry('check email', []);
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
+    expect(result).toBeTruthy();
+    expect(typeof result).toBe('object');
+    expect(result.title).toBeTruthy();
+    expect(result.content).toBeTruthy();
   });
 });
 
 describe('normalizeMemoryConfidence', () => {
-  it('clamps confidence values to 0–1 range', () => {
+  it('normalizes confidence values to trust state strings', () => {
     const entries = [
-      { confidence: 1.5 },
-      { confidence: -0.3 },
-      { confidence: 0.7 },
+      { confidence: 'VERIFIED' },
+      { confidence: 'UNVERIFIED' },
+      { confidence: 'INFERRED' },
     ];
     const result = normalizeMemoryConfidence(entries);
     result.forEach(e => {
-      expect(e.confidence).toBeGreaterThanOrEqual(0);
-      expect(e.confidence).toBeLessThanOrEqual(1);
+      expect(typeof e.confidence).toBe('string');
+      expect(e.confidence.length).toBeGreaterThan(0);
     });
   });
 
