@@ -159,6 +159,26 @@ const TOOLS: &[ToolDef] = &[
     exe: "open-webui",
     args: &["serve", "--host", "127.0.0.1", "--port", "3000"],
   },
+  ToolDef {
+    name: "voice-os",
+    display_name: "Voice OS",
+    description: "Alphonso Voice OS — STT (faster-whisper) + LLM + TTS (piper) WebSocket pipeline on :8765",
+    repo_url: None,
+    pip_packages: &[
+      "faster-whisper",
+      "piper-tts",
+      "webrtcvad",
+      "fastapi",
+      "uvicorn[standard]",
+      "websockets",
+      "numpy",
+    ],
+    requirements_file: Some("voice/backend/requirements.txt"),
+    port: Some(8765),
+    health_path: None,
+    exe: "python",
+    args: &["voice/backend/main.py", "--host", "127.0.0.1", "--port", "8765"],
+  },
 ];
 
 fn tool_def(name: &str) -> Option<&'static ToolDef> {

@@ -1,11 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
+import { listPlugins, togglePlugin } from '../services/pluginRegistryService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
 import { getAccBridgeConfig, updateAccBridgeConfig } from '../services/agentWorkshop/accBridgeService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
@@ -322,6 +323,7 @@ const SETTINGS_SECTIONS = [
   { id: 'memory',      label: 'Memory',       Icon: Database },
   { id: 'knowledge',   label: 'Knowledge',    Icon: Compass },
   { id: 'appearance',  label: 'Appearance',   Icon: Palette },
+  { id: 'plugins',     label: 'Plugins',      Icon: Package },
   { id: 'logs',        label: 'Logs',         Icon: ScrollText },
   { id: 'backup',      label: 'Backup',       Icon: Download },
 ];
@@ -1195,6 +1197,7 @@ export function SettingsView({
       <FilesView memoryItems={memoryItems as Parameters<typeof FilesView>[0]['memoryItems']} />
     </div>
   )}
+  {activeSection === 'plugins' && <PluginMarketplacePanel />}
   {activeSection === 'logs' && (
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
@@ -1272,6 +1275,69 @@ export function SettingsView({
     </div>
   )}
       </div>
+    </div>
+  );
+}
+
+function PluginMarketplacePanel() {
+  const [plugins, setPlugins] = React.useState(() => listPlugins());
+  const [filter, setFilter] = React.useState('');
+
+  const filtered = plugins.filter(p =>
+    !filter || p.name?.toLowerCase().includes(filter.toLowerCase()) || p.description?.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const handleToggle = (id: string) => {
+    togglePlugin(id, !plugins.find(p => p.id === id)?.enabled);
+    setPlugins(listPlugins());
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
+        <SectionHeader icon={Package} label="Plugin Marketplace" />
+        <p className="text-xs text-zinc-400">Install and manage signed plugins. Plugins extend Alphonso with new panels, tools, and workflow steps.</p>
+        <input
+          type="text"
+          placeholder="Search plugins…"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          className="w-full text-sm bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500/50"
+        />
+        {filtered.length === 0 ? (
+          <div className="p-8 rounded-2xl border border-white/5 bg-zinc-900/40 text-center space-y-2">
+            <Package className="w-8 h-8 text-zinc-600 mx-auto" />
+            <p className="text-sm text-zinc-400">{filter ? 'No plugins match your search.' : 'No plugins installed yet.'}</p>
+            <p className="text-xs text-zinc-600">Drop a signed plugin manifest (.json) into Settings → Backup → Import, or install via the Alphonso CLI.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(p => (
+              <div key={p.id} className="flex items-center gap-4 p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-white truncate">{p.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-white/5 shrink-0">v{p.version}</span>
+                    {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">✓ signed</span>}
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-0.5 truncate">{p.description}</p>
+                  {p.author && <p className="text-[10px] text-zinc-600 mt-0.5">by {p.author}</p>}
+                </div>
+                <button
+                  onClick={() => handleToggle(p.id)}
+                  className={`shrink-0 transition-colors ${p.enabled ? 'text-indigo-400 hover:text-indigo-300' : 'text-zinc-600 hover:text-zinc-400'}`}
+                  title={p.enabled ? 'Disable plugin' : 'Enable plugin'}
+                >
+                  {p.enabled ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10 text-xs text-zinc-400">
+          <span className="text-indigo-400 font-medium">How to install:</span> Obtain a signed plugin manifest from a trusted source, then use <span className="font-mono text-zinc-300">verifyAndAddPlugin(manifest)</span> from <span className="font-mono text-zinc-300">pluginSigningService</span>. Only ECDSA-signed plugins from trusted keys are accepted.
+        </div>
+      </section>
     </div>
   );
 }
