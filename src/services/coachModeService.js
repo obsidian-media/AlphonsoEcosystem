@@ -36,7 +36,7 @@ export async function openCoachWindow(alwaysOnTop, coachAgent = 'alphonso') {
     // Ignore storage failures in restricted runtimes.
   }
 
-  const existing = await WebviewWindow.getByLabel(COACH_LABEL);
+  const existing = await WebviewWindow.getByLabel(COACH_LABEL).catch(() => null);
   if (existing) {
     await existing.show();
     await existing.setFocus();
@@ -61,7 +61,7 @@ export async function openCoachWindow(alwaysOnTop, coachAgent = 'alphonso') {
 }
 
 export async function closeCoachWindow() {
-  const existing = await WebviewWindow.getByLabel(COACH_LABEL);
+  const existing = await WebviewWindow.getByLabel(COACH_LABEL).catch(() => null);
   if (existing) {
     await existing.close();
   }

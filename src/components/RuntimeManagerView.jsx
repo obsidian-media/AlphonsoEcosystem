@@ -351,7 +351,7 @@ export default function RuntimeManagerView() {
   const load = useCallback(async () => {
     try {
       const [statuses, pq] = await Promise.all([getAllStatus(), checkPrerequisites()]);
-      setTools(statuses);
+      setTools(statuses ?? []);
       setPrereqs(pq);
       setError(null);
     } catch (e) {

@@ -455,7 +455,7 @@ export async function verifyConnectorEnvironment(connectorId) {
 
   let envPresence = {};
   try {
-    envPresence = await invoke('check_env_vars_presence', { names: connector.requiredEnv });
+    envPresence = await invoke('check_env_vars_presence', { names: connector.requiredEnv }) ?? {};
   } catch (error) {
     appendConnectorAudit(connector.id, 'env_check_failed', { error: String(error) });
     // Fall through to credential-store check even if Tauri invoke fails
@@ -476,7 +476,7 @@ export async function verifyConnectorEnvironment(connectorId) {
     const cloudSet = ['WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID'];
     const twilioSet = ['WHATSAPP_TWILIO_ACCOUNT_SID', 'WHATSAPP_TWILIO_AUTH_TOKEN', 'WHATSAPP_TWILIO_FROM'];
     let providerPresence = {};
-    try { providerPresence = await invoke('check_env_vars_presence', { names: [...cloudSet, ...twilioSet] }); } catch { /* ignore */ }
+    try { providerPresence = await invoke('check_env_vars_presence', { names: [...cloudSet, ...twilioSet] }) ?? {}; } catch { /* ignore */ }
     // merge stored credentials for WhatsApp provider keys
     for (const name of [...cloudSet, ...twilioSet]) {
       providerPresence[name] = Boolean(providerPresence[name]) || Boolean(getStoredCredential('whatsapp', name));

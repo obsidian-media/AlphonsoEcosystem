@@ -24,19 +24,23 @@ export function CoachProvider({ children }) {
 
   const handleToggleCoachMode = useCallback(async () => {
     if (coachMode) {
-      await closeCoachWindow();
+      await closeCoachWindow().catch(() => {});
       setCoachMode(false);
       return;
     }
-    await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
-    setCoachMode(true);
+    try {
+      await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
+      setCoachMode(true);
+    } catch {
+      // Coach window requires the Tauri desktop runtime.
+    }
   }, [coachMode, coachAlwaysOnTop, settings.coachAgent]);
 
   const handleToggleCoachTop = useCallback(async () => {
     const next = !coachAlwaysOnTop;
     setCoachAlwaysOnTop(next);
     if (coachMode) {
-      await openCoachWindow(next, settings.coachAgent || 'alphonso');
+      await openCoachWindow(next, settings.coachAgent || 'alphonso').catch(() => {});
     }
   }, [coachAlwaysOnTop, coachMode, settings.coachAgent]);
 

@@ -384,6 +384,8 @@ export function SettingsView({
 }: SettingsViewProps) {
   const resolvedNormalizeEndpoint = normalizeEndpoint || _normalizeEndpoint;
   const folderPickerRef = useRef<HTMLInputElement>(null);
+  const outputFolderPickerRef = useRef<HTMLInputElement>(null);
+  const comfyuiDirPickerRef = useRef<HTMLInputElement>(null);
 
   const [composioApiKey, setComposioApiKey] = useState<string>(() => getComposioConfig().apiKey || '');
   const [composioUserId, setComposioUserId] = useState<string>(() => getComposioConfig().userId || 'alphonso-user');
@@ -445,14 +447,36 @@ export function SettingsView({
     try {
       const result = await invoke<{ picked: boolean; path: string }>('pick_folder');
       if (result?.picked && result.path) setSettings({ ...settings, outputFolder: result.path });
-    } catch { /* Tauri not available */ }
+    } catch {
+      outputFolderPickerRef.current?.click();
+    }
+  };
+
+  const handleOutputFolderPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0] as File & { path?: string; webkitRelativePath?: string };
+    const path = file.path || file.webkitRelativePath?.split('/')[0] || '';
+    if (path) setSettings({ ...settings, outputFolder: path });
+    e.target.value = '';
   };
 
   const handlePickComfyUIDir = async () => {
     try {
       const result = await invoke<{ picked: boolean; path: string }>('pick_folder');
       if (result?.picked && result.path) setSettings({ ...settings, comfyuiDir: result.path });
-    } catch { /* Tauri not available */ }
+    } catch {
+      comfyuiDirPickerRef.current?.click();
+    }
+  };
+
+  const handleComfyUIDirPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0] as File & { path?: string; webkitRelativePath?: string };
+    const path = file.path || file.webkitRelativePath?.split('/')[0] || '';
+    if (path) setSettings({ ...settings, comfyuiDir: path });
+    e.target.value = '';
   };
 
   const handleLaunchOllama = async () => {
@@ -1005,6 +1029,7 @@ export function SettingsView({
                 <div className="text-sm font-semibold text-white">Output Folder</div>
                 <div className="text-xs text-zinc-500 mt-0.5">Where generated images and files are saved.</div>
               </div>
+              <input ref={outputFolderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleOutputFolderPick} className="hidden" />
               <button
                 onClick={handlePickOutputFolder}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-medium border border-white/10 transition-colors"
@@ -1069,6 +1094,7 @@ export function SettingsView({
                   placeholder="C:\ComfyUI"
                   className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
                 />
+                <input ref={comfyuiDirPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleComfyUIDirPick} className="hidden" />
                 <button
                   onClick={handlePickComfyUIDir}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-medium border border-white/10 transition-colors"
