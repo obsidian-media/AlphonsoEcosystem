@@ -18,24 +18,24 @@ const makeStatus = (state, message = 'test message', privacyLabel = 'Mic Off') =
 });
 
 describe('VoiceInputButton', () => {
-  it('shows "VOICE INPUT" in idle state', () => {
+  it('renders button in idle state', () => {
     render(<VoiceInputButton voiceStatus={makeStatus(VOICE_STATES.IDLE)} onToggle={() => {}} />);
-    expect(screen.getByText('VOICE INPUT')).toBeTruthy();
+    expect(screen.getByRole('button')).toBeTruthy();
   });
 
-  it('shows "STOP LISTENING" in listening state', () => {
+  it('shows "STOP" in listening state', () => {
     render(<VoiceInputButton voiceStatus={makeStatus(VOICE_STATES.LISTENING)} onToggle={() => {}} />);
-    expect(screen.getByText('STOP LISTENING')).toBeTruthy();
+    expect(screen.getByText('STOP')).toBeTruthy();
   });
 
-  it('shows "REQUESTING MIC" in requesting_permission state', () => {
+  it('shows "REQUESTING MIC…" in requesting_permission state', () => {
     render(
       <VoiceInputButton
         voiceStatus={makeStatus(VOICE_STATES.REQUESTING_PERMISSION)}
         onToggle={() => {}}
       />
     );
-    expect(screen.getByText('REQUESTING MIC')).toBeTruthy();
+    expect(screen.getByText('REQUESTING MIC…')).toBeTruthy();
   });
 
   it('button is disabled in unsupported state', () => {

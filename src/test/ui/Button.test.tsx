@@ -8,14 +8,14 @@ describe('Button', () => {
     it('renders primary variant with correct classes', () => {
       render(<Button variant="primary">Primary</Button>);
       const btn = screen.getByText('Primary').closest('button');
-      expect(btn.className).toContain('bg-accent');
-      expect(btn.className).toContain('text-white');
+      expect(btn.className).toContain('bg-[var(--accent)]');
+      expect(btn.className).toContain('text-[var(--surface-0)]');
     });
 
     it('renders secondary variant with correct classes', () => {
       render(<Button variant="secondary">Secondary</Button>);
       const btn = screen.getByText('Secondary').closest('button');
-      expect(btn.className).toContain('bg-surface-3');
+      expect(btn.className).toContain('bg-[var(--surface-3)]');
     });
 
     it('renders ghost variant with correct classes', () => {
@@ -27,13 +27,13 @@ describe('Button', () => {
     it('renders danger variant with correct classes', () => {
       render(<Button variant="danger">Danger</Button>);
       const btn = screen.getByText('Danger').closest('button');
-      expect(btn.className).toContain('text-[--error]');
+      expect(btn.className).toContain('text-[var(--error)]');
     });
 
     it('renders success variant with correct classes', () => {
       render(<Button variant="success">Success</Button>);
       const btn = screen.getByText('Success').closest('button');
-      expect(btn.className).toContain('text-[--success]');
+      expect(btn.className).toContain('text-[var(--success)]');
     });
   });
 

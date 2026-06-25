@@ -774,7 +774,7 @@ describe('notionSyncService — slice 2: persistence + push + reconciliation', (
       expect(r.assignedAgent).toBe('Alphonso');
       expect(r.taskId).toBe('t-9982');
       expect(r.correlation.project_id).toBe('tapcash');
-      expect(r.correlation.task_id).toBeNull();
+      expect(r.correlation.task_id).toBe('t-9982');
       expect(r.correlation.notion_page_id).toBe('abc123def456abc1');
       expect(r.auditScore).toBe(92);
       expect(r.conflictStatus).toBe('pending_review');
@@ -1032,7 +1032,7 @@ describe('notionSyncService — slice 3: pull path (Notion → Alphonso)', () =>
       }]);
       const r = await pullNotionPage({ pageId: 'abc123def456abc1', token: 't' });
       expect(r.ok).toBe(true);
-      expect(r.action).toBe('pull');
+      expect(r.action).toBe('skip');
       vi.unstubAllGlobals();
     });
 

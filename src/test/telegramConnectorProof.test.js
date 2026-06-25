@@ -25,6 +25,9 @@ import { proveTelegramConnectorPath, updateConnectorAuthProfile } from '../servi
 describe('telegram live connector proof path', () => {
   beforeEach(() => {
     localStorage.clear();
+    localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
+      telegram: { TELEGRAM_BOT_TOKEN: 'mock-bot-token', TELEGRAM_ALLOWED_CHAT_IDS: 'chat-1' }
+    }));
     updateConnectorAuthProfile('telegram', {
       enabled: true,
       allowlist: ['chat-1']

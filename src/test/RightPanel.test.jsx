@@ -77,7 +77,7 @@ describe('RightPanel', () => {
     render(<RightPanel {...defaultProps} />);
     const reScanBtn = screen.getByTitle('Re-scan');
     expect(reScanBtn).toBeTruthy();
-    expect(reScanBtn.textContent).toContain('↺');
+    expect(reScanBtn.getAttribute('aria-label')).toBe('Re-scan for security threats');
   });
 
   it('clicking re-scan button calls scanForThreats again', () => {

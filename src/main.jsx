@@ -125,3 +125,15 @@ root.render(
     </BootBoundary>
   ),
 )
+
+// Register service worker for offline support
+if ('serviceWorker' in navigator && !window.__TAURI_INTERNALS__?.invoke) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      console.warn('[Alphonso PWA] Service worker registered:', reg.scope);
+    }).catch((err) => {
+      console.warn('[Alphonso PWA] Service worker registration failed:', err);
+    });
+  });
+}
+

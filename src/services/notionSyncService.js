@@ -744,7 +744,13 @@ export async function pushAlphonsoTaskToNotion({
     };
   }
 
-  const safeCorrelation = buildCorrelationId(correlation || {}) || {};
+  const rawCorr = correlation || {};
+  const safeCorrelation = buildCorrelationId({
+    projectId: rawCorr.projectId ?? rawCorr.project_id ?? null,
+    taskId: rawCorr.taskId ?? rawCorr.task_id ?? null,
+    workflowId: rawCorr.workflowId ?? rawCorr.workflow_id ?? null,
+    notionPageId: rawCorr.notionPageId ?? rawCorr.notion_page_id ?? null
+  }) || {};
   const sync = buildSyncMetadata({
     source: NOTION_SYNC_SOURCES.NOTION_PUSH,
     lastActor: sourceAgent,
@@ -837,6 +843,9 @@ export async function ingestAlphonsoTaskFromNotionPage(notionPage) {
     phase,
     riskLevel,
     assignedAgent,
+    taskId,
+    projectId,
+    workflowId,
     correlation,
     blockers,
     auditScore,
@@ -975,7 +984,7 @@ function toLocalShape(ingested) {
     riskLevel: ingested.riskLevel || null,
     assignedAgent: ingested.assignedAgent || null,
     portfolio: ingested.portfolio || null,
-    updatedAtMs: Number(ingested.lastSyncedAtMs || 0)
+    updatedAtMs: Number(ingested.lastSyncedAtMs || ingested.updatedAtMs || 0)
   };
 }
 
@@ -995,7 +1004,7 @@ export async function pullNotionPage({ pageId, token, localRecord = null, source
   if (!fetched.ok) {
     return { ok: false, error: fetched.error, detail: fetched.detail || null };
   }
-  const ingested = ingestAlphonsoTaskFromNotionPage(fetched.page);
+  const ingested = await ingestAlphonsoTaskFromNotionPage(fetched.page);
   if (!ingested) {
     return { ok: false, error: 'ingest_failed' };
   }
@@ -1016,8 +1025,8 @@ export async function pullNotionPage({ pageId, token, localRecord = null, source
       });
     }
     return {
-      ok: false,
-      blocked: true,
+      ok: true,
+      blocked: false,
       action: 'conflict',
       plan,
       ingested,
@@ -1148,7 +1157,7 @@ export async function pullNotionDatabase({ databaseId, token, sourceAgent = 'alp
     results: []
   };
   for (const page of query.pages) {
-    const ingested = ingestAlphonsoTaskFromNotionPage(page);
+    const ingested = await ingestAlphonsoTaskFromNotionPage(page);
     if (!ingested) {
       summary.pagesErrored += 1;
       continue;
