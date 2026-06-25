@@ -23,6 +23,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Wand2,
+  Zap,
 } from 'lucide-react';
 import { AgentActivityLog } from './AgentActivityLog';
 import {
@@ -101,6 +102,41 @@ const TOOL_META = {
     docsUrl: 'https://github.com/open-webui/open-webui',
     color: 'text-[var(--agent-nova)]',
     bg: 'bg-[var(--agent-nova-glow)] border-[var(--border)]',
+  },
+  'mcp-server': {
+    icon: Activity,
+    category: 'Integration',
+    docsUrl: 'https://modelcontextprotocol.io',
+    color: 'text-purple-400',
+    bg: 'bg-purple-500/10 border-purple-500/20',
+  },
+  'alphonso-bridge': {
+    icon: Activity,
+    category: 'Integration',
+    docsUrl: 'https://modelcontextprotocol.io',
+    color: 'text-violet-400',
+    bg: 'bg-violet-500/10 border-violet-500/20',
+  },
+  chromadb: {
+    icon: Layers,
+    category: 'Memory',
+    docsUrl: 'https://docs.trychroma.com',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10 border-emerald-500/20',
+  },
+  openHands: {
+    icon: Bot,
+    category: 'Agent',
+    docsUrl: 'https://github.com/All-Hands-AI/OpenHands',
+    color: 'text-cyan-400',
+    bg: 'bg-cyan-500/10 border-cyan-500/20',
+  },
+  n8n: {
+    icon: Zap,
+    category: 'Automation',
+    docsUrl: 'https://n8n.io',
+    color: 'text-orange-400',
+    bg: 'bg-orange-500/10 border-orange-500/20',
   },
 };
 

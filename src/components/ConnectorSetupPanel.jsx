@@ -49,6 +49,7 @@ const CONNECTOR_ICONS = {
   sd_webui: Settings2,
   comfyui_video: Settings2,
   mobile_bridge: Smartphone,
+  n8n: Zap,
 };
 
 // ── Status helpers ────────────────────────────────────────────────────────────
@@ -237,6 +238,7 @@ export function ConnectorSetupPanel() {
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
+  const [n8nBaseUrl, setN8nBaseUrl] = useState(() => getConnectorCredential('n8n', 'N8N_BASE_URL') || 'http://localhost:5678');
 
   useEffect(() => {
     let cancelled = false;
@@ -731,6 +733,19 @@ export function ConnectorSetupPanel() {
             onSave={() => saveConnectorApiKey('runway', { RUNWAYML_API_SECRET: runwayApiKey })}
             hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
             savedLabel="Runway key saved"
+          />
+
+          {/* n8n Automation */}
+          <CredentialSection
+            title="n8n Automation (Docker)"
+            icon={Zap}
+            borderColor="border-orange-300/20"
+            bgColor="bg-orange-500/8"
+            accentColor="text-orange-400"
+            fields={[{ label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false }]}
+            onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
+            hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
+            savedLabel="n8n URL saved"
           />
         </div>
       </div>

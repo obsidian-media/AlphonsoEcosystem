@@ -179,6 +179,18 @@ const TOOLS: &[ToolDef] = &[
     exe: "python",
     args: &["voice/backend/main.py", "--host", "127.0.0.1", "--port", "8765"],
   },
+  ToolDef {
+    name: "n8n",
+    display_name: "n8n",
+    description: "n8n — local workflow automation engine (Docker)",
+    repo_url: None,
+    pip_packages: &[],
+    requirements_file: None,
+    port: Some(5678),
+    health_path: Some("/healthz"),
+    exe: "docker",
+    args: &["run", "-d", "--name", "n8n", "-p", "5678:5678", "-v", "n8n_data:/home/node/.n8n", "n8nio/n8n"],
+  },
 ];
 
 fn tool_def(name: &str) -> Option<&'static ToolDef> {
