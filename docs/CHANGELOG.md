@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.4] - 2026-06-25 — UX Restructure: Navigation Consolidation, Coach Mode, ACC Bridge, AgentDock Integration
+
+### Fixed
+- **Coach mode button shows no change** (`CoachContext.jsx`): `openCoachWindow()` silently failed in web mode without visual feedback. Now toggles `coachMode` state and dispatches an `alphonso:toast` event so the user sees a confirmation. `ToastProvider` now listens to the `alphonso:toast` window event — services/contexts outside the React tree can now show toasts.
+- **RuntimeManagerView not loading** (`RuntimeManagerView.jsx`): Changed `Promise.all` to `Promise.allSettled` so one failing Tauri command doesn't abort both tool status and prereq fetches. The page now loads in web mode and partial Tauri environments.
+- **Workspace root Browse button unreliable** (`SettingsView.tsx`): Added `invoke('pick_folder')` as the primary picker with fallback to `<input webkitdirectory>` for web mode.
+- **ACC Bridge config clutter in Content page** (`ContentCatalystWorkspace.jsx`): Replaced the large 4-field config form (URL, prefix, token, timeout) + packet list with a compact 2-line status indicator: connection state + Sync/Refresh buttons. Full config remains in Settings → Connectors.
+
+### Added
+- **AgentDock embedded mode** (`AgentDock.jsx`): Added `embedded` prop. When true, renders inline (no `fixed z-50`, no drag handles, natural width) for use inside RightPanel's Agents tab. Passes `agentDockCompanions` from App → RightPanel.
+- **Activity tab in RuntimeManagerView** (`RuntimeManagerView.jsx`): Tab bar added (Runtimes / Activity). Activity tab renders `AgentActivityLog` inline, replacing the need for a standalone Activity sidebar page.
+- **Knowledge tab in SettingsView** (`SettingsView.tsx`): New "Knowledge" section renders `FilesView` inside Settings, replacing the need for a standalone Files/Knowledge sidebar page.
+- **Automation ops toggleable** (`AutomationView.jsx`): Workflow operations now have an Enable/Active toggle button. Uses `updateWorkflowOperationStatus` to flip status between active/inactive.
+- **Telegram commands expanded to 17** (`telegramCompanionService.js`): Added `/ping`, `/agents`, `/nova`, `/scan` commands on top of the existing 13.
+
+### Changed
+- **Sidebar navigation condensed**: Removed `Activity` and `Knowledge/Files` as standalone sidebar items. Activity is now a tab in Runtimes; Knowledge is a tab in Settings.
+
+---
+
 ## [2.2.3-patch2] - 2026-06-25 — Boot Null-Guards, Jarvis Voice UI, RightPanel Agents Tab, Compact Allowlist
 
 ### Fixed

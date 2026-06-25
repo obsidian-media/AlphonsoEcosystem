@@ -28,11 +28,16 @@ export function CoachProvider({ children }) {
       setCoachMode(false);
       return;
     }
+
     try {
       await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
       setCoachMode(true);
     } catch {
-      // Coach window requires the Tauri desktop runtime.
+      // Coach window requires the Tauri desktop runtime — toggle state anyway so UI reflects intent
+      setCoachMode(true);
+      window.dispatchEvent(new CustomEvent('alphonso:toast', {
+        detail: { message: 'Coach mode active (desktop window requires Tauri runtime)', type: 'info' }
+      }));
     }
   }, [coachMode, coachAlwaysOnTop, settings.coachAgent]);
 

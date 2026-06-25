@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   Bot,
@@ -23,6 +24,7 @@ import {
   ToggleRight,
   Wand2,
 } from 'lucide-react';
+import { AgentActivityLog } from './AgentActivityLog';
 import {
   checkPrerequisites,
   getAllStatus,
@@ -337,6 +339,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }) {
 const CATEGORIES = ['All', 'LLM', 'Image / Video', 'Image', 'Audio'];
 
 export default function RuntimeManagerView() {
+  const [activeTab, setActiveTab] = useState('tools');
   const [tools, setTools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -350,9 +353,9 @@ export default function RuntimeManagerView() {
 
   const load = useCallback(async () => {
     try {
-      const [statuses, pq] = await Promise.all([getAllStatus(), checkPrerequisites()]);
-      setTools(statuses ?? []);
-      setPrereqs(pq);
+      const [statusResult, prereqResult] = await Promise.allSettled([getAllStatus(), checkPrerequisites()]);
+      setTools((statusResult.status === 'fulfilled' ? statusResult.value : null) ?? []);
+      setPrereqs(prereqResult.status === 'fulfilled' ? prereqResult.value : null);
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -438,7 +441,34 @@ export default function RuntimeManagerView() {
   const installedCount = tools.filter((t) => t.installed).length;
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Tab bar */}
+      <div className="flex items-center gap-1 px-5 pt-4 pb-0 border-b border-[var(--border)] shrink-0">
+        {[
+          { id: 'tools', label: 'Runtimes', icon: Cpu },
+          { id: 'activity', label: 'Activity', icon: Activity },
+        ].map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
+              activeTab === id
+                ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
+                : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+            }`}
+          >
+            <Icon className="w-3 h-3" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'activity' ? (
+        <div className="flex-1 overflow-hidden">
+          <AgentActivityLog />
+        </div>
+      ) : (
+    <div className="flex-1 overflow-y-auto">
     <div className="flex flex-col gap-5 p-5 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
@@ -557,6 +587,8 @@ export default function RuntimeManagerView() {
         Tools install to <code className="text-zinc-500">%APPDATA%\Alphonso\runtimes\</code> and are shared across Alphonso updates.
       </p>
     </div>
+    </div>
+      )}
     </div>
   );
 }

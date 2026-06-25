@@ -294,143 +294,38 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-[3rem] border border-cyan-400/20 bg-zinc-950/90 p-6 shadow-[0_0_0_1px_rgba(34,211,238,0.06)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
+          {/* ACC Bridge — compact 2-way status indicator. Full config is in Settings → Connectors */}
+          <div className="rounded-3xl border border-cyan-400/20 bg-zinc-950/90 px-5 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className={`h-4 w-4 shrink-0 ${bridgeStatus.configured ? 'text-cyan-400' : 'text-zinc-600'}`} />
               <div>
-                <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-cyan-300" />
-                  ACC Bridge
-                </div>
-                <div className="text-sm text-zinc-300">
-                  Status: <span className="font-semibold text-cyan-200">{bridgeStatus.status}</span>
-                  {' '}
-                  {bridgeStatus.configured ? 'connected' : 'not configured yet'}
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">ACC Bridge</div>
+                <div className="text-sm text-zinc-300 mt-0.5">
+                  {bridgeStatus.configured
+                    ? <span className="text-cyan-300">Connected · {bridgeStatus.status || 'ok'}</span>
+                    : <span className="text-zinc-500">Not configured — set up in <span className="text-zinc-300">Settings → Connectors</span></span>
+                  }
                 </div>
               </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {activeJob && bridgeStatus.configured && (
+                <button
+                  type="button"
+                  disabled={bridgeBusy}
+                  onClick={handleBridgeSyncActiveJob}
+                  className="rounded-full border border-cyan-400/30 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-200 transition hover:border-cyan-300 hover:text-cyan-100 disabled:opacity-50"
+                >
+                  Sync
+                </button>
+              )}
               <button
                 type="button"
                 onClick={refreshBridge}
-                className="rounded-full border border-white/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:border-cyan-400/40 hover:text-white"
+                className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:border-cyan-400/40 hover:text-white"
               >
                 Refresh
               </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">Bridge URL</span>
-                <input
-                  value={bridgeConfig.baseUrl || ''}
-                  onChange={(event) => setBridgeConfig((current) => ({ ...current, baseUrl: event.target.value }))}
-                  placeholder="http://localhost:4000"
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-cyan-400/40"
-                />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">Path Prefix</span>
-                <input
-                  value={bridgeConfig.pathPrefix || ''}
-                  onChange={(event) => setBridgeConfig((current) => ({ ...current, pathPrefix: event.target.value }))}
-                  placeholder="/api/alphonso-bridge"
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-cyan-400/40"
-                />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">Token</span>
-                <input
-                  type="password"
-                  value={bridgeConfig.token || ''}
-                  onChange={(event) => setBridgeConfig((current) => ({ ...current, token: event.target.value }))}
-                  placeholder="bridge token"
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-cyan-400/40"
-                />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">Timeout ms</span>
-                <input
-                  type="number"
-                  min="1000"
-                  step="500"
-                  value={bridgeConfig.timeoutMs || 15000}
-                  onChange={(event) => setBridgeConfig((current) => ({ ...current, timeoutMs: Number(event.target.value) || 15000 }))}
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-cyan-400/40"
-                />
-              </label>
-            </div>
-
-            <label className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-200">
-              <input
-                type="checkbox"
-                checked={Boolean(bridgeConfig.enabled)}
-                onChange={(event) => setBridgeConfig((current) => ({ ...current, enabled: event.target.checked }))}
-                className="h-4 w-4 rounded border-white/20 bg-zinc-950 text-cyan-400"
-              />
-              Enable live ACC sync from Alphonso
-            </label>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={bridgeBusy}
-                onClick={handleBridgeSave}
-                className="rounded-full bg-cyan-400 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Save Bridge
-              </button>
-              <button
-                type="button"
-                disabled={bridgeBusy}
-                onClick={handleBridgeReset}
-                className="rounded-full border border-white/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-200 transition hover:border-cyan-400/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                disabled={bridgeBusy || !activeJob}
-                onClick={handleBridgeSyncActiveJob}
-                className="rounded-full border border-cyan-400/30 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-200 transition hover:border-cyan-300 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Sync Active Job to ACC
-              </button>
-            </div>
-
-            {bridgeNotice ? (
-              <div className="mt-3 rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-zinc-300">
-                {bridgeNotice}
-              </div>
-            ) : null}
-
-            <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-zinc-300">
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Packets</div>
-                <div className="mt-1 text-lg font-semibold text-white">{bridgeStatus.packetCount || 0}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Last Sync</div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  {bridgeStatus.lastSyncStatus || 'none'}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">Recent bridge packets</div>
-              <div className="max-h-48 space-y-2 overflow-auto pr-1">
-                {bridgePackets.length ? bridgePackets.map((packet) => (
-                  <div key={packet.id} className="rounded-2xl border border-white/10 bg-black/25 p-3 text-xs text-zinc-300">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-semibold text-white">{packet.kind}</span>
-                      <span className="text-zinc-500">{packet.status}</span>
-                    </div>
-                    <div className="mt-1 text-zinc-400">{packet.jobId || packet.requestId || packet.id}</div>
-                  </div>
-                )) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-3 text-xs text-zinc-500">
-                    No bridge packets yet.
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 

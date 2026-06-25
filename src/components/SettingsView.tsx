@@ -16,6 +16,7 @@ import { CrashLogView } from './CrashLogView';
 import { CompanionPairingPanel } from './CompanionPairingPanel';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';
 import { SessionHistoryView } from './SessionHistoryView';
+import { FilesView } from './FilesView';
 
 interface MemoryItem {
   id?: string;
@@ -319,6 +320,7 @@ const SETTINGS_SECTIONS = [
   { id: 'agents',      label: 'Agents',       Icon: Bot },
   { id: 'runtime',     label: 'Runtime',      Icon: Cpu },
   { id: 'memory',      label: 'Memory',       Icon: Database },
+  { id: 'knowledge',   label: 'Knowledge',    Icon: Compass },
   { id: 'appearance',  label: 'Appearance',   Icon: Palette },
   { id: 'logs',        label: 'Logs',         Icon: ScrollText },
   { id: 'backup',      label: 'Backup',       Icon: Download },
@@ -338,6 +340,7 @@ interface SettingsViewProps {
   normalizeEndpoint?: (endpoint: string) => string;
   ollamaTroubleshootingCommand?: string;
   braveSearchConfigured?: boolean;
+  memoryItems?: unknown[];
 }
 
 interface LaunchStatus {
@@ -380,7 +383,8 @@ export function SettingsView({
   onCheckUpdates,
   normalizeEndpoint,
   ollamaTroubleshootingCommand,
-  braveSearchConfigured = false
+  braveSearchConfigured = false,
+  memoryItems = [],
 }: SettingsViewProps) {
   const resolvedNormalizeEndpoint = normalizeEndpoint || _normalizeEndpoint;
   const folderPickerRef = useRef<HTMLInputElement>(null);
@@ -429,6 +433,17 @@ export function SettingsView({
         });
       });
     }
+  };
+
+  const handlePickWorkspaceRoot = async () => {
+    try {
+      const result = await invoke<{ picked: boolean; path: string }>('pick_folder');
+      if (result?.picked && result.path) {
+        setSettings({ ...settings, workspaceRoot: result.path });
+        return;
+      }
+    } catch { /* fall through to file input */ }
+    folderPickerRef.current?.click();
   };
 
   const handleFolderPick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -606,7 +621,7 @@ export function SettingsView({
               />
               <input ref={folderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleFolderPick} className="hidden" />
               <button
-                onClick={() => folderPickerRef.current?.click()}
+                onClick={handlePickWorkspaceRoot}
                 className="px-3 py-2 rounded-xl border border-white/10 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
                 title="Browse for folder"
               >
@@ -1173,6 +1188,11 @@ export function SettingsView({
           ))}
         </div>
       </section>
+    </div>
+  )}
+  {activeSection === 'knowledge' && (
+    <div className="max-w-4xl mx-auto min-h-[60vh]">
+      <FilesView memoryItems={memoryItems as Parameters<typeof FilesView>[0]['memoryItems']} />
     </div>
   )}
   {activeSection === 'logs' && (

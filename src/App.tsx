@@ -359,11 +359,7 @@ function AppShell() {
         />
         <main className="flex-1 overflow-hidden relative bg-[var(--surface-0)]">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-cyan-500/4 blur-[120px] rounded-full pointer-events-none" />
-          <div className="absolute left-4 top-4 z-20">
-            <Suspense fallback={<div className="rounded-xl border border-white/10 bg-zinc-950/70 p-3 text-xs text-zinc-400">Loading agent dock...</div>}>
-              <AgentDock companions={mergedAgentDockCompanions} />
-            </Suspense>
-          </div>
+          {/* AgentDock moved to RightPanel → Agents tab */}
           <div className="h-full relative z-10">
             <ViewErrorBoundary label={activeTab} key={activeTab}>
               <Suspense fallback={<ViewLoadingState activeTab={activeTab} />}>
@@ -404,7 +400,7 @@ function AppShell() {
                 )}
                 {activeTab === 'settings' && (
                   <Suspense fallback={null}>
-                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} normalizeEndpoint={(e: string) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} />
+                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} normalizeEndpoint={(e: string) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} memoryItems={memoryItems} />
                   </Suspense>
                 )}
                 {activeTab === 'connectors' && (
@@ -430,7 +426,7 @@ function AppShell() {
         </main>
       </div>
       <Suspense fallback={null}>
-        <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} />
+        <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} agentDockCompanions={mergedAgentDockCompanions} />
       </Suspense>
       <Suspense fallback={null}>
         <BootStatusBanner />

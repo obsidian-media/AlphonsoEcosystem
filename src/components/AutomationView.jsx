@@ -2,7 +2,7 @@ import React from 'react';
 import { RefreshCw } from 'lucide-react';
 import { createWorkflow, listWorkflows } from '../services/workflowBuilderService';
 import { listWorkflowReceipts } from '../services/workflowReceiptService';
-import { listWorkflowOperations } from '../services/workflowOperationsRegistryService';
+import { listWorkflowOperations, updateWorkflowOperationStatus } from '../services/workflowOperationsRegistryService';
 import { WorkflowBuilderView } from './WorkflowBuilderView';
 
 export function AutomationView() {
@@ -108,14 +108,31 @@ export function AutomationView() {
       {ops.length > 0 && (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
           <div className="section-label">Registered Operations ({ops.length})</div>
-          {ops.slice(0, 20).map((op) => (
-            <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
-              <div className="text-sm font-medium text-[var(--text-2)]">{op.name || op.id}</div>
-              <span className={`text-[10px] px-2 py-0.5 rounded border ${op.status === 'active' || op.enabled ? 'border-[var(--success)]/30 text-[var(--success)]' : 'border-[var(--border)] text-[var(--text-3)]'}`}>
-                {op.status === 'active' || op.enabled ? 'active' : op.status || 'inactive'}
-              </span>
-            </div>
-          ))}
+          {ops.slice(0, 20).map((op) => {
+            const isActive = op.status === 'active' || op.enabled;
+            return (
+              <div key={op.id} className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-3)]">
+                <div>
+                  <div className="text-sm font-medium text-[var(--text-2)]">{op.name || op.id}</div>
+                  {op.description && <div className="text-[10px] text-[var(--text-4)] mt-0.5">{op.description}</div>}
+                </div>
+                <button
+                  onClick={() => {
+                    const nextStatus = isActive ? 'inactive' : 'active';
+                    updateWorkflowOperationStatus(op.id, nextStatus, { enabled: !isActive });
+                    setOps(listWorkflowOperations());
+                  }}
+                  className={`text-[10px] px-3 py-1 rounded-lg border font-semibold transition-colors ${
+                    isActive
+                      ? 'border-[var(--success)]/30 text-[var(--success)] hover:bg-[var(--success)]/10'
+                      : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--accent-border)] hover:text-[var(--text-1)]'
+                  }`}
+                >
+                  {isActive ? 'Active' : 'Enable'}
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

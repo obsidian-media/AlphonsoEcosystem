@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.2.3-patch2** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
+> **v2.2.4** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.2.3-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.2.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-1930%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -17,11 +17,21 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 14 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.2.3**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.2.3) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.2.4**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.2.4) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
+
+## What's New in v2.2.4
+
+- **Navigation Consolidated** — Activity moved to a tab inside Runtimes (Runtimes / Activity). Knowledge/Files moved to a tab inside Settings. Both removed from the main sidebar to reduce clutter.
+- **AgentDock in Right Panel** — The agent mascot deck is now embedded in the RightPanel Agents tab (inline, full-width, no floating). Live agent companions passed directly from App state.
+- **Coach Mode Actually Works** — Clicking Coach Mode now toggles the state and shows a toast confirmation, even in web mode (where the Tauri native window isn't available).
+- **ACC Bridge Simplified** — Content page's ACC Bridge section replaced with a compact 2-line status indicator. Full config is in Settings → Connectors where it belongs.
+- **Automation Operations Toggleable** — Workflow operations now have Enable/Active buttons. Previously read-only status badges.
+- **Telegram: 17 Commands** — Added `/ping`, `/agents`, `/nova`, `/scan` for a total of 17 bot commands.
+- **Global Toast Events** — `ToastProvider` now listens to `window.alphonso:toast` so services and contexts outside the React tree can show notifications.
 
 ## What's New in v2.2.3-patch2
 
@@ -276,7 +286,8 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.2.3-patch2** | June 25, 2026 | Jarvis voice button wired in ChatView; Agents tab in RightPanel (3 tabs); compact SentinelAllowlistPanel; boot null-guard fixes; Browse fallbacks; Coach mode fix in web mode |
+| **v2.2.4** | June 25, 2026 | Navigation restructure: Activity→Runtimes tab, Knowledge→Settings tab; AgentDock embedded in RightPanel; coach mode fix + toast; ACC Bridge simplified; automation ops toggleable; Telegram 17 commands |
+| v2.2.3-patch2 | June 25, 2026 | Jarvis voice button wired in ChatView; Agents tab in RightPanel (3 tabs); compact SentinelAllowlistPanel; boot null-guard fixes; Browse fallbacks; Coach mode fix in web mode |
 | v2.2.3-patch1 | June 25, 2026 | Full 16-bug audit: stale state fix, TS types, production voice path, code splitting, O(1) chat render, live connector status, SQLite delete, audit memoization |
 | v2.2.3 | June 24, 2026 | Chat UX consolidation: Jose pipeline/approval/Nova results inline in chat; connector verification fixed (UI credential store); auto-scroll fixed |
 | v2.2.2 | June 24, 2026 | Voice OS pipeline + OKLCH UI/UX overhaul — 144 test files, 1,930+ tests |

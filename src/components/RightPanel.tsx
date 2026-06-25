@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, Bot, ChevronLeft, ChevronRight, Cpu, RefreshCw, Shield } from 'lucide-react';
 import { AgentStatusStrip } from './AgentStatusStrip';
+import { AgentDock } from './AgentDock';
 import { formatModelSize } from '../lib/ollama';
 import { scanForThreats } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
@@ -84,6 +85,7 @@ interface RightPanelProps {
   hectorCompanionState?: unknown;
   screenObserverState?: unknown;
   onCheckUpdates?: () => void;
+  agentDockCompanions?: unknown[];
 }
 
 function StatusDot({ state }: { state: string }) {
@@ -126,6 +128,7 @@ export function RightPanel({
   onCheckOllama,
   operatorMode,
   updateCheckState,
+  agentDockCompanions,
 }: RightPanelProps) {
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('alphonso_right_panel_collapsed_v1') === 'true');
   const [activeTab, setActiveTab] = useState<'system' | 'audit' | 'agents'>('system');
@@ -385,9 +388,12 @@ export function RightPanel({
       )}
 
       {activeTab === 'agents' && (
-        <div className="flex-1 overflow-y-auto p-3">
-          <p className="section-label mb-3">Active Agents</p>
-          <AgentStatusStrip useAutoFeed compact={false} />
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <AgentDock companions={(agentDockCompanions as never[]) ?? []} embedded />
+          <div className="border-t border-[var(--border)] pt-3">
+            <p className="section-label mb-2">Live Activity</p>
+            <AgentStatusStrip useAutoFeed compact={false} />
+          </div>
         </div>
       )}
     </aside>

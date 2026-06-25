@@ -106,7 +106,7 @@ Before writing any new service, component, or feature, check this list:
 | Echo memory preservation runtime | `src/services/echoMemoryService.js` — Ollama synthesis, retention classification, confidence normalization |
 | Marcus distribution execution runtime | `src/services/marcusExecutionService.js` — governance-gated GitHub/Slack/publish dispatch |
 | Connector credential UI (all 9 API connectors) | `src/components/ConnectorSetupPanel.jsx` `CredentialSection` — saves via `saveConnectorCredential()` |
-| Telegram companion bot commands | `src/services/telegramCompanionService.js` — `/help`, `/report`, `/files`, `/status`, `/memory` |
+| Telegram companion bot commands | `src/services/telegramCompanionService.js` — 17 commands: `/help`, `/report`, `/files`, `/status`, `/memory`, `/ping`, `/agents`, `/nova`, `/scan` + more |
 | Voice STT pipeline | `src/services/voiceService.js` + `src/hooks/useVoiceInput.js` — SpeechRecognition with fallback |
 | Voice OS sidecar launcher | `src-tauri/src/voice_sidecar.rs` — `voice_start`/`voice_stop`/`voice_status` Tauri commands |
 | Voice OS React service | `src/services/voiceOsService.js` — `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus` |
@@ -218,6 +218,13 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Agents tab missing from RightPanel~~ — **CLOSED 2026-06-25 patch2** (System | Audit | Agents, Agents tab shows `AgentStatusStrip useAutoFeed`)
 - ~~SentinelAllowlistPanel overflows sidebar~~ — **CLOSED 2026-06-25 patch2** (compact inline form rewrite with CSS var theming)
 - ~~pcm-processor.worklet.ts dead class breaking tests~~ — **CLOSED 2026-06-25 patch2** (removed `class PcmProcessor extends AudioWorkletNode` placeholder that caused jsdom test failures)
+- ~~Coach mode shows no change on click~~ — **CLOSED 2026-06-25 v2.2.4** (`CoachContext` sets `coachMode=true` + dispatches `alphonso:toast` even when Tauri window fails; `ToastProvider` now listens to global `alphonso:toast` CustomEvent)
+- ~~ACC Bridge full config form in Content page~~ — **CLOSED 2026-06-25 v2.2.4** (`ContentCatalystWorkspace.jsx` replaced 4-field form with compact status indicator; config stays in Settings → Connectors)
+- ~~AgentDock floating, not integrated in RightPanel~~ — **CLOSED 2026-06-25 v2.2.4** (`AgentDock.jsx` `embedded` prop; `RightPanel.tsx` Agents tab uses embedded dock with `agentDockCompanions` from App)
+- ~~Activity page too thin (standalone)~~ — **CLOSED 2026-06-25 v2.2.4** (Activity tab added to RuntimeManagerView; sidebar `activity` item removed)
+- ~~Knowledge/Files page too thin (standalone)~~ — **CLOSED 2026-06-25 v2.2.4** (Knowledge section in SettingsView renders `FilesView`; sidebar `files` item removed)
+- ~~Automation operations non-interactive (stubs)~~ — **CLOSED 2026-06-25 v2.2.4** (`AutomationView.jsx` operations now toggleable via `updateWorkflowOperationStatus`)
+- ~~Telegram commands limited to 13~~ — **CLOSED 2026-06-25 v2.2.4** (17 commands: +`/ping`, `/agents`, `/nova`, `/scan` in `telegramCompanionService.js`)
 
 ---
 
@@ -278,4 +285,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-25 — v2.2.3-patch2 — Boot null-guard fixes, Browse fallbacks, Coach try/catch, Jarvis voice button in ChatView, Agents tab in RightPanel, compact SentinelAllowlistPanel, dead AudioWorkletNode class removed from pcm-processor.worklet.ts. patch1 (same date): Full codebase bug audit + 16-bug fix session. Critical: ChatView "Try Again" stale state fixed, pcm-processor.worklet.ts added to src/hooks/, Tauri invoke→emit for native proof stage. High: @types/react/@types/react-dom/@types/node installed, typecheck script added to verify:app, voice_sidecar uses resource_dir for production path. Medium: runtimeManagerService code splitting restored, O(n²)→O(1) chat render, ConnectorStatusIndicators poll 5s + CustomEvent, kv_delete Tauri command added, audit log memoized in RightPanel. 144 test files, 1930+ tests passing. cargo clippy zero warnings. Build clean. Run `npm run verify:app` and `cargo clippy -- -D warnings` from src-tauri/ to re-verify._
+_Last verified: 2026-06-25 — v2.2.4 — UX restructure: Activity tab in RuntimeManagerView, Knowledge tab in SettingsView, Activity+Files removed from sidebar. AgentDock `embedded` prop + RightPanel wired with `agentDockCompanions`. Coach mode now sets state + shows toast even in web mode. ACC Bridge in ContentCatalystWorkspace → compact 2-line status indicator (full config stays in Settings). AutomationView workflow operations toggleable. Telegram 17 commands (+/ping, /agents, /nova, /scan). ToastProvider now listens to `window.alphonso:toast` CustomEvent. 144 test files, 1930+ tests passing. typecheck clean. Build clean._

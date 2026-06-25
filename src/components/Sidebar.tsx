@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Activity,
   Bot,
   BrainCircuit,
   ChevronDown,
@@ -10,7 +9,6 @@ import {
   FileText,
   GitBranch,
   LayoutDashboard,
-  Layers,
   MessageSquare,
   Moon,
   Palette,
@@ -80,7 +78,6 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'hector', icon: Database, label: 'Research' },
       { id: 'content', icon: FileText, label: 'Content' },
       { id: 'automation', icon: GitBranch, label: 'Automation' },
-      { id: 'files', icon: Layers, label: 'Knowledge' },
     ]
   },
   {
@@ -96,7 +93,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'runtimes', icon: Cpu, label: 'Runtimes' },
       { id: 'connectors', icon: Plug, label: 'Connectors', showStatusDot: true },
-      { id: 'activity', icon: Activity, label: 'Activity' },
     ]
   }
 ];

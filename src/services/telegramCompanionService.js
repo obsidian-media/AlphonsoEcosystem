@@ -5,6 +5,9 @@ import { listAgentActivity } from './agentActivityService';
 import { listMemoryItems } from './memoryService';
 import { createJoseCommandRoute, listJoseCommands } from './joseCommandRouterService';
 import { getStorage, setStorage } from '../lib/appStorage';
+import { listAgentProfiles } from '../agents/agentRegistry';
+import { runQuickScan } from './sentinelSecurityService';
+import { getOpportunityHistory } from './novaAnalysisService';
 
 const INBOUND_POLL_MS = 4000;
 const PUSH_WATCHER_MS = 6000;
@@ -95,20 +98,24 @@ function formatShortId(fullId) {
 function formatCommandList() {
   return `👋 Alphonso companion active.
 
-Commands:
-/ask <text> — send any command to Jose
-/status — system status
+📋 Commands:
+/ask <text> — send a command to Jose
+/status — system status (Ollama, queue, activity)
+/report — full summary: status + queue + activity
 /queue — pending approvals
 /approve <id> — approve a packet
 /reject <id> — reject a packet
-/activity — recent agent activity
+/activity — recent agent activity (last 8)
+/agents — show all 9 agent statuses
 /memory — last 5 memory items
-/stop — pause notifications
-/resume — resume notifications
+/nova — latest opportunity score + history
+/scan — run Sentinel security scan
+/files — list workspace files
+/ping — check Alphonso is alive
+/stop — pause push notifications
+/resume — resume push notifications
 /resetowner — re-register this chat as owner
-/help — show all commands
-/report — full summary: status + queue + recent activity
-/files — list recent workspace files`;
+/help — show this command list`;
 }
 
 export async function handleStatusCommand(token, chatId) {
@@ -243,6 +250,53 @@ ${lines.join('\n')}`
 
 export async function handleHelpCommand(token, chatId) {
   return sendTelegramMessageInternal({ token, chatId, text: formatCommandList() });
+}
+
+export async function handlePingCommand(token, chatId) {
+  const now = new Date().toLocaleTimeString();
+  return sendTelegramMessageInternal({ token, chatId, text: `🏓 Pong! Alphonso is alive. ${now}` });
+}
+
+export async function handleAgentsCommand(token, chatId) {
+  const profiles = listAgentProfiles();
+  const activity = listAgentActivity();
+  const activeIds = new Set(
+    activity.filter(a => (Date.now() - a.ts) < 5 * 60 * 1000).map(a => a.agentId || a.agent)
+  );
+
+  const lines = profiles.map(p => {
+    const active = activeIds.has(p.id) || activeIds.has(p.name?.toLowerCase());
+    const icon = active ? '🟢' : '⚪';
+    return `${icon} ${p.name || p.id} — ${p.role || 'agent'}`;
+  });
+
+  return sendTelegramMessageInternal({ token, chatId, text: `🤖 Agent Roster (9)\n\n${lines.join('\n')}` });
+}
+
+export async function handleNovaCommand(token, chatId) {
+  const history = getOpportunityHistory();
+  if (!history || history.length === 0) {
+    return sendTelegramMessageInternal({ token, chatId, text: '📊 No Nova analysis history yet. Send a command to Jose to generate one.' });
+  }
+  const latest = history[history.length - 1];
+  const score = latest.score ?? 0;
+  const rec = latest.recommendation || 'No recommendation';
+  const trend = history.slice(-5).map(h => h.score ?? 0).join(' → ');
+  return sendTelegramMessageInternal({ token, chatId, text: `📊 Nova Opportunity\n\nLatest score: ${score}/100\nRecommendation: ${rec}\n\nTrend (last 5): ${trend}` });
+}
+
+export async function handleScanCommand(token, chatId) {
+  try {
+    await sendTelegramMessageInternal({ token, chatId, text: '🔍 Running Sentinel security scan…' });
+    const result = await runQuickScan();
+    const level = result?.threatLevel || 'unknown';
+    const findings = Array.isArray(result?.findings) ? result.findings.length : 0;
+    const summary = result?.summary || 'Scan complete.';
+    const icon = level === 'clear' ? '✅' : level === 'low' ? '🟡' : level === 'medium' ? '🟠' : '🔴';
+    return sendTelegramMessageInternal({ token, chatId, text: `${icon} Sentinel Scan\n\nThreat level: ${level}\nFindings: ${findings}\n${summary}` });
+  } catch {
+    return sendTelegramMessageInternal({ token, chatId, text: '⚠️ Scan failed. Ensure Alphonso is running.' });
+  }
 }
 
 export async function handleReportCommand(token, chatId) {
@@ -449,6 +503,22 @@ export async function processInboundCommands(token, updates) {
 
       if (cmd === 'help') {
         return handleHelpCommand(token, chatId);
+      }
+
+      if (cmd === 'ping') {
+        return handlePingCommand(token, chatId);
+      }
+
+      if (cmd === 'agents') {
+        return handleAgentsCommand(token, chatId);
+      }
+
+      if (cmd === 'nova') {
+        return handleNovaCommand(token, chatId);
+      }
+
+      if (cmd === 'scan') {
+        return handleScanCommand(token, chatId);
       }
 
       if (cmd === 'report') {

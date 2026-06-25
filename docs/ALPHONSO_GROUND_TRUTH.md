@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-25 — v2.2.3-patch2 Boot null-guards, Jarvis voice UI, Agents tab in RightPanel, compact Allowlist, Browse fallback  
-**Verified by:** Claude Code session (144 test files, 1930 tests passing, build clean, cargo clippy zero warnings)  
-**Version:** 2.2.3-patch2 (patch1: 16-bug audit; patch2: null-guard boot fixes, Browse fallbacks, Coach try/catch, Jarvis voice button in ChatView, Agents tab in RightPanel, compact SentinelAllowlistPanel, dead AudioWorkletNode class removed from pcm-processor.worklet.ts)  
+**Last verified:** 2026-06-25 — v2.2.4 Navigation consolidation, coach mode fix, ACC Bridge simplification, AgentDock embedded, Telegram 17 commands  
+**Verified by:** Claude Code session (144 test files, 1930 tests passing, build clean, typecheck clean)  
+**Version:** 2.2.4 (patch2: null-guard boot fixes, Browse fallbacks, Coach try/catch, Jarvis voice button, Agents tab in RightPanel; 2.2.4: navigation restructure, coach mode UX fix, ACC Bridge status-only view, AgentDock embedded mode, Telegram +4 commands, automation ops toggleable, Knowledge tab in Settings, Activity tab in Runtimes)  
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.2.3 |
+| Version | 2.2.4 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -502,6 +502,15 @@ These are confirmed gaps as of 2026-06-24. Any agent working on these areas shou
 - [x] **Test coverage push** — **CLOSED Sprint Next-10 T3** 10 new service test files → 111 total / 1621+ tests: agentBrainService, workspaceFileService, proactiveAgentService, streamingService, browserAutomationService, backupService, composioService, agentActivityService, resourceCostService, marcusPublishService.
 - [ ] **Branch protection on `main`** — CI not yet required before merge (GitHub settings, manual step)
 - [x] **TypeScript migration (continued)** — **CLOSED Sprint Next-50 D5** App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx`. Total: 10 TSX components. Remaining JSX: 63 components.
+
+### v2.2.4 UX Restructure (2026-06-25)
+- [x] **Coach mode no visual feedback** — **CLOSED** `CoachContext.jsx` now sets `coachMode=true` and dispatches `alphonso:toast` even when Tauri window open fails. `ToastProvider` now listens to `window.alphonso:toast` CustomEvent for cross-context toasting.
+- [x] **ACC Bridge config overload in Content page** — **CLOSED** `ContentCatalystWorkspace.jsx` now shows a 2-line status indicator (connected/not, Sync + Refresh buttons). Full config stays in Settings → Connectors.
+- [x] **AgentDock not integrated in RightPanel** — **CLOSED** `AgentDock.jsx` added `embedded` prop (inline, no fixed positioning, no drag). `RightPanel.tsx` passes `agentDockCompanions` from App.tsx.
+- [x] **Activity page too thin for standalone** — **CLOSED** `RuntimeManagerView.jsx` now has a Runtimes/Activity tab bar; Activity tab renders `AgentActivityLog`. Sidebar `activity` item removed.
+- [x] **Knowledge/Files page too thin for standalone** — **CLOSED** `SettingsView.tsx` has a new "Knowledge" section that renders `FilesView`. Sidebar `files` item removed.
+- [x] **Automation operations not interactive** — **CLOSED** `AutomationView.jsx` operations now have Enable/Active toggle via `updateWorkflowOperationStatus`.
+- [x] **Telegram commands limited** — **CLOSED** 17 commands total: added `/ping`, `/agents`, `/nova`, `/scan` to `telegramCompanionService.js`.
 
 ### Runtime Hub (2026-06-23) — All 9 Gaps Fixed
 - [x] **runtime_manager.rs** — full rewrite; all 9 gaps addressed:

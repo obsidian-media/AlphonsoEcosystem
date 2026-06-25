@@ -65,6 +65,15 @@ export function ToastProvider({ children }) {
 
   const value = useMemo(() => toast, [toast]);
 
+  useEffect(() => {
+    const handler = (e) => {
+      const { message, type = 'info', title } = e.detail || {};
+      if (message) toast(type, title || '', message);
+    };
+    window.addEventListener('alphonso:toast', handler);
+    return () => window.removeEventListener('alphonso:toast', handler);
+  }, [toast]);
+
   return (
     <ToastContext.Provider value={value}>
       {children}
