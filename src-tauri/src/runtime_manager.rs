@@ -180,6 +180,18 @@ const TOOLS: &[ToolDef] = &[
     args: &["voice/backend/main.py", "--host", "127.0.0.1", "--port", "8765"],
   },
   ToolDef {
+    name: "n8n",
+    display_name: "n8n",
+    description: "n8n — local workflow automation engine (Docker)",
+    repo_url: None,
+    pip_packages: &[],
+    requirements_file: None,
+    port: Some(5678),
+    health_path: Some("/healthz"),
+    exe: "docker",
+    args: &["run", "-d", "--name", "n8n", "-p", "5678:5678", "-v", "n8n_data:/home/node/.n8n", "n8nio/n8n"],
+  },
+  ToolDef {
     name: "mcp-server",
     display_name: "MCP Server",
     description: "Exposes Alphonso as an MCP tool server on port 3333 — callable from Claude Desktop, Cursor, Windsurf, and any MCP-compatible AI tool. Requires Node.js.",
@@ -226,7 +238,7 @@ const TOOLS: &[ToolDef] = &[
     health_path: Some("/api/health"),
     exe: "docker",
     args: &[
-      "run", "--rm", "-it",
+      "run", "--rm", "-d",
       "-p", "3000:3000",
       "-e", "SANDBOX_RUNTIME_CONTAINER_IMAGE=ghcr.io/all-hands-ai/runtime:0.38",
       "-v", "/var/run/docker.sock:/var/run/docker.sock",

@@ -43,6 +43,9 @@ export function selectDistributionTarget(assignment) {
   if (/clickup/.test(actionType)) {
     return { type: 'publish', action: 'publish', platform: 'clickup' };
   }
+  if (/n8n|workflow.*trigger|automation.*trigger/.test(actionType)) {
+    return { type: 'n8n', action: 'trigger_webhook', platform: null };
+  }
 
   // Infer from payload
   const platform = payload.platform || null;
@@ -137,6 +140,37 @@ export async function executeMarcusSlackAction(commandText, assignment, options 
   }
 }
 
+// ── n8n execution ────────────────────────────────────────────────────────────
+
+export async function executeMarcusN8nAction(commandText, assignment, options = {}) {
+  const token = getConnectorCredential('n8n', 'N8N_BASE_URL');
+  const auth = isConnectorAuthenticated('n8n');
+
+  if (!auth.ok || !token) {
+    return {
+      ok: false,
+      error: 'n8n connector not authenticated. Add N8N_BASE_URL in Connector Setup.',
+      setupRequired: true
+    };
+  }
+
+  const payload = assignment?.payload || {};
+  const webhookPath = payload.webhookPath || options.webhookPath || 'default';
+
+  const n8n = await import('./connectors/n8nConnector.js');
+
+  try {
+    const result = await n8n.triggerN8nWebhook(webhookPath, {
+      commandText: String(commandText || '').slice(0, 2000),
+      assignment,
+      ...payload
+    });
+    return { ok: result.ok, type: 'n8n_webhook', webhookPath, data: result.data, error: result.error };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
+}
+
 // ── Schema builder ────────────────────────────────────────────────────────────
 
 export function buildMarcusExecutionRecord(result, assignment) {
@@ -205,6 +239,8 @@ export async function runMarcusDistribution(commandText, assignment, priorOutput
     execResult = await executeMarcusGitHubAction(commandText, assignment, options);
   } else if (target.type === 'slack') {
     execResult = await executeMarcusSlackAction(commandText, assignment, options);
+  } else if (target.type === 'n8n') {
+    execResult = await executeMarcusN8nAction(commandText, assignment, options);
   } else if (target.type === 'publish' && target.platform) {
     const payload = assignment?.payload || {};
     const publishResult = await executeMarcusPublish({

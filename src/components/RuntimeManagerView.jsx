@@ -23,6 +23,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Wand2,
+  Zap,
 } from 'lucide-react';
 import { AgentActivityLog } from './AgentActivityLog';
 import {
@@ -129,6 +130,13 @@ const TOOL_META = {
     docsUrl: 'https://github.com/All-Hands-AI/OpenHands',
     color: 'text-cyan-400',
     bg: 'bg-cyan-500/10 border-cyan-500/20',
+  },
+  n8n: {
+    icon: Zap,
+    category: 'Automation',
+    docsUrl: 'https://n8n.io',
+    color: 'text-orange-400',
+    bg: 'bg-orange-500/10 border-orange-500/20',
   },
 };
 
