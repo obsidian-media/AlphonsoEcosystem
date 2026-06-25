@@ -4,7 +4,7 @@
 
 # Alphonso
 
-> **v2.2.3** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
+> **v2.2.3-patch2** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.2.3-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-1930%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
@@ -22,6 +22,15 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 </div>
 
 ---
+
+## What's New in v2.2.3-patch2
+
+- **Jarvis Voice Button Wired** — The WebSocket voice pipeline (`useJarvisVoice`) is now a live mic button in the chat input bar. Pulses while listening, shows active agent in tooltip, and auto-populates the input with the transcript. Requires the FastAPI voice server (Runtime Manager → Voice OS).
+- **Agents Tab in Right Panel** — The right sidebar now has three tabs: **System | Audit | Agents**. The Agents tab shows live pulsing agent status badges without leaving the chat view.
+- **Compact Allowlist Panel** — `SentinelAllowlistPanel` restyled to fit the sidebar without overflowing. Inline form, abbreviated controls, scrollable entry list.
+- **Boot Crashes Fixed** — Three `invoke()` calls that silently returned `null` (not threw) were crashing on startup. Fixed with `?? []`/`?? {}` guards.
+- **Browse Buttons Fixed in Web Mode** — Output Folder and ComfyUI Dir Browse buttons now fall back to a hidden `<input webkitdirectory>` picker when Tauri's `pick_folder` is unavailable.
+- **Coach Mode Fixed in Web Mode** — Coach window button no longer freezes the app outside the Tauri desktop runtime.
 
 ## What's New in v2.2.3
 
@@ -130,7 +139,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~1,584 lines · 82 Tauri commands · 18 modules    │    │
+│  │  lib.rs ~2,024 lines · 82 Tauri commands · 18 modules    │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -226,10 +235,10 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 1,737+ tests across 120 files
+npm run test           # 1,930+ tests across 144 files
 npm run test:coverage  # Coverage report (~35%+; threshold 20%)
 npm run build          # Production build (OXC compiler)
-npm run verify:app     # lint + test + build in one command
+npm run verify:app     # lint + typecheck + test + build in one command
 npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```
 
@@ -267,7 +276,9 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.2.3** | June 24, 2026 | Chat UX consolidation: Jose pipeline/approval/Nova results inline in chat; connector verification fixed (UI credential store); auto-scroll fixed |
+| **v2.2.3-patch2** | June 25, 2026 | Jarvis voice button wired in ChatView; Agents tab in RightPanel (3 tabs); compact SentinelAllowlistPanel; boot null-guard fixes; Browse fallbacks; Coach mode fix in web mode |
+| v2.2.3-patch1 | June 25, 2026 | Full 16-bug audit: stale state fix, TS types, production voice path, code splitting, O(1) chat render, live connector status, SQLite delete, audit memoization |
+| v2.2.3 | June 24, 2026 | Chat UX consolidation: Jose pipeline/approval/Nova results inline in chat; connector verification fixed (UI credential store); auto-scroll fixed |
 | v2.2.2 | June 24, 2026 | Voice OS pipeline + OKLCH UI/UX overhaul — 144 test files, 1,930+ tests |
 | v2.0.8 | June 22, 2026 | Sprint Next-50: 5 resilience services, 5 new UI panels, 8 test files, ChatView enhancements, 10 TSX components, 1,737+ tests, mobile companion Phase 1–2 (Rust WebSocket server + React pairing UI with QR + mDNS) |
 | v2.0.6 | June 22, 2026 | CI rustfmt fix, documentation accuracy pass, mobile companion sprint plan executed (Phase 1–2 complete) |
