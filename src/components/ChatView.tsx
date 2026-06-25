@@ -17,7 +17,7 @@ function MessageListProfiler({ children, msgCount }) {
   );
 }
 import { invoke } from '@tauri-apps/api/core';
-import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Eye, EyeOff, History, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard, Zap as ZapIcon } from 'lucide-react';
+import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
@@ -38,7 +38,7 @@ import { listOrchestrationReceipts } from '../services/orchestrationReceiptServi
 import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
 import { startProactiveWatcher } from '../services/proactiveAgentService';
 import { MemorySearch } from './MemorySearch';
-import { runNovaAnalysis, computeOpportunityScores, classifyPriorityTier } from '../services/novaAnalysisService';
+import { runNovaAnalysis, computeOpportunityScores } from '../services/novaAnalysisService';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -200,7 +200,7 @@ interface ChatViewProps {
   ollamaStatus: { state: string; label?: string };
   installedModels: string[];
   selectedModelMissing?: boolean;
-  voice: { voiceStatus: string; toggleListening: () => void };
+  voice: { voiceStatus: string; toggleListening: () => void; liveTranscript?: string };
   onGenerationChange?: (generating: boolean) => void;
   onTaskComplete: () => void;
   onRetryOllama: () => void;
@@ -450,13 +450,14 @@ export function ChatView({
     if (files.length) setAttachedFiles((prev) => [...prev, ...files]);
   };
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isGenerating) return;
+  const handleSend = async (overrideInput?: string) => {
+    const effectiveInput = overrideInput !== undefined ? overrideInput : inputValue;
+    if (!effectiveInput.trim() || isGenerating) return;
     setNovaInsight(null);
     const filesSuffix = attachedFiles.length
       ? `\n\n[Attached files: ${attachedFiles.map((f) => f.name).join(', ')}]`
       : '';
-    const rawInput = inputValue.trim() + filesSuffix;
+    const rawInput = effectiveInput.trim() + filesSuffix;
     const cleanInput = directMode ? `[DIRECT:${directAgent}] ${rawInput}` : rawInput;
     const joseCommand = !directMode && (isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput));
 
@@ -679,8 +680,7 @@ export function ChatView({
   const retryLastMessage = () => {
     const lastUser = [...messages].reverse().find((m) => m.role === 'user');
     if (lastUser) {
-      setInputValue(lastUser.content);
-      handleSend();
+      handleSend(lastUser.content);
     }
   };
 
@@ -745,6 +745,9 @@ export function ChatView({
     }
     return -1;
   }, [messages]);
+
+  // O(1) global index lookup — avoids O(n²) messages.indexOf() inside visibleMessages.map()
+  const messageGlobalIndexMap = useMemo(() => new Map(messages.map((m, i) => [m, i])), [messages]);
 
   return (
     <div className="h-full flex flex-col">
@@ -939,7 +942,8 @@ export function ChatView({
         <MessageListProfiler msgCount={visibleMessages.length}>
         <AnimatePresence initial={false}>
         {visibleMessages.map((message) => {
-          const isLastAssistantMessage = message.role === 'assistant' && messages.indexOf(message) === lastAssistantIdx;
+          const msgGlobalIdx = messageGlobalIndexMap.get(message) ?? -1;
+          const isLastAssistantMessage = message.role === 'assistant' && msgGlobalIdx === lastAssistantIdx;
           return (
           <motion.div key={message.id} variants={messageIn} initial="hidden" animate="visible" exit={{ opacity: 0, y: -4 }} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (

@@ -136,7 +136,7 @@ export function RightPanel({
   useEffect(() => {
     const id = setInterval(onCheckOllama, 10 * 60 * 1000);
     return () => clearInterval(id);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onCheckOllama]);
 
   const compact = (text: unknown, max = 36): string => {
     const v = String(text || '');
@@ -207,7 +207,10 @@ export function RightPanel({
     );
   }
 
-  const auditEntries: AuditEntry[] = getAuditLog().slice(-10).reverse();
+  const auditEntries: AuditEntry[] = useMemo(
+    () => getAuditLog().slice(-10).reverse(),
+    [activeTab]
+  );
 
   const relativeTime = (ts: number): string => {
     const diff = Math.floor((Date.now() - ts) / 1000);

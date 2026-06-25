@@ -43,6 +43,16 @@ pub fn kv_get(app: tauri::AppHandle, key: String) -> Result<Option<String>, Stri
 }
 
 #[tauri::command]
+pub fn kv_delete(app: tauri::AppHandle, key: String) -> Result<(), String> {
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
+  ensure_kv_table(&conn)?;
+  conn
+    .execute("DELETE FROM kv_store WHERE key = ?1", params![key])
+    .map_err(|e| e.to_string())?;
+  Ok(())
+}
+
+#[tauri::command]
 pub fn save_settings(app: tauri::AppHandle, settings_json: String) -> Result<(), String> {
   let (conn, _) = crate::memory_store::open_memory_db(&app)?;
   ensure_kv_table(&conn)?;

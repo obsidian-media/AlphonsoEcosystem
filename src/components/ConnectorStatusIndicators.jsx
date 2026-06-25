@@ -30,9 +30,19 @@ export const ConnectorStatusDot = memo(function ConnectorStatusDot({ connectorId
   const [status, setStatus] = useState('disabled');
 
   useEffect(() => {
-    const connectors = listConnectors();
-    const connector = connectors.find((c) => c.id === connectorId);
-    setStatus(deriveStatus(connector));
+    const refresh = () => {
+      const connectors = listConnectors();
+      const connector = connectors.find((c) => c.id === connectorId);
+      setStatus(deriveStatus(connector));
+    };
+    refresh();
+    const id = setInterval(refresh, 5000);
+    const onSaved = () => refresh();
+    window.addEventListener('alphonso-connector-saved', onSaved);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('alphonso-connector-saved', onSaved);
+    };
   }, [connectorId]);
 
   const colorMap = {
@@ -57,7 +67,14 @@ export const ConnectorStatusStrip = memo(function ConnectorStatusStrip({ zeroCos
   const [connectors, setConnectors] = useState(() => listConnectors());
 
   useEffect(() => {
-    setConnectors(listConnectors());
+    const refresh = () => setConnectors(listConnectors());
+    refresh();
+    const id = setInterval(refresh, 5000);
+    window.addEventListener('alphonso-connector-saved', refresh);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('alphonso-connector-saved', refresh);
+    };
   }, []);
 
   const counts = connectors.reduce((acc, c) => {

@@ -20,7 +20,6 @@ import { checkOllama, fetchOllamaModels, normalizeEndpoint, pullOllamaModel } fr
 import { setStorage } from '../lib/appStorage';
 import { buildOllamaPreflightEvent, recordEvent as recordOllamaPreflightEvent } from '../services/eventsService';
 import { invoke } from '@tauri-apps/api/core';
-import { checkPrerequisites, startTool, waitForTool } from '../services/runtimeManagerService';
 import { setComposioConfig } from '../services/composioService';
 
 function openExternal(url) {
@@ -79,6 +78,7 @@ function CheckOllamaStep({ onNext }) {
     let pq = prereqs;
     if (!pq) {
       try {
+        const { checkPrerequisites } = await import('../services/runtimeManagerService');
         pq = await checkPrerequisites();
         setPrereqs(pq);
       } catch {
@@ -146,6 +146,7 @@ function CheckOllamaStep({ onNext }) {
     setStarting(true);
     setStartMsg('Starting Ollama via Runtime Hub…');
     try {
+      const { startTool, waitForTool } = await import('../services/runtimeManagerService');
       const result = await startTool('ollama');
       if (!result.ok) {
         setStartMsg(result.message);

@@ -1,4 +1,3 @@
-import { getAllStatus } from './runtimeManagerService';
 
 const CREATIVE_PATTERNS = {
   image_generation: /\b(generate|create|draw|make|render)\b.{0,30}\b(image|photo|picture|illustration|artwork|poster|thumbnail)\b/i,
@@ -21,7 +20,10 @@ export function detectCreativeIntent(commandText) {
 
 export async function routeToCreativeTool(intent) {
   let statuses;
-  try { statuses = await getAllStatus(); } catch { return null; }
+  try {
+    const { getAllStatus } = await import('./runtimeManagerService');
+    statuses = await getAllStatus();
+  } catch { return null; }
   const running = (statuses || []).filter(s => s.status === 'running').map(s => s.name);
   const preferred = TOOL_PRIORITY[intent] || [];
   const tool = preferred.find(t => running.includes(t));

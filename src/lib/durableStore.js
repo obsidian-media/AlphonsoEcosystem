@@ -22,6 +22,6 @@ export function durableSet(key, value) {
 export function durableRemove(key) {
   localStorage.removeItem(key);
   if (tauriInvoke) {
-    tauriInvoke('kv_set', { key, value: '' }).catch(() => {});
+    tauriInvoke('kv_delete', { key }).catch(() => {});
   }
 }

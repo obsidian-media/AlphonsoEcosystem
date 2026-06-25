@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { emit } from '@tauri-apps/api/event';
 import { getStorage } from '../lib/appStorage';
 import { INITIAL_CONVERSATION_ID, VERIFICATION_LOG_CAP, SNAPSHOT_HISTORY_CAP, MEMORY_EXPIRY_MS, SCREEN_OBSERVER_INTERVAL_MS } from '../constants/appConstants';
 import { listMemoryItems, pushMemoryItem } from '../services/memoryService';
@@ -86,7 +87,7 @@ export function useAppShellState({
       error: payload.error ?? null, durationMs: payload.durationMs ?? null, ...payload
     };
     try {
-      void invoke('alphonso-native-proof-stage', { fileName: stageFileName, ...content }).catch(() => {});
+      void emit('alphonso-native-proof-stage', { fileName: stageFileName, ...content }).catch(() => {});
       void invoke('write_workspace_text_file', {
         workspaceRoot: proofWorkspaceRoot, relativePath: `release/rc0/proof/${stageFileName}`,
         content: JSON.stringify(content, null, 2)

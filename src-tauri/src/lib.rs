@@ -36,7 +36,7 @@ use voice_sidecar::VoiceSidecar;
 
 pub(crate) use audit_log::*;
 pub(crate) use connector_commands::*;
-pub(crate) use kv_store::{kv_get, kv_set, load_settings, save_settings};
+pub(crate) use kv_store::{kv_delete, kv_get, kv_set, load_settings, save_settings};
 pub(crate) use memory_store::*;
 pub(crate) use meta_publish::*;
 pub(crate) use native_proof::{
@@ -1937,6 +1937,7 @@ pub fn run() {
       load_settings,
       kv_set,
       kv_get,
+      kv_delete,
       verify_paths,
       read_runtime_env_value,
       alphonso_bridge_status,

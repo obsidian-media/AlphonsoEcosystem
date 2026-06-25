@@ -1,7 +1,6 @@
 // @ts-nocheck
 import React, { useState } from 'react';
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Zap } from 'lucide-react';
-import { startTool } from '../services/runtimeManagerService';
 
 /**
  * Global banner shown in the main app shell whenever Ollama is not connected.
@@ -20,6 +19,7 @@ export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }) {
     setStarting(true);
     setStartMsg(null);
     try {
+      const { startTool } = await import('../services/runtimeManagerService');
       const result = await startTool('ollama');
       setStartMsg(result.ok ? 'Ollama starting… retrying in 3s.' : result.message);
       if (result.ok) {

@@ -261,6 +261,7 @@ export function ConnectorSetupPanel() {
     setConnectors(listConnectors());
     setAudit(listConnectorAudit());
     setAuthProfiles(listConnectorAuthProfiles());
+    window.dispatchEvent(new CustomEvent('alphonso-connector-saved'));
   };
 
   const showNotice = (msg, type = 'info') => {
