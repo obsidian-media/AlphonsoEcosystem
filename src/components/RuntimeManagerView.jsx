@@ -102,6 +102,20 @@ const TOOL_META = {
     color: 'text-[var(--agent-nova)]',
     bg: 'bg-[var(--agent-nova-glow)] border-[var(--border)]',
   },
+  'mcp-server': {
+    icon: Activity,
+    category: 'Integration',
+    docsUrl: 'https://modelcontextprotocol.io',
+    color: 'text-purple-400',
+    bg: 'bg-purple-500/10 border-purple-500/20',
+  },
+  'alphonso-bridge': {
+    icon: Activity,
+    category: 'Integration',
+    docsUrl: 'https://modelcontextprotocol.io',
+    color: 'text-violet-400',
+    bg: 'bg-violet-500/10 border-violet-500/20',
+  },
   chromadb: {
     icon: Layers,
     category: 'Memory',

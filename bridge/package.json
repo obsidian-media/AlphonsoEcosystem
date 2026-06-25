@@ -1,0 +1,12 @@
+{
+  "name": "alphonso-bridge",
+  "version": "1.0.0",
+  "description": "HTTP bridge between MCP server and Alphonso frontend (via shared localStorage/kv_store)",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}

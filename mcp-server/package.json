@@ -1,0 +1,12 @@
+{
+  "name": "alphonso-mcp-server",
+  "version": "1.0.0",
+  "description": "Alphonso MCP server — expose Alphonso agents as tools to Claude Desktop, Cursor, Windsurf, and any MCP-compatible AI",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}

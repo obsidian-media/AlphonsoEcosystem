@@ -1277,6 +1277,7 @@ export function SettingsView({
       </div>
 
       <AccBridgeSettings />
+      <McpServerInfo />
     </div>
   )}
       </div>
@@ -1424,6 +1425,32 @@ function MeetingTranscriptionPanel() {
         <p className="text-xs text-red-400">✗ {error}</p>
       )}
     </div>
+  );
+}
+
+function McpServerInfo() {
+  return (
+    <section className="mt-6 border-t border-white/5 pt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="w-4 h-4 text-purple-400" />
+        <span className="text-sm font-semibold text-[var(--text-1)]">MCP Server — Connect AI Tools</span>
+      </div>
+      <p className="text-xs text-[var(--text-3)] mb-3">
+        Expose Alphonso's 9 agents as tools in Claude Desktop, Cursor, Windsurf, and any MCP-compatible AI editor.
+      </p>
+      <div className="bg-zinc-900/60 rounded-xl border border-purple-500/20 p-4 space-y-2 font-mono text-xs">
+        <p className="text-purple-300">1. Start "Alphonso Bridge" + "MCP Server" in Runtime Hub</p>
+        <p className="text-purple-300">2. Add to your AI editor's MCP config:</p>
+        <pre className="text-zinc-400 bg-zinc-950 rounded p-2 overflow-x-auto">{`{
+  "mcpServers": {
+    "alphonso": {
+      "url": "http://localhost:3333"
+    }
+  }
+}`}</pre>
+        <p className="text-zinc-500">Tools available: run_pipeline · search_memory · research · get_status · get_receipts</p>
+      </div>
+    </section>
   );
 }
 
