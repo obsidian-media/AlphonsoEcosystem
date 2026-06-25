@@ -1921,3 +1921,105 @@ pub(crate) async fn transcribe_audio_file(
   std::fs::read_to_string(&txt_path)
     .map_err(|e| format!("Could not read whisper output at {}: {e}", txt_path.display()))
 }
+
+// ── Inbox file watcher commands ───────────────────────────────────────────────
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct InboxFileProof {
+  pub(crate) relative_path: String,
+  pub(crate) filename: String,
+  pub(crate) bytes: u64,
+  pub(crate) modified_at_ms: u64,
+  pub(crate) trust: String,
+}
+
+/// Poll the inbox directory and return a list of unprocessed files.
+/// A file is considered "unprocessed" if it does NOT have a .processed suffix.
+#[tauri::command]
+pub(crate) fn watch_inbox_poll(
+  workspace_root: String,
+  inbox_path: String,
+) -> Result<Vec<InboxFileProof>, String> {
+  let root = PathBuf::from(&workspace_root);
+  let inbox = if Path::new(&inbox_path).is_absolute() {
+    PathBuf::from(&inbox_path)
+  } else {
+    root.join(&inbox_path)
+  };
+
+  if !inbox.exists() {
+    return Ok(vec![]);
+  }
+
+  let mut files = Vec::new();
+  let entries = fs::read_dir(&inbox).map_err(|e| format!("Failed to read inbox: {e}"))?;
+
+  for entry in entries.flatten() {
+    let path = entry.path();
+    if !path.is_file() { continue; }
+
+    let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+
+    // Skip already-processed files
+    if filename.ends_with(".processed") { continue; }
+
+    let meta = fs::metadata(&path).map_err(|e| format!("Failed to stat {}: {e}", path.display()))?;
+    let modified_at_ms = meta
+      .modified()
+      .ok()
+      .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+      .map(|d| d.as_millis() as u64)
+      .unwrap_or(0);
+
+    let relative_path = path
+      .strip_prefix(&root)
+      .unwrap_or(&path)
+      .to_string_lossy()
+      .to_string();
+
+    files.push(InboxFileProof {
+      relative_path,
+      filename,
+      bytes: meta.len(),
+      modified_at_ms,
+      trust: "verified".to_string(),
+    });
+  }
+
+  Ok(files)
+}
+
+/// Mark an inbox file as processed by renaming it with a .processed suffix.
+#[tauri::command]
+pub(crate) fn mark_inbox_file_processed(
+  workspace_root: String,
+  inbox_path: String,
+  relative_path: String,
+) -> Result<WorkspaceWriteProof, String> {
+  let root = PathBuf::from(&workspace_root);
+  let source = if Path::new(&relative_path).is_absolute() {
+    PathBuf::from(&relative_path)
+  } else {
+    root.join(&relative_path)
+  };
+
+  if !source.exists() {
+    return Err(format!("File not found: {}", source.display()));
+  }
+
+  let new_name = format!("{}.processed", source.file_name().unwrap_or_default().to_string_lossy());
+  let dest = source.with_file_name(new_name);
+
+  fs::rename(&source, &dest).map_err(|e| format!("Failed to rename {}: {e}", source.display()))?;
+
+  let now = now_ms();
+  Ok(WorkspaceWriteProof {
+    file_path: dest.to_string_lossy().to_string(),
+    relative_path: dest.strip_prefix(&root).unwrap_or(&dest).to_string_lossy().to_string(),
+    written: true,
+    written_at_ms: now,
+    bytes: 0,
+    trust: "verified".to_string(),
+  })
+}

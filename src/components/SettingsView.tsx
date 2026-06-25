@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic } from 'lucide-react';
+import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
@@ -1165,6 +1165,10 @@ export function SettingsView({
         <SectionHeader icon={Database} label="Session History" />
         <SessionHistoryView />
       </section>
+      <section className="space-y-4">
+        <SectionHeader icon={FolderOpen} label="Echo Inbox Folder Watcher" />
+        <InboxFolderConfig />
+      </section>
     </div>
   )}
   {activeSection === 'appearance' && (
@@ -1489,6 +1493,79 @@ function AccBridgeSettings() {
         </button>
       </div>
     </section>
+  );
+}
+
+function InboxFolderConfig() {
+  const [inboxPath, setInboxPath] = useState('');
+  const [enabled, setEnabled] = useState(false);
+  const [pollSec, setPollSec] = useState(30);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const { getWatcherConfig } = require('../services/echoFileWatcherService');
+      const cfg = getWatcherConfig();
+      if (cfg) {
+        setInboxPath(cfg.inboxPath || '');
+        setEnabled(cfg.enabled || false);
+        setPollSec(cfg.pollIntervalSec || 30);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  function handleSave() {
+    try {
+      const { saveWatcherConfig } = require('../services/echoFileWatcherService');
+      saveWatcherConfig({ inboxPath, enabled, pollIntervalSec: pollSec });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-4">
+      <div className="space-y-1">
+        <div className="text-sm font-semibold text-white">Inbox Folder Path</div>
+        <div className="text-xs text-zinc-500">Directory to watch for new files. New files are auto-ingested into Echo memory by Jose.</div>
+      </div>
+      <input
+        type="text"
+        value={inboxPath}
+        onChange={(e) => setInboxPath(e.target.value)}
+        placeholder="C:\Users\You\Documents\Inbox"
+        className="w-full px-3 py-2 bg-zinc-800/60 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setEnabled(!enabled)}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+            enabled
+              ? 'bg-teal-500/20 border-teal-400/30 text-teal-300'
+              : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
+          }`}
+        >
+          {enabled ? 'Enabled' : 'Disabled'}
+        </button>
+        <span className="text-xs text-zinc-500">Poll every {pollSec}s</span>
+        <input
+          type="range"
+          min={10}
+          max={120}
+          step={5}
+          value={pollSec}
+          onChange={(e) => setPollSec(Number(e.target.value))}
+          className="w-24 accent-teal-500"
+        />
+      </div>
+      <button
+        onClick={handleSave}
+        className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-xl transition-colors"
+      >
+        <Save className="w-4 h-4" />
+        {saved ? 'Saved' : 'Save Config'}
+      </button>
+    </div>
   );
 }
 

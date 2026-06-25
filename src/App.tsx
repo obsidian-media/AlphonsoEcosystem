@@ -266,6 +266,30 @@ function AppShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Echo file watcher background service
+  useEffect(() => {
+    let watcherStop: (() => void) | null = null;
+    (async () => {
+      try {
+        const { startFileWatcher, getWatcherConfig } = await import('./services/echoFileWatcherService');
+        const config = getWatcherConfig();
+        if (config?.enabled && config?.inboxPath) {
+          watcherStop = startFileWatcher((result) => {
+            if (result?.ingested > 0) {
+              addNotification({
+                type: 'success',
+                title: 'Echo auto-ingest',
+                message: `${result.ingested} file(s) ingested from inbox.`
+              });
+            }
+          });
+        }
+      } catch { /* non-critical */ }
+    })();
+    return () => { try { watcherStop?.(); } catch { /* ignore */ } };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (isCoachWindow) {
     return (
       <CoachWindow
