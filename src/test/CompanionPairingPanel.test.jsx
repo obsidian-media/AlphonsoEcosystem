@@ -16,7 +16,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 vi.mock('qrcode.react', () => ({
-  QRCodeCanvas: ({ value }) => <span data-testid="qr-code">{value}</span>,
+  QRCodeCanvas: ({ value }) => <canvas data-testid="qr-code" data-value={value} />,
 }));
 
 import { invoke } from '@tauri-apps/api/core';
@@ -24,8 +24,11 @@ import { CompanionPairingPanel } from '../components/CompanionPairingPanel.jsx';
 
 describe('CompanionPairingPanel', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     invoke.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('shows server not running when status call fails', async () => {
@@ -91,7 +94,7 @@ describe('CompanionPairingPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /Generate PIN/i }));
     await waitFor(() => {
       expect(screen.getByTestId('qr-code')).toBeTruthy();
-      expect(screen.getByTestId('qr-code').textContent).toBe('123456');
+      expect(screen.getByTestId('qr-code').getAttribute('data-value')).toBe('123456');
     });
   });
 

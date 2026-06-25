@@ -106,7 +106,7 @@ export function CompanionPairingPanel() {
               </button>
             </div>
             <div className="flex justify-center p-4 bg-zinc-900/70 rounded-xl">
-              <QRCode value={pin} size={128} bgColor="#18181b" fgColor="#34d399" />
+              <QRCodeCanvas value={pin} size={128} bgColor="#18181b" fgColor="#34d399" />
             </div>
           </div>
         )}

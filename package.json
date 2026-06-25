@@ -31,6 +31,7 @@
     "preview": "node scripts/run-vite-preview.mjs",
     "tauri": "tauri",
     "test:e2e": "playwright test",
+    "test:rust": "cd src-tauri && cargo test",
     "version:bump": "node scripts/bump-version.mjs",
     "prepare": "husky"
   },

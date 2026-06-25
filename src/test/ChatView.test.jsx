@@ -140,7 +140,7 @@ describe('ChatView', () => {
 
   it('shows empty state when no messages', () => {
     render(<ChatView {...makeProps()} />);
-    expect(screen.getByText('Start a conversation')).toBeTruthy();
+    expect(screen.getByText('What can I help you build?')).toBeTruthy();
   });
 
   it('shows Ollama offline hint when not connected', () => {
