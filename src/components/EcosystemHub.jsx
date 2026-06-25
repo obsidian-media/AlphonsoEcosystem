@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
   CheckCircle2,
@@ -216,6 +217,14 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
         </div>
       </header>
 
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={showAdvancedSections ? 'advanced' : 'essential'}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.15 }}
+      >
       <EcosystemMaturityPanelsGate
         showAdvancedSections={showAdvancedSections}
         settings={settings}
@@ -394,6 +403,8 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
           <SnapshotDiffPanel snapshots={snapshots} />
         </>
       )}
+      </motion.div>
+      </AnimatePresence>
     </div>
     </div>
   );
@@ -574,9 +585,9 @@ function MarketplacePanel({ marketItems, onRefresh }) {
 
 function Panel({ icon: Icon, title, children }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3.5">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-400 font-bold mb-3">
-        <Icon className="w-4 h-4 text-indigo-300" /> {title}
+    <section className="card">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)] mb-3">
+        <Icon className="w-3.5 h-3.5 text-[var(--accent)]" /> {title}
       </div>
       {children}
     </section>

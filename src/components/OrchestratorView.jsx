@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
   AlertTriangle,
@@ -382,6 +383,15 @@ export function OrchestratorView({
         ))}
       </div>
 
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={orchTab}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.15 }}
+      >
+
       {/* Command Tab */}
       {orchTab === 'command' && (
         <div className="space-y-4">
@@ -625,7 +635,7 @@ export function OrchestratorView({
         </div>
       )}
 
-      {/* Monitor Tab */}
+      {/* Monitor Tab — keep same */}
       {orchTab === 'monitor' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -734,6 +744,8 @@ export function OrchestratorView({
           </OCard>
         </div>
       )}
+      </motion.div>
+      </AnimatePresence>
       </div>
     </div>
   );
@@ -741,8 +753,8 @@ export function OrchestratorView({
 
 function OCard({ label, children }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
-      {label && <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</div>}
+    <div className="card">
+      {label && <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>}
       {children}
     </div>
   );
@@ -750,7 +762,7 @@ function OCard({ label, children }) {
 
 function ApproveBtn({ onClick, children }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-emerald-300 hover:bg-emerald-500/15 transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--success)]/25 bg-[var(--success)]/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-emerald-300 hover:bg-[var(--success)]/15 transition-colors">
       {children}
     </button>
   );
@@ -758,7 +770,7 @@ function ApproveBtn({ onClick, children }) {
 
 function RejectBtn({ onClick, children }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-red-300 hover:bg-red-500/15 transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--error)]/25 bg-[var(--error)]/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-red-300 hover:bg-[var(--error)]/15 transition-colors">
       {children}
     </button>
   );
@@ -766,7 +778,7 @@ function RejectBtn({ onClick, children }) {
 
 function NeutralBtn({ onClick, disabled, children }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className="rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-zinc-300 hover:bg-zinc-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+    <button type="button" onClick={onClick} disabled={disabled} className="btn-secondary text-[10px] px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
       {children}
     </button>
   );

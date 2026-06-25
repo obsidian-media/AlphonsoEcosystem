@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { listAgentProfiles } from '../../agents/agentRegistry';
 import { JOSE_PERMISSIONS } from '../../agents/jose/josePermissions';
 import { ALPHONSO_PERMISSIONS } from '../../agents/alphonso/alphonsoPermissions';
@@ -198,6 +199,16 @@ export function ProjectExecutionMode() {
             </button>
           ))}
         </div>
+
+        {/* Tab content with Framer Motion */}
+        <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15 }}
+        >
 
         {/* Setup Tab */}
         {activeTab === 'setup' && (
@@ -472,6 +483,9 @@ export function ProjectExecutionMode() {
             )}
           </div>
         )}
+
+        </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -479,15 +493,24 @@ export function ProjectExecutionMode() {
 
 function Card({ label, children }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
-      {label && <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</div>}
+    <div className="card">
+      {label && <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>}
       {children}
     </div>
   );
 }
 
-function EmptyState({ text }) {
-  return <p className="text-[12px] text-zinc-600">{text}</p>;
+function EmptyState({ text, onAction, actionLabel }) {
+  return (
+    <div className="py-6 text-center space-y-3">
+      <p className="text-[12px] text-[var(--text-3)]">{text}</p>
+      {onAction && (
+        <button type="button" onClick={onAction} className="btn-primary text-[11px] px-4 py-2">
+          {actionLabel || 'Get started'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function Row({ label, value }) {

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bot,
   Clapperboard,
@@ -761,42 +762,48 @@ export function MiyaStudio({
   return (
     <div className="h-full overflow-y-auto">
     <div className="max-w-6xl mx-auto px-8 py-8 space-y-6">
-      <header className="rounded-2xl border border-fuchsia-400/20 bg-gradient-to-r from-fuchsia-950/40 via-zinc-950 to-zinc-950 p-6">
-        <div className="flex items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-fuchsia-300 font-bold">Miya Creative Studio</div>
-            <h1 className="text-2xl font-bold text-fuchsia-100">Creator Agent Workspace</h1>
-            <p className="text-sm text-fuchsia-100/70">
-              Miya specializes in storytelling, campaign design, visual prompts, thumbnails, and creative handoffs to Alphonso.
-            </p>
-            <div className="text-xs text-fuchsia-200/80">{companionMessage}</div>
+      <header className="pb-5 border-b border-white/[0.06]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--agent-miya)]/70">Creative Studio</div>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Miya — Creator Agent</h1>
+            <p className="mt-1 text-[13px] text-zinc-500">{companionMessage || 'Storytelling, prompts, thumbnails, and creative handoffs.'}</p>
           </div>
-          <div className="h-24 w-24 rounded-2xl overflow-hidden border border-fuchsia-300/25 bg-zinc-900">
+          <div className="h-14 w-14 rounded-xl overflow-hidden border border-[var(--agent-miya)]/20 bg-zinc-900 shrink-0">
             <img src={miyaMascot} alt="Miya mascot" className="h-full w-full object-cover object-center miya-breathe" />
           </div>
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1">
         {studioTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold uppercase tracking-widest ${
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
               activeTab === tab.id
-                ? 'border-fuchsia-400/35 bg-fuchsia-500/15 text-fuchsia-100'
-                : 'border-white/10 bg-zinc-900/50 text-zinc-400 hover:bg-zinc-800/60'
+                ? 'bg-white/10 text-white'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            <tab.icon className="h-3.5 w-3.5" />
+            <tab.icon className="h-3 w-3" />
             {tab.label}
           </button>
         ))}
       </div>
 
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.15 }}
+      >
+
       {/* Brand Kit — full width */}
       {activeTab === 'brand' && (
-        <section className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-5">
+        <section className="card">
           <BrandKitEditor brandKit={brandKit} setBrandKit={setBrandKit} onSave={saveBrandKit} />
         </section>
       )}
@@ -805,8 +812,8 @@ export function MiyaStudio({
       {activeTab === 'prompt' && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
-            <section className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
-              <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Pipeline Inputs</div>
+            <section className="card">
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Pipeline Inputs</div>
               <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
             </section>
             <LocalGenerationPanel
@@ -841,14 +848,14 @@ export function MiyaStudio({
       {activeTab !== 'brand' && activeTab !== 'prompt' && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
-            <section className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
-              <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Pipeline Inputs</div>
+            <section className="card">
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Pipeline Inputs</div>
               <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
               <div className="mt-4 flex items-center gap-3">
                 <button
                   onClick={generateScriptToVideoPackage}
                   disabled={isGenerating || !canGenerate}
-                  className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/10 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-fuchsia-200 hover:bg-fuchsia-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isGenerating ? 'Generating…' : 'Generate Package'}
                 </button>
@@ -883,6 +890,9 @@ export function MiyaStudio({
           </div>
         </div>
       )}
+
+      </motion.div>
+      </AnimatePresence>
 
       <div className="rounded-xl border border-white/[0.06] bg-zinc-900/30 px-4 py-2.5 text-[11px] text-zinc-600 flex items-center gap-3">
         <span>State: <span className="text-zinc-400">{companionState}</span></span>

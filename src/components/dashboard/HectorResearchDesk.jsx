@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Compass, Download } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { BookOpen, ChevronDown, ChevronRight, Compass, Download } from 'lucide-react';
 import { HECTOR_PROFILE } from '../../agents/hector/hectorProfile';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../../agents/hector/hectorPermissions';
 import { HECTOR_SOURCE_TYPES } from '../../agents/hector/hectorResearchSchema';
@@ -179,8 +180,8 @@ export function HectorResearchDesk({ onHectorStateChange }) {
               onClick={() => setActiveTab(tab.id)}
               className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-teal-500/10 text-teal-200 border border-teal-400/20'
-                  : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
               {tab.label}
@@ -188,21 +189,30 @@ export function HectorResearchDesk({ onHectorStateChange }) {
           ))}
         </div>
 
+        <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15 }}
+        >
+
         {/* New Research Tab */}
         {activeTab === 'new' && (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-5 space-y-4">
+            <div className="card space-y-4">
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">Research Question</label>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Research Question</label>
                 <input
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="What do you want Hector to research?"
-                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-teal-400/30"
+                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-[var(--agent-hector)]/40"
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">Source Type</label>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source Type</label>
                 <select
                   value={sourceType}
                   onChange={(e) => setSourceType(e.target.value)}
@@ -212,30 +222,30 @@ export function HectorResearchDesk({ onHectorStateChange }) {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">Source URLs <span className="text-zinc-600 normal-case font-normal">(optional, one per line)</span></label>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source URLs <span className="text-zinc-600 normal-case font-normal">(optional, one per line)</span></label>
                 <textarea
                   value={sourceUrls}
                   onChange={(e) => setSourceUrls(e.target.value)}
                   rows={3}
-                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-teal-400/30"
+                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-[var(--agent-hector)]/40"
                   placeholder="Leave blank for Hector to discover sources, or add specific URLs here."
                 />
               </div>
               <button
                 onClick={createDraft}
                 disabled={!question.trim()}
-                className="rounded-xl border border-teal-400/20 bg-teal-500/10 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-teal-200 hover:bg-teal-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Create Research Draft
               </button>
             </div>
 
             {/* Permissions — compact collapsible */}
-            <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60">
+            <div className="panel-flat">
               <button
                 type="button"
                 onClick={() => setShowPermissions((v) => !v)}
-                className="flex w-full items-center justify-between px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="btn-ghost flex w-full items-center justify-between px-4 py-3 text-[10px] font-bold uppercase tracking-[0.15em]"
               >
                 <span>Hector Permissions</span>
                 {showPermissions ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -268,21 +278,25 @@ export function HectorResearchDesk({ onHectorStateChange }) {
         {activeTab === 'reports' && (
           <div className="space-y-4">
             {reports.length === 0 ? (
-              <div className="rounded-2xl border border-white/[0.06] bg-zinc-950/50 p-10 text-center">
-                <p className="text-sm text-zinc-500">No research reports yet.</p>
+              <div className="card py-12 text-center space-y-4">
+                <BookOpen className="mx-auto h-8 w-8 text-[var(--agent-hector)]/50" />
+                <div>
+                  <p className="text-[13px] font-semibold text-[var(--text-2)]">No research reports yet</p>
+                  <p className="mt-1 text-[11px] text-[var(--text-3)]">Create a research draft to get started.</p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setActiveTab('new')}
-                  className="mt-3 text-[11px] font-semibold text-teal-400 hover:text-teal-300"
+                  className="btn-primary"
                 >
-                  Create your first research draft →
+                  Create first draft
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.4fr] gap-4">
                 {/* Report Index */}
-                <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
-                  <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">All Reports</div>
+                <div className="card">
+                  <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">All Reports</div>
                   <div className="space-y-1.5 max-h-[32rem] overflow-y-auto pr-1">
                     {reports.slice().reverse().map((report) => (
                       <button
@@ -290,7 +304,7 @@ export function HectorResearchDesk({ onHectorStateChange }) {
                         onClick={() => setSelectedId(report.id)}
                         className={`w-full rounded-xl border p-3 text-left transition-colors ${
                           selectedReport?.id === report.id
-                            ? 'border-teal-400/25 bg-teal-500/10'
+                            ? 'border-[var(--agent-hector)]/30 bg-[var(--agent-hector)]/10'
                             : 'border-white/[0.06] bg-zinc-900/40 hover:bg-zinc-900/60'
                         }`}
                       >
@@ -307,14 +321,14 @@ export function HectorResearchDesk({ onHectorStateChange }) {
                     <button
                       onClick={fetchSources}
                       disabled={!selectedReport?.id || isFetching}
-                      className="flex-1 rounded-xl border border-teal-400/20 bg-teal-500/10 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-teal-200 hover:bg-teal-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {isFetching ? 'Researching…' : 'Run Live Research'}
                     </button>
                     <button
                       onClick={exportReport}
                       disabled={!selectedReport}
-                      className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-[11px] font-semibold text-zinc-300 hover:bg-zinc-700/60 disabled:opacity-40 transition-colors"
+                      className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
                     >
                       <Download className="h-3.5 w-3.5" /> Export
                     </button>
@@ -380,6 +394,9 @@ export function HectorResearchDesk({ onHectorStateChange }) {
             )}
           </div>
         )}
+
+        </motion.div>
+        </AnimatePresence>
 
         <p className="text-[11px] text-zinc-700 pb-2">
           {HECTOR_PROFILE.name}: {HECTOR_PROFILE.allowedSummary}

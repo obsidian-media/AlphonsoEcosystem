@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
 import { requireApproval } from '../../../services/approval/approvalService';
 import {
@@ -253,7 +254,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
               type="button"
               disabled={bridgeBusy}
               onClick={handleBridgeSyncActiveJob}
-              className="rounded-full border border-cyan-400/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200 transition hover:border-cyan-300 hover:text-cyan-100 disabled:opacity-50"
+              className="rounded-full border border-[var(--accent-border)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--accent)] transition hover:border-[var(--accent)] hover:text-white disabled:opacity-50"
             >
               Sync
             </button>
@@ -288,6 +289,15 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
           </button>
         ))}
       </div>
+
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={contentTab}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.15 }}
+      >
 
       {/* Create tab */}
       {contentTab === 'create' && (
@@ -349,6 +359,9 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
           />
         </div>
       )}
+
+      </motion.div>
+      </AnimatePresence>
 
     </div>
     </div>
