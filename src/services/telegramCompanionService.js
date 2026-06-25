@@ -8,6 +8,7 @@ import { getStorage, setStorage } from '../lib/appStorage';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { runQuickScan } from './sentinelSecurityService';
 import { getOpportunityHistory } from './novaAnalysisService';
+import { listOrchestrationReceipts } from './orchestrationReceiptService';
 
 const INBOUND_POLL_MS = 4000;
 const PUSH_WATCHER_MS = 6000;
@@ -98,24 +99,37 @@ function formatShortId(fullId) {
 function formatCommandList() {
   return `👋 Alphonso companion active.
 
-📋 Commands:
+🤖 Core:
 /ask <text> — send a command to Jose
-/status — system status (Ollama, queue, activity)
+/status — system + Ollama status
 /report — full summary: status + queue + activity
+/ping — check Alphonso is alive
+
+📥 Approvals:
 /queue — pending approvals
 /approve <id> — approve a packet
 /reject <id> — reject a packet
-/activity — recent agent activity (last 8)
+
+🔍 Research & Memory:
+/research <topic> — live web research via Hector
+/memory [query] — search or list recent memories
+/nova — latest opportunity score + trend
+
+📡 Agents & Security:
 /agents — show all 9 agent statuses
-/memory — last 5 memory items
-/nova — latest opportunity score + history
+/activity — recent agent activity (last 8)
 /scan — run Sentinel security scan
+/receipts — last 5 completed task receipts
+
+📂 Files & Workspace:
 /files — list workspace files
-/ping — check Alphonso is alive
+/read <filename> — read a workspace file
+
+⚙️ Settings:
 /stop — pause push notifications
 /resume — resume push notifications
-/resetowner — re-register this chat as owner
-/help — show this command list`;
+/resetowner — re-register this chat
+/help — show this list`;
 }
 
 export async function handleStatusCommand(token, chatId) {
@@ -407,6 +421,82 @@ ${lines.join('\n')}`;
   return sendTelegramMessageInternal({ token, chatId, text: filesText });
 }
 
+async function handleResearchCommand(token, chatId, query) {
+  if (!query) {
+    return sendTelegramMessageInternal({ token, chatId, text: 'Usage: /research <topic>' });
+  }
+  await sendTelegramMessageInternal({ token, chatId, text: `🔍 Hector researching: "${query}"…` });
+  try {
+    // Route through Jose as a research command so the full pipeline runs
+    await createJoseCommandRoute({ commandText: `ask hector: research ${query}`, source: 'telegram' });
+    return sendTelegramMessageInternal({ token, chatId, text: "📋 Research task queued. I'll push results when Hector is done." });
+  } catch (e) {
+    return sendTelegramMessageInternal({ token, chatId, text: `❌ Research failed: ${e.message}` });
+  }
+}
+
+async function handleMemorySearchCommand(token, chatId, query) {
+  const items = listMemoryItems();
+  const filtered = query
+    ? items.filter(m => {
+        const haystack = `${m.title || ''} ${m.content || ''} ${m.category || ''}`.toLowerCase();
+        return query.toLowerCase().split(' ').every(word => haystack.includes(word));
+      }).slice(-8)
+    : items.slice(-8);
+
+  if (filtered.length === 0) {
+    return sendTelegramMessageInternal({ token, chatId, text: query ? `🧠 No memories matching "${query}".` : '🧠 No memory items yet.' });
+  }
+
+  const lines = filtered.reverse().map(m => {
+    const title = m.title || 'Untitled';
+    const cat = m.category || m.namespace || 'general';
+    const ago = m.timestampMs ? Math.round((Date.now() - m.timestampMs) / 60000) + 'm ago' : '';
+    return `• ${title} [${cat}]${ago ? ' — ' + ago : ''}`;
+  });
+
+  return sendTelegramMessageInternal({
+    token, chatId,
+    text: `🧠 Memory${query ? ` — "${query}"` : ' (recent)'}\n\n${lines.join('\n')}`
+  });
+}
+
+async function handleReceiptsCommand(token, chatId) {
+  try {
+    const receipts = listOrchestrationReceipts({}).slice(-5).reverse();
+    if (receipts.length === 0) {
+      return sendTelegramMessageInternal({ token, chatId, text: '📋 No completed receipts yet.' });
+    }
+    const lines = receipts.map(r => {
+      const agent = r.agentId || 'unknown';
+      const status = r.status === 'success' ? '✅' : '❌';
+      const label = r.label || r.taskId?.slice(-8) || '';
+      const ms = r.durationMs ? `${Math.round(r.durationMs / 1000)}s` : '';
+      return `${status} [${agent}] ${label}${ms ? ' — ' + ms : ''}`;
+    });
+    return sendTelegramMessageInternal({ token, chatId, text: `📋 Last ${receipts.length} receipts\n\n${lines.join('\n')}` });
+  } catch {
+    return sendTelegramMessageInternal({ token, chatId, text: '⚠️ Could not load receipts.' });
+  }
+}
+
+async function handleReadFileCommand(token, chatId, filename) {
+  if (!filename) {
+    return sendTelegramMessageInternal({ token, chatId, text: 'Usage: /read <filename>' });
+  }
+  if (!isTauriAvailable()) {
+    return sendTelegramMessageInternal({ token, chatId, text: 'File reading only available on desktop.' });
+  }
+  try {
+    const content = await telegramInvoke('read_workspace_file', { path: filename });
+    if (!content) return sendTelegramMessageInternal({ token, chatId, text: `📄 File not found: ${filename}` });
+    const preview = String(content).slice(0, 3000);
+    return sendTelegramMessageInternal({ token, chatId, text: `📄 ${filename}\n\n${preview}${content.length > 3000 ? '\n\n…(truncated)' : ''}` });
+  } catch (e) {
+    return sendTelegramMessageInternal({ token, chatId, text: `❌ Could not read file: ${e.message}` });
+  }
+}
+
 export async function processInboundCommands(token, updates) {
   if (!updates || !updates.ok) return;
 
@@ -527,6 +617,22 @@ export async function processInboundCommands(token, updates) {
 
       if (cmd === 'files') {
         return handleFilesCommand(token, chatId);
+      }
+
+      if (cmd === 'research') {
+        return handleResearchCommand(token, chatId, argument);
+      }
+
+      if (cmd === 'memory') {
+        return handleMemorySearchCommand(token, chatId, argument || '');
+      }
+
+      if (cmd === 'receipts') {
+        return handleReceiptsCommand(token, chatId);
+      }
+
+      if (cmd === 'read') {
+        return handleReadFileCommand(token, chatId, argument);
       }
 
       if (cmd === 'stop') {
