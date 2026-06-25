@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import { listAgentProfiles } from '../../agents/agentRegistry';
 import { JOSE_PERMISSIONS } from '../../agents/jose/josePermissions';
 import { ALPHONSO_PERMISSIONS } from '../../agents/alphonso/alphonsoPermissions';
@@ -39,23 +38,7 @@ import { listWorkContracts, signWorkContract, archiveWorkContract } from '../../
 import { listVerificationChains } from '../../services/agentWorkshop/verificationChainService';
 import { OPERATIONAL_MODES, getOperationalMode, setOperationalMode } from '../../services/agentWorkshop/operationalModeService';
 
-function ExecutionSection({ title, id, focusMode, openSections, onToggle, children }) {
-  const open = !focusMode || openSections.has(id);
-  return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
-      <button
-        type="button"
-        onClick={() => onToggle?.(id)}
-        className="flex w-full items-center justify-between gap-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 hover:text-indigo-100"
-      >
-        <span>{title}</span>
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
-      {open ? <div className="mt-3">{children}</div> : <div className="mt-2 text-[11px] text-zinc-600">Collapsed in Focus view.</div>}
-    </section>
-  );
-}
-
+// Kept for API compatibility — no longer shown in UI
 export const TAPCASH_PRESET = {
   label: 'TapCash Preset',
   projectName: 'TapCash GPT Rewards Platform',
@@ -70,11 +53,19 @@ export const TAPCASH_PRESET = {
 
 const ALL_AGENT_IDS = ['jose', 'alphonso', 'miya', 'hector', 'marcus', 'maria'];
 
+const PAGE_TABS = [
+  { id: 'setup', label: 'Setup' },
+  { id: 'agents', label: 'Agents' },
+  { id: 'execution', label: 'Execution' },
+  { id: 'results', label: 'Results' },
+];
+
 function parseCsv(value = '') {
   return String(value).split(',').map((v) => v.trim()).filter(Boolean);
 }
 
 export function ProjectExecutionMode() {
+  const [activeTab, setActiveTab] = useState('setup');
   const [intake, setIntake] = useState({
     projectName: '',
     projectDescription: '',
@@ -92,8 +83,6 @@ export function ProjectExecutionMode() {
   const [mode, setMode] = useState(getAgentMode());
   const [execState, setExecState] = useState(getExecutionApprovalState());
   const [opMode, setOpMode] = useState(getOperationalMode());
-  const [focusMode, setFocusMode] = useState(() => localStorage.getItem('alphonso_project_execution_density_v1') !== 'full');
-  const [openSections, setOpenSections] = useState(() => new Set(['intake', 'modes', 'generate', 'outputs']));
   const [researchBrief, setResearchBrief] = useState(null);
   const [researchLoading, setResearchLoading] = useState(false);
 
@@ -134,6 +123,7 @@ export function ProjectExecutionMode() {
       source: 'project_execution_mode',
       tags: ['project_execution', 'jose', 'packet']
     });
+    setActiveTab('results');
   };
 
   const traceSummary = result?.traceId ? getTraceSummary(result.traceId) : null;
@@ -150,23 +140,6 @@ export function ProjectExecutionMode() {
   };
 
   const refreshView = () => setResult((current) => (current ? { ...current } : current));
-
-  const toggleFocusMode = () => {
-    setFocusMode((current) => {
-      const next = !current;
-      localStorage.setItem('alphonso_project_execution_density_v1', next ? 'focus' : 'full');
-      return next;
-    });
-  };
-
-  const toggleSection = (id) => {
-    setOpenSections((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   useEffect(() => {
     if (!result?.project?.projectName) {
@@ -189,255 +162,352 @@ export function ProjectExecutionMode() {
   const auditReport = result ? auditProjectPlan(result.project) : null;
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Project Execution Workspace</div>
-          <div className="mt-1 text-sm text-zinc-400">Plan, route, verify, and package agent work without crowding every control at once.</div>
-        </div>
-        <button
-          type="button"
-          onClick={toggleFocusMode}
-          className="rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-indigo-100 hover:bg-indigo-500/20"
-        >
-          {focusMode ? 'Focus view: essentials' : 'Full view: all sections'}
-        </button>
-      </div>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
 
-      <ExecutionSection title="Project Intake" id="intake" focusMode={false} openSections={openSections} onToggle={toggleSection}>
-        <ProjectIntakePanel
-        intake={intake}
-        setIntake={setIntake}
-        presets={{ tapcash: TAPCASH_PRESET }}
-          onApplyPreset={(preset) => setIntake((current) => ({ ...current, ...preset }))}
-        />
-      </ExecutionSection>
-
-      <ExecutionSection title="System Health" id="system-health" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <SystemHealthPanel />
-      </ExecutionSection>
-
-      <ExecutionSection title="Operational Modes" id="modes" focusMode={false} openSections={openSections} onToggle={toggleSection}>
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-        <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Operational Modes</div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
-          {OPERATIONAL_MODES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => { const next = setOperationalMode(item.id); setOpMode(next); }}
-              className={`rounded-lg border px-2 py-2 text-[11px] ${opMode.id === item.id ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100' : 'border-white/10 bg-zinc-900 text-zinc-300'}`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div className="mb-4 text-[11px] text-zinc-500">Active mode emphasis: {opMode.emphasis.join(', ')}</div>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold text-white">Proposal Mode vs Execution Mode</div>
-            <div className="text-xs text-zinc-400">
-              Default is read-only Proposal Mode. Execution Mode requires approval, audit, verification, and dependency checks.
+        {/* Header */}
+        <header className="pb-5 border-b border-white/[0.06]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Projects</div>
+              <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Project Execution</h1>
+              <p className="mt-1 text-[13px] text-zinc-500">Plan, assign, and package agent work for any project.</p>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => { setAgentMode(AGENT_MODES.PROPOSAL); setMode(AGENT_MODES.PROPOSAL); }}
-              className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest ${mode === AGENT_MODES.PROPOSAL ? 'bg-indigo-500/20 text-indigo-100 border border-indigo-400/30' : 'bg-zinc-900 text-zinc-300 border border-white/10'}`}
-            >
-              Proposal
-            </button>
-            <button
-              type="button"
-              onClick={() => { setAgentMode(AGENT_MODES.EXECUTION); setMode(AGENT_MODES.EXECUTION); }}
-              className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest ${mode === AGENT_MODES.EXECUTION ? 'bg-amber-500/20 text-amber-100 border border-amber-400/30' : 'bg-zinc-900 text-zinc-300 border border-white/10'}`}
-            >
-              Execution
-            </button>
-          </div>
-        </div>
-        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-          {[
-            ['approved', 'Approval'],
-            ['audited', 'Audit'],
-            ['verified', 'Verification'],
-            ['dependenciesChecked', 'Dependencies']
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                const next = { ...execState, [key]: !execState[key] };
-                setExecutionApprovalState(next);
-                setExecState(next);
-              }}
-              className={`rounded-lg border px-3 py-2 ${execState[key] ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100' : 'border-white/10 bg-zinc-900 text-zinc-300'}`}
-            >
-              {label}: {execState[key] ? 'pass' : 'pending'}
-            </button>
-          ))}
-        </div>
-          <div className="mt-2 text-[11px] text-zinc-500">Read-only default: {mode === AGENT_MODES.PROPOSAL ? 'enabled' : 'disabled (execution mode)'}</div>
-        </div>
-      </ExecutionSection>
-
-      <ExecutionSection title="Agent Selection" id="agents" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <AgentDock agents={allProfiles} activeAgents={activeAgents} onToggleAgent={toggleAgent} />
-
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <AgentProfilePanel agent={selectedAgent} />
-          <AgentCapabilityMatrix agentPermissions={permissions} agentProfiles={agentProfileMap} />
-        </div>
-      </ExecutionSection>
-
-      <ExecutionSection title="Generate Execution Packet" id="generate" focusMode={false} openSections={openSections} onToggle={toggleSection}>
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 flex items-center justify-between">
-        <div>
-          <div className="text-sm font-semibold text-white">Project Execution Mode</div>
-          <div className="text-xs text-zinc-400">Jose decomposes and routes tasks to active agents with supervised approvals.</div>
-        </div>
-          <button type="button" onClick={runWorkshop} className="rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-indigo-100">
-            Generate Execution Packet
-          </button>
-        </div>
-      </ExecutionSection>
-
-      <ExecutionSection title="Traceability + Proposals" id="traceability" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Traceability Chain</div>
-          {!traceSummary && <div className="text-sm text-zinc-500">Run workshop to generate trace chain.</div>}
-          {traceSummary && (
-            <div className="space-y-1 text-xs text-zinc-300">
-              <div>stages covered: {traceSummary.stagesCovered.join(' -> ')}</div>
-              <div>events: {traceSummary.total}</div>
-              <div>pending approvals: {traceSummary.pendingApprovals}</div>
-              <div>executed: {traceSummary.executed}</div>
-              <div>failed: {traceSummary.failed}</div>
-            </div>
-          )}
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Diff-First Proposals</div>
-          <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-            {proposals.length === 0 && <div className="text-sm text-zinc-500">No proposals yet.</div>}
-            {proposals.map((proposal) => (
-              <div key={proposal.id} className="rounded-lg border border-white/10 bg-zinc-900/40 p-2">
-                <div className="text-xs font-semibold text-zinc-200">{proposal.title}</div>
-                <div className="text-[11px] text-zinc-500">{proposal.agentId} | {proposal.status} | diffs: {proposal.proposedDiffs.length}</div>
+            {result && (
+              <div className="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold tracking-widest text-emerald-300">
+                Packet ready
               </div>
-            ))}
+            )}
           </div>
-        </div>
-        </div>
-      </ExecutionSection>
+        </header>
 
-      <ExecutionSection title="Contracts + Verification Chains" id="contracts" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Work Contracts</div>
-          {contracts.length === 0 && <div className="text-sm text-zinc-500">No contracts yet. Generate packet first.</div>}
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {contracts.map((contract) => (
-              <div key={contract.id} className="rounded-lg border border-white/10 bg-zinc-900/40 p-2">
-                <div className="text-xs font-semibold text-zinc-200">{contract.objective}</div>
-                <div className="text-[11px] text-zinc-500">state: {contract.state} | risk: {contract.riskLevel}</div>
-                <div className="text-[11px] text-zinc-500">allowed: {contract.allowedScope.slice(0, 2).join(', ')}</div>
-                <div className="text-[11px] text-zinc-500">forbidden: {contract.forbiddenScope.slice(0, 2).join(', ')}</div>
-                <div className="mt-1 flex gap-2">
-                  <button type="button" onClick={() => { signWorkContract(contract.id); refreshView(); }} className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-100">Sign</button>
-                  <button type="button" onClick={() => { archiveWorkContract(contract.id); refreshView(); }} className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">Archive</button>
+        {/* Tabs */}
+        <div className="flex gap-1">
+          {PAGE_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-indigo-500/15 text-indigo-200 border border-indigo-400/20'
+                  : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Setup Tab */}
+        {activeTab === 'setup' && (
+          <div className="space-y-4">
+            <Card label="Project Details">
+              <ProjectIntakePanel
+                intake={intake}
+                setIntake={setIntake}
+                presets={{}}
+                onApplyPreset={() => {}}
+              />
+            </Card>
+
+            <Card label="System Health">
+              <SystemHealthPanel />
+            </Card>
+
+            <Card label="Operational Mode">
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {OPERATIONAL_MODES.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => { const next = setOperationalMode(item.id); setOpMode(next); }}
+                      className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                        opMode.id === item.id
+                          ? 'border-indigo-400/25 bg-indigo-500/10 text-indigo-200'
+                          : 'border-white/[0.07] bg-zinc-900/50 text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-zinc-600">Emphasis: {opMode.emphasis.join(', ')}</p>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <span className="text-[11px] text-zinc-500">Execution mode:</span>
+                  <button
+                    type="button"
+                    onClick={() => { setAgentMode(AGENT_MODES.PROPOSAL); setMode(AGENT_MODES.PROPOSAL); }}
+                    className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${mode === AGENT_MODES.PROPOSAL ? 'border-indigo-400/25 bg-indigo-500/10 text-indigo-200' : 'border-white/[0.07] text-zinc-500 hover:text-zinc-300'}`}
+                  >
+                    Proposal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAgentMode(AGENT_MODES.EXECUTION); setMode(AGENT_MODES.EXECUTION); }}
+                    className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${mode === AGENT_MODES.EXECUTION ? 'border-amber-400/25 bg-amber-500/10 text-amber-200' : 'border-white/[0.07] text-zinc-500 hover:text-zinc-300'}`}
+                  >
+                    Execution
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[['approved', 'Approval'], ['audited', 'Audit'], ['verified', 'Verification'], ['dependenciesChecked', 'Dependencies']].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        const next = { ...execState, [key]: !execState[key] };
+                        setExecutionApprovalState(next);
+                        setExecState(next);
+                      }}
+                      className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                        execState[key]
+                          ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300'
+                          : 'border-white/[0.07] bg-zinc-900/50 text-zinc-500'
+                      }`}
+                    >
+                      {label} {execState[key] ? '✓' : '·'}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
+            </Card>
           </div>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Verification Chains</div>
-          {chains.length === 0 && <div className="text-sm text-zinc-500">No chain yet. Generate packet first.</div>}
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {chains.map((chain) => (
-              <div key={chain.id} className="rounded-lg border border-white/10 bg-zinc-900/40 p-2">
-                <div className="text-xs font-semibold text-zinc-200">{chain.name}</div>
-                <div className="text-[11px] text-zinc-500">{chain.stages.map((stage) => `${stage.agentId}:${stage.state}`).join(' -> ')}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        </div>
-      </ExecutionSection>
+        )}
 
-      <ExecutionSection title="Assignments + Agent Outputs" id="outputs" focusMode={false} openSections={openSections} onToggle={toggleSection}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <AgentAssignmentBoard packets={result?.packets || []} />
-          <AgentOutputPanel outputs={result?.outputs || []} />
-        </div>
-      </ExecutionSection>
-
-      <ExecutionSection title="Timeline + Approval + Final Packet" id="timeline" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <ExecutionTimeline timeline={result?.sequence || []} />
-          <ApprovalGatePanel gates={result?.approvalGates || []} />
-          <FinalExecutionPacket finalPacket={result?.finalPacket || null} />
-        </div>
-      </ExecutionSection>
-
-      <ExecutionSection title="Project DNA + AI Review" id="review" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Project DNA</div>
-          {!result?.projectDna && <div className="text-sm text-zinc-500">No project DNA yet. Generate packet first.</div>}
-          {result?.projectDna && (
-            <div className="space-y-1 text-xs text-zinc-300">
-              <div>architecture: {result.projectDna.architecture}</div>
-              <div>standards: {result.projectDna.codingStandards}</div>
-              <div>stack: {result.projectDna.stack}</div>
-              <div>deployment model: {result.projectDna.deploymentModel}</div>
-              <div>constraints: {(result.projectDna.constraints || []).join(', ')}</div>
+        {/* Agents Tab */}
+        {activeTab === 'agents' && (
+          <div className="space-y-4">
+            <Card label="Active Agents">
+              <AgentDock agents={allProfiles} activeAgents={activeAgents} onToggleAgent={toggleAgent} />
+            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card label="Agent Profile">
+                <AgentProfilePanel agent={selectedAgent} />
+              </Card>
+              <Card label="Capability Matrix">
+                <AgentCapabilityMatrix agentPermissions={permissions} agentProfiles={agentProfileMap} />
+              </Card>
             </div>
-          )}
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">AI Review Required</div>
-          {!result?.aiReviewGate && <div className="text-sm text-zinc-500">Run workshop to evaluate merge gate.</div>}
-          {result?.aiReviewGate && (
-            <div className="space-y-1 text-xs">
-              <div className={`font-semibold ${result.aiReviewGate.passes ? 'text-emerald-200' : 'text-amber-200'}`}>
-                {result.aiReviewGate.passes ? 'PASS' : 'BLOCKED'}
-              </div>
-              {(result.aiReviewGate.blockers || []).map((item) => (
-                <div key={item} className="text-zinc-400">{item}</div>
-              ))}
-            </div>
-          )}
-        </div>
-        </div>
-      </ExecutionSection>
-
-      <ExecutionSection title="Reliability Doctrine" id="doctrine" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Reliability Doctrine</div>
-          <div className="text-xs text-zinc-400 mt-1">
-            Reliability over impressiveness: orchestration quality, verification depth, memory confidence, auditability, rollback, and observability are prioritized over flashy autonomy.
           </div>
-        </div>
-      </ExecutionSection>
+        )}
 
-      <ExecutionSection title="Roadmap + Risk + Verification" id="roadmap" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <ProjectRoadmap timeline={result?.project?.timeline || result?.project?.output?.proposedChanges || []} />
-          <ProjectRiskRegister risks={result?.project?.riskRegister || []} />
-          <ProjectVerificationChecklist checklist={result?.project?.verificationChecklist || []} />
-        </div>
-      </ExecutionSection>
+        {/* Execution Tab */}
+        {activeTab === 'execution' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-indigo-400/15 bg-indigo-500/5 p-5 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-white">Generate Execution Packet</div>
+                <p className="mt-0.5 text-[12px] text-zinc-500">
+                  Jose decomposes your project and routes tasks to active agents with supervised approvals.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={runWorkshop}
+                disabled={!intake.projectName}
+                className="shrink-0 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-200 hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Generate
+              </button>
+            </div>
 
-      <ExecutionSection title="Audit + Research" id="audit-research" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <MarcusAuditPanel auditReport={auditReport} />
-          <HectorResearchPanel researchBrief={researchBrief} loading={researchLoading} />
-        </div>
-      </ExecutionSection>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card label="Traceability Chain">
+                {!traceSummary
+                  ? <EmptyState text="Run workshop to generate trace chain." />
+                  : (
+                    <div className="space-y-1.5 text-[12px] text-zinc-400">
+                      <Row label="Stages" value={traceSummary.stagesCovered.join(' → ')} />
+                      <Row label="Events" value={traceSummary.total} />
+                      <Row label="Pending approvals" value={traceSummary.pendingApprovals} />
+                      <Row label="Executed" value={traceSummary.executed} />
+                      <Row label="Failed" value={traceSummary.failed} />
+                    </div>
+                  )}
+              </Card>
+              <Card label="Diff-First Proposals">
+                {proposals.length === 0
+                  ? <EmptyState text="No proposals yet." />
+                  : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {proposals.map((proposal) => (
+                        <div key={proposal.id} className="rounded-lg border border-white/[0.07] bg-zinc-900/40 p-2.5">
+                          <div className="text-[12px] font-medium text-zinc-200">{proposal.title}</div>
+                          <div className="mt-0.5 text-[11px] text-zinc-500">{proposal.agentId} · {proposal.status} · {proposal.proposedDiffs.length} diffs</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card label="Work Contracts">
+                {contracts.length === 0
+                  ? <EmptyState text="No contracts yet. Generate packet first." />
+                  : (
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {contracts.map((contract) => (
+                        <div key={contract.id} className="rounded-lg border border-white/[0.07] bg-zinc-900/40 p-2.5">
+                          <div className="text-[12px] font-medium text-zinc-200">{contract.objective}</div>
+                          <div className="mt-0.5 text-[11px] text-zinc-500">{contract.state} · risk: {contract.riskLevel}</div>
+                          <div className="mt-1.5 flex gap-1.5">
+                            <SmallBtn onClick={() => { signWorkContract(contract.id); refreshView(); }} tone="green">Sign</SmallBtn>
+                            <SmallBtn onClick={() => { archiveWorkContract(contract.id); refreshView(); }} tone="amber">Archive</SmallBtn>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+              </Card>
+              <Card label="Verification Chains">
+                {chains.length === 0
+                  ? <EmptyState text="No chain yet. Generate packet first." />
+                  : (
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {chains.map((chain) => (
+                        <div key={chain.id} className="rounded-lg border border-white/[0.07] bg-zinc-900/40 p-2.5">
+                          <div className="text-[12px] font-medium text-zinc-200">{chain.name}</div>
+                          <div className="mt-0.5 text-[11px] text-zinc-500">{chain.stages.map((s) => `${s.agentId}:${s.state}`).join(' → ')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Results Tab */}
+        {activeTab === 'results' && (
+          <div className="space-y-4">
+            {!result ? (
+              <div className="rounded-2xl border border-white/[0.06] bg-zinc-950/50 p-10 text-center">
+                <div className="text-sm text-zinc-500">No execution packet yet.</div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('execution')}
+                  className="mt-3 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300"
+                >
+                  Go to Execution →
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Card label="Assignments">
+                    <AgentAssignmentBoard packets={result.packets || []} />
+                  </Card>
+                  <Card label="Agent Outputs">
+                    <AgentOutputPanel outputs={result.outputs || []} />
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <Card label="Timeline">
+                    <ExecutionTimeline timeline={result.sequence || []} />
+                  </Card>
+                  <Card label="Approval Gates">
+                    <ApprovalGatePanel gates={result.approvalGates || []} />
+                  </Card>
+                  <Card label="Final Packet">
+                    <FinalExecutionPacket finalPacket={result.finalPacket || null} />
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <Card label="Roadmap">
+                    <ProjectRoadmap timeline={result.project?.timeline || result.project?.output?.proposedChanges || []} />
+                  </Card>
+                  <Card label="Risk Register">
+                    <ProjectRiskRegister risks={result.project?.riskRegister || []} />
+                  </Card>
+                  <Card label="Verification Checklist">
+                    <ProjectVerificationChecklist checklist={result.project?.verificationChecklist || []} />
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Card label="Project DNA">
+                    {!result.projectDna
+                      ? <EmptyState text="No DNA data." />
+                      : (
+                        <div className="space-y-1.5 text-[12px] text-zinc-400">
+                          <Row label="Architecture" value={result.projectDna.architecture} />
+                          <Row label="Standards" value={result.projectDna.codingStandards} />
+                          <Row label="Stack" value={result.projectDna.stack} />
+                          <Row label="Deployment" value={result.projectDna.deploymentModel} />
+                        </div>
+                      )}
+                  </Card>
+                  <Card label="AI Review Gate">
+                    {!result.aiReviewGate
+                      ? <EmptyState text="No review gate data." />
+                      : (
+                        <div className="space-y-1.5">
+                          <div className={`text-sm font-semibold ${result.aiReviewGate.passes ? 'text-emerald-300' : 'text-amber-300'}`}>
+                            {result.aiReviewGate.passes ? 'PASS' : 'BLOCKED'}
+                          </div>
+                          {(result.aiReviewGate.blockers || []).map((item) => (
+                            <div key={item} className="text-[12px] text-zinc-500">{item}</div>
+                          ))}
+                        </div>
+                      )}
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Card label="Audit">
+                    <MarcusAuditPanel auditReport={auditReport} />
+                  </Card>
+                  <Card label="Research Brief">
+                    <HectorResearchPanel researchBrief={researchBrief} loading={researchLoading} />
+                  </Card>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+function Card({ label, children }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
+      {label && <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</div>}
+      {children}
+    </div>
+  );
+}
+
+function EmptyState({ text }) {
+  return <p className="text-[12px] text-zinc-600">{text}</p>;
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="shrink-0 text-zinc-600">{label}:</span>
+      <span className="text-zinc-300">{value}</span>
+    </div>
+  );
+}
+
+function SmallBtn({ onClick, tone, children }) {
+  const cls = tone === 'green'
+    ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15'
+    : tone === 'amber'
+      ? 'border-amber-400/20 bg-amber-500/10 text-amber-300 hover:bg-amber-500/15'
+      : 'border-white/[0.07] bg-zinc-800 text-zinc-300 hover:bg-zinc-700';
+  return (
+    <button type="button" onClick={onClick} className={`rounded border px-2 py-1 text-[10px] font-semibold tracking-wider transition-colors ${cls}`}>
+      {children}
+    </button>
   );
 }

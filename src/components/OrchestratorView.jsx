@@ -319,535 +319,456 @@ export function OrchestratorView({
     refreshAll();
   };
 
+  const [orchTab, setOrchTab] = useState('command');
+  const orchTabs = [
+    { id: 'command', label: 'Command' },
+    { id: 'approvals', label: `Approvals${approvalQueue.length ? ` (${approvalQueue.length})` : ''}` },
+    { id: 'packets', label: 'Packets' },
+    { id: 'monitor', label: 'Monitor' },
+  ];
+
   return (
     <div className="h-full overflow-y-auto">
-    <div className="mx-auto max-w-6xl px-6 py-8 space-y-4">
-      <header className="pb-6 border-b border-white/[0.06]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
+
+      {/* Header */}
+      <header className="pb-5 border-b border-white/[0.06]">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Crown className="h-4 w-4 text-amber-400/70" />
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Jose Orchestrator</span>
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-400/70">
+              <Crown className="h-3.5 w-3.5" />
+              Orchestrator
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Governance &amp; routing</h1>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 max-w-2xl">
-              Supervise agent handoffs, review approvals, and route tasks. No automatic execution.
-            </p>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Jose — Governance &amp; Routing</h1>
+            <p className="mt-1 text-[13px] text-zinc-500">Supervise agent handoffs, review approvals, route tasks. No automatic execution.</p>
           </div>
-          <div className="flex items-center gap-6 shrink-0">
-            <Metric label="Packets" value={packets.length} />
-            <Metric label="Approvals" value={approvalQueue.length} tone={approvalQueue.length ? 'amber' : 'zinc'} />
-            <Metric label="Runtime" value={ollamaStatus.label} tone={runtimeState === 'failed' ? 'red' : runtimeState === 'verified' ? 'green' : 'amber'} />
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="text-right">
+              <div className="text-[10px] text-zinc-600 uppercase tracking-widest">Packets</div>
+              <div className="text-lg font-bold text-zinc-100">{packets.length}</div>
+            </div>
+            {approvalQueue.length > 0 && (
+              <div className="text-right">
+                <div className="text-[10px] text-zinc-600 uppercase tracking-widest">Pending</div>
+                <div className="text-lg font-bold text-amber-300">{approvalQueue.length}</div>
+              </div>
+            )}
             <button
               type="button"
-              onClick={() => setFocusMode((current) => !current)}
-              className="rounded-xl border border-white/[0.08] bg-zinc-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 hover:text-zinc-200 hover:border-white/[0.12] transition-colors"
+              onClick={refreshAll}
+              className="rounded-lg border border-white/[0.08] bg-zinc-900/60 p-2 text-zinc-400 hover:text-zinc-200 transition-colors"
             >
-              {focusMode ? 'Focus' : 'Full'}
+              <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </header>
 
-      <CollapsiblePanel icon={ClipboardList} title="Jose Task Pipeline" id="jose-task-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-        <JoseTaskQueue onRefresh={refreshAll} />
-      </CollapsiblePanel>
+      {/* Tabs */}
+      <div className="flex gap-1">
+        {orchTabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setOrchTab(tab.id)}
+            className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+              orchTab === tab.id
+                ? 'bg-amber-500/10 text-amber-200 border border-amber-400/20'
+                : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      <CollapsiblePanel icon={Crown} title="Jose Command Intake: Shayan -> Jose -> Agents -> Jose -> Shayan" id="jose-intake" focusMode={false} openPanels={openPanels} onToggle={togglePanel}>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-3">
-            <textarea
-              value={joseCommandText}
-              onChange={(event) => setJoseCommandText(event.target.value)}
-              rows={4}
-              className="w-full rounded-xl border border-amber-200/15 bg-zinc-900 px-3 py-2 text-sm leading-relaxed text-zinc-100 outline-none focus:border-amber-200/35"
-              placeholder="Shayan command to Jose..."
-            />
-            <button
-              onClick={distributeShayanCommand}
-              className="rounded-xl bg-amber-200 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-amber-100"
-            >
-              Give Command To Jose
-            </button>
-            <p className="text-[11px] leading-relaxed text-zinc-500">
-              This creates real local packets from Jose to the selected agents. It does not execute system commands, silently browse, post messages, upload content, or write files.
-            </p>
+      {/* Command Tab */}
+      {orchTab === 'command' && (
+        <div className="space-y-4">
+          <OCard label="Jose Task Pipeline">
+            <JoseTaskQueue onRefresh={refreshAll} />
+          </OCard>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <OCard label="Give Command to Jose">
+              <div className="space-y-3">
+                <textarea
+                  value={joseCommandText}
+                  onChange={(e) => setJoseCommandText(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm leading-relaxed text-zinc-100 outline-none focus:border-amber-200/30 placeholder:text-zinc-600"
+                  placeholder="Describe what you want Jose to coordinate…"
+                />
+                <button
+                  onClick={distributeShayanCommand}
+                  className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 hover:bg-amber-500/15 transition-colors"
+                >
+                  Send to Jose
+                </button>
+                <p className="text-[11px] text-zinc-600 leading-relaxed">
+                  Creates local packets from Jose to selected agents. No system commands, browsing, or file writes.
+                </p>
+              </div>
+            </OCard>
+            <OCard label="Workflow">
+              <div className="space-y-2">
+                {[
+                  ['1', 'You give a command to Jose.'],
+                  ['2', 'Jose routes parts to Hector, Miya, Alphonso, or others.'],
+                  ['3', 'Agents report back to Jose.'],
+                  ['4', 'Jose merges reports and confirms.'],
+                  ['5', 'Jose reports result back to you with a verified URL when available.'],
+                ].map(([n, text]) => (
+                  <FlowStep key={n} label={n} text={text} />
+                ))}
+              </div>
+            </OCard>
           </div>
-          <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Required Workflow</div>
-            <div className="mt-3 grid gap-2 text-[11px] text-zinc-300">
-              <FlowStep label="1" text="Shayan gives command to Jose." />
-              <FlowStep label="2" text="Jose decides which part goes to Hector, Miya, Alphonso, or Jose." />
-              <FlowStep label="3" text="Agents report back to Jose." />
-              <FlowStep label="4" text="Jose merges agent reports and confirms final command state." />
-              <FlowStep label="5" text="Jose reports the result back to Shayan, including a verified URL only when one exists." />
-            </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <OCard label="Task Routing">
+              <div className="space-y-3">
+                <input
+                  value={routeTitle}
+                  onChange={(e) => setRouteTitle(e.target.value)}
+                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-amber-200/30"
+                />
+                <select
+                  value={routeTarget}
+                  onChange={(e) => setRouteTarget(e.target.value)}
+                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none"
+                >
+                  <option value={AGENTS.ALPHONSO}>Alphonso — execution</option>
+                  <option value={AGENTS.MIYA}>Miya — creative</option>
+                  <option value={AGENTS.HECTOR}>Hector — research</option>
+                  <option value={AGENTS.MARIA}>Maria — governance audit</option>
+                  <option value={AGENTS.MARCUS}>Marcus — distribution</option>
+                  <option value={AGENTS.ECHO}>Echo — memory</option>
+                  <option value={AGENTS.SENTINEL}>Sentinel — security</option>
+                  <option value={AGENTS.NOVA}>Nova — opportunity</option>
+                </select>
+                <button onClick={createRoutingPacket} className="w-full rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 hover:bg-amber-500/15 transition-colors">
+                  Create Supervised Route
+                </button>
+              </div>
+            </OCard>
+
+            <OCard label="WhatsApp Inbound">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-1.5 w-1.5 rounded-full ${whatsappConfigured ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                    <span className="text-[12px] text-zinc-400">{whatsappConfigured ? 'Connected' : 'Not configured — see Settings'}</span>
+                  </div>
+                  <button
+                    onClick={pollWhatsAppNow}
+                    disabled={!whatsappConfigured || whatsappPolling}
+                    className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-zinc-900/60 px-3 py-1.5 text-[10px] font-semibold text-zinc-400 hover:text-zinc-200 disabled:opacity-40 transition-colors"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${whatsappPolling ? 'animate-spin' : ''}`} />
+                    {whatsappPolling ? 'Polling…' : 'Poll'}
+                  </button>
+                </div>
+                <WhatsAppInboxPanel
+                  messages={whatsappAudit.map((e) => ({
+                    id: e.id || String(Math.random()),
+                    from: e.details?.from || 'WhatsApp',
+                    body: e.details?.body || e.action || 'event',
+                    timestamp: e.timestampMs || Date.now(),
+                    direction: e.details?.direction || 'inbound',
+                    status: e.details?.status,
+                  }))}
+                  onReply={() => pollWhatsAppNow()}
+                  onRetry={() => pollWhatsAppNow()}
+                />
+              </div>
+            </OCard>
           </div>
         </div>
-      </CollapsiblePanel>
+      )}
 
-      <CollapsiblePanel icon={MessageCircle} title="WhatsApp Inbound" id="whatsapp-inbound" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={`h-2 w-2 rounded-full ${whatsappConfigured ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
-              <span className="text-xs text-zinc-400">{whatsappConfigured ? 'Connector configured — polling active' : 'Connector not configured — set env vars in Settings'}</span>
-            </div>
-            <button
-              onClick={pollWhatsAppNow}
-              disabled={!whatsappConfigured || whatsappPolling}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-zinc-900 text-[10px] font-bold uppercase tracking-widest text-zinc-300 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <RefreshCw className={`w-3 h-3 ${whatsappPolling ? 'animate-spin' : ''}`} />
-              {whatsappPolling ? 'Polling...' : 'Poll Now'}
-            </button>
-          </div>
-
-          <WhatsAppInboxPanel
-            messages={whatsappAudit.map((e) => ({
-              id: e.id || String(Math.random()),
-              from: e.details?.from || 'WhatsApp',
-              body: e.details?.body || e.action || 'event',
-              timestamp: e.timestampMs || Date.now(),
-              direction: e.details?.direction || 'inbound',
-              status: e.details?.status,
-            }))}
-            onReply={(_id, _text) => { pollWhatsAppNow(); }}
-            onRetry={(_id) => pollWhatsAppNow()}
-          />
-          {whatsappAudit.length === 0 ? (
-            <div className="rounded-xl border border-white/[0.04] bg-zinc-900/40 px-4 py-6 text-center text-xs text-zinc-600">
-              No WhatsApp activity yet. Messages routed from WhatsApp will appear here.
+      {/* Approvals Tab */}
+      {orchTab === 'approvals' && (
+        <div className="space-y-4">
+          {approvalQueue.length === 0 ? (
+            <div className="rounded-2xl border border-white/[0.06] bg-zinc-950/50 p-10 text-center">
+              <p className="text-sm text-zinc-500">No pending approvals.</p>
             </div>
           ) : (
-            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-              {whatsappAudit.map((entry, i) => {
-                const isRoute = entry.action?.includes('routed') || entry.action?.includes('distributed');
-                const isReject = entry.action?.includes('rejected') || entry.action?.includes('failed') || entry.action?.includes('missing');
-                const color = isReject ? 'border-red-500/20 bg-red-900/10' : isRoute ? 'border-emerald-500/20 bg-emerald-900/10' : 'border-white/[0.04] bg-zinc-900/40';
-                const dot = isReject ? 'bg-red-400' : isRoute ? 'bg-emerald-400' : 'bg-zinc-500';
-                return (
-                  <div key={entry.id || i} className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 ${color}`}>
-                    <div className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{entry.action || 'event'}</span>
-                        <span className="text-[10px] text-zinc-600">{new Date(entry.timestampMs || 0).toLocaleTimeString()}</span>
+            <div className="space-y-2">
+              {approvalQueue.map((packet) => (
+                <div key={packet.id} className="rounded-xl border border-amber-400/15 bg-amber-500/5 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-zinc-100">{packet.title}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500">
+                        <AgentAvatar agentId={packet.fromAgent} name={packet.fromAgent} sizeClass="h-3.5 w-3.5" />
+                        <span>{packet.fromAgent}</span>
+                        <span>→</span>
+                        <AgentAvatar agentId={packet.toAgent} name={packet.toAgent} sizeClass="h-3.5 w-3.5" />
+                        <span>{packet.toAgent}</span>
+                        <span>· {packet.packetType}</span>
                       </div>
-                      {entry.details?.packetId && (
-                        <div className="text-[11px] text-zinc-500 truncate mt-0.5">Packet: {entry.details.packetId}</div>
-                      )}
-                      {entry.details?.commandId && (
-                        <div className="text-[11px] text-emerald-400 truncate">→ Jose command: {entry.details.commandId}</div>
-                      )}
-                      {entry.details?.error && (
-                        <div className="text-[11px] text-red-400 truncate">{entry.details.error}</div>
-                      )}
                     </div>
+                    <TrustBadge state={packet.verificationState || 'unverified'} />
                   </div>
-                );
-              })}
-            </div>
-          )}
-
-          {approvalQueue.filter((p) => p.payload?.source === 'whatsapp' || p.fromConnector === 'whatsapp').length > 0 && (
-            <div className="rounded-xl border border-amber-500/20 bg-amber-900/10 p-3 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Pending Approval — WhatsApp sourced</div>
-              {approvalQueue.filter((p) => p.payload?.source === 'whatsapp' || p.fromConnector === 'whatsapp').map((packet) => (
-                <div key={packet.id} className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-zinc-300 truncate">{packet.title}</span>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => { approvePacket(packet.id); refreshAll(); }}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition-colors">Approve</button>
-                    <button onClick={() => { rejectPacket(packet.id, 'Denied from OrchestratorView inbound panel'); refreshAll(); }}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-red-900/40 text-zinc-300 hover:text-red-300 text-[10px] font-bold transition-colors">Deny</button>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <ApproveBtn onClick={() => approve(packet.id)}>Approve</ApproveBtn>
+                    <RejectBtn onClick={() => reject(packet.id)}>Reject</RejectBtn>
+                    <NeutralBtn onClick={() => queueForExecution(packet.id)}>Queue</NeutralBtn>
+                    <NeutralBtn
+                      onClick={() => executePacketNow(packet.id)}
+                      disabled={executingPacketIds.has(packet.id)}
+                    >
+                      {executingPacketIds.has(packet.id) ? 'Running…' : 'Execute'}
+                    </NeutralBtn>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </CollapsiblePanel>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <CollapsiblePanel icon={Users} title="Agent Workload" id="agent-workload" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="divide-y divide-white/[0.05]">
-            {workload.map((row) => (
-              <div key={row.agent} className="flex items-center justify-between py-2.5">
-                <span className="text-[12px] font-medium capitalize text-zinc-300 w-24">{row.agent}</span>
-                <div className="flex items-center gap-4 text-[11px] text-zinc-600">
-                  <span>{row.inbound} in</span>
-                  <span>{row.outbound} out</span>
-                  <span className={row.pending ? 'text-amber-400' : ''}>{row.pending} pending</span>
-                  <span className="text-emerald-600">{row.completed} done</span>
-                </div>
+          {executionResults.length > 0 && (
+            <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4 space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Execution Results</div>
+                <button onClick={() => setExecutionResults([])} className="text-[10px] text-zinc-600 hover:text-zinc-400">Clear</button>
               </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={AlertTriangle} title="Workflow Governance" id="workflow-governance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-3">
-            <GovernanceRow label="Duplicate Task Detection" value={`${duplicateCandidates.length} candidates`} state="verified" />
-            <GovernanceRow label="Conflict Detection" value={`${conflictCandidates.length} candidates`} state="verified" />
-            <GovernanceRow label="Idle Agent Routing" value={idleAgents.length ? idleAgents.join(', ') : 'No idle agents detected'} state="temporary" />
-            <GovernanceRow label="Escalation Queue" value={`${escalations.length} items`} state={escalations.length ? 'pending' : 'verified'} />
-          </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
-            Duplicate and conflict detection are heuristic UI foundations only. No tasks are merged, canceled, or rerouted automatically.
-          </p>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={Route} title="Task Routing" id="task-routing" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-3">
-            <input
-              value={routeTitle}
-              onChange={(event) => setRouteTitle(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-200/35"
-            />
-            <select
-              value={routeTarget}
-              onChange={(event) => setRouteTarget(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none"
-            >
-              <option value={AGENTS.ALPHONSO}>Route to Alphonso execution</option>
-              <option value={AGENTS.MIYA}>Route to Miya creative</option>
-              <option value={AGENTS.HECTOR}>Route to Hector research</option>
-              <option value={AGENTS.MARIA}>Route to Maria governance audit</option>
-              <option value={AGENTS.MARCUS}>Route to Marcus distribution execution</option>
-              <option value={AGENTS.ECHO}>Route to Echo memory preservation</option>
-              <option value={AGENTS.SENTINEL}>Route to Sentinel security monitoring</option>
-              <option value={AGENTS.NOVA}>Route to Nova opportunity scoring</option>
-            </select>
-            <button onClick={createRoutingPacket} className="w-full rounded-xl bg-amber-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-amber-100">
-              Create Supervised Route
-            </button>
-            <p className="text-[11px] leading-relaxed text-zinc-500">
-              Creates a real local handoff packet in the shared agent bus. It is not executed automatically.
-            </p>
-          </div>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={Activity} title="Runtime Balance" id="runtime-balance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-3 text-sm">
-            <RuntimeRow label="Ollama" value={ollamaStatus.label} trust={runtimeState} />
-            <RuntimeRow label="Model" value={settings.selectedModel || 'None selected'} trust={settings.selectedModel ? 'temporary' : 'unverified'} />
-            <RuntimeRow label="Focus" value={settings.focusMode || 'mission_control'} trust="temporary" />
-            <RuntimeRow label="Theme" value={settings.environmentTheme || 'deep_space'} trust="temporary" />
-            <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-400">
-              Resource points: {resourceSummary.points}. CPU/VRAM readings are limited to WebView-safe browser signals until native telemetry is wired.
+              {executionResults.map((r) => (
+                <div key={r.id + r.ts} className={`rounded-xl border p-3 ${r.ok ? 'border-emerald-400/15 bg-emerald-500/5' : 'border-red-400/15 bg-red-500/5'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-[11px] font-semibold ${r.ok ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {r.ok ? (r.setupRequired ? 'Queued' : 'Success') : 'Failed'}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">{new Date(r.ts).toLocaleTimeString()}</span>
+                  </div>
+                  <div className="mt-1 text-[12px] font-medium text-zinc-200">{r.title}</div>
+                  <div className="mt-0.5 text-[11px] text-zinc-500 leading-relaxed">{r.summary}</div>
+                </div>
+              ))}
             </div>
-          </div>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={RefreshCw} title="Durable Queue + Dead-Letter" id="durable-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-zinc-500">
-            <MiniStat label="Queued" value={queueSnapshot.queued} />
-            <MiniStat label="Failed" value={queueSnapshot.failed} />
-            <MiniStat label="Dead" value={queueSnapshot.deadLetter} />
-          </div>
-          <div className="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1">
-            {queueTransitions.length === 0 && <p className="text-[11px] text-zinc-500">No queue transitions yet.</p>}
-            {queueTransitions.slice(0, 8).map((row) => (
-              <div key={row.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold text-zinc-100">{row.fromStatus} {'->'} {row.toStatus}</span>
-                  <TrustBadge state={row.verificationState || 'unverified'} />
-                </div>
-                <div className="mt-1 text-[10px] text-zinc-500">{row.packetId}</div>
-                {row.toStatus === 'dead_letter' && (
-                  <button
-                    onClick={() => {
-                      replayPacketFromDeadLetter(row.packetId, 'Manual replay from Jose workspace.');
-                      refreshAll();
-                    }}
-                    className="mt-2 rounded-lg bg-amber-500/20 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-amber-100"
-                  >
-                    Replay
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <CollapsiblePanel icon={ShieldCheck} title="Pending Approvals" id="pending-approvals" focusMode={false} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-            {approvalQueue.length === 0 && <p className="text-sm text-zinc-500">No pending approvals.</p>}
-            {approvalQueue.map((packet) => (
-              <div key={packet.id} className="rounded-xl border border-amber-200/15 bg-amber-500/10 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-amber-50">{packet.title}</div>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-amber-100/55">
-                      <AgentAvatar agentId={packet.fromAgent} name={packet.fromAgent} sizeClass="h-4 w-4" className="border-amber-100/20" />
-                      <span>{packet.fromAgent}</span>
-                      <span>{'->'}</span>
-                      <AgentAvatar agentId={packet.toAgent} name={packet.toAgent} sizeClass="h-4 w-4" className="border-amber-100/20" />
-                      <span>{packet.toAgent}</span>
-                      <span>| {packet.packetType}</span>
-                    </div>
-                  </div>
-                  <TrustBadge state={packet.verificationState || 'unverified'} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button onClick={() => approve(packet.id)} className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-100">Approve</button>
-                  <button onClick={() => reject(packet.id)} className="rounded-lg bg-red-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-red-100">Reject</button>
-                  <button onClick={() => queueForExecution(packet.id)} className="rounded-lg bg-zinc-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Queue</button>
-                  <button
-                    onClick={() => executePacketNow(packet.id)}
-                    disabled={executingPacketIds.has(packet.id)}
-                    className="rounded-lg bg-indigo-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100 disabled:opacity-50 disabled:cursor-wait"
-                  >
-                    {executingPacketIds.has(packet.id) ? 'Running…' : 'Execute'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={GitBranch} title="Active Workflows" id="active-workflows" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-            {workflows.length === 0 && <p className="text-sm text-zinc-500">No workflows created yet.</p>}
-            {workflows.map((flow) => (
-              <div key={flow.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-zinc-100">{flow.name}</div>
-                    <div className="mt-1 text-[11px] text-zinc-500">{flow.agentScope} | nodes {flow.nodes.length} | edges {flow.edges.length}</div>
-                  </div>
-                  <TrustBadge state={flow.verificationState || 'unverified'} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <CollapsiblePanel icon={Brain} title="Memory Governance" id="memory-governance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Metric label="Shared Memory" value={memoryItems.length} />
-            <Metric label="Miya Memory" value={miyaMemory.length} tone="fuchsia" />
-            <Metric label="Expired" value={memoryItems.filter((item) => item.confidence === TRUST_STATES.EXPIRED).length} tone="amber" />
-          </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
-            Memory items are local records with confidence, source, timestamp, and verification state. Jose currently governs visibility and queue state; semantic deduplication is still backend work.
-          </p>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={ClipboardList} title="System Decisions" id="system-decisions" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="flex gap-2">
-            <button onClick={recordDecision} className="rounded-xl bg-amber-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-amber-100">
-              Record Governance Snapshot
-            </button>
-            <button onClick={refreshAll} className="rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
-              <RefreshCw className="inline h-3.5 w-3.5" /> Refresh
-            </button>
-          </div>
-          <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
-            {decisions.length === 0 && <p className="text-sm text-zinc-500">No Jose governance decisions recorded yet.</p>}
-            {decisions.slice().reverse().map((decision) => (
-              <div key={decision.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-zinc-100">{decision.title}</div>
-                    <div className="mt-1 text-[11px] leading-relaxed text-zinc-500">{decision.summary}</div>
-                  </div>
-                  <TrustBadge state={decision.verificationState} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <CollapsiblePanel icon={Gauge} title="Orchestration Analytics" id="orchestration-analytics" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2 text-sm">
-            <RuntimeRow label="Packets Created" value={packets.length} trust="temporary" />
-            <RuntimeRow label="Approval Rate" value={formatPercent(countStatus(packets, 'approved'), packets.length)} trust="inferred" />
-            <RuntimeRow label="Execution Reports" value={countStatus(packets, 'executed')} trust="temporary" />
-            <RuntimeRow label="Rejected Packets" value={countStatus(packets, 'rejected')} trust={countStatus(packets, 'rejected') ? 'pending' : 'verified'} />
-            <RuntimeRow label="Failed Packets" value={workflowObs?.totals?.failedPackets ?? 0} trust={workflowObs?.totals?.failedPackets ? 'pending' : 'verified'} />
-            <RuntimeRow label="Dead Letters" value={workflowObs?.totals?.deadLetters ?? 0} trust={workflowObs?.totals?.deadLetters ? 'failed' : 'verified'} />
-          </div>
-          <button onClick={runRetrySweep} className="mt-3 w-full rounded-xl bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700">
-            Run Retry + Dead-Letter Sweep
-          </button>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={Network} title="Active Handoffs" id="active-handoffs" focusMode={false} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {packets.filter((packet) => ['pending_approval', 'approved', 'queued'].includes(packet.status)).length === 0 && <p className="text-sm text-zinc-500">No active handoffs.</p>}
-            {packets.filter((packet) => ['pending_approval', 'approved', 'queued'].includes(packet.status)).slice().reverse().slice(0, 8).map((packet) => (
-              <div key={packet.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
-                <div className="text-sm font-semibold text-zinc-100">{packet.title}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500">
-                  <span>{packet.status} |</span>
-                  <AgentAvatar agentId={packet.fromAgent} name={packet.fromAgent} sizeClass="h-4 w-4" />
-                  <span>{packet.fromAgent}</span>
-                  <span>{'->'}</span>
-                  <AgentAvatar agentId={packet.toAgent} name={packet.toAgent} sizeClass="h-4 w-4" />
-                  <span>{packet.toAgent}</span>
-                </div>
-                {packet.fromAgent === AGENTS.JOSE && packet.toAgent !== AGENTS.JOSE && (
-                  <button onClick={() => reportToJose(packet)} className="mt-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-100">
-                    Agent Report Back To Jose
-                  </button>
-                )}
-                {['approved', 'queued'].includes(packet.status) && (
-                  <button
-                    onClick={() => executePacketNow(packet.id)}
-                    disabled={executingPacketIds.has(packet.id)}
-                    className="mt-2 ml-2 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100 disabled:opacity-50 disabled:cursor-wait"
-                  >
-                    {executingPacketIds.has(packet.id) ? 'Running…' : 'Execute Now'}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={ShieldCheck} title="Approval Governance" id="approval-governance" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2 text-sm">
-            <RuntimeRow label="Visible Approval Queue" value={`${approvalQueue.length} pending`} trust={approvalQueue.length ? 'pending' : 'verified'} />
-            <RuntimeRow label="High Risk Items" value={packets.filter((packet) => ['high', 'critical'].includes(packet.riskLevel || '')).length} trust="temporary" />
-            <RuntimeRow label="Rollback Wiring" value="Planned but not execution-backed yet" trust="unverified" />
-            <RuntimeRow label="Dangerous Auto-Execution" value="Disabled" trust="verified" />
-          </div>
-        </CollapsiblePanel>
-      </div>
-
-      <CollapsiblePanel icon={Database} title="Handoff Queue + Timeline" id="handoff-timeline" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {packets.slice().reverse().slice(0, 12).map((packet) => (
-              <div key={packet.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-400">
-                <div className="font-semibold text-zinc-100">{packet.title}</div>
-                <div className="mt-1">{packet.status} | {packet.fromAgent} {'->'} {packet.toAgent}</div>
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {sessionEvents.slice().reverse().slice(0, 12).map((event) => (
-              <div key={event.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-400">
-                <div className="font-semibold text-zinc-100">{event.title}</div>
-                <div className="mt-1">{event.category} | {new Date(event.timestampMs).toLocaleTimeString()}</div>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
-      </CollapsiblePanel>
+      )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <CollapsiblePanel icon={AlertTriangle} title="Dead-Letter Queue" id="dead-letter-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {deadLetters.length === 0 && <p className="text-sm text-zinc-500">No dead-letter items.</p>}
-            {deadLetters.slice().reverse().slice(0, 12).map((item) => (
-              <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl border border-red-300/15 bg-red-500/10 p-3 text-[11px] text-red-100/85">
-                <div className="font-semibold">{item.agent}: {item.title}</div>
-                <div className="mt-1 text-red-100/70">Command: {item.commandText}</div>
-                <div className="mt-1">Retries: {item.retries || 0}</div>
-              </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-
-        <CollapsiblePanel icon={ClipboardList} title="Jose Receipts" id="jose-receipts" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {(workflowObs?.receipts || []).length === 0 && <p className="text-sm text-zinc-500">No orchestration receipts yet.</p>}
-            {(workflowObs?.receipts || []).slice(0, 20).map((receipt) => (
-              <div key={receipt.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-300">
-                <div className="font-semibold">{receipt.type}</div>
-                <div className="mt-1 text-zinc-500">Command {receipt.commandId} | {new Date(receipt.timestampMs).toLocaleTimeString()}</div>
-              </div>
-            ))}
-          </div>
-        </CollapsiblePanel>
-      </div>
-
-      <CollapsiblePanel icon={Route} title="Orchestration Queue" id="orchestration-queue" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-        <OrchestratorQueueView />
-      </CollapsiblePanel>
-
-      <CollapsiblePanel icon={ClipboardList} title="Jose Command Ledger" id="jose-command-ledger" focusMode={focusMode} openPanels={openPanels} onToggle={togglePanel}>
-        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-          {joseCommands.length === 0 && <p className="text-sm text-zinc-500">No Shayan {'->'} Jose commands recorded yet.</p>}
-          {joseCommands.slice().reverse().slice(0, 10).map((command) => (
-            <div key={command.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-zinc-100">{command.commandText}</div>
-                  <div className="mt-1 text-[11px] text-zinc-500">{command.status} | assignments {command.assignments?.length || 0}</div>
-                </div>
-                <TrustBadge state={command.trust} />
-              </div>
-                <div className="mt-3 grid gap-2">
-                  {(command.assignments || []).map((assignment) => (
-                    <div key={assignment.packetId} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-zinc-400">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <AgentAvatar agentId="jose" name="Jose" sizeClass="h-4 w-4" />
-                        <span>Jose {'->'}</span>
-                        <AgentAvatar agentId={assignment.agent} name={assignment.agent} sizeClass="h-4 w-4" />
-                        <span className="capitalize">{assignment.agent}</span>
-                        <span>: {assignment.title} | {assignment.status}</span>
+      {/* Packets Tab */}
+      {orchTab === 'packets' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <OCard label="Active Handoffs">
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                {packets.filter((p) => ['pending_approval', 'approved', 'queued'].includes(p.status)).length === 0
+                  ? <p className="text-[12px] text-zinc-600">No active handoffs.</p>
+                  : packets.filter((p) => ['pending_approval', 'approved', 'queued'].includes(p.status)).slice().reverse().slice(0, 8).map((packet) => (
+                    <div key={packet.id} className="rounded-xl border border-white/[0.07] bg-zinc-900/40 p-3">
+                      <div className="text-[12px] font-medium text-zinc-200">{packet.title}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500">
+                        <span className="rounded bg-zinc-800 px-1.5 py-0.5">{packet.status}</span>
+                        <span>{packet.fromAgent} → {packet.toAgent}</span>
+                      </div>
+                      <div className="mt-2 flex gap-1.5">
+                        {packet.fromAgent === AGENTS.JOSE && packet.toAgent !== AGENTS.JOSE && (
+                          <NeutralBtn onClick={() => reportToJose(packet)}>Report to Jose</NeutralBtn>
+                        )}
+                        {['approved', 'queued'].includes(packet.status) && (
+                          <NeutralBtn onClick={() => executePacketNow(packet.id)} disabled={executingPacketIds.has(packet.id)}>
+                            {executingPacketIds.has(packet.id) ? 'Running…' : 'Execute'}
+                          </NeutralBtn>
+                        )}
                       </div>
                     </div>
                   ))}
-                </div>
-              <button onClick={() => confirmCommand(command.id)} className="mt-3 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-100">
-                Jose Confirm + Report To Shayan
-              </button>
-              {command.joseConfirmation && <div className="mt-2 text-[11px] text-emerald-200/80">{command.joseConfirmation}</div>}
-              {command.shayanReport && (
-                <div className="mt-3 rounded-lg border border-emerald-300/15 bg-emerald-500/10 p-3 text-[11px] text-emerald-100/85">
-                  <div className="font-bold uppercase tracking-widest">Jose {'->'} Shayan Report</div>
-                  <div className="mt-2">{command.shayanReport.summary}</div>
-                  {command.shayanReport.resultUrl ? (
-                    <div className="mt-2 break-all text-emerald-200">Verified URL: {command.shayanReport.resultUrl}</div>
-                  ) : (
-                    <div className="mt-2 text-amber-100/85">No verified result URL yet.</div>
-                  )}
-                  <div className="mt-2 text-emerald-100/60">
-                    Reports merged: {command.shayanReport.reportCount} | Pending: {command.shayanReport.pendingCount}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </CollapsiblePanel>
-
-      {executionResults.length > 0 && (
-        <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-300">Execution Results</div>
-            <button onClick={() => setExecutionResults([])} className="text-[10px] text-zinc-500 hover:text-zinc-300">Clear</button>
-          </div>
-          {executionResults.map((r) => (
-            <div key={r.id + r.ts} className={`rounded-xl border p-3 ${r.ok ? 'border-emerald-400/20 bg-emerald-500/10' : 'border-red-400/20 bg-red-500/10'}`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className={`text-xs font-semibold ${r.ok ? 'text-emerald-200' : 'text-red-300'}`}>{r.ok ? (r.setupRequired ? '⏳ Queued' : '✓ Success') : '✗ Failed'}</span>
-                <span className="text-[10px] text-zinc-500">{new Date(r.ts).toLocaleTimeString()}</span>
               </div>
-              <div className="mt-1 text-sm font-medium text-zinc-100">{r.title}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-zinc-400">{r.summary}</div>
-              {r.setupRequired && (
-                <div className="mt-2 text-[11px] text-amber-300/80">
-                  This packet type (<code className="text-amber-200">{r.packetType}</code>) needs a runtime adapter to produce live output. Go to <strong>Chat</strong> and ask Alphonso to execute the task directly — that path is fully wired.
+            </OCard>
+
+            <OCard label="Jose Command Ledger">
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                {joseCommands.length === 0 && <p className="text-[12px] text-zinc-600">No commands recorded yet.</p>}
+                {joseCommands.slice().reverse().slice(0, 8).map((command) => (
+                  <div key={command.id} className="rounded-xl border border-white/[0.07] bg-zinc-900/40 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-[12px] font-medium text-zinc-200 line-clamp-2">{command.commandText}</div>
+                      <TrustBadge state={command.trust} />
+                    </div>
+                    <div className="mt-1 text-[11px] text-zinc-500">{command.status} · {command.assignments?.length || 0} assignments</div>
+                    <div className="mt-2 flex gap-1.5">
+                      <NeutralBtn onClick={() => confirmCommand(command.id)}>Confirm &amp; Report</NeutralBtn>
+                    </div>
+                    {command.shayanReport && (
+                      <div className="mt-2 rounded-lg border border-emerald-400/15 bg-emerald-500/5 p-2.5 text-[11px] text-emerald-200/80">
+                        {command.shayanReport.summary}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </OCard>
+          </div>
+
+          <OCard label="All Packets (recent)">
+            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+              {packets.slice().reverse().slice(0, 12).map((packet) => (
+                <div key={packet.id} className="rounded-lg border border-white/[0.06] bg-zinc-900/40 px-3 py-2 text-[11px] text-zinc-400">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-zinc-200 truncate">{packet.title}</span>
+                    <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px]">{packet.status}</span>
+                  </div>
+                  <div className="mt-0.5 text-zinc-600">{packet.fromAgent} → {packet.toAgent}</div>
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          </OCard>
+
+          <OCard label="Queue View">
+            <OrchestratorQueueView />
+          </OCard>
         </div>
       )}
+
+      {/* Monitor Tab */}
+      {orchTab === 'monitor' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <OCard label="Agent Workload">
+              <div className="divide-y divide-white/[0.05]">
+                {workload.map((row) => (
+                  <div key={row.agent} className="flex items-center justify-between py-2">
+                    <span className="text-[12px] font-medium capitalize text-zinc-300">{row.agent}</span>
+                    <div className="flex items-center gap-3 text-[11px] text-zinc-600">
+                      <span>{row.inbound} in</span>
+                      <span>{row.outbound} out</span>
+                      <span className={row.pending ? 'text-amber-400' : ''}>{row.pending} pend</span>
+                      <span className="text-emerald-600">{row.completed} done</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </OCard>
+
+            <OCard label="Durable Queue">
+              <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                <MiniStat label="Queued" value={queueSnapshot.queued} />
+                <MiniStat label="Failed" value={queueSnapshot.failed} />
+                <MiniStat label="Dead" value={queueSnapshot.deadLetter} />
+              </div>
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {queueTransitions.slice(0, 6).map((row) => (
+                  <div key={row.id} className="rounded-lg border border-white/[0.06] bg-zinc-900/40 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-zinc-300">{row.fromStatus} → {row.toStatus}</span>
+                      <TrustBadge state={row.verificationState || 'unverified'} />
+                    </div>
+                    {row.toStatus === 'dead_letter' && (
+                      <button
+                        onClick={() => { replayPacketFromDeadLetter(row.packetId, 'Manual replay.'); refreshAll(); }}
+                        className="mt-1.5 rounded border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300"
+                      >
+                        Replay
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </OCard>
+
+            <OCard label="Governance">
+              <div className="space-y-2">
+                <GovernanceRow label="Duplicates" value={`${duplicateCandidates.length} candidates`} state="verified" />
+                <GovernanceRow label="Conflicts" value={`${conflictCandidates.length} high-risk`} state="verified" />
+                <GovernanceRow label="Idle agents" value={idleAgents.length ? idleAgents.join(', ') : 'None'} state="temporary" />
+                <GovernanceRow label="Escalations" value={`${escalations.length} items`} state={escalations.length ? 'pending' : 'verified'} />
+              </div>
+            </OCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <OCard label="Analytics">
+              <div className="space-y-0.5">
+                <RuntimeRow label="Total Packets" value={packets.length} trust="temporary" />
+                <RuntimeRow label="Approval Rate" value={formatPercent(countStatus(packets, 'approved'), packets.length)} trust="inferred" />
+                <RuntimeRow label="Executed" value={countStatus(packets, 'executed')} trust="temporary" />
+                <RuntimeRow label="Rejected" value={countStatus(packets, 'rejected')} trust={countStatus(packets, 'rejected') ? 'pending' : 'verified'} />
+                <RuntimeRow label="Dead Letters" value={workflowObs?.totals?.deadLetters ?? 0} trust={workflowObs?.totals?.deadLetters ? 'failed' : 'verified'} />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button onClick={runRetrySweep} className="rounded-xl border border-white/[0.08] bg-zinc-900/60 px-3 py-2 text-[10px] font-semibold tracking-wider text-zinc-400 hover:text-zinc-200 transition-colors">
+                  Retry Sweep
+                </button>
+                <button onClick={recordDecision} className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-[10px] font-semibold tracking-wider text-amber-300 hover:bg-amber-500/15 transition-colors">
+                  Record Snapshot
+                </button>
+              </div>
+            </OCard>
+
+            <OCard label="Memory">
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <MiniStat label="Shared" value={memoryItems.length} />
+                <MiniStat label="Miya" value={miyaMemory.length} />
+                <MiniStat label="Workflows" value={workflows.length} />
+              </div>
+              <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                {sessionEvents.slice().reverse().slice(0, 6).map((event) => (
+                  <div key={event.id} className="rounded-lg border border-white/[0.05] bg-zinc-900/30 px-3 py-2 text-[11px] text-zinc-400">
+                    <div className="font-medium text-zinc-300">{event.title}</div>
+                    <div className="mt-0.5 text-zinc-600">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
+                  </div>
+                ))}
+              </div>
+            </OCard>
+          </div>
+
+          <OCard label="Dead-Letter Items">
+            {deadLetters.length === 0
+              ? <p className="text-[12px] text-zinc-600">No dead-letter items.</p>
+              : (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {deadLetters.slice().reverse().slice(0, 8).map((item) => (
+                    <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl border border-red-400/15 bg-red-500/5 p-3 text-[11px] text-red-200/80">
+                      <div className="font-medium">{item.agent}: {item.title}</div>
+                      <div className="mt-0.5 text-red-300/60">{item.commandText}</div>
+                      <div className="mt-0.5 text-zinc-500">Retries: {item.retries || 0}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+          </OCard>
+        </div>
+      )}
+      </div>
     </div>
+  );
+}
+
+function OCard({ label, children }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
+      {label && <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</div>}
+      {children}
     </div>
+  );
+}
+
+function ApproveBtn({ onClick, children }) {
+  return (
+    <button type="button" onClick={onClick} className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-emerald-300 hover:bg-emerald-500/15 transition-colors">
+      {children}
+    </button>
+  );
+}
+
+function RejectBtn({ onClick, children }) {
+  return (
+    <button type="button" onClick={onClick} className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-red-300 hover:bg-red-500/15 transition-colors">
+      {children}
+    </button>
+  );
+}
+
+function NeutralBtn({ onClick, disabled, children }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className="rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-zinc-300 hover:bg-zinc-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+      {children}
+    </button>
   );
 }
 

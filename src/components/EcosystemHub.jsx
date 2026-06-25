@@ -192,25 +192,23 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   return (
     <div className="h-full overflow-y-auto">
     <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
-      <header className="rounded-2xl border border-white/10 bg-zinc-950/70 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <header className="pb-5 border-b border-white/[0.06]">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Shared Agent Intelligence Bus</div>
-            <h1 className="text-xl font-bold text-white mt-2">Operator + Creator Ecosystem</h1>
-            <p className="text-sm text-zinc-400 mt-2 max-w-2xl">
-          Local-first orchestration hub for handoffs, skill packs, visual workflows, session intelligence, and supervised runtime control.
-            </p>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">All Agents</div>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Agent Ecosystem</h1>
+            <p className="mt-1 text-[13px] text-zinc-500">Handoffs, skill packs, workflows, session intelligence, and runtime control.</p>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/60 p-1">
+          <div className="flex gap-1 shrink-0">
             <button
               onClick={() => setShowAdvancedSections(false)}
-              className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition ${!showAdvancedSections ? 'bg-indigo-500/20 text-indigo-100' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${!showAdvancedSections ? 'bg-indigo-500/10 text-indigo-200 border border-indigo-400/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent'}`}
             >
               Essential
             </button>
             <button
               onClick={() => setShowAdvancedSections(true)}
-              className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition ${showAdvancedSections ? 'bg-indigo-500/20 text-indigo-100' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${showAdvancedSections ? 'bg-indigo-500/10 text-indigo-200 border border-indigo-400/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent'}`}
             >
               Advanced
             </button>
@@ -271,10 +269,10 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                   <div key={packet.id} className="rounded-lg border border-white/10 bg-zinc-900/55 p-3 space-y-2">
                     <div className="text-xs font-semibold text-zinc-200">{packet.title}</div>
                     <div className="text-[11px] text-zinc-500">{packet.fromAgent} {'->'} {packet.toAgent} | {packet.packetType}</div>
-                    <div className="flex gap-2">
-                      <button onClick={() => runApprove(packet.id)} className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-200">Approve</button>
-                      <button onClick={() => runReject(packet.id)} className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-red-200">Reject</button>
-                      <button onClick={() => runExecutePacket(packet.id)} className="rounded bg-indigo-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-indigo-200">Mark Executed</button>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => runApprove(packet.id)} className="rounded border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/15 transition-colors">Approve</button>
+                      <button onClick={() => runReject(packet.id)} className="rounded border border-red-400/20 bg-red-500/10 px-2.5 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/15 transition-colors">Reject</button>
+                      <button onClick={() => runExecutePacket(packet.id)} className="rounded border border-white/[0.08] bg-zinc-800/60 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700/60 transition-colors">Execute</button>
                     </div>
                   </div>
                 ))}

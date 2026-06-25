@@ -794,28 +794,21 @@ export function MiyaStudio({
         ))}
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-5 space-y-5">
-        <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
-
-        {activeTab === 'brand' ? (
+      {/* Brand Kit — full width */}
+      {activeTab === 'brand' && (
+        <section className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-5">
           <BrandKitEditor brandKit={brandKit} setBrandKit={setBrandKit} onSave={saveBrandKit} />
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={generateScriptToVideoPackage}
-                disabled={isGenerating}
-                className="rounded-lg bg-fuchsia-500/85 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-fuchsia-400 disabled:opacity-60"
-              >
-                {isGenerating ? 'Generating...' : 'Generate Script -> Video Package'}
-              </button>
-            </div>
-            {lastError && (
-              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
-                {lastError}
-              </div>
-            )}
-            <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} />
+        </section>
+      )}
+
+      {/* Prompt/Media tab — visual generation focused */}
+      {activeTab === 'prompt' && (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
+          <div className="space-y-4">
+            <section className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
+              <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Pipeline Inputs</div>
+              <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
+            </section>
             <LocalGenerationPanel
               mediaRuntime={mediaRuntime}
               setMediaRuntime={setMediaRuntime}
@@ -836,25 +829,65 @@ export function MiyaStudio({
               onLoadPromptsFromScript={loadPromptsFromScript}
               onRunFullPipeline={runFullPipeline}
             />
-            <YouTubePublishHandoffPanel
-              output={creativeOutput}
-              publishDraft={publishDraft}
-              setPublishDraft={setPublishDraft}
-              onCreateHandoff={createYouTubePublishHandoff}
-            />
-            <CapCutExportHandoffPanel
-              output={creativeOutput}
-              capcutDraft={capcutDraft}
-              setCapcutDraft={setCapcutDraft}
-              onCreateHandoff={createCapCutExportHandoff}
-            />
+          </div>
+          <div className="space-y-4">
+            <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} />
             <OutputPanels output={creativeOutput} />
-          </>
-        )}
-      </section>
+          </div>
+        </div>
+      )}
 
-      <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-4 text-xs text-zinc-400">
-        State: <span className="font-semibold text-zinc-200">{companionState}</span> | Local model: {canGenerate ? settings.selectedModel : 'not available'}
+      {/* All other tabs (script, scene, thumbnail, campaign) — script generation focused */}
+      {activeTab !== 'brand' && activeTab !== 'prompt' && (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
+          <div className="space-y-4">
+            <section className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
+              <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Pipeline Inputs</div>
+              <PipelineInputs pipeline={pipeline} setPipeline={setPipeline} />
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={generateScriptToVideoPackage}
+                  disabled={isGenerating || !canGenerate}
+                  className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/10 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-fuchsia-200 hover:bg-fuchsia-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isGenerating ? 'Generating…' : 'Generate Package'}
+                </button>
+                {!canGenerate && (
+                  <span className="text-[11px] text-zinc-600">Connect Ollama to generate</span>
+                )}
+              </div>
+              {lastError && (
+                <div className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-[11px] text-red-300">{lastError}</div>
+              )}
+            </section>
+            {creativeOutput && (
+              <>
+                <YouTubePublishHandoffPanel
+                  output={creativeOutput}
+                  publishDraft={publishDraft}
+                  setPublishDraft={setPublishDraft}
+                  onCreateHandoff={createYouTubePublishHandoff}
+                />
+                <CapCutExportHandoffPanel
+                  output={creativeOutput}
+                  capcutDraft={capcutDraft}
+                  setCapcutDraft={setCapcutDraft}
+                  onCreateHandoff={createCapCutExportHandoff}
+                />
+              </>
+            )}
+          </div>
+          <div className="space-y-4">
+            <ExportPackageReadiness output={creativeOutput} canGenerate={canGenerate} />
+            <OutputPanels output={creativeOutput} />
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-white/[0.06] bg-zinc-900/30 px-4 py-2.5 text-[11px] text-zinc-600 flex items-center gap-3">
+        <span>State: <span className="text-zinc-400">{companionState}</span></span>
+        <span>·</span>
+        <span>Model: <span className="text-zinc-400">{canGenerate ? settings.selectedModel : 'not connected'}</span></span>
       </div>
     </div>
     </div>

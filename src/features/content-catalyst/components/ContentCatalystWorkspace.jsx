@@ -225,7 +225,8 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
   };
 
   return (
-    <div className="h-full overflow-y-auto space-y-6 p-6">
+    <div className="h-full overflow-y-auto">
+    <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
       <BrandHeader
         brandProfile={brandProfile}
         analytics={analytics}
@@ -367,6 +368,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
