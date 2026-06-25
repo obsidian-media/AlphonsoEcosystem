@@ -290,4 +290,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-26 — v2.2.7 — Plugin Marketplace UI (Settings → Plugins, PluginMarketplacePanel). Voice OS added to Rust TOOLS in runtime_manager.rs (port 8765, pip: faster-whisper/piper-tts/webrtcvad). Railway Dockerfile single-stage fix + DOCKERFILE builder in railway.json. CI Railway URL updated to real endpoint. All pre-existing test failures fixed (8 files). pluginSigningService.js syntax repaired. PWA sw.js + offlineChatService.js added. 144 test files, 1930+ tests passing. cargo check clean._
+_Last verified: 2026-06-26 — v2.2.8 — JUNE CANDY sprint: Tavily search fallback (tavilyConnector.js, hectorResearchService tier-2 wired), Telegram 21 commands (research/memory/receipts/read added), OpenHands in Runtime Hub (TOOLS array + TOOL_META + ACC Bridge pre-fill), Whisper meeting transcription (transcribe_audio_file Rust cmd + whisperTranscriptionService.js + MeetingTranscriptionPanel in Settings Memory). 145 test files / 1935 tests passing. cargo check clean._

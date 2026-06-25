@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.8] - 2026-06-26 — JUNE CANDY Sprint: Tavily, Telegram+, OpenHands, Whisper
+
+### Added
+- **Tavily search connector** (`src/services/connectors/tavilyConnector.js`): Free-tier (1,000/mo) AI-optimized search fallback for Hector. Wired as tier-2 between Brave Search and DuckDuckGo in `hectorResearchService.js`. Credential UI in Settings → Connectors. 5 new tests (`src/test/tavilyConnector.test.js`).
+- **Telegram companion expansion** (`src/services/telegramCompanionService.js`): 17 → 21 commands. Added `/research <topic>` (Hector pipeline), `/memory [query]` (keyword search across Echo memory), `/receipts` (last 5 orchestration receipts), `/read <filename>` (workspace file reader). Help text reorganized into categorized sections.
+- **OpenHands in Runtime Hub** (`src-tauri/src/runtime_manager.rs`): `openHands` added to Rust TOOLS array (Docker, port 3000, `/api/health`). TOOL_META entry in `RuntimeManagerView.jsx` (Agent category, cyan). ACC Bridge settings in SettingsView now has a "Use local OpenHands" button that pre-fills `http://localhost:3000`.
+- **Whisper meeting transcription → Echo** (`src-tauri/src/workspace.rs`, `src/services/whisperTranscriptionService.js`): New `transcribe_audio_file` Tauri command resolves whisper from Runtime Hub venv, runs it on a given audio path, returns transcript text. `whisperTranscriptionService.js` orchestrates: transcribe → Ollama summarize → Echo synthesizeMemory. `MeetingTranscriptionPanel` component added to Settings → Memory section (file picker, status labels, summary preview).
+
+### Tests
+- 145 test files / 1935 tests — all passing
+- Added: `src/test/tavilyConnector.test.js` (5 tests)
+
+### Branches merged
+- `feat/tavily-hector`, `feat/telegram-mobile-control`, `feat/openhand-runtime`, `feat/whisper-meeting-ingest`
+
+---
+
 ## [2.2.7] - 2026-06-26 — Plugin Marketplace UI, Voice OS in Runtime Hub, Railway Fix, Test Fixes
 
 ### Added
