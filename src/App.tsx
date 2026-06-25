@@ -266,6 +266,25 @@ function AppShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Jose scheduler background service
+  useEffect(() => {
+    let schedulerStop: (() => void) | null = null;
+    (async () => {
+      try {
+        const { startScheduler } = await import('./services/joseSchedulerService');
+        schedulerStop = startScheduler((schedule) => {
+          addNotification({
+            type: 'info',
+            title: `Scheduled: ${schedule.name}`,
+            message: `Executing: ${String(schedule.commandText || '').slice(0, 100)}`
+          });
+        });
+      } catch { /* non-critical */ }
+    })();
+    return () => { try { schedulerStop?.(); } catch { /* ignore */ } };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (isCoachWindow) {
     return (
       <CoachWindow
