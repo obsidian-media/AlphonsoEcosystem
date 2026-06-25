@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, ChevronLeft, ChevronRight, Cpu, RefreshCw, Shield } from 'lucide-react';
+import { Activity, Bot, ChevronLeft, ChevronRight, Cpu, RefreshCw, Shield } from 'lucide-react';
+import { AgentStatusStrip } from './AgentStatusStrip';
 import { formatModelSize } from '../lib/ollama';
 import { scanForThreats } from '../services/sentinelSecurityService';
 import { getAuditLog } from '../services/agentAuditService';
@@ -127,7 +128,7 @@ export function RightPanel({
   updateCheckState,
 }: RightPanelProps) {
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('alphonso_right_panel_collapsed_v1') === 'true');
-  const [activeTab, setActiveTab] = useState<'system' | 'audit'>('system');
+  const [activeTab, setActiveTab] = useState<'system' | 'audit' | 'agents'>('system');
   const setPanelCollapsed = (value: boolean) => {
     setCollapsed(value);
     localStorage.setItem('alphonso_right_panel_collapsed_v1', String(value));
@@ -237,6 +238,12 @@ export function RightPanel({
             className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${activeTab === 'audit' ? 'text-[var(--text-1)] bg-[var(--surface-3)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
           >
             Audit
+          </button>
+          <button
+            onClick={() => setActiveTab('agents')}
+            className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${activeTab === 'agents' ? 'text-[var(--text-1)] bg-[var(--surface-3)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
+          >
+            Agents
           </button>
         </div>
         <button
@@ -374,6 +381,13 @@ export function RightPanel({
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {activeTab === 'agents' && (
+        <div className="flex-1 overflow-y-auto p-3">
+          <p className="section-label mb-3">Active Agents</p>
+          <AgentStatusStrip useAutoFeed compact={false} />
         </div>
       )}
     </aside>

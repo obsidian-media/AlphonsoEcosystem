@@ -17,7 +17,7 @@ function MessageListProfiler({ children, msgCount }) {
   );
 }
 import { invoke } from '@tauri-apps/api/core';
-import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
+import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Mic, MicOff, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
@@ -39,6 +39,7 @@ import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShort
 import { startProactiveWatcher } from '../services/proactiveAgentService';
 import { MemorySearch } from './MemorySearch';
 import { runNovaAnalysis, computeOpportunityScores } from '../services/novaAnalysisService';
+import { useJarvisVoice } from '../hooks/useJarvisVoice';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
@@ -255,6 +256,7 @@ export function ChatView({
   const [showMemorySearch, setShowMemorySearch] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [novaInsight, setNovaInsight] = useState(null);
+  const jarvis = useJarvisVoice();
   const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
   const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
   const [connectorBannerDismissed, setConnectorBannerDismissed] = useState(false);
@@ -278,6 +280,13 @@ export function ChatView({
       setInputValue(voice.liveTranscript);
     }
   }, [voice?.liveTranscript]);
+
+  // Wire Jarvis STT transcript into the chat input
+  useEffect(() => {
+    if (jarvis.transcript) {
+      setInputValue(jarvis.transcript);
+    }
+  }, [jarvis.transcript]);
 
   const pinMessage = (message) => {
     setPinnedMessages((prev) => {
@@ -1241,6 +1250,19 @@ export function ChatView({
             <Suspense fallback={null}>
               <VoiceInputButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
             </Suspense>
+            <button
+              onClick={() => jarvis.state === 'idle' ? jarvis.start() : jarvis.stop()}
+              title={jarvis.isConnected ? `Jarvis voice — ${jarvis.state}${jarvis.activeAgent !== 'alphonso_core' ? ` · ${jarvis.activeAgent}` : ''}` : 'Jarvis voice (requires voice server)'}
+              className={`h-7 w-7 flex items-center justify-center rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+                jarvis.state === 'listening' ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-muted)] animate-pulse'
+                : jarvis.state === 'thinking' || jarvis.state === 'speaking' ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-muted)]'
+                : jarvis.state === 'error' ? 'border-[var(--error)]/40 text-[var(--error)]'
+                : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
+              }`}
+              aria-label="Jarvis voice pipeline"
+            >
+              {jarvis.state === 'idle' || jarvis.state === 'error' ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
+            </button>
             <span className="flex-1 text-2xs text-[var(--text-4)]">
               {ollamaStatus.state === 'connected' && !selectedModelMissing
                 ? `${settings.selectedModel as string || 'local model'}`
