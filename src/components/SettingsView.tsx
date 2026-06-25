@@ -1153,6 +1153,10 @@ export function SettingsView({
   {activeSection === 'memory' && (
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
+        <SectionHeader icon={Mic} label="Meeting Transcription → Echo Memory" />
+        <MeetingTranscriptionPanel />
+      </section>
+      <section className="space-y-4">
         <SectionHeader icon={Activity} label="Echo Memory Timeline" />
         <EchoTimeline />
       </section>
@@ -1338,6 +1342,65 @@ function PluginMarketplacePanel() {
           <span className="text-indigo-400 font-medium">How to install:</span> Obtain a signed plugin manifest from a trusted source, then use <span className="font-mono text-zinc-300">verifyAndAddPlugin(manifest)</span> from <span className="font-mono text-zinc-300">pluginSigningService</span>. Only ECDSA-signed plugins from trusted keys are accepted.
         </div>
       </section>
+    </div>
+  );
+}
+
+function MeetingTranscriptionPanel() {
+  const [status, setStatus] = React.useState<'idle' | 'transcribing' | 'summarizing' | 'saving' | 'done' | 'error'>('idle');
+  const [result, setResult] = React.useState<{ filename: string; summary: string } | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    setStatus('transcribing');
+    setError(null);
+    setResult(null);
+    try {
+      const { transcribeAndIngest } = await import('../services/whisperTranscriptionService.js');
+      // In Tauri, file objects from <input> have a .path property on Windows
+      const path = (file as File & { path?: string }).path || file.name;
+      const res = await transcribeAndIngest(path, file.name, (s: string) => setStatus(s as typeof status));
+      setResult({ filename: file.name, summary: res.summary });
+      setStatus('done');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+      setStatus('error');
+    }
+  };
+
+  const busy = status !== 'idle' && status !== 'done' && status !== 'error';
+  const label = busy ? `${status}…` : 'Choose Audio File';
+
+  return (
+    <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-white/5 space-y-3">
+      <p className="text-xs text-[var(--text-3)]">
+        Drop an audio file (MP3, WAV, M4A). Whisper transcribes it, Ollama summarizes it, Echo remembers it.
+        Whisper must be installed via Runtime Hub first.
+      </p>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".mp3,.wav,.m4a,.mp4,.ogg,.webm"
+        className="hidden"
+        onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
+      />
+      <button
+        onClick={() => { setStatus('idle'); setResult(null); setError(null); fileRef.current?.click(); }}
+        disabled={busy}
+        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white text-xs rounded-xl transition-colors"
+      >
+        {label}
+      </button>
+      {result && (
+        <div className="space-y-1">
+          <p className="text-xs text-emerald-400">✓ {result.filename} saved to Echo memory</p>
+          <p className="text-xs text-[var(--text-3)] line-clamp-3">{result.summary}</p>
+        </div>
+      )}
+      {error && (
+        <p className="text-xs text-red-400">✗ {error}</p>
+      )}
     </div>
   );
 }

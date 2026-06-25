@@ -102,6 +102,13 @@ const TOOL_META = {
     color: 'text-[var(--agent-nova)]',
     bg: 'bg-[var(--agent-nova-glow)] border-[var(--border)]',
   },
+  openHands: {
+    icon: Bot,
+    category: 'Agent',
+    docsUrl: 'https://github.com/All-Hands-AI/OpenHands',
+    color: 'text-cyan-400',
+    bg: 'bg-cyan-500/10 border-cyan-500/20',
+  },
 };
 
 function StatusDot({ running, installing }) {
