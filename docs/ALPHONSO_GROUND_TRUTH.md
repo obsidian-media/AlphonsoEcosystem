@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-26 — v2.3.0
-**Verified by:** Claude Code — JUNE CANDY sprint + OpenCode features merged
-**Version:** 2.3.0 (n8n Runtime Hub + Marcus connector; Jose cron scheduler; Echo inbox file watcher; Whisper file picker fix; MCP bridge live Ollama; 149 test files / 1983 tests passing)
+**Last verified:** 2026-06-27 — v2.3.1
+**Verified by:** Claude Code — UI Polish sprint
+**Version:** 2.3.1 (Tab-based layout overhaul for 6 core pages; perplexityConnector.js; 149 test files / 1982 tests passing)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.3.0 |
+| Version | 2.3.1 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -139,6 +139,10 @@ Key services that past audits missed or underestimated:
 - `voice/frontend/src/useJarvisVoice.ts` — Standalone frontend hook (AudioWorklet, all exports)
 - `voice/frontend/src/pcm-processor.worklet.ts` — AudioWorklet processor (PCM float32→int16)
 - `src/hooks/pcm-processor.worklet.ts` — **copy required by `useJarvisVoice.ts`** (the hook imports from `./pcm-processor.worklet`; the voice/frontend version is a separate package). Do NOT remove this file.
+
+### UI Polish Sprint (v2.3.1)
+- `src/services/connectors/perplexityConnector.js` — Perplexity AI search: `isPerplexityConfigured`, `searchPerplexity`. Calls `/chat/completions` with `llama-3.1-sonar-small-128k-online`.
+- **6 pages tab-overhauled**: `ProjectExecutionMode.jsx` (4 tabs), `HectorResearchDesk.jsx` (3 tabs), `OrchestratorView.jsx` (4 tabs), `MiyaStudio.jsx` (tab-conditional layout), `EcosystemHub.jsx` (flat header + pill toggle), `ContentCatalystWorkspace.jsx` (max-w-5xl wrapper).
 
 ### JUNE CANDY Additions (v2.2.8 – v2.3.0)
 - `src/services/connectors/tavilyConnector.js` — Tavily AI search (free tier 1K/mo), `searchTavily`, `isTavilyConfigured`. Wired as tier-2 fallback in `hectorResearchService.js` (Brave → Tavily → DuckDuckGo → RSS).

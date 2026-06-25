@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.3.1] - 2026-06-27 — UI Polish Sprint: Tab-based layouts for 6 core pages
+
+### Changed
+- **ProjectExecutionMode**: 4-tab layout (Setup / Agents / Execution / Results), `h-full overflow-y-auto` scroll fixed, TapCash preset removed from UI (export kept for API compat), compact operational-mode pill buttons
+- **HectorResearchDesk**: 3-tab layout (New Research / Reports / Live Run), Hector Permissions collapsed to chevron accordion, empty-state with CTA on Reports tab, `createDraft()` auto-switches to Reports tab
+- **OrchestratorView**: 4-tab layout (Command / Approvals / Packets / Monitor), Approve/Reject/Execute buttons scoped to Approvals tab only — no longer repeated across every panel
+- **MiyaStudio**: tab-conditional rendering — `LocalGenerationPanel` only on Prompt tab, publish handoff panels gated on `creativeOutput` existing
+- **EcosystemHub**: flat `border-b` header replacing card-style header, pill-style Essential/Advanced toggle matching other pages
+- **ContentCatalystWorkspace**: consistent `max-w-5xl mx-auto px-6 py-6 space-y-5` inner container wrapper
+
+### Added
+- **perplexityConnector.js**: `isPerplexityConfigured`, `searchPerplexity` — calls Perplexity `/chat/completions` with `llama-3.1-sonar-small-128k-online`
+
+### Tests
+- 149 test files / 1982 passing (1 pre-existing flaky test in `echoFileWatcherService` deduplication — unrelated to this sprint)
+
+---
+
 ## [2.3.0] - 2026-06-26 — JUNE CANDY OpenCode Merge: n8n, Jose Scheduler, Echo File Watcher
 
 ### Added

@@ -50,7 +50,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **licenseService.ts**: license tier validation (Free/Pro/Enterprise) gates premium connectors (GitHub, Slack, Claude, ChatGPT, YouTube, Notion, ClickUp, SD WebUI, ComfyUI)
 - **parallelExecutionService.ts**: parallel task execution with concurrency control, retry logic, and task queues
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
-- **14 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope — all policy-gated. All have credential input UI in ConnectorSetupPanel.
+- **15 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope, Perplexity — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~2,024 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
 - **All 1930+ tests are in `src/test/`** — 144 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
@@ -150,6 +150,7 @@ Before writing any new service, component, or feature, check this list:
 | PWA service worker | `public/sw.js` — cache-first static, network-first nav, network-only API/invoke |
 | Offline chat service | `src/services/offlineChatService.js` — IndexedDB store (`alphonso-offline` DB) with `saveMessageOffline`/`getOfflineMessages`/`markMessageSynced` |
 | Tavily search connector | `src/services/connectors/tavilyConnector.js` — `searchTavily`, `isTavilyConfigured`; wired as tier-2 Hector fallback |
+| Perplexity search connector | `src/services/connectors/perplexityConnector.js` — `searchPerplexity`, `isPerplexityConfigured` |
 | ChromaDB vector DB | `src/services/chromaDbService.js` — `addMemoryToChroma`, `semanticSearchMemory`, `isChromaHealthy`; fire-and-forget write from Echo |
 | Whisper transcription service | `src/services/whisperTranscriptionService.js` — `transcribeAndIngest(audioFilePath, filename, onProgress)`; uses `pick_file` Tauri command |
 | n8n connector | `src/services/connectors/n8nConnector.js` — `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`, `isN8nHealthy` |
@@ -306,4 +307,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-26 — v2.3.0 — JUNE CANDY sprint complete + OpenCode merges: n8n in Runtime Hub + Marcus connector; Jose cron scheduler (AutomationView Schedules tab); Echo inbox file watcher (Tauri poll commands + 30s JS interval); Whisper pick_file fix; MCP bridge live Ollama responses; OpenHands -it→-d fix; cargo clippy -D warnings clean. 149 test files / 1983 tests passing._
+_Last verified: 2026-06-27 — v2.3.1 — UI Polish sprint: tab-based layouts for 6 core pages (Projects, Research, Orchestrator, Creative, All Agents, Content); perplexityConnector.js added; 15 connectors total. 149 test files / 1982 tests passing (1 pre-existing flaky test in echoFileWatcherService)._
