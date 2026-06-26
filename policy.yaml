@@ -1,0 +1,58 @@
+# Alphonso Module Policy DSL
+# Rules are evaluated top-to-bottom; first match wins.
+
+version: "1.0"
+
+rules:
+  - id: block_delete_all
+    description: Block bulk delete operations
+    match:
+      action: "delete"
+      scope: "all"
+    effect: deny
+
+  - id: require_consent_external_publish
+    description: Require user consent before publishing to external services
+    match:
+      action: "publish"
+      target: "external"
+    effect: require_consent
+
+  - id: require_consent_financial
+    description: Require consent for any financial action
+    match:
+      action: "payment"
+    effect: require_consent
+
+  - id: allow_read_only
+    description: Allow all read-only operations
+    match:
+      action: "read"
+    effect: allow
+
+  - id: allow_internal_memory
+    description: Allow writing to internal memory stores
+    match:
+      action: "write"
+      target: "memory"
+    effect: allow
+
+  - id: deny_credential_export
+    description: Block exporting credentials or secrets
+    match:
+      action: "export"
+      target: "credentials"
+    effect: deny
+
+  - id: require_consent_agent_spawn
+    description: Require consent before spawning new agent processes
+    match:
+      action: "spawn"
+      target: "agent"
+    effect: require_consent
+
+  - id: allow_internal_default
+    description: Default allow for internal operations
+    match:
+      target: "internal"
+    effect: allow

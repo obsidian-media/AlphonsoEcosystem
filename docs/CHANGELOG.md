@@ -6,6 +6,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.0] - 2026-06-27 — Agent OS Foundations, Boardroom Sessions, Observability, Polish
+
+### Agent OS Foundations
+- **Module system** — `modules/` directory with TOML manifest spec; example `alphonso.researcher.web_monitor` module
+- **moduleRegistryService** — install, enable, disable, list, uninstall modules; persisted via durableStore (`alphonso_modules_v1`)
+- **runtimeApiService** — bridge client (port 4444) for module lifecycle + event publishing; AbortController timeouts; falls back to registry when bridge offline
+- **policyDslService** — module-level policy evaluation with `policy.yaml`; separate from policyEnforcementService
+- **a2aProtocolService** — structured agent-to-agent task delegation via agentBusService; persists tasks in `alphonso_a2a_tasks_v1`
+- **agentBusService** — extended with `sendAgentMessage`, `getAgentMessages`, `clearAgentMessages`, `subscribeToMessages` (2s poll, ring buffer 50 per agent)
+
+### Agent Capabilities
+- **Boardroom multi-agent sessions** — topic + participant selection, Hector briefing auto-triggered, Maria risk score, Echo synthesis, Marcus distribution; `alphonso_boardroom_sessions_v1`
+- **Miya creative brief** — button in concluded sessions sends conclusion to Miya via Jose router
+- **5 SCHEDULE_PRESETS** — nova_daily_scan, sentinel_daily_summary, echo_nightly_consolidation, hector_morning_briefing, maria_weekly_audit; all wired to agent services
+- **/boardroom Telegram command** — 22nd command; runs boardroom and replies with conclusion
+- **Runtime Hub Modules tab** — list, install, enable/disable modules
+
+### Observability & Reliability
+- **Voice OS watchdog** — 30s health-check interval post-start; auto-restarts; `stopVoiceWatchdog()` export
+- **Hector RSS retry** — `fetchWithRetry` 3 attempts, 500/1000/2000ms delays; crash-logged on retry
+- **Cron validation** — 5-field validation before schedule store; descriptive error on reject
+- **ChromaDB error surface** — try/catch on writes; `getChromaWriteErrors()` ring buffer (10 entries)
+- **n8n timeouts** — 15s/10s/5s AbortController per endpoint; clean `AbortError` catch
+- **Unified memory namespace eviction** — limits: shared 500, miya 700, ecosystem 1500, workflow 2000; oldest evicted on overflow; `getNamespaceCount(ns)`
+- **Bundle size CI** — 10MB total / 2MB per-chunk enforced in GitHub Actions post-build step
+
+### Polish
+- **Dark/light mode** — TopBar toggle; `[data-theme="light"]` overrides in tokens.css; localStorage persist
+- **Keyboard shortcuts modal** — `KeyboardShortcutsModal.tsx`; Ctrl+? global listener; Ctrl+J/B/R nav
+- **Agent performance export** — CSV + JSON download from AgentPerformanceView
+- **Dead Letter Queue section** in AgentPerformanceView — count, oldest timestamp, Retry All button
+- **CONTRIBUTING.md** — PR checklist, branch strategy, TS requirements, commit format
+- **docs/WORKFLOW_NODES.md** — all 9 node types documented (trigger, ocr, memory, analysis, condition, approval, action, notification, report)
+- **e2e/multiagent.spec.js** — Playwright pipeline smoke test (skipped in CI, requires Ollama)
+
 ## [2.3.3] - 2026-06-27 — Bug Fix Sprint: Voice OS, AgentPairing, Settings persistence, UX polish
 
 ### Fixed
