@@ -8,6 +8,7 @@ import { TRUST_STATES } from './services/trustModel';
 import { sendNativeNotification } from './services/notificationService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
@@ -42,6 +43,37 @@ const RuntimeManagerView = lazy(() => import('./components/RuntimeManagerView'))
 const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then((mod) => ({ default: mod.BootStatusBanner })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
+const BoardroomView = lazy(() => import('./components/BoardroomView'));
+
+function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprovalRequest: () => void }) {
+  const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex items-center gap-1 px-5 pt-3 pb-0 border-b border-[var(--border)] shrink-0">
+        {(['mission', 'boardroom'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setSubTab(t)}
+            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
+              subTab === t
+                ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
+                : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+            }`}
+          >
+            {t === 'mission' ? 'Mission Room' : 'Boardroom Sessions'}
+          </button>
+        ))}
+      </div>
+      <div className="flex-1 overflow-hidden">
+        {subTab === 'mission' ? (
+          <MissionRoom onCreateApprovalRequest={onCreateApprovalRequest} />
+        ) : (
+          <Suspense fallback={null}><BoardroomView /></Suspense>
+        )}
+      </div>
+    </div>
+  );
+}
 const AutomationView = lazy(() => import('./components/AutomationView').then((mod) => ({ default: mod.AutomationView })));
 const FilesView = lazy(() => import('./components/FilesView').then((mod) => ({ default: mod.FilesView })));
 const EcosystemHub = lazy(() => import('./components/EcosystemHub').then((mod) => ({ default: mod.EcosystemHub })));
@@ -105,6 +137,7 @@ function AppShell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [pendingApprovalCount, setPendingApprovalCount] = useState<number>(0);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
   const addNotification = useCallback((n: Omit<AppNotification, 'id' | 'timestamp'>) => {
     setNotifications((prev) => [
@@ -189,7 +222,7 @@ function AppShell() {
     approvalRequiredNotice
   });
 
-  useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab });
+  useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab, setShowKeyboardShortcuts });
   useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
 
   // Echo end-of-session synthesis on window close
@@ -310,6 +343,17 @@ function AppShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Voice OS watchdog — restarts voice server if it dies (Tauri-only)
+  useEffect(() => {
+    if (typeof window.__TAURI_INTERNALS__ === 'undefined') return;
+    let stopFn: (() => void) | null = null;
+    import('./services/voiceOsService').then(({ startVoiceWatchdog, stopVoiceWatchdog }: any) => {
+      startVoiceWatchdog();
+      stopFn = stopVoiceWatchdog;
+    }).catch(() => { /* non-critical */ });
+    return () => { stopFn?.(); };
+  }, []);
+
   if (isCoachWindow) {
     return (
       <CoachWindow
@@ -415,7 +459,7 @@ function AppShell() {
                   <MissionControlHome settings={settings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} coachMode={coachMode} coachIntervention={coachIntervention} verificationLogs={verificationLogs} memoryItems={memoryItems} updateCheckState={updateCheckState} onNavigate={switchTab} />
                 )}
                 {activeTab === 'mission_room' && (
-                  <MissionRoom onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} />
+                  <MissionRoomBoardroomTabs onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} />
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState label="Chat" />}>
@@ -483,6 +527,9 @@ function AppShell() {
         <Suspense fallback={<ViewLoadingState label="Workflows" />}>
           <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(_workflowId: string) => switchTab('activity')} />
         </Suspense>
+      )}
+      {showKeyboardShortcuts && (
+        <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
       )}
     </div>
   );

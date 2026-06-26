@@ -17,6 +17,19 @@ export const SCHEDULE_PRESETS = [
   { id: 'maria_weekly_audit',           cron: '0 9 * * 1', label: 'Maria Weekly Governance Audit',      handler: 'maria_audit' },
 ];
 
+function nextCronMs(cron) {
+  const fields = cron.trim().split(/\s+/);
+  const minute = fields[0] === '*' ? null : parseInt(fields[0], 10);
+  const hour = fields[1] === '*' ? null : parseInt(fields[1], 10);
+  const now = new Date();
+  const next = new Date(now);
+  next.setSeconds(0, 0);
+  if (minute !== null) next.setMinutes(minute);
+  if (hour !== null) next.setHours(hour);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next.getTime();
+}
+
 function validateCronExpression(cron) {
   if (typeof cron !== 'string') return false;
   const fields = cron.trim().split(/\s+/);
@@ -124,7 +137,8 @@ export function createSchedule({ name, commandText, presetId = 'hourly', interva
     return { success: false, error: 'Invalid cron expression: must have 5 fields (minute hour day month weekday)' };
   }
   const preset = SCHEDULE_PRESETS.find((p) => p.id === presetId) || SCHEDULE_PRESETS[1];
-  const resolvedInterval = intervalMs || preset.intervalMs || 60 * 60 * 1000;
+  const resolvedCron = cron || preset.cron || null;
+  const resolvedInterval = intervalMs || preset.intervalMs || (resolvedCron ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000);
   const now = Date.now();
 
   const schedule = {
@@ -133,10 +147,11 @@ export function createSchedule({ name, commandText, presetId = 'hourly', interva
     commandText: String(commandText || '').slice(0, 2000),
     presetId: preset.id,
     intervalMs: resolvedInterval,
+    ...(resolvedCron ? { cron: resolvedCron } : {}),
     agentId: String(agentId || 'jose'),
     enabled: true,
     lastRunAtMs: null,
-    nextRunAtMs: now + resolvedInterval,
+    nextRunAtMs: resolvedCron ? nextCronMs(resolvedCron) : now + resolvedInterval,
     createdAtMs: now,
   };
 
@@ -202,7 +217,7 @@ export function startScheduler(callback) {
       schedules[i] = {
         ...s,
         lastRunAtMs: now,
-        nextRunAtMs: now + s.intervalMs,
+        nextRunAtMs: s.cron ? nextCronMs(s.cron) : now + s.intervalMs,
       };
       changed = true;
 
