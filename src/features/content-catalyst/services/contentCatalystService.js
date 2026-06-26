@@ -373,6 +373,9 @@ export async function generateContentImage(job) {
     cfgScale: 7
   });
   if (!result?.ok) {
+    window.dispatchEvent(new CustomEvent('alphonso:toast', {
+      detail: { type: 'warning', message: 'Image generation skipped — ComfyUI not running. Start it in Runtimes.' }
+    }));
     return {
       ...job,
       status: CONTENT_JOB_STATES.FAILED,
@@ -419,6 +422,9 @@ export async function generateContentVideo(job) {
     timeoutSeconds: 600
   });
   if (!result?.ok) {
+    window.dispatchEvent(new CustomEvent('alphonso:toast', {
+      detail: { type: 'warning', message: 'Video generation skipped — Runway API key not configured. Add it in Settings.' }
+    }));
     return {
       ...job,
       status: CONTENT_JOB_STATES.FAILED,

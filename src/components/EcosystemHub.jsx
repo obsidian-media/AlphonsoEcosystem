@@ -42,6 +42,13 @@ import { ProductionReadinessPanel } from './ProductionReadinessPanel';
 import { SelfDevelopmentPanel } from './SelfDevelopmentPanel';
 import { EcosystemMaturityPanelsGate } from './EcosystemMaturityPanelsGate';
 import { AgentPairingView } from './AgentPairingView';
+import { ProjectIntakePanel } from './agentWorkshop/ProjectIntakePanel';
+import { AgentAssignmentBoard } from './agentWorkshop/AgentAssignmentBoard';
+import { AgentOutputPanel } from './agentWorkshop/AgentOutputPanel';
+import { ApprovalGatePanel } from './agentWorkshop/ApprovalGatePanel';
+import { ExecutionTimeline } from './agentWorkshop/ExecutionTimeline';
+import { FinalExecutionPacket } from './agentWorkshop/FinalExecutionPacket';
+import { SystemHealthPanel } from './agentWorkshop/SystemHealthPanel';
 
 const WorkflowOperationsDashboard = lazy(() =>
   import('./WorkflowOperationsDashboard').then((module) => ({
@@ -197,6 +204,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
     { id: 'skills', label: 'Skills' },
     { id: 'workflows', label: 'Workflows' },
     { id: 'pairings', label: 'Pairings' },
+    { id: 'workshop', label: 'Workshop' },
     { id: 'advanced', label: 'Advanced' },
   ];
 
@@ -353,6 +361,22 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
           {showAdvancedSections === 'pairings' && (
             <div className="space-y-4">
               <AgentPairingView />
+            </div>
+          )}
+
+          {/* WORKSHOP TAB */}
+          {showAdvancedSections === 'workshop' && (
+            <div className="space-y-4">
+              <SystemHealthPanel />
+              <ProjectIntakePanel
+                intake={{ projectName: '', stack: '', deadline: '', projectType: 'web_app', projectDescription: '', targetFeaturesText: '', constraintsText: '' }}
+                setIntake={() => {}}
+              />
+              <AgentAssignmentBoard packets={[]} />
+              <AgentOutputPanel outputs={[]} />
+              <ApprovalGatePanel gates={[]} />
+              <ExecutionTimeline timeline={[]} />
+              <FinalExecutionPacket finalPacket={null} />
             </div>
           )}
 

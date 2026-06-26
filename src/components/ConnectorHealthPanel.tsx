@@ -100,7 +100,7 @@ const STATUS_BADGE = {
   live: {
     dot: 'bg-emerald-400',
     badge: 'border-[var(--success-dim)] bg-[var(--success-dim)] text-[var(--success)]',
-    label: 'Live'
+    label: 'Credentials saved'
   },
   missing_config: {
     dot: 'bg-amber-400',

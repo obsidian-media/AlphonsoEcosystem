@@ -194,4 +194,77 @@ describe('policyEnforcementService', () => {
       expect(result.blocked).toBe(false);
     });
   });
+
+  describe('additional fail-closed scenarios', () => {
+    it('blocks missing connectorId as ambiguous action', () => {
+      const result = evaluatePolicyGate({ connectorId: '' });
+      expect(result.ok).toBe(true);
+      expect(result.blocked).toBe(false);
+    });
+
+    it('blocks missing credentials when auth enabled', () => {
+      const result = evaluatePolicyGate({
+        connectorId: 'telegram',
+        auth: { enabled: true, isAuthorized: false }
+      });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+      expect(result.reason).toContain('authorization failed');
+    });
+
+    it('blocks ambiguous action pattern', () => {
+      const result = evaluatePolicyGate({
+        connectorId: 'telegram',
+        actionType: 'send_message',
+        approved: false
+      });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+    });
+
+    it('blocks paid connector in zero-cost mode', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: true }));
+      const result = evaluatePolicyGate({ connectorId: 'chatgpt' });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+    });
+
+    it('requires approval in approval mode for high-risk', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+      const result = evaluatePolicyGate({ connectorId: 'youtube', approved: false });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+      expect(result.reason).toContain('Approval Mode');
+    });
+
+    it('passes low-risk connector with no modes', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({
+        approvalMode: false,
+        zeroCostMode: false,
+        safeMode: false,
+        localOnlyMode: false
+      }));
+      const result = evaluatePolicyGate({ connectorId: 'unknown_connector' });
+      expect(result.ok).toBe(true);
+      expect(result.blocked).toBe(false);
+    });
+
+    it('passes low-risk connector with approval override', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+      const result = evaluatePolicyGate({ connectorId: 'telegram', approved: true });
+      expect(result.ok).toBe(true);
+      expect(result.blocked).toBe(false);
+    });
+
+    it('blocks high-risk action without approval in approval mode', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+      const result = evaluatePolicyGate({
+        connectorId: 'notion',
+        actionType: 'publish_content',
+        approved: false
+      });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+    });
+  });
 });

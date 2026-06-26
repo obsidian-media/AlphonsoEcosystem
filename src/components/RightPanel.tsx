@@ -167,6 +167,12 @@ export function RightPanel({
     if (!sentinelScan) runQuickScan();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (activeTab !== 'system') return;
+    const id = setInterval(runQuickScan, 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const diagnostics = useMemo(() => [
     {
       label: 'Ollama',

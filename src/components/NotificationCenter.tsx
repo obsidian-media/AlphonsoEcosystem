@@ -1,6 +1,4 @@
-import React from 'react';
-import { Bell } from 'lucide-react';
-import { EmptyState } from './ui/EmptyState';
+import React, { useEffect, useRef } from 'react';
 
 type NotificationType = 'success' | 'warning' | 'error' | 'info';
 
@@ -18,6 +16,20 @@ interface NotificationCenterProps {
   onClearAll: () => void;
 }
 
+const STORAGE_KEY = 'alphonso_notifications_v1';
+
+export function loadPersistedNotifications(): Notification[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+export function clearPersistedNotifications(): void {
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* non-blocking */ }
+}
+
 const BORDER_COLOR: Record<NotificationType, string> = {
   success: 'border-emerald-500',
   warning: 'border-amber-500',
@@ -32,6 +44,20 @@ function relativeTime(timestamp: number): string {
 }
 
 export function NotificationCenter({ notifications, onDismiss, onClearAll }: NotificationCenterProps) {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+      } catch { /* non-blocking */ }
+    }, 500);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [notifications]);
+
   if (!notifications || notifications.length === 0) {
     return null;
   }
@@ -42,7 +68,10 @@ export function NotificationCenter({ notifications, onDismiss, onClearAll }: Not
     <div className="fixed top-4 right-4 z-50 w-80 flex flex-col gap-2 max-h-[80vh] overflow-y-auto">
       {notifications.length > 1 && (
         <button
-          onClick={onClearAll}
+          onClick={() => {
+            clearPersistedNotifications();
+            onClearAll();
+          }}
           className="self-end text-xs text-zinc-400 hover:text-zinc-200 underline"
         >
           Clear all

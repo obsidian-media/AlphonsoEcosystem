@@ -208,4 +208,154 @@ describe('agentContractService', () => {
       expect(result.ok).toBe(true);
     });
   });
+
+  describe('blocked actions per agent', () => {
+    it('blocks purchase for marcus', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'marcus',
+        actionType: 'purchase_upgrade'
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain('blocked');
+    });
+
+    it('blocks execute_command for marcus', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'marcus',
+        actionType: 'execute_command_run'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('blocks purchase for echo', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'echo',
+        actionType: 'purchase_storage'
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain('blocked');
+    });
+
+    it('blocks external_publish for echo', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'echo',
+        actionType: 'external_publish_memory'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('blocks purchase for sentinel', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'sentinel',
+        actionType: 'purchase_license'
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain('blocked');
+    });
+
+    it('blocks filesystem_write for sentinel', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'sentinel',
+        actionType: 'filesystem_write_log'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('blocks purchase for nova', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'nova',
+        actionType: 'purchase_analysis'
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain('blocked');
+    });
+
+    it('blocks external_publish for nova', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'nova',
+        actionType: 'external_publish_report'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('blocks upload for hector', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'hector',
+        actionType: 'upload_research_data'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('blocks post for maria', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'maria',
+        actionType: 'post_announcement'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('blocks execute_command for jose', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'jose',
+        actionType: 'execute_command_deploy'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('blocks filesystem_write for miya', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'miya',
+        actionType: 'filesystem_write_script'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('allows alphonso execute_command', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'alphonso',
+        actionType: 'execute_command_run_tests'
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it('allows marcus approved_distribution', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'marcus',
+        actionType: 'approved_distribution_release'
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it('allows echo memory_store', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'echo',
+        actionType: 'memory_store_record'
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it('allows sentinel security_check', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'sentinel',
+        actionType: 'security_check_permission'
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it('allows nova opportunity_score', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'nova',
+        actionType: 'opportunity_score_leads'
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it('allows hector research_discover', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: 'hector',
+        actionType: 'research_discover_sources'
+      });
+      expect(result.ok).toBe(true);
+    });
+  });
 });

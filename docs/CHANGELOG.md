@@ -6,6 +6,61 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.1] - 2026-06-27 — Bug & Gap Closure Sprint (OpenCode)
+
+### Voice OS
+- **S-01** Health check after install — verifies venv and package imports post-install
+- **S-03** `/health` endpoint enhanced — returns `stt` and `tts` fields; piper model existence check
+- **S-04** Piper TTS model download — graceful fallback when model missing; clear error message
+- **S-05** Voice OS WebSocket URL — configurable via `alphonso_voice_ws_url` localStorage key; Settings UI input
+
+### Runtime Manager (Rust)
+- **S-06** Docker prerequisite detection — `find_docker()` for n8n, ChromaDB, OpenHands
+- **S-07** Node prerequisite detection — `find_node()` for MCP Server
+- **S-08** AudioCraft Python version check — warning if Python >= 3.12
+- **S-09** ComfyUI venv isolation — verified already handled by existing logic
+- **S-10** Post-spawn health check — 3-second PID liveness check after `runtime_start_tool`
+
+### Security Hardening
+- **S-11** IPC rate limiting — 10 calls/minute token bucket on telegram_send_message, whatsapp_send_message, youtube_upload_video, meta_publish_media
+- **S-12** WhatsApp gateway HMAC verification — already implemented (verified)
+- **S-13** Bridge body size limit — 1MB max via `express.json({ limit: '1mb' })`
+- **S-14** MCP server auth — Bearer token or localhost-only restriction
+- **S-15** Git history verified clean — no credentials in history
+- **S-31** Port conflict documentation — env var overrides for bridge (ALPHONSO_BRIDGE_PORT) and MCP (MCP_SERVER_PORT)
+
+### Connector UX
+- **S-16** "Connected" label renamed to "Credentials saved"
+- **S-17** GitHub/Slack Test Connection — real API calls with username feedback
+- **S-18** Runway credential section — already existed (verified)
+- **S-19** Hector briefing card — empty sources fallback message
+- **S-20** Nova insight threshold — configurable via `alphonso_nova_threshold` localStorage; Settings UI input
+- **S-21** Ollama model pull button — pull unloaded models with progress
+
+### Content Pipeline & Settings
+- **S-22** Content pipeline error surfacing — warning toasts for ComfyUI/Runway failures
+- **S-23** Workspace root audit — no hardcoded paths found (verified)
+- **S-24** Notification persistence — localStorage with debounced save; clear on "Clear all"
+- **S-25** Sentinel auto-refresh gated — only runs when Security tab visible
+
+### Mounted Components
+- **S-26** CompanionPairingPanel mounted in SettingsView
+- **S-27** AgentMetricsPanel already mounted (verified)
+- **S-28** AgentWorkshop mounted as new tab in EcosystemHub
+- **S-29** Whisper prereq warning in MeetingTranscriptionPanel
+
+### Release Infrastructure
+- **S-32** RELEASE_CHECKLIST.md created — documents required GitHub Secrets
+- **S-33** Updater manifest generation verified in release.yml
+
+### Tests (4 new files, 42+ new tests)
+- **S-34** `ecosystemHub.test.jsx` — 8 tests (rendering, tabs, switching)
+- **S-35** `agentPairingView.test.jsx` — 8 tests (create, duplicate, delete)
+- **S-36** `policyEnforcementService.test.js` — 8 new fail-closed tests
+- **S-37** `agentContractService.test.js` — 18 new boundary tests (all 9 agents)
+
+---
+
 ## [2.4.0] - 2026-06-27 — Agent OS Foundations, Boardroom Sessions, Observability, Polish
 
 ### Agent OS Foundations

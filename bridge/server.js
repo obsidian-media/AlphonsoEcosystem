@@ -1,14 +1,16 @@
 /**
- * Alphonso Bridge — HTTP server on port 4444
+ * Alphonso Bridge — HTTP server
+ * Default port: 4444. Override via ALPHONSO_BRIDGE_PORT env var.
  * Called by the MCP server. Routes tool calls to Ollama for live responses.
  */
 
 import express from 'express';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
-const PORT = Number(process.env.BRIDGE_PORT || 4444);
+// Default port 4444; override with ALPHONSO_BRIDGE_PORT env var
+const PORT = Number(process.env.ALPHONSO_BRIDGE_PORT || process.env.BRIDGE_PORT || 4444);
 const OLLAMA_BASE = process.env.OLLAMA_BASE || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 

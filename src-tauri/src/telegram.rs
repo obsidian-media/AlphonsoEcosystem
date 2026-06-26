@@ -202,9 +202,11 @@ pub(crate) async fn connector_poll_telegram(
 #[tauri::command]
 pub(crate) async fn connector_send_telegram(
   http_client: tauri::State<'_, reqwest::Client>,
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
   chat_id: String,
   text: String,
 ) -> Result<ConnectorSendProof, String> {
+  rate_limiter.check_and_record("connector_send_telegram")?;
   let sent_at_ms = now_ms();
   let token = std::env::var("TELEGRAM_BOT_TOKEN")
     .map(|value| value.trim().to_string())

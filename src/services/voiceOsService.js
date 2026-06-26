@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendAgentActivity } from './agentActivityService.js';
 
-const WS_URL = 'ws://127.0.0.1:8765/ws';
+const DEFAULT_WS_URL = 'ws://127.0.0.1:8765/ws';
 
 export async function startVoiceServer() {
   const result = await invoke('voice_start');
@@ -20,7 +20,11 @@ export async function getVoiceServerStatus() {
 }
 
 export function getVoiceWebSocketUrl() {
-  return WS_URL;
+  try {
+    const saved = localStorage.getItem('alphonso_voice_ws_url');
+    if (saved && saved.startsWith('ws://')) return saved;
+  } catch { /* ignore */ }
+  return DEFAULT_WS_URL;
 }
 
 let _watchdogInterval = null;
