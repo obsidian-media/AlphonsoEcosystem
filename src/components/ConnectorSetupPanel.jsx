@@ -331,6 +331,59 @@ export function ConnectorSetupPanel() {
   };
 
   const verifyEnv = async (id) => {
+    // Real API test for GitHub
+    if (id === 'github') {
+      const token = githubToken.trim() || getConnectorCredential('github', 'GITHUB_TOKEN');
+      if (!token) { showNotice('GitHub token is required.', 'error'); return; }
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch('https://api.github.com/user', {
+          headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (res.ok) {
+          const data = await res.json();
+          showNotice(`Connection verified — authenticated as @${data.login}`, 'success');
+        } else if (res.status === 401 || res.status === 403) {
+          showNotice('Invalid GitHub token', 'error');
+        } else {
+          showNotice(`GitHub API returned HTTP ${res.status}`, 'error');
+        }
+      } catch {
+        showNotice('Could not reach GitHub API', 'error');
+      }
+      refresh();
+      return;
+    }
+
+    // Real API test for Slack
+    if (id === 'slack') {
+      const token = slackBotToken.trim() || getConnectorCredential('slack', 'SLACK_BOT_TOKEN');
+      if (!token) { showNotice('Slack bot token is required.', 'error'); return; }
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch('https://slack.com/api/auth.test', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        const data = await res.json();
+        if (data.ok) {
+          showNotice(`Connection verified — authenticated as @${data.user}`, 'success');
+        } else {
+          showNotice(`Invalid Slack token: ${data.error || 'auth.test failed'}`, 'error');
+        }
+      } catch {
+        showNotice('Could not reach Slack API', 'error');
+      }
+      refresh();
+      return;
+    }
+
     const result = await verifyConnectorEnvironment(id);
     if (result?.error) {
       showNotice(`${id}: ${result.error}`, 'error');

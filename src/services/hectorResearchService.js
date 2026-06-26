@@ -13,6 +13,27 @@ import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceSe
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
 
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  const DELAYS = [500, 1000, 2000];
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const delayMs = DELAYS[attempt] ?? 2000;
+        try {
+          const { logError } = await import('./crashLogService.js');
+          logError('hector_rss_retry', { url, attempt: attempt + 1 });
+        } catch { /* non-critical */ }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 async function retryWithBackoff(fn, maxRetries = 3) {
   let lastError = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -393,7 +414,7 @@ export async function fetchRssSources(query, limit = 8) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
-      const resp = await fetch(feed.url, { signal: controller.signal });
+      const resp = await fetchWithRetry(feed.url, { signal: controller.signal });
       clearTimeout(timer);
       if (!resp.ok) return;
       const text = await resp.text();

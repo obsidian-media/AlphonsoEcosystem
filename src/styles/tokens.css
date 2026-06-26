@@ -91,7 +91,8 @@
   --duration-slow: 250ms;
 }
 
-/* Light mode overrides */
+/* Light mode overrides — applied via .light class OR data-theme attribute */
+[data-theme="light"],
 .light {
   --surface-0: oklch(99% 0.005 255);
   --surface-1: oklch(97% 0.007 255);

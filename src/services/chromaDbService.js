@@ -1,6 +1,12 @@
 const CHROMA_BASE = 'http://127.0.0.1:8000';
 const COLLECTION = 'alphonso_echo_memory';
 
+const writeErrors = [];
+
+export function getChromaWriteErrors() {
+  return writeErrors.slice();
+}
+
 export async function isChromaHealthy() {
   try {
     const r = await fetch(`${CHROMA_BASE}/api/v1/heartbeat`, {
@@ -37,8 +43,15 @@ export async function addMemoryToChroma(memory) {
         }],
       }),
     });
-  } catch {
+  } catch (e) {
     // Non-blocking — ChromaDB being offline must not break memory save
+    const errorEntry = { error: e?.message || String(e), collection: COLLECTION, ts: Date.now() };
+    writeErrors.push(errorEntry);
+    if (writeErrors.length > 10) writeErrors.shift();
+    try {
+      const { logError } = await import('./crashLogService.js');
+      logError('chroma_write_error', errorEntry);
+    } catch { /* non-critical */ }
   }
 }
 

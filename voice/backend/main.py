@@ -34,7 +34,15 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    tts_ok = False
+    try:
+        import os
+        from pathlib import Path
+        model_path = Path(__file__).parent / "en_US-lessac-medium.onnx"
+        tts_ok = model_path.exists()
+    except Exception:
+        pass
+    return {"status": "ok", "stt": True, "tts": tts_ok}
 
 
 @app.websocket("/ws")

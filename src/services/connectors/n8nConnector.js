@@ -47,7 +47,7 @@ export async function triggerN8nWebhook(webhookPath, payload = {}) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(15000),
     });
 
     const contentType = response.headers.get('content-type') || '';
@@ -68,6 +68,9 @@ export async function triggerN8nWebhook(webhookPath, payload = {}) {
 
     return { ok: true, data };
   } catch (error) {
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      return { ok: false, error: 'n8n webhook timeout (15s)' };
+    }
     return {
       ok: false,
       error: `n8n webhook request failed: ${String(error?.message || error).slice(0, 200)}`,

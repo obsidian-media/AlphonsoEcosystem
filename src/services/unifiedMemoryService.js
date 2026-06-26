@@ -738,6 +738,12 @@ export function importMemoryItems(json, namespace) {
   return { imported, skipped, total: imported + skipped };
 }
 
+// ── Namespace count ───────────────────────────────────────────────────
+
+export function getNamespaceCount(namespace) {
+  return readLocal(namespace).length;
+}
+
 // ── Memory summary for diagnostics ────────────────────────────────────
 
 export function getMemorySummary() {

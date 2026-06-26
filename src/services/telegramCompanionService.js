@@ -480,6 +480,21 @@ async function handleReceiptsCommand(token, chatId) {
   }
 }
 
+async function handleBoardroomCommand(token, chatId, topic) {
+  await sendTelegramMessageInternal({ token, chatId, text: `🏛 Convening boardroom session on: "${topic}"…` });
+  try {
+    const { createJoseCommandRoute } = await import('./joseCommandRouterService.js');
+    await createJoseCommandRoute({ commandText: `boardroom: ${topic}`, source: 'telegram', boardroom: true });
+    return sendTelegramMessageInternal({
+      token,
+      chatId,
+      text: `✅ Boardroom session for "${topic}" started. Agents are deliberating — check the Boardroom view for the conclusion.`
+    });
+  } catch (e) {
+    return sendTelegramMessageInternal({ token, chatId, text: `❌ Boardroom session failed: ${e.message}` });
+  }
+}
+
 async function handleReadFileCommand(token, chatId, filename) {
   if (!filename) {
     return sendTelegramMessageInternal({ token, chatId, text: 'Usage: /read <filename>' });
@@ -651,6 +666,10 @@ export async function processInboundCommands(token, updates) {
           chatId,
           text: '🔔 Push notifications resumed.'
         });
+      }
+
+      if (cmd === 'boardroom' && argument) {
+        return handleBoardroomCommand(token, chatId, argument);
       }
 
       if (cmd === 'ask' && argument) {

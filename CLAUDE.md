@@ -157,6 +157,13 @@ Before writing any new service, component, or feature, check this list:
 | Jose cron scheduler | `src/services/joseSchedulerService.js` — `createSchedule`, `listSchedules`, `startScheduler`/`stopScheduler`; SCHEDULE_PRESETS; AutomationView Schedules tab |
 | Echo file watcher | `src/services/echoFileWatcherService.js` — `startFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`; polls `watch_inbox_poll` Tauri command every 30s |
 | MCP server | `mcp-server/server.js` — Express port 3333; 5 MCP tools callable from Claude Desktop/Cursor/Windsurf |
+| Module registry | `src/services/moduleRegistryService.ts` — `installModule`, `enableModule`, `disableModule`, `listModules`, `getModule`, `uninstallModule`; persists to `alphonso_modules_v1` |
+| Runtime API client | `src/services/runtimeApiService.ts` — bridge client (port 4444): `listModules`, `runModule`, `getRunStatus`, `publishEvent`; falls back to registry offline |
+| Policy DSL (module-level) | `src/services/policyDslService.ts` — `loadPolicy`, `evaluateAction`, `getPolicyRules`; separate from `policyEnforcementService` |
+| A2A protocol | `src/services/a2aProtocolService.ts` — `delegate`, `getTaskStatus`, `updateTaskResult`, `listActiveTasks`, `listTasksByAgent`; uses agentBusService |
+| Module manifests | `modules/` directory — TOML manifests; example: `alphonso.researcher.web_monitor` |
+| policy.yaml | `policy.yaml` (repo root) — module-level policy rules consumed by `policyDslService` |
+| Keyboard shortcuts modal | `src/components/KeyboardShortcutsModal.tsx` — Ctrl+? trigger; Ctrl+J/B/R nav shortcuts |
 | Alphonso Bridge | `bridge/server.js` — Express port 4444; proxies tool calls to Ollama `/api/chat`; `alphonso_get_status` checks `/api/tags` |
 | Native file picker | `pick_file` Tauri command in `src-tauri/src/lib.rs` — PowerShell OpenFileDialog, returns full path; used by Whisper transcription |
 
@@ -307,4 +314,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-27 — v2.3.3 — Bug Fix Sprint: Voice OS install/start fixed; AgentPairingView mounted in All Agents; Settings persistence fixed; Notification watermark fixed; Boardroom in Sidebar; 5-tab All Agents layout; Connector UX explanation; Runtime page polish; WebView2 bootstrapper; DeadLetterQueueView mounted. 149 test files / 1983 tests passing._
+_Last verified: 2026-06-27 — v2.4.0 — claudecode-sprint: Module system (moduleRegistryService, runtimeApiService, policyDslService, a2aProtocolService), Boardroom multi-agent sessions, A2A protocol, Policy DSL, 5 scheduler presets + handlers, /boardroom Telegram command, dark/light mode toggle, keyboard shortcuts modal, agent performance CSV/JSON export, DLQ section, Hector retry, n8n timeouts, ChromaDB error surface, unified memory eviction, Voice OS watchdog, bundle size CI. 149+ test files / 1983+ tests passing._

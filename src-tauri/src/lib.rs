@@ -1,8 +1,10 @@
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -33,6 +35,35 @@ mod whatsapp_webhook;
 mod workspace;
 mod youtube;
 use voice_sidecar::VoiceSidecar;
+
+pub(crate) struct RateLimiter {
+  calls: Mutex<HashMap<String, (u32, std::time::Instant)>>,
+}
+
+impl RateLimiter {
+  fn new() -> Self {
+    Self {
+      calls: Mutex::new(HashMap::new()),
+    }
+  }
+
+  fn check_and_record(&self, command: &str) -> Result<(), String> {
+    let mut calls = self.calls.lock().map_err(|e| e.to_string())?;
+    let now = std::time::Instant::now();
+    let entry = calls
+      .entry(command.to_string())
+      .or_insert((0, now));
+    if now.duration_since(entry.1).as_secs() >= 60 {
+      *entry = (1, now);
+      return Ok(());
+    }
+    if entry.0 >= 10 {
+      return Err("rate_limited".to_string());
+    }
+    entry.0 += 1;
+    Ok(())
+  }
+}
 
 pub(crate) use audit_log::*;
 pub(crate) use connector_commands::*;
@@ -1567,6 +1598,7 @@ pub fn run() {
     .manage(http_client)
     .manage(runtime_manager::RuntimeManager::new())
     .manage(VoiceSidecar(std::sync::Mutex::new(None)))
+    .manage(RateLimiter::new())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_updater::Builder::new().build())

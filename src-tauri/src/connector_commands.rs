@@ -501,9 +501,11 @@ pub(crate) async fn connector_slack_send(
 
 #[tauri::command]
 pub(crate) async fn connector_send_whatsapp(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
   to: String,
   text: String,
 ) -> Result<ConnectorSendProof, String> {
+  rate_limiter.check_and_record("connector_send_whatsapp")?;
   let sent_at_ms = now_ms();
   let provider = std::env::var("WHATSAPP_PROVIDER")
     .map(|value| value.trim().to_ascii_lowercase())

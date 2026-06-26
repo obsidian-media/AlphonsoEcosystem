@@ -601,8 +601,10 @@ export function ChatView({
         try {
           const novaScores = computeOpportunityScores(cleanInput, {});
           if (novaScores.valueScore > 60) {
+            let novaThreshold = 65;
+            try { novaThreshold = Number(localStorage.getItem('alphonso_nova_threshold') || '65') || 65; } catch { /* ignore */ }
             runNovaAnalysis(cleanInput, null, {}, { skipOllama: true }).then(novaResult => {
-              if (novaResult?.score > 65) setNovaInsight(novaResult);
+              if (novaResult?.score > novaThreshold) setNovaInsight(novaResult);
             }).catch(() => {});
           }
         } catch { /* non-critical */ }
@@ -998,23 +1000,29 @@ export function ChatView({
                     </div>
                   )}
                   {/* Inline Hector citations on last assistant message */}
-                  {hectorBriefing && isLastAssistantMessage && hectorBriefing.sources?.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {hectorBriefing.sources.slice(0, 3).map((src, i) => {
-                        const domain = src.url ? (() => { try { return new URL(src.url).hostname.replace('www.', ''); } catch { return src.url; } })() : null;
-                        return (
-                          <a
-                            key={i}
-                            href="#"
-                            onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-900/40 border border-sky-700/50 rounded text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/60"
-                            title={src.url}
-                          >
-                            <span>↗</span>
-                            <span>{src.title || domain || `Source ${i + 1}`}</span>
-                          </a>
-                        );
-                      })}
+                  {hectorBriefing && isLastAssistantMessage && (
+                    <div className="mt-1">
+                      {hectorBriefing.sources?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {hectorBriefing.sources.slice(0, 3).map((src, i) => {
+                            const domain = src.url ? (() => { try { return new URL(src.url).hostname.replace('www.', ''); } catch { return src.url; } })() : null;
+                            return (
+                              <a
+                                key={i}
+                                href="#"
+                                onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-900/40 border border-sky-700/50 rounded text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/60"
+                                title={src.url}
+                              >
+                                <span>↗</span>
+                                <span>{src.title || domain || `Source ${i + 1}`}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-zinc-500 italic">No external sources — configure Brave Search or Perplexity in Connectors for real citations.</p>
+                      )}
                     </div>
                   )}
                   <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">

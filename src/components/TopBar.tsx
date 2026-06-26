@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowUpCircle, Bell, WifiOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowUpCircle, Bell, WifiOff, Sun, Moon, Keyboard } from 'lucide-react';
 import { Badge } from './ui/Badge';
 
 interface Settings {
@@ -24,6 +24,7 @@ interface TopBarProps {
   notificationCount?: number;
   onToggleNotifications?: () => void;
   selectedModelMissing?: boolean;
+  onOpenShortcuts?: () => void;
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -57,7 +58,17 @@ export function TopBar({
   notificationCount = 0,
   onToggleNotifications,
   selectedModelMissing,
+  onOpenShortcuts,
 }: TopBarProps) {
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('alphonso_theme_v1') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('alphonso_theme_v1', theme);
+  }, [theme]);
+
   return (
     <header className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--surface-glass)] backdrop-blur-xl z-20 sticky top-0 relative">
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-border)] to-transparent opacity-60" />
@@ -82,6 +93,26 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+          className="p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
+          aria-label="Toggle theme"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+
+        {onOpenShortcuts && (
+          <button
+            onClick={onOpenShortcuts}
+            className="p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (Ctrl+?)"
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
+        )}
+
         {operatorMode && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)]">
             Operator

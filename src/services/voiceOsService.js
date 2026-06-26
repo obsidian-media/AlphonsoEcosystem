@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendAgentActivity } from './agentActivityService.js';
 
-const WS_URL = 'ws://127.0.0.1:8765/ws';
+const DEFAULT_WS_URL = 'ws://127.0.0.1:8765/ws';
 
 export async function startVoiceServer() {
   const result = await invoke('voice_start');
@@ -20,5 +20,38 @@ export async function getVoiceServerStatus() {
 }
 
 export function getVoiceWebSocketUrl() {
-  return WS_URL;
+  try {
+    const saved = localStorage.getItem('alphonso_voice_ws_url');
+    if (saved && saved.startsWith('ws://')) return saved;
+  } catch { /* ignore */ }
+  return DEFAULT_WS_URL;
+}
+
+let _watchdogInterval = null;
+
+export async function startVoiceWatchdog() {
+  stopVoiceWatchdog();
+  _watchdogInterval = setInterval(async () => {
+    try {
+      const status = await getVoiceServerStatus();
+      if (status === 'stopped') {
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { type: 'error', message: 'Voice OS offline — restarting...' }
+        }));
+        await startVoiceServer();
+      }
+    } catch {
+      window.dispatchEvent(new CustomEvent('alphonso:toast', {
+        detail: { type: 'error', message: 'Voice OS offline — restarting...' }
+      }));
+      try { await startVoiceServer(); } catch { /* non-blocking */ }
+    }
+  }, 30_000);
+}
+
+export function stopVoiceWatchdog() {
+  if (_watchdogInterval !== null) {
+    clearInterval(_watchdogInterval);
+    _watchdogInterval = null;
+  }
 }
