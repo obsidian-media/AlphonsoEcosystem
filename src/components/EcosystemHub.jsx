@@ -58,7 +58,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   const [resourceSnapshots, setResourceSnapshots] = useState(() => listResourceSnapshots());
   const [marketItems, setMarketItems] = useState(() => listMarketplaceItems());
   const [snapshots, setSnapshots] = useState(() => listSnapshots());
-  const [showAdvancedSections, setShowAdvancedSections] = useState(false);
+  const [showAdvancedSections, setShowAdvancedSections] = useState('overview');
   const [manifestInput, setManifestInput] = useState('{\n  "id": "pack.youtube-studio",\n  "name": "YouTube Pack",\n  "version": "1.0.0",\n  "permissions": ["memory.read", "workflows.write"],\n  "category": "creator"\n}');
   const [newWorkflowName, setNewWorkflowName] = useState('Shayan -> Jose -> Agents -> Jose Confirmation Flow');
   const [handoffNote, setHandoffNote] = useState('Creative packet validated and queued for supervised execution.');
@@ -190,220 +190,210 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
     refreshAll();
   };
 
+  const TABS = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'queue', label: 'Queue' },
+    { id: 'skills', label: 'Skills' },
+    { id: 'workflows', label: 'Workflows' },
+    { id: 'advanced', label: 'Advanced' },
+  ];
+
   return (
     <div className="h-full overflow-y-auto">
-    <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
-      <header className="pb-5 border-b border-white/[0.06]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">All Agents</div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Agent Ecosystem</h1>
-            <p className="mt-1 text-[13px] text-zinc-500">Handoffs, skill packs, workflows, session intelligence, and runtime control.</p>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => setShowAdvancedSections(false)}
-              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${!showAdvancedSections ? 'bg-indigo-500/10 text-indigo-200 border border-indigo-400/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent'}`}
-            >
-              Essential
-            </button>
-            <button
-              onClick={() => setShowAdvancedSections(true)}
-              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${showAdvancedSections ? 'bg-indigo-500/10 text-indigo-200 border border-indigo-400/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent'}`}
-            >
-              Advanced
-            </button>
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
+      <header className="pb-4 border-b border-white/[0.06]">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">All Agents</div>
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Agent Ecosystem</h1>
       </header>
 
-      <AnimatePresence mode="wait">
-      <motion.div
-        key={showAdvancedSections ? 'advanced' : 'essential'}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -4 }}
-        transition={{ duration: 0.15 }}
-      >
-      <EcosystemMaturityPanelsGate
-        showAdvancedSections={showAdvancedSections}
-        settings={settings}
-        setSettings={setSettings}
-        ollamaStatus={ollamaStatus}
-        verificationLogs={verificationLogs}
-        voiceStatus={voiceStatus}
-        workspaceFoundation={workspaceFoundation}
-        onRefresh={refreshAll}
-      />
-      {showAdvancedSections && (
-        <>
-          <Suspense
-            fallback={
-              <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3 text-sm text-zinc-400">
-                Loading advanced ecosystem tools...
-              </div>
-            }
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-white/[0.06] pb-1">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setShowAdvancedSections(tab.id)}
+            className={`rounded-lg px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+              showAdvancedSections === tab.id
+                ? 'bg-indigo-500/10 text-indigo-200 border border-indigo-400/20'
+                : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+            }`}
           >
-            <WorkflowOperationsDashboard settings={settings} />
-          </Suspense>
-          <ProductionReadinessPanel
-            settings={settings}
-            setSettings={setSettings}
-            ollamaStatus={ollamaStatus}
-            verificationLogs={verificationLogs}
-            workspaceFoundation={workspaceFoundation}
-            updateCheckState={updateCheckState}
-            nativeSelfDevProof={nativeSelfDevProof}
-          />
-          <SelfDevelopmentPanel
-            settings={settings}
-            setSettings={setSettings}
-            verificationLogs={verificationLogs}
-            workspaceFoundation={workspaceFoundation}
-            updateCheckState={updateCheckState}
-            nativeSelfDevProof={nativeSelfDevProof}
-            setNativeSelfDevProof={setNativeSelfDevProof}
-            nativeProofHooks={nativeProofHooks}
-          />
-        </>
-      )}
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {showAdvancedSections && (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Panel icon={Network} title="Handoff Queue">
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {approvalQueue.length === 0 && <p className="text-sm text-zinc-500">No pending approvals.</p>}
-                {approvalQueue.map((packet) => (
-                  <div key={packet.id} className="rounded-lg border border-white/10 bg-zinc-900/55 p-3 space-y-2">
-                    <div className="text-xs font-semibold text-zinc-200">{packet.title}</div>
-                    <div className="text-[11px] text-zinc-500">{packet.fromAgent} {'->'} {packet.toAgent} | {packet.packetType}</div>
-                    <div className="flex gap-1.5">
-                      <button onClick={() => runApprove(packet.id)} className="rounded border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/15 transition-colors">Approve</button>
-                      <button onClick={() => runReject(packet.id)} className="rounded border border-red-400/20 bg-red-500/10 px-2.5 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/15 transition-colors">Reject</button>
-                      <button onClick={() => runExecutePacket(packet.id)} className="rounded border border-white/[0.08] bg-zinc-800/60 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700/60 transition-colors">Execute</button>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={showAdvancedSections}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15 }}
+          className="space-y-4"
+        >
+          {/* OVERVIEW TAB */}
+          {(showAdvancedSections === 'overview' || showAdvancedSections === false) && (
+            <EcosystemMaturityPanelsGate
+              showAdvancedSections={false}
+              settings={settings}
+              setSettings={setSettings}
+              ollamaStatus={ollamaStatus}
+              verificationLogs={verificationLogs}
+              voiceStatus={voiceStatus}
+              workspaceFoundation={workspaceFoundation}
+              onRefresh={refreshAll}
+            />
+          )}
+
+          {/* QUEUE TAB */}
+          {showAdvancedSections === 'queue' && (
+            <div className="space-y-4">
+              <Panel icon={Network} title="Handoff Queue">
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {approvalQueue.length === 0 && <p className="text-sm text-zinc-500">No pending approvals.</p>}
+                  {approvalQueue.map((packet) => (
+                    <div key={packet.id} className="rounded-lg border border-white/10 bg-zinc-900/55 p-3 space-y-2">
+                      <div className="text-xs font-semibold text-zinc-200">{packet.title}</div>
+                      <div className="text-[11px] text-zinc-500">{packet.fromAgent} {'→'} {packet.toAgent} | {packet.packetType}</div>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => runApprove(packet.id)} className="rounded border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/15 transition-colors">Approve</button>
+                        <button onClick={() => runReject(packet.id)} className="rounded border border-red-400/20 bg-red-500/10 px-2.5 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/15 transition-colors">Reject</button>
+                        <button onClick={() => runExecutePacket(packet.id)} className="rounded border border-white/[0.08] bg-zinc-800/60 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 hover:bg-zinc-700/60 transition-colors">Execute</button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-zinc-500">Execution Note</label>
-                <input value={handoffNote} onChange={(event) => setHandoffNote(event.target.value)} className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-[11px]" />
-              </div>
-            </Panel>
+                  ))}
+                </div>
+                <div className="mt-3">
+                  <label className="text-[10px] uppercase tracking-widest text-zinc-500">Execution Note</label>
+                  <input value={handoffNote} onChange={(e) => setHandoffNote(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-[11px]" />
+                </div>
+              </Panel>
+              <Panel icon={ShieldAlert} title="Human Override">
+                <div className="space-y-2 text-[11px] text-zinc-400">
+                  <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2">Safe mode and approval gates remain active.</div>
+                  <div className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2">Emergency stop: reject all pending packets.</div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => approvalQueue.forEach((p) => runReject(p.id))} className="rounded bg-red-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-red-200 flex items-center gap-1">
+                    <PauseCircle className="h-3.5 w-3.5" /> Emergency Stop
+                  </button>
+                  <button onClick={() => approvalQueue.forEach((p) => runApprove(p.id))} className="rounded bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-200 flex items-center gap-1">
+                    <PlayCircle className="h-3.5 w-3.5" /> Resume Queue
+                  </button>
+                </div>
+              </Panel>
+            </div>
+          )}
 
+          {/* SKILLS TAB */}
+          {showAdvancedSections === 'skills' && (
             <Panel icon={Layers3} title="Skill Pack System">
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {skills.length === 0 && <p className="text-sm text-zinc-500">No skill packs installed.</p>}
                 {skills.map((skill) => (
                   <div key={skill.id} className="rounded-lg border border-white/10 bg-zinc-900/55 px-3 py-2 flex items-center justify-between">
                     <div>
                       <div className="text-xs font-semibold text-zinc-200">{skill.name}</div>
-                      <div className="text-[11px] text-zinc-500">{skill.id} | {skill.version}</div>
+                      <div className="text-[11px] text-zinc-500">{skill.id} | v{skill.version}</div>
                     </div>
                     <div className="flex gap-1">
                       <button onClick={() => { setSkillPackEnabled(skill.id, !skill.enabled); refreshAll(); }} className="rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-200">{skill.enabled ? 'Disable' : 'Enable'}</button>
-                      <button onClick={() => { uninstallSkillPack(skill.id); refreshAll(); }} className="rounded bg-red-500/20 px-2 py-1 text-[10px] text-red-200">Uninstall</button>
+                      <button onClick={() => { uninstallSkillPack(skill.id); refreshAll(); }} className="rounded bg-red-500/20 px-2 py-1 text-[10px] text-red-200">Remove</button>
                     </div>
                   </div>
                 ))}
               </div>
-              <textarea value={manifestInput} onChange={(event) => setManifestInput(event.target.value)} rows={7} className="mt-3 w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 font-mono text-[11px] text-zinc-200" />
-              <div className="mt-2 flex gap-2">
-                <button onClick={runValidateManifest} className="rounded bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Validate</button>
-                <button onClick={runInstallSkillPack} className="rounded bg-indigo-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Install</button>
-              </div>
-              <div className="mt-2 text-[11px] text-zinc-500">Audit entries: {skillAudit.length}</div>
-            </Panel>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Panel icon={Workflow} title="Visual Workflow Builder">
-              <div className="flex gap-2">
-                <input value={newWorkflowName} onChange={(event) => setNewWorkflowName(event.target.value)} className="flex-1 rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" />
-                <button onClick={runCreateWorkflow} className="rounded bg-indigo-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Create</button>
-              </div>
-              <div className="mt-3 text-[11px] text-zinc-500">Node Library: {WORKFLOW_NODE_LIBRARY.map((node) => node.label).join(', ')}</div>
-              <div className="mt-3 space-y-2 max-h-40 overflow-y-auto pr-1">
-                {workflows.map((flow) => (
-                  <div key={flow.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2 text-[11px] text-zinc-300">
-                    {flow.name} | nodes {flow.nodes.length} | edges {flow.edges.length}
-                  </div>
-                ))}
-              </div>
-            </Panel>
-
-            <Panel icon={Activity} title="Session Intelligence + Timeline">
-              <div className="text-[11px] text-zinc-300">Events (24h): {sessionSummary.totalEvents}</div>
-              <div className="text-[11px] text-zinc-500 mt-1">Warnings: {sessionSummary.warnings?.length || 0} | Unresolved: {sessionSummary.unresolved?.length || 0}</div>
-              <div className="mt-3 space-y-2 max-h-44 overflow-y-auto pr-1">
-                {timeline.map((event) => (
-                  <div key={event.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2">
-                    <div className="text-[11px] text-zinc-200">{event.title}</div>
-                    <div className="text-[10px] text-zinc-500">{event.category} | {new Date(event.timestampMs).toLocaleTimeString()}</div>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Panel icon={ClipboardList} title="Persistent Activity Timeline">
-              <div className="text-[11px] text-zinc-500">
-                Timeline combines builds, edits, approvals, AI actions, task updates, and memory changes through session events.
-              </div>
-              <div className="mt-3 space-y-2 max-h-40 overflow-y-auto pr-1">
-                {timeline.slice(0, 8).map((event) => (
-                  <div key={event.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2 text-[11px] text-zinc-300">
-                    {event.title}
-                  </div>
-                ))}
-              </div>
-            </Panel>
-
-            <Panel icon={ShieldAlert} title="Human Override Layer">
-              <div className="space-y-2 text-[11px] text-zinc-400">
-                <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2">Safe mode and approval gates remain active.</div>
-                <div className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2">Emergency stop path: reject all pending packets in approval queue.</div>
-                <div className="rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2">Action preview path: use handoff queue details before approve/execute.</div>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button onClick={() => approvalQueue.forEach((packet) => runReject(packet.id))} className="rounded bg-red-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-red-200 flex items-center gap-1">
-                  <PauseCircle className="h-3.5 w-3.5" /> Emergency Stop
-                </button>
-                <button onClick={() => approvalQueue.forEach((packet) => runApprove(packet.id))} className="rounded bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-200 flex items-center gap-1">
-                  <PlayCircle className="h-3.5 w-3.5" /> Resume Queue
-                </button>
-              </div>
-            </Panel>
-          </div>
-
-          <Panel icon={CheckCircle2} title="Runtime Resource + Cost Awareness">
-            <div className="flex gap-2">
-              <button onClick={runResourceSnapshot} className="rounded bg-indigo-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Collect Snapshot</button>
-              <button onClick={refreshAll} className="rounded bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Refresh</button>
-            </div>
-            <div className="mt-3 text-[11px] text-zinc-400">
-              Points: {resourceSummary.points} | Avg token estimate: {resourceSummary.avgTokenEstimate} | Max JS heap used: {resourceSummary.maxJsHeapUsed}
-            </div>
-            <div className="mt-2 space-y-1">
-              {(resourceSummary.recommendations || []).map((rec) => (
-                <div key={rec} className="text-[11px] text-zinc-500">{rec}</div>
-              ))}
-            </div>
-            <div className="mt-3 space-y-2 max-h-36 overflow-y-auto pr-1">
-              {resourceSnapshots.slice(-10).reverse().map((snapshot) => (
-                <div key={snapshot.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2 text-[11px] text-zinc-300">
-                  {new Date(snapshot.timestampMs).toLocaleTimeString()} | model {snapshot.modelName || 'none'} | tokens {snapshot.tokenEstimate}
+              <div className="mt-4">
+                <label className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1 block">Install from manifest JSON</label>
+                <textarea value={manifestInput} onChange={(e) => setManifestInput(e.target.value)} rows={6} className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 font-mono text-[11px] text-zinc-200" />
+                <div className="mt-2 flex gap-2">
+                  <button onClick={runValidateManifest} className="rounded bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Validate</button>
+                  <button onClick={runInstallSkillPack} className="rounded bg-indigo-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Install</button>
                 </div>
-              ))}
-            </div>
-          </Panel>
+              </div>
+            </Panel>
+          )}
 
-          <MarketplacePanel marketItems={marketItems} onRefresh={refreshAll} />
-          <SnapshotDiffPanel snapshots={snapshots} />
-        </>
-      )}
-      </motion.div>
+          {/* WORKFLOWS TAB */}
+          {showAdvancedSections === 'workflows' && (
+            <div className="space-y-4">
+              <Panel icon={Workflow} title="Workflows">
+                <div className="flex gap-2">
+                  <input value={newWorkflowName} onChange={(e) => setNewWorkflowName(e.target.value)} className="flex-1 rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" />
+                  <button onClick={runCreateWorkflow} className="rounded bg-indigo-500/25 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Create</button>
+                </div>
+                <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {workflows.length === 0 && <p className="text-sm text-zinc-500">No workflows yet.</p>}
+                  {workflows.map((flow) => (
+                    <div key={flow.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2 text-[11px] text-zinc-300">
+                      {flow.name} — {flow.nodes.length} nodes, {flow.edges.length} edges
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+              <Panel icon={Activity} title="Session Timeline (24h)">
+                <div className="text-[11px] text-zinc-400 mb-2">Events: {sessionSummary.totalEvents} | Warnings: {sessionSummary.warnings?.length || 0}</div>
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                  {timeline.length === 0 && <p className="text-sm text-zinc-500">No events yet.</p>}
+                  {timeline.map((event) => (
+                    <div key={event.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-3 py-2">
+                      <div className="text-[11px] text-zinc-200">{event.title}</div>
+                      <div className="text-[10px] text-zinc-500">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {/* ADVANCED TAB */}
+          {showAdvancedSections === 'advanced' && (
+            <div className="space-y-4">
+              <EcosystemMaturityPanelsGate
+                showAdvancedSections={true}
+                settings={settings}
+                setSettings={setSettings}
+                ollamaStatus={ollamaStatus}
+                verificationLogs={verificationLogs}
+                voiceStatus={voiceStatus}
+                workspaceFoundation={workspaceFoundation}
+                onRefresh={refreshAll}
+              />
+              <Suspense fallback={<div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3 text-sm text-zinc-400">Loading…</div>}>
+                <WorkflowOperationsDashboard settings={settings} />
+              </Suspense>
+              <ProductionReadinessPanel
+                settings={settings}
+                setSettings={setSettings}
+                ollamaStatus={ollamaStatus}
+                verificationLogs={verificationLogs}
+                workspaceFoundation={workspaceFoundation}
+                updateCheckState={updateCheckState}
+                nativeSelfDevProof={nativeSelfDevProof}
+              />
+              <SelfDevelopmentPanel
+                settings={settings}
+                setSettings={setSettings}
+                verificationLogs={verificationLogs}
+                workspaceFoundation={workspaceFoundation}
+                updateCheckState={updateCheckState}
+                nativeSelfDevProof={nativeSelfDevProof}
+                setNativeSelfDevProof={setNativeSelfDevProof}
+                nativeProofHooks={nativeProofHooks}
+              />
+              <Panel icon={CheckCircle2} title="Resource Awareness">
+                <div className="flex gap-2">
+                  <button onClick={runResourceSnapshot} className="rounded bg-indigo-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100">Collect Snapshot</button>
+                  <button onClick={refreshAll} className="rounded bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200">Refresh</button>
+                </div>
+                <div className="mt-2 text-[11px] text-zinc-400">Points: {resourceSummary.points} | Avg tokens: {resourceSummary.avgTokenEstimate}</div>
+              </Panel>
+              <MarketplacePanel marketItems={marketItems} onRefresh={refreshAll} />
+              <SnapshotDiffPanel snapshots={snapshots} />
+            </div>
+          )}
+        </motion.div>
       </AnimatePresence>
     </div>
     </div>

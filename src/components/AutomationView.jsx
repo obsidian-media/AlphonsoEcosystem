@@ -4,6 +4,7 @@ import { createWorkflow, listWorkflows } from '../services/workflowBuilderServic
 import { listWorkflowReceipts } from '../services/workflowReceiptService';
 import { listWorkflowOperations, updateWorkflowOperationStatus } from '../services/workflowOperationsRegistryService';
 import { WorkflowBuilderView } from './WorkflowBuilderView';
+import { DeadLetterQueueView } from './DeadLetterQueueView';
 import {
   createSchedule,
   listSchedules,
@@ -195,11 +196,25 @@ export function AutomationView() {
         >
           Schedules
         </button>
+        <button
+          onClick={() => setActiveTab('deadletter')}
+          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
+            activeTab === 'deadletter'
+              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
+              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+          }`}
+        >
+          Dead Letter
+        </button>
       </div>
 
       {activeTab === 'builder' ? (
         <div className="flex-1 overflow-hidden">
           <WorkflowBuilderView />
+        </div>
+      ) : activeTab === 'deadletter' ? (
+        <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full">
+          <DeadLetterQueueView />
         </div>
       ) : activeTab === 'schedules' ? (
         <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl mx-auto w-full">

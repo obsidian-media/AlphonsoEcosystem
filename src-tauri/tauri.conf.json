@@ -63,6 +63,10 @@
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": false
+      },
       "nsis": {
         "installerIcon": "icons/icon.ico",
         "installMode": "currentUser",

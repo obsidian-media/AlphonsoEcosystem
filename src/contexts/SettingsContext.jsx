@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { getDefaultWorkspaceRoot } from '../services/workspaceRootService';
 
@@ -35,8 +35,20 @@ const DEFAULT_SETTINGS = {
 };
 
 export function SettingsProvider({ children }) {
-  const [settings, setSettings] = useState(() => getStorage('alphonso_settings', DEFAULT_SETTINGS));
+  const [settings, setSettingsRaw] = useState(() => getStorage('alphonso_settings', DEFAULT_SETTINGS));
   const [operatorMode, setOperatorModeState] = useState(() => Boolean(getStorage('alphonso_operator_mode_v1', false)));
+
+  // Persist settings to localStorage on every change
+  useEffect(() => {
+    setStorage('alphonso_settings', settings);
+  }, [settings]);
+
+  const setSettings = useCallback((valueOrUpdater) => {
+    setSettingsRaw((current) => {
+      const next = typeof valueOrUpdater === 'function' ? valueOrUpdater(current) : valueOrUpdater;
+      return next;
+    });
+  }, []);
 
   const setOperatorMode = useCallback((value) => {
     setOperatorModeState((current) => {

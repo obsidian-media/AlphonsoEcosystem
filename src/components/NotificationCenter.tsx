@@ -33,11 +33,7 @@ function relativeTime(timestamp: number): string {
 
 export function NotificationCenter({ notifications, onDismiss, onClearAll }: NotificationCenterProps) {
   if (!notifications || notifications.length === 0) {
-    return (
-      <div className="fixed top-4 right-4 z-50 w-80">
-        <EmptyState icon={<Bell className="w-full h-full" />} title="No notifications" description="You're all caught up." />
-      </div>
-    );
+    return null;
   }
 
   const visible = notifications.slice(0, 5);

@@ -533,6 +533,10 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
         </button>
       </div>
 
+      <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3 text-[11px] leading-relaxed text-sky-300">
+        <span className="font-semibold">How connectors work:</span> Connectors store your API credentials locally and are called by Alphonso's agents (Jose, Marcus, Hector…) running on your local Ollama instance. A "Connected" status means your credentials are saved — the agents will use them automatically when you ask them to take action (e.g. "open a GitHub issue", "post to Slack"). You do not call connectors directly.
+      </div>
+
       <div className="rounded-xl border border-[var(--warning-dim)] bg-[var(--warning-dim)] px-4 py-2 text-[11px] leading-relaxed text-[var(--warning)]">
         Public deploy note: this app auto-deploys from GitHub main to Railway. Do not add real connector secrets to browser-exposed env vars unless that connector is meant to be public/cloud-facing.
       </div>
@@ -549,6 +553,14 @@ export function ConnectorHealthPanel({ zeroCostMode = false }) {
             zeroCostMode={zeroCostMode}
           />
         ))}
+      </div>
+
+      {/* Composio callout */}
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3 flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-[var(--text-1)]">Composio (External Tools)</p>
+          <p className="text-[11px] text-[var(--text-3)] mt-0.5">Composio gives agents access to 250+ external tools (GitHub Actions, Notion, Linear, Jira…). Configure your API key in <span className="font-semibold text-[var(--accent)]">Settings → Connectors → External Tools</span>.</p>
+        </div>
       </div>
 
       <p className="text-[10px] text-[var(--text-4)] leading-relaxed">

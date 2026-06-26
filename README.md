@@ -4,24 +4,43 @@
 
 # Alphonso
 
-> **v2.2.4** — Local-first AI desktop companion with real-time Voice OS, powered by Ollama
+> **v2.3.2** — Local-first AI desktop companion with 9 agents, 15 connectors, tab-based UI, and real-time Voice OS — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.2.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-1930%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.3.2-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-1983%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
 **Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
-It orchestrates 9 specialized agents, connects to 14 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
+It orchestrates 9 specialized agents, connects to 15 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
 
-**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 14 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
+**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 15 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.2.4**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.2.4) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.3.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.3.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
+
+## What's New in v2.3.2
+
+- **Settings Now Persist** — Critical fix: all settings (model, workspace root, theme, output folder, etc.) now properly save to localStorage on every change. Previously only survived the session.
+- **Boardroom Added to Sidebar** — The Boardroom (MissionRoom) is now accessible directly from the sidebar under Agents.
+- **All Agents Page — Tab Layout** — The crowded "Agent Ecosystem" page is now split into 5 tabs: Overview, Queue, Skills, Workflows, and Advanced. No more information overload.
+- **Notification Watermark Fixed** — The notification center no longer renders a ghost empty-state div when there are no notifications.
+- **Composio Visible in Connectors** — The Connectors page now shows a Composio callout with navigation to Settings → Connectors for API key setup.
+- **Connector Architecture Banner** — A clear info banner explains that "Connected" means credentials are stored — agents use them automatically when you ask them to act. No manual connector calls needed.
+- **WebView2 Bootstrapper** — The NSIS installer now downloads WebView2 at install time if not already present (fixes black-window-then-disappear on fresh Windows installs).
+- **Perplexity Connector** — Added 15th connector: `perplexityConnector.js` as a tier-2 Hector research fallback.
+
+## What's New in v2.3.0–v2.3.1
+
+- **n8n Workflow Automation** — `n8nConnector.js` + Runtime Hub ToolDef + Marcus distribution target + ConnectorSetupPanel credential section.
+- **Jose Scheduled Tasks** — `joseSchedulerService.js` + AutomationView Schedules tab + App.tsx background scheduler wiring.
+- **Echo File System Watcher** — `echoFileWatcherService.js` polls `watch_inbox_poll` Tauri command every 30s. Config card in Settings.
+- **MCP Bridge Live Responses** — `bridge/server.js` calls Ollama `/api/chat` for live responses; `alphonso_get_status` checks `/api/tags`.
+- **21 Telegram Commands** — `/research`, `/memory`, `/receipts`, `/read` added to telegramCompanionService (total: 21 commands).
 
 ## What's New in v2.2.4
 
@@ -62,7 +81,7 @@ It orchestrates 9 specialized agents, connects to 14 external services, and uses
 ## Features
 
 - **9 Enhanced Agents** — Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — each with defined roles, permission contracts, and enforced boundaries. Now with GitHub and Slack capabilities.
-- **14 Connectors** — Ollama, Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude API, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search, Qwen/DashScope
+- **15 Connectors** — Ollama, Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude API, ChatGPT, Notion, ClickUp, Stable Diffusion WebUI, ComfyUI, Brave Search, Qwen/DashScope, Perplexity
 - **1,000+ Integrations** — Composio integration gives access to GitHub, Slack, Jira, Salesforce, Linear, and 1,000+ more services — all policy-gated
 - **Local LLM First** — Ollama with model switching (`llama3.2:3b` default); no prompt leaves your device for core operations
 - **Fail-Closed Policy Gate** — every outbound action runs through `policyEnforcementService.ts`; if credentials are missing or the action is ambiguous it is blocked, not allowed

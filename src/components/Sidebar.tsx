@@ -86,6 +86,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'orchestrator', icon: Shield, label: 'Orchestrator', showApprovalBadge: true },
       { id: 'miya', icon: Palette, label: 'Creative' },
+      { id: 'mission_room', icon: Sparkles, label: 'Boardroom' },
       { id: 'ecosystem', icon: Bot, label: 'All Agents' },
     ]
   },
