@@ -267,7 +267,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`font-semibold text-sm ${meta.color || 'text-white'}`}>
-                {tool.displayName}
+                {tool.displayName || tool.name}
               </span>
               <span className="text-zinc-600 text-xs bg-zinc-800 px-2 py-0.5 rounded">
                 {meta.category}
@@ -277,6 +277,16 @@ function ToolCard({ tool, onAction, onAutostartToggle }) {
               )}
             </div>
             <p className="text-zinc-400 text-xs mt-0.5 leading-tight">{tool.description}</p>
+            {tool.repoUrl && (
+              <a
+                href={tool.repoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] text-zinc-600 hover:text-zinc-400 font-mono truncate block mt-0.5"
+              >
+                {tool.repoUrl.replace('https://github.com/', 'github: ').replace('https://', '')}
+              </a>
+            )}
           </div>
         </div>
         <StatusDot running={tool.running} installing={installing} />
@@ -292,39 +302,45 @@ function ToolCard({ tool, onAction, onAutostartToggle }) {
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap">
-        {!tool.installed && !installing && (
-          <button
-            onClick={handleInstall}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors"
-          >
-            <Download size={12} /> Install
-          </button>
-        )}
-        {tool.installed && !tool.running && !installing && (
-          <button
-            onClick={handleStart}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white transition-colors"
-          >
-            <Play size={12} /> Start
-          </button>
-        )}
-        {tool.running && tool.startedByUs && (
-          <button
-            onClick={handleStop}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-900 hover:bg-red-800 text-red-200 transition-colors"
-          >
-            <Square size={12} /> Stop
-          </button>
-        )}
-        {tool.running && tool.port && (
-          <a
-            href={`http://127.0.0.1:${tool.port}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white transition-colors"
-          >
-            <ExternalLink size={10} /> Open UI
-          </a>
+        {tool._webFallback ? (
+          <span className="text-xs text-zinc-600 italic">Open the desktop app to install</span>
+        ) : (
+          <>
+            {!tool.installed && !installing && (
+              <button
+                onClick={handleInstall}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors"
+              >
+                <Download size={12} /> Install
+              </button>
+            )}
+            {tool.installed && !tool.running && !installing && (
+              <button
+                onClick={handleStart}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white transition-colors"
+              >
+                <Play size={12} /> Start
+              </button>
+            )}
+            {tool.running && tool.startedByUs && (
+              <button
+                onClick={handleStop}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-900 hover:bg-red-800 text-red-200 transition-colors"
+              >
+                <Square size={12} /> Stop
+              </button>
+            )}
+            {tool.running && tool.port && (
+              <a
+                href={`http://127.0.0.1:${tool.port}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white transition-colors"
+              >
+                <ExternalLink size={10} /> Open UI
+              </a>
+            )}
+          </>
         )}
         {meta.docsUrl && (
           <a
@@ -379,7 +395,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }) {
   );
 }
 
-const CATEGORIES = ['All', 'LLM', 'Image / Video', 'Image', 'Audio'];
+const CATEGORIES = ['All', 'LLM', 'Image / Video', 'Image', 'Audio', 'Voice', 'Automation', 'Integration', 'Memory', 'Agent'];
 
 export default function RuntimeManagerView() {
   const [activeTab, setActiveTab] = useState('tools');
@@ -476,16 +492,21 @@ export default function RuntimeManagerView() {
     }
   };
 
-  // When Tauri is unavailable, show catalog entries from TOOL_META so the UI isn't empty
-  const catalogFallback = !loading && tools.length === 0
-    ? Object.entries(TOOL_META).map(([name]) => ({
+  // Detect if we're in a real Tauri environment (not web browser)
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+  // When Tauri is unavailable, show catalog entries from TOOL_META for reference only (no Install buttons)
+  const catalogFallback = !loading && tools.length === 0 && !isTauri
+    ? Object.entries(TOOL_META).map(([name, meta]) => ({
         name,
+        displayName: name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, ' '),
+        description: 'Install via the desktop app.',
         installed: false,
         running: false,
-        version: null,
         installDir: null,
-        autostart: false,
-        display_name: name.charAt(0).toUpperCase() + name.slice(1),
+        autoStart: false,
+        repoUrl: meta.docsUrl || null,
+        _webFallback: true,
       }))
     : [];
   const allTools = tools.length > 0 ? tools : catalogFallback;
@@ -565,6 +586,13 @@ export default function RuntimeManagerView() {
           <span className="text-zinc-500 ml-1">total tools</span>
         </div>
       </div>
+
+      {/* Web mode banner */}
+      {!isTauri && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-300">
+          <span className="font-semibold">Desktop app required.</span> Runtime installation and control only works in the Alphonso desktop app (Tauri). Download from GitHub Releases.
+        </div>
+      )}
 
       {/* Toast */}
       {actionMsg && (
