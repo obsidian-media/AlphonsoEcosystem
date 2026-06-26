@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-27 — v2.3.2
-**Verified by:** Claude Code — UI Polish sprint v2
-**Version:** 2.3.2 (Design system + Framer Motion applied to all 6 pages; tab layouts; perplexityConnector.js; 149 test files / 1982 tests passing)
+**Last verified:** 2026-06-27 — v2.3.3
+**Verified by:** Claude Code — Bug Fix Sprint
+**Version:** 2.3.3 (Voice OS install/start fixed; AgentPairingView mounted; Settings persistence fixed; Notification watermark fixed; Boardroom sidebar entry; All Agents 5-tab layout; Connector UX; Runtime page polish; 149 test files / 1983 tests passing)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.3.2 |
+| Version | 2.3.3 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |

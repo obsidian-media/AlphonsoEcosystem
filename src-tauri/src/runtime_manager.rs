@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 // Windows: prevent child processes from opening visible console windows.
@@ -173,7 +173,7 @@ const TOOLS: &[ToolDef] = &[
       "websockets",
       "numpy",
     ],
-    requirements_file: Some("voice/backend/requirements.txt"),
+    requirements_file: None,
     port: Some(8765),
     health_path: None,
     exe: "python",
@@ -965,6 +965,7 @@ pub async fn runtime_install_tool(
 pub async fn runtime_start_tool(
   name: String,
   state: tauri::State<'_, RuntimeManager>,
+  app: AppHandle,
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
 
@@ -983,6 +984,28 @@ pub async fn runtime_start_tool(
 
   let dir = tool_dir(def.name);
   let exe = resolve_exe(def, &dir);
+
+  // voice-os: resolve script path relative to app resource directory
+  if name == "voice-os" {
+    let resource_dir = app.path().resource_dir().map_err(|e| format!("Resource dir: {e}"))?;
+    let backend_dir = resource_dir.join("voice").join("backend");
+    let vpy = venv_python(&dir);
+    let py = if vpy.exists() { vpy.to_string_lossy().to_string() } else { "python".to_string() };
+    let script = backend_dir.join("main.py");
+    let mut cmd = Command::new(&py);
+    cmd.arg(&script).args(["--host", "127.0.0.1", "--port", "8765"]);
+    cmd.stdout(std::process::Stdio::null());
+    cmd.stderr(std::process::Stdio::null());
+    no_window(&mut cmd);
+    let child = cmd.spawn().map_err(|e| format!("Failed to start Voice OS: {e}"))?;
+    let pid = child.id();
+    state.record_pid(&name, pid);
+    return Ok(RuntimeActionResult {
+      tool: name,
+      ok: true,
+      message: format!("Voice OS started (PID {pid}). Allow a few seconds for initialization."),
+    });
+  }
 
   // For python tools, first arg is the script path — use venv python
   let mut cmd = Command::new(&exe);

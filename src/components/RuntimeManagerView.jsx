@@ -666,6 +666,14 @@ export default function RuntimeManagerView() {
         </div>
       )}
 
+      {/* Voice OS quick-start callout */}
+      {isTauri && !loading && allTools.find((t) => t.name === 'voice-os' && !t.installed) && (
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-300 space-y-1">
+          <div className="font-semibold text-cyan-200">🎙️ Enable Jarvis voice</div>
+          <div className="text-cyan-400/80">Install <strong>Voice OS</strong> above, then use the mic button in Chat to speak to Alphonso.</div>
+        </div>
+      )}
+
       {/* Footer note */}
       <p className="text-zinc-600 text-xs text-center pt-2">
         Tools install to <code className="text-zinc-500">%APPDATA%\Alphonso\runtimes\</code> and are shared across Alphonso updates.

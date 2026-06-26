@@ -6,6 +6,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.3.3] - 2026-06-27 — Bug Fix Sprint: Voice OS, AgentPairing, Settings persistence, UX polish
+
+### Fixed
+- **Voice OS install bug**: `requirements_file` path for voice-os was relative to tool install dir (which has no git clone), causing pip packages to be silently skipped. Removed `requirements_file` from voice-os ToolDef — pip_packages list is now used directly (correct path).
+- **Voice OS start bug**: `runtime_start_tool` now uses `app.path().resource_dir()` to resolve `voice/backend/main.py` from the app bundle, matching the pattern in `voice_sidecar.rs`. Voice OS no longer fails to find its script on production installs.
+- **Rust `Manager` trait**: Added `tauri::Manager` to `use` imports in `runtime_manager.rs`; `runtime_start_tool` now accepts `AppHandle` parameter for resource path resolution.
+- **Settings persistence**: `SettingsContext` `setSettings` was the raw React setter — no `useEffect` to persist. All settings (model, workspace root, theme, output folder) were lost on every reload. Fixed by adding `useEffect(() => { setStorage('alphonso_settings', settings); }, [settings])`.
+- **Notification watermark**: `NotificationCenter` returned a fixed-position `EmptyState` div when `notifications.length === 0`, leaving a permanent ghost on screen. Fixed: returns `null` when empty.
+- **Boardroom missing from sidebar**: `mission_room` tab existed in App.tsx routing but had no sidebar entry. Added "Boardroom" item between Creative and All Agents in `Sidebar.tsx`.
+- **All Agents page crowded**: Replaced boolean `showAdvancedSections` toggle with 5-tab layout (Overview / Queue / Skills / Workflows / Advanced) in `EcosystemHub.jsx`.
+- **Connector page confusion**: Added architecture explanation banner in `ConnectorHealthPanel.tsx` (connectors = credential stores; agents run on local Ollama). Added Composio callout card directing users to Settings → Connectors → External Tools.
+- **Runtime page web-mode placeholders**: Fallback cards used `display_name` (snake_case); ToolCard reads `displayName` (camelCase). Fixed casing. Added `_webFallback` flag to suppress Install buttons in browser. Added amber web-mode banner. Added repo URL display in each card. Expanded CATEGORIES filter.
+- **WebView2 black window on fresh install**: Added `webviewInstallMode: { type: "downloadBootstrapper", silent: false }` to `tauri.conf.json`.
+- **DeadLetterQueueView unmounted**: Added "Dead Letter" tab to `AutomationView.jsx`.
+- **README stale**: Updated to v2.3.2 with current feature set, badges, and "What's New" section.
+
+### Added
+- **AgentPairingView mounted**: `AgentPairingView.jsx` (agent-to-agent pairing definitions) was fully implemented but not mounted anywhere. Added as "Pairings" tab in `EcosystemHub.jsx` (All Agents page).
+- **Voice OS quick-start callout**: RuntimeManagerView shows a cyan callout when Voice OS is not yet installed, directing users to install it and use the Jarvis mic button in Chat.
+
+### Tests
+- 149 test files / 1983 passing
+
+---
+
 ## [2.3.2] - 2026-06-27 — UI Polish v2: Design system + Framer Motion across all 6 pages
 
 ### Changed

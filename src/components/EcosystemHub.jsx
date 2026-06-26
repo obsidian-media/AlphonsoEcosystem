@@ -41,6 +41,7 @@ import { listSnapshots } from '../services/recoveryService';
 import { ProductionReadinessPanel } from './ProductionReadinessPanel';
 import { SelfDevelopmentPanel } from './SelfDevelopmentPanel';
 import { EcosystemMaturityPanelsGate } from './EcosystemMaturityPanelsGate';
+import { AgentPairingView } from './AgentPairingView';
 
 const WorkflowOperationsDashboard = lazy(() =>
   import('./WorkflowOperationsDashboard').then((module) => ({
@@ -195,6 +196,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
     { id: 'queue', label: 'Queue' },
     { id: 'skills', label: 'Skills' },
     { id: 'workflows', label: 'Workflows' },
+    { id: 'pairings', label: 'Pairings' },
     { id: 'advanced', label: 'Advanced' },
   ];
 
@@ -344,6 +346,13 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                   ))}
                 </div>
               </Panel>
+            </div>
+          )}
+
+          {/* PAIRINGS TAB */}
+          {showAdvancedSections === 'pairings' && (
+            <div className="space-y-4">
+              <AgentPairingView />
             </div>
           )}
 

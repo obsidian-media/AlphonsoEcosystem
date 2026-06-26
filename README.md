@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.3.2** — Local-first AI desktop companion with 9 agents, 15 connectors, tab-based UI, and real-time Voice OS — powered by Ollama
+> **v2.3.3** — Local-first AI desktop companion with 9 agents, 15 connectors, tab-based UI, and real-time Voice OS — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.3.2-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.3.3-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-1983%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -17,22 +17,31 @@ It orchestrates 9 specialized agents, connects to 15 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 15 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.3.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.3.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.3.3**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.3.3) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
 
-## What's New in v2.3.2
+## What's New in v2.3.3
 
+- **Voice OS Install Fixed** — Critical: pip packages for Voice OS were silently skipped because `requirements_file` path was relative to the wrong directory. Now uses `pip_packages` list directly — all packages install correctly.
+- **Voice OS Start Fixed** — `runtime_start_tool` now resolves `voice/backend/main.py` from the app resource directory (`app.path().resource_dir()`), matching `voice_sidecar.rs`. Jarvis mic button in Chat now works with Desktop app.
+- **Agent Pairing View Mounted** — `AgentPairingView.jsx` (define agent-to-agent trigger pairings) was fully built but never accessible. Now mounted as a "Pairings" tab in the All Agents page.
 - **Settings Now Persist** — Critical fix: all settings (model, workspace root, theme, output folder, etc.) now properly save to localStorage on every change. Previously only survived the session.
 - **Boardroom Added to Sidebar** — The Boardroom (MissionRoom) is now accessible directly from the sidebar under Agents.
-- **All Agents Page — Tab Layout** — The crowded "Agent Ecosystem" page is now split into 5 tabs: Overview, Queue, Skills, Workflows, and Advanced. No more information overload.
+- **All Agents Page — 6-Tab Layout** — Tab layout now includes Pairings tab alongside Overview, Queue, Skills, Workflows, and Advanced.
 - **Notification Watermark Fixed** — The notification center no longer renders a ghost empty-state div when there are no notifications.
 - **Composio Visible in Connectors** — The Connectors page now shows a Composio callout with navigation to Settings → Connectors for API key setup.
 - **Connector Architecture Banner** — A clear info banner explains that "Connected" means credentials are stored — agents use them automatically when you ask them to act. No manual connector calls needed.
 - **WebView2 Bootstrapper** — The NSIS installer now downloads WebView2 at install time if not already present (fixes black-window-then-disappear on fresh Windows installs).
+- **Dead Letter Queue Accessible** — `DeadLetterQueueView` now mounted as a tab in Automation page.
+- **Runtime Page Polish** — Repo URL shown on each tool card; web-mode handled cleanly; category filters expanded; Voice OS quick-start callout when not yet installed.
+
+## What's New in v2.3.2
+
 - **Perplexity Connector** — Added 15th connector: `perplexityConnector.js` as a tier-2 Hector research fallback.
+- **UI Polish v2** — Design system tokens + Framer Motion applied across all 6 pages.
 
 ## What's New in v2.3.0–v2.3.1
 
