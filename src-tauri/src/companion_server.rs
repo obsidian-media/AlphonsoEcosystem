@@ -70,7 +70,8 @@ impl CompanionServer {
         )
         .await
         {
-          log::warn!("Companion connection error: {}", e);
+          // Handshake errors from non-WS probes (health checks, etc.) are expected noise
+          log::debug!("Companion connection closed: {}", e);
         }
 
         clients.lock().await.remove(&client_id);

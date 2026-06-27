@@ -359,6 +359,7 @@ function AppShell() {
     if (typeof window.__TAURI_INTERNALS__ === 'undefined') return;
     let unlistenCommand: (() => void) | null = null;
     let unlistenApprove: (() => void) | null = null;
+    let unlistenAbort: (() => void) | null = null;
     let registered = false;
     (async () => {
       try {
@@ -367,8 +368,13 @@ function AppShell() {
         const { isJoseIntakeCommand, runJoseCommandExecutionPipeline } = await import('./services/joseExecutionEngineService');
         const { shouldRouteThroughJose } = await import('./lib/chatUtils');
 
+        // Track active pipeline AbortControllers by commandId for abort_command
+        const activeAborts = new Map<string, AbortController>();
+
         unlistenCommand = await listen('companion://command', async (event) => {
           const { commandId, text } = event.payload as { commandId: string; text: string };
+          const abortCtrl = new AbortController();
+          activeAborts.set(commandId, abortCtrl);
           try {
             const joseCommand = isJoseIntakeCommand(text) || shouldRouteThroughJose(text);
             if (!joseCommand) {
@@ -387,6 +393,7 @@ function AppShell() {
               previewMode: false,
               conversationHistory: [],
               onProgress: (progress) => {
+                if (abortCtrl.signal.aborted) return;
                 invoke('companion_broadcast', {
                   event: 'agent_status',
                   payload: {
@@ -402,6 +409,7 @@ function AppShell() {
                 }).catch(() => {});
               },
               onToken: (tokenData) => {
+                if (abortCtrl.signal.aborted) return;
                 invoke('companion_broadcast', {
                   event: 'token',
                   payload: { commandId, token: tokenData.fullText || '' }
@@ -409,25 +417,40 @@ function AppShell() {
               }
             });
 
-            const summary = result?.command?.shayanReport?.summary || 'Command processed.';
-            await invoke('companion_broadcast', {
-              event: 'done',
-              payload: { commandId, summary }
-            });
+            if (!abortCtrl.signal.aborted) {
+              const summary = result?.command?.shayanReport?.summary || 'Command processed.';
+              await invoke('companion_broadcast', {
+                event: 'done',
+                payload: { commandId, summary }
+              });
+            }
           } catch (err) {
-            await invoke('companion_broadcast', {
-              event: 'done',
-              payload: { commandId, error: String(err) }
-            }).catch(() => {});
+            if (!abortCtrl.signal.aborted) {
+              await invoke('companion_broadcast', {
+                event: 'done',
+                payload: { commandId, error: String(err) }
+              }).catch(() => {});
+            }
+          } finally {
+            activeAborts.delete(commandId);
           }
         });
 
-        // Listen for approval requests from iOS
+        // abort_command: Rust emits companion://abort — cancel the pipeline for that commandId
+        unlistenAbort = await listen('companion://abort', (event) => {
+          const { commandId } = event.payload as { commandId: string };
+          activeAborts.get(commandId)?.abort();
+          activeAborts.delete(commandId);
+          invoke('companion_broadcast', {
+            event: 'done',
+            payload: { commandId, error: 'Aborted by user.' }
+          }).catch(() => {});
+        });
+
+        // Listen for approval requests from iOS — open the ApprovalModal
         unlistenApprove = await listen('companion://approve', async (event) => {
           const { taskId } = event.payload as { taskId: string };
-          // Emit approval event that ApprovalModal can listen to
-          // The actual approval handling is done via the approvalPending state
-          console.log('[Companion] Approval requested for task:', taskId);
+          setApprovalPending(taskId);
         });
 
         registered = true;
@@ -437,6 +460,7 @@ function AppShell() {
       if (registered) {
         try { unlistenCommand?.(); } catch { /* ignore */ }
         try { unlistenApprove?.(); } catch { /* ignore */ }
+        try { unlistenAbort?.(); } catch { /* ignore */ }
       }
     };
   }, [settings.endpoint, settings.zeroCostMode]);
