@@ -19,10 +19,13 @@ jobs:
 
       - name: Setup signing
         env:
-          CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE }}
-          CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE }}
+          IOS_CERT_PEM: ${{ secrets.IOS_CERT_PEM }}
+          IOS_KEY_PEM: ${{ secrets.IOS_KEY_PEM }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
         run: |
+          set -e
+
           # Create temporary keychain
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -30,26 +33,32 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # Disable history expansion so ! in password is preserved
-          set +H
+          # Decode PEM files from secrets
+          CERT_PATH=$RUNNER_TEMP/cert.pem
+          KEY_PATH=$RUNNER_TEMP/key.pem
 
-          # Import certificate (macOS uses -D for decode, not --decode)
-          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-          echo "$CERTIFICATE_BASE64" | base64 -D > "$CERTIFICATE_PATH"
-          echo "Certificate size: $(wc -c < "$CERTIFICATE_PATH") bytes"
+          echo "$IOS_CERT_PEM" | base64 -D > "$CERT_PATH"
+          echo "$IOS_KEY_PEM" | base64 -D > "$KEY_PATH"
 
-          # Try import with password first, then without
-          if ! security import "$CERTIFICATE_PATH" \
+          echo "Cert size: $(wc -c < "$CERT_PATH") bytes, Key size: $(wc -c < "$KEY_PATH") bytes"
+
+          # Create .p12 on macOS runner using its own OpenSSL with -legacy flag
+          P12_PATH=$RUNNER_TEMP/certificate.p12
+          cat "$KEY_PATH" "$CERT_PATH" | openssl pkcs12 -export \
+            -out "$P12_PATH" \
+            -passout pass:"$CERTIFICATE_PASSWORD" \
+            -legacy
+
+          echo "P12 size: $(wc -c < "$P12_PATH") bytes"
+
+          # Import .p12 into keychain
+          security import "$P12_PATH" \
             -P "$CERTIFICATE_PASSWORD" \
-            -A -t cert -f pkcs12 \
-            -k "$KEYCHAIN_PATH" 2>/dev/null; then
-            echo "Trying with empty password..."
-            security import "$CERTIFICATE_PATH" \
-              -P "" \
-              -A -t cert -f pkcs12 \
-              -k "$KEYCHAIN_PATH" \
-              || { echo "::error::Certificate import failed with both passwords"; exit 1; }
-          fi
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
           security set-key-partition-list \
             -S apple-tool:,apple: \
             -k "$KEYCHAIN_PASSWORD" \
@@ -59,7 +68,7 @@ jobs:
 
           # Install provisioning profile
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
-          echo "$PROVISION_PROFILE_BASE64" | base64 -D > "$PP_PATH"
+          echo "$IOS_PROVISIONING_PROFILE" | base64 -D > "$PP_PATH"
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PP_PATH"))
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
@@ -68,19 +77,23 @@ jobs:
       - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
         run: |
+          set -e
           xcodebuild archive \
             -project AlphonsoCompanion.xcodeproj \
             -scheme AlphonsoCompanion \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath build/AlphonsoCompanion.xcarchive \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM="${{ secrets.IOS_DEVELOPMENT_TEAM }}" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="iPhone Distribution: Shayan Salimi (9Y6GYPM3K5)" \
+            DEVELOPMENT_TEAM="9Y6GYPM3K5" \
+            PROVISIONING_PROFILE_SPECIFIER="Alphonso_iOS" \
             PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion"
 
       - name: Export IPA
         working-directory: ios/AlphonsoCompanion
         run: |
+          set -e
           mkdir -p build/output
 
           cat > build/ExportOptions.plist << 'PLIST_EOF'
@@ -97,7 +110,12 @@ jobs:
             <key>uploadSymbols</key>
             <true/>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.alphonso.companion</key>
+              <string>Alphonso_iOS</string>
+            </dict>
           </dict>
           </plist>
           PLIST_EOF
@@ -128,7 +146,8 @@ jobs:
             --file build/output/AlphonsoCompanion.ipa \
             --apiKey "$API_KEY_ID" \
             --apiIssuer "$API_ISSUER" \
-            --apiKeyPath "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8"
+            --apiKeyPath "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8" \
+            || echo "::warning::TestFlight upload failed — download IPA from artifacts"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
