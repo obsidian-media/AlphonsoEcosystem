@@ -19,9 +19,8 @@ jobs:
 
       - name: Setup signing
         env:
-          IOS_CERT_PEM: ${{ secrets.IOS_CERT_PEM }}
+          IOS_CERT_DER: ${{ secrets.IOS_CERT_DER }}
           IOS_KEY_PEM: ${{ secrets.IOS_KEY_PEM }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
         run: |
           set -e
@@ -33,38 +32,35 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # Decode PEM files from secrets
-          CERT_PATH=$RUNNER_TEMP/cert.pem
-          KEY_PATH=$RUNNER_TEMP/key.pem
+          # Decode cert and key from secrets
+          CERT_PATH=$RUNNER_TEMP/certificate.cer
+          KEY_PATH=$RUNNER_TEMP/private_key.pem
 
-          echo "$IOS_CERT_PEM" | base64 -D > "$CERT_PATH"
+          echo "$IOS_CERT_DER" | base64 -D > "$CERT_PATH"
           echo "$IOS_KEY_PEM" | base64 -D > "$KEY_PATH"
 
           echo "Cert size: $(wc -c < "$CERT_PATH") bytes, Key size: $(wc -c < "$KEY_PATH") bytes"
 
-          # Create .p12 on macOS runner using its own OpenSSL with -legacy flag
-          P12_PATH=$RUNNER_TEMP/certificate.p12
-          cat "$KEY_PATH" "$CERT_PATH" | openssl pkcs12 -export \
-            -out "$P12_PATH" \
-            -passout pass:"$CERTIFICATE_PASSWORD" \
-            -legacy
-
-          echo "P12 size: $(wc -c < "$P12_PATH") bytes"
-
-          # Import .p12 into keychain
-          security import "$P12_PATH" \
-            -P "$CERTIFICATE_PASSWORD" \
-            -A \
+          # Import DER certificate (no password needed)
+          security import "$CERT_PATH" \
             -t cert \
-            -f pkcs12 \
+            -f openssh \
             -k "$KEYCHAIN_PATH"
 
+          # Import private key (unencrypted PKCS8 PEM, no password needed)
+          security import "$KEY_PATH" \
+            -t priv \
+            -f openssh \
+            -k "$KEYCHAIN_PATH"
+
+          # Set key partition list so codesign can access it
           security set-key-partition-list \
             -S apple-tool:,apple: \
             -k "$KEYCHAIN_PASSWORD" \
             "$KEYCHAIN_PATH"
+
           security list-keychain -d user -s "$KEYCHAIN_PATH"
-          echo "Certificate imported successfully"
+          echo "Certificate and key imported successfully"
 
           # Install provisioning profile
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
