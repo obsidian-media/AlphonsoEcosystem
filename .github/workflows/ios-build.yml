@@ -2,7 +2,10 @@ name: Build iOS Companion
 
 on:
   push:
-    branches: [IOSCOMPANION]
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-build.yml'
   workflow_dispatch:
 
 jobs:
