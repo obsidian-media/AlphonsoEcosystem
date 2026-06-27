@@ -6,7 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.4.2] - 2026-06-27 — TypeScript Migration Sprint (Cline)
+## [2.4.2] - 2026-06-27 — TypeScript Migration + Pre-Merge Bug Patch (cline-sprint → main)
+
+### Pre-Merge Bug Fixes (10 issues caught in orchestrator review)
+- **fetchWithRetry abort signal** (`hectorResearchService.js`): created fresh `AbortController` per retry attempt — retries 2–3 were aborting instantly on timeout
+- **subscribeToMessages ring overflow** (`agentBusService.js`): switched to ID-Set tracking — ring-full condition no longer silently drops all new A2A messages
+- **nextCronMs weekday field** (`joseSchedulerService.js`): `fields[4]` (weekday) now parsed — `maria_weekly_audit` fires Mondays only, not daily
+- **Scheduler handler stacking** (`joseSchedulerService.js`): `_runningHandlers` Set guard prevents concurrent Ollama handler invocations
+- **Voice watchdog double-toast** (`voiceOsService.js`): toast + restart deduped; backoff caps at 5 consecutive failures
+- **createSchedule error silenced** (`AutomationView.tsx`): return value checked; error message surfaced in UI
+- **A2A failed status unreachable** (`a2aProtocolService.ts`): `updateTaskResult` accepts `error?` param, sets `status: 'failed'` when provided
+- **installModule Tauri CSP** (`moduleRegistryService.ts`): uses `invoke('read_file')` in Tauri with fetch fallback for web dev
+- **Notification persistence write-only** (`NotificationCenter.tsx` / `App.tsx`): `loadPersistedNotifications` now called as `useState` initializer
+- **Bridge /modules 404** (`bridge/server.js`): `GET /modules` route added — `listModulesRemote()` no longer silently falls back every call
+
+### TypeScript Migration Sprint (Cline)
 
 ### TypeScript Migration
 - Migrated 60 `.jsx` component files → `.tsx` with full prop interfaces

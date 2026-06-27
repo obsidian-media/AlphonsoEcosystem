@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-27 — v2.4.0
-**Verified by:** Claude Code — claudecode-sprint (Agent OS Foundations + Observability + Capabilities + Polish)
-**Version:** 2.4.0 (Module system, Boardroom sessions, A2A protocol, Policy DSL, Runtime API, 5 scheduler presets, dark mode, keyboard shortcuts, observability hardening; 158 test files / 2147 tests passing; TypeScript migration complete — 76 .tsx components, 2 .jsx remaining)
+**Last verified:** 2026-06-27 — v2.4.2
+**Verified by:** Claude Code — cline-sprint merge to main (TypeScript migration + 10-bug pre-merge patch)
+**Version:** 2.4.2 (TypeScript migration: 94 .tsx components across src/components; 20 .jsx remain in subdirectories; 10 pre-merge bugs patched; 158 test files / 2147 tests passing; merged to main 2026-06-27)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,11 +25,11 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.3.3 |
+| Version | 2.4.2 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
-| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 2 `.jsx` (OpenCode-owned: ConnectorSetupPanel, ModelSwitcher) + 76 `.tsx` components |
+| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 94 `.tsx` + 20 `.jsx` components (`.jsx` remaining: ConnectorSetupPanel, ModelSwitcher in root; 18 in subdirectories agents/, hector/, ui/, projectExecution/, research/, approval/, audit/, dashboard/) |
 | UI System | **OKLCH** CSS design token system (`src/styles/tokens.css` — all colors in `oklch()` syntax), Framer Motion animation library (`src/lib/motion.ts` — spring/tween/fadeUp/fadeIn/slideInRight/scaleIn/staggerContainer/staggerItem/messageIn/panelIn), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |
@@ -170,7 +170,7 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 149 Files in `src/test/` (not zero)
+## 4. Test Suite — 158 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
@@ -791,7 +791,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-26 — TypeScript migration sprint complete: 76 .tsx components (2 .jsx remaining — OpenCode-owned), 158 test files / 2147 tests passing, typecheck clean, lint clean. Known honest gaps: DeepSeek is not_wired (Ollama deepseek-r1 works locally); PWA IndexedDB not yet wired into ChatView message save path; pluginSigningService test file added; coverage runner has pre-existing ECONNREFUSED on port 8000 (Voice OS sidecar)._
+_Last verified: 2026-06-27 — v2.4.2 merged to main. cline-sprint complete: 94 .tsx components (20 .jsx remain in subdirectories), 10 pre-merge bugs patched (fetchWithRetry abort signal, cron weekday, handler stacking, watchdog double-toast, ring overflow, notification persistence, createSchedule error propagation, a2a failed status, installModule Tauri CSP, bridge /modules route), 158 test files / 2147 tests passing, typecheck clean, lint clean. Known honest gaps: DeepSeek not wired (Ollama deepseek-r1 works locally); PWA IndexedDB not wired into ChatView message save path; coverage runner has pre-existing ECONNREFUSED on port 8000 (Voice OS sidecar)._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

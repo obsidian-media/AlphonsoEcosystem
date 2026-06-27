@@ -314,4 +314,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-27 — v2.4.0 — claudecode-sprint: Module system (moduleRegistryService, runtimeApiService, policyDslService, a2aProtocolService), Boardroom multi-agent sessions, A2A protocol, Policy DSL, 5 scheduler presets + handlers, /boardroom Telegram command, dark/light mode toggle, keyboard shortcuts modal, agent performance CSV/JSON export, DLQ section, Hector retry, n8n timeouts, ChromaDB error surface, unified memory eviction, Voice OS watchdog, bundle size CI. 149+ test files / 1983+ tests passing._
+_Last verified: 2026-06-27 — v2.4.2 — cline-sprint merged to main: TypeScript migration (94 .tsx, 20 .jsx remain in subdirectories), 10 pre-merge bugs patched (fetchWithRetry abort signal, cron weekday, handler stacking, watchdog double-toast + backoff, ring overflow, notification persistence, createSchedule error surface, a2a failed status, installModule Tauri CSP, bridge /modules route). 158 test files / 2147 tests passing._
