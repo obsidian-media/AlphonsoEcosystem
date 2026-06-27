@@ -13,7 +13,49 @@ struct PairingView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                discoveredSection
+                if mdnsService.discovered.isEmpty {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Scanning for Alphonso Desktop...")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(mdnsService.discovered) { host in
+                                Button(action: { selectedHost = host }) {
+                                    HStack {
+                                        VStack(alignment: .leading) {
+                                            Text(host.name)
+                                                .font(.headline)
+                                            Text("\(host.host):\(host.port)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        if selectedHost?.id == host.id {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(.accent)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 10)
+                                }
+                                .foregroundColor(.primary)
+                            }
+                        }
+                    }
+                }
+
+                Button("Enter IP Manually") {
+                    showingManualEntry = true
+                }
+                .foregroundColor(.accent)
+                .padding(.horizontal)
+                .padding(.top, 8)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("PIN Code")
@@ -94,54 +136,6 @@ struct PairingView: View {
                     }
                 }
             }
-        }
-    }
-
-    private var discoveredSection: some View {
-        Group {
-            if mdnsService.discovered.isEmpty {
-                HStack {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Scanning for Alphonso Desktop...")
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(mdnsService.discovered) { host in
-                            Button(action: { selectedHost = host }) {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(host.name)
-                                            .font(.headline)
-                                        Text("\(host.host):\(host.port)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if selectedHost?.id == host.id {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.accent)
-                                    }
-                                }
-                                .padding(.horizontal)
-                                .padding(.vertical, 10)
-                            }
-                            .foregroundColor(.primary)
-                        }
-                    }
-                }
-            }
-
-            Button("Enter IP Manually") {
-                showingManualEntry = true
-            }
-            .foregroundColor(.accent)
-            .padding(.horizontal)
-            .padding(.top, 8)
         }
     }
 
