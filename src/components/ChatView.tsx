@@ -462,7 +462,7 @@ export function ChatView({
   };
 
   const handleSend = async (overrideInput?: string) => {
-    const effectiveInput = overrideInput !== undefined ? overrideInput : inputValue;
+    const effectiveInput = typeof overrideInput === 'string' ? overrideInput : inputValue;
     if (!effectiveInput.trim() || isGenerating) return;
     setNovaInsight(null);
     const filesSuffix = attachedFiles.length

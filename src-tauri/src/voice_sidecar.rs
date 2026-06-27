@@ -18,7 +18,14 @@ pub async fn voice_start(app: tauri::AppHandle, state: State<'_, VoiceSidecar>) 
         .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
         .join("voice")
         .join("backend");
-    let mut child = Command::new("python")
+    // Prefer the voice backend's own venv Python; fall back to system python
+    let venv_python = backend_path.join("venv").join("Scripts").join("python.exe");
+    let python_bin = if venv_python.exists() {
+        venv_python
+    } else {
+        std::path::PathBuf::from("python")
+    };
+    let mut child = Command::new(&python_bin)
         .args([
             "-m",
             "uvicorn",

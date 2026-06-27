@@ -20,15 +20,16 @@ const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'airtable'
 ]);
 
+// Only match genuinely outbound/destructive actions — not user-initiated commands
 const HIGH_RISK_ACTION_PATTERNS: RegExp[] = [
-  /upload/i,
-  /publish/i,
-  /post/i,
-  /send/i,
-  /external/i,
-  /connector/i,
-  /delete/i,
-  /remove/i
+  /external_publish/i,
+  /external_send/i,
+  /external_post/i,
+  /external_upload/i,
+  /^publish$/i,
+  /^upload$/i,
+  /delete_files/i,
+  /deploy_production/i,
 ];
 
 export interface RuntimePolicySettings {
@@ -66,7 +67,7 @@ export interface PolicyGateResult {
 
 export function getRuntimePolicySettings(): RuntimePolicySettings {
   const defaults: RuntimePolicySettings = {
-    approvalMode: true,
+    approvalMode: false,
     zeroCostMode: true,
     safeMode: true,
     localOnlyMode: true,
@@ -76,7 +77,7 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     return {
-      approvalMode: parsed.approvalMode !== false,
+      approvalMode: parsed.approvalMode === true,
       zeroCostMode: parsed.zeroCostMode !== false,
       safeMode: parsed.safeMode !== false,
       localOnlyMode: parsed.localOnlyMode !== false,
@@ -89,7 +90,7 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
 
 export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySettings> {
   const defaults: RuntimePolicySettings = {
-    approvalMode: true,
+    approvalMode: false,
     zeroCostMode: true,
     safeMode: true,
     localOnlyMode: true,
@@ -100,7 +101,7 @@ export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySett
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        approvalMode: parsed.approvalMode !== false,
+        approvalMode: parsed.approvalMode === true,
         zeroCostMode: parsed.zeroCostMode !== false,
         safeMode: parsed.safeMode !== false,
         localOnlyMode: parsed.localOnlyMode !== false,
