@@ -13,44 +13,10 @@ struct PairingView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if mdnsService.discovered.isEmpty {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Scanning for Alphonso Desktop...")
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal)
-                } else {
-                    let hosts = Array(mdnsService.discovered)
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(0..<hosts.count, id: \.self) { index in
-                                let host = hosts[index]
-                                Button(action: { selectedHost = host }) {
-                                    HStack {
-                                        VStack(alignment: .leading) {
-                                            Text(host.name)
-                                                .font(.headline)
-                                            Text("\(host.host):\(host.port)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        if selectedHost?.id == host.id {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(.accent)
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 10)
-                                }
-                                .foregroundColor(.primary)
-                            }
-                        }
-                    }
-                }
+                HostListView(
+                    hosts: mdnsService.discovered,
+                    selectedHost: $selectedHost
+                )
 
                 Button("Enter IP Manually") {
                     showingManualEntry = true
@@ -158,5 +124,46 @@ struct PairingView: View {
         }
 
         webSocketService.connect(host: host, port: port, pin: pin)
+    }
+}
+
+struct HostListView: View {
+    let hosts: [DiscoveredHost]
+    @Binding var selectedHost: DiscoveredHost?
+
+    var body: some View {
+        if hosts.isEmpty {
+            HStack {
+                ProgressView()
+                    .scaleEffect(0.8)
+                Text("Scanning for Alphonso Desktop...")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal)
+        } else {
+            List {
+                ForEach(hosts) { host in
+                    Button(action: { selectedHost = host }) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(host.name)
+                                    .font(.headline)
+                                Text("\(host.host):\(host.port)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if selectedHost?.id == host.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.accent)
+                            }
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
+            }
+            .listStyle(.plain)
+        }
     }
 }
