@@ -28,23 +28,37 @@ export function getVoiceWebSocketUrl() {
 }
 
 let _watchdogInterval = null;
+let _watchdogFailures = 0;
+const WATCHDOG_MAX_FAILURES = 5;
 
 export async function startVoiceWatchdog() {
   stopVoiceWatchdog();
+  _watchdogFailures = 0;
   _watchdogInterval = setInterval(async () => {
+    if (_watchdogFailures >= WATCHDOG_MAX_FAILURES) return; // backed off — stop spamming
     try {
       const status = await getVoiceServerStatus();
       if (status === 'stopped') {
+        _watchdogFailures++;
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { type: 'error', message: _watchdogFailures >= WATCHDOG_MAX_FAILURES
+            ? 'Voice OS offline — giving up after 5 attempts. Restart manually in Runtimes.'
+            : 'Voice OS offline — restarting...' }
+        }));
+        if (_watchdogFailures < WATCHDOG_MAX_FAILURES) {
+          try { await startVoiceServer(); _watchdogFailures = 0; } catch { /* non-blocking */ }
+        }
+      } else {
+        _watchdogFailures = 0; // reset on healthy status
+      }
+    } catch {
+      _watchdogFailures++;
+      if (_watchdogFailures <= WATCHDOG_MAX_FAILURES) {
         window.dispatchEvent(new CustomEvent('alphonso:toast', {
           detail: { type: 'error', message: 'Voice OS offline — restarting...' }
         }));
-        await startVoiceServer();
+        try { await startVoiceServer(); _watchdogFailures = 0; } catch { /* non-blocking */ }
       }
-    } catch {
-      window.dispatchEvent(new CustomEvent('alphonso:toast', {
-        detail: { type: 'error', message: 'Voice OS offline — restarting...' }
-      }));
-      try { await startVoiceServer(); } catch { /* non-blocking */ }
     }
   }, 30_000);
 }

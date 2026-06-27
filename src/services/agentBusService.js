@@ -274,13 +274,13 @@ export function clearAgentMessages(toAgent) {
 const _subscriptions = new Map();
 
 export function subscribeToMessages(toAgent, callback) {
-  let lastCount = getAgentMessages(toAgent).length;
+  const seen = new Set(getAgentMessages(toAgent).map(m => m.id));
 
   const interval = setInterval(() => {
     const msgs = getAgentMessages(toAgent);
-    if (msgs.length > lastCount) {
-      const newMsgs = msgs.slice(lastCount);
-      lastCount = msgs.length;
+    const newMsgs = msgs.filter(m => !seen.has(m.id));
+    if (newMsgs.length > 0) {
+      newMsgs.forEach(m => seen.add(m.id));
       try { callback(newMsgs); } catch { /* non-critical */ }
     }
   }, 2000);

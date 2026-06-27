@@ -84,7 +84,8 @@ export function getTaskStatus(delegateId: string): A2ATask | null {
 export function updateTaskResult(
   delegateId: string,
   result: unknown,
-  logs: string[]
+  logs: string[],
+  error?: string
 ): void {
   const tasks = readTasks().map(t => {
     if (t.delegateId !== delegateId) return t;
@@ -92,7 +93,7 @@ export function updateTaskResult(
       ...t,
       result,
       logs: [...t.logs, ...logs],
-      status: 'completed' as const,
+      status: (error ? 'failed' : 'completed') as A2ATask['status'],
       completedAt: new Date().toISOString(),
     };
   });

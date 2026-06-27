@@ -127,6 +127,14 @@ app.post('/tool/alphonso_get_receipts', (req, res) => {
   });
 });
 
+// ── Module registry ───────────────────────────────────────────────────────────
+// Returns an empty list — module state lives in the Tauri frontend's localStorage.
+// This route satisfies runtimeApiService.listModulesRemote() so it doesn't always
+// 404-then-fallback silently.
+app.get('/modules', (_req, res) => {
+  res.json([]);
+});
+
 // ── Health ────────────────────────────────────────────────────────────────────
 
 app.get('/health', async (req, res) => {

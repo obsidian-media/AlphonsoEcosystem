@@ -68,13 +68,20 @@ function parseTOML(toml: string): Partial<ModuleManifest> {
 export async function installModule(path: string): Promise<{ success: boolean; error?: string }> {
   try {
     let tomlText: string;
-    const tomlUrl = path.endsWith('module.toml') ? path : `${path}/module.toml`;
+    const tomlPath = path.endsWith('module.toml') ? path : `${path}/module.toml`;
     try {
-      const resp = await fetch(tomlUrl);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      tomlText = await resp.text();
+      // In Tauri, use invoke('read_file') to read disk paths — fetch() can't access local files
+      const { invoke } = await import('@tauri-apps/api/core');
+      tomlText = await invoke<string>('read_file', { path: tomlPath });
     } catch {
-      return { success: false, error: `Cannot read module.toml from: ${tomlUrl}` };
+      // Fallback to fetch for web/dev mode
+      try {
+        const resp = await fetch(tomlPath);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        tomlText = await resp.text();
+      } catch {
+        return { success: false, error: `Cannot read module.toml from: ${tomlPath}` };
+      }
     }
 
     const manifest = parseTOML(tomlText) as ModuleManifest;

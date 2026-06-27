@@ -19,14 +19,24 @@ export const SCHEDULE_PRESETS = [
 
 function nextCronMs(cron) {
   const fields = cron.trim().split(/\s+/);
-  const minute = fields[0] === '*' ? null : parseInt(fields[0], 10);
-  const hour = fields[1] === '*' ? null : parseInt(fields[1], 10);
+  const minute  = fields[0] === '*' ? null : parseInt(fields[0], 10);
+  const hour    = fields[1] === '*' ? null : parseInt(fields[1], 10);
+  const weekday = fields[4] === '*' ? null : parseInt(fields[4], 10); // 0=Sun,1=Mon…6=Sat
   const now = new Date();
   const next = new Date(now);
   next.setSeconds(0, 0);
   if (minute !== null) next.setMinutes(minute);
   if (hour !== null) next.setHours(hour);
+  // Advance past the current moment first
   if (next <= now) next.setDate(next.getDate() + 1);
+  // If weekday is constrained, advance until we land on the right day
+  if (weekday !== null) {
+    let safety = 0;
+    while (next.getDay() !== weekday && safety < 7) {
+      next.setDate(next.getDate() + 1);
+      safety++;
+    }
+  }
   return next.getTime();
 }
 
@@ -38,7 +48,11 @@ function validateCronExpression(cron) {
   return fields.every(f => fieldPattern.test(f));
 }
 
+const _runningHandlers = new Set();
+
 async function _dispatchPresetHandler(handler, label) {
+  if (_runningHandlers.has(handler)) return; // prevent concurrent stacking
+  _runningHandlers.add(handler);
   try {
     window.dispatchEvent(new CustomEvent('alphonso:agent_activity', {
       detail: { agent: _handlerAgentMap[handler] || 'jose', message: `${label} triggered`, timestamp: new Date().toISOString() }
@@ -99,6 +113,7 @@ async function _dispatchPresetHandler(handler, label) {
       }
     }
   } catch { /* non-critical */ }
+  finally { _runningHandlers.delete(handler); }
 }
 
 const _handlerAgentMap = {

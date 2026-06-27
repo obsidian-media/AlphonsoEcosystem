@@ -14,7 +14,7 @@ import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { OllamaOfflineBanner } from './components/OllamaOfflineBanner';
-import { NotificationCenter } from './components/NotificationCenter';
+import { NotificationCenter, loadPersistedNotifications } from './components/NotificationCenter';
 import { CoachWindow } from './components/CoachWindow';
 import { ViewLoadingState } from './components/ViewLoadingState';
 import { useAppKeyboardShortcuts } from './hooks/useAppKeyboardShortcuts';
@@ -134,7 +134,7 @@ function AppShell() {
   // Notification center state
   type NotificationType = 'success' | 'warning' | 'error' | 'info';
   interface AppNotification { id: string; type: NotificationType; title: string; message: string; timestamp: number; }
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => loadPersistedNotifications() as AppNotification[]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [pendingApprovalCount, setPendingApprovalCount] = useState<number>(0);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
