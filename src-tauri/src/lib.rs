@@ -1954,20 +1954,20 @@ pub fn run() {
           .parse()
           .expect("fallback hotkey parse")
       });
+      let gs = app.handle().global_shortcut();
+      // Unregister first in case a previous dev-server restart left it registered.
+      let _ = gs.unregister(shortcut.clone());
       let app_handle_hs = app.handle().clone();
-      app
-        .handle()
-        .global_shortcut()
-        .on_shortcut(shortcut, move |_, _, event| {
-          if event.state == ShortcutState::Pressed {
-            if let Some(win) = app_handle_hs.get_webview_window("main") {
-              let _ = win.unminimize();
-              let _ = win.show();
-              let _ = win.set_focus();
-            }
-            let _ = app_handle_hs.emit("alphonso://voice_start", "hotkey");
+      gs.on_shortcut(shortcut, move |_, _, event| {
+        if event.state == ShortcutState::Pressed {
+          if let Some(win) = app_handle_hs.get_webview_window("main") {
+            let _ = win.unminimize();
+            let _ = win.show();
+            let _ = win.set_focus();
           }
-        })?;
+          let _ = app_handle_hs.emit("alphonso://voice_start", "hotkey");
+        }
+      })?;
 
       Ok(())
     })
