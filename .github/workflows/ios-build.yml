@@ -53,8 +53,9 @@ jobs:
             -k "$KEYCHAIN_PATH"
 
           # Set default keychain so codesign finds the cert+key
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-          security default-keychain -s "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" || true
+          security default-keychain -s "$KEYCHAIN_PATH" || true
+          security list-keychains -d user -s "$KEYCHAIN_PATH" || true
           echo "Certificate and key imported successfully"
 
           # Install provisioning profile
@@ -67,6 +68,8 @@ jobs:
 
       - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
+        env:
+          KEYCHAIN_PATH: ${{ runner.temp }}/app-signing.keychain-db
         run: |
           set -e
           xcodebuild archive \
@@ -79,7 +82,8 @@ jobs:
             CODE_SIGN_IDENTITY="iPhone Distribution: Shayan Salimi (9Y6GYPM3K5)" \
             DEVELOPMENT_TEAM="9Y6GYPM3K5" \
             PROVISIONING_PROFILE_SPECIFIER="Alphonso_iOS" \
-            PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion"
+            PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"
 
       - name: Export IPA
         working-directory: ios/AlphonsoCompanion
