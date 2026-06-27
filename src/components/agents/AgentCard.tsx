@@ -1,6 +1,19 @@
 import React from 'react';
 
-export function AgentCard({ agent, active, onClick }) {
+interface Agent {
+  id: string;
+  name: string;
+  title?: string;
+  role?: string;
+}
+
+interface Props {
+  agent: Agent;
+  active?: boolean;
+  onClick?: (id: string) => void;
+}
+
+export function AgentCard({ agent, active, onClick }: Props): JSX.Element {
   return (
     <button
       type="button"
@@ -10,8 +23,7 @@ export function AgentCard({ agent, active, onClick }) {
       }`}
     >
       <div className="text-sm font-semibold text-white">{agent.name}</div>
-      <div className="text-[11px] text-zinc-400">{agent.title || agent.role}</div>
+      <div className="text-[11px] text-zinc-400">{agent.title ?? agent.role}</div>
     </button>
   );
 }
-

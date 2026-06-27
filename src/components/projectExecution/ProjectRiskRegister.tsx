@@ -1,6 +1,17 @@
 import React from 'react';
 
-export function ProjectRiskRegister({ risks = [] }) {
+interface Risk {
+  id: string;
+  title: string;
+  severity?: string;
+  mitigation?: string;
+}
+
+interface Props {
+  risks?: Risk[];
+}
+
+export function ProjectRiskRegister({ risks = [] }: Props): JSX.Element {
   return (
     <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-4">
       <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Risk Register</div>
@@ -17,4 +28,3 @@ export function ProjectRiskRegister({ risks = [] }) {
     </div>
   );
 }
-

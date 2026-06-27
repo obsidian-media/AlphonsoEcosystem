@@ -1,6 +1,15 @@
 import React from 'react';
 
-export function HectorApprovalHandoff({ report, onCreateHandoff }) {
+interface Report {
+  id: string;
+}
+
+interface Props {
+  report?: Report | null;
+  onCreateHandoff: (reportId: string) => void;
+}
+
+export function HectorApprovalHandoff({ report, onCreateHandoff }: Props): JSX.Element {
   return (
     <section className="rounded-2xl border border-teal-300/15 bg-zinc-950/72 p-4">
       <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-200/75">Jose Approval Handoff</div>

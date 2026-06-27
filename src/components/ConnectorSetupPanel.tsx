@@ -32,8 +32,9 @@ import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/tel
 import { saveConnectorCredential, getConnectorCredential } from '../services/connectors/connectorAuth';
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
 
-// ── Connector icon map ────────────────────────────────────────────────────────
-const CONNECTOR_ICONS = {
+type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
+
+const CONNECTOR_ICONS: Record<string, LucideIcon> = {
   telegram: MessageSquare,
   whatsapp: Phone,
   github: GitBranch,
@@ -52,8 +53,18 @@ const CONNECTOR_ICONS = {
   n8n: Zap,
 };
 
-// ── Status helpers ────────────────────────────────────────────────────────────
-function getDisplayStatus(connector) {
+interface Connector {
+  id: string;
+  name: string;
+  status?: string;
+  requiredEnv?: string[];
+  envPresence?: Record<string, boolean>;
+  lastTestStatus?: string;
+}
+
+type DisplayStatus = 'configured' | 'local_only' | 'not_configured' | 'error';
+
+function getDisplayStatus(connector: Connector): DisplayStatus {
   const status = String(connector?.status || 'unknown').trim().toLowerCase();
   const requiredEnv = Array.isArray(connector?.requiredEnv) ? connector.requiredEnv : [];
   const envMissing = requiredEnv.length > 0 && requiredEnv.some((n) => !connector?.envPresence?.[n]);
@@ -68,24 +79,44 @@ function getDisplayStatus(connector) {
   return 'not_configured';
 }
 
-function isConnectorLive(connector) {
+function isConnectorLive(connector: Connector): boolean {
   return getDisplayStatus(connector) === 'configured' && connector?.lastTestStatus === 'verified';
 }
 
-function isConnectorOutboundAllowed(connector, approved) {
+function isConnectorOutboundAllowed(connector: Connector, approved: boolean): boolean {
   if (!connector || !approved) return false;
   if (['mobile_bridge', 'sd_webui', 'comfyui_video'].includes(connector.id)) return false;
   return getDisplayStatus(connector) === 'configured';
 }
 
-function isConnectorPollAllowed(connector) {
+function isConnectorPollAllowed(connector: Connector): boolean {
   if (!connector) return false;
   if (!['telegram', 'whatsapp'].includes(connector.id)) return false;
   return getDisplayStatus(connector) === 'configured';
 }
 
-// ── Credential section with save confirmation ─────────────────────────────────
-function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }) {
+interface CredentialField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  value: string;
+  onChange: (v: string) => void;
+  secret?: boolean;
+}
+
+interface CredentialSectionProps {
+  title: string;
+  icon?: LucideIcon;
+  borderColor: string;
+  bgColor: string;
+  accentColor: string;
+  fields: CredentialField[];
+  onSave: () => void;
+  hint?: string;
+  savedLabel?: string;
+}
+
+function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }: CredentialSectionProps): JSX.Element {
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -136,20 +167,24 @@ function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColo
   );
 }
 
-// ── Connector status card ─────────────────────────────────────────────────────
-function ConnectorCard({ connector, onVerifyEnv }) {
-  const Icon = CONNECTOR_ICONS[connector.id] || MessageCircle;
+interface ConnectorCardProps {
+  connector: Connector;
+  onVerifyEnv: () => void;
+}
+
+function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): JSX.Element {
+  const Icon = CONNECTOR_ICONS[connector.id] ?? MessageCircle;
   const displayStatus = getDisplayStatus(connector);
   const live = isConnectorLive(connector);
 
-  const statusConfig = {
+  const statusConfig: Record<DisplayStatus, { label: string; dot: string; text: string; border: string }> = {
     configured: { label: 'Active', dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-300/20 bg-emerald-500/5' },
     local_only: { label: 'Local', dot: 'bg-slate-400', text: 'text-slate-400', border: 'border-slate-300/20 bg-slate-500/5' },
     not_configured: { label: 'Not set up', dot: 'bg-zinc-600', text: 'text-zinc-500', border: 'border-white/10 bg-zinc-900/40' },
     error: { label: 'Error', dot: 'bg-amber-400', text: 'text-amber-400', border: 'border-amber-300/20 bg-amber-500/5' },
   };
 
-  const cfg = statusConfig[displayStatus] || statusConfig.not_configured;
+  const cfg = statusConfig[displayStatus] ?? statusConfig.not_configured;
 
   return (
     <div className={`rounded-xl border p-3.5 ${cfg.border}`}>
@@ -163,16 +198,8 @@ function ConnectorCard({ connector, onVerifyEnv }) {
           <span className={`text-[10px] font-medium ${cfg.text}`}>{cfg.label}</span>
         </div>
       </div>
-      {live && (
-        <div className="mt-2 text-[10px] text-emerald-400/70">
-          Verified & ready
-        </div>
-      )}
-      {displayStatus === 'not_configured' && (
-        <div className="mt-2 text-[10px] text-zinc-600">
-          Enter credentials below to enable
-        </div>
-      )}
+      {live && <div className="mt-2 text-[10px] text-emerald-400/70">Verified & ready</div>}
+      {displayStatus === 'not_configured' && <div className="mt-2 text-[10px] text-zinc-600">Enter credentials below to enable</div>}
       <button
         onClick={onVerifyEnv}
         className="mt-3 w-full rounded-lg bg-white/5 px-3 py-1.5 text-[10px] font-medium text-zinc-400 hover:bg-white/10 hover:text-zinc-200 transition-colors"
@@ -183,17 +210,17 @@ function ConnectorCard({ connector, onVerifyEnv }) {
   );
 }
 
-// ── Main panel ────────────────────────────────────────────────────────────────
-export function ConnectorSetupPanel() {
-  const [connectors, setConnectors] = useState(() => listConnectors());
+type NoticeType = 'info' | 'error' | 'success';
+
+export function ConnectorSetupPanel(): JSX.Element {
+  const [connectors, setConnectors] = useState<Connector[]>(() => listConnectors() as Connector[]);
   const [audit, setAudit] = useState(() => listConnectorAudit());
   const [authProfiles, setAuthProfiles] = useState(() => listConnectorAuthProfiles());
   const [notice, setNotice] = useState('');
-  const [noticeType, setNoticeType] = useState('info'); // 'info' | 'error' | 'success'
+  const [noticeType, setNoticeType] = useState<NoticeType>('info');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [transportBusy, setTransportBusy] = useState(false);
 
-  // Advanced / developer state
   const [connectorId, setConnectorId] = useState('telegram');
   const [simulatedText, setSimulatedText] = useState('ask hector: find latest Tauri v2 docs');
   const [senderId, setSenderId] = useState('');
@@ -213,12 +240,10 @@ export function ConnectorSetupPanel() {
   const [cloudWebhookChallenge, setCloudWebhookChallenge] = useState('challenge-123');
   const [autoPollState, setAutoPollState] = useState(() => getTelegramAutoPollState());
 
-  // Telegram credentials
   const [telegramBotToken, setTelegramBotToken] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN'));
   const [telegramChatIds, setTelegramChatIds] = useState(() => getConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS'));
-  const [telegramBotVerified, setTelegramBotVerified] = useState(null);
+  const [telegramBotVerified, setTelegramBotVerified] = useState<{ ok: boolean; botUsername?: string; error?: string } | null>(null);
 
-  // API key credentials
   const [githubToken, setGithubToken] = useState(() => getConnectorCredential('github', 'GITHUB_TOKEN'));
   const [slackBotToken, setSlackBotToken] = useState(() => getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
   const [anthropicApiKey, setAnthropicApiKey] = useState(() => getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
@@ -243,41 +268,39 @@ export function ConnectorSetupPanel() {
   useEffect(() => {
     let cancelled = false;
     const probeAll = async () => {
-      const ids = listConnectors().map((c) => c.id);
+      const ids = (listConnectors() as Connector[]).map((c) => c.id);
       for (const id of ids) {
         if (cancelled) break;
         try { await verifyConnectorEnvironment(id); } catch { /* silent */ }
       }
       if (!cancelled) {
-        setConnectors(listConnectors());
+        setConnectors(listConnectors() as Connector[]);
         setAuthProfiles(listConnectorAuthProfiles());
       }
     };
-    probeAll();
+    void probeAll();
     return () => { cancelled = true; };
   }, []);
 
   const selectedConnector = useMemo(
-    () => connectors.find((c) => c.id === connectorId) || null,
+    () => connectors.find((c) => c.id === connectorId) ?? null,
     [connectors, connectorId]
   );
 
   const refresh = () => {
-    setConnectors(listConnectors());
+    setConnectors(listConnectors() as Connector[]);
     setAudit(listConnectorAudit());
     setAuthProfiles(listConnectorAuthProfiles());
     window.dispatchEvent(new CustomEvent('alphonso-connector-saved'));
   };
 
-  const showNotice = (msg, type = 'info') => {
+  const showNotice = (msg: string, type: NoticeType = 'info') => {
     setNotice(msg);
     setNoticeType(type);
   };
 
-  // Active connector count for summary
   const activeCount = connectors.filter((c) => getDisplayStatus(c) === 'configured').length;
 
-  // ── Credential save helpers ─────────────────────────────────────────────────
   const saveTelegramCredentials = async () => {
     const token = telegramBotToken.trim();
     if (!token) { showNotice('Bot token is required.', 'error'); return; }
@@ -289,7 +312,7 @@ export function ConnectorSetupPanel() {
     });
     setTelegramBotVerified(null);
     try {
-      const result = await verifyConnectorEnvironment('telegram');
+      const result = await verifyConnectorEnvironment('telegram') as { ok?: boolean } | null;
       showNotice(result?.ok ? 'Telegram saved & verified ✓' : 'Telegram saved — use "Test Connection" to verify the bot token.', result?.ok ? 'success' : 'info');
     } catch {
       showNotice('Telegram credentials saved.', 'success');
@@ -297,7 +320,7 @@ export function ConnectorSetupPanel() {
     refresh();
   };
 
-  const saveConnectorApiKey = async (cId, fields) => {
+  const saveConnectorApiKey = async (cId: string, fields: Record<string, string>) => {
     let hasValue = false;
     for (const [key, value] of Object.entries(fields)) {
       const trimmed = String(value || '').trim();
@@ -305,9 +328,8 @@ export function ConnectorSetupPanel() {
     }
     if (!hasValue) { showNotice('Please enter at least one credential value.', 'error'); return; }
     updateConnectorAuthProfile(cId, { enabled: true });
-    // Auto-verify immediately so the card shows "Active" without a manual test step
     try {
-      const result = await verifyConnectorEnvironment(cId);
+      const result = await verifyConnectorEnvironment(cId) as { ok?: boolean } | null;
       showNotice(result?.ok ? `${cId} saved & verified ✓` : `${cId} saved — verify check returned incomplete (check values)`, result?.ok ? 'success' : 'error');
     } catch {
       showNotice(`${cId} credentials saved.`, 'success');
@@ -320,7 +342,7 @@ export function ConnectorSetupPanel() {
     if (!token) { showNotice('Enter a bot token first.', 'error'); return; }
     setTransportBusy(true);
     try {
-      const result = await verifyTelegramBotEnvironment({ botToken: token });
+      const result = await verifyTelegramBotEnvironment({ botToken: token }) as { ok: boolean; botUsername?: string; error?: string };
       setTelegramBotVerified(result);
       if (result.ok) {
         showNotice(`Connected to @${result.botUsername}`, 'success');
@@ -330,8 +352,7 @@ export function ConnectorSetupPanel() {
     } finally { setTransportBusy(false); }
   };
 
-  const verifyEnv = async (id) => {
-    // Real API test for GitHub
+  const verifyEnv = async (id: string) => {
     if (id === 'github') {
       const token = githubToken.trim() || getConnectorCredential('github', 'GITHUB_TOKEN');
       if (!token) { showNotice('GitHub token is required.', 'error'); return; }
@@ -344,7 +365,7 @@ export function ConnectorSetupPanel() {
         });
         clearTimeout(timer);
         if (res.ok) {
-          const data = await res.json();
+          const data = await res.json() as { login: string };
           showNotice(`Connection verified — authenticated as @${data.login}`, 'success');
         } else if (res.status === 401 || res.status === 403) {
           showNotice('Invalid GitHub token', 'error');
@@ -358,7 +379,6 @@ export function ConnectorSetupPanel() {
       return;
     }
 
-    // Real API test for Slack
     if (id === 'slack') {
       const token = slackBotToken.trim() || getConnectorCredential('slack', 'SLACK_BOT_TOKEN');
       if (!token) { showNotice('Slack bot token is required.', 'error'); return; }
@@ -371,7 +391,7 @@ export function ConnectorSetupPanel() {
           signal: controller.signal,
         });
         clearTimeout(timer);
-        const data = await res.json();
+        const data = await res.json() as { ok: boolean; user?: string; error?: string };
         if (data.ok) {
           showNotice(`Connection verified — authenticated as @${data.user}`, 'success');
         } else {
@@ -384,7 +404,7 @@ export function ConnectorSetupPanel() {
       return;
     }
 
-    const result = await verifyConnectorEnvironment(id);
+    const result = await verifyConnectorEnvironment(id) as { ok?: boolean; error?: string } | null;
     if (result?.error) {
       showNotice(`${id}: ${result.error}`, 'error');
     } else {
@@ -393,9 +413,8 @@ export function ConnectorSetupPanel() {
     refresh();
   };
 
-  // ── Advanced tool handlers ──────────────────────────────────────────────────
   const createRoute = () => {
-    const result = createConnectorRoutePacket(connectorId, simulatedText, senderId);
+    const result = createConnectorRoutePacket(connectorId, simulatedText, senderId) as { rejected?: boolean; reason?: string; packet?: { id?: string } } | null;
     if (result?.rejected) {
       showNotice(`Route blocked: ${result.reason}`, 'error');
     } else {
@@ -405,8 +424,8 @@ export function ConnectorSetupPanel() {
   };
 
   const applyAllowlist = () => {
-    const profile = updateConnectorAuthProfile(connectorId, { enabled: true, allowlist: authInput });
-    showNotice(`Allowlist updated for ${connectorId}. ${profile.allowlist.length} entries.`, 'success');
+    const profile = updateConnectorAuthProfile(connectorId, { enabled: true, allowlist: authInput }) as { allowlist?: unknown[] } | null;
+    showNotice(`Allowlist updated for ${connectorId}. ${profile?.allowlist?.length ?? 0} entries.`, 'success');
     refresh();
   };
 
@@ -423,13 +442,13 @@ export function ConnectorSetupPanel() {
     }
     setTransportBusy(true);
     try {
-      const result = connectorId === 'whatsapp'
+      const result = (connectorId === 'whatsapp'
         ? await pollWhatsAppConnector(20)
-        : await pollTelegramConnector(20);
-      if (result.error) {
+        : await pollTelegramConnector(20)) as { error?: string; count?: number; routed?: number; rejected?: number } | null;
+      if (result?.error) {
         showNotice(`Poll failed: ${result.error}`, 'error');
       } else {
-        showNotice(`Poll: ${result.count} inbound, ${result.routed} routed, ${result.rejected} rejected.`, 'info');
+        showNotice(`Poll: ${result?.count ?? 0} inbound, ${result?.routed ?? 0} routed, ${result?.rejected ?? 0} rejected.`, 'info');
       }
       refresh();
     } finally { setTransportBusy(false); }
@@ -439,10 +458,10 @@ export function ConnectorSetupPanel() {
     if (connectorId !== 'telegram') { showNotice('Auto-poll is Telegram only.', 'error'); return; }
     setTransportBusy(true);
     try {
-      const result = await runSingleTelegramPoll({ limit: 12 });
+      const result = await runSingleTelegramPoll({ limit: 12 }) as { ok?: boolean; count?: number; routed?: number; reason?: string };
       setAutoPollState(getTelegramAutoPollState());
       showNotice(result.ok
-        ? `Auto-poll: ${result.count} inbound, ${result.routed} routed.`
+        ? `Auto-poll: ${result.count ?? 0} inbound, ${result.routed ?? 0} routed.`
         : `Auto-poll failed: ${result.reason || 'unknown'}`,
         result.ok ? 'info' : 'error');
       refresh();
@@ -457,15 +476,15 @@ export function ConnectorSetupPanel() {
     }
     setTransportBusy(true);
     try {
-      let result = null;
-      if (connectorId === 'telegram') result = await sendTelegramConnectorMessage(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval });
-      else if (connectorId === 'whatsapp') result = await sendWhatsAppConnectorMessage(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval });
-      else if (connectorId === 'chatgpt') result = await sendChatGptConnectorMessage(outboundText.trim(), { approved: explicitApproval });
-      else if (connectorId === 'claude') result = await sendClaudeConnectorMessage(outboundText.trim(), { approved: explicitApproval });
-      else if (connectorId === 'qwen') result = await sendQwenConnectorMessage(outboundText.trim(), { approved: explicitApproval });
-      else if (connectorId === 'notion') result = await sendNotionConnectorEntry({ title: outboundText.trim().slice(0, 180), content: outboundText.trim(), parentPageId: outboundTarget.trim() }, { approved: explicitApproval });
-      else if (connectorId === 'clickup') result = await sendClickUpConnectorTask({ title: outboundText.trim().slice(0, 180), content: outboundText.trim(), listId: outboundTarget.trim() }, { approved: explicitApproval });
-      else if (connectorId === 'youtube') result = await uploadYouTubeConnectorVideo({ filePath: youtubeFilePath.trim(), title: youtubeTitle.trim(), description: youtubeDescription.trim(), tags: youtubeTags.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 20), privacyStatus: youtubePrivacy }, { approved: explicitApproval });
+      let result: { ok?: boolean; blocked?: boolean; error?: string; externalId?: string; url?: string } | null = null;
+      if (connectorId === 'telegram') result = await sendTelegramConnectorMessage(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval }) as typeof result;
+      else if (connectorId === 'whatsapp') result = await sendWhatsAppConnectorMessage(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval }) as typeof result;
+      else if (connectorId === 'chatgpt') result = await sendChatGptConnectorMessage(outboundText.trim(), { approved: explicitApproval }) as typeof result;
+      else if (connectorId === 'claude') result = await sendClaudeConnectorMessage(outboundText.trim(), { approved: explicitApproval }) as typeof result;
+      else if (connectorId === 'qwen') result = await sendQwenConnectorMessage(outboundText.trim(), { approved: explicitApproval }) as typeof result;
+      else if (connectorId === 'notion') result = await sendNotionConnectorEntry({ title: outboundText.trim().slice(0, 180), content: outboundText.trim(), parentPageId: outboundTarget.trim() }, { approved: explicitApproval }) as typeof result;
+      else if (connectorId === 'clickup') result = await sendClickUpConnectorTask({ title: outboundText.trim().slice(0, 180), content: outboundText.trim(), listId: outboundTarget.trim() }, { approved: explicitApproval }) as typeof result;
+      else if (connectorId === 'youtube') result = await uploadYouTubeConnectorVideo({ filePath: youtubeFilePath.trim(), title: youtubeTitle.trim(), description: youtubeDescription.trim(), tags: youtubeTags.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 20), privacyStatus: youtubePrivacy }, { approved: explicitApproval }) as typeof result;
       else { showNotice('Outbound send not supported for this connector.', 'error'); return; }
 
       if (result?.ok) {
@@ -482,14 +501,14 @@ export function ConnectorSetupPanel() {
   const runWhatsAppCloudWebhookSimulation = async () => {
     setTransportBusy(true);
     try {
-      let payload = {};
+      let payload: unknown = {};
       try { payload = JSON.parse(cloudWebhookPayload); } catch {
         showNotice('Webhook payload must be valid JSON.', 'error'); return;
       }
-      const challengeProof = await verifyWhatsAppCloudWebhookChallenge({ mode: cloudWebhookMode, verifyToken: cloudWebhookVerifyToken, challenge: cloudWebhookChallenge });
-      const signatureProof = await verifyWhatsAppCloudWebhookSignature({ rawBody: JSON.stringify(payload), signatureHeader: cloudWebhookSignature });
-      const routeProof = await simulateWhatsAppCloudInbound(payload);
-      showNotice(`Simulation: challenge=${challengeProof?.ok ? 'ok' : 'fail'}, signature=${signatureProof?.ok ? 'ok' : 'fail'}, routed=${routeProof?.routedCount || 0}.`, 'info');
+      const challengeProof = await verifyWhatsAppCloudWebhookChallenge({ mode: cloudWebhookMode, verifyToken: cloudWebhookVerifyToken, challenge: cloudWebhookChallenge }) as { ok?: boolean } | null;
+      const signatureProof = await verifyWhatsAppCloudWebhookSignature({ rawBody: JSON.stringify(payload), signatureHeader: cloudWebhookSignature }) as { ok?: boolean } | null;
+      const routeProof = await simulateWhatsAppCloudInbound(payload) as { routedCount?: number } | null;
+      showNotice(`Simulation: challenge=${challengeProof?.ok ? 'ok' : 'fail'}, signature=${signatureProof?.ok ? 'ok' : 'fail'}, routed=${routeProof?.routedCount ?? 0}.`, 'info');
       refresh();
     } finally { setTransportBusy(false); }
   };
@@ -499,7 +518,7 @@ export function ConnectorSetupPanel() {
     if (!outboundTarget.trim()) { showNotice('Enter a chat ID.', 'error'); return; }
     setTransportBusy(true);
     try {
-      const result = await proveTelegramConnectorPath(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval, requestedBy: 'jose' });
+      const result = await proveTelegramConnectorPath(outboundTarget.trim(), outboundText.trim(), { approved: explicitApproval, requestedBy: 'jose' }) as { ok?: boolean; blocked?: boolean; error?: string; externalId?: string } | null;
       if (result?.ok) showNotice(`Live proof success. ID: ${result.externalId || 'n/a'}`, 'success');
       else if (result?.blocked) showNotice(`Blocked: ${result?.error}`, 'error');
       else showNotice(`Failed: ${result?.error || 'unknown'}`, 'error');
@@ -510,7 +529,7 @@ export function ConnectorSetupPanel() {
   const pollAvailable = ['telegram', 'whatsapp'].includes(connectorId);
   const outboundAllowed = Boolean(selectedConnector && isConnectorOutboundAllowed(selectedConnector, explicitApproval));
 
-  const noticeColors = {
+  const noticeColors: Record<NoticeType, string> = {
     success: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
     error: 'border-red-300/20 bg-red-500/10 text-red-300',
     info: 'border-teal-300/15 bg-teal-500/10 text-teal-100/80',
@@ -519,7 +538,6 @@ export function ConnectorSetupPanel() {
   return (
     <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-5 space-y-6">
 
-      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
@@ -534,7 +552,6 @@ export function ConnectorSetupPanel() {
         </div>
       </div>
 
-      {/* ── Notice ── */}
       {notice && (
         <div className={`rounded-xl border px-4 py-3 text-[12px] flex items-center gap-2 ${noticeColors[noticeType]}`}>
           {noticeType === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
@@ -545,7 +562,6 @@ export function ConnectorSetupPanel() {
         </div>
       )}
 
-      {/* ── Connector status cards ── */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
         {connectors.map((connector) => (
           <ConnectorCard
@@ -556,7 +572,6 @@ export function ConnectorSetupPanel() {
         ))}
       </div>
 
-      {/* ── Credential Setup ── */}
       <div>
         <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Configure Integrations</h3>
         <div className="space-y-4">
@@ -570,24 +585,15 @@ export function ConnectorSetupPanel() {
             <div className="space-y-3">
               <div>
                 <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Bot Token</label>
-                <input
-                  type="password"
-                  value={telegramBotToken}
-                  onChange={(e) => setTelegramBotToken(e.target.value)}
+                <input type="password" value={telegramBotToken} onChange={(e) => setTelegramBotToken(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
-                  placeholder="Paste your bot token from @BotFather"
-                  autoComplete="off"
-                />
+                  placeholder="Paste your bot token from @BotFather" autoComplete="off" />
               </div>
               <div>
                 <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Allowed Chat IDs <span className="text-zinc-600 font-normal">(optional)</span></label>
-                <input
-                  type="text"
-                  value={telegramChatIds}
-                  onChange={(e) => setTelegramChatIds(e.target.value)}
+                <input type="text" value={telegramChatIds} onChange={(e) => setTelegramChatIds(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
-                  placeholder="e.g. 123456789, 987654321"
-                />
+                  placeholder="e.g. 123456789, 987654321" />
               </div>
             </div>
             <p className="mt-3 text-[11px] text-zinc-500">
@@ -601,113 +607,59 @@ export function ConnectorSetupPanel() {
               </div>
             )}
             <div className="mt-4 flex items-center gap-2">
-              <button
-                onClick={saveTelegramCredentials}
-                className="rounded-xl border border-sky-300/20 px-4 py-2 text-[11px] font-semibold text-zinc-100 hover:opacity-80 transition-opacity"
-              >
+              <button onClick={saveTelegramCredentials} className="rounded-xl border border-sky-300/20 px-4 py-2 text-[11px] font-semibold text-zinc-100 hover:opacity-80 transition-opacity">
                 Save & Enable
               </button>
-              <button
-                onClick={verifyTelegramBot}
-                disabled={transportBusy}
-                className="rounded-xl border border-white/10 px-4 py-2 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 hover:border-white/20 disabled:opacity-40 transition-colors"
-              >
+              <button onClick={verifyTelegramBot} disabled={transportBusy}
+                className="rounded-xl border border-white/10 px-4 py-2 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 hover:border-white/20 disabled:opacity-40 transition-colors">
                 Verify Bot
               </button>
             </div>
           </div>
 
-          {/* GitHub */}
-          <CredentialSection
-            title="GitHub"
-            icon={GitBranch}
-            borderColor="border-violet-300/20"
-            bgColor="bg-violet-500/8"
-            accentColor="text-violet-400"
+          <CredentialSection title="GitHub" icon={GitBranch} borderColor="border-violet-300/20" bgColor="bg-violet-500/8" accentColor="text-violet-400"
             fields={[{ label: 'Personal Access Token', placeholder: 'ghp_...', value: githubToken, onChange: setGithubToken, key: 'GITHUB_TOKEN' }]}
             onSave={() => saveConnectorApiKey('github', { GITHUB_TOKEN: githubToken })}
             hint="Create a token at github.com/settings/tokens with repo and workflow scopes. Used by Marcus for releases and issue management."
-            savedLabel="GitHub token saved"
-          />
+            savedLabel="GitHub token saved" />
 
-          {/* Slack */}
-          <CredentialSection
-            title="Slack"
-            icon={Hash}
-            borderColor="border-green-300/20"
-            bgColor="bg-green-500/8"
-            accentColor="text-green-400"
+          <CredentialSection title="Slack" icon={Hash} borderColor="border-green-300/20" bgColor="bg-green-500/8" accentColor="text-green-400"
             fields={[{ label: 'Bot Token', placeholder: 'xoxb-...', value: slackBotToken, onChange: setSlackBotToken, key: 'SLACK_BOT_TOKEN' }]}
             onSave={() => saveConnectorApiKey('slack', { SLACK_BOT_TOKEN: slackBotToken })}
             hint="Create a Slack app at api.slack.com/apps, add the chat:write scope, install to your workspace, and copy the Bot User OAuth Token."
-            savedLabel="Slack token saved"
-          />
+            savedLabel="Slack token saved" />
 
-          {/* Claude */}
-          <CredentialSection
-            title="Claude (Anthropic)"
-            icon={Bot}
-            borderColor="border-orange-300/20"
-            bgColor="bg-orange-500/8"
-            accentColor="text-orange-400"
+          <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
             fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
             onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
             hint="Get your key at console.anthropic.com/settings/keys. Only used when you explicitly route a task to Claude."
-            savedLabel="Anthropic key saved"
-          />
+            savedLabel="Anthropic key saved" />
 
-          {/* ChatGPT */}
-          <CredentialSection
-            title="ChatGPT (OpenAI)"
-            icon={Bot}
-            borderColor="border-teal-300/20"
-            bgColor="bg-teal-500/8"
-            accentColor="text-teal-400"
+          <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
             onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
             hint="Get your key at platform.openai.com/api-keys. Only used when you explicitly route a task to ChatGPT."
-            savedLabel="OpenAI key saved"
-          />
+            savedLabel="OpenAI key saved" />
 
-          {/* Notion */}
-          <CredentialSection
-            title="Notion"
-            icon={Database}
-            borderColor="border-pink-300/20"
-            bgColor="bg-pink-500/8"
-            accentColor="text-pink-400"
+          <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
             fields={[
               { label: 'Integration Secret', placeholder: 'secret_...', value: notionApiKey, onChange: setNotionApiKey, key: 'NOTION_API_KEY' },
               { label: 'Default Page ID', placeholder: 'Page UUID (optional)', value: notionParentPageId, onChange: setNotionParentPageId, key: 'NOTION_PARENT_PAGE_ID', secret: false }
             ]}
             onSave={() => saveConnectorApiKey('notion', { NOTION_API_KEY: notionApiKey, NOTION_PARENT_PAGE_ID: notionParentPageId })}
             hint="Create an integration at notion.so/my-integrations, then share the pages you want Alphonso to write to with your integration."
-            savedLabel="Notion credentials saved"
-          />
+            savedLabel="Notion credentials saved" />
 
-          {/* ClickUp */}
-          <CredentialSection
-            title="ClickUp"
-            icon={ListTodo}
-            borderColor="border-purple-300/20"
-            bgColor="bg-purple-500/8"
-            accentColor="text-purple-400"
+          <CredentialSection title="ClickUp" icon={ListTodo} borderColor="border-purple-300/20" bgColor="bg-purple-500/8" accentColor="text-purple-400"
             fields={[
               { label: 'API Key', placeholder: 'pk_...', value: clickupApiKey, onChange: setClickupApiKey, key: 'CLICKUP_API_KEY' },
               { label: 'Default List ID', placeholder: 'Found in the list URL (optional)', value: clickupListId, onChange: setClickupListId, key: 'CLICKUP_LIST_ID', secret: false }
             ]}
             onSave={() => saveConnectorApiKey('clickup', { CLICKUP_API_KEY: clickupApiKey, CLICKUP_LIST_ID: clickupListId })}
             hint="Find your API key under ClickUp Settings → Apps. The Default List ID is optional — Alphonso can target any list per task."
-            savedLabel="ClickUp credentials saved"
-          />
+            savedLabel="ClickUp credentials saved" />
 
-          {/* WhatsApp Cloud */}
-          <CredentialSection
-            title="WhatsApp Cloud"
-            icon={Phone}
-            borderColor="border-emerald-300/20"
-            bgColor="bg-emerald-500/8"
-            accentColor="text-emerald-400"
+          <CredentialSection title="WhatsApp Cloud" icon={Phone} borderColor="border-emerald-300/20" bgColor="bg-emerald-500/8" accentColor="text-emerald-400"
             fields={[
               { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
               { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
@@ -715,16 +667,9 @@ export function ConnectorSetupPanel() {
             ]}
             onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken })}
             hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook."
-            savedLabel="WhatsApp credentials saved"
-          />
+            savedLabel="WhatsApp credentials saved" />
 
-          {/* YouTube */}
-          <CredentialSection
-            title="YouTube"
-            icon={Video}
-            borderColor="border-red-300/20"
-            bgColor="bg-red-500/8"
-            accentColor="text-red-400"
+          <CredentialSection title="YouTube" icon={Video} borderColor="border-red-300/20" bgColor="bg-red-500/8" accentColor="text-red-400"
             fields={[
               { label: 'Client ID', placeholder: 'From Google Cloud Console', value: youtubeClientId, onChange: setYoutubeClientId, key: 'YOUTUBE_CLIENT_ID', secret: false },
               { label: 'Client Secret', placeholder: 'From Google Cloud Console', value: youtubeClientSecret, onChange: setYoutubeClientSecret, key: 'YOUTUBE_CLIENT_SECRET' },
@@ -733,82 +678,44 @@ export function ConnectorSetupPanel() {
             ]}
             onSave={() => saveConnectorApiKey('youtube', { YOUTUBE_CLIENT_ID: youtubeClientId, YOUTUBE_CLIENT_SECRET: youtubeClientSecret, YOUTUBE_REFRESH_TOKEN: youtubeRefreshToken, YOUTUBE_CHANNEL_ID: youtubeChannelId })}
             hint="Create OAuth 2.0 credentials in Google Cloud Console with the YouTube Data API v3 enabled. Then run npm run auth:youtube in a terminal to generate your Refresh Token."
-            savedLabel="YouTube credentials saved"
-          />
+            savedLabel="YouTube credentials saved" />
 
-          {/* Qwen */}
-          <CredentialSection
-            title="Qwen / DashScope"
-            icon={Cpu}
-            borderColor="border-yellow-300/20"
-            bgColor="bg-yellow-500/8"
-            accentColor="text-yellow-400"
+          <CredentialSection title="Qwen / DashScope" icon={Cpu} borderColor="border-yellow-300/20" bgColor="bg-yellow-500/8" accentColor="text-yellow-400"
             fields={[{ label: 'API Key', placeholder: 'sk-...', value: qwenApiKey, onChange: setQwenApiKey, key: 'DASHSCOPE_API_KEY' }]}
             onSave={() => saveConnectorApiKey('qwen', { DASHSCOPE_API_KEY: qwenApiKey })}
             hint="Get your key at dashscope.aliyuncs.com. Alphonso uses the international endpoint automatically."
-            savedLabel="Qwen key saved"
-          />
+            savedLabel="Qwen key saved" />
 
-          {/* Brave Search */}
-          <CredentialSection
-            title="Brave Search"
-            icon={Search}
-            borderColor="border-orange-300/20"
-            bgColor="bg-orange-500/8"
-            accentColor="text-orange-400"
+          <CredentialSection title="Brave Search" icon={Search} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
             fields={[{ label: 'API Key', placeholder: 'BSA...', value: braveApiKey, onChange: setBraveApiKey, key: 'BRAVE_SEARCH_API_KEY' }]}
             onSave={() => saveConnectorApiKey('brave_search', { BRAVE_SEARCH_API_KEY: braveApiKey })}
             hint="Free tier: 2,000 queries/month. Sign up at search.brave.com/register. Used by Hector for real-time web research. Without this key Hector falls back to DuckDuckGo HTML scraping."
-            savedLabel="Brave Search key saved"
-          />
+            savedLabel="Brave Search key saved" />
 
-          {/* Tavily Search */}
-          <CredentialSection
-            title="Tavily Search (Hector Fallback)"
-            icon={Search}
-            borderColor="border-sky-300/20"
-            bgColor="bg-sky-500/8"
-            accentColor="text-sky-400"
+          <CredentialSection title="Tavily Search (Hector Fallback)" icon={Search} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
             fields={[{ label: 'API Key', placeholder: 'tvly-...', value: tavilyApiKey, onChange: setTavilyApiKey, key: 'TAVILY_API_KEY' }]}
             onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
             hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
-            savedLabel="Tavily key saved"
-          />
+            savedLabel="Tavily key saved" />
 
-          {/* Runway ML */}
-          <CredentialSection
-            title="Runway ML (Video Generation)"
-            icon={Video}
-            borderColor="border-fuchsia-300/20"
-            bgColor="bg-fuchsia-500/8"
-            accentColor="text-fuchsia-400"
+          <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
             fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}
             onSave={() => saveConnectorApiKey('runway', { RUNWAYML_API_SECRET: runwayApiKey })}
             hint="Get your key at app.runwayml.com/account/api-keys. Used by Miya Studio for AI video generation (Gen-4.5). Free trial credits included."
-            savedLabel="Runway key saved"
-          />
+            savedLabel="Runway key saved" />
 
-          {/* n8n Automation */}
-          <CredentialSection
-            title="n8n Automation (Docker)"
-            icon={Zap}
-            borderColor="border-orange-300/20"
-            bgColor="bg-orange-500/8"
-            accentColor="text-orange-400"
+          <CredentialSection title="n8n Automation (Docker)" icon={Zap} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
             fields={[{ label: 'n8n Base URL', placeholder: 'http://localhost:5678', value: n8nBaseUrl, onChange: setN8nBaseUrl, key: 'N8N_BASE_URL', secret: false }]}
             onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
             hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
-            savedLabel="n8n URL saved"
-          />
+            savedLabel="n8n URL saved" />
         </div>
       </div>
 
-      {/* ── Tool Connections ── */}
       <div>
         <ToolConnectionsPanel />
       </div>
 
-      {/* ── Advanced / Developer Tools ── */}
       <div className="rounded-xl border border-white/10">
         <button
           onClick={() => setAdvancedOpen((v) => !v)}
@@ -821,7 +728,6 @@ export function ConnectorSetupPanel() {
         {advancedOpen && (
           <div className="border-t border-white/10 p-4 space-y-4">
 
-            {/* Connector selector for testing */}
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[11rem_1fr_12rem]">
               <select value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
                 {connectors.map((c) => <option key={`route-${c.id}`} value={c.id}>{c.name}</option>)}
@@ -832,7 +738,6 @@ export function ConnectorSetupPanel() {
               </button>
             </div>
 
-            {/* Allowlist */}
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_2fr_auto_auto]">
               <input value={senderId} onChange={(e) => setSenderId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Simulated sender id" />
               <input value={authInput} onChange={(e) => setAuthInput(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Allowlist ids (comma or newline)" />
@@ -840,7 +745,6 @@ export function ConnectorSetupPanel() {
               <button onClick={disableAuthProfile} className="rounded-xl bg-amber-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-amber-100 hover:bg-amber-500/20">Disable Auth</button>
             </div>
 
-            {/* Outbound test */}
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[10rem_1fr_1fr_auto_auto]">
               <select value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
                 {connectors.map((c) => <option key={`outbound-${c.id}`} value={c.id}>{c.name}</option>)}
@@ -867,7 +771,7 @@ export function ConnectorSetupPanel() {
               )}
               {connectorId === 'telegram' && (
                 <button onClick={runAutoPoll} disabled={transportBusy} className="rounded-xl bg-cyan-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-40">
-                  Auto-Poll {autoPollState.errors > 0 ? `(${autoPollState.errors} err)` : ''}
+                  Auto-Poll {(autoPollState as { errors?: number }).errors ? `(${(autoPollState as { errors?: number }).errors} err)` : ''}
                 </button>
               )}
             </div>
@@ -884,13 +788,11 @@ export function ConnectorSetupPanel() {
               </div>
             )}
 
-            {/* Approval gate */}
             <div className="flex items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/85">
               <input id="dev-approval" type="checkbox" checked={explicitApproval} onChange={(e) => setExplicitApproval(e.target.checked)} className="h-3.5 w-3.5 accent-amber-300" />
               <label htmlFor="dev-approval" className="cursor-pointer">Approve this outbound action (required for sends and uploads)</label>
             </div>
 
-            {/* WhatsApp Cloud webhook simulation */}
             <div className="rounded-xl border border-teal-300/15 bg-zinc-900/55 p-4">
               <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-teal-200/75">WhatsApp Cloud Webhook Simulation</div>
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -905,17 +807,15 @@ export function ConnectorSetupPanel() {
               </div>
             </div>
 
-            {/* Debug: connector state */}
             <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[10px] text-zinc-500 font-mono space-y-1">
               <div>connector: <span className="text-zinc-300">{connectorId}</span> | status: <span className="text-zinc-300">{selectedConnector ? getDisplayStatus(selectedConnector) : 'n/a'}</span> | live: <span className="text-zinc-300">{selectedConnector ? String(isConnectorLive(selectedConnector)) : 'n/a'}</span></div>
               <div>outbound_allowed: <span className="text-zinc-300">{String(outboundAllowed)}</span> | poll_available: <span className="text-zinc-300">{String(pollAvailable)}</span></div>
             </div>
 
-            {/* Audit log */}
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
               <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-2">Connector Audit</div>
               {audit.length === 0 && <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-3 text-sm text-zinc-600">No activity yet.</div>}
-              {audit.slice().reverse().slice(0, 10).map((entry) => (
+              {(audit as Array<{ id: string; connectorId: string; action: string; timestampMs: number }>).slice().reverse().slice(0, 10).map((entry) => (
                 <div key={entry.id} className="rounded-xl border border-white/10 bg-zinc-900/55 px-3 py-2 text-[10px] text-zinc-500 font-mono">
                   {entry.connectorId} · {entry.action} · {new Date(entry.timestampMs).toLocaleTimeString()}
                 </div>

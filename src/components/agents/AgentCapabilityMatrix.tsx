@@ -1,6 +1,21 @@
 import React from 'react';
 
-export function AgentCapabilityMatrix({ agentPermissions = {}, agentProfiles = {} }) {
+interface Permission {
+  allowed: string[];
+  blocked: string[];
+  approvalRequired: string[];
+}
+
+interface AgentProfile {
+  limitations?: string[];
+}
+
+interface Props {
+  agentPermissions?: Record<string, Permission>;
+  agentProfiles?: Record<string, AgentProfile>;
+}
+
+export function AgentCapabilityMatrix({ agentPermissions = {}, agentProfiles = {} }: Props): JSX.Element {
   const rows = Object.entries(agentPermissions);
   return (
     <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-4">
@@ -15,7 +30,7 @@ export function AgentCapabilityMatrix({ agentPermissions = {}, agentProfiles = {
             <div className="text-zinc-500">cannot do: {permission.blocked.slice(0, 3).join(', ')}</div>
             <div className="text-zinc-500">needs approval: {permission.approvalRequired.slice(0, 3).join(', ')}</div>
             {agentProfiles?.[agentId]?.limitations?.length ? (
-              <div className="mt-1 text-amber-200/80">limitations: {agentProfiles[agentId].limitations.slice(0, 2).join(' | ')}</div>
+              <div className="mt-1 text-amber-200/80">limitations: {agentProfiles[agentId].limitations!.slice(0, 2).join(' | ')}</div>
             ) : null}
             <div className="text-indigo-200/70">unwired: external autonomy disabled by policy.</div>
           </div>
