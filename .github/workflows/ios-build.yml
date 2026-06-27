@@ -200,13 +200,16 @@ jobs:
           IPA_PATH=$(find build/output -name "*.ipa" | head -1)
           echo "Uploading $IPA_PATH to TestFlight..."
 
+          # altool ignores --apiKeyPath; must be in one of its hardcoded search paths
+          mkdir -p ~/.appstoreconnect/private_keys
+          cp "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8" \
+             ~/.appstoreconnect/private_keys/
+
           xcrun altool --upload-app \
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "$API_KEY_ID" \
             --apiIssuer "$API_ISSUER" \
-            --apiKeyPath "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8" \
-            --show-progress \
             || echo "::warning::TestFlight upload failed — download IPA from artifacts below"
 
       - name: Upload IPA artifact
