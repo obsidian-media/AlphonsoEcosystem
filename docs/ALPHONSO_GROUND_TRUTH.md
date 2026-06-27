@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-27 — v2.4.2
-**Verified by:** Claude Code — cline-sprint merge to main (TypeScript migration + 10-bug pre-merge patch)
-**Version:** 2.4.2 (TypeScript migration: 94 .tsx components across src/components; 20 .jsx remain in subdirectories; 10 pre-merge bugs patched; 158 test files / 2147 tests passing; merged to main 2026-06-27)
+**Last verified:** 2026-06-27 — v2.4.3
+**Verified by:** Claude Code — audit-sprint-26jun merge to main (P1-05/P1-08/P1-14/P2-14 closed; full TypeScript migration complete)
+**Version:** 2.4.3 (TypeScript migration: 114 .tsx components, 0 subdirectory .jsx remain; credential KV-primary; voice sidecar piped logs; plugin signing KV-primary; 158 test files / 2147 tests passing; merged to main 2026-06-27)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,11 +25,11 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.4.2 |
+| Version | 2.4.3 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
-| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 94 `.tsx` + 20 `.jsx` components (`.jsx` remaining: ConnectorSetupPanel, ModelSwitcher in root; 18 in subdirectories agents/, hector/, ui/, projectExecution/, research/, approval/, audit/, dashboard/) |
+| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 114 `.tsx` + 0 subdirectory `.jsx` components (TypeScript migration complete; only top-level utility .jsx files remain if any) |
 | UI System | **OKLCH** CSS design token system (`src/styles/tokens.css` — all colors in `oklch()` syntax), Framer Motion animation library (`src/lib/motion.ts` — spring/tween/fadeUp/fadeIn/slideInRight/scaleIn/staggerContainer/staggerItem/messageIn/panelIn), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |
@@ -395,9 +395,9 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 
 ## 8. Real Gaps — What Actually Needs Work
 
-These are confirmed gaps as of 2026-06-26 (v2.3.0). Any agent working on these areas should check current state before implementing.
+These are confirmed gaps as of 2026-06-27 (v2.4.3). Any agent working on these areas should check current state before implementing.
 
-### OPEN GAPS (as of v2.3.0)
+### OPEN GAPS (as of v2.4.3)
 - [ ] **DeepSeek connector** — `externalAgentAdapter.js` has stub `{ id: 'deepseek', enabled: false, status: 'not_wired' }`. No service, no UI. Workaround: use Ollama with `deepseek-r1:7b` locally — works today.
 - [ ] **PWA offline ChatView wiring** — `public/sw.js` + `src/services/offlineChatService.js` exist but ChatView does not call `saveMessageOffline()`. Messages are not persisted to IndexedDB on disconnect.
 - [ ] **Plugin sandbox execution** — `pluginSandboxService.js` exists but is never imported or called. Plugin tools cannot actually run in isolation.
@@ -422,7 +422,7 @@ These are confirmed gaps as of 2026-06-26 (v2.3.0). Any agent working on these a
 - [x] **lib.rs continued splitting + plugins extracted** — DONE (2026-06-07, OpenCode): `plugin_runtime.rs`, `policy_gate.rs`, `audit_log.rs`, `ollama.rs`, `memory_store.rs`, `meta_publish.rs`, `runway.rs`, `native_proof.rs` now own their own modules. `cargo check` clean, `cargo clippy -- -D warnings` clean, `cargo test` clean (14 Rust unit tests passing).
 - [x] **Policy gate expanded** — `policy_gate.rs` whitelist expanded from 8 to 40+ programs: python, pip, cargo, npx, yarn, pnpm, curl, wget, ffmpeg, docker, pwsh, explorer, chrome, copy, xcopy, robocopy, mkdir, del, and more. Still blocks: cmd, rm, shutdown, format, net, reg.
 - [x] **New Tauri commands** — `read_workspace_file`, `delete_workspace_file`, `move_workspace_file`, `search_workspace_files`, `list_workspace_directory`, `open_url`, `fetch_url_content`, `read_clipboard`, `write_clipboard`. All with safe path validation (no escape from workspace root).
-- [x] **Voice sidecar module** — `src-tauri/src/voice_sidecar.rs` added (2026-06-24, feat/voice-os): `VoiceSidecar(Mutex<Option<Child>>)` state, `voice_start`/`voice_stop`/`voice_status` Tauri commands registered in `lib.rs`. `cargo clippy -- -D warnings` clean.
+- [x] **Voice sidecar module** — `src-tauri/src/voice_sidecar.rs` added (2026-06-24, feat/voice-os): `VoiceSidecar(Mutex<Option<Child>>)` state, `voice_start`/`voice_stop`/`voice_status` Tauri commands registered in `lib.rs`. `cargo clippy -- -D warnings` clean. **P1-08 CLOSED 2026-06-27**: `Stdio::null()` → `Stdio::piped()` for stdout+stderr; `BufReader` threads pipe to `log::info!`/`log::warn!` so voice OS subprocess errors are no longer invisible.
 - [ ] **lib.rs further splitting** — Optional: Telegram connector block can be extracted further if needed.
 - [x] **Rust unit tests added** — 14 tests in `#[cfg(test)] mod tests` covering `allowed_program`, `plugin_blocked_token_present`, `validate_plugin_extra_args`, `trim_trailing_slashes`, `wal_pragma_applies_on_in_memory_db`, `to_hex` — all passing (verified `cargo test` 2026-05-31, Agent D)
 - [x] **Shared `reqwest::Client`** — built at startup, registered via `.manage()`, used by `connector_poll_telegram`, `connector_send_telegram`, `connector_send_chatgpt`, `connector_send_claude` (2026-05-31, Agent D).
@@ -538,6 +538,9 @@ These are confirmed gaps as of 2026-06-26 (v2.3.0). Any agent working on these a
 - [x] **Test coverage push** — **CLOSED Sprint Next-10 T3** 10 new service test files → 111 total / 1621+ tests: agentBrainService, workspaceFileService, proactiveAgentService, streamingService, browserAutomationService, backupService, composioService, agentActivityService, resourceCostService, marcusPublishService.
 - [ ] **Branch protection on `main`** — CI not yet required before merge (GitHub settings, manual step)
 - [x] **TypeScript migration (continued)** — **CLOSED Sprint Next-50 D5** App, Sidebar, RightPanel, SettingsView, ChatView all migrated to `.tsx`. Total: 10 TSX components. Remaining JSX: 63 components.
+- [x] **TypeScript migration COMPLETE** — **CLOSED audit-sprint-26jun 2026-06-27** Final 20 subdirectory .jsx components migrated to .tsx (agents/, hector/, projectExecution/, research/, approval/, audit/, dashboard/ + ConnectorSetupPanel + ModelSwitcher). ui/Badge.jsx re-export shim deleted. Total: 114 .tsx, 0 subdirectory .jsx remain. P1-14 CLOSED.
+- [x] **Connector credentials KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `connectorAuth.js` now uses Tauri KV (SQLite) as primary store with in-memory `_credCache`. localStorage cleared after KV hydration. `hydrateConnectorCredentialsFromSqlite()` migrates and removes old localStorage keys. P1-05 CLOSED.
+- [x] **Plugin signing keys KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `pluginSigningService.js` stores keypair and trusted signer keys in KV; localStorage cleared after read. `hydrateTrustedSignerKeysFromKv()` migrates on boot. P2-14 CLOSED.
 
 ### v2.2.4 UX Restructure (2026-06-25)
 - [x] **Coach mode no visual feedback** — **CLOSED** `CoachContext.jsx` now sets `coachMode=true` and dispatches `alphonso:toast` even when Tauri window open fails. `ToastProvider` now listens to `window.alphonso:toast` CustomEvent for cross-context toasting.

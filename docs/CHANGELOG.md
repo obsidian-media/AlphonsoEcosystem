@@ -6,6 +6,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.3] - 2026-06-27 — Audit Sprint (audit-sprint-26jun → main)
+
+### Security & Credential Hardening
+- **P1-05 CLOSED**: `connectorAuth.js` — all credentials now stored in Tauri KV (SQLite) as primary store. In-memory `_credCache` avoids repeated localStorage reads. `hydrateConnectorCredentialsFromSqlite()` migrates existing localStorage credentials to KV on boot, then removes them. localStorage no longer holds credentials at rest.
+- **P2-14 CLOSED**: `pluginSigningService.js` — ECDSA keypair and trusted signer keys now stored in KV. `hydrateTrustedSignerKeysFromKv()` migrates on boot. localStorage copies removed after KV reads.
+
+### Rust Backend
+- **P1-08 CLOSED**: `voice_sidecar.rs` — `Stdio::null()` replaced with `Stdio::piped()` for both stdout and stderr. `BufReader` threads pipe subprocess output to `log::info!`/`log::warn!` so voice OS errors are no longer invisible in production logs.
+
+### TypeScript Migration (Complete)
+- **P1-14 CLOSED**: Final 20 subdirectory `.jsx` components migrated to `.tsx` with full TypeScript prop interfaces:
+  - `agents/`: AgentCapabilityMatrix, AgentCard, AgentDock, AgentProfilePanel
+  - `hector/`: CitationPanel, HectorActivityLog, HectorApprovalHandoff, SourceBoard, ResearchReportPanel
+  - `projectExecution/`: ProjectRiskRegister, ProjectRoadmap, ProjectVerificationChecklist, ProjectExecutionMode
+  - `approval/`: ApprovalCenterPanel
+  - `research/`: HectorResearchPanel
+  - `audit/`: MarcusAuditPanel
+  - `dashboard/`: HectorResearchDesk
+  - Root: `ConnectorSetupPanel.tsx`, `ModelSwitcher.tsx`
+  - Deleted: `ui/Badge.jsx` re-export shim
+- **Total: 114 `.tsx` components, 0 subdirectory `.jsx` remain** — TypeScript migration complete
+
+### Verified Already Closed
+- **P1-11**: `BoardroomView.tsx` confirmed present with full session model, participant selector, convene/conclude flow
+- **P2-10**: `release.yml` already has `Validate updater manifest` step checking JSON parseability + required fields
+
+---
+
 ## [2.4.2] - 2026-06-27 — TypeScript Migration + Pre-Merge Bug Patch (cline-sprint → main)
 
 ### Pre-Merge Bug Fixes (10 issues caught in orchestrator review)

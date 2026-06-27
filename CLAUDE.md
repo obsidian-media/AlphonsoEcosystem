@@ -314,4 +314,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-27 — v2.4.2 — cline-sprint merged to main: TypeScript migration (94 .tsx, 20 .jsx remain in subdirectories), 10 pre-merge bugs patched (fetchWithRetry abort signal, cron weekday, handler stacking, watchdog double-toast + backoff, ring overflow, notification persistence, createSchedule error surface, a2a failed status, installModule Tauri CSP, bridge /modules route). 158 test files / 2147 tests passing._
+_Last verified: 2026-06-27 — v2.4.3 — audit-sprint-26jun merged to main: TypeScript migration COMPLETE (114 .tsx, 0 subdirectory .jsx remain). P1-05 closed (connector credentials KV-primary). P1-08 closed (voice sidecar Stdio::piped). P2-14 closed (plugin signing keys KV-primary). P1-11/P2-10 verified already done. 158 test files / 2147 tests passing. cargo clippy -D warnings clean._
