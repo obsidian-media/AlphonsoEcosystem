@@ -1,3 +1,4 @@
+use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{Manager, State};
@@ -17,7 +18,7 @@ pub async fn voice_start(app: tauri::AppHandle, state: State<'_, VoiceSidecar>) 
         .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
         .join("voice")
         .join("backend");
-    let child = Command::new("python")
+    let mut child = Command::new("python")
         .args([
             "-m",
             "uvicorn",
@@ -29,10 +30,24 @@ pub async fn voice_start(app: tauri::AppHandle, state: State<'_, VoiceSidecar>) 
             "--app-dir",
         ])
         .arg(&backend_path)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("Failed to start voice server: {e}"))?;
+    if let Some(stdout) = child.stdout.take() {
+        std::thread::spawn(move || {
+            for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+                log::info!("[voice-os] {}", line);
+            }
+        });
+    }
+    if let Some(stderr) = child.stderr.take() {
+        std::thread::spawn(move || {
+            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                log::warn!("[voice-os] {}", line);
+            }
+        });
+    }
     *guard = Some(child);
     Ok("started".into())
 }

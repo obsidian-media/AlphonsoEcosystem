@@ -13,25 +13,34 @@ import {
 } from './connectorRegistry.js';
 
 // ── Credential storage (actual values, not just presence flags) ───────────────
-// Separate from auth profiles — stores real tokens/keys entered via UI.
+// Primary store: Tauri KV (SQLite). In-memory cache for sync reads.
+// localStorage is used as a boot-time migration source only — cleared after KV hydration.
 const CREDS_KEY = 'alphonso_connector_credentials_v1';
 
+let _credCache = null;
+
 function readAllCredentials() {
+  if (_credCache !== null) return _credCache;
   try {
     const raw = localStorage.getItem(CREDS_KEY);
-    return raw ? JSON.parse(raw) : {};
+    _credCache = raw ? JSON.parse(raw) : {};
+    return _credCache;
   } catch {
-    return {};
+    _credCache = {};
+    return _credCache;
   }
 }
 
 function writeAllCredentials(creds) {
-  localStorage.setItem(CREDS_KEY, JSON.stringify(creds));
+  _credCache = creds;
   try {
-    invoke('kv_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => {});
+    invoke('kv_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => { /* kv_set fire-and-forget */ });
   } catch {
-    // SQLite not available outside Tauri
+    // SQLite not available outside Tauri — fall back to localStorage
+    try { localStorage.setItem(CREDS_KEY, JSON.stringify(creds)); } catch { /* localStorage unavailable */ }
   }
+  // Remove from localStorage so credentials do not persist in the webview store
+  try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
 }
 
 export function saveConnectorCredential(connectorId, key, value) {
@@ -62,13 +71,27 @@ export function getConnectorCredentials(connectorId) {
 export async function hydrateConnectorCredentialsFromSqlite() {
   try {
     const json = await invoke('kv_get', { key: CREDS_KEY });
-    if (!json) return;
-    const parsed = JSON.parse(json);
-    if (parsed && typeof parsed === 'object') {
-      localStorage.setItem(CREDS_KEY, JSON.stringify(parsed));
+    if (json) {
+      const parsed = JSON.parse(json);
+      if (parsed && typeof parsed === 'object') {
+        _credCache = parsed;
+        // Remove any lingering localStorage copy — KV is now authoritative
+        try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
+        return;
+      }
+    }
+    // KV empty — migrate from localStorage if present, then remove
+    const raw = localStorage.getItem(CREDS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        _credCache = parsed;
+        invoke('kv_set', { key: CREDS_KEY, value: raw }).catch(() => {});
+        localStorage.removeItem(CREDS_KEY);
+      }
     }
   } catch {
-    // ignore — localStorage fallback already in place
+    // ignore — in-memory cache fallback already in place
   }
 }
 

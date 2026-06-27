@@ -1,9 +1,19 @@
+import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { appendPluginAuditEntry } from './pluginRegistryService';
 
 const KEYPAIR_KEY = 'alphonso_plugin_signer_keypair_v1';
 const TRUSTED_KEYS_KEY = 'alphonso_plugin_trusted_signer_keys_v1';
 const SIGNATURE_ALGO = { name: 'ECDSA', namedCurve: 'P-256', hash: { name: 'SHA-256' } };
+
+let _trustedKeysCache = null;
+
+async function _kvSetSafe(key, value) {
+  try { await invoke('kv_set', { key, value }); } catch { /* kv unavailable outside Tauri */ }
+}
+async function _kvGetSafe(key) {
+  try { return await invoke('kv_get', { key }); } catch { /* kv unavailable outside Tauri */ return null; }
+}
 
 function base64UrlEncode(buffer) {
   return btoa(String.fromCharCode(...new Uint8Array(buffer)))
@@ -18,7 +28,9 @@ function base64UrlDecode(str) {
 
 async function getKeyPair() {
   try {
-    const raw = localStorage.getItem(KEYPAIR_KEY);
+    const kvRaw = await _kvGetSafe(KEYPAIR_KEY);
+    const raw = kvRaw || localStorage.getItem(KEYPAIR_KEY);
+    if (raw && kvRaw) { try { localStorage.removeItem(KEYPAIR_KEY); } catch { /* ignore */ } }
     if (raw) {
       const stored = JSON.parse(raw);
       const privateKey = await crypto.subtle.importKey(
@@ -31,7 +43,7 @@ async function getKeyPair() {
       );
       return { privateKey, publicKey, publicKeyJwk: stored.publicKeyJwk };
     }
-  } catch { /* generate new */ }
+  } catch { /* key parse failed — generate new */ }
   return null;
 }
 
@@ -40,12 +52,15 @@ async function generateAndStoreKeyPair() {
   const privateKeyRaw = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
   const publicKeyRaw = await crypto.subtle.exportKey('spki', keyPair.publicKey);
   const publicKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
-  localStorage.setItem(KEYPAIR_KEY, JSON.stringify({
+  const stored = JSON.stringify({
     privateKey: base64UrlEncode(privateKeyRaw),
     publicKey: base64UrlEncode(publicKeyRaw),
     publicKeyJwk,
     createdAt: Date.now()
-  }));
+  });
+  await _kvSetSafe(KEYPAIR_KEY, stored);
+  // Remove localStorage copy — KV is authoritative
+  try { localStorage.removeItem(KEYPAIR_KEY); } catch { /* ignore */ }
   return { privateKey: keyPair.privateKey, publicKey: keyPair.publicKey, publicKeyJwk };
 }
 
@@ -97,7 +112,7 @@ export async function verifyPluginSignature(manifestObj) {
         encoder.encode(manifestJson)
       );
       if (valid) return { ok: true, trusted: 'local_signer' };
-    } catch { /* fall through */ }
+    } catch { /* verification error — fall through to trusted keys */ }
   }
 
   const trustedKeys = getTrustedSignerKeys();
@@ -111,14 +126,42 @@ export async function verifyPluginSignature(manifestObj) {
         trustedKey, signature, encoder.encode(manifestJson)
       );
       if (valid) return { ok: true, trusted: 'trusted_signer' };
-    } catch { /* continue */ }
+    } catch { /* key import or verify error — try next key */ }
   }
   return { ok: false, reason: 'Signature does not match any trusted signer key.' };
 }
 
 export function getTrustedSignerKeys() {
-  try { return JSON.parse(localStorage.getItem(TRUSTED_KEYS_KEY) || '[]'); }
-  catch { return []; }
+  if (_trustedKeysCache !== null) return _trustedKeysCache;
+  try {
+    const raw = localStorage.getItem(TRUSTED_KEYS_KEY);
+    _trustedKeysCache = raw ? JSON.parse(raw) : [];
+    return _trustedKeysCache;
+  } catch { /* parse error */ _trustedKeysCache = []; return []; }
+}
+
+export async function hydrateTrustedSignerKeysFromKv() {
+  try {
+    const json = await _kvGetSafe(TRUSTED_KEYS_KEY);
+    if (json) {
+      _trustedKeysCache = JSON.parse(json);
+      try { localStorage.removeItem(TRUSTED_KEYS_KEY); } catch { /* ignore */ }
+      return;
+    }
+    // Migrate from localStorage
+    const raw = localStorage.getItem(TRUSTED_KEYS_KEY);
+    if (raw) {
+      _trustedKeysCache = JSON.parse(raw);
+      await _kvSetSafe(TRUSTED_KEYS_KEY, raw);
+      try { localStorage.removeItem(TRUSTED_KEYS_KEY); } catch { /* ignore */ }
+    }
+  } catch { /* hydration error — in-memory cache fallback */ }
+}
+
+function _persistTrustedKeys(keys) {
+  _trustedKeysCache = keys;
+  _kvSetSafe(TRUSTED_KEYS_KEY, JSON.stringify(keys)).catch(() => { /* kv fire-and-forget */ });
+  try { localStorage.removeItem(TRUSTED_KEYS_KEY); } catch { /* ignore */ }
 }
 
 export function addTrustedSignerKey(publicKeyJwk) {
@@ -126,8 +169,8 @@ export function addTrustedSignerKey(publicKeyJwk) {
   if (!publicKeyJwk || !publicKeyJwk.kty) return false;
   const exists = current.some((k) => JSON.stringify(k) === JSON.stringify(publicKeyJwk));
   if (exists) return false;
-  current.push({ ...publicKeyJwk, addedAt: Date.now() });
-  localStorage.setItem(TRUSTED_KEYS_KEY, JSON.stringify(current));
+  const next = [...current, { ...publicKeyJwk, addedAt: Date.now() }];
+  _persistTrustedKeys(next);
   appendPluginAuditEntry({
     pluginId: 'system', action: 'trusted_signer_added',
     trust: TRUST_STATES.VERIFIED, details: { keyType: publicKeyJwk.kty }
@@ -138,8 +181,9 @@ export function addTrustedSignerKey(publicKeyJwk) {
 export function removeTrustedSignerKey(index) {
   const current = getTrustedSignerKeys();
   if (index < 0 || index >= current.length) return false;
-  current.splice(index, 1);
-  localStorage.setItem(TRUSTED_KEYS_KEY, JSON.stringify(current));
+  const next = [...current];
+  next.splice(index, 1);
+  _persistTrustedKeys(next);
   appendPluginAuditEntry({ pluginId: 'system', action: 'trusted_signer_removed', trust: TRUST_STATES.VERIFIED });
   return true;
 }

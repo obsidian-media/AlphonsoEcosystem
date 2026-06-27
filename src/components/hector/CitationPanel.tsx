@@ -1,8 +1,24 @@
 import React from 'react';
 
-export function CitationPanel({ report }) {
-  const proofs = report?.sourceProofs || [];
-  const urls = proofs.length ? proofs.map((proof) => proof.url) : report?.urls || [];
+interface SourceProof {
+  url: string;
+  dateChecked?: string;
+  verificationState?: string;
+  httpStatus?: number;
+}
+
+interface Report {
+  sourceProofs?: SourceProof[];
+  urls?: string[];
+}
+
+interface Props {
+  report?: Report | null;
+}
+
+export function CitationPanel({ report }: Props): JSX.Element {
+  const proofs = report?.sourceProofs ?? [];
+  const urls = proofs.length ? proofs.map((proof) => proof.url) : report?.urls ?? [];
   return (
     <section className="rounded-2xl border border-teal-300/15 bg-zinc-950/72 p-4">
       <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-200/75">Citation Panel</div>
@@ -17,7 +33,7 @@ export function CitationPanel({ report }) {
               [{index + 1}] {url}
               {proofs[index] && (
                 <div className="mt-1 text-zinc-500">
-                  checked {proofs[index].dateChecked || 'n/a'} | {proofs[index].verificationState} | {proofs[index].httpStatus ? `HTTP ${proofs[index].httpStatus}` : 'no status'}
+                  checked {proofs[index].dateChecked ?? 'n/a'} | {proofs[index].verificationState} | {proofs[index].httpStatus ? `HTTP ${proofs[index].httpStatus}` : 'no status'}
                 </div>
               )}
             </li>

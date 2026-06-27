@@ -1,7 +1,20 @@
 import React from 'react';
 import { AgentCard } from './AgentCard';
 
-export function AgentDock({ agents, activeAgents, onToggleAgent }) {
+interface Agent {
+  id: string;
+  name: string;
+  title?: string;
+  role?: string;
+}
+
+interface Props {
+  agents: Agent[];
+  activeAgents: string[];
+  onToggleAgent: (id: string) => void;
+}
+
+export function AgentDock({ agents, activeAgents, onToggleAgent }: Props): JSX.Element {
   return (
     <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4 space-y-3">
       <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold">Agent Dock</div>
@@ -18,4 +31,3 @@ export function AgentDock({ agents, activeAgents, onToggleAgent }) {
     </div>
   );
 }
-
