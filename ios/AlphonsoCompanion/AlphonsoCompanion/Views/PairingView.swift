@@ -21,7 +21,7 @@ struct PairingView: View {
                 Button("Enter IP Manually") {
                     showingManualEntry = true
                 }
-                .foregroundColor(.accent)
+                .foregroundColor(.accentColor)
                 .padding(.horizontal)
                 .padding(.top, 8)
 
@@ -142,26 +142,33 @@ struct HostListView: View {
             .padding(.vertical, 8)
             .padding(.horizontal)
         } else {
-            List(hosts) { host in
-                Button(action: { selectedHost = host }) {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(host.name)
-                                .font(.headline)
-                            Text("\(host.host):\(host.port)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    let hostData = Array(hosts)
+                    ForEach(hostData.indices, id: \.self) { index in
+                        let host = hostData[index]
+                        Button(action: { selectedHost = host }) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(host.name)
+                                        .font(.headline)
+                                    Text("\(host.host):\(host.port)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if selectedHost?.id == host.id {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.accentColor)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
                         }
-                        Spacer()
-                        if selectedHost?.id == host.id {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.accentColor)
-                        }
+                        .foregroundColor(.primary)
                     }
                 }
-                .foregroundColor(.primary)
             }
-            .listStyle(.plain)
         }
     }
 }
