@@ -61,8 +61,19 @@ jobs:
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$IOS_PROVISIONING_PROFILE" | base64 -D > "$PP_PATH"
           PP_PLIST=$RUNNER_TEMP/profile.plist
-          security cms -D -i "$PP_PATH" > "$PP_PLIST"
-          UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PP_PLIST")
+
+          # Decode CMS signature using openssl (more reliable than security cms)
+          openssl smime -inform DER -verify -in "$PP_PATH" -noverify -out "$PP_PLIST" 2>/dev/null \
+            || security cms -D -i "$PP_PATH" > "$PP_PLIST" 2>/dev/null
+
+          UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PP_PLIST" 2>/dev/null \
+            || plutil -extract UUID raw "$PP_PLIST")
+
+          if [ -z "$UUID" ]; then
+            echo "::error::Could not extract UUID from provisioning profile"
+            exit 1
+          fi
+
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
           echo "Provisioning profile installed: $UUID"
