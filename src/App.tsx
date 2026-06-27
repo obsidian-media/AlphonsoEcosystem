@@ -354,6 +354,93 @@ function AppShell() {
     return () => { stopFn?.(); };
   }, []);
 
+  // iOS Companion: listen for commands from iOS and route through Jose
+  useEffect(() => {
+    if (typeof window.__TAURI_INTERNALS__ === 'undefined') return;
+    let unlistenCommand: (() => void) | null = null;
+    let unlistenApprove: (() => void) | null = null;
+    let registered = false;
+    (async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        const { invoke } = await import('@tauri-apps/api/core');
+        const { isJoseIntakeCommand, runJoseCommandExecutionPipeline } = await import('./services/joseExecutionEngineService');
+        const { shouldRouteThroughJose } = await import('./lib/chatUtils');
+
+        unlistenCommand = await listen('companion://command', async (event) => {
+          const { commandId, text } = event.payload as { commandId: string; text: string };
+          try {
+            const joseCommand = isJoseIntakeCommand(text) || shouldRouteThroughJose(text);
+            if (!joseCommand) {
+              await invoke('companion_broadcast', {
+                event: 'done',
+                payload: { commandId, error: 'Command not recognized as a Jose command.' }
+              });
+              return;
+            }
+
+            const result = await runJoseCommandExecutionPipeline({
+              commandText: text,
+              source: 'ios_companion',
+              endpoint: settings.endpoint,
+              zeroCostMode: settings.zeroCostMode,
+              previewMode: false,
+              conversationHistory: [],
+              onProgress: (progress) => {
+                invoke('companion_broadcast', {
+                  event: 'agent_status',
+                  payload: {
+                    commandId,
+                    agent: progress.assignment?.agent || 'jose',
+                    status: progress.stage,
+                    detail: progress.stage === 'wave_start'
+                      ? `Wave ${(progress as any).wave + 1}: ${(progress as any).agents?.join(', ')}`
+                      : progress.stage === 'executed'
+                        ? `${(progress as any).assignment?.agent || 'Agent'} completed`
+                        : 'Processing...'
+                  }
+                }).catch(() => {});
+              },
+              onToken: (tokenData) => {
+                invoke('companion_broadcast', {
+                  event: 'token',
+                  payload: { commandId, token: tokenData.fullText || '' }
+                }).catch(() => {});
+              }
+            });
+
+            const summary = result?.command?.shayanReport?.summary || 'Command processed.';
+            await invoke('companion_broadcast', {
+              event: 'done',
+              payload: { commandId, summary }
+            });
+          } catch (err) {
+            await invoke('companion_broadcast', {
+              event: 'done',
+              payload: { commandId, error: String(err) }
+            }).catch(() => {});
+          }
+        });
+
+        // Listen for approval requests from iOS
+        unlistenApprove = await listen('companion://approve', async (event) => {
+          const { taskId } = event.payload as { taskId: string };
+          // Emit approval event that ApprovalModal can listen to
+          // The actual approval handling is done via the approvalPending state
+          console.log('[Companion] Approval requested for task:', taskId);
+        });
+
+        registered = true;
+      } catch { /* Tauri API not available */ }
+    })();
+    return () => {
+      if (registered) {
+        try { unlistenCommand?.(); } catch { /* ignore */ }
+        try { unlistenApprove?.(); } catch { /* ignore */ }
+      }
+    };
+  }, [settings.endpoint, settings.zeroCostMode]);
+
   if (isCoachWindow) {
     return (
       <CoachWindow

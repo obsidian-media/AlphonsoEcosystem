@@ -3,19 +3,19 @@
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 5, Tailwind 3) + Ollama (local LLM)
-- **Version**: 2.0.2 (WhatsApp Cloud end-to-end, GitHub/Slack connector tests, auto-updater operational)
-- **Target**: v2.0.2 = production-ready, enhanced agents, new connectors, performance optimized, WhatsApp deployed
+- **Version**: 2.4.4 (iOS companion app, 104 Tauri commands, 25 Rust modules, 162 services, 2,151 tests)
+- **Target**: v2.4.4 = iOS companion live, all 9 agent runtimes shipped, policy-gated, production-ready
 
 ## Directory Structure
 ```
 src/                   React frontend (.jsx, not .tsx)
   agents/              9 agent profiles, permissions, schemas
   components/          82 UI components
-  services/            130 services (policy-gated, not stubs)
+  services/            162 services (policy-gated, not stubs)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                81 test files, 1,100 tests (Vitest, all passing)
+  test/                159 test files, 2,151 tests (Vitest, all passing)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -24,7 +24,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
 src-tauri/             Rust backend
-  src/lib.rs           ~1,584 lines, 82 Tauri commands (across 18 modules)
+  src/lib.rs           ~1,975 lines, 104 Tauri commands (across 25 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -50,7 +50,7 @@ docs/                  56 documentation files
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 1,100 tests (81 files; all passing)
+npm run test             # 2,151 tests (159 files; all passing)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
@@ -59,7 +59,7 @@ npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
 
 # From src-tauri/
 cargo check              # Verify Rust compiles
-cargo test               # 60 Rust unit tests (across 18 modules)
+cargo test               # 69 Rust unit tests (across 25 modules)
 cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 ```
 

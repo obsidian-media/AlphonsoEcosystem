@@ -9,17 +9,20 @@ class WebSocketService: ObservableObject {
     @Published var errorMessage: String?
     @Published var tokenCount: Int = 0
     @Published var isStreaming: Bool = false
+    @Published var boardroomSessions: [BoardroomSession] = []
 
     private var webSocketTask: URLSessionWebSocketTask?
     private let session = URLSession(configuration: .default)
     private var reconnectDelay: Double = 1.0
     private var host: String?
+    private var port: UInt16?
     private var pin: String?
 
     private var subscriptions = Set<AnyCancellable>()
 
     func connect(host: String, port: UInt16, pin: String) {
         self.host = host
+        self.port = port
         self.pin = pin
         let url = URL(string: "ws://\(host):\(port)")!
         webSocketTask = session.webSocketTask(with: url)
@@ -45,7 +48,7 @@ class WebSocketService: ObservableObject {
     }
 
     func getStatus() {
-        let msg = #"{"id":"status","method":"get_status","params":{}"#
+        let msg = #"{"id":"status","method":"get_status","params":{}}"#
         send(text: msg)
     }
 
@@ -121,9 +124,14 @@ class WebSocketService: ObservableObject {
     }
 
     private func parseBoardroomResponse(_ json: [String: Any]) {
-        // Parse boardroom data and update published state
-        if let goals = json["goals"] as? [[String: Any]] {
-            // TODO: Update goals state if BoardroomView observes via @Published
+        // Parse boardroom sessions and update published state
+        if let sessions = json["sessions"] as? [[String: Any]] {
+            boardroomSessions = sessions.compactMap { BoardroomSession(dict: $0) }
+        } else if let goals = json["goals"] as? [[String: Any]] {
+            // Legacy format fallback
+            boardroomSessions = goals.compactMap { goal in
+                BoardroomSession(dict: goal)
+            }
         }
     }
 
@@ -154,7 +162,24 @@ class WebSocketService: ObservableObject {
             if let payload = payload as? [String: Any],
                let commandId = payload["commandId"] as? String,
                let token = payload["token"] as? String {
+                isStreaming = true
                 updateStreamingMessage(commandId: commandId, token: token)
+            }
+        case "done":
+            isStreaming = false
+            if let payload = payload as? [String: Any] {
+                let commandId = payload["commandId"] as? String
+                if let error = payload["error"] as? String {
+                    errorMessage = error
+                } else if let summary = payload["summary"] as? String, let commandId = commandId {
+                    if let idx = messages.firstIndex(where: { $0.commandId == commandId && $0.isIncoming }) {
+                        messages[idx] = Message(
+                            text: summary,
+                            isIncoming: true,
+                            commandId: commandId
+                        )
+                    }
+                }
             }
         default:
             break
@@ -179,11 +204,11 @@ class WebSocketService: ObservableObject {
     }
 
     private func scheduleReconnect() {
-        guard let host = host, let pin = pin else { return }
+        guard let host = host, let port = port, let pin = pin else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + reconnectDelay) { [weak self] in
             guard let self else { return }
             reconnectDelay = min(reconnectDelay * 2, 30.0)
-            connect(host: host, port: 8765, pin: pin)
+            connect(host: host, port: port, pin: pin)
         }
     }
 

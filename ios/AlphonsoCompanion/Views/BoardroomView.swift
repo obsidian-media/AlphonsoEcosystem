@@ -3,60 +3,83 @@ import SwiftUI
 struct BoardroomView: View {
     @EnvironmentObject var webSocketService: WebSocketService
 
-    @State private var goals: [Goal] = []
-    @State private var batches: [Batch] = []
-    @State private var tasks: [TaskItem] = []
-    @State private var isLoading = false
-
     var body: some View {
         NavigationStack {
             List {
-                Section("Goals") {
-                    if goals.isEmpty {
-                        Text("No goals yet")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(goals) { goal in
-                            GoalRow(goal: goal)
+                if webSocketService.boardroomSessions.isEmpty {
+                    Section {
+                        VStack(spacing: 12) {
+                            Image(systemName: "tray")
+                                .font(.largeTitle)
+                                .foregroundStyle(.secondary)
+                            Text("No boardroom sessions yet")
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                            Text("Sessions will appear here when tasks are executed on the desktop.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
                     }
-                }
-
-                Section("Batches") {
-                    if batches.isEmpty {
-                        Text("No batches")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(batches) { batch in
-                            BatchRow(batch: batch)
-                        }
-                    }
-                }
-
-                Section("Tasks") {
-                    if tasks.isEmpty {
-                        Text("No tasks")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(tasks) { task in
-                            TaskRow(task: task)
+                } else {
+                    ForEach(webSocketService.boardroomSessions) { session in
+                        Section(session.title) {
+                            if session.goals.isEmpty {
+                                Text("No goals in this session")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            } else {
+                                ForEach(session.goals) { goal in
+                                    GoalRow(goal: goal)
+                                }
+                            }
+                            
+                            HStack {
+                                Label(session.status, systemImage: statusIcon(session.status))
+                                    .font(.caption)
+                                    .foregroundStyle(statusColor(session.status))
+                                Spacer()
+                                Text(session.createdAt, style: .relative)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                     }
                 }
             }
             .navigationTitle("Boardroom")
             .refreshable {
-                await loadBoardroom()
+                loadBoardroom()
             }
             .task {
-                await loadBoardroom()
+                loadBoardroom()
             }
         }
     }
 
-    private func loadBoardroom() async {
+    private func loadBoardroom() {
         let msg = #"{"id":"boardroom","method":"get_boardroom","params":{}}"#
         webSocketService.sendRaw(text: msg)
+    }
+    
+    private func statusIcon(_ status: String) -> String {
+        switch status.lowercased() {
+        case "active": return "play.circle.fill"
+        case "completed": return "checkmark.circle.fill"
+        case "failed": return "xmark.circle.fill"
+        default: return "circle"
+        }
+    }
+    
+    private func statusColor(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "active": return .blue
+        case "completed": return .green
+        case "failed": return .red
+        default: return .secondary
+        }
     }
 }
 
@@ -65,13 +88,34 @@ struct GoalRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(goal.title)
-                .font(.headline)
-            Text(goal.description)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack {
+                Text(goal.title)
+                    .font(.headline)
+                Spacer()
+                Text(goal.status)
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(statusColor(goal.status).opacity(0.2))
+                    .foregroundColor(statusColor(goal.status))
+                    .cornerRadius(4)
+            }
+            if !goal.description.isEmpty {
+                Text(goal.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.vertical, 4)
+    }
+    
+    private func statusColor(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "active": return .blue
+        case "completed": return .green
+        case "failed": return .red
+        default: return .secondary
+        }
     }
 }
 

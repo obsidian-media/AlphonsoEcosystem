@@ -4,10 +4,10 @@
 
 # Alphonso
 
-> **v2.4.2** — Local-first AI desktop companion with 9 agents, 15 connectors, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.4.4** — Local-first AI desktop companion with 9 agents, 15 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.4.2-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-2147%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.4.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-2151%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
@@ -17,11 +17,17 @@ It orchestrates 9 specialized agents, connects to 15 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 15 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.4.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.4.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.4.4**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.4.4) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
+
+## What's New in v2.4.4
+
+- **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
+- **69 Rust unit tests across 25 modules** — 104 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **2,151 tests across 159 test files** — all passing. 0 TypeScript errors. 0 ESLint warnings. Cargo clippy clean.
 
 ## What's New in v2.4.2
 
@@ -202,7 +208,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~2,024 lines · 82 Tauri commands · 18 modules    │    │
+│  │  lib.rs ~1,975 lines · 104 Tauri commands · 25 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -298,7 +304,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 2,147 tests across 158 files
+npm run test           # 2,151 tests across 159 files
 npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -310,7 +316,7 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 14 Rust unit tests (18 modules)
+cargo test                     # 69 Rust unit tests across 25 modules
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 
@@ -339,7 +345,8 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
-| **v2.4.2** | June 27, 2026 | TypeScript migration (94 .tsx); 10 pre-merge bugs patched; rand/mdns-sd/tokio-tungstenite/jsdom dep bumps; 2147 tests / 158 files |
+| **v2.4.4** | June 27, 2026 | iOS companion app (Swift, mDNS, ed25519-signed WebSocket, TestFlight workflow); 104 Tauri commands / 25 modules; 2,151 tests / 159 files |
+| v2.4.2 | June 27, 2026 | TypeScript migration (94 .tsx); 10 pre-merge bugs patched; rand/mdns-sd/tokio-tungstenite/jsdom dep bumps; 2147 tests / 158 files |
 | **v2.4.1** | June 27, 2026 | 37-task bug & gap sprint: Voice OS health, IPC rate limit, MCP auth, bridge hardening, Nova threshold, agent perf export, DLQ section |
 | **v2.4.0** | June 27, 2026 | Agent OS module system, Boardroom sessions, A2A protocol, Policy DSL, 5 scheduler presets, dark/light mode, keyboard shortcuts |
 | **v2.3.3** | June 26, 2026 | n8n connector, Jose scheduled tasks, Echo file watcher, MCP bridge live responses, 21 Telegram commands |
@@ -365,7 +372,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 130 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 162 services already exist.
 
 ## Security
 

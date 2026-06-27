@@ -22,7 +22,7 @@ export const TS_EXT = new Set(['.ts', '.tsx']);
 export const ALL_JS_TS = new Set([...JS_EXT, ...TS_EXT]);
 export const MD_EXT = new Set(['.md']);
 export const COMPONENT_EXT = new Set(['.jsx', '.tsx']);
-export const TEST_EXT = new Set(['.js', '.jsx', '.ts']);
+export const TEST_EXT = new Set(['.js', '.jsx', '.ts', '.tsx']);
 
 export function walk(dir, predicate, results = []) {
   let entries;

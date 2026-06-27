@@ -9,7 +9,7 @@ class MDNSService: ObservableObject {
 
     func startBrowsing() {
         let descriptor = NWBrowser.Descriptor.bonjour(
-            serviceType: "_alphonso",
+            serviceType: "_alphonso._tcp",
             domain: "local"
         )
         let parameters = NWParameters.tcp
@@ -18,33 +18,33 @@ class MDNSService: ObservableObject {
         browser?.browseResultsChangedHandler = { [weak self] results, _ in
             Task { @MainActor in
                 self?.discovered = results.compactMap { result in
-                    switch result {
-                    case .added(let endpoint, let _):
-                        if case .hostPort(let host, let port) = endpoint {
-                            let hostname = host.rawValue
-                            let portValue = port.rawValue
-                            return DiscoveredHost(
-                                name: "Alphonso Desktop",
-                                host: hostname,
-                                port: portValue
-                            )
-                        }
-                        return nil
-                    default:
+                    guard case .service(let name, _, _, _) = result.endpoint else {
                         return nil
                     }
+                    // Return discovered host with service name
+                    // Host resolution will happen on connect
+                    return DiscoveredHost(
+                        name: name,
+                        host: name,
+                        port: 8765
+                    )
                 }
             }
         }
 
-        browser?.stateUpdateHandler = { newState in
-            switch newState {
-            case .ready:
-                break
-            case .failed(let error):
-                break
-            default:
-                break
+        browser?.stateUpdateHandler = { [weak self] newState in
+            Task { @MainActor in
+                switch newState {
+                case .ready:
+                    break
+                case .failed(let error):
+                    self?.discovered = []
+                    print("[MDNSService] Browse failed: \(error)")
+                case .cancelled:
+                    break
+                default:
+                    break
+                }
             }
         }
 
@@ -55,8 +55,44 @@ class MDNSService: ObservableObject {
         browser?.cancel()
         browser = nil
     }
-
-    func resolveHost(_ host: DiscoveredHost) -> (String, UInt16)? {
-        return (host.host, host.port)
+    
+    func resolveHost(_ host: DiscoveredHost, completion: @escaping (String, UInt16) -> Void) {
+        // For Bonjour services, we connect using the service name
+        // NWConnection will resolve the endpoint automatically
+        let endpoint = NWEndpoint.service(
+            name: host.name,
+            type: "_alphonso._tcp",
+            domain: "local",
+            interface: nil
+        )
+        
+        let connection = NWConnection(to: endpoint, using: .tcp)
+        self.connection = connection
+        
+        connection.stateUpdateHandler = { state in
+            Task { @MainActor in
+                switch state {
+                case .ready:
+                    // Once connected, we can get the actual endpoint
+                    if case .hostPort(let host, let port) = connection.currentPath?.remoteEndpoint {
+                        let hostname = host.rawValue
+                        let portValue = port.rawValue
+                        completion(hostname, portValue)
+                    } else {
+                        // Fallback to service name
+                        completion(host.name, 8765)
+                    }
+                    connection.cancel()
+                case .failed:
+                    // Fallback
+                    completion(host.name, 8765)
+                    connection.cancel()
+                default:
+                    break
+                }
+            }
+        }
+        
+        connection.start(queue: .main)
     }
 }
