@@ -105,7 +105,7 @@ async fn handle_connection(
                         }
                         None => break,
                     };
-                    ws_tx.send(Message::Text(response)).await?;
+                    ws_tx.send(Message::Text(response.into())).await?;
                 }
                 Some(Ok(Message::Close(_))) | None => break,
                 Some(Ok(Message::Ping(p))) => { ws_tx.send(Message::Pong(p)).await?; }
@@ -116,7 +116,7 @@ async fn handle_connection(
             if let Ok(json) = event {
                 let state = clients.lock().await.get(&client_id).cloned();
                 if matches!(state, Some(ClientState::Authenticated { .. })) {
-                    ws_tx.send(Message::Text(json)).await?;
+                    ws_tx.send(Message::Text(json.into())).await?;
                 }
             }
         }
