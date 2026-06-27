@@ -1,4 +1,4 @@
-# generate-csr.ps1 — Generate Certificate Signing Request for Apple
+# generate-csr.ps1 — Generate CSR for Apple using Windows certreq (no OpenSSL, no .NET Core needed)
 # Run this on your Windows machine
 
 $ErrorActionPreference = "Stop"
@@ -14,33 +14,49 @@ $commonName = Read-Host "Enter certificate name (e.g. 'Alphonso iOS Distribution
 $outDir = "$PSScriptRoot\certs"
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-Write-Host "`nGenerating private key..." -ForegroundColor Yellow
-$rsa = [System.Security.Cryptography.RSA]::Create(2048)
+# Create INF file for certreq
+$infContent = @"
+[Version]
+Signature = "`$Windows NT$"
 
-$privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
-$privateKeyPem = "-----BEGIN PRIVATE KEY-----`n"
-$privateKeyPem += [Convert]::ToBase64String($privateKeyBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
-$privateKeyPem += "`n-----END PRIVATE KEY-----"
-$privateKeyPem | Out-File -FilePath "$outDir\private_key.pem" -Encoding ASCII
-Write-Host "Private key saved: $outDir\private_key.pem" -ForegroundColor Green
+[NewRequest]
+Subject = "CN=$commonName, O=$teamId, E=$email"
+KeySpec = 1
+KeyLength = 2048
+HashAlgorithm = SHA256
+Exportable = TRUE
+MachineKeySet = FALSE
+SMIME = FALSE
+PrivateKeyArchive = FALSE
+UserProtected = FALSE
+UseExistingKeySet = FALSE
+ProviderName = "Microsoft Enhanced RSA and AES Cryptographic Provider"
+ProviderType = 12
+RequestType = PKCS10
+KeyUsage = 0xa0
 
-Write-Host "Generating CSR..." -ForegroundColor Yellow
+[EnhancedKeyUsageExtension]
+OID = 1.3.6.1.5.5.7.3.2
+"@
 
-$subject = "CN=$commonName, O=$teamId, E=$email"
+$infPath = "$outDir\request.inf"
+$infContent | Out-File -FilePath $infPath -Encoding ASCII
 
-$csr = New-Object System.Security.Cryptography.X509Certificates.CertificateRequest(
-    $subject,
-    $rsa,
-    [System.Security.Cryptography.HashAlgorithmName]::SHA256,
-    [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
-)
+Write-Host "Creating CSR..." -ForegroundColor Yellow
 
-$csrBytes = $csr.CreateSigningRequest()
-$csrPem = "-----BEGIN CERTIFICATE REQUEST-----`n"
-$csrPem += [Convert]::ToBase64String($csrBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
-$csrPem += "`n-----END CERTIFICATE REQUEST-----"
-$csrPem | Out-File -FilePath "$outDir\certsigningrequest.csr" -Encoding ASCII
+# Use certreq to generate the CSR
+$csrResult = certreq -new -f $infPath "$outDir\certsigningrequest.csr" 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error creating CSR:" -ForegroundColor Red
+    Write-Host $csrResult
+    exit 1
+}
+
 Write-Host "CSR saved: $outDir\certsigningrequest.csr" -ForegroundColor Green
+
+# Clean up temp INF
+Remove-Item -Path $infPath -Force -ErrorAction SilentlyContinue
 
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "NEXT STEPS:" -ForegroundColor Yellow
@@ -49,7 +65,7 @@ Write-Host ""
 Write-Host "1. Go to: https://developer.apple.com/account/resources/certificates/add" -ForegroundColor White
 Write-Host "2. Select 'iOS Distribution (App Store and Ad Hoc)'" -ForegroundColor White
 Write-Host "3. Click Continue" -ForegroundColor White
-Write-Host "4. Upload the CSR file:" -ForegroundColor White
+Write-Host "4. Upload this file:" -ForegroundColor White
 Write-Host "   $outDir\certsigningrequest.csr" -ForegroundColor White
 Write-Host "5. Click Continue, then download the .cer certificate" -ForegroundColor White
 Write-Host "6. Save the .cer file in: $outDir\" -ForegroundColor White
