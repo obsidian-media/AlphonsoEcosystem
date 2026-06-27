@@ -11,7 +11,8 @@ struct ChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
-                            ForEach(webSocketService.messages) { msg in
+                            let msgs = Array(webSocketService.messages)
+                            ForEach(msgs) { msg in
                                 MessageBubble(message: msg)
                                     .id(msg.id)
                             }

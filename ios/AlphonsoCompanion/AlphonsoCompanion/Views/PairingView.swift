@@ -23,9 +23,11 @@ struct PairingView: View {
                     .padding(.vertical, 8)
                     .padding(.horizontal)
                 } else {
+                    let hosts = Array(mdnsService.discovered)
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(mdnsService.discovered) { host in
+                            ForEach(0..<hosts.count, id: \.self) { index in
+                                let host = hosts[index]
                                 Button(action: { selectedHost = host }) {
                                     HStack {
                                         VStack(alignment: .leading) {
