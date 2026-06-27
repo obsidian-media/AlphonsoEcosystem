@@ -14,45 +14,43 @@ struct PairingView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 List {
-                    Section("Discovered Desktops") {
-                        if mdnsService.discovered.isEmpty {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Scanning for Alphonso Desktop...")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.vertical, 8)
-                        } else {
-                            ForEach(mdnsService.discovered) { host in
-                                Button(action: { selectedHost = host }) {
-                                    HStack {
-                                        VStack(alignment: .leading) {
-                                            Text(host.name)
-                                                .font(.headline)
-                                            Text("\(host.host):\((host.port))")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        if selectedHost?.id == host.id {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(.accent)
-                                        }
+                    if mdnsService.discovered.isEmpty {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Scanning for Alphonso Desktop...")
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 8)
+                    } else {
+                        ForEach(mdnsService.discovered) { host in
+                            Button(action: { selectedHost = host }) {
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text(host.name)
+                                            .font(.headline)
+                                        Text("\(host.host):\((host.port))")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if selectedHost?.id == host.id {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.accent)
                                     }
                                 }
-                                .foregroundColor(.primary)
                             }
+                            .foregroundColor(.primary)
                         }
-                    }
-
-                    Section("Manual Connection") {
-                        Button("Enter IP Manually") {
-                            showingManualEntry = true
-                        }
-                        .foregroundColor(.accent)
                     }
                 }
+
+                Button("Enter IP Manually") {
+                    showingManualEntry = true
+                }
+                .foregroundColor(.accent)
+                .padding(.horizontal)
+                .padding(.top, 8)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("PIN Code")
