@@ -60,6 +60,12 @@ vi.mock('../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn(async () => undefined)
 }));
 
+vi.mock('../services/chromaDbService', () => ({
+  addMemoryToChroma: vi.fn(async () => undefined),
+  semanticSearchMemory: vi.fn(async () => []),
+  isChromaHealthy: vi.fn(async () => false)
+}));
+
 vi.mock('../services/agentOutputStoreService', () => ({
   setAgentOutput: vi.fn(),
   getPriorOutputs: vi.fn(() => ({})),

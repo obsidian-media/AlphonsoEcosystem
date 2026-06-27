@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Simulate a persistent KV store so key pairs survive between getOrCreateSignerKeys() calls
+const _kvStore = {};
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(async (cmd, args) => {
+    if (cmd === 'kv_set') { _kvStore[args.key] = args.value; return null; }
+    if (cmd === 'kv_get') { return _kvStore[args.key] ?? null; }
+    return null;
+  })
+}));
+
 vi.mock('../services/pluginRegistryService', () => ({
   appendPluginAuditEntry: vi.fn(),
   listPlugins: vi.fn().mockReturnValue([])
@@ -13,12 +24,17 @@ const {
   addTrustedSignerKey,
   removeTrustedSignerKey,
   exportPublicKeyJwk,
-  verifyAndAddPlugin
+  verifyAndAddPlugin,
+  _resetTrustedSignerKeysForTesting
 } = await import('../services/pluginSigningService');
 
 describe('pluginSigningService', () => {
   beforeEach(() => {
     localStorage.clear();
+    // Clear the in-memory KV store so each test gets fresh keys
+    Object.keys(_kvStore).forEach((k) => delete _kvStore[k]);
+    // Reset module-level trusted keys cache
+    _resetTrustedSignerKeysForTesting();
   });
 
   describe('getOrCreateSignerKeys', () => {

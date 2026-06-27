@@ -320,6 +320,10 @@ describe('saveOpportunityScore and getOpportunityHistory', () => {
 // ── setAlertThreshold / getAlertThreshold ──────────────────────────────────
 
 describe('alertThreshold', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('getAlertThreshold returns default 75', () => {
     expect(getAlertThreshold()).toBe(75);
   });

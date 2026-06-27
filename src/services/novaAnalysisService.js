@@ -276,14 +276,18 @@ const MAX_HISTORY = 30;
 const DEFAULT_ALERT_THRESHOLD = 75;
 
 export function setAlertThreshold(n) {
-  const value = Math.min(100, Math.max(0, Number(n) || DEFAULT_ALERT_THRESHOLD));
+  const parsed = Number(n);
+  const value = isNaN(parsed) ? DEFAULT_ALERT_THRESHOLD : Math.min(100, Math.max(0, parsed));
   try { localStorage.setItem(NOVA_THRESHOLD_KEY, String(value)); } catch { /* storage */ }
 }
 
 export function getAlertThreshold() {
   try {
     const raw = localStorage.getItem(NOVA_THRESHOLD_KEY);
-    if (raw !== null) return Math.min(100, Math.max(0, Number(raw) || DEFAULT_ALERT_THRESHOLD));
+    if (raw !== null) {
+      const parsed = Number(raw);
+      if (!isNaN(parsed)) return Math.min(100, Math.max(0, parsed));
+    }
   } catch { /* storage */ }
   return DEFAULT_ALERT_THRESHOLD;
 }

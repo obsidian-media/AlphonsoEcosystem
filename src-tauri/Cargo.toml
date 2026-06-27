@@ -37,6 +37,7 @@ mdns-sd = "0.20"
 hostname = "0.3"
 subtle = "2"
 dotenvy = "0.15"
+base64 = "0.22"
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-global-shortcut = "2.3.2"
 

@@ -26,8 +26,12 @@ Object.defineProperty(global, 'localStorage', { value: localStorageMock });
 // ── SCHEDULE_PRESETS ──────────────────────────────────────────────────────────
 
 describe('SCHEDULE_PRESETS', () => {
-  it('has 4 presets', () => {
-    expect(SCHEDULE_PRESETS.length).toBe(4);
+  it('has at least 4 interval presets', () => {
+    expect(SCHEDULE_PRESETS.length).toBeGreaterThanOrEqual(4);
+    expect(SCHEDULE_PRESETS.some((p) => p.id === '30min')).toBe(true);
+    expect(SCHEDULE_PRESETS.some((p) => p.id === 'hourly')).toBe(true);
+    expect(SCHEDULE_PRESETS.some((p) => p.id === 'daily')).toBe(true);
+    expect(SCHEDULE_PRESETS.some((p) => p.id === 'weekly')).toBe(true);
   });
 
   it('has correct intervals', () => {
