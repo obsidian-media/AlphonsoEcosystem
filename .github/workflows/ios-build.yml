@@ -57,7 +57,6 @@ jobs:
       - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
         run: |
-          set -o pipefail
           xcodebuild archive \
             -project AlphonsoCompanion.xcodeproj \
             -scheme AlphonsoCompanion \
@@ -66,8 +65,7 @@ jobs:
             -archivePath build/AlphonsoCompanion.xcarchive \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            2>&1 | xcpretty
+            CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E "error:|warning:|❌|ARCHIVE"
 
       - name: Export IPA
         working-directory: ios/AlphonsoCompanion
