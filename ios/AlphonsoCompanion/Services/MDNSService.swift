@@ -18,21 +18,16 @@ class MDNSService: ObservableObject {
         browser?.browseResultsChangedHandler = { [weak self] results, _ in
             Task { @MainActor in
                 self?.discovered = results.compactMap { result in
-                    switch result {
-                    case .added(let endpoint, let _):
-                        if case .hostPort(let host, let port) = endpoint {
-                            let hostname = host.rawValue
-                            let portValue = port.rawValue
-                            return DiscoveredHost(
-                                name: "Alphonso Desktop",
-                                host: hostname,
-                                port: portValue
-                            )
-                        }
-                        return nil
-                    default:
+                    guard case .service(let name, _, _, _) = result.endpoint else {
                         return nil
                     }
+                    // For service endpoints, we get the service name
+                    // The actual host/port will be resolved when connecting
+                    return DiscoveredHost(
+                        name: name,
+                        host: "",
+                        port: 8765
+                    )
                 }
             }
         }

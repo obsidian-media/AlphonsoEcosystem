@@ -9,6 +9,7 @@ class WebSocketService: ObservableObject {
     @Published var errorMessage: String?
     @Published var tokenCount: Int = 0
     @Published var isStreaming: Bool = false
+    @Published var boardroomSessions: [BoardroomSession] = []
 
     private var webSocketTask: URLSessionWebSocketTask?
     private let session = URLSession(configuration: .default)
@@ -121,9 +122,14 @@ class WebSocketService: ObservableObject {
     }
 
     private func parseBoardroomResponse(_ json: [String: Any]) {
-        // Parse boardroom data and update published state
-        if let goals = json["goals"] as? [[String: Any]] {
-            // TODO: Update goals state if BoardroomView observes via @Published
+        // Parse boardroom sessions and update published state
+        if let sessions = json["sessions"] as? [[String: Any]] {
+            boardroomSessions = sessions.compactMap { BoardroomSession(dict: $0) }
+        } else if let goals = json["goals"] as? [[String: Any]] {
+            // Legacy format fallback
+            boardroomSessions = goals.compactMap { goal in
+                BoardroomSession(dict: goal)
+            }
         }
     }
 
