@@ -41,16 +41,15 @@ jobs:
 
           echo "Cert size: $(wc -c < "$CERT_PATH") bytes, Key size: $(wc -c < "$KEY_PATH") bytes"
 
-          # Import DER certificate (no password needed)
+          # Import DER certificate (auto-detected format)
           security import "$CERT_PATH" \
             -t cert \
-            -f openssh \
             -k "$KEYCHAIN_PATH"
 
-          # Import private key (unencrypted PKCS8 PEM, no password needed)
+          # Import private key (unencrypted PKCS8 PEM)
           security import "$KEY_PATH" \
             -t priv \
-            -f openssh \
+            -f openssl \
             -k "$KEYCHAIN_PATH"
 
           # Set key partition list so codesign can access it
