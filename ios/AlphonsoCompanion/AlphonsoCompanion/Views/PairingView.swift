@@ -11,10 +11,11 @@ struct PairingView: View {
     @State private var manualPort = "8765"
 
     var body: some View {
+        let hosts = mdnsService.discovered
         NavigationStack {
             VStack(spacing: 0) {
                 List {
-                    if mdnsService.discovered.isEmpty {
+                    if hosts.isEmpty {
                         HStack {
                             ProgressView()
                                 .scaleEffect(0.8)
@@ -23,7 +24,7 @@ struct PairingView: View {
                         }
                         .padding(.vertical, 8)
                     } else {
-                        ForEach(mdnsService.discovered) { host in
+                        ForEach(hosts, id: \.id) { host in
                             Button(action: { selectedHost = host }) {
                                 HStack {
                                     VStack(alignment: .leading) {
