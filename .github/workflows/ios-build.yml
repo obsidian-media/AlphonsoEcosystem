@@ -52,13 +52,9 @@ jobs:
             -f openssl \
             -k "$KEYCHAIN_PATH"
 
-          # Set key partition list so codesign can access it
-          security set-key-partition-list \
-            -S apple-tool:,apple: \
-            -k "$KEYCHAIN_PASSWORD" \
-            "$KEYCHAIN_PATH"
-
+          # Set default keychain so codesign finds the cert+key
           security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
           echo "Certificate and key imported successfully"
 
           # Install provisioning profile
