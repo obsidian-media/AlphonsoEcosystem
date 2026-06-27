@@ -9,7 +9,7 @@ class MDNSService: ObservableObject {
 
     func startBrowsing() {
         let descriptor = NWBrowser.Descriptor.bonjour(
-            serviceType: "_alphonso._tcp",
+            type: "_alphonso._tcp",
             domain: "local"
         )
         let parameters = NWParameters.tcp
