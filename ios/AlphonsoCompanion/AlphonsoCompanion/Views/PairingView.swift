@@ -144,31 +144,37 @@ struct HostListView: View {
         } else {
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    let hostData = Array(hosts)
-                    ForEach(hostData.indices, id: \.self) { index in
-                        let host = hostData[index]
-                        Button(action: { selectedHost = host }) {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(host.name)
-                                        .font(.headline)
-                                    Text("\(host.host):\(host.port)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if selectedHost?.id == host.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.accentColor)
-                                }
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
-                        }
-                        .foregroundColor(.primary)
+                    ForEach(hosts) { host in
+                        HostRow(host: host, isSelected: selectedHost?.id == host.id)
+                            .onTapGesture { selectedHost = host }
                     }
                 }
             }
         }
+    }
+}
+
+struct HostRow: View {
+    let host: DiscoveredHost
+    let isSelected: Bool
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(host.name)
+                    .font(.headline)
+                Text("\(host.host):\(host.port)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .foregroundStyle(.accentColor)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .foregroundColor(.primary)
     }
 }
