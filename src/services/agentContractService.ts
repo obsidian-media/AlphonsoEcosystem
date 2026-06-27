@@ -26,7 +26,7 @@ export const AGENT_EXECUTION_CONTRACTS: Record<string, AgentExecutionContract> =
   },
   [AGENTS.ALPHONSO]: {
     role: 'operator',
-    allowedActionPrefixes: ['local_operation', 'verification_', 'runtime_', 'orchestration_', 'agent_report'],
+    allowedActionPrefixes: ['local_operation', 'verification_', 'runtime_', 'orchestration_', 'agent_report', 'execute_command', 'filesystem_'],
     blockedActionPrefixes: ['purchase']
   },
   [AGENTS.MIYA]: {

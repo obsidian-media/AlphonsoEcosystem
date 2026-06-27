@@ -1,5 +1,5 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-27 — v2.4.3
+**Last verified:** 2026-06-27 — v2.4.4
 **Verified by:** Claude Code — audit-sprint-26jun merge to main (P1-05/P1-08/P1-14/P2-14 closed; full TypeScript migration complete)
 **Version:** 2.4.3 (TypeScript migration: 114 .tsx components, 0 subdirectory .jsx remain; credential KV-primary; voice sidecar piped logs; plugin signing KV-primary; 158 test files / 2147 tests passing; merged to main 2026-06-27)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
@@ -395,15 +395,19 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 
 ## 8. Real Gaps — What Actually Needs Work
 
-These are confirmed gaps as of 2026-06-27 (v2.4.3). Any agent working on these areas should check current state before implementing.
+These are confirmed gaps as of 2026-06-27 (v2.4.4). Any agent working on these areas should check current state before implementing.
 
-### OPEN GAPS (as of v2.4.3)
-- [ ] **DeepSeek connector** — `externalAgentAdapter.js` has stub `{ id: 'deepseek', enabled: false, status: 'not_wired' }`. No service, no UI. Workaround: use Ollama with `deepseek-r1:7b` locally — works today.
-- [ ] **PWA offline ChatView wiring** — `public/sw.js` + `src/services/offlineChatService.js` exist but ChatView does not call `saveMessageOffline()`. Messages are not persisted to IndexedDB on disconnect.
-- [ ] **Plugin sandbox execution** — `pluginSandboxService.js` exists but is never imported or called. Plugin tools cannot actually run in isolation.
-- [ ] **Runway API key credential UI** — `runway_generate_video` reads `RUNWAYML_API_SECRET` from env var only (Rust side). There is no credential UI in ConnectorSetupPanel for Runway. Users must set env var manually before running the app.
-- [ ] **iOS companion backend** — `ios/AlphonsoCompanion/` has 11 Swift files (SwiftUI, WebSocket, mDNS) but there is no documented connection path to the Alphonso desktop. CI builds the scheme but the app has no working server to connect to.
+### OPEN GAPS (as of v2.4.4)
+- [ ] **iOS companion router stubs** — `companion_router.rs` returns hardcoded empty JSON for all 6 methods. `send_command` never routes to Jose; `get_boardroom` always returns `[]`; `approve_task` does nothing. Full 10-step work order at `ALPHONSOJUNECOMPLITIONIOSCOMPANION.md` (~10-12h). Infrastructure is complete on both sides.
 - [ ] **Voice OS Python dependency** — Voice OS in Runtime Hub can Install/Start, but requires Python 3.10+ on PATH. `find_python()` checks standard paths but won't auto-install Python itself. User must have Python installed first.
+- [ ] **Plugin true execution isolation** — `pluginSandboxService.js` IS imported and wired via `PluginContext.jsx:95` (`evaluatePluginExecutionPolicy`). But the policy check validates args only (arg count, blocked tokens, injection patterns) — there is no Web Worker, iframe, or subprocess isolation. Plugin tools run in the main thread.
+
+### CLOSED — v2.4.4 (2026-06-27)
+- [x] **DeepSeek connector** — `src/services/connectors/deepseekConnector.js` created: `isDeepSeekConfigured`, `sendDeepSeekMessage`, `searchWithDeepSeek`. Credential UI added to ConnectorSetupPanel. `externalAgentAdapter.js` wired: `runExternalAgentTask('deepseek', task)` calls DeepSeek API live. Hector tier-3 fallback added. 4 tests in `deepseekConnector.test.js`.
+- [x] **PWA offline ChatView wiring** — `saveMessageOffline()` from `offlineChatService.js` now called in ChatView.tsx (import added line 43; called on Ollama stream error at line 687). Messages are saved to IndexedDB when Ollama is unreachable.
+- [x] **Runway API key credential UI** — Already closed in prior sprint (ConnectorSetupPanel.tsx line 701). Ground Truth was stale.
+- [x] **Plugin sandbox wiring** — Already closed: `PluginContext.jsx` imports and calls `evaluatePluginExecutionPolicy` before every tool run. Ground Truth was stale (incorrect "never imported" claim).
+- [x] **agentContractService alphonso allowedActionPrefixes** — `execute_command` and `filesystem_` added to alphonso's allowed prefixes. Fixes test `allows alphonso execute_command`. Alphonso is the operator agent and CAN run commands and filesystem ops.
 
 ### CLOSED (historical — do not re-implement)
 
@@ -794,7 +798,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-27 — v2.4.2 merged to main. cline-sprint complete: 94 .tsx components (20 .jsx remain in subdirectories), 10 pre-merge bugs patched (fetchWithRetry abort signal, cron weekday, handler stacking, watchdog double-toast, ring overflow, notification persistence, createSchedule error propagation, a2a failed status, installModule Tauri CSP, bridge /modules route), 158 test files / 2147 tests passing, typecheck clean, lint clean. Known honest gaps: DeepSeek not wired (Ollama deepseek-r1 works locally); PWA IndexedDB not wired into ChatView message save path; coverage runner has pre-existing ECONNREFUSED on port 8000 (Voice OS sidecar)._
+_Last verified: 2026-06-27 — v2.4.4. gap-closure sprint: DeepSeek connector live (service + credential UI + Hector tier-3 + 4 tests); ChatView offline wiring (saveMessageOffline on Ollama error); alphonso contract fixed (execute_command allowed); 159 test files / 2151 tests passing. Remaining open gaps: iOS companion router stubs (handoff at ALPHONSOJUNECOMPLITIONIOSCOMPANION.md), Voice OS Python prereq (user must install Python), plugin true sandbox isolation (policy check runs, no Worker isolation)._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

@@ -40,6 +40,7 @@ import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShort
 import { startProactiveWatcher } from '../services/proactiveAgentService';
 import { MemorySearch } from './MemorySearch';
 import { runNovaAnalysis, computeOpportunityScores } from '../services/novaAnalysisService';
+import { saveMessageOffline } from '../services/offlineChatService';
 import { useJarvisVoice } from '../hooks/useJarvisVoice';
 
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
@@ -683,6 +684,8 @@ export function ChatView({
           ? { ...msg, isError: true, content: `${classified.label}\n\n${classified.message}\n\nPowerShell:\n${OLLAMA_TROUBLESHOOTING_COMMAND}` }
           : msg
       ));
+      // Persist the user message offline so it can be retried when Ollama comes back
+      saveMessageOffline({ role: 'user', content: cleanInput, timestamp: Date.now() }).catch(() => {});
     } finally {
       setIsGenerating(false);
       onGenerationChange(false);

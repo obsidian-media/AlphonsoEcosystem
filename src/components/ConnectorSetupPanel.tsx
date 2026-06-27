@@ -51,6 +51,7 @@ const CONNECTOR_ICONS: Record<string, LucideIcon> = {
   comfyui_video: Settings2,
   mobile_bridge: Smartphone,
   n8n: Zap,
+  deepseek: Cpu,
 };
 
 interface Connector {
@@ -264,6 +265,7 @@ export function ConnectorSetupPanel(): JSX.Element {
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
   const [n8nBaseUrl, setN8nBaseUrl] = useState(() => getConnectorCredential('n8n', 'N8N_BASE_URL') || 'http://localhost:5678');
+  const [deepseekApiKey, setDeepseekApiKey] = useState(() => getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
 
   useEffect(() => {
     let cancelled = false;
@@ -709,6 +711,12 @@ export function ConnectorSetupPanel(): JSX.Element {
             onSave={() => saveConnectorApiKey('n8n', { N8N_BASE_URL: n8nBaseUrl })}
             hint="n8n must be running in Docker. Default: http://localhost:5678. Used by Marcus for workflow automation triggers."
             savedLabel="n8n URL saved" />
+
+          <CredentialSection title="DeepSeek AI" icon={Cpu} borderColor="border-sky-300/20" bgColor="bg-sky-500/8" accentColor="text-sky-400"
+            fields={[{ label: 'API Key', placeholder: 'sk-...', value: deepseekApiKey, onChange: setDeepseekApiKey, key: 'DEEPSEEK_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('deepseek', { DEEPSEEK_API_KEY: deepseekApiKey })}
+            hint="Get your key at platform.deepseek.com. OpenAI-compatible API — deepseek-chat model. Use as an alternative to Claude/ChatGPT for Hector research."
+            savedLabel="DeepSeek key saved" />
         </div>
       </div>
 

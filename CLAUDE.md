@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 2147+ tests across 158 files — all should pass
+npm run test             # Run all 2151+ tests across 158 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command
@@ -52,7 +52,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **15 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope, Perplexity — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~2,024 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 2147+ tests are in `src/test/`** — 158 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 2151+ tests are in `src/test/`** — 159 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.tsx` captures history snapshot before React state updates.
@@ -151,6 +151,7 @@ Before writing any new service, component, or feature, check this list:
 | Offline chat service | `src/services/offlineChatService.js` — IndexedDB store (`alphonso-offline` DB) with `saveMessageOffline`/`getOfflineMessages`/`markMessageSynced` |
 | Tavily search connector | `src/services/connectors/tavilyConnector.js` — `searchTavily`, `isTavilyConfigured`; wired as tier-2 Hector fallback |
 | Perplexity search connector | `src/services/connectors/perplexityConnector.js` — `searchPerplexity`, `isPerplexityConfigured` |
+| DeepSeek AI connector | `src/services/connectors/deepseekConnector.js` — `sendDeepSeekMessage`, `searchWithDeepSeek`, `isDeepSeekConfigured`; wired as tier-3 Hector fallback; credential UI in ConnectorSetupPanel |
 | ChromaDB vector DB | `src/services/chromaDbService.js` — `addMemoryToChroma`, `semanticSearchMemory`, `isChromaHealthy`; fire-and-forget write from Echo |
 | Whisper transcription service | `src/services/whisperTranscriptionService.js` — `transcribeAndIngest(audioFilePath, filename, onProgress)`; uses `pick_file` Tauri command |
 | n8n connector | `src/services/connectors/n8nConnector.js` — `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`, `isN8nHealthy` |
@@ -173,8 +174,8 @@ Before writing any new service, component, or feature, check this list:
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
 2. Check `src/services/` for an existing service before writing a new one — there are 130+ services
-3. Check `src/test/` — there are 158 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 2147+ tests must continue to pass
+3. Check `src/test/` — there are 159 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 2151+ tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -254,6 +255,10 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Whisper file path broken~~ — **CLOSED 2026-06-26 v2.2.10** (`pick_file` Tauri command via PowerShell OpenFileDialog; `MeetingTranscriptionPanel` uses `invoke('pick_file')`)
 - ~~MCP bridge stub responses~~ — **CLOSED 2026-06-26 v2.2.10** (`bridge/server.js` calls Ollama `/api/chat` for live responses; `alphonso_get_status` checks `/api/tags`)
 - ~~OpenHands -it flag (no TTY)~~ — **CLOSED 2026-06-26 v2.3.0** (changed to `-d` in `runtime_manager.rs` ToolDef)
+- ~~DeepSeek connector~~ — **CLOSED 2026-06-27 v2.4.4** (`deepseekConnector.js` + credential UI + Hector tier-3 fallback + 4 tests + externalAgentAdapter wired)
+- ~~PWA offline ChatView wiring~~ — **CLOSED 2026-06-27 v2.4.4** (`saveMessageOffline` called in ChatView.tsx on Ollama stream error)
+- iOS companion router — still OPEN (handoff at `ALPHONSOJUNECOMPLITIONIOSCOMPANION.md`)
+- Voice OS Python prereq — still OPEN (requires Python 3.10+ on PATH, can't auto-install Python itself)
 
 ---
 
@@ -271,7 +276,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                158 test files (Vitest, vitest.config.js)
+  test/                159 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
@@ -314,4 +319,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-27 — v2.4.3 — audit-sprint-26jun merged to main: TypeScript migration COMPLETE (114 .tsx, 0 subdirectory .jsx remain). P1-05 closed (connector credentials KV-primary). P1-08 closed (voice sidecar Stdio::piped). P2-14 closed (plugin signing keys KV-primary). P1-11/P2-10 verified already done. 158 test files / 2147 tests passing. cargo clippy -D warnings clean._
+_Last verified: 2026-06-27 — v2.4.4 — gap-closure sprint: DeepSeek connector live (deepseekConnector.js + credential UI + Hector tier-3 fallback + 4 tests); ChatView offline wiring (saveMessageOffline on Ollama error); alphonso contract fixed (execute_command + filesystem_ in allowedActionPrefixes); 159 test files / 2151 tests passing. cargo clippy -D warnings clean._

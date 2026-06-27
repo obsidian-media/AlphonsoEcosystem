@@ -1,6 +1,7 @@
 import { appendAgentActivity } from './agentActivityService';
 import { getConnectorCredential } from './connectors/connectorAuth';
 import { isTavilyConfigured, searchTavily } from './connectors/tavilyConnector.js';
+import { isDeepSeekConfigured, searchWithDeepSeek } from './connectors/deepseekConnector.js';
 import { invoke } from '@tauri-apps/api/core';
 import { HECTOR_RESEARCH_SCHEMA } from '../agents/hector/hectorResearchSchema';
 import { HECTOR_ALLOWED_ACTIONS, HECTOR_BLOCKED_ACTIONS } from '../agents/hector/hectorPermissions';
@@ -1158,7 +1159,27 @@ export async function runMultiSourceResearch(query) {
     } catch { /* Tavily unavailable — fall through */ }
   }
 
-  // 3. Try Rust backend search_research_sources
+  // 3. Try DeepSeek AI synthesis (tier-3 fallback when web sources are thin)
+  if (isDeepSeekConfigured() && allSources.length < 3) {
+    try {
+      const dsResult = await searchWithDeepSeek(query, { maxTokens: 1024 });
+      if (dsResult?.summary) {
+        providerChain.push('deepseek');
+        if (!preferredProvider) preferredProvider = 'deepseek';
+        allSources.push({
+          url: `deepseek://synthesis/${Date.now()}`,
+          title: 'DeepSeek AI Synthesis',
+          summary: dsResult.summary,
+          sourceType: 'ai_synthesis',
+          provider: 'deepseek',
+          confidence: 'inferred'
+        });
+        citations.push({ url: `deepseek://synthesis`, title: 'DeepSeek AI', source: 'deepseek', confidence: 'inferred' });
+      }
+    } catch { /* DeepSeek unavailable — fall through */ }
+  }
+
+  // 4. Try Rust backend search_research_sources
   try {
     const rustSources = await discoverResearchSources({
       researchQuestion: query,

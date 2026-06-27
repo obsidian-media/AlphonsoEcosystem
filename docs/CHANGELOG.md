@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.4] - 2026-06-27 — Gap Closure Sprint
+
+### New Connectors
+- **DeepSeek AI connector** — `src/services/connectors/deepseekConnector.js`: `isDeepSeekConfigured`, `sendDeepSeekMessage`, `searchWithDeepSeek` (OpenAI-compatible API at `api.deepseek.com/v1`). Credential UI added to ConnectorSetupPanel (API key field, sky-blue theme). `externalAgentAdapter.js` wired: `runExternalAgentTask('deepseek', task)` calls live API. Hector tier-3 fallback — DeepSeek synthesis fills gap when web search returns fewer than 3 sources. 4 tests in `deepseekConnector.test.js`.
+
+### Frontend Fixes
+- **ChatView offline wiring** — `saveMessageOffline()` from `offlineChatService.js` now called when Ollama stream fails. User messages are saved to IndexedDB so they can be retried when Ollama comes back online. Import added at line 43; called in the catch block of `generateOllamaChatStream`.
+
+### Service Fixes
+- **agentContractService alphonso allowedActionPrefixes** — Added `execute_command` and `filesystem_` to alphonso's allowed action prefixes. Alphonso is the operator agent with execution rights; blocking these was incorrect and caused `allows alphonso execute_command` test to fail.
+
+### Documentation
+- `ALPHONSOJUNECOMPLITIONIOSCOMPANION.md` — iOS companion handoff doc: 9 sections covering existing infrastructure, stub problems, 7 implementation steps with code snippets, event protocol, 10-task work order (~10-12h), testing checklist, known risks.
+- GROUND_TRUTH corrected: plugin sandbox is wired (PluginContext.jsx); Runway UI was already present — two stale "open gap" entries removed.
+
+### Tests
+- 159 test files / 2151 tests — all passing
+
+---
+
 ## [2.4.3] - 2026-06-27 — Audit Sprint (audit-sprint-26jun → main)
 
 ### Security & Credential Hardening
