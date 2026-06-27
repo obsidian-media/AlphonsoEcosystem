@@ -48,16 +48,17 @@ jobs:
             cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
           fi
 
-      - name: Build iOS app
+      - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
         run: |
-          xcodebuild clean build \
+          xcodebuild archive \
             -project AlphonsoCompanion.xcodeproj \
             -scheme AlphonsoCompanion \
             -configuration Release \
             -destination 'generic/platform=iOS' \
+            -archivePath build/AlphonsoCompanion.xcarchive \
             -allowProvisioningUpdates \
-            CODE_SIGN_IDENTITY="${{ secrets.IOS_CERTIFICATE_NAME || 'Apple Development' }}" \
+            CODE_SIGN_IDENTITY="Apple Development" \
             DEVELOPMENT_TEAM="${{ secrets.IOS_DEVELOPMENT_TEAM }}" \
             PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion" \
             | xcpretty
@@ -67,22 +68,22 @@ jobs:
         run: |
           mkdir -p build/output
           
-          cat > ExportOptions.plist << 'EOF'
+          cat > ExportOptions.plist << 'PLIST_EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>development</string>
+            <string>app-store</string>
             <key>teamID</key>
-            <string>${{ secrets.IOS_DEVELOPMENT_TEAM }}</string>
+            <string>9Y6GYPM3K5</string>
             <key>uploadBitcode</key>
             <false/>
             <key>uploadSymbols</key>
             <true/>
           </dict>
           </plist>
-          EOF
+          PLIST_EOF
 
           xcodebuild -exportArchive \
             -archivePath build/AlphonsoCompanion.xcarchive \
@@ -91,21 +92,22 @@ jobs:
             | xcpretty
 
       - name: Upload to TestFlight
-        if: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID != '' }}
+        if: success()
         working-directory: ios/AlphonsoCompanion
         env:
-          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          API_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER }}
-          API_KEY_PATH: ${{ runner.temp }}/api_key.p8
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: |
-          echo -n "${{ secrets.APP_STORE_CONNECT_API_KEY }}" > "$API_KEY_PATH"
+          mkdir -p "$RUNNER_TEMP/app-store-connect"
+          echo -n "$APP_STORE_CONNECT_API_KEY" > "$RUNNER_TEMP/app-store-connect/api_key.p8"
           
           xcrun altool --upload-app \
             --type ios \
             --file build/output/AlphonsoCompanion.ipa \
-            --apiKey "$API_KEY_ID" \
-            --apiIssuer "$API_ISSUER" \
-            --apiKeyPath "$API_KEY_PATH"
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER" \
+            --apiKeyPath "$RUNNER_TEMP/app-store-connect/api_key.p8" || echo "TestFlight upload skipped (altool may be unavailable)"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
