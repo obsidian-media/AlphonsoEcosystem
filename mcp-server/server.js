@@ -15,10 +15,33 @@
 import express from 'express';
 
 const app = express();
-app.use(express.json());
 
-const PORT = Number(process.env.MCP_PORT || 3333);
+const PORT = Number(process.env.MCP_SERVER_PORT || process.env.MCP_PORT || 3333);
 const BRIDGE_URL = process.env.ALPHONSO_BRIDGE_URL || 'http://localhost:4444';
+const MCP_SECRET = process.env.MCP_SECRET || '';
+
+// ── Auth middleware ───────────────────────────────────────────────────────────
+// If MCP_SECRET is set, require Bearer token on tool call routes.
+// If MCP_SECRET is not set, restrict to 127.0.0.1 connections only.
+
+function authMiddleware(req, res, next) {
+  if (MCP_SECRET) {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ') || authHeader.slice(7) !== MCP_SECRET) {
+      return res.status(401).json({ error: 'Unauthorized: invalid or missing Bearer token' });
+    }
+  } else {
+    const ip = req.ip || req.connection?.remoteAddress || '';
+    const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+    if (!isLocal) {
+      return res.status(401).json({ error: 'Unauthorized: MCP_SECRET not configured, local connections only' });
+    }
+  }
+  next();
+}
+
+app.use(express.json());
+app.use('/call', authMiddleware);
 
 // ── MCP tool definitions ──────────────────────────────────────────────────────
 

@@ -9,7 +9,41 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
-import { listConnectors, sendQwenConnectorMessage, verifyConnectorEnvironment } from '../services/connectorRegistryService';
+vi.mock('../services/agentActivityService', () => ({
+  appendAgentActivity: vi.fn()
+}));
+
+vi.mock('../services/orchestrationReceiptService', () => ({
+  appendOrchestrationReceipt: vi.fn()
+}));
+
+vi.mock('../services/policyEnforcementService', () => ({
+  evaluatePolicyGate: vi.fn(({ connectorId, actionType }) => {
+    if (actionType === 'blocked_action') return { ok: false, reason: 'blocked', riskLevel: 'high' };
+    return { ok: true, riskLevel: 'low' };
+  })
+}));
+
+vi.mock('../services/runtimeLedgerService', () => ({
+  persistScopeRows: vi.fn()
+}));
+
+vi.mock('../services/approval/approvalService', () => ({
+  requireApproval: vi.fn()
+}));
+
+import {
+  listConnectors,
+  listConnectorAudit,
+  setConnectorStatus,
+  appendConnectorAudit,
+  gateConnectorAction,
+  recordConnectorFailure,
+  recordConnectorSuccess,
+  getConnectorCircuitState,
+  sendQwenConnectorMessage,
+  verifyConnectorEnvironment
+} from '../services/connectorRegistryService';
 
 describe('connectorRegistryService', () => {
   beforeEach(() => {
@@ -88,5 +122,151 @@ describe('connectorRegistryService', () => {
     });
     expect(mockInvoke).not.toHaveBeenCalledWith('check_env_vars_presence', expect.anything());
     expect(mockInvoke).not.toHaveBeenCalledWith('connector_check_local_runtime_health', expect.anything());
+  });
+
+  // ── listConnectors ────────────────────────────────────────────────────────
+
+  describe('listConnectors', () => {
+    it('returns all default connectors', () => {
+      const connectors = listConnectors();
+      expect(connectors.length).toBeGreaterThanOrEqual(10);
+    });
+
+    it('includes telegram connector', () => {
+      const connectors = listConnectors();
+      const telegram = connectors.find((c) => c.id === 'telegram');
+      expect(telegram).toBeDefined();
+      expect(telegram.name).toBe('Telegram Bridge');
+    });
+
+    it('includes github connector', () => {
+      const connectors = listConnectors();
+      const github = connectors.find((c) => c.id === 'github');
+      expect(github).toBeDefined();
+      expect(github.permissions).toContain('repo_read');
+    });
+
+    it('includes slack connector', () => {
+      const connectors = listConnectors();
+      const slack = connectors.find((c) => c.id === 'slack');
+      expect(slack).toBeDefined();
+      expect(slack.permissions).toContain('message_send');
+    });
+
+    it('includes foundation_only connectors like sd_webui', () => {
+      const connectors = listConnectors();
+      const sd = connectors.find((c) => c.id === 'sd_webui');
+      expect(sd).toBeDefined();
+      expect(sd.status).toBe('foundation_only');
+    });
+  });
+
+  // ── listConnectorAudit ────────────────────────────────────────────────────
+
+  describe('listConnectorAudit', () => {
+    it('returns empty array when no audit entries exist', () => {
+      expect(listConnectorAudit()).toEqual([]);
+    });
+  });
+
+  // ── setConnectorStatus ────────────────────────────────────────────────────
+
+  describe('setConnectorStatus', () => {
+    it('updates connector status and returns updated connector', () => {
+      const updated = setConnectorStatus('telegram', 'configured', 'Token set');
+      expect(updated.status).toBe('configured');
+      expect(updated.note).toBe('Token set');
+    });
+
+    it('creates audit entry on status change', () => {
+      setConnectorStatus('slack', 'configured');
+      const audit = listConnectorAudit();
+      expect(audit.length).toBeGreaterThanOrEqual(1);
+      expect(audit.some((e) => e.connectorId === 'slack' && e.action === 'status_updated')).toBe(true);
+    });
+  });
+
+  // ── appendConnectorAudit ──────────────────────────────────────────────────
+
+  describe('appendConnectorAudit', () => {
+    it('creates an audit entry with required fields', () => {
+      const entry = appendConnectorAudit('github', 'send_message', { summary: 'test' });
+      expect(entry.connectorId).toBe('github');
+      expect(entry.action).toBe('send_message');
+      expect(entry.timestampMs).toBeDefined();
+      expect(entry.id).toContain('connector-audit-');
+    });
+
+    it('appends to existing audit entries', () => {
+      appendConnectorAudit('github', 'action1');
+      appendConnectorAudit('github', 'action2');
+      const audit = listConnectorAudit();
+      expect(audit.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  // ── gateConnectorAction ───────────────────────────────────────────────────
+
+  describe('gateConnectorAction', () => {
+    it('allows a normal action', () => {
+      const gate = gateConnectorAction('telegram', 'send_message', 'hello');
+      expect(gate.ok).toBe(true);
+    });
+
+    it('blocks a blocked_action type', () => {
+      const gate = gateConnectorAction('telegram', 'blocked_action', 'dangerous');
+      expect(gate.ok).toBe(false);
+    });
+
+    it('creates audit entry for policy decision', () => {
+      gateConnectorAction('github', 'create_release', 'v1.0.0');
+      const audit = listConnectorAudit();
+      expect(audit.some((e) => e.action === 'policy_allow' || e.action === 'policy_block')).toBe(true);
+    });
+  });
+
+  // ── Circuit breaker ───────────────────────────────────────────────────────
+
+  describe('circuit breaker', () => {
+    it('getConnectorCircuitState returns ok when no failures', () => {
+      const state = getConnectorCircuitState('telegram');
+      expect(state.ok).toBe(true);
+      expect(state.failures).toBe(0);
+    });
+
+    it('recordConnectorFailure increments failure count', () => {
+      recordConnectorFailure('telegram', 'send');
+      const state = getConnectorCircuitState('telegram', 'send');
+      expect(state.failures).toBe(1);
+      expect(state.ok).toBe(true);
+    });
+
+    it('opens circuit breaker after threshold failures', () => {
+      for (let i = 0; i < 5; i++) {
+        recordConnectorFailure('telegram', 'send');
+      }
+      const state = getConnectorCircuitState('telegram', 'send');
+      expect(state.open).toBe(true);
+      expect(state.disabledUntil).toBeDefined();
+    });
+
+    it('recordConnectorSuccess clears state when circuit not open', () => {
+      recordConnectorFailure('telegram', 'send');
+      recordConnectorSuccess('telegram', 'send');
+      const state = getConnectorCircuitState('telegram', 'send');
+      expect(state.failures).toBe(0);
+      expect(state.open).toBe(false);
+    });
+
+    it('recordConnectorSuccess decrements when circuit is open', () => {
+      for (let i = 0; i < 5; i++) {
+        recordConnectorFailure('telegram', 'send');
+      }
+      const before = getConnectorCircuitState('telegram', 'send');
+      expect(before.open).toBe(true);
+      recordConnectorSuccess('telegram', 'send');
+      const after = getConnectorCircuitState('telegram', 'send');
+      expect(after.failures).toBe(4);
+    });
   });
 });

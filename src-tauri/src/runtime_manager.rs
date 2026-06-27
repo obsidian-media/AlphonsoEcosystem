@@ -175,7 +175,7 @@ const TOOLS: &[ToolDef] = &[
     ],
     requirements_file: None,
     port: Some(8765),
-    health_path: None,
+    health_path: Some("/health"),
     exe: "python",
     args: &["voice/backend/main.py", "--host", "127.0.0.1", "--port", "8765"],
   },
@@ -321,6 +321,10 @@ pub struct PrereqStatus {
   pub git_version: Option<String>,
   pub ollama_found: bool,
   pub ollama_path: Option<String>,
+  pub docker_found: bool,
+  pub docker_path: Option<String>,
+  pub node_found: bool,
+  pub node_path: Option<String>,
   pub missing: Vec<String>,
   pub install_hint: String,
 }
@@ -382,6 +386,18 @@ fn python_version(exe: &str) -> Option<String> {
     .filter(|s| !s.is_empty())
 }
 
+/// Parse a Python version string like "3.11.4" into (3, 11).
+fn parse_python_version(version: &str) -> Option<(u32, u32)> {
+  let parts: Vec<&str> = version.split('.').collect();
+  if parts.len() >= 2 {
+    let major = parts[0].parse::<u32>().ok()?;
+    let minor = parts[1].parse::<u32>().ok()?;
+    Some((major, minor))
+  } else {
+    None
+  }
+}
+
 /// Gap 2: find Git across PATH + common Windows install locations
 pub fn find_git() -> Option<String> {
   if which_exe("git") {
@@ -423,6 +439,50 @@ pub fn find_ollama() -> Option<String> {
       format!(r"{}\Programs\Ollama\ollama.exe", local),
       format!(r"{}\AppData\Local\Programs\Ollama\ollama.exe", user),
       r"C:\Program Files\Ollama\ollama.exe".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  }
+  None
+}
+
+/// S-06: find Docker across PATH + common Windows install locations
+pub fn find_docker() -> Option<String> {
+  if which_exe("docker") {
+    return Some("docker".to_string());
+  }
+  if cfg!(target_os = "windows") {
+    let paths = [
+      r"C:\Program Files\Docker\Docker\resources\bin\docker.exe".to_string(),
+      r"C:\ProgramData\DockerDesktop\version-bin\docker.exe".to_string(),
+      {
+        let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
+        format!(r"{}\Docker\cli-plugins\docker.exe", local)
+      },
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  }
+  None
+}
+
+/// S-07: find Node.js across PATH + common install locations
+pub fn find_node() -> Option<String> {
+  if which_exe("node") {
+    return Some("node".to_string());
+  }
+  if cfg!(target_os = "windows") {
+    let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
+    let paths = [
+      format!(r"{}\Programs\node\node.exe", local),
+      r"C:\Program Files\nodejs\node.exe".to_string(),
+      r"C:\Program Files (x86)\nodejs\node.exe".to_string(),
     ];
     for p in &paths {
       if Path::new(p).exists() {
@@ -486,6 +546,12 @@ pub struct RuntimeActionResult {
   pub tool: String,
   pub ok: bool,
   pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolStartFailed {
+  pub tool: String,
 }
 
 // ─────────────────────────────────────────────────────────
@@ -725,6 +791,10 @@ pub fn runtime_check_prerequisites() -> PrereqStatus {
 
   let ollama_path = find_ollama();
 
+  let docker_path = find_docker();
+
+  let node_path = find_node();
+
   let mut missing = Vec::new();
   if python_path.is_none() {
     missing.push("Python 3.10+".to_string());
@@ -734,6 +804,12 @@ pub fn runtime_check_prerequisites() -> PrereqStatus {
   }
   if ollama_path.is_none() {
     missing.push("Ollama".to_string());
+  }
+  if docker_path.is_none() {
+    missing.push("Docker".to_string());
+  }
+  if node_path.is_none() {
+    missing.push("Node.js".to_string());
   }
 
   let hint = if missing.is_empty() {
@@ -759,6 +835,10 @@ pub fn runtime_check_prerequisites() -> PrereqStatus {
     git_version,
     ollama_found: ollama_path.is_some(),
     ollama_path,
+    docker_found: docker_path.is_some(),
+    docker_path,
+    node_found: node_path.is_some(),
+    node_path,
     missing,
     install_hint: hint,
   }
@@ -947,6 +1027,32 @@ pub async fn runtime_install_tool(
       .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
   }
 
+  // S-08: AudioCraft Python version check — warn if Python >= 3.12
+  if name == "audiocraft" {
+    let vpy = venv_python(&dir);
+    let py_for_check = if vpy.exists() {
+      vpy.to_string_lossy().to_string()
+    } else {
+      py.clone()
+    };
+    if let Some(ver) = python_version(&py_for_check) {
+      if let Some((major, minor)) = parse_python_version(&ver) {
+        if major > 3 || (major == 3 && minor >= 12) {
+          emit_progress(
+            &app,
+            &name,
+            "warning",
+            &format!(
+              "AudioCraft requires Python 3.9\u{2013}3.11. Found Python {}.{}",
+              major, minor
+            ),
+            90,
+          );
+        }
+      }
+    }
+  }
+
   emit_progress(
     &app,
     &name,
@@ -1000,6 +1106,20 @@ pub async fn runtime_start_tool(
     let child = cmd.spawn().map_err(|e| format!("Failed to start Voice OS: {e}"))?;
     let pid = child.id();
     state.record_pid(&name, pid);
+    // S-10: post-spawn health check — emit failure event if process dies within 3 s
+    {
+      let app_clone = app.clone();
+      let name_clone = name.clone();
+      tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        if !is_pid_alive(pid) {
+          let _ = app_clone.emit(
+            "runtime://tool_start_failed",
+            ToolStartFailed { tool: name_clone },
+          );
+        }
+      });
+    }
     return Ok(RuntimeActionResult {
       tool: name,
       ok: true,
@@ -1023,6 +1143,21 @@ pub async fn runtime_start_tool(
 
   let pid = child.id();
   state.record_pid(&name, pid);
+
+  // S-10: post-spawn health check — emit failure event if process dies within 3 s
+  {
+    let app_clone = app.clone();
+    let name_clone = name.clone();
+    tokio::spawn(async move {
+      tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+      if !is_pid_alive(pid) {
+        let _ = app_clone.emit(
+          "runtime://tool_start_failed",
+          ToolStartFailed { tool: name_clone },
+        );
+      }
+    });
+  }
 
   Ok(RuntimeActionResult {
     tool: name,
@@ -1231,6 +1366,33 @@ fn kill_pid(pid: u32) {
     let _ = Command::new("kill")
       .args(["-TERM", &pid.to_string()])
       .output();
+  }
+}
+
+/// Check if a process with the given PID is still alive.
+fn is_pid_alive(pid: u32) -> bool {
+  if cfg!(target_os = "windows") {
+    let output = Command::new("tasklist")
+      .args(["/FI", &format!("PID eq {}", pid), "/NH"])
+      .stdout(std::process::Stdio::piped())
+      .stderr(std::process::Stdio::null())
+      .output();
+    match output {
+      Ok(o) => {
+        let out = String::from_utf8_lossy(&o.stdout);
+        out.contains(&pid.to_string())
+      }
+      Err(_) => false,
+    }
+  } else {
+    // kill -0 sends no signal but checks if process exists
+    Command::new("kill")
+      .args(["-0", &pid.to_string()])
+      .stdout(std::process::Stdio::null())
+      .stderr(std::process::Stdio::null())
+      .status()
+      .map(|s| s.success())
+      .unwrap_or(false)
   }
 }
 

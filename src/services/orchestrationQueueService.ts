@@ -197,6 +197,19 @@ export function forceDeadLetterPacket(packetId: string, reason: string = 'Manual
   return { ok: true, packet: dead, transition };
 }
 
+export function getDeadLetterCount(): number {
+  return listAgentPackets().filter((p: any) => p.status === 'dead_letter').length;
+}
+
+export function getOldestDeadLetterTimestamp(): string | null {
+  const packets = listAgentPackets().filter((p: any) => p.status === 'dead_letter');
+  if (packets.length === 0) return null;
+  const oldest = packets.reduce((a: any, b: any) =>
+    Number(a.createdAtMs || 0) < Number(b.createdAtMs || 0) ? a : b
+  );
+  return oldest.createdAtMs ? new Date(Number(oldest.createdAtMs)).toISOString() : null;
+}
+
 export function retryDeadLetter(): number {
   const packets = listAgentPackets();
   const deadLetterPackets = packets.filter((p: any) => p.status === 'dead_letter');

@@ -1,0 +1,13 @@
+id = "alphonso.researcher.web_monitor"
+name = "Web Monitor"
+version = "1.0.0"
+description = "Monitors specified URLs for content changes and surfaces updates to Hector"
+author = "alphonso"
+capabilities = ["web_fetch", "diff", "notify"]
+models = ["llama3.2", "qwen2.5", "gemma3"]
+schedules = ["0 */6 * * *"]
+entrypoint = "tools/main.js"
+ui = "ui/panel.jsx"
+
+[policy]
+tags = ["read_only", "network_fetch"]

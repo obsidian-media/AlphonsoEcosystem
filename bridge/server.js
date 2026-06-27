@@ -1,14 +1,16 @@
 /**
- * Alphonso Bridge — HTTP server on port 4444
+ * Alphonso Bridge — HTTP server
+ * Default port: 4444. Override via ALPHONSO_BRIDGE_PORT env var.
  * Called by the MCP server. Routes tool calls to Ollama for live responses.
  */
 
 import express from 'express';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
-const PORT = Number(process.env.BRIDGE_PORT || 4444);
+// Default port 4444; override with ALPHONSO_BRIDGE_PORT env var
+const PORT = Number(process.env.ALPHONSO_BRIDGE_PORT || process.env.BRIDGE_PORT || 4444);
 const OLLAMA_BASE = process.env.OLLAMA_BASE || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 
@@ -123,6 +125,14 @@ app.post('/tool/alphonso_get_receipts', (req, res) => {
     receipts: [],
     note: 'Receipt sync requires Alphonso frontend connection. Coming in Phase 2.'
   });
+});
+
+// ── Module registry ───────────────────────────────────────────────────────────
+// Returns an empty list — module state lives in the Tauri frontend's localStorage.
+// This route satisfies runtimeApiService.listModulesRemote() so it doesn't always
+// 404-then-fallback silently.
+app.get('/modules', (_req, res) => {
+  res.json([]);
 });
 
 // ── Health ────────────────────────────────────────────────────────────────────

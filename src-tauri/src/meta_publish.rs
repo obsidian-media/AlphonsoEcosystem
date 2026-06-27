@@ -79,8 +79,10 @@ fn graph_error_message(body: &Value, fallback: &str) -> String {
 
 #[tauri::command]
 pub(crate) async fn meta_publish_content(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
   request: MetaPublishRequest,
 ) -> Result<MetaPublishProof, String> {
+  rate_limiter.check_and_record("meta_publish_content")?;
   let published_at_ms = now_ms();
   let platform = request.platform.trim().to_ascii_lowercase();
   let _request_id = request

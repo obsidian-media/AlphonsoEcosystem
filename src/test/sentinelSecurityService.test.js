@@ -4,7 +4,8 @@ import {
   buildSentinelThreatPrompt,
   parseSentinelThreatResponse,
   buildSentinelFallbackAlert,
-  runSentinelSecurityScan
+  runSentinelSecurityScan,
+  startScheduledScans
 } from '../services/sentinelSecurityService';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────

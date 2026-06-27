@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-27 — v2.3.3
-**Verified by:** Claude Code — Bug Fix Sprint
-**Version:** 2.3.3 (Voice OS install/start fixed; AgentPairingView mounted; Settings persistence fixed; Notification watermark fixed; Boardroom sidebar entry; All Agents 5-tab layout; Connector UX; Runtime page polish; 149 test files / 1983 tests passing)
+**Last verified:** 2026-06-27 — v2.4.0
+**Verified by:** Claude Code — claudecode-sprint (Agent OS Foundations + Observability + Capabilities + Polish)
+**Version:** 2.4.0 (Module system, Boardroom sessions, A2A protocol, Policy DSL, Runtime API, 5 scheduler presets, dark mode, keyboard shortcuts, observability hardening; 158 test files / 2147 tests passing; TypeScript migration complete — 76 .tsx components, 2 .jsx remaining)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -29,7 +29,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
-| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 63 `.jsx` + 10 `.tsx` components (App, Sidebar, RightPanel, SettingsView, ChatView, AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar) |
+| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 2 `.jsx` (OpenCode-owned: ConnectorSetupPanel, ModelSwitcher) + 76 `.tsx` components |
 | UI System | **OKLCH** CSS design token system (`src/styles/tokens.css` — all colors in `oklch()` syntax), Framer Motion animation library (`src/lib/motion.ts` — spring/tween/fadeUp/fadeIn/slideInRight/scaleIn/staggerContainer/staggerItem/messageIn/panelIn), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |
@@ -148,7 +148,11 @@ Key services that past audits missed or underestimated:
 - `src/services/connectors/tavilyConnector.js` — Tavily AI search (free tier 1K/mo), `searchTavily`, `isTavilyConfigured`. Wired as tier-2 fallback in `hectorResearchService.js` (Brave → Tavily → DuckDuckGo → RSS).
 - `src/services/chromaDbService.js` — ChromaDB local vector DB (port 8000): `addMemoryToChroma`, `semanticSearchMemory`, `deleteMemoryFromChroma`, `isChromaHealthy`. Fire-and-forget write from `echoMemoryService.runEchoPreservation`.
 - `src/services/whisperTranscriptionService.js` — Whisper meeting transcription: `transcribeAndIngest(audioFilePath, filename, onProgress)` — calls `transcribe_audio_file` Tauri command → Ollama summarize → Echo `pushMemoryItem`.
-- `src/services/connectors/n8nConnector.js` — n8n workflow automation: `isN8nHealthy`, `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`. Wired as Marcus distribution target (`n8n|workflow.*trigger`).
+- `src/services/connectors/n8nConnector.js` — n8n workflow automation: `isN8nHealthy`, `triggerN8nWebhook`, `listN8nWorkflows`, `setN8nWorkflowActive`. Wired as Marcus distribution target (`n8n|workflow.*trigger`). All endpoints have AbortController timeouts (15s/10s/5s).
+- `src/services/moduleRegistryService.ts` — Agent OS module registry: `installModule`, `enableModule`, `disableModule`, `listModules`, `getModule`, `uninstallModule`. Persisted via durableStore as `alphonso_modules_v1`. Reads `module.toml` manifests.
+- `src/services/runtimeApiService.ts` — Bridge client (port 4444) for module lifecycle: `listModules`, `runModule`, `getRunStatus`, `publishEvent`. Falls back to registry when bridge offline. 10s AbortController timeout.
+- `src/services/policyDslService.ts` — Module-level policy evaluation: `loadPolicy`, `evaluateAction`, `getPolicyRules`. Uses hardcoded rules from `policy.yaml` spec. Separate from `policyEnforcementService`.
+- `src/services/a2aProtocolService.ts` — A2A task delegation: `delegate`, `getTaskStatus`, `updateTaskResult`, `listActiveTasks`, `listTasksByAgent`. Uses agentBusService for message passing; persists to `alphonso_a2a_tasks_v1`.
 - `src/services/joseSchedulerService.js` — Jose cron scheduler: `createSchedule`, `listSchedules`, `saveSchedule`, `deleteSchedule`, `startScheduler`, `stopScheduler`. `SCHEDULE_PRESETS`: 30min/hourly/daily/weekly. Polls every 60s, fires callback when due. Started in `App.tsx`.
 - `src/services/echoFileWatcherService.js` — Echo inbox file watcher: `startFileWatcher`, `stopFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`. Polls via `watch_inbox_poll` Tauri command every 30s, auto-summarizes with Ollama, saves to Echo via `runEchoPreservation`, deduplicates via `.processed` suffix. Started in `App.tsx`.
 - `mcp-server/server.js` — MCP server (port 3333): 5 tools (`alphonso_run_pipeline`, `alphonso_search_memory`, `alphonso_research`, `alphonso_get_status`, `alphonso_get_receipts`), callable from Claude Desktop/Cursor/Windsurf.
@@ -171,7 +175,7 @@ Key services that past audits missed or underestimated:
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-26 v2.3.0, all passing):**
-- 149 test files, 1983 tests passing
+- 158 test files, 2147 tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
 ```
 accBridgeService.test.js
@@ -787,7 +791,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-26 — v2.2.7: Plugin Marketplace UI added (Settings → Plugins, PluginMarketplacePanel, toggle/search/signed-badge). Voice OS registered in Rust TOOLS list (runtime_manager.rs) — can now be Installed/Started from Runtime Hub like any other tool (pip-install of faster-whisper/piper/webrtcvad handled automatically once Python is present). Railway Dockerfile fixed (single-stage, no multi-stage cache bug). railway.json switched from RAILPACK to DOCKERFILE builder. CI gateway-health job updated to real Railway URL alphonsoecosystem-production-3ad1.up.railway.app. All 144 test files / 1930+ tests passing. cargo check clean. Known honest gaps: DeepSeek is not_wired (Ollama deepseek-r1 works locally); PWA IndexedDB not yet wired into ChatView message save path; pluginSandboxService not called from anywhere; Runway API key has no credential UI (uses RUNWAYML_API_SECRET env var only); iOS companion has no backend connection path documented._
+_Last verified: 2026-06-26 — TypeScript migration sprint complete: 76 .tsx components (2 .jsx remaining — OpenCode-owned), 158 test files / 2147 tests passing, typecheck clean, lint clean. Known honest gaps: DeepSeek is not_wired (Ollama deepseek-r1 works locally); PWA IndexedDB not yet wired into ChatView message save path; pluginSigningService test file added; coverage runner has pre-existing ECONNREFUSED on port 8000 (Voice OS sidecar)._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

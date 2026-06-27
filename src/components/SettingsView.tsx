@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic } from 'lucide-react';
+import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
@@ -713,6 +713,23 @@ export function SettingsView({
               )}
             </div>
           </div>
+
+          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+            <div>
+              <div className="text-sm font-semibold text-white">Voice OS WebSocket Port</div>
+              <div className="text-xs text-zinc-500 mt-0.5">WebSocket URL for Voice OS (STT+TTS) pipeline. Default: ws://127.0.0.1:8765/ws</div>
+            </div>
+            <input
+              type="text"
+              defaultValue={(() => { try { return localStorage.getItem('alphonso_voice_ws_url') || 'ws://127.0.0.1:8765/ws'; } catch { return 'ws://127.0.0.1:8765/ws'; } })()}
+              onBlur={(e) => {
+                const val = e.target.value.trim();
+                try { localStorage.setItem('alphonso_voice_ws_url', val || 'ws://127.0.0.1:8765/ws'); } catch { /* ignore */ }
+              }}
+              placeholder="ws://127.0.0.1:8765/ws"
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            />
+          </div>
         </div>
       </section>
 
@@ -1014,6 +1031,10 @@ export function SettingsView({
         <SectionHeader icon={BarChart3} label="Agent Performance" />
         <AgentMetricsPanel />
       </section>
+      <section className="space-y-4">
+        <SectionHeader icon={Bot} label="Agent Companions" />
+        <CompanionPairingPanel />
+      </section>
     </div>
   )}
   {activeSection === 'runtime' && (
@@ -1148,6 +1169,26 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={TrendingUp} label="Nova Opportunity History" />
         <NovaHistoryChart />
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={TrendingUp} label="Nova Insight Threshold" />
+        <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div>
+            <div className="text-sm font-semibold text-white">Insight Score Threshold</div>
+            <div className="text-xs text-zinc-500 mt-0.5">Minimum Nova score (0–100) to show an insight card after pipeline completion. Default: 65.</div>
+          </div>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            defaultValue={(() => { try { return Number(localStorage.getItem('alphonso_nova_threshold') || '65'); } catch { return 65; } })()}
+            onBlur={(e) => {
+              const val = Math.min(100, Math.max(0, Number(e.target.value) || 65));
+              try { localStorage.setItem('alphonso_nova_threshold', String(val)); } catch { /* ignore */ }
+            }}
+            className="w-24 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+          />
+        </div>
       </section>
     </div>
   )}
@@ -1378,6 +1419,16 @@ function MeetingTranscriptionPanel() {
   const [status, setStatus] = React.useState<'idle' | 'reading' | 'transcribing' | 'summarizing' | 'saving' | 'done' | 'error'>('idle');
   const [result, setResult] = React.useState<{ filename: string; summary: string } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [whisperInstalled, setWhisperInstalled] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    import('../services/runtimeManagerService.js').then(({ getAllStatus }) => {
+      getAllStatus().then((tools: any[]) => {
+        const whisper = tools.find((t: any) => t.name === 'whisper');
+        setWhisperInstalled(whisper?.installed ?? false);
+      }).catch(() => setWhisperInstalled(false));
+    }).catch(() => setWhisperInstalled(false));
+  }, []);
 
   const pickAndTranscribe = async () => {
     setStatus('reading');
@@ -1404,6 +1455,12 @@ function MeetingTranscriptionPanel() {
 
   return (
     <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-white/5 space-y-3">
+      {whisperInstalled === false && (
+        <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-200 text-xs">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          Whisper not installed. Install it in Runtimes → Whisper to enable transcription.
+        </div>
+      )}
       <p className="text-xs text-[var(--text-3)]">
         Choose an audio file (MP3, WAV, M4A). Whisper transcribes it, Ollama summarizes it, Echo remembers it.
         Whisper must be installed via Runtime Hub first.

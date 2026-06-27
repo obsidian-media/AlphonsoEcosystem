@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.3.3** — Local-first AI desktop companion with 9 agents, 15 connectors, tab-based UI, and real-time Voice OS — powered by Ollama
+> **v2.4.0** — Local-first AI desktop companion with 9 agents, 15 connectors, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.3.3-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-1983%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -17,11 +17,25 @@ It orchestrates 9 specialized agents, connects to 15 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 15 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.3.3**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.3.3) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.4.0**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.4.0) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
+
+## What's New in v2.4.0
+
+- **Agent OS Module System** — New pluggable module architecture (`modules/` directory, `moduleRegistryService`, `runtimeApiService`). Install, enable, and run agent modules with a standardized TOML manifest.
+- **Boardroom Multi-Agent Sessions** — Convene all 9 agents on a topic, collect responses, get a Hector research briefing, run a Maria risk assessment, and distribute via Marcus — all in one session.
+- **Policy DSL** — New `policyDslService` with `policy.yaml` for module-level policy evaluation (separate from the existing `policyEnforcementService`).
+- **A2A Protocol** — `a2aProtocolService` for structured agent-to-agent task delegation via the agent bus.
+- **5 Daily Scheduler Presets** — Nova daily scan, Sentinel daily summary, Echo nightly consolidation, Hector morning briefing, Maria weekly audit — all wired to their respective agent services.
+- **Dark/Light Mode Toggle** — TopBar sun/moon button; preference persisted in localStorage.
+- **Keyboard Shortcuts Modal** — Ctrl+? opens a shortcut reference; Ctrl+J/B/R for quick navigation.
+- **Agent Performance Export** — CSV and JSON export for orchestration receipts from the performance view.
+- **Observability Hardening** — Hector RSS retry with exponential backoff, n8n connector timeouts, ChromaDB write error surface, unified memory namespace eviction, Voice OS health watchdog.
+- **/boardroom Telegram command** — Run a multi-agent boardroom session directly from Telegram.
+- **Bundle Size CI Check** — GitHub Actions now enforces 10MB total / 2MB per-chunk limits.
 
 ## What's New in v2.3.3
 

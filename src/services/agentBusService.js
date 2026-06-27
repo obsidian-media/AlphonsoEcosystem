@@ -227,6 +227,75 @@ export function listFailedRetryablePackets() {
   return readPackets().filter((packet) => packet.status === 'failed' && packet.retryable !== false);
 }
 
+// ── A2A Direct Messaging ─────────────────────────────────────────────────────
+
+const MSG_RING_SIZE = 50;
+
+function _msgKey(toAgent) {
+  return `alphonso_agent_messages_${String(toAgent)}`;
+}
+
+export function sendAgentMessage(fromAgent, toAgent, message, context = {}) {
+  const key = _msgKey(toAgent);
+  let ring = [];
+  try {
+    const raw = localStorage.getItem(key);
+    ring = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(ring)) ring = [];
+  } catch { ring = []; }
+
+  ring.push({
+    id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+    fromAgent: String(fromAgent),
+    toAgent: String(toAgent),
+    message: String(message),
+    context: context || {},
+    sentAt: new Date().toISOString(),
+    read: false,
+  });
+
+  localStorage.setItem(key, JSON.stringify(ring.slice(-MSG_RING_SIZE)));
+}
+
+export function getAgentMessages(toAgent) {
+  try {
+    const raw = localStorage.getItem(_msgKey(toAgent));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function clearAgentMessages(toAgent) {
+  localStorage.removeItem(_msgKey(toAgent));
+}
+
+const _subscriptions = new Map();
+
+export function subscribeToMessages(toAgent, callback) {
+  const seen = new Set(getAgentMessages(toAgent).map(m => m.id));
+
+  const interval = setInterval(() => {
+    const msgs = getAgentMessages(toAgent);
+    const newMsgs = msgs.filter(m => !seen.has(m.id));
+    if (newMsgs.length > 0) {
+      newMsgs.forEach(m => seen.add(m.id));
+      try { callback(newMsgs); } catch { /* non-critical */ }
+    }
+  }, 2000);
+
+  const key = `${toAgent}_${interval}`;
+  _subscriptions.set(key, interval);
+
+  return function unsubscribe() {
+    clearInterval(interval);
+    _subscriptions.delete(key);
+  };
+}
+
+// ── Internal helpers ──────────────────────────────────────────────────────────
+
 function isExternalRiskAction(packet) {
   const action = String(packet?.actionType || '').toLowerCase();
   const preview = String(packet?.commandPreview || '').toLowerCase();

@@ -38,9 +38,9 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 
 5. **Run tests**
    ```bash
-   npm run test         # All 978 tests across 73 files
+   npm run test         # All 1983+ tests across 149 files
    npm run lint         # ESLint
-   npm run verify:app   # lint + test + build
+   npm run verify:app   # lint + typecheck + test + build
    ```
 
 ## Project Structure
@@ -96,9 +96,19 @@ git commit -m "type: description"
 ```
 
 ### 5. Create a PR
-- Describe what you changed and why
-- Reference any related issues
-- Ensure CI passes
+
+**PR Checklist:**
+- [ ] `npm run verify:app` passes (lint + typecheck + test + build)
+- [ ] `npm run typecheck` — 0 TypeScript errors
+- [ ] `npm run test` — all 1983+ tests pass; no regressions
+- [ ] New components are `.tsx` with exported prop interfaces
+- [ ] New services have a test file in `src/test/`
+- [ ] No `.env`, `.tauri-updater-key`, or secret files committed
+- [ ] Coverage has not dropped below 35%
+
+**Commit message format:** `feat(scope): description` / `fix(scope): description` / `docs(scope): description`
+
+**TypeScript requirement:** All new React components must be `.tsx` with prop interfaces. No implicit `any`.
 
 ## Code Style
 

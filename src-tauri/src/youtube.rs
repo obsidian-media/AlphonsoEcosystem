@@ -75,12 +75,14 @@ fn mime_for_video_path(path: &Path) -> String {
 
 #[tauri::command]
 pub(crate) async fn connector_upload_youtube(
+  rate_limiter: tauri::State<'_, crate::RateLimiter>,
   file_path: String,
   title: String,
   description: Option<String>,
   tags: Option<Vec<String>>,
   privacy_status: Option<String>,
 ) -> Result<YouTubeUploadProof, String> {
+  rate_limiter.check_and_record("connector_upload_youtube")?;
   let uploaded_at_ms = now_ms();
   let path = std::path::PathBuf::from(file_path.trim());
   let clean_title = title.trim().to_string();

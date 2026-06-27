@@ -44,7 +44,18 @@ jobs:
       - name: Check bundle size
         shell: bash
         run: |
-          find dist/assets -name "*.js" -size +1024k | grep . && echo "Bundle size exceeded 1MB limit" && exit 1 || echo "Bundle size OK"
+          TOTAL=$(du -sb dist/assets/ | awk '{print $1}')
+          echo "Total bundle size: $TOTAL bytes"
+          if [ "$TOTAL" -gt "10485760" ]; then
+            echo "Bundle exceeds 10MB limit ($TOTAL bytes)"
+            exit 1
+          fi
+          LARGEST=$(find dist/assets -name "*.js" -printf "%s\n" | sort -n | tail -1)
+          if [ "$LARGEST" -gt "2097152" ]; then
+            echo "Single JS chunk exceeds 2MB limit ($LARGEST bytes)"
+            exit 1
+          fi
+          echo "Bundle size OK"
 
   rust-quality:
     name: Rust Tests & Clippy

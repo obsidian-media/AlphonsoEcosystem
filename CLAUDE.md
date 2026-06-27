@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 1930+ tests across 144 files — all should pass
+npm run test             # Run all 2147+ tests across 158 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command
@@ -52,7 +52,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **15 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope, Perplexity — all policy-gated. All have credential input UI in ConnectorSetupPanel.
 - **lib.rs is ~2,024 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 1930+ tests are in `src/test/`** — 144 test files; Vitest via vitest.config.js (separate from vite build config)
+- **All 2147+ tests are in `src/test/`** — 158 test files; Vitest via vitest.config.js (separate from vite build config)
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.tsx` captures history snapshot before React state updates.
@@ -157,6 +157,13 @@ Before writing any new service, component, or feature, check this list:
 | Jose cron scheduler | `src/services/joseSchedulerService.js` — `createSchedule`, `listSchedules`, `startScheduler`/`stopScheduler`; SCHEDULE_PRESETS; AutomationView Schedules tab |
 | Echo file watcher | `src/services/echoFileWatcherService.js` — `startFileWatcher`, `getWatcherConfig`, `saveWatcherConfig`; polls `watch_inbox_poll` Tauri command every 30s |
 | MCP server | `mcp-server/server.js` — Express port 3333; 5 MCP tools callable from Claude Desktop/Cursor/Windsurf |
+| Module registry | `src/services/moduleRegistryService.ts` — `installModule`, `enableModule`, `disableModule`, `listModules`, `getModule`, `uninstallModule`; persists to `alphonso_modules_v1` |
+| Runtime API client | `src/services/runtimeApiService.ts` — bridge client (port 4444): `listModules`, `runModule`, `getRunStatus`, `publishEvent`; falls back to registry offline |
+| Policy DSL (module-level) | `src/services/policyDslService.ts` — `loadPolicy`, `evaluateAction`, `getPolicyRules`; separate from `policyEnforcementService` |
+| A2A protocol | `src/services/a2aProtocolService.ts` — `delegate`, `getTaskStatus`, `updateTaskResult`, `listActiveTasks`, `listTasksByAgent`; uses agentBusService |
+| Module manifests | `modules/` directory — TOML manifests; example: `alphonso.researcher.web_monitor` |
+| policy.yaml | `policy.yaml` (repo root) — module-level policy rules consumed by `policyDslService` |
+| Keyboard shortcuts modal | `src/components/KeyboardShortcutsModal.tsx` — Ctrl+? trigger; Ctrl+J/B/R nav shortcuts |
 | Alphonso Bridge | `bridge/server.js` — Express port 4444; proxies tool calls to Ollama `/api/chat`; `alphonso_get_status` checks `/api/tags` |
 | Native file picker | `pick_file` Tauri command in `src-tauri/src/lib.rs` — PowerShell OpenFileDialog, returns full path; used by Whisper transcription |
 
@@ -166,8 +173,8 @@ Before writing any new service, component, or feature, check this list:
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
 2. Check `src/services/` for an existing service before writing a new one — there are 130+ services
-3. Check `src/test/` — there are 144 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 1930+ tests must continue to pass
+3. Check `src/test/` — there are 158 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 2147+ tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -264,7 +271,7 @@ src/                   React frontend (all .jsx, 9 .ts services)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                144 test files (Vitest, vitest.config.js)
+  test/                158 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
@@ -307,4 +314,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-27 — v2.3.3 — Bug Fix Sprint: Voice OS install/start fixed; AgentPairingView mounted in All Agents; Settings persistence fixed; Notification watermark fixed; Boardroom in Sidebar; 5-tab All Agents layout; Connector UX explanation; Runtime page polish; WebView2 bootstrapper; DeadLetterQueueView mounted. 149 test files / 1983 tests passing._
+_Last verified: 2026-06-27 — v2.4.0 — claudecode-sprint: Module system (moduleRegistryService, runtimeApiService, policyDslService, a2aProtocolService), Boardroom multi-agent sessions, A2A protocol, Policy DSL, 5 scheduler presets + handlers, /boardroom Telegram command, dark/light mode toggle, keyboard shortcuts modal, agent performance CSV/JSON export, DLQ section, Hector retry, n8n timeouts, ChromaDB error surface, unified memory eviction, Voice OS watchdog, bundle size CI. 149+ test files / 1983+ tests passing._

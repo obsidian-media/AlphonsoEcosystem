@@ -10,11 +10,22 @@ _executor = ThreadPoolExecutor(max_workers=2)
 @lru_cache(maxsize=1)
 def _load_piper():
     from piper import PiperVoice
+    import os
+    from pathlib import Path
+    model_path = Path(__file__).parent / "en_US-lessac-medium.onnx"
+    if not model_path.exists():
+        import logging
+        logging.warning(
+            "Piper voice model not found. Run: python -c \"import piper; piper.download_model('en_US-lessac-medium')\""
+        )
+        return None
     return PiperVoice.load("en_US-lessac-medium")
 
 
 def _synthesize_sync(text: str) -> bytes:
     voice = _load_piper()
+    if voice is None:
+        return b""
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
         wf.setnchannels(1)

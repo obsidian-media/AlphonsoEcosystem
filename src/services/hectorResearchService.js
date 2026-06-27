@@ -13,6 +13,34 @@ import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceSe
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
 
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  const DELAYS = [500, 1000, 2000];
+  // Strip any AbortSignal from options — we create a fresh one per attempt below
+  const { signal: _ignored, ...baseOptions } = options;
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const resp = await fetch(url, { ...baseOptions, signal: controller.signal });
+      clearTimeout(timer);
+      return resp;
+    } catch (error) {
+      clearTimeout(timer);
+      lastError = error;
+      if (attempt < maxRetries) {
+        const delayMs = DELAYS[attempt] ?? 2000;
+        try {
+          const { logError } = await import('./crashLogService.js');
+          logError('hector_rss_retry', { url, attempt: attempt + 1 });
+        } catch { /* non-critical */ }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 async function retryWithBackoff(fn, maxRetries = 3) {
   let lastError = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -391,10 +419,7 @@ export async function fetchRssSources(query, limit = 8) {
   const results = [];
   await Promise.allSettled(scored.map(async ({ feed }) => {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      const resp = await fetch(feed.url, { signal: controller.signal });
-      clearTimeout(timer);
+      const resp = await fetchWithRetry(feed.url);
       if (!resp.ok) return;
       const text = await resp.text();
       const items = parseRssItems(text, feed.url, Math.ceil(limit / scored.length) + 1);
