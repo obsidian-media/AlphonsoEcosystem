@@ -67,7 +67,6 @@ jobs:
         run: |
           mkdir -p build/output
           
-          # Create export options
           cat > ExportOptions.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -91,6 +90,23 @@ jobs:
             -exportPath build/output \
             | xcpretty
 
+      - name: Upload to TestFlight
+        if: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID != '' }}
+        working-directory: ios/AlphonsoCompanion
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER }}
+          API_KEY_PATH: ${{ runner.temp }}/api_key.p8
+        run: |
+          echo -n "${{ secrets.APP_STORE_CONNECT_API_KEY }}" > "$API_KEY_PATH"
+          
+          xcrun altool --upload-app \
+            --type ios \
+            --file build/output/AlphonsoCompanion.ipa \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_ISSUER" \
+            --apiKeyPath "$API_KEY_PATH"
+
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
@@ -108,8 +124,19 @@ jobs:
           echo "## iOS Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Artifact:** AlphonsoCompanion-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "**To install on iPhone:**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download the .ipa from the Artifacts section" >> $GITHUB_STEP_SUMMARY
-          echo "2. On a Mac: \`ios-deploy --bundle YourApp.ipa\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. Or use Apple Configurator 2 to sideload" >> $GITHUB_STEP_SUMMARY
-          echo "4. Or upload to TestFlight for wireless install" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install on iPhone (No Mac Required)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 1: AltStore (Windows)**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download .ipa from Artifacts section above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Install [AltStore](https://altstore.io) on your Windows PC" >> $GITHUB_STEP_SUMMARY
+          echo "3. Connect iPhone via USB, open AltStore, install the .ipa" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 2: TestFlight (Wireless)**" >> $GITHUB_STEP_SUMMARY
+          echo "1. If TestFlight secrets are set, .ipa was uploaded automatically" >> $GITHUB_STEP_SUMMARY
+          echo "2. Install TestFlight app on iPhone" >> $GITHUB_STEP_SUMMARY
+          echo "3. Check email for invitation, install from TestFlight" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 3: Sideloadly (Windows)**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download [Sideloadly](https://sideloadly.io)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Connect iPhone, drag .ipa into Sideloadly" >> $GITHUB_STEP_SUMMARY
