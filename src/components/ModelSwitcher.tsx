@@ -16,7 +16,7 @@ interface ModelSwitcherProps {
   compact?: boolean;
 }
 
-export function ModelSwitcher({ currentModel, onSwitch, compact = false }: ModelSwitcherProps): JSX.Element {
+export function ModelSwitcher({ currentModel, onSwitch, compact = false }: ModelSwitcherProps): React.JSX.Element {
   return (
     <div className={`flex rounded-lg overflow-hidden border border-zinc-700 ${compact ? 'text-xs' : 'text-sm'}`}>
       {AI_MODELS.map((model) => (
@@ -34,7 +34,7 @@ interface OllamaModelPickerProps {
   initialModel?: string;
 }
 
-export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPickerProps): JSX.Element {
+export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPickerProps): React.JSX.Element {
   const [models, setModels] = useState<string[]>([]);
   const [selected, setSelected] = useState<string>(() => initialModel ?? localStorage.getItem(STORAGE_KEY) ?? '');
   const [ollamaOnline, setOllamaOnline] = useState<boolean | null>(null);

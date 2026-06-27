@@ -41,7 +41,7 @@ const PAGE_TABS = [
 
 type TabId = typeof PAGE_TABS[number]['id'];
 
-function InfoCell({ label, value }: InfoCellProps): JSX.Element {
+function InfoCell({ label, value }: InfoCellProps): React.JSX.Element {
   return (
     <div className="rounded-lg border border-white/[0.06] bg-zinc-900/40 p-2.5">
       <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">{label}</div>
@@ -50,7 +50,7 @@ function InfoCell({ label, value }: InfoCellProps): JSX.Element {
   );
 }
 
-export function HectorResearchDesk({ onHectorStateChange }: Props): JSX.Element {
+export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabId>('new');
   const [question, setQuestion] = useState('');
   const [sourceType, setSourceType] = useState('official_docs');

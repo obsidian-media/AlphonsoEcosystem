@@ -117,7 +117,7 @@ interface CredentialSectionProps {
   savedLabel?: string;
 }
 
-function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }: CredentialSectionProps): JSX.Element {
+function CredentialSection({ title, icon: Icon, borderColor, bgColor, accentColor, fields, onSave, hint, savedLabel }: CredentialSectionProps): React.JSX.Element {
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -173,7 +173,7 @@ interface ConnectorCardProps {
   onVerifyEnv: () => void;
 }
 
-function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): JSX.Element {
+function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JSX.Element {
   const Icon = CONNECTOR_ICONS[connector.id] ?? MessageCircle;
   const displayStatus = getDisplayStatus(connector);
   const live = isConnectorLive(connector);
@@ -213,7 +213,7 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): JSX.Elem
 
 type NoticeType = 'info' | 'error' | 'success';
 
-export function ConnectorSetupPanel(): JSX.Element {
+export function ConnectorSetupPanel(): React.JSX.Element {
   const [connectors, setConnectors] = useState<Connector[]>(() => listConnectors() as Connector[]);
   const [audit, setAudit] = useState(() => listConnectorAudit());
   const [authProfiles, setAuthProfiles] = useState(() => listConnectorAuthProfiles());

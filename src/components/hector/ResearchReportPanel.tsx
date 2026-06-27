@@ -29,7 +29,7 @@ interface ReportListProps {
   empty: string;
 }
 
-function ReportList({ title, rows = [], empty }: ReportListProps): JSX.Element {
+function ReportList({ title, rows = [], empty }: ReportListProps): React.JSX.Element {
   return (
     <div>
       <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{title}</div>
@@ -44,7 +44,7 @@ function ReportList({ title, rows = [], empty }: ReportListProps): JSX.Element {
   );
 }
 
-export function ResearchReportPanel({ report }: Props): JSX.Element {
+export function ResearchReportPanel({ report }: Props): React.JSX.Element {
   return (
     <section className="rounded-2xl border border-teal-300/15 bg-zinc-950/72 p-4">
       <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-200/75">Research Report</div>

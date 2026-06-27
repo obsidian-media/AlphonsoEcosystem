@@ -15,7 +15,7 @@ interface Props {
   agentProfiles?: Record<string, AgentProfile>;
 }
 
-export function AgentCapabilityMatrix({ agentPermissions = {}, agentProfiles = {} }: Props): JSX.Element {
+export function AgentCapabilityMatrix({ agentPermissions = {}, agentProfiles = {} }: Props): React.JSX.Element {
   const rows = Object.entries(agentPermissions);
   return (
     <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-4">

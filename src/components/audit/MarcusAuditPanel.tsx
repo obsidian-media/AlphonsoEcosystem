@@ -77,7 +77,7 @@ interface FieldSelectProps {
   options: { value: string; label: string }[];
 }
 
-function FieldInput({ label, value, onChange, placeholder = '', multiline = false }: FieldInputProps): JSX.Element {
+function FieldInput({ label, value, onChange, placeholder = '', multiline = false }: FieldInputProps): React.JSX.Element {
   const cls = 'w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-400/40';
   return (
     <div>
@@ -89,7 +89,7 @@ function FieldInput({ label, value, onChange, placeholder = '', multiline = fals
   );
 }
 
-function FieldSelect({ label, value, onChange, options }: FieldSelectProps): JSX.Element {
+function FieldSelect({ label, value, onChange, options }: FieldSelectProps): React.JSX.Element {
   return (
     <div>
       <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{label}</label>
@@ -108,7 +108,7 @@ function riskColor(level?: string): string {
   return 'text-emerald-400';
 }
 
-export function MarcusAuditPanel({ auditReport }: Props): JSX.Element {
+export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
   const [platform, setPlatform] = useState<string>('instagram');
   const [fields, setFields] = useState<PlatformFields>({ ...PLATFORM_DEFAULTS.instagram });
   const [approved, setApproved] = useState(false);

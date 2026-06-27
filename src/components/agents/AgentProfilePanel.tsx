@@ -15,7 +15,7 @@ interface Props {
   agent?: Agent | null;
 }
 
-export function AgentProfilePanel({ agent }: Props): JSX.Element {
+export function AgentProfilePanel({ agent }: Props): React.JSX.Element {
   if (!agent) {
     return <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-3 text-sm text-zinc-500">Select an agent to inspect profile details.</div>;
   }

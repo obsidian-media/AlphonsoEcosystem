@@ -1,7 +1,7 @@
 import React from 'react';
 import { listPendingApprovals } from '../../services/approval/approvalService';
 
-export function ApprovalCenterPanel(): JSX.Element {
+export function ApprovalCenterPanel(): React.JSX.Element {
   const pending = listPendingApprovals();
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4">

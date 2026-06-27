@@ -16,7 +16,7 @@ interface Props {
   report?: Report | null;
 }
 
-export function CitationPanel({ report }: Props): JSX.Element {
+export function CitationPanel({ report }: Props): React.JSX.Element {
   const proofs = report?.sourceProofs ?? [];
   const urls = proofs.length ? proofs.map((proof) => proof.url) : report?.urls ?? [];
   return (

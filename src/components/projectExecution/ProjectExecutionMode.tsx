@@ -79,7 +79,7 @@ interface EmptyStateProps { text: string; onAction?: () => void; actionLabel?: s
 interface RowProps { label: string; value: unknown; }
 interface SmallBtnProps { onClick: () => void; tone?: string; children: React.ReactNode; }
 
-function Card({ label, children }: CardProps): JSX.Element {
+function Card({ label, children }: CardProps): React.JSX.Element {
   return (
     <div className="card">
       {label && <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>}
@@ -88,7 +88,7 @@ function Card({ label, children }: CardProps): JSX.Element {
   );
 }
 
-function EmptyState({ text, onAction, actionLabel }: EmptyStateProps): JSX.Element {
+function EmptyState({ text, onAction, actionLabel }: EmptyStateProps): React.JSX.Element {
   return (
     <div className="py-6 text-center space-y-3">
       <p className="text-[12px] text-[var(--text-3)]">{text}</p>
@@ -97,7 +97,7 @@ function EmptyState({ text, onAction, actionLabel }: EmptyStateProps): JSX.Eleme
   );
 }
 
-function Row({ label, value }: RowProps): JSX.Element {
+function Row({ label, value }: RowProps): React.JSX.Element {
   return (
     <div className="flex items-start gap-2">
       <span className="shrink-0 text-zinc-600">{label}:</span>
@@ -106,7 +106,7 @@ function Row({ label, value }: RowProps): JSX.Element {
   );
 }
 
-function SmallBtn({ onClick, tone, children }: SmallBtnProps): JSX.Element {
+function SmallBtn({ onClick, tone, children }: SmallBtnProps): React.JSX.Element {
   const cls = tone === 'green'
     ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15'
     : tone === 'amber'
@@ -123,7 +123,7 @@ function parseCsv(value = ''): string[] {
   return String(value).split(',').map((v) => v.trim()).filter(Boolean);
 }
 
-export function ProjectExecutionMode(): JSX.Element {
+export function ProjectExecutionMode(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabId>('setup');
   const [intake, setIntake] = useState<Intake>({
     projectName: '', projectDescription: '', stack: '', deadline: '',
@@ -167,7 +167,7 @@ export function ProjectExecutionMode(): JSX.Element {
       projectId: (workshop.project as { id: string }).id,
       agentId: 'jose',
       title: `${(workshop.project as { projectName: string }).projectName} execution packet generated`,
-      content: (next.finalPacket as { summary: string }).summary,
+      content: ((next as unknown as { finalPacket: { summary: string } }).finalPacket).summary,
       confidence: 'inferred',
       source: 'project_execution_mode',
       tags: ['project_execution', 'jose', 'packet']
@@ -238,7 +238,7 @@ export function ProjectExecutionMode(): JSX.Element {
             <Card label="Operational Mode">
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-1.5">
-                  {(OPERATIONAL_MODES as { id: string; label: string }[]).map((item) => (
+                  {(OPERATIONAL_MODES as unknown as { id: string; label: string }[]).map((item) => (
                     <button key={item.id} type="button" onClick={() => { const next = setOperationalMode(item.id) as Record<string, unknown>; setOpMode(next); }}
                       className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${opModeTyped.id === item.id ? 'border-indigo-400/25 bg-indigo-500/10 text-indigo-200' : 'border-white/[0.07] bg-zinc-900/50 text-zinc-400 hover:text-zinc-200'}`}>
                       {item.label}
@@ -367,7 +367,7 @@ export function ProjectExecutionMode(): JSX.Element {
                   <Card label="Final Packet"><FinalExecutionPacket finalPacket={result.finalPacket as never} /></Card>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <Card label="Roadmap"><ProjectRoadmap timeline={(result.project as Record<string, unknown>)?.timeline as never ?? (result.project as Record<string, unknown>)?.output?.proposedChanges as never ?? []} /></Card>
+                  <Card label="Roadmap"><ProjectRoadmap timeline={((result.project as Record<string, unknown>)?.timeline ?? ((result.project as Record<string, unknown>)?.output as Record<string, unknown>)?.proposedChanges ?? []) as never} /></Card>
                   <Card label="Risk Register"><ProjectRiskRegister risks={(result.project as Record<string, unknown>)?.riskRegister as never} /></Card>
                   <Card label="Verification Checklist"><ProjectVerificationChecklist checklist={(result.project as Record<string, unknown>)?.verificationChecklist as never} /></Card>
                 </div>

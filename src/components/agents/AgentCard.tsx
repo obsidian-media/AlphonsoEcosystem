@@ -13,7 +13,7 @@ interface Props {
   onClick?: (id: string) => void;
 }
 
-export function AgentCard({ agent, active, onClick }: Props): JSX.Element {
+export function AgentCard({ agent, active, onClick }: Props): React.JSX.Element {
   return (
     <button
       type="button"

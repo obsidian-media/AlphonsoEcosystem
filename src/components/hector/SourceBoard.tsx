@@ -21,7 +21,7 @@ interface Props {
   report?: Report | null;
 }
 
-export function SourceBoard({ report }: Props): JSX.Element {
+export function SourceBoard({ report }: Props): React.JSX.Element {
   const sources = report?.sources ?? [];
   return (
     <section className="rounded-2xl border border-teal-300/15 bg-zinc-950/72 p-4">
