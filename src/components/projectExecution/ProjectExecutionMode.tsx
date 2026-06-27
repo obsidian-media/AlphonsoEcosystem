@@ -167,7 +167,7 @@ export function ProjectExecutionMode(): JSX.Element {
       projectId: (workshop.project as { id: string }).id,
       agentId: 'jose',
       title: `${(workshop.project as { projectName: string }).projectName} execution packet generated`,
-      content: (next.finalPacket as { summary: string }).summary,
+      content: ((next as unknown as { finalPacket: { summary: string } }).finalPacket).summary,
       confidence: 'inferred',
       source: 'project_execution_mode',
       tags: ['project_execution', 'jose', 'packet']
@@ -238,7 +238,7 @@ export function ProjectExecutionMode(): JSX.Element {
             <Card label="Operational Mode">
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-1.5">
-                  {(OPERATIONAL_MODES as { id: string; label: string }[]).map((item) => (
+                  {(OPERATIONAL_MODES as unknown as { id: string; label: string }[]).map((item) => (
                     <button key={item.id} type="button" onClick={() => { const next = setOperationalMode(item.id) as Record<string, unknown>; setOpMode(next); }}
                       className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${opModeTyped.id === item.id ? 'border-indigo-400/25 bg-indigo-500/10 text-indigo-200' : 'border-white/[0.07] bg-zinc-900/50 text-zinc-400 hover:text-zinc-200'}`}>
                       {item.label}
@@ -367,7 +367,7 @@ export function ProjectExecutionMode(): JSX.Element {
                   <Card label="Final Packet"><FinalExecutionPacket finalPacket={result.finalPacket as never} /></Card>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <Card label="Roadmap"><ProjectRoadmap timeline={(result.project as Record<string, unknown>)?.timeline as never ?? (result.project as Record<string, unknown>)?.output?.proposedChanges as never ?? []} /></Card>
+                  <Card label="Roadmap"><ProjectRoadmap timeline={((result.project as Record<string, unknown>)?.timeline ?? ((result.project as Record<string, unknown>)?.output as Record<string, unknown>)?.proposedChanges ?? []) as never} /></Card>
                   <Card label="Risk Register"><ProjectRiskRegister risks={(result.project as Record<string, unknown>)?.riskRegister as never} /></Card>
                   <Card label="Verification Checklist"><ProjectVerificationChecklist checklist={(result.project as Record<string, unknown>)?.verificationChecklist as never} /></Card>
                 </div>
