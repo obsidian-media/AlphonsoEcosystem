@@ -85,7 +85,7 @@ dependencies = [
  "hostname",
  "log",
  "mdns-sd",
- "rand 0.8.6",
+ "rand 0.9.4",
  "reqwest 0.12.28",
  "rusqlite",
  "serde",
