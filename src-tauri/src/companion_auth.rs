@@ -16,7 +16,7 @@ impl PinManager {
   }
 
   pub async fn generate(&self) -> String {
-    let pin: String = format!("{:06}", rand::thread_rng().gen_range(0..1_000_000));
+    let pin: String = format!("{:06}", rand::rng().random_range(0..1_000_000));
     *self.current_pin.lock().await = Some((pin.clone(), Instant::now()));
     pin
   }
