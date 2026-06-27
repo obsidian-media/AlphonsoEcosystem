@@ -5,7 +5,11 @@ import {
   buildNovaAnalysisPrompt,
   parseNovaAnalysisResponse,
   buildNovaFallbackAnalysis,
-  runNovaAnalysis
+  runNovaAnalysis,
+  saveOpportunityScore,
+  getOpportunityHistory,
+  setAlertThreshold,
+  getAlertThreshold
 } from '../services/novaAnalysisService';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -275,5 +279,60 @@ describe('runNovaAnalysis', () => {
   it('returns contractAction', async () => {
     const result = await runNovaAnalysis('analyze opportunity', { actionType: 'opportunity_analysis' }, {});
     expect(result).toHaveProperty('contractAction');
+  });
+});
+
+// ── saveOpportunityScore / getOpportunityHistory ───────────────────────────
+
+describe('saveOpportunityScore and getOpportunityHistory', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('saves and retrieves opportunity scores', () => {
+    saveOpportunityScore(85, 'High opportunity detected');
+    const history = getOpportunityHistory();
+    expect(history.length).toBe(1);
+    expect(history[0].score).toBe(85);
+    expect(history[0].recommendation).toBe('High opportunity detected');
+  });
+
+  it('caps history at 30 entries', () => {
+    for (let i = 0; i < 40; i++) {
+      saveOpportunityScore(i % 100, `Rec ${i}`);
+    }
+    const history = getOpportunityHistory();
+    expect(history.length).toBe(30);
+  });
+
+  it('returns empty array when no history', () => {
+    const history = getOpportunityHistory();
+    expect(history).toEqual([]);
+  });
+
+  it('getOpportunityHistory survives corrupt localStorage', () => {
+    localStorage.setItem('alphonso_nova_history_v1', 'NOT_JSON');
+    const history = getOpportunityHistory();
+    expect(Array.isArray(history)).toBe(true);
+  });
+});
+
+// ── setAlertThreshold / getAlertThreshold ──────────────────────────────────
+
+describe('alertThreshold', () => {
+  it('getAlertThreshold returns default 75', () => {
+    expect(getAlertThreshold()).toBe(75);
+  });
+
+  it('setAlertThreshold updates and get returns new value', () => {
+    setAlertThreshold(80);
+    expect(getAlertThreshold()).toBe(80);
+  });
+
+  it('setAlertThreshold clamps to 0-100', () => {
+    setAlertThreshold(150);
+    expect(getAlertThreshold()).toBe(100);
+    setAlertThreshold(-10);
+    expect(getAlertThreshold()).toBe(0);
   });
 });

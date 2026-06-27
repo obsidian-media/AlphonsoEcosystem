@@ -16,6 +16,9 @@ const {
   replayPacketFromDeadLetter,
   forceDeadLetterPacket,
   markPacketInterrupted,
+  getDeadLetterCount,
+  getOldestDeadLetterTimestamp,
+  retryDeadLetter,
   ORCHESTRATION_QUEUE_SCOPE
 } = await import('../services/orchestrationQueueService.ts');
 
@@ -355,6 +358,78 @@ describe('orchestrationQueueService', () => {
       const result = markPacketInterrupted('pkt-int3');
       expect(result.packet.confidence).toBe('failed');
       expect(result.packet.verificationState).toBe('failed');
+    });
+  });
+
+  describe('getDeadLetterCount', () => {
+    it('returns 0 when no dead letter packets exist', () => {
+      seedPacket('p1', 'queued');
+      seedPacket('p2', 'executing');
+      const count = getDeadLetterCount();
+      expect(count).toBe(0);
+    });
+
+    it('returns the count of dead_letter packets', () => {
+      seedPacket('p1', 'dead_letter');
+      seedPacket('p2', 'dead_letter');
+      seedPacket('p3', 'queued');
+      seedPacket('p4', 'dead_letter');
+      const count = getDeadLetterCount();
+      expect(count).toBe(3);
+    });
+
+    it('returns 0 when localStorage is empty', () => {
+      const count = getDeadLetterCount();
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('getOldestDeadLetterTimestamp', () => {
+    it('returns null when no dead letter packets exist', () => {
+      seedPacket('p1', 'queued');
+      const result = getOldestDeadLetterTimestamp();
+      expect(result).toBeNull();
+    });
+
+    it('returns ISO string of the oldest dead_letter packet', () => {
+      const t1 = Date.now() - 60000;
+      const t2 = Date.now() - 30000;
+      seedPacket('p-dl-old', 'dead_letter', { createdAtMs: t1 });
+      seedPacket('p-dl-new', 'dead_letter', { createdAtMs: t2 });
+      seedPacket('p-queued', 'queued', { createdAtMs: Date.now() });
+      const result = getOldestDeadLetterTimestamp();
+      expect(result).toBe(new Date(t1).toISOString());
+    });
+  });
+
+  describe('retryDeadLetter', () => {
+    it('returns 0 when no dead letter packets exist', () => {
+      seedPacket('p1', 'queued');
+      const count = retryDeadLetter();
+      expect(count).toBe(0);
+    });
+
+    it('replays all dead_letter packets and returns requeued count', () => {
+      seedPacket('p-dl-1', 'dead_letter');
+      seedPacket('p-dl-2', 'dead_letter');
+      seedPacket('p-ok', 'queued');
+      const count = retryDeadLetter();
+      expect(count).toBe(2);
+      const packets = JSON.parse(localStorage.getItem(PACKET_KEY));
+      const dl1 = packets.find((p) => p.id === 'p-dl-1');
+      const dl2 = packets.find((p) => p.id === 'p-dl-2');
+      const ok = packets.find((p) => p.id === 'p-ok');
+      expect(dl1.status).toBe('queued');
+      expect(dl2.status).toBe('queued');
+      expect(ok.status).toBe('queued');
+    });
+
+    it('handles already-replayed packets gracefully (no double replay)', () => {
+      seedPacket('p-dl-1', 'dead_letter');
+      const first = retryDeadLetter();
+      expect(first).toBe(1);
+      const second = retryDeadLetter();
+      expect(second).toBe(0);
     });
   });
 

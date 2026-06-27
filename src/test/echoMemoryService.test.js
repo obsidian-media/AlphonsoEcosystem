@@ -6,7 +6,10 @@ import {
   parseEchoMemoryResponse,
   buildEchoFallbackEntry,
   normalizeMemoryConfidence,
-  runEchoPreservation
+  runEchoPreservation,
+  synthesizeSession,
+  searchEchoMemorySemantic,
+  isChromaHealthy
 } from '../services/echoMemoryService';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -261,5 +264,53 @@ describe('runEchoPreservation', () => {
     const result = await runEchoPreservation('preserve', {}, {});
     const schemaArtifact = result.artifacts.find((a) => a.type === 'echo_memory_schema');
     expect(schemaArtifact?.schema).toHaveProperty('retentionPolicy');
+  });
+});
+
+// ── synthesizeSession ──────────────────────────────────────────────────────
+
+describe('synthesizeSession', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns null for empty messages array', async () => {
+    const result = await synthesizeSession([]);
+    expect(result).toBeNull();
+  });
+
+  it('returns null for non-array input', async () => {
+    const result = await synthesizeSession(null);
+    expect(result).toBeNull();
+  });
+
+  it('synthesizes valid messages into a preservation result', async () => {
+    const result = await synthesizeSession([
+      { role: 'user', content: 'remember this important decision about the project' },
+      { role: 'assistant', content: 'The decision has been recorded.' }
+    ]);
+    expect(result).not.toBeNull();
+    expect(result).toHaveProperty('summary');
+  });
+});
+
+// ── searchEchoMemorySemantic ───────────────────────────────────────────────
+
+describe('searchEchoMemorySemantic', () => {
+  it('returns an array for a keyword query', async () => {
+    const result = await searchEchoMemorySemantic('test query');
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it('handles empty query gracefully', async () => {
+    const result = await searchEchoMemorySemantic('');
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+// ── isChromaHealthy ────────────────────────────────────────────────────────
+
+describe('isChromaHealthy', () => {
+  it('returns a boolean', async () => {
+    const result = await isChromaHealthy();
+    expect(typeof result).toBe('boolean');
   });
 });

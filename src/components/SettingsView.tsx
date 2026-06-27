@@ -711,6 +711,7 @@ export function SettingsView({
                   {'# Free tier: 2,000 queries/month — signup at search.brave.com/register\nBRAVE_SEARCH_API_KEY=your_key_here'}
                 </div>
               )}
+            </div>
           </div>
 
           <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">

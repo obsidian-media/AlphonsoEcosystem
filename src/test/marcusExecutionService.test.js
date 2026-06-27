@@ -1,8 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   selectDistributionTarget,
   buildMarcusExecutionRecord,
-  runMarcusDistribution
+  runMarcusDistribution,
+  executeMarcusGitHubAction,
+  executeMarcusSlackAction,
+  executeMarcusN8nAction,
+  schedulePublish,
+  getScheduledPublishes,
+  cancelScheduledPublish,
+  startScheduler,
+  stopScheduler
 } from '../services/marcusExecutionService';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -190,5 +198,104 @@ describe('runMarcusDistribution', () => {
   it('handles null priorOutputs gracefully', async () => {
     const result = await runMarcusDistribution('action', { actionType: 'review' }, null);
     expect(result).toHaveProperty('summary');
+  });
+});
+
+// ── executeMarcusGitHubAction ──────────────────────────────────────────────
+
+describe('executeMarcusGitHubAction', () => {
+  it('returns setupRequired when GitHub NOT authenticated', async () => {
+    const result = await executeMarcusGitHubAction('test', { actionType: 'github_issue_create' });
+    expect(result.ok).toBe(false);
+    expect(result.setupRequired).toBe(true);
+  });
+});
+
+// ── executeMarcusSlackAction ───────────────────────────────────────────────
+
+describe('executeMarcusSlackAction', () => {
+  it('returns setupRequired when Slack NOT authenticated', async () => {
+    const result = await executeMarcusSlackAction('test', {});
+    expect(result.ok).toBe(false);
+    expect(result.setupRequired).toBe(true);
+  });
+});
+
+// ── executeMarcusN8nAction ─────────────────────────────────────────────────
+
+describe('executeMarcusN8nAction', () => {
+  it('returns setupRequired when n8n NOT authenticated', async () => {
+    const result = await executeMarcusN8nAction('test', {});
+    expect(result.ok).toBe(false);
+    expect(result.setupRequired).toBe(true);
+  });
+});
+
+// ── Schedule CRUD ──────────────────────────────────────────────────────────
+
+describe('schedulePublish', () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it('returns an entry with id, status pending', () => {
+    const entry = schedulePublish({ content: 'Hello', platform: 'telegram', scheduledAt: Date.now() + 60000, agentId: 'marcus' });
+    expect(entry).toHaveProperty('id');
+    expect(entry.status).toBe('pending');
+    expect(entry.platform).toBe('telegram');
+    expect(entry.content).toBe('Hello');
+  });
+
+  it('defaults agentId to marcus when not provided', () => {
+    const entry = schedulePublish({ content: 'test', platform: 'slack', scheduledAt: Date.now() + 60000 });
+    expect(entry.agentId).toBe('marcus');
+  });
+});
+
+describe('getScheduledPublishes', () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it('returns empty array when no schedules exist', () => {
+    expect(getScheduledPublishes()).toEqual([]);
+  });
+
+  it('returns previously scheduled publishes', () => {
+    schedulePublish({ content: 'A', platform: 'telegram', scheduledAt: Date.now() + 60000, agentId: 'marcus' });
+    schedulePublish({ content: 'B', platform: 'slack', scheduledAt: Date.now() + 60000, agentId: 'marcus' });
+    const list = getScheduledPublishes();
+    expect(list.length).toBe(2);
+  });
+});
+
+describe('cancelScheduledPublish', () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it('returns false for non-existent id', () => {
+    expect(cancelScheduledPublish('nonexistent')).toBe(false);
+  });
+
+  it('cancels an existing scheduled publish', () => {
+    const entry = schedulePublish({ content: 'test', platform: 'telegram', scheduledAt: Date.now() + 60000, agentId: 'marcus' });
+    const result = cancelScheduledPublish(entry.id);
+    expect(result).toBe(true);
+    const updated = getScheduledPublishes().find((e) => e.id === entry.id);
+    expect(updated.status).toBe('cancelled');
+  });
+});
+
+// ── Scheduler start/stop ───────────────────────────────────────────────────
+
+describe('startScheduler / stopScheduler', () => {
+  afterEach(() => { stopScheduler(); });
+
+  it('startScheduler does not throw', () => {
+    expect(() => startScheduler(100)).not.toThrow();
+  });
+
+  it('stopScheduler does not throw when no scheduler is running', () => {
+    expect(() => stopScheduler()).not.toThrow();
+  });
+
+  it('stopScheduler can be called after startScheduler', () => {
+    startScheduler(100);
+    expect(() => stopScheduler()).not.toThrow();
   });
 });

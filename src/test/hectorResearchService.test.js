@@ -111,6 +111,7 @@ import {
   parseRssItems,
   RSS_FEED_CATALOG,
   runHectorLiveResearch,
+  runMultiSourceResearch,
   scoreRssFeed
 } from '../services/hectorResearchService';
 
@@ -236,5 +237,32 @@ describe('RSS failover', () => {
     const results = await fetchRssSources('artificial intelligence tech', 8);
     expect(Array.isArray(results)).toBe(true);
     expect(results).toEqual([]);
+  });
+});
+
+// ── runMultiSourceResearch (Tavily/fallback paths) ─────────────────────────
+
+vi.mock('../services/connectors/tavilyConnector.js', () => ({
+  isTavilyConfigured: vi.fn(() => true),
+  searchTavily: vi.fn(async () => ({
+    summary: 'Tavily result summary',
+    sources: [{ url: 'https://tavily.example.com/1', title: 'Tavily Article', snippet: 'Tavily snippet.', relevance: 0.9 }],
+    confidenceLevel: 'high',
+    provider: 'tavily'
+  }))
+}));
+
+describe('runMultiSourceResearch Tavily and fallback', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    braveEnabled = false;
+  });
+
+  it('includes tavily in provider chain when configured', async () => {
+    const result = await runMultiSourceResearch('test query for tavily');
+    expect(result.ok).toBe(true);
+    expect(result.providerChain).toContain('tavily');
+    expect(result.sources.length).toBeGreaterThan(0);
+    expect(result.sources.some((s) => s.provider === 'tavily')).toBe(true);
   });
 });

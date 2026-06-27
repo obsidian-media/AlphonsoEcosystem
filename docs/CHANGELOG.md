@@ -6,6 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.2] - 2026-06-27 — TypeScript Migration Sprint (Cline)
+
+### TypeScript Migration
+- Migrated 60 `.jsx` component files → `.tsx` with full prop interfaces
+- 76 total `.tsx` components; 2 `.jsx` remaining (OpenCode-owned: ConnectorSetupPanel, ModelSwitcher)
+- All migrated components have typed `Props` interfaces, `useState<T>`, `useRef<T>`, and event handlers
+- Pre-existing type errors fixed across 11 files (EcosystemHub, EcosystemMaturityPanels, MarketingLandingPage, MissionRoom, MiyaStudio, NotionSyncPanel, OllamaPreflightPanel, OperatorDashboard, OrchestratorView, ProductionReadinessPanel, SelfDevelopmentPanel)
+- `npm run typecheck` — 0 errors
+
+### Test Coverage
+- New test file: `pluginSigningService.test.js` (17 tests) — ECDSA signing, verification, trust key management
+- Expanded: `connectorRegistryService.test.js` (+17 tests) — listConnectors, setConnectorStatus, appendConnectorAudit, gateConnectorAction, circuit breaker
+- 5 new component test files: NotificationCenter, AgentPerformanceView, OnboardingWizard, SentinelFindingModal, WorkflowBuilderView
+- New: `unifiedMemoryService.test.js` (24 tests)
+- Total: **158 test files / 2147 tests** — all passing
+- `npm run lint` — clean
+
+### Documentation
+- `docs/ALPHONSO_GROUND_TRUTH.md` updated: component count, test count, version
+- `CLAUDE.md` updated: test counts, component counts, directory structure
+
+---
+
 ## [2.4.1] - 2026-06-27 — Bug & Gap Closure Sprint (OpenCode)
 
 ### Voice OS

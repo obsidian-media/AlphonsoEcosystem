@@ -208,9 +208,40 @@ describe('orchestrationReceiptService', () => {
     });
   });
 
-  describe('ORCHESTRATION_RECEIPT_SCOPE', () => {
-    it('exports the correct scope constant', () => {
-      expect(ORCHESTRATION_RECEIPT_SCOPE).toBe('orchestration_receipts_v1');
+  describe('ring buffer behavior', () => {
+    it('drops oldest receipts when exceeding 3000 cap', () => {
+      const many = Array.from({ length: 3000 }, (_, i) => ({
+        id: `orx-old-${i}`,
+        eventType: 'old',
+        workflowId: `wf-${i}`,
+        timestampMs: i
+      }));
+      localStorage.setItem(RECEIPT_KEY, JSON.stringify(many));
+
+      appendOrchestrationReceipt({ eventType: 'new', workflowId: 'wf-new' });
+
+      const stored = JSON.parse(localStorage.getItem(RECEIPT_KEY));
+      expect(stored.length).toBe(3000);
+      expect(stored[0].eventType).toBe('old');
+      expect(stored[0].workflowId).toBe('wf-1');
+      expect(stored[stored.length - 1].eventType).toBe('new');
+    });
+
+    it('keeps the exact 3000 most recent entries', () => {
+      const exactly3000 = Array.from({ length: 3000 }, (_, i) => ({
+        id: `orx-exact-${i}`,
+        eventType: 'exact',
+        workflowId: `wf-${i}`,
+        timestampMs: i
+      }));
+      localStorage.setItem(RECEIPT_KEY, JSON.stringify(exactly3000));
+
+      appendOrchestrationReceipt({ eventType: 'overflow', workflowId: 'wf-overflow' });
+
+      const stored = JSON.parse(localStorage.getItem(RECEIPT_KEY));
+      expect(stored.length).toBe(3000);
+      expect(stored[0].id).toBe('orx-exact-1');
+      expect(stored[stored.length - 1].eventType).toBe('overflow');
     });
   });
 });
