@@ -30,25 +30,19 @@ const CLAIMS = [
     file: 'README.md',
     label: 'version badge',
     pattern: /version-([\d.]+)-blue/,
-    actualFn: () => '2.0.2'
+    actualFn: () => '2.4.4'
   },
   {
     file: 'README.md',
     label: 'test badge',
     pattern: /tests-(\d+)%20passing/,
-    actualFn: () => '1100'
+    actualFn: () => '2151'
   },
   {
     file: 'README.md',
     label: 'subtitle version',
     pattern: /> \*\*v([\d.]+)\*\*/,
-    actualFn: () => '2.0.2'
-  },
-  {
-    file: 'README.md',
-    label: 'architecture services count',
-    pattern: /│\s+(\d+) Services\s+│/,
-    actualFn: () => getAllCounts().services.files
+    actualFn: () => '2.4.4'
   },
   {
     file: 'README.md',
@@ -70,38 +64,9 @@ const CLAIMS = [
   },
   {
     file: 'README.md',
-    label: 'What\'s New test count',
-    pattern: /- \*\*([\d,]+) Tests\*\*/,
-    actualFn: () => {
-      const c = getAllCounts();
-      return c.tests.files > 0 ? '1,100' : '0';
-    }
-  },
-  {
-    file: 'README.md',
-    label: 'What\'s New test files',
-    pattern: /\*\*([\d,]+) Tests\*\* — (\d+) test files/,
-    actualFn: () => getAllCounts().tests.files,
-    group: 2
-  },
-  {
-    file: 'README.md',
-    label: "What's New Rust unit tests",
-    pattern: /(\d+) Rust unit tests across (\d+) modules/,
-    actualFn: () => getAllCounts().rustTests
-  },
-  {
-    file: 'README.md',
-    label: "What's New modules count",
-    pattern: /(\d+) Rust unit tests across (\d+) modules/,
-    actualFn: () => getAllCounts().rustSource.modules.length,
-    group: 2
-  },
-  {
-    file: 'README.md',
     label: 'dev test command count',
     pattern: /# ([\d,]+) tests across/,
-    actualFn: () => '1,100'
+    actualFn: () => '2,151'
   },
   {
     file: 'README.md',
@@ -116,11 +81,19 @@ const CLAIMS = [
     pattern: /(\d+) services already exist/,
     actualFn: () => getAllCounts().services.files
   },
+
   {
     file: 'README.md',
-    label: 'architecture diagram services',
-    pattern: /│\s+(\d+) Services\s+│/,
-    actualFn: () => getAllCounts().services.files
+    label: 'What\'s New Rust unit tests',
+    pattern: /(\d+) Rust unit tests across (\d+) modules/,
+    actualFn: () => getAllCounts().rustTests
+  },
+  {
+    file: 'README.md',
+    label: "What's New modules count",
+    pattern: /(\d+) Rust unit tests across (\d+) modules/,
+    actualFn: () => getAllCounts().rustSource.modules.length,
+    group: 2
   },
 
   // ── ARCHITECTURE.md ─────────────────────────────────────────
@@ -142,7 +115,7 @@ const CLAIMS = [
     file: 'AGENTS.md',
     label: 'version',
     pattern: /Version\*\*: ([\d.]+)/,
-    actualFn: () => '2.0.2'
+    actualFn: () => '2.4.4'
   },
   {
     file: 'AGENTS.md',
@@ -160,7 +133,7 @@ const CLAIMS = [
     file: 'AGENTS.md',
     label: 'directory structure tests count',
     pattern: /test files, ([\d,]+) tests/,
-    actualFn: () => '1,100'
+    actualFn: () => '2,151'
   },
   {
     file: 'AGENTS.md',
@@ -184,7 +157,7 @@ const CLAIMS = [
     file: 'AGENTS.md',
     label: 'build commands test count',
     pattern: /# ([\d,]+) tests \(/,
-    actualFn: () => '1,100'
+    actualFn: () => '2,151'
   },
   {
     file: 'AGENTS.md',
