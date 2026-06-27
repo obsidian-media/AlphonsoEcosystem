@@ -204,6 +204,11 @@ export function recordConnectorSuccess(connectorId, actionType = 'default') {
   }
 }
 
+export function resetConnectorCircuitState(connectorId, actionType = 'default') {
+  const key = getCircuitBreakerKey(connectorId, actionType);
+  delete circuitBreakerState[key];
+}
+
 export function getConnectorCircuitState(connectorId, actionType = 'default') {
   const key = getCircuitBreakerKey(connectorId, actionType);
   const state = circuitBreakerState[key];

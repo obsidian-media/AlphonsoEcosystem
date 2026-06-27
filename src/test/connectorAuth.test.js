@@ -68,10 +68,12 @@ describe('saveConnectorCredential / getConnectorCredential', () => {
     expect(getConnectorCredential('notion', 'NOTION_PARENT_PAGE_ID')).toBe('page-uuid-123');
   });
 
-  it('persists to localStorage', () => {
+  it('stores credential in memory and makes it retrievable', () => {
     saveConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN', 'bot-token-xyz');
-    const stored = JSON.parse(localStorage.getItem('alphonso_connector_credentials_v1'));
-    expect(stored?.telegram?.TELEGRAM_BOT_TOKEN).toBe('bot-token-xyz');
+    // Credentials go to Tauri KV (not localStorage) — verify via in-memory getter
+    expect(getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN')).toBe('bot-token-xyz');
+    // localStorage is intentionally cleared after KV write
+    expect(localStorage.getItem('alphonso_connector_credentials_v1')).toBeNull();
   });
 
   it('handles empty string value gracefully', () => {

@@ -131,6 +131,10 @@ export async function verifyPluginSignature(manifestObj) {
   return { ok: false, reason: 'Signature does not match any trusted signer key.' };
 }
 
+export function _resetTrustedSignerKeysForTesting() {
+  _trustedKeysCache = null;
+}
+
 export function getTrustedSignerKeys() {
   if (_trustedKeysCache !== null) return _trustedKeysCache;
   try {
@@ -167,7 +171,8 @@ function _persistTrustedKeys(keys) {
 export function addTrustedSignerKey(publicKeyJwk) {
   const current = getTrustedSignerKeys();
   if (!publicKeyJwk || !publicKeyJwk.kty) return false;
-  const exists = current.some((k) => JSON.stringify(k) === JSON.stringify(publicKeyJwk));
+  const normalize = ({ addedAt: _a, ...rest }) => JSON.stringify(rest);
+  const exists = current.some((k) => normalize(k) === normalize(publicKeyJwk));
   if (exists) return false;
   const next = [...current, { ...publicKeyJwk, addedAt: Date.now() }];
   _persistTrustedKeys(next);

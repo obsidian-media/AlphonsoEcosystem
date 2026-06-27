@@ -203,6 +203,10 @@ describe('policyEnforcementService', () => {
     });
 
     it('blocks missing credentials when auth enabled', () => {
+      // Disable approval/zero-cost/safe modes so auth check is reached first
+      localStorage.setItem('alphonso_settings', JSON.stringify({
+        approvalMode: false, zeroCostMode: false, safeMode: false, localOnlyMode: false
+      }));
       const result = evaluatePolicyGate({
         connectorId: 'telegram',
         auth: { enabled: true, isAuthorized: false }

@@ -10,5 +10,6 @@ struct AlphonsoCompanionApp: App {
             ContentView()
                 .environmentObject(webSocketService)
                 .environmentObject(mdnsService)
-        }
+    }
+}
     }

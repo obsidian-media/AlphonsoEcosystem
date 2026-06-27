@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue(null),
@@ -107,22 +107,22 @@ describe('EcosystemHub', () => {
     });
   });
 
-  it('switches to Pairings tab', () => {
+  it('switches to Pairings tab', async () => {
     render(<EcosystemHub {...defaultProps} />);
     fireEvent.click(screen.getByText('Pairings'));
-    expect(screen.getByTestId('agent-pairing')).toBeDefined();
+    await waitFor(() => expect(screen.getByTestId('agent-pairing')).toBeDefined(), { timeout: 3000 });
   });
 
-  it('switches to Queue tab', () => {
+  it('switches to Queue tab', async () => {
     render(<EcosystemHub {...defaultProps} />);
     fireEvent.click(screen.getByText('Queue'));
-    expect(screen.getByText('Handoff Queue')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Handoff Queue')).toBeDefined(), { timeout: 3000 });
   });
 
-  it('switches to Skills tab', () => {
+  it('switches to Skills tab', async () => {
     render(<EcosystemHub {...defaultProps} />);
     fireEvent.click(screen.getByText('Skills'));
-    expect(screen.getByText('Skill Pack System')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Skill Pack System')).toBeDefined(), { timeout: 3000 });
   });
 
   it('switches to Workflows tab', () => {

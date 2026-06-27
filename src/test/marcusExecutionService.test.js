@@ -205,6 +205,8 @@ describe('runMarcusDistribution', () => {
 
 describe('executeMarcusGitHubAction', () => {
   it('returns setupRequired when GitHub NOT authenticated', async () => {
+    const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+    vi.mocked(getConnectorCredential).mockReturnValueOnce(null);
     const result = await executeMarcusGitHubAction('test', { actionType: 'github_issue_create' });
     expect(result.ok).toBe(false);
     expect(result.setupRequired).toBe(true);
@@ -215,6 +217,8 @@ describe('executeMarcusGitHubAction', () => {
 
 describe('executeMarcusSlackAction', () => {
   it('returns setupRequired when Slack NOT authenticated', async () => {
+    const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+    vi.mocked(getConnectorCredential).mockReturnValueOnce(null);
     const result = await executeMarcusSlackAction('test', {});
     expect(result.ok).toBe(false);
     expect(result.setupRequired).toBe(true);

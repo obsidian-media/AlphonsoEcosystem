@@ -117,8 +117,9 @@ describe('startFileWatcher', () => {
   it('deduplicates files across poll cycles', async () => {
     saveWatcherConfig({ enabled: true, workspaceRoot: '/ws', inboxPath: '/inbox' });
     invoke
-      .mockResolvedValue([{ relativePath: 'dup.txt' }])
-      .mockResolvedValue({ content: 'Enough content to pass the length check easily' });
+      .mockResolvedValueOnce([{ relativePath: 'dup.txt' }])
+      .mockResolvedValueOnce({ content: 'Enough content to pass the length check easily' })
+      .mockResolvedValueOnce([{ relativePath: 'dup.txt' }]);
     const cb = vi.fn();
     startFileWatcher(cb);
     await vi.advanceTimersByTimeAsync(30_000);

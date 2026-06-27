@@ -41,6 +41,7 @@ import {
   recordConnectorFailure,
   recordConnectorSuccess,
   getConnectorCircuitState,
+  resetConnectorCircuitState,
   sendQwenConnectorMessage,
   verifyConnectorEnvironment
 } from '../services/connectorRegistryService';
@@ -228,6 +229,11 @@ describe('connectorRegistryService', () => {
   // ── Circuit breaker ───────────────────────────────────────────────────────
 
   describe('circuit breaker', () => {
+    beforeEach(() => {
+      resetConnectorCircuitState('telegram', 'send');
+      resetConnectorCircuitState('telegram', 'default');
+    });
+
     it('getConnectorCircuitState returns ok when no failures', () => {
       const state = getConnectorCircuitState('telegram');
       expect(state.ok).toBe(true);

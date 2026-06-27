@@ -24,7 +24,8 @@ struct BoardroomView: View {
                         .padding(.vertical, 40)
                     }
                 } else {
-                    ForEach(webSocketService.boardroomSessions) { session in
+                    let sessions = Array(webSocketService.boardroomSessions)
+                    ForEach(sessions) { session in
                         Section(session.title) {
                             if session.goals.isEmpty {
                                 Text("No goals in this session")

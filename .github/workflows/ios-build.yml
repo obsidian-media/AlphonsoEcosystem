@@ -19,124 +19,220 @@ jobs:
 
       - name: Setup signing
         env:
-          CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE }}
-          CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE }}
+          IOS_CERT_DER: ${{ secrets.IOS_CERT_DER }}
+          IOS_KEY_PEM: ${{ secrets.IOS_KEY_PEM }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
         run: |
-          # Create temporary keychain
+          set -e
+
+          # ── Keychain ──────────────────────────────────────────────────────────
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # Import certificate
-          if [ -n "$CERTIFICATE_BASE64" ]; then
-            CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-            echo -n "$CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
-            security import "$CERTIFICATE_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-            security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-            security list-keychain -d user -s "$KEYCHAIN_PATH"
+          # Add our keychain to the search list while keeping existing ones
+          # (without this Xcode can't find system/Apple roots for codesign)
+          EXISTING_KEYCHAINS=$(security list-keychains -d user | tr -d '[:space:]"')
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $EXISTING_KEYCHAINS
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+          # ── Certificate ───────────────────────────────────────────────────────
+          CERT_PATH=$RUNNER_TEMP/certificate.cer
+          KEY_PATH=$RUNNER_TEMP/private_key.pem
+
+          echo "$IOS_CERT_DER" | base64 --decode > "$CERT_PATH"
+          echo "$IOS_KEY_PEM"  | base64 --decode > "$KEY_PATH"
+
+          echo "Cert size: $(wc -c < "$CERT_PATH") bytes  Key size: $(wc -c < "$KEY_PATH") bytes"
+
+          security import "$CERT_PATH" \
+            -t cert \
+            -k "$KEYCHAIN_PATH" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+
+          security import "$KEY_PATH" \
+            -t priv \
+            -f openssl \
+            -A \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow codesign to access the key without a UI prompt
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH" 2>/dev/null || true
+
+          echo "Certificate and key imported successfully"
+
+          # ── Provisioning Profile ──────────────────────────────────────────────
+          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          PP_PLIST=$RUNNER_TEMP/profile.plist
+
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > "$PP_PATH"
+
+          # Decode CMS: openssl smime first, fall back to security cms
+          openssl smime -inform DER -verify -noverify \
+            -in "$PP_PATH" -out "$PP_PLIST" 2>/dev/null \
+            || security cms -D -i "$PP_PATH" > "$PP_PLIST" 2>/dev/null \
+            || true
+
+          if [ ! -s "$PP_PLIST" ]; then
+            echo "::error::Failed to decode provisioning profile — check IOS_PROVISIONING_PROFILE secret"
+            exit 1
           fi
 
-          # Install provisioning profile
-          if [ -n "$PROVISION_PROFILE_BASE64" ]; then
-            PP_PATH=$RUNNER_TEMP/profile.mobileprovision
-            echo -n "$PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
-            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-            UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PP_PATH"))
-            cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
+          # Extract UUID (required for install path)
+          UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PP_PLIST" 2>/dev/null \
+            || plutil -extract UUID raw "$PP_PLIST" 2>/dev/null \
+            || grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}' "$PP_PLIST" | head -1)
+
+          if [ -z "$UUID" ]; then
+            echo "::error::Could not extract UUID from provisioning profile"
+            exit 1
           fi
 
-      - name: Build iOS app
+          # Extract Name — this is what Xcode matches against PROVISIONING_PROFILE_SPECIFIER
+          PP_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PP_PLIST" 2>/dev/null \
+            || plutil -extract Name raw "$PP_PLIST" 2>/dev/null \
+            || grep -A1 '<key>Name</key>' "$PP_PLIST" | tail -1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
+
+          if [ -z "$PP_NAME" ]; then
+            echo "::error::Could not extract Name from provisioning profile plist"
+            exit 1
+          fi
+
+          echo "Profile UUID : $UUID"
+          echo "Profile Name : $PP_NAME"
+
+          # Warn if the name differs from the expected value (non-fatal)
+          if [ "$PP_NAME" != "Alphonso_iOS" ]; then
+            echo "::warning::Provisioning profile Name is '$PP_NAME', not 'Alphonso_iOS'. Using extracted name."
+          fi
+
+          # Install profile so Xcode can find it
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
+          echo "Provisioning profile installed: $UUID ($PP_NAME)"
+
+          # Share values with subsequent steps
+          echo "PP_NAME=$PP_NAME" >> "$GITHUB_ENV"
+          echo "PP_UUID=$UUID"    >> "$GITHUB_ENV"
+
+      - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
         run: |
-          xcodebuild clean build \
+          set -e
+
+          echo "Archiving with profile: '${{ env.PP_NAME }}'"
+
+          xcodebuild archive \
             -project AlphonsoCompanion.xcodeproj \
             -scheme AlphonsoCompanion \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -allowProvisioningUpdates \
-            CODE_SIGN_IDENTITY="${{ secrets.IOS_CERTIFICATE_NAME || 'Apple Development' }}" \
-            DEVELOPMENT_TEAM="${{ secrets.IOS_DEVELOPMENT_TEAM }}" \
+            -archivePath build/AlphonsoCompanion.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="iPhone Distribution: Shayan Salimi (9Y6GYPM3K5)" \
+            DEVELOPMENT_TEAM="9Y6GYPM3K5" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_NAME }}" \
             PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion" \
-            | xcpretty
+            GENERATE_INFOPLIST_FILE=NO \
+            INFOPLIST_FILE=AlphonsoCompanion/Info.plist \
+            OTHER_CODE_SIGN_FLAGS="--keychain ${{ env.KEYCHAIN_PATH }}"
 
       - name: Export IPA
         working-directory: ios/AlphonsoCompanion
         run: |
+          set -e
           mkdir -p build/output
-          
-          cat > ExportOptions.plist << 'EOF'
+
+          # Write ExportOptions.plist with the actual profile name
+          cat > build/ExportOptions.plist << PLIST_EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>development</string>
+            <string>app-store</string>
             <key>teamID</key>
-            <string>${{ secrets.IOS_DEVELOPMENT_TEAM }}</string>
+            <string>9Y6GYPM3K5</string>
             <key>uploadBitcode</key>
             <false/>
             <key>uploadSymbols</key>
             <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.alphonso.companion</key>
+              <string>${{ env.PP_NAME }}</string>
+            </dict>
           </dict>
           </plist>
-          EOF
+          PLIST_EOF
 
           xcodebuild -exportArchive \
             -archivePath build/AlphonsoCompanion.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/output \
-            | xcpretty
+            -exportOptionsPlist build/ExportOptions.plist \
+            -exportPath build/output
+
+          echo "IPA exported:"
+          ls -la build/output/*.ipa
 
       - name: Upload to TestFlight
-        if: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID != '' }}
         working-directory: ios/AlphonsoCompanion
         env:
           API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           API_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER }}
-          API_KEY_PATH: ${{ runner.temp }}/api_key.p8
+          API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: |
-          echo -n "${{ secrets.APP_STORE_CONNECT_API_KEY }}" > "$API_KEY_PATH"
-          
+          set -e
+          mkdir -p "$RUNNER_TEMP/app-store-connect"
+          echo "$API_KEY" > "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8"
+
+          IPA_PATH=$(find build/output -name "*.ipa" | head -1)
+          echo "Uploading $IPA_PATH to TestFlight..."
+
           xcrun altool --upload-app \
             --type ios \
-            --file build/output/AlphonsoCompanion.ipa \
+            --file "$IPA_PATH" \
             --apiKey "$API_KEY_ID" \
             --apiIssuer "$API_ISSUER" \
-            --apiKeyPath "$API_KEY_PATH"
+            --apiKeyPath "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8" \
+            --show-progress \
+            || echo "::warning::TestFlight upload failed — download IPA from artifacts below"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: AlphonsoCompanion-${{ github.run_number }}
-          path: ios/AlphonsoCompanion/build/output/*.ipa
+          path: ios/AlphonsoCompanion/build/output/AlphonsoCompanion.ipa
           retention-days: 7
+          if-no-files-found: error
 
       - name: Cleanup keychain
         if: always()
         run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
 
       - name: Build summary
+        if: always()
         run: |
           echo "## iOS Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Artifact:** AlphonsoCompanion-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Artifact** | AlphonsoCompanion-${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Profile Name** | ${{ env.PP_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Profile UUID** | ${{ env.PP_UUID }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Install on iPhone (No Mac Required)" >> $GITHUB_STEP_SUMMARY
+          echo "### TestFlight" >> $GITHUB_STEP_SUMMARY
+          echo "If the upload step succeeded, the build is processing on App Store Connect (usually 5–15 min)." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Option 1: AltStore (Windows)**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download .ipa from Artifacts section above" >> $GITHUB_STEP_SUMMARY
-          echo "2. Install [AltStore](https://altstore.io) on your Windows PC" >> $GITHUB_STEP_SUMMARY
-          echo "3. Connect iPhone via USB, open AltStore, install the .ipa" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Option 2: TestFlight (Wireless)**" >> $GITHUB_STEP_SUMMARY
-          echo "1. If TestFlight secrets are set, .ipa was uploaded automatically" >> $GITHUB_STEP_SUMMARY
-          echo "2. Install TestFlight app on iPhone" >> $GITHUB_STEP_SUMMARY
-          echo "3. Check email for invitation, install from TestFlight" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Option 3: Sideloadly (Windows)**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download [Sideloadly](https://sideloadly.io)" >> $GITHUB_STEP_SUMMARY
-          echo "2. Connect iPhone, drag .ipa into Sideloadly" >> $GITHUB_STEP_SUMMARY
+          echo "### Manual Install (if TestFlight upload fails)" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the .ipa from Artifacts above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Use [Sideloadly](https://sideloadly.io) or AltStore to install" >> $GITHUB_STEP_SUMMARY

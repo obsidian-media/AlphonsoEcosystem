@@ -13,46 +13,17 @@ struct PairingView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                List {
-                    Section("Discovered Desktops") {
-                        if mdnsService.discovered.isEmpty {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Scanning for Alphonso Desktop...")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.vertical, 8)
-                        } else {
-                            ForEach(mdnsService.discovered) { host in
-                                Button(action: { selectedHost = host }) {
-                                    HStack {
-                                        VStack(alignment: .leading) {
-                                            Text(host.name)
-                                                .font(.headline)
-                                            Text("\(host.host):\((host.port))")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        if selectedHost?.id == host.id {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(.accent)
-                                        }
-                                    }
-                                }
-                                .foregroundColor(.primary)
-                            }
-                        }
-                    }
+                HostListView(
+                    hosts: mdnsService.discovered,
+                    selectedHost: $selectedHost
+                )
 
-                    Section("Manual Connection") {
-                        Button("Enter IP Manually") {
-                            showingManualEntry = true
-                        }
-                        .foregroundColor(.accent)
-                    }
+                Button("Enter IP Manually") {
+                    showingManualEntry = true
                 }
+                .foregroundColor(.accentColor)
+                .padding(.horizontal)
+                .padding(.top, 8)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("PIN Code")
@@ -153,5 +124,57 @@ struct PairingView: View {
         }
 
         webSocketService.connect(host: host, port: port, pin: pin)
+    }
+}
+
+struct HostListView: View {
+    let hosts: [DiscoveredHost]
+    @Binding var selectedHost: DiscoveredHost?
+
+    var body: some View {
+        if hosts.isEmpty {
+            HStack {
+                ProgressView()
+                    .scaleEffect(0.8)
+                Text("Scanning for Alphonso Desktop...")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(hosts) { host in
+                        HostRow(host: host, isSelected: selectedHost?.id == host.id)
+                            .onTapGesture { selectedHost = host }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct HostRow: View {
+    let host: DiscoveredHost
+    let isSelected: Bool
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(host.name)
+                    .font(.headline)
+                Text("\(host.host):\(host.port)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .foregroundColor(.primary)
     }
 }

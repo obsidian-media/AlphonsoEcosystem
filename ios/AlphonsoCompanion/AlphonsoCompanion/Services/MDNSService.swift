@@ -9,31 +9,31 @@ class MDNSService: ObservableObject {
 
     func startBrowsing() {
         let descriptor = NWBrowser.Descriptor.bonjour(
-            serviceType: "_alphonso._tcp",
+            type: "_alphonso._tcp",
             domain: "local"
         )
         let parameters = NWParameters.tcp
         browser = NWBrowser(for: descriptor, using: parameters)
 
         browser?.browseResultsChangedHandler = { [weak self] results, _ in
-            Task { @MainActor in
-                self?.discovered = results.compactMap { result in
-                    guard case .service(let name, _, _, _) = result.endpoint else {
-                        return nil
-                    }
-                    // Return discovered host with service name
-                    // Host resolution will happen on connect
-                    return DiscoveredHost(
-                        name: name,
-                        host: name,
-                        port: 8765
-                    )
+            guard let self = self else { return }
+            let discovered = results.compactMap { result -> DiscoveredHost? in
+                guard case .service(let name, _, _, _) = result.endpoint else {
+                    return nil
                 }
+                return DiscoveredHost(
+                    name: name,
+                    host: name,
+                    port: 8765
+                )
+            }
+            Task { @MainActor [weak self] in
+                self?.discovered = discovered
             }
         }
 
         browser?.stateUpdateHandler = { [weak self] newState in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 switch newState {
                 case .ready:
                     break
@@ -75,8 +75,8 @@ class MDNSService: ObservableObject {
                 case .ready:
                     // Once connected, we can get the actual endpoint
                     if case .hostPort(let host, let port) = connection.currentPath?.remoteEndpoint {
-                        let hostname = host.rawValue
-                        let portValue = port.rawValue
+                        let hostname = "\(host)"
+                        let portValue = UInt16(port.rawValue)
                         completion(hostname, portValue)
                     } else {
                         // Fallback to service name

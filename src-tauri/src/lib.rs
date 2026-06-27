@@ -1533,12 +1533,12 @@ fn save_image_to_folder(
   }
   #[allow(unreachable_code)]
   {
-    use std::process::Command;
-    let script = format!("printf '%s' '{}' | base64 -d > '{}'", raw, path_str);
-    Command::new("sh")
-      .args(["-c", &script])
-      .output()
-      .map_err(|e| e.to_string())?;
+    // Decode base64 in-process — no shell involved, eliminates injection risk.
+    use base64::Engine as _;
+    let bytes = base64::engine::general_purpose::STANDARD
+      .decode(raw.as_bytes())
+      .map_err(|e| format!("base64 decode error: {e}"))?;
+    std::fs::write(&path, &bytes).map_err(|e| e.to_string())?;
     Ok(SaveImageProof {
       path: path_str,
       saved: true,
@@ -1586,6 +1586,28 @@ mod tests {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  // Capture panics to a log file before the process exits so startup crashes
+  // are diagnosable without a debugger attached.
+  // Location (file + line) is always available; backtrace requires symbols.
+  std::panic::set_hook(Box::new(|info| {
+    let location = info
+      .location()
+      .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+      .unwrap_or_else(|| "unknown location".to_string());
+    let payload = info
+      .payload()
+      .downcast_ref::<&str>()
+      .copied()
+      .or_else(|| info.payload().downcast_ref::<String>().map(|s| s.as_str()))
+      .unwrap_or("(no message)");
+    let msg = format!("[alphonso panic] {payload}\n  at {location}\n");
+    eprintln!("{msg}");
+    // Best-effort write to %TEMP%\alphonso_panic.log
+    let mut path = std::env::temp_dir();
+    path.push("alphonso_panic.log");
+    let _ = std::fs::write(&path, &msg);
+  }));
+
   load_dotenv();
   let http_client = reqwest::Client::builder()
     .timeout(std::time::Duration::from_secs(30))
