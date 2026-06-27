@@ -23,70 +23,101 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE }}
         run: |
+          # Create temporary keychain
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          if [ -n "$CERTIFICATE_BASE64" ]; then
-            CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-            echo -n "$CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
-            if security import "$CERTIFICATE_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"; then
-              echo "Certificate imported successfully"
-              security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-              security list-keychain -d user -s "$KEYCHAIN_PATH"
-            else
-              echo "::warning::Certificate import failed — continuing with ad-hoc signing"
-            fi
-          else
-            echo "::warning::No certificate provided — using ad-hoc signing"
-          fi
+          # Import certificate (macOS uses -D for decode, not --decode)
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          echo "$CERTIFICATE_BASE64" | base64 -D > "$CERTIFICATE_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          echo "Certificate imported successfully"
 
-          if [ -n "$PROVISION_PROFILE_BASE64" ]; then
-            PP_PATH=$RUNNER_TEMP/profile.mobileprovision
-            echo -n "$PROVISION_PROFILE_BASE64" | base64 --decode > "$PP_PATH"
-            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-            UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PP_PATH"))
-            cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
-          fi
+          # Install provisioning profile
+          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "$PROVISION_PROFILE_BASE64" | base64 -D > "$PP_PATH"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PP_PATH"))
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
+          echo "Provisioning profile installed: $UUID"
 
-      - name: Build iOS app
+      - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
         run: |
-          xcodebuild build \
+          xcodebuild archive \
             -project AlphonsoCompanion.xcodeproj \
             -scheme AlphonsoCompanion \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            -archivePath build/AlphonsoCompanion.xcarchive \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="${{ secrets.IOS_DEVELOPMENT_TEAM }}" \
+            PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion"
 
-      - name: Package IPA
+      - name: Export IPA
         working-directory: ios/AlphonsoCompanion
         run: |
-          BUILD_DIR=$(xcodebuild -project AlphonsoCompanion.xcodeproj \
-            -scheme AlphonsoCompanion \
-            -configuration Release \
-            -showBuildSettings 2>/dev/null | grep -m1 "BUILT_PRODUCTS_DIR" | awk '{print $3}')
-
-          APP_PATH=$(find "$BUILD_DIR" -name "AlphonsoCompanion.app" -type d | head -1)
-          echo "Found app at: $APP_PATH"
-
-          if [ -z "$APP_PATH" ]; then
-            echo "::error::AlphonsoCompanion.app not found in build directory"
-            exit 1
-          fi
-
           mkdir -p build/output
-          cd build/output
-          mkdir -p Payload
-          cp -R "$APP_PATH" Payload/
-          zip -r AlphonsoCompanion.ipa Payload/
-          rm -rf Payload
-          echo "IPA created: $(pwd)/AlphonsoCompanion.ipa"
-          ls -la AlphonsoCompanion.ipa
+
+          cat > build/ExportOptions.plist << 'PLIST_EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>9Y6GYPM3K5</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>automatic</string>
+          </dict>
+          </plist>
+          PLIST_EOF
+
+          xcodebuild -exportArchive \
+            -archivePath build/AlphonsoCompanion.xcarchive \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -exportPath build/output
+
+          echo "IPA exported:"
+          ls -la build/output/*.ipa
+
+      - name: Upload to TestFlight
+        working-directory: ios/AlphonsoCompanion
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER }}
+          API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          # Write API key to file
+          mkdir -p "$RUNNER_TEMP/app-store-connect"
+          echo "$API_KEY" > "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8"
+
+          echo "Uploading to TestFlight..."
+          xcrun altool --upload-app \
+            --type ios \
+            --file build/output/AlphonsoCompanion.ipa \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_ISSUER" \
+            --apiKeyPath "$RUNNER_TEMP/app-store-connect/AuthKey_${API_KEY_ID}.p8"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -108,16 +139,10 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Artifact:** AlphonsoCompanion-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Install on iPhone (No Mac Required)" >> $GITHUB_STEP_SUMMARY
+          echo "### TestFlight" >> $GITHUB_STEP_SUMMARY
+          echo "If the upload step succeeded, the build is processing on App Store Connect." >> $GITHUB_STEP_SUMMARY
+          echo "It usually takes 5-15 minutes to appear in TestFlight." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Option 1: AltStore (Windows)**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download .ipa from Artifacts section above" >> $GITHUB_STEP_SUMMARY
-          echo "2. Install [AltStore](https://altstore.io) on your Windows PC" >> $GITHUB_STEP_SUMMARY
-          echo "3. Connect iPhone via USB, open AltStore, install the .ipa" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Option 2: Sideloadly (Windows)**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download [Sideloadly](https://sideloadly.io)" >> $GITHUB_STEP_SUMMARY
-          echo "2. Connect iPhone, drag .ipa into Sideloadly" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Option 3: TestFlight (via Mac)**" >> $GITHUB_STEP_SUMMARY
-          echo "1. On a Mac, use Xcode or Transporter to upload the .ipa" >> $GITHUB_STEP_SUMMARY
+          echo "### Manual Install (if TestFlight upload fails)" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the .ipa from Artifacts above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Use [AltStore](https://altstore.io) or [Sideloadly](https://sideloadly.io) to install" >> $GITHUB_STEP_SUMMARY
