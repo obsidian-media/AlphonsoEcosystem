@@ -21,7 +21,7 @@ Write-Host "`nGenerating private key..." -ForegroundColor Yellow
 $rsa = [System.Security.Cryptography.RSA]::Create(2048)
 
 # Export private key in PKCS#8 format
-$privateKeyBytes = rsa.ExportPkcs8PrivateKey()
+$privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
 $privateKeyPem = "-----BEGIN PRIVATE KEY-----`n"
 $privateKeyPem += [Convert]::ToBase64String($privateKeyBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
 $privateKeyPem += "`n-----END PRIVATE KEY-----"
@@ -63,11 +63,11 @@ Write-Host "1. Go to: https://developer.apple.com/account/resources/certificates
 Write-Host "2. Select 'iOS Distribution (App Store and Ad Hoc)'" -ForegroundColor White
 Write-Host "3. Click Continue" -ForegroundColor White
 Write-Host "4. Upload the CSR file:" -ForegroundColor White
-Write-Host "   $outDir\certsigningringrequest.csr" -ForegroundColor White
+Write-Host "   $outDir\certsigningrequest.csr" -ForegroundColor White
 Write-Host "5. Click Continue, then download the .cer certificate" -ForegroundColor White
 Write-Host "6. Save the .cer file in: $outDir\" -ForegroundColor White
 Write-Host "7. Run: .\create-p12.ps1" -ForegroundColor White
 Write-Host ""
 Write-Host "Files created:" -ForegroundColor Green
 Write-Host "  $outDir\private_key.pem     (KEEP SECRET - needed for .p12)" -ForegroundColor Gray
-Write-Host "  $outDir\certsignrequest.csr (upload to Apple)" -ForegroundColor Gray
+Write-Host "  $outDir\certsigningrequest.csr (upload to Apple)" -ForegroundColor Gray
