@@ -170,7 +170,7 @@ struct HostRow: View {
             Spacer()
             if isSelected {
                 Image(systemName: "checkmark")
-                    .foregroundStyle(.accentColor)
+                    .foregroundColor(.accentColor)
             }
         }
         .padding(.horizontal)
