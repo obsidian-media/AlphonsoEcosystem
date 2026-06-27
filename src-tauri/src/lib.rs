@@ -1954,11 +1954,9 @@ pub fn run() {
           .parse()
           .expect("fallback hotkey parse")
       });
-      let gs = app.handle().global_shortcut();
-      // Unregister first in case a previous dev-server restart left it registered.
-      let _ = gs.unregister(shortcut.clone());
       let app_handle_hs = app.handle().clone();
-      gs.on_shortcut(shortcut, move |_, _, event| {
+      // Ignore "already registered" — happens when a previous dev run crashed without cleanup.
+      if let Err(e) = app.handle().global_shortcut().on_shortcut(shortcut, move |_, _, event| {
         if event.state == ShortcutState::Pressed {
           if let Some(win) = app_handle_hs.get_webview_window("main") {
             let _ = win.unminimize();
@@ -1967,7 +1965,9 @@ pub fn run() {
           }
           let _ = app_handle_hs.emit("alphonso://voice_start", "hotkey");
         }
-      })?;
+      }) {
+        log::warn!("Global shortcut Ctrl+Shift+Space could not be registered: {e}");
+      }
 
       Ok(())
     })
