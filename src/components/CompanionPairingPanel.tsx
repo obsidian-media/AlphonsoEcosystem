@@ -12,6 +12,7 @@ interface CompanionStatus {
 export function CompanionPairingPanel() {
   const [pin, setPin] = useState('');
   const [status, setStatus] = useState<CompanionStatus | null>(null);
+  const [localIps, setLocalIps] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [discoveryStarted, setDiscoveryStarted] = useState(false);
@@ -56,6 +57,7 @@ export function CompanionPairingPanel() {
   useEffect(() => {
     refreshStatus();
     const interval = setInterval(refreshStatus, 5000);
+    invoke<string[]>('companion_get_local_ip').then(ips => setLocalIps(ips)).catch(() => {});
     return () => clearInterval(interval);
   }, []);
 
@@ -116,8 +118,17 @@ export function CompanionPairingPanel() {
           </div>
         )}
 
+        {localIps.length > 0 && (
+          <div className="p-3 bg-black/20 rounded-xl">
+            <div className="text-[11px] text-zinc-400 mb-1 font-medium">Desktop IP (for manual entry)</div>
+            {localIps.map(ip => (
+              <div key={ip} className="font-mono text-sm text-emerald-300">{ip}:{status?.port ?? 8765}</div>
+            ))}
+          </div>
+        )}
         <div className="text-[11px] text-zinc-500">
           Enter this 6-digit PIN in the iOS app to pair. The PIN expires in 5 minutes.
+          {localIps.length === 0 ? '' : ' On a different network, use the IP above for manual entry.'}
         </div>
       </div>
 

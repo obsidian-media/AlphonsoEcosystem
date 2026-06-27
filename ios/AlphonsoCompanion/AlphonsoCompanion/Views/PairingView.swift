@@ -112,18 +112,18 @@ struct PairingView: View {
     }
 
     private func connect() {
-        let host: String
-        let port: UInt16
+        let pin = self.pin
 
         if let selected = selectedHost {
-            host = selected.host
-            port = selected.port
+            // Resolve the mDNS service endpoint to a real IP before connecting
+            mdnsService.resolveHost(selected) { resolvedHost, resolvedPort in
+                self.webSocketService.connect(host: resolvedHost, port: resolvedPort, pin: pin)
+            }
         } else {
-            host = manualHost
-            port = UInt16(manualPort) ?? 8765
+            let host = manualHost
+            let port = UInt16(manualPort) ?? 8765
+            webSocketService.connect(host: host, port: port, pin: pin)
         }
-
-        webSocketService.connect(host: host, port: port, pin: pin)
     }
 }
 

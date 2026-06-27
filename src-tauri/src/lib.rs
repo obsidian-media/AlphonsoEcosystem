@@ -2123,6 +2123,7 @@ pub fn run() {
       companion_server::companion_get_status,
       companion_server::companion_start_discovery,
       companion_server::companion_broadcast,
+      companion_server::companion_get_local_ip,
       voice_sidecar::voice_start,
       voice_sidecar::voice_stop,
       voice_sidecar::voice_status

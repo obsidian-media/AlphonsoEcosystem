@@ -23,7 +23,7 @@ class MDNSService: ObservableObject {
                 }
                 return DiscoveredHost(
                     name: name,
-                    host: name,
+                    host: "\(name).local",
                     port: 8765
                 )
             }

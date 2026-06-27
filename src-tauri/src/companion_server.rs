@@ -204,6 +204,21 @@ pub async fn companion_start_discovery(port: u16) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn companion_get_local_ip() -> Result<Vec<String>, String> {
+  use std::net::UdpSocket;
+  let mut ips: Vec<String> = Vec::new();
+  // Use UDP trick to discover the primary outbound IP without actually sending data
+  if let Ok(sock) = UdpSocket::bind("0.0.0.0:0") {
+    if sock.connect("8.8.8.8:80").is_ok() {
+      if let Ok(addr) = sock.local_addr() {
+        ips.push(addr.ip().to_string());
+      }
+    }
+  }
+  Ok(ips)
+}
+
+#[tauri::command]
 pub async fn companion_broadcast(
   state: tauri::State<'_, Arc<CompanionServer>>,
   event: String,
