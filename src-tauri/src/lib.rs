@@ -1919,8 +1919,9 @@ pub fn run() {
       let companion_server = std::sync::Arc::new(server);
       let companion_server_clone = std::sync::Arc::clone(&companion_server);
       app.manage(companion_server_clone);
+      let app_handle_for_companion = app.handle().clone();
       tauri::async_runtime::spawn(async move {
-        if let Err(e) = companion_server.run().await {
+        if let Err(e) = companion_server.run(app_handle_for_companion).await {
           log::error!("Companion server error: {}", e);
         }
       });
@@ -2099,6 +2100,7 @@ pub fn run() {
       companion_server::companion_get_pin,
       companion_server::companion_get_status,
       companion_server::companion_start_discovery,
+      companion_server::companion_broadcast,
       voice_sidecar::voice_start,
       voice_sidecar::voice_stop,
       voice_sidecar::voice_status

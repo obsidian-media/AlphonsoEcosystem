@@ -4,6 +4,7 @@ use crate::companion_types::{ClientState, CompanionConfig, JsonRpcRequest};
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tauri::AppHandle;
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, Mutex};
 use tokio_tungstenite::accept_async;
@@ -39,7 +40,7 @@ impl CompanionServer {
     let _ = self.event_tx.send(event_json);
   }
 
-  pub async fn run(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+  pub async fn run(&self, app_handle: AppHandle) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = format!("0.0.0.0:{}", self.config.port);
     let listener = TcpListener::bind(&addr).await?;
     log::info!("Companion server listening on {}", addr);
@@ -49,6 +50,7 @@ impl CompanionServer {
       let clients = Arc::clone(&self.clients);
       let pin_manager = Arc::clone(&self.pin_manager);
       let event_rx = self.event_tx.subscribe();
+      let app = app_handle.clone();
 
       tokio::spawn(async move {
         let client_id = Uuid::new_v4();
@@ -64,6 +66,7 @@ impl CompanionServer {
           Arc::clone(&clients),
           Arc::clone(&pin_manager),
           event_rx,
+          app,
         )
         .await
         {
@@ -83,6 +86,7 @@ async fn handle_connection(
   clients: Arc<Mutex<HashMap<Uuid, ClientState>>>,
   pin_manager: Arc<PinManager>,
   mut event_rx: broadcast::Receiver<String>,
+  app: AppHandle,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   let ws = accept_async(stream).await?;
   let (mut ws_tx, mut ws_rx) = ws.split();
@@ -96,7 +100,7 @@ async fn handle_connection(
                     let response = match state {
                         Some(ClientState::Authenticated { .. }) => {
                             match serde_json::from_str::<JsonRpcRequest>(&text) {
-                                Ok(req) => serde_json::to_string(&route(req).await)?,
+                                Ok(req) => serde_json::to_string(&route(req, app.clone()).await)?,
                                 Err(_) => r#"{"error":{"code":-32700,"message":"Parse error"}}"#.to_string(),
                             }
                         }
@@ -195,5 +199,17 @@ pub async fn companion_start_discovery(port: u16) -> Result<(), String> {
   discovery
     .advertise(port, &hostname)
     .map_err(|e| e.to_string())?;
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn companion_broadcast(
+  state: tauri::State<'_, Arc<CompanionServer>>,
+  event: String,
+  payload: serde_json::Value,
+) -> Result<(), String> {
+  let msg = serde_json::to_string(&serde_json::json!({"event": event, "payload": payload}))
+    .map_err(|e| e.to_string())?;
+  state.broadcast_event(msg);
   Ok(())
 }
