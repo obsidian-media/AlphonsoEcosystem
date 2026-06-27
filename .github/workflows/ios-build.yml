@@ -46,23 +46,24 @@ jobs:
             -t cert \
             -k "$KEYCHAIN_PATH"
 
-          # Import private key (unencrypted PKCS8 PEM)
+          # Import private key (unencrypted RSA PEM)
           security import "$KEY_PATH" \
             -t priv \
             -f openssl \
+            -A \
             -k "$KEYCHAIN_PATH"
 
-          # Set default keychain so codesign finds the cert+key
-          security list-keychain -d user -s "$KEYCHAIN_PATH" || true
-          security default-keychain -s "$KEYCHAIN_PATH" || true
-          security list-keychains -d user -s "$KEYCHAIN_PATH" || true
+          # Set keychain as default so codesign finds the cert+key
+          security list-keychain -d user -s "$KEYCHAIN_PATH" 2>/dev/null || true
           echo "Certificate and key imported successfully"
 
           # Install provisioning profile
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$IOS_PROVISIONING_PROFILE" | base64 -D > "$PP_PATH"
+          PP_PLIST=$RUNNER_TEMP/profile.plist
+          security cms -D -i "$PP_PATH" > "$PP_PLIST"
+          UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PP_PLIST")
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i "$PP_PATH"))
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
           echo "Provisioning profile installed: $UUID"
 
