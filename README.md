@@ -4,10 +4,10 @@
 
 # Alphonso
 
-> **v2.4.0** — Local-first AI desktop companion with 9 agents, 15 connectors, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.4.2** — Local-first AI desktop companion with 9 agents, 15 connectors, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.4.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-1983%2B%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.4.2-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-2147%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
@@ -17,11 +17,22 @@ It orchestrates 9 specialized agents, connects to 15 external services, and uses
 
 **Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 15 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
-[**Download v2.4.0**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.4.0) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.4.2**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.4.2) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
+
+## What's New in v2.4.2
+
+- **TypeScript Migration Complete** — 94 `.tsx` components across `src/components/`; 20 `.jsx` remaining in subdirectories. Full prop interfaces, typed hooks, and zero typecheck errors.
+- **10 Pre-Merge Bugs Fixed** — Orchestrator code review caught and patched: RSS retry abort signal, cron weekday scheduling, scheduler handler stacking, voice watchdog double-toast + backoff cap, A2A message ring overflow, notification persistence wired up, `createSchedule` error surfaced, A2A failed status reachable, `installModule` Tauri CSP fix, bridge `/modules` route added.
+- **Dependency Updates** — Rust: rand 0.9.4, mdns-sd 0.20.0, tokio-tungstenite 0.29.0. npm: jsdom 29.1.1. All compile and test clean.
+- **158 test files / 2147 tests** — all passing. 0 TypeScript errors. 0 ESLint warnings. Cargo clippy clean.
+
+## What's New in v2.4.1
+
+- **37-task Bug & Gap Closure Sprint** — Voice OS health endpoint, Whisper post-install verification, Docker/Node prereq detection, AudioCraft Python version check, IPC rate limiting (10 calls/min token bucket), WhatsApp HMAC verification, MCP server auth, bridge 1MB body limit, Hector briefing empty-source fallback, Nova insight threshold configurable, agent performance CSV/JSON export, dead-letter queue section, n8n timeouts, ChromaDB error surface.
 
 ## What's New in v2.4.0
 
@@ -172,7 +183,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │                  React 18 (Vite 5, Tailwind 3)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
-│  │  9 Agents     │  │  82 UI           │  │  130 Services      │  │
+│  │  9 Agents     │  │  114 UI          │  │  131+ Services     │  │
 │  │  (profiles,   │  │  Components     │  │  (policy-gated,    │  │
 │  │   contracts)  │  │  14 Hooks       │  │   orchestrated)    │  │
 │  └──────┬────────┘  └─────────────────┘  └──────────┬─────────┘  │
@@ -287,8 +298,8 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 1,930+ tests across 144 files
-npm run test:coverage  # Coverage report (~35%+; threshold 20%)
+npm run test           # 2,147 tests across 158 files
+npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
 npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
@@ -328,6 +339,10 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 | Version | Date | Highlights |
 |----------|-------------|-----------------------------------------------------------------------------|
+| **v2.4.2** | June 27, 2026 | TypeScript migration (94 .tsx); 10 pre-merge bugs patched; rand/mdns-sd/tokio-tungstenite/jsdom dep bumps; 2147 tests / 158 files |
+| **v2.4.1** | June 27, 2026 | 37-task bug & gap sprint: Voice OS health, IPC rate limit, MCP auth, bridge hardening, Nova threshold, agent perf export, DLQ section |
+| **v2.4.0** | June 27, 2026 | Agent OS module system, Boardroom sessions, A2A protocol, Policy DSL, 5 scheduler presets, dark/light mode, keyboard shortcuts |
+| **v2.3.3** | June 26, 2026 | n8n connector, Jose scheduled tasks, Echo file watcher, MCP bridge live responses, 21 Telegram commands |
 | **v2.2.4** | June 25, 2026 | Navigation restructure: Activity→Runtimes tab, Knowledge→Settings tab; AgentDock embedded in RightPanel; coach mode fix + toast; ACC Bridge simplified; automation ops toggleable; Telegram 17 commands |
 | v2.2.3-patch2 | June 25, 2026 | Jarvis voice button wired in ChatView; Agents tab in RightPanel (3 tabs); compact SentinelAllowlistPanel; boot null-guard fixes; Browse fallbacks; Coach mode fix in web mode |
 | v2.2.3-patch1 | June 25, 2026 | Full 16-bug audit: stale state fix, TS types, production voice path, code splitting, O(1) chat render, live connector status, SQLite delete, audit memoization |
