@@ -1,5 +1,5 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-27 — v2.4.4
+**Last verified:** 2026-06-27 — v2.4.5
 **Verified by:** Claude Code — audit-sprint-26jun merge to main (P1-05/P1-08/P1-14/P2-14 closed; full TypeScript migration complete)
 **Version:** 2.4.3 (TypeScript migration: 114 .tsx components, 0 subdirectory .jsx remain; credential KV-primary; voice sidecar piped logs; plugin signing KV-primary; 158 test files / 2147 tests passing; merged to main 2026-06-27)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
@@ -686,7 +686,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **Brave Search** → already wired in `hectorResearchService.js` with Rust + VITE_ fallback
 - **Auth scripts** → `auth:youtube`, `auth:meta`, `auth:outlook` already exist
 - **Desktop preflight/verify** → `verify:desktop:preflight`, `verify:desktop` already exist
-- **CI workflows** → `ci.yml` and `release.yml` already exist and passing green (extend, do not replace). Note: `verify-app.yml` does NOT exist as a file — `npm run verify:app` runs inside `ci.yml`.
+- **CI workflows** → `ci.yml`, `release.yml`, and `ios-build.yml` exist and pass green (extend, do not replace). Note: `verify-app.yml` does NOT exist as a file — `npm run verify:app` runs inside `ci.yml`. `ios-build.yml` triggers on `main` pushes to `ios/**` + `workflow_dispatch`; builds, archives, exports IPA, and uploads to TestFlight via `xcrun altool` + App Store Connect API key.
 - **WhatsApp webhook Rust module** → `src-tauri/src/whatsapp_webhook.rs` — `verify_whatsapp_cloud_webhook_challenge`, `verify_whatsapp_cloud_webhook_signature`, `normalize_whatsapp_cloud_inbound` + 4 structs live here. Do not re-add to `lib.rs`.
 - **WhatsApp browser connector** → `src/services/whatsappBrowserConnector.js` — `browserSendWhatsApp` (outbound via Meta Graph API v17.0) and `browserPollWhatsAppGateway` (inbound via Railway gateway `/queue/drain`). Reads credentials from `connectorAuth.js` (`getConnectorCredential`). Do NOT recreate.
 - **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `kv_delete`, `save_settings`, `load_settings`, `ensure_kv_table`. `kv_delete` issues `DELETE FROM kv_store WHERE key = ?`. Do not re-add to `lib.rs`.
@@ -798,7 +798,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-27 — v2.4.4. gap-closure sprint: DeepSeek connector live (service + credential UI + Hector tier-3 + 4 tests); ChatView offline wiring (saveMessageOffline on Ollama error); alphonso contract fixed (execute_command allowed); 159 test files / 2151 tests passing. Remaining open gaps: iOS companion router stubs (handoff at ALPHONSOJUNECOMPLITIONIOSCOMPANION.md), Voice OS Python prereq (user must install Python), plugin true sandbox isolation (policy check runs, no Worker isolation)._
+_Last verified: 2026-06-27 — v2.4.5. iOS CI pipeline fully operational: ios-build.yml fixed (dynamic PP Name extraction, keychain preservation, altool path fix, GENERATE_INFOPLIST_FILE conflict resolved); IOSCOMPANION branch merged to main and deleted; TestFlight upload confirmed (UPLOAD SUCCEEDED). 159 test files / 2151 tests passing. Remaining open gaps: iOS companion router stubs (handoff at ALPHONSOJUNECOMPLITIONIOSCOMPANION.md), Voice OS Python prereq (user must install Python), plugin true sandbox isolation (policy check runs, no Worker isolation)._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

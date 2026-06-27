@@ -6,6 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.5] - 2026-06-27 — iOS CI Pipeline & TestFlight
+
+### iOS CI Pipeline
+- **ios-build.yml fully fixed** — provisioning profile `Name` now extracted dynamically via `PlistBuddy → plutil → grep` fallback chain after CMS decode. Profile name (`"Alphonso iOS"`) is written to `$GITHUB_ENV` and used in both `xcodebuild archive` (`PROVISIONING_PROFILE_SPECIFIER`) and `ExportOptions.plist` — no more hardcoded `"Alphonso_iOS"` mismatch.
+- **Keychain search list preserved** — `security list-keychains` now captures and re-adds existing keychains alongside the temp keychain, so Xcode codesign can find Apple root certs.
+- **`set-key-partition-list` added** — private key is partition-listed for `apple-tool:,apple:,codesign:` so codesign never prompts for UI access on the runner.
+- **`GENERATE_INFOPLIST_FILE` conflict resolved** — set to `NO` in both CI command and `project.pbxproj` Release config (was `YES`, conflicting with explicit `INFOPLIST_FILE` path).
+- **`project.pbxproj` Release config hardened** — `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "iPhone Distribution"`, `DEVELOPMENT_TEAM = 9Y6GYPM3K5`, `PROVISIONING_PROFILE_SPECIFIER = "Alphonso iOS"` set directly in build settings.
+- **altool API key path fixed** — key file copied to `~/.appstoreconnect/private_keys/` (altool's hardcoded search path) instead of relying on `--apiKeyPath` flag which altool ignores.
+- **Workflow trigger updated** — fires on `main` branch pushes to `ios/**` or the workflow file itself; `workflow_dispatch` retained for manual runs.
+- **IOSCOMPANION branch merged to main and deleted.**
+- **Build confirmed**: archive ✓ → export ✓ → TestFlight upload ✓ (UPLOAD SUCCEEDED, Delivery UUID: 47199f32-03a4-449f-82d4-cf826e837291)
+
+---
+
 ## [2.4.4] - 2026-06-27 — Gap Closure Sprint
 
 ### New Connectors
