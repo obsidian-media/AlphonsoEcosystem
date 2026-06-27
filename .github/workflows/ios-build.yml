@@ -57,6 +57,7 @@ jobs:
       - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
         run: |
+          set -o pipefail
           xcodebuild archive \
             -project AlphonsoCompanion.xcodeproj \
             -scheme AlphonsoCompanion \
@@ -66,7 +67,7 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            | xcpretty
+            2>&1 | xcpretty
 
       - name: Export IPA
         working-directory: ios/AlphonsoCompanion
