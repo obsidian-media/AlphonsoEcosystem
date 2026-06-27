@@ -21,33 +21,42 @@ Write-Host "`nGenerating private key..." -ForegroundColor Yellow
 $rsa = [System.Security.Cryptography.RSA]::Create(2048)
 
 # Export private key in PKCS#8 format
-$privateKeyBytes = rsa.ExportPkcs8PrivateKey()
+$privateKeyBytes = $rsa.ExportPkcs8PrivateKey()
 $privateKeyPem = "-----BEGIN PRIVATE KEY-----`n"
 $privateKeyPem += [Convert]::ToBase64String($privateKeyBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
 $privateKeyPem += "`n-----END PRIVATE KEY-----"
 $privateKeyPem | Out-File -FilePath "$outDir\private_key.pem" -Encoding ASCII
 Write-Host "Private key saved: $outDir\private_key.pem" -ForegroundColor Green
 
-# Build CSR using ASN.1
+# Create CSR using CertificateRequest
 Write-Host "Generating CSR..." -ForegroundColor Yellow
 
-# Subject: CN=commonName, O=teamId, OID.1.2.840.113549.1.9.1=email
-$oidCn = [System.Security.Cryptography.Oid]::Lookup("2.5.4.3")
-$oidO = [System.Security.Cryptography.Oid]::Lookup("2.5.4.10")
-$oidEmail = [System.Security.Cryptography.Oid]::Lookup("1.2.840.113549.1.9.1")
+$subject = "CN=$commonName, O=$teamId, E=$email"
 
-$subjectBuilder = New-Object System.Security.Cryptography.AsnEncodedData($oidCn, [System.Text.Encoding]::ASCII.GetBytes($commonName))
-$subjectO = New-Object System.Security.Cryptography.AsnEncodedData($oidO, [System.Text.Encoding]::ASCII.GetBytes($teamId))
-$subjectEmail = New-Object System.Security.Cryptography.AsnEncodedData($oidEmail, [System.Text.Encoding]::ASCII.GetBytes($email))
-
-# Create CSR using .NET
-$csr = New-Object System.Security.Cryptography.Certificates.CertificateRequest(
-    "CN=$commonName, O=$teamId, 1.2.840.113549.1.9.1=$email",
+$csr = New-Object System.Security.Cryptography.X509Certificates.CertificateRequest(
+    $subject,
     $rsa,
     [System.Security.Cryptography.HashAlgorithmName]::SHA256,
     [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
 )
 
+# Add Apple's required extensions
+# Key Usage: Digital Signature + Key Encipherment
+$keyUsageExtension = New-Object System.Security.Cryptography.X509Certificates.X509KeyUsageExtension(
+    [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature -bor
+    [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyEncipherment,
+    $true
+)
+$csr.CertificateExtensions.Add($keyUsageExtension)
+
+# Enhanced Key Usage: Client Authentication + Server Authentication
+$ekuOids = New-Object System.Collections.Generic.List[System.Security.Cryptography.Oid]
+$ekuOids.Add([System.Security.Cryptography.Oid]::new("1.3.6.1.5.5.7.3.2"))  # Client Auth
+$ekuOids.Add([System.Security.Cryptography.Oid]::new("1.3.6.1.5.5.7.3.1"))  # Server Auth
+$ekuExtension = New-Object System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension($ekuOids, $true)
+$csr.CertificateExtensions.Add($ekuExtension)
+
+# Create the CSR
 $csrBytes = $csr.CreateSigningRequest()
 $csrPem = "-----BEGIN CERTIFICATE REQUEST-----`n"
 $csrPem += [Convert]::ToBase64String($csrBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
@@ -63,11 +72,11 @@ Write-Host "1. Go to: https://developer.apple.com/account/resources/certificates
 Write-Host "2. Select 'iOS Distribution (App Store and Ad Hoc)'" -ForegroundColor White
 Write-Host "3. Click Continue" -ForegroundColor White
 Write-Host "4. Upload the CSR file:" -ForegroundColor White
-Write-Host "   $outDir\certsigningringrequest.csr" -ForegroundColor White
+Write-Host "   $outDir\certsigningrequest.csr" -ForegroundColor White
 Write-Host "5. Click Continue, then download the .cer certificate" -ForegroundColor White
 Write-Host "6. Save the .cer file in: $outDir\" -ForegroundColor White
 Write-Host "7. Run: .\create-p12.ps1" -ForegroundColor White
 Write-Host ""
 Write-Host "Files created:" -ForegroundColor Green
-Write-Host "  $outDir\private_key.pem     (KEEP SECRET - needed for .p12)" -ForegroundColor Gray
-Write-Host "  $outDir\certsignrequest.csr (upload to Apple)" -ForegroundColor Gray
+Write-Host "  $outDir\private_key.pem         (KEEP SECRET)" -ForegroundColor Gray
+Write-Host "  $outDir\certsigningrequest.csr  (upload to Apple)" -ForegroundColor Gray
