@@ -120,7 +120,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AlphonsoCompanion-${{ github.run_number }}
-          path: ios/AlphonsoCompanion/build/output/*.ipa
+          path: |
+            ios/AlphonsoCompanion/build/output/*.ipa
+            ios/AlphonsoCompanion/build/AlphonsoCompanion.xcarchive
           retention-days: 7
 
       - name: Cleanup keychain
