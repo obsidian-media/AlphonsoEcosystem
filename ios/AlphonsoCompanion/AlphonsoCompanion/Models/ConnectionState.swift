@@ -16,7 +16,7 @@ struct DiscoveredHost: Identifiable, Equatable {
 }
 
 struct Message: Identifiable, Codable {
-    let id: UUID
+    let id = UUID()
     let text: String
     let isIncoming: Bool
     let timestamp: Date
