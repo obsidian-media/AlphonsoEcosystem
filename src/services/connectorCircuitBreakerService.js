@@ -1,3 +1,5 @@
+import { durableGet, durableSet } from '../../lib/durableStore.js';
+
 const STORAGE_KEY = 'alphonso_circuit_breaker_v1';
 const FAILURE_THRESHOLD = 5;
 const COOLDOWN_MS = 60_000;
@@ -5,11 +7,11 @@ const COOLDOWN_MS = 60_000;
 // ── Persistence helpers ────────────────────────────────────────────────────────
 
 function loadAll() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}'); } catch { return {}; }
+  try { return JSON.parse(durableGet(STORAGE_KEY) ?? '{}'); } catch { return {}; }
 }
 
 function saveAll(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* localStorage unavailable */ }
+  durableSet(STORAGE_KEY, JSON.stringify(data));
 }
 
 function defaultState() {

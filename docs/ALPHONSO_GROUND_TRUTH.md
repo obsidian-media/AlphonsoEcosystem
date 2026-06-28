@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-27 — v2.4.5
-**Verified by:** Claude Code — audit-sprint-26jun merge to main (P1-05/P1-08/P1-14/P2-14 closed; full TypeScript migration complete)
-**Version:** 2.4.3 (TypeScript migration: 114 .tsx components, 0 subdirectory .jsx remain; credential KV-primary; voice sidecar piped logs; plugin signing KV-primary; 158 test files / 2147 tests passing; merged to main 2026-06-27)
+**Last verified:** 2026-06-28 — v2.4.4
+**Verified by:** Claude Code — sprint/mustdonow-28jun (S1/S2 security fixes, S3/S4 credential migration, UX1-3 theme/dead-tab/update fixes)
+**Version:** 2.4.3 (TypeScript migration: 114 .tsx components, 0 subdirectory .jsx remain; credential KV-primary; voice sidecar piped logs; plugin signing KV-primary; 2,151+ tests across 159 files passing; merged to main 2026-06-27)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -398,11 +398,11 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 These are confirmed gaps as of 2026-06-27 (v2.4.4). Any agent working on these areas should check current state before implementing.
 
 ### OPEN GAPS (as of v2.4.4)
-- [ ] **iOS companion router stubs** — `companion_router.rs` returns hardcoded empty JSON for all 6 methods. `send_command` never routes to Jose; `get_boardroom` always returns `[]`; `approve_task` does nothing. Full 10-step work order at `ALPHONSOJUNECOMPLITIONIOSCOMPANION.md` (~10-12h). Infrastructure is complete on both sides.
+- [ ] **iOS companion router — events emitted but no frontend listener — companion_router.rs send_command emits companion://command Tauri events but no frontend listener in App.tsx to route to Jose. get_boardroom reads from KV but get_projects has no real implementation. Infrastructure exists but commands don't reach execution engine.
 - [ ] **Voice OS Python dependency** — Voice OS in Runtime Hub can Install/Start, but requires Python 3.10+ on PATH. `find_python()` checks standard paths but won't auto-install Python itself. User must have Python installed first.
 - [ ] **Plugin true execution isolation** — `pluginSandboxService.js` IS imported and wired via `PluginContext.jsx:95` (`evaluatePluginExecutionPolicy`). But the policy check validates args only (arg count, blocked tokens, injection patterns) — there is no Web Worker, iframe, or subprocess isolation. Plugin tools run in the main thread.
 
-### CLOSED — v2.4.4 (2026-06-27)
+### CLOSED — v2.4.4 (2026-06-28)
 - [x] **DeepSeek connector** — `src/services/connectors/deepseekConnector.js` created: `isDeepSeekConfigured`, `sendDeepSeekMessage`, `searchWithDeepSeek`. Credential UI added to ConnectorSetupPanel. `externalAgentAdapter.js` wired: `runExternalAgentTask('deepseek', task)` calls DeepSeek API live. Hector tier-3 fallback added. 4 tests in `deepseekConnector.test.js`.
 - [x] **PWA offline ChatView wiring** — `saveMessageOffline()` from `offlineChatService.js` now called in ChatView.tsx (import added line 43; called on Ollama stream error at line 687). Messages are saved to IndexedDB when Ollama is unreachable.
 - [x] **Runway API key credential UI** — Already closed in prior sprint (ConnectorSetupPanel.tsx line 701). Ground Truth was stale.
@@ -798,7 +798,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-27 — v2.4.5. iOS CI pipeline fully operational: ios-build.yml fixed (dynamic PP Name extraction, keychain preservation, altool path fix, GENERATE_INFOPLIST_FILE conflict resolved); IOSCOMPANION branch merged to main and deleted; TestFlight upload confirmed (UPLOAD SUCCEEDED). 159 test files / 2151 tests passing. Remaining open gaps: iOS companion router stubs (handoff at ALPHONSOJUNECOMPLITIONIOSCOMPANION.md), Voice OS Python prereq (user must install Python), plugin true sandbox isolation (policy check runs, no Worker isolation)._
+_Last verified: 2026-06-28 — v2.4.4. iOS CI pipeline fully operational: ios-build.yml fixed (dynamic PP Name extraction, keychain preservation, altool path fix, GENERATE_INFOPLIST_FILE conflict resolved); IOSCOMPANION branch merged to main and deleted; TestFlight upload confirmed (UPLOAD SUCCEEDED). 159 test files / 2151 tests passing. Remaining open gaps: iOS companion router — events emitted but no frontend listener — companion_router.rs send_command emits companion://command Tauri events but no frontend listener in App.tsx to route to Jose. get_boardroom reads from KV but get_projects has no real implementation. Infrastructure exists but commands don't reach execution engine.
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

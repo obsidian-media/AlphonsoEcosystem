@@ -37,7 +37,7 @@ export async function runExternalAgentTask(provider, task) {
   return {
     enabled: false,
     status: 'not_wired',
-    message: 'External agent adapter is local-only. Live provider calls are disabled.',
+    message: 'Not yet available. Live integration is planned but not yet wired.',
     tracked: true
   };
 }

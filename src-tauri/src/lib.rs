@@ -1474,6 +1474,12 @@ async fn launch_comfyui(
   } else {
     python_exe.trim().to_string()
   };
+  if !allowed_program(&py) {
+    return Err(format!(
+      "'{}' is not allowed by Alphonso supervised command policy. Use python or python3.",
+      py
+    ));
+  }
   use std::process::Command;
   Command::new(&py)
     .arg("main.py")
@@ -1513,38 +1519,17 @@ fn save_image_to_folder(
     .to_string();
   let path = std::path::Path::new(&folder).join(&filename);
   let path_str = path.to_string_lossy().to_string();
-  #[cfg(target_os = "windows")]
-  {
-    use std::process::Command;
-    let escaped_path = path_str.replace('\'', "''");
-    let script = format!(
-      "[System.IO.File]::WriteAllBytes('{}', [Convert]::FromBase64String('{}'))",
-      escaped_path, raw
-    );
-    Command::new("powershell")
-      .args(["-NoProfile", "-Command", &script])
-      .output()
-      .map_err(|e| e.to_string())?;
-    return Ok(SaveImageProof {
-      path: path_str,
-      saved: true,
-      saved_at_ms: now_ms(),
-    });
-  }
-  #[allow(unreachable_code)]
-  {
-    // Decode base64 in-process — no shell involved, eliminates injection risk.
-    use base64::Engine as _;
-    let bytes = base64::engine::general_purpose::STANDARD
-      .decode(raw.as_bytes())
-      .map_err(|e| format!("base64 decode error: {e}"))?;
-    std::fs::write(&path, &bytes).map_err(|e| e.to_string())?;
-    Ok(SaveImageProof {
-      path: path_str,
-      saved: true,
-      saved_at_ms: now_ms(),
-    })
-  }
+  // Decode base64 in Rust — no shell involved, eliminates injection risk on all platforms.
+  use base64::Engine as _;
+  let bytes = base64::engine::general_purpose::STANDARD
+    .decode(raw.as_bytes())
+    .map_err(|e| format!("base64 decode error: {e}"))?;
+  std::fs::write(&path, &bytes).map_err(|e| e.to_string())?;
+  Ok(SaveImageProof {
+    path: path_str,
+    saved: true,
+    saved_at_ms: now_ms(),
+  })
 }
 
 #[cfg(test)]

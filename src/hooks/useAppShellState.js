@@ -61,7 +61,11 @@ export function useAppShellState({
   const prevOllamaStateRef = useRef(null);
   const [, startTabTransition] = useTransition();
 
-  const switchTab = useCallback((tab) => startTabTransition(() => setActiveTab(tab)), []);
+  const switchTab = useCallback((tab) => {
+    // Migrate legacy 'workflows' tab to 'automation'
+    const normalizedTab = tab === 'workflows' ? 'automation' : tab;
+    startTabTransition(() => setActiveTab(normalizedTab));
+  }, []);
 
   const mergedAgentDockCompanions = useMemo(() => {
     // Logic from App.jsx

@@ -11,36 +11,48 @@ import {
   readRows,
   writeRows
 } from './connectorRegistry.js';
-
-// ── Credential storage (actual values, not just presence flags) ───────────────
-// Primary store: Tauri KV (SQLite). In-memory cache for sync reads.
-// localStorage is used as a boot-time migration source only — cleared after KV hydration.
+import { durableGet, durableSet } from '../../lib/durableStore.js';
 const CREDS_KEY = 'alphonso_connector_credentials_v1';
 
 let _credCache = null;
 
-function readAllCredentials() {
-  if (_credCache !== null) return _credCache;
+export async function hydrateConnectorCredentialsFromSqlite() {
+  if (_credCache !== null) return;
   try {
+    const json = await invoke('kv_get', { key: CREDS_KEY });
+    if (json) {
+      const parsed = JSON.parse(json);
+      if (parsed && typeof parsed === 'object') {
+        _credCache = parsed;
+        try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
+        return;
+      }
+    }
     const raw = localStorage.getItem(CREDS_KEY);
-    _credCache = raw ? JSON.parse(raw) : {};
-    return _credCache;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        _credCache = parsed;
+        invoke('kv_set', { key: CREDS_KEY, value: raw }).catch(() => {});
+        localStorage.removeItem(CREDS_KEY);
+      }
+    }
   } catch {
-    _credCache = {};
-    return _credCache;
+    // ignore — in-memory cache fallback already in place
   }
+}
+
+function readAllCredentials() {
+  return _credCache !== null ? _credCache : (_credCache = {});
 }
 
 function writeAllCredentials(creds) {
   _credCache = creds;
   try {
-    invoke('kv_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => { /* kv_set fire-and-forget */ });
+    invoke('kv_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => {});
   } catch {
-    // SQLite not available outside Tauri — fall back to localStorage
-    try { localStorage.setItem(CREDS_KEY, JSON.stringify(creds)); } catch { /* localStorage unavailable */ }
+    // SQLite not available outside Tauri
   }
-  // Remove from localStorage so credentials do not persist in the webview store
-  try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
 }
 
 export function saveConnectorCredential(connectorId, key, value) {
@@ -68,33 +80,6 @@ export function getConnectorCredentials(connectorId) {
   }
 }
 
-export async function hydrateConnectorCredentialsFromSqlite() {
-  try {
-    const json = await invoke('kv_get', { key: CREDS_KEY });
-    if (json) {
-      const parsed = JSON.parse(json);
-      if (parsed && typeof parsed === 'object') {
-        _credCache = parsed;
-        // Remove any lingering localStorage copy — KV is now authoritative
-        try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
-        return;
-      }
-    }
-    // KV empty — migrate from localStorage if present, then remove
-    const raw = localStorage.getItem(CREDS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        _credCache = parsed;
-        invoke('kv_set', { key: CREDS_KEY, value: raw }).catch(() => {});
-        localStorage.removeItem(CREDS_KEY);
-      }
-    }
-  } catch {
-    // ignore — in-memory cache fallback already in place
-  }
-}
-
 export const DEFAULT_AUTH_PROFILES = {
   telegram: { enabled: false, allowlist: [], mode: 'allowlist_required' },
   whatsapp: { enabled: false, allowlist: [], mode: 'allowlist_required' },
@@ -109,12 +94,9 @@ export const DEFAULT_AUTH_PROFILES = {
   runway: { enabled: false, allowlist: [], mode: 'allowlist_required' }
 };
 
-const SQLITE_WRITE_DEBOUNCE_MS = 300;
-let authProfilesSqliteWriteTimer = null;
-
 export function readAuthProfiles() {
   try {
-    const raw = localStorage.getItem(CONNECTOR_AUTH_KEY);
+    const raw = durableGet(CONNECTOR_AUTH_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     return { ...DEFAULT_AUTH_PROFILES, ...(parsed || {}) };
   } catch {
@@ -123,16 +105,7 @@ export function readAuthProfiles() {
 }
 
 export function writeAuthProfiles(profiles) {
-  try {
-    invoke('kv_set', { key: CONNECTOR_AUTH_KEY, value: JSON.stringify(profiles) }).catch(() => {});
-  } catch {
-    // SQLite not available in browser
-  }
-  localStorage.setItem(CONNECTOR_AUTH_KEY, JSON.stringify(profiles));
-  clearTimeout(authProfilesSqliteWriteTimer);
-  authProfilesSqliteWriteTimer = setTimeout(() => {
-    invoke('kv_set', { key: CONNECTOR_AUTH_KEY, value: JSON.stringify(profiles) }).catch(() => {});
-  }, SQLITE_WRITE_DEBOUNCE_MS);
+  durableSet(CONNECTOR_AUTH_KEY, JSON.stringify(profiles));
   const rows = Object.entries(profiles || {}).map(([id, profile]) => ({
     id: `auth-${id}`,
     ...profile

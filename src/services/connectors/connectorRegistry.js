@@ -7,6 +7,7 @@ import { evaluatePolicyGate } from '../policyEnforcementService';
 import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { requireApproval } from '../approval/approvalService';
 import { hydrateConnectorAuthProfilesFromSqlite } from './connectorAuth.js';
+import { durableSet } from '../../lib/durableStore.js';
 
 // Read credentials saved via UI (separate from OS env vars)
 function getStoredCredential(connectorId, key) {
@@ -307,20 +308,20 @@ export async function initializeConnectorRegistryFromSqlite() {
     if (registry && registry.length > 0) {
       const existing = readRows(CONNECTOR_KEY);
       if (existing.length === 0) {
-        localStorage.setItem(CONNECTOR_KEY, JSON.stringify(registry));
+        durableSet(CONNECTOR_KEY, JSON.stringify(registry));
       }
     }
     if (audit && audit.length > 0) {
       const existing = readRows(CONNECTOR_AUDIT_KEY);
       if (existing.length === 0) {
-        localStorage.setItem(CONNECTOR_AUDIT_KEY, JSON.stringify(audit));
+        durableSet(CONNECTOR_AUDIT_KEY, JSON.stringify(audit));
       }
     }
     if (auth && Object.keys(auth).length > 0) {
       const raw = localStorage.getItem(CONNECTOR_AUTH_KEY);
       const existing = raw ? JSON.parse(raw) : {};
       if (Object.keys(existing).length === 0) {
-        localStorage.setItem(CONNECTOR_AUTH_KEY, JSON.stringify(auth));
+        durableSet(CONNECTOR_AUTH_KEY, JSON.stringify(auth));
       }
     }
   } catch {
