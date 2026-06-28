@@ -54,13 +54,3 @@ export const AgentOutputTypes = Object.freeze({
 export function createAgentOutput(type, payload) {
   return createBaseOutput({ type, ...payload });
 }
-
-export function validateAgentOutput(output) {
-  if (!output || typeof output !== 'object') return { valid: false, reason: 'Output must be an object.' };
-  const required = ['id', 'createdAt', 'agentId', 'projectId', 'title', 'summary', 'status', 'confidence', 'riskLevel'];
-  for (const key of required) {
-    if (!output[key]) return { valid: false, reason: `Missing required field: ${key}` };
-  }
-  return { valid: true, reason: null };
-}
-

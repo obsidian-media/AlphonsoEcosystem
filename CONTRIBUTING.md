@@ -14,34 +14,34 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Thatisshayan/AlphonsoEcosystem.git
-   cd local-agent-ui-v2
-   ```
+    git clone https://github.com/Thatisshayan/AlphonsoEcosystem.git
+    cd local-agent-ui-v2
+    ```
 
 2. **Install dependencies**
    ```bash
-   npm ci
-   ```
+    npm ci
+    ```
 
 3. **Set up environment**
    ```bash
-   cp .env.example .env
-   # Edit .env with your API keys (optional — app works in zero-cost mode)
-   ```
+    cp .env.example .env
+    # Edit .env with your API keys (optional — app works in zero-cost mode)
+    ```
 
 4. **Start development**
    ```bash
-   npm run dev          # Vite dev server (port 5173)
-   # OR
-   npm run desktop:dev  # Full Tauri dev with Rust backend
-   ```
+    npm run dev          # Vite dev server (port 5173)
+    # OR
+    npm run desktop:dev  # Full Tauri dev with Rust backend
+    ```
 
 5. **Run tests**
    ```bash
-   npm run test         # All 1983+ tests across 149 files
-   npm run lint         # ESLint
-   npm run verify:app   # lint + typecheck + test + build
-   ```
+    npm run test         # All 2,151+ tests across 159+ files
+    npm run lint         # ESLint
+    npm run verify:app   # lint + typecheck + test + build
+    ```
 
 ## Project Structure
 
@@ -100,7 +100,7 @@ git commit -m "type: description"
 **PR Checklist:**
 - [ ] `npm run verify:app` passes (lint + typecheck + test + build)
 - [ ] `npm run typecheck` — 0 TypeScript errors
-- [ ] `npm run test` — all 1983+ tests pass; no regressions
+- [ ] `npm run test` — all 2,151+ tests pass; no regressions
 - [ ] New components are `.tsx` with exported prop interfaces
 - [ ] New services have a test file in `src/test/`
 - [ ] No `.env`, `.tauri-updater-key`, or secret files committed
