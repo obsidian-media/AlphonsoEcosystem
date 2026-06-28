@@ -28,9 +28,7 @@ function base64UrlDecode(str) {
 
 async function getKeyPair() {
   try {
-    const kvRaw = await _kvGetSafe(KEYPAIR_KEY);
-    const raw = kvRaw || localStorage.getItem(KEYPAIR_KEY);
-    if (raw && kvRaw) { try { localStorage.removeItem(KEYPAIR_KEY); } catch { /* ignore */ } }
+    const raw = await _kvGetSafe(KEYPAIR_KEY);
     if (raw) {
       const stored = JSON.parse(raw);
       const privateKey = await crypto.subtle.importKey(
@@ -59,8 +57,6 @@ async function generateAndStoreKeyPair() {
     createdAt: Date.now()
   });
   await _kvSetSafe(KEYPAIR_KEY, stored);
-  // Remove localStorage copy — KV is authoritative
-  try { localStorage.removeItem(KEYPAIR_KEY); } catch { /* ignore */ }
   return { privateKey: keyPair.privateKey, publicKey: keyPair.publicKey, publicKeyJwk };
 }
 
@@ -115,7 +111,7 @@ export async function verifyPluginSignature(manifestObj) {
     } catch { /* verification error — fall through to trusted keys */ }
   }
 
-  const trustedKeys = getTrustedSignerKeys();
+  const trustedKeys = await hydrateAndReturnTrustedKeys();
   for (const trustedKeyJwk of trustedKeys) {
     try {
       const trustedKey = await crypto.subtle.importKey(
@@ -135,13 +131,26 @@ export function _resetTrustedSignerKeysForTesting() {
   _trustedKeysCache = null;
 }
 
-export function getTrustedSignerKeys() {
+async function hydrateAndReturnTrustedKeys() {
   if (_trustedKeysCache !== null) return _trustedKeysCache;
   try {
-    const raw = localStorage.getItem(TRUSTED_KEYS_KEY);
-    _trustedKeysCache = raw ? JSON.parse(raw) : [];
-    return _trustedKeysCache;
-  } catch { /* parse error */ _trustedKeysCache = []; return []; }
+    const json = await _kvGetSafe(TRUSTED_KEYS_KEY);
+    if (json) {
+      _trustedKeysCache = JSON.parse(json);
+    } else {
+      _trustedKeysCache = [];
+    }
+  } catch {
+    _trustedKeysCache = [];
+  }
+  return _trustedKeysCache;
+}
+
+export function getTrustedSignerKeys() {
+  if (_trustedKeysCache !== null) return _trustedKeysCache;
+  hydrateAndReturnTrustedKeys().catch(() => {});
+  _trustedKeysCache = [];
+  return [];
 }
 
 export async function hydrateTrustedSignerKeysFromKv() {
@@ -149,23 +158,14 @@ export async function hydrateTrustedSignerKeysFromKv() {
     const json = await _kvGetSafe(TRUSTED_KEYS_KEY);
     if (json) {
       _trustedKeysCache = JSON.parse(json);
-      try { localStorage.removeItem(TRUSTED_KEYS_KEY); } catch { /* ignore */ }
       return;
     }
-    // Migrate from localStorage
-    const raw = localStorage.getItem(TRUSTED_KEYS_KEY);
-    if (raw) {
-      _trustedKeysCache = JSON.parse(raw);
-      await _kvSetSafe(TRUSTED_KEYS_KEY, raw);
-      try { localStorage.removeItem(TRUSTED_KEYS_KEY); } catch { /* ignore */ }
-    }
-  } catch { /* hydration error — in-memory cache fallback */ }
+  } catch { /* hydration error */ }
 }
 
 function _persistTrustedKeys(keys) {
   _trustedKeysCache = keys;
-  _kvSetSafe(TRUSTED_KEYS_KEY, JSON.stringify(keys)).catch(() => { /* kv fire-and-forget */ });
-  try { localStorage.removeItem(TRUSTED_KEYS_KEY); } catch { /* ignore */ }
+  _kvSetSafe(TRUSTED_KEYS_KEY, JSON.stringify(keys)).catch(() => {});
 }
 
 export function addTrustedSignerKey(publicKeyJwk) {
