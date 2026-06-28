@@ -5,7 +5,6 @@ import { runEchoPreservation } from './echoMemoryService';
 const WATCHER_CONFIG_KEY = 'alphonso_echo_watcher_config_v1';
 const POLL_INTERVAL_MS = 30_000;
 const PROCESSED_CACHE_KEY = 'alphonso_echo_watcher_processed_v1';
-const MAX_FILES_PER_POLL = 3; // debounce: process at most 3 files per cycle
 
 /**
  * @typedef {{ enabled: boolean, workspaceRoot: string, inboxPath: string }} WatcherConfig
@@ -127,10 +126,7 @@ export function startFileWatcher(callback) {
       let ingested = 0;
       const processedFiles = [];
 
-      // Debounce: process at most MAX_FILES_PER_POLL per cycle, defer rest to next poll
-      const filesToProcess = files.slice(0, MAX_FILES_PER_POLL);
-
-      for (const file of filesToProcess) {
+      for (const file of files) {
         if (_isAlreadyProcessed(file.relativePath)) continue;
 
         const result = await processFile(file.relativePath, config.workspaceRoot);
