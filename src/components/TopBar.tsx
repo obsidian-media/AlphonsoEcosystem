@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowUpCircle, Bell, WifiOff, Sun, Moon, Keyboard } from 'lucide-react';
-import { Badge } from './ui/Badge';
+import React from 'react';
+import { Bell, WifiOff, Sun, Moon, Keyboard, ArrowUpCircle } from 'lucide-react';
+import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
+import { useTheme } from '../hooks/useTheme';
 
 interface Settings {
   selectedModel?: string;
@@ -60,20 +61,13 @@ export function TopBar({
   selectedModelMissing,
   onOpenShortcuts,
 }: TopBarProps) {
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('alphonso_theme_v1') as 'dark' | 'light') || 'dark';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('alphonso_theme_v1', theme);
-  }, [theme]);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="h-11 flex items-center justify-between px-4 border-b border-[var(--border)] bg-[var(--surface-glass)] backdrop-blur-xl z-20 sticky top-0 relative">
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-border)] to-transparent opacity-60" />
       <div className="flex items-center gap-3">
-        <h1 className="text-sm font-semibold text-[var(--text-1)]">
+<h1 className="text-sm font-semibold text-[var(--text-1)]">
           {PAGE_TITLES[activeTab] || 'Alphonso'}
         </h1>
 
@@ -94,7 +88,7 @@ export function TopBar({
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+          onClick={toggleTheme}
           className="p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
           aria-label="Toggle theme"
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

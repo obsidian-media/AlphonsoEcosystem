@@ -6,6 +6,7 @@ import { getVerificationLogs } from './services/verificationService';
 import { appendVerificationLog } from './services/verificationService';
 import { TRUST_STATES } from './services/trustModel';
 import { sendNativeNotification } from './services/notificationService';
+import { checkAppUpdate } from './services/appUpdateService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
@@ -595,15 +596,12 @@ function AppShell() {
                 {activeTab === 'orchestrator' && (
                   <OrchestratorView settings={settings} ollamaStatus={ollamaStatus} onJoseStateChange={(state: string, message: string) => setJoseCompanionState({ state, message })} />
                 )}
-                {activeTab === 'workflows' && (
-                  <AutomationView />
-                )}
                 {activeTab === 'operator' && (
                   <OperatorDashboard operatorMode={operatorMode} setOperatorMode={setOperatorMode} ollamaStatus={ollamaStatus} lastCheckedAt={lastCheckedAt} verificationLogs={verificationLogs} onVerifyOllama={verifyOllamaWithProof} onVerifyAuditChain={verifyAuditChain} onVerifyProcess={verifyProcesses} onVerifyPaths={verifyPaths} onVerifyCommand={verifyCommand} memoryItems={memoryItems} plugins={plugins} diskPluginManifests={diskPluginManifests} pluginAudit={pluginAudit} onTogglePlugin={handleTogglePlugin} onDiscoverPlugins={handleDiscoverPlugins} workspaceFoundation={workspaceFoundation} onToggleWorkspaceFeature={handleToggleWorkspaceFeature} workspaceProof={workspaceProof} ocrCapability={ocrCapability} onRunWorkspaceProof={handleRunWorkspaceProof} onCheckOcrCapability={handleCheckOcrCapability} workspaceSymbolIndex={workspaceSymbolIndex} onBuildSymbolIndex={handleBuildSymbolIndex} onExecutePluginTool={handleExecutePluginTool} onValidatePluginManifest={handleValidatePluginManifest} lastPluginToolRun={lastPluginToolRun} lastManifestValidation={lastManifestValidation} pluginSandboxPolicy={pluginSandboxPolicy} onUpdatePluginSandboxPolicy={handleUpdatePluginSandboxPolicy} auditChainProof={auditChainProof} onRunOcrAdapter={handleRunOcrAdapter} lastOcrAdapterRun={lastOcrAdapterRun} snapshots={snapshots} onCreateSnapshot={handleCreateSnapshot} onRestoreSnapshot={handleRestoreSnapshot} onBackupMemory={handleBackupMemory} onRunRuntimeRepair={handleRuntimeRepair} onRunReleasePreflight={handleRunReleasePreflight} onExportDiagnostics={handleExportDiagnostics} durableAuditLogs={durableAuditLogs} coachMode={coachMode} coachAlwaysOnTop={coachAlwaysOnTop} onToggleCoachMode={handleToggleCoachMode} onToggleCoachTop={handleToggleCoachTop} screenObserverState={screenObserverState} screenObserverLogs={screenObserverLogs} onRequestScreenObserverPermission={handleRequestScreenObserverPermission} onStartScreenObserver={handleStartScreenObserver} onStopScreenObserver={handleStopScreenObserver} onUpdateScreenObserverSettings={handleUpdateScreenObserverSettings} modes={settings} />
                 )}
                 {activeTab === 'settings' && (
                   <Suspense fallback={null}>
-                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} normalizeEndpoint={(e: string) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} memoryItems={memoryItems} />
+                    <SettingsView settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} normalizeEndpoint={(e: string) => e} ollamaTroubleshootingCommand="ollama" braveSearchConfigured={braveSearchConfigured} memoryItems={memoryItems} />
                   </Suspense>
                 )}
                 {activeTab === 'connectors' && (
@@ -629,7 +627,7 @@ function AppShell() {
         </main>
       </div>
       <Suspense fallback={null}>
-        <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={() => runOllamaCheck()} agentDockCompanions={mergedAgentDockCompanions} />
+        <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} agentDockCompanions={mergedAgentDockCompanions} />
       </Suspense>
       <Suspense fallback={null}>
         <BootStatusBanner />

@@ -25,6 +25,7 @@ import {
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { AgentStatusStrip } from './AgentStatusStrip';
+import { useTheme } from '../hooks/useTheme';
 
 interface NavItem {
   id: string;
@@ -101,15 +102,7 @@ const NAV_SECTIONS: NavSection[] = [
 
 export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
-
-  const [isLight, setIsLight] = useState<boolean>(() => {
-    try { return localStorage.getItem('alphonso_theme_v1') === 'light'; } catch { return false; }
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('light', isLight);
-    try { localStorage.setItem('alphonso_theme_v1', isLight ? 'light' : 'dark'); } catch { /* ignore */ }
-  }, [isLight]);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <aside className={`${isOpen ? 'w-52' : 'w-14'} flex flex-col transition-all duration-300 ease-in-out bg-[var(--surface-1)] shrink-0 border-r border-[var(--border)]`}>
@@ -214,7 +207,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
 
       {/* Footer */}
       <div className="p-2 border-t border-[var(--border)] space-y-0.5">
-        {onOpenCoach && (
+{onOpenCoach && (
           <button
             onClick={onOpenCoach}
             className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
@@ -235,12 +228,12 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           {isOpen && <span>Settings</span>}
         </button>
         <button
-          onClick={() => setIsLight((v) => !v)}
+          onClick={toggleTheme}
           className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
-          aria-label={isLight ? 'Switch to dark theme' : 'Switch to light theme'}
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         >
-          {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          {isOpen && <span>{isLight ? 'Dark' : 'Light'}</span>}
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {isOpen && <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>}
         </button>
       </div>
     </aside>
