@@ -4,7 +4,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
 }));
 
-vi.mock('../services/agentActivityService.js', () => ({
+vi.mock('../../services/agentActivityService.js', () => ({
   appendAgentActivity: vi.fn()
 }));
 

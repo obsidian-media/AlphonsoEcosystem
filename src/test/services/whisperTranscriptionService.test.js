@@ -8,7 +8,7 @@ vi.mock('../../lib/ollama.js', () => ({
   generateOllamaResponse: vi.fn()
 }));
 
-vi.mock('../memoryService.js', () => ({
+vi.mock('../../services/memoryService.js', () => ({
   pushMemoryItem: vi.fn()
 }));
 
