@@ -20,12 +20,16 @@ vi.mock('qrcode.react', () => ({
 }));
 
 import { invoke } from '@tauri-apps/api/core';
-import { CompanionPairingPanel } from '../components/CompanionPairingPanel.jsx';
+import { CompanionPairingPanel } from '../components/CompanionPairingPanel.tsx';
 
 describe('CompanionPairingPanel', () => {
-  beforeEach(() => {
-    invoke.mockReset();
-  });
+   beforeEach(() => {
+     invoke.mockReset();
+     invoke.mockImplementation((cmd) => {
+       if (cmd === 'companion_get_local_ip') return Promise.resolve(['192.168.1.1']);
+       return Promise.resolve(null);
+     });
+   });
 
   afterEach(() => {
     vi.useRealTimers();

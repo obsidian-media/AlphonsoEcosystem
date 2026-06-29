@@ -11,6 +11,7 @@ import {
   GitBranch,
   LayoutDashboard,
   MessageSquare,
+  Mic,
   Moon,
   Palette,
   Plug,
@@ -95,6 +96,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'System',
     items: [
       { id: 'runtimes', icon: Cpu, label: 'Runtimes' },
+      { id: 'voice', icon: Mic, label: 'Voice' },
       { id: 'connectors', icon: Plug, label: 'Connectors', showStatusDot: true },
     ]
   }

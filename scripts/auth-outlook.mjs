@@ -24,12 +24,14 @@
 import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
+import { randomUUID } from 'crypto';
 import { exec } from 'node:child_process';
 import { URL, URLSearchParams } from 'node:url';
 import { join } from 'node:path';
 
 const PORT = 8087;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
+const STATE = randomUUID();
 const SCOPES = 'Mail.Send Mail.ReadWrite offline_access User.Read';
 // Use 'common' tenant to support both personal and work/school accounts
 const TENANT = 'common';
@@ -66,6 +68,14 @@ async function waitForCode() {
       if (url.pathname !== '/callback') { res.writeHead(404); res.end(); return; }
       const code = url.searchParams.get('code');
       const error = url.searchParams.get('error');
+      const stateReturned = url.searchParams.get('state');
+      if (stateReturned !== STATE) {
+        res.writeHead(400);
+        res.end('Invalid state');
+        server.close();
+        reject(new Error('OAuth state mismatch. Possible CSRF attack.'));
+        return;
+      }
       const errorDesc = url.searchParams.get('error_description') || '';
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(`<html><body style="font-family:sans-serif;padding:2rem;">
@@ -125,6 +135,7 @@ async function main() {
     scope: SCOPES,
     response_mode: 'query',
     prompt: 'select_account',
+    state: STATE,
   }).toString();
 
   console.log('\nOpening browser for Microsoft authorization...');
@@ -144,7 +155,11 @@ async function main() {
   if (!tokens.refresh_token) {
     console.error('❌ No refresh token returned.');
     console.error('   Make sure "offline_access" is in the scopes and granted in Azure.');
-    console.error('Raw response:', JSON.stringify(tokens, null, 2));
+    if (tokens.error_description) {
+      console.error('OAuth error details:', tokens.error_description);
+    } else {
+      console.error('Token response keys:', Object.keys(tokens));
+    }
     process.exit(1);
   }
 

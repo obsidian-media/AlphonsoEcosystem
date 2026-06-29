@@ -46,6 +46,7 @@ import { useJarvisVoice } from '../hooks/useJarvisVoice';
 const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ default: mod.RuntimeNotice })));
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
 const VoiceInputButton = lazy(() => import('./VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
+const SmartVoiceButton = lazy(() => import('./SmartVoiceButton').then((mod) => ({ default: mod.SmartVoiceButton })));
 
 // D2T9: Connector degradation banner — shown when Ollama is online but connectors are unavailable
 function ConnectorDegradationBanner({ onDismiss }) {
@@ -1259,22 +1260,9 @@ export function ChatView({
               <Paperclip className="w-3 h-3" />
               {(attachedFile as { error?: string; name?: string } | null)?.error ? (attachedFile as { error: string }).error : (attachedFile as { error?: string; name?: string } | null)?.name ? (attachedFile as { name: string }).name : 'File'}
             </button>
-            <Suspense fallback={null}>
-              <VoiceInputButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
-            </Suspense>
-            <button
-              onClick={() => jarvis.state === 'idle' ? jarvis.start() : jarvis.stop()}
-              title={jarvis.isConnected ? `Jarvis voice — ${jarvis.state}${jarvis.activeAgent !== 'alphonso_core' ? ` · ${jarvis.activeAgent}` : ''}` : 'Jarvis voice (requires voice server)'}
-              className={`h-7 w-7 flex items-center justify-center rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
-                jarvis.state === 'listening' ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-muted)] animate-pulse'
-                : jarvis.state === 'thinking' || jarvis.state === 'speaking' ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-muted)]'
-                : jarvis.state === 'error' ? 'border-[var(--error)]/40 text-[var(--error)]'
-                : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
-              }`}
-              aria-label="Jarvis voice pipeline"
-            >
-              {jarvis.state === 'idle' || jarvis.state === 'error' ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
-            </button>
+<Suspense fallback={null}>
+               <SmartVoiceButton voiceStatus={voice.voiceStatus} onToggle={voice.toggleListening} />
+             </Suspense>
             <span className="flex-1 text-2xs text-[var(--text-4)]">
               {ollamaStatus.state === 'connected' && !selectedModelMissing
                 ? `${settings.selectedModel as string || 'local model'}`

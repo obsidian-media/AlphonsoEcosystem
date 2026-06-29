@@ -70,20 +70,7 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (request.method === 'GET' && url.pathname === '/health') {
-    return sendJson(response, 200, {
-      ok: true,
-      status: VERIFY_TOKEN && APP_SECRET ? 'ready' : 'setup_required',
-      forwardConfigured: Boolean(FORWARD_URL),
-      queueLength: messageQueue.length,
-      verifyTokenConfigured: Boolean(VERIFY_TOKEN),
-      appSecretConfigured: Boolean(APP_SECRET),
-      allowlistCount: ALLOWLIST.length,
-      requiredEnv: {
-        WHATSAPP_VERIFY_TOKEN: VERIFY_TOKEN ? 'present' : 'missing',
-        WHATSAPP_APP_SECRET: APP_SECRET ? 'present' : 'missing',
-        ALPHONSO_FORWARD_URL: FORWARD_URL ? 'present' : 'queued'
-      }
-    });
+    return sendJson(response, 200, { ok: true, status: 'ok' });
   }
 
   if (request.method === 'GET' && url.pathname === '/webhook') {

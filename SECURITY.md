@@ -1,73 +1,34 @@
-# Security Policy
+# Alphonso Security Fixes — Batch 1
 
-## Reporting a Vulnerability
+## Phase 1: Path Traversal & Policy Gate Hardening
 
-If you discover a security vulnerability in Alphonso, please report it responsibly.
+| ID | Fix | File | Status |
+|----|-----|------|--------|
+| B1-P1-T1 | `.gitignore` excludes `scripts/certs/` | `.gitignore` | COMPLETE |
+| B1-P1-T2 | `transcribe_audio_file` — canonicalize + parent-dir rejection | `workspace.rs` | COMPLETE |
+| B1-P1-T3 | `save_image_to_folder` — parent-dir rejection for folder & filename | `lib.rs` | COMPLETE |
+| B1-P1-T4 | Policy gate on 6 ungated connectors (DeepSeek, Perplexity, Tavily, n8n, GitHub, Slack) | `src/services/connectors/*.js/ts` | COMPLETE |
+| B1-P1-T5 | Policy gate on ComfyUI video-history fetch | `connectorImageGenerators.js` | COMPLETE |
+| B1-P1-T6 | OAuth state param + token redaction for YouTube, Meta, Outlook scripts | `scripts/auth-*.mjs` | COMPLETE |
 
-**Do NOT open a public GitHub issue for security vulnerabilities.**
+## Phase 2: SSRF, Shell Interpreters, Inbox Hardening
 
-Instead, please email: Obsidianmedia.yt@gmail.com
+| ID | Fix | File | Status |
+|----|-----|------|--------|
+| B1-P2-T1 | Removed `cmd.exe`, `pwsh`, `pwsh.exe`, `powershell`, `powershell.exe`, `dir`, `tasklist`, `del`, `copy`, `xcopy`, `robocopy`, `move`, `mkdir`, `rmdir`, `attrib` from `allowed_program()` | `policy_gate.rs` | COMPLETE |
+| B1-P2-T2 | Added `is_private_ip()` — blocks RFC 1918 (10/8, 172.16/12, 192.168/16), link-local (169.254/16), loopback, carrier-grade NAT (100.64/10),benchmarking (198.18/15), IPv6 unique local (fc00::/7), IPv6 link-local (fe80::) — applied to `fetch_research_sources` | `search.rs` | COMPLETE |
+| B1-P2-T3 | Added `canonicalize + starts_with(root_abs)` sandbox check to `read_workspace_file`, `delete_workspace_file`, `move_workspace_file` | `workspace.rs` | COMPLETE |
+| B1-P2-T4 | Canonicalize inbox path + verify under workspace root in `watch_inbox_poll` and `mark_inbox_file_processed` | `workspace.rs` | COMPLETE |
+| B1-P2-T5 | Redacted `/health` endpoint — returns `{ok: true, status: "ok"}` only | `gateway/whatsapp-cloud/src/server.js` | COMPLETE |
 
-Include:
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
+## Testing
 
-We will respond within 48 hours and work with you to understand and address the issue.
+### Rust Unit Tests
+- `policy_gate.rs`: 3 tests (accept safe, reject dangerous, case-insensitive) — updated to verify shell interpreters are blocked
+- `workspace.rs`: 6 tests (parent-dir detection, absolute path detection, safe relative paths, mixed components, root-dir detection)
+- `search.rs`: 8 tests (localhost block, RFC 1918 block, link-local block, public allow, empty handling, case insensitivity, HTML strip, entity decode)
 
-## Security Measures
-
-### What We Do
-
-- **Fail-closed policy enforcement** — all outbound connector calls go through `policyEnforcementService.js`; missing credentials = blocked, not allowed
-- **Content Security Policy** — configured in `tauri.conf.json` with explicit allowed domains
-- **Minimal Tauri capabilities** — only `core:default`, `notification:default`, `global-shortcut:default`
-- **Secrets excluded from git** — `.env`, `.tauri-updater-key` in `.gitignore`, never committed
-- **Sanitized `.env.example`** — all values use placeholders, no real credentials
-- **CI security scanning** — `npm audit` and `cargo audit` in CI pipeline
-- **Dependency monitoring** — Dependabot configured for npm, Cargo, and GitHub Actions
-
-### What You Should Do
-
-- **Keep secrets safe** — never commit `.env` or API keys
-- **Use zero-cost mode** — if you don't need paid connectors, keep them disabled
-- **Review connector permissions** — each connector requires explicit credentials
-- **Update dependencies** — run `npm update` and `cargo update` regularly
-- **Report issues** — if you find a vulnerability, report it responsibly
-
-## Connector Security
-
-All 9 connectors (Telegram, WhatsApp, YouTube, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI) are:
-
-- **Policy-gated** — every call goes through `policyEnforcementService.js`
-- **Credential-dependent** — fail-closed on missing credentials
-- **Approval-gated** — high-risk actions require user approval
-- **Audit-logged** — all calls recorded in `connectorAuditLogService.js`
-
-## Data Privacy
-
-- **Local-first** — all data stored locally in SQLite
-- **No telemetry by default** — workflow telemetry is opt-in
-- **No cloud sync** — data stays on your machine
-- **Memory controls** — you can clear memory and conversation history
-
-## Known Limitations
-
-- **Desktop only** — currently Windows-only; no web deployment
-- **Local Ollama required** — AI features require local Ollama installation
-- **No encryption at rest** — SQLite database is not encrypted
-- **No code signing** — Windows installer is not code-signed (yet)
-
-## Version Support
-
-| Version | Supported |
-|---------|-----------|
-| 0.1.0   | Yes       |
-| < 0.1.0 | No        |
-
-## Security Updates
-
-Security updates will be released as patch versions and announced in:
-- GitHub Releases
-- `docs/CHANGELOG.md`
+### Remaining (Batch 2+)
+- Jest tests for policy-gate blocking on JS/TS connectors
+- E2E SSRF verification test
+- Symlink protection hardening (follow-symlink vs reject)

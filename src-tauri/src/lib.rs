@@ -453,6 +453,15 @@ fn execute_command_verified(
 
   let output = command.output().map_err(|error| error.to_string())?;
   let finished = now_ms();
+
+  let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+  let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+  let sanitize = |raw: String| {
+    raw
+      .replace(r"(?i)(api_key|token|secret|password|authorization:\s*bearer)\s+[^[:\s]+", "$1 ***")
+  };
+
   let success = output.status.success();
 
   Ok(CommandProof {
@@ -463,8 +472,8 @@ fn execute_command_verified(
     finished_at_ms: finished,
     success,
     exit_code: output.status.code(),
-    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+    stdout: sanitize(stdout),
+    stderr: sanitize(stderr),
     trust: if success {
       "verified".to_string()
     } else {
@@ -1513,6 +1522,19 @@ fn save_image_to_folder(
   if folder.is_empty() {
     return Err("No output folder configured".to_string());
   }
+  let filename = filename.trim().to_string();
+  if filename.is_empty() {
+    return Err("No filename configured".to_string());
+  }
+
+  // Path traversal protection: reject any path component that is ParentDir
+  if std::path::Path::new(&folder).components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+    return Err("Unsafe folder path rejected".to_string());
+  }
+  if std::path::Path::new(&filename).components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+    return Err("Unsafe filename rejected".to_string());
+  }
+
   let raw = base64_data
     .trim_start_matches("data:image/png;base64,")
     .trim_start_matches("data:image/jpeg;base64,")
@@ -1559,6 +1581,52 @@ mod tests {
       "http://localhost:11434"
     );
     assert_eq!(trim_trailing_slashes(""), "");
+  }
+
+  #[test]
+  fn save_image_to_folder_rejects_parent_dir_in_folder() {
+    let result = save_image_to_folder(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8=".to_string(),
+      "test.png".to_string(),
+      "../output".to_string(),
+    );
+    assert!(result.is_err());
+    match result {
+      Err(msg) => assert_eq!(msg, "Unsafe folder path rejected"),
+      Ok(_) => panic!("Expected error"),
+    }
+  }
+
+  #[test]
+  fn save_image_to_folder_rejects_parent_dir_in_filename() {
+    let result = save_image_to_folder(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8=".to_string(),
+      "../test.png".to_string(),
+      "output".to_string(),
+    );
+    assert!(result.is_err());
+    match result {
+      Err(msg) => assert_eq!(msg, "Unsafe filename rejected"),
+      Ok(_) => panic!("Expected error"),
+    }
+  }
+
+  #[test]
+  fn save_image_to_folder_accepts_safe_paths() {
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.join("test_save");
+    std::fs::create_dir_all(&temp_path).unwrap();
+    
+    let result = save_image_to_folder(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8=".to_string(),
+      "test.png".to_string(),
+      temp_path.to_string_lossy().to_string(),
+    );
+    assert!(result.is_ok());
+    let proof = result.unwrap();
+    assert!(proof.path.ends_with("test.png"));
+    assert!(std::path::Path::new(&proof.path).exists());
+    std::fs::remove_file(&proof.path).unwrap();
   }
 
   #[test]

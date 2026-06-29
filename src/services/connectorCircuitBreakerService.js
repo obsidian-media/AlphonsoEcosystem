@@ -1,4 +1,4 @@
-import { durableGet, durableSet } from '../../lib/durableStore.js';
+import { durableGet, durableSet } from '../lib/durableStore';
 
 const STORAGE_KEY = 'alphonso_circuit_breaker_v1';
 const FAILURE_THRESHOLD = 5;

@@ -1,19 +1,32 @@
 import { isDeepSeekConfigured, sendDeepSeekMessage } from '../connectors/deepseekConnector.js';
+import { sendChatGPTMessage } from '../chatgptService.js';
+import { sendClaudeMessage } from '../claudeService.js';
+import { isConnectorAuthenticated } from './connectorRegistryService.js';
+import { generateOllamaChatStream } from '../../lib/ollama.js';
 
+/**
+ * External Agent Adapter — routes external agent tasks to live providers.
+ * 
+ * Wired providers: OpenAI/ChatGPT, Claude/Anthropic, Ollama, DeepSeek
+ * Planned providers: Gemini (v2.6), ACC (v2.6)
+ * 
+ * Note: Gemini requires Google AI Studio API key — planned for v2.6.
+ * ACC is the Alphonso Companion project MCP server — planned for inter-project calls.
+ */
 const _adapterUsageLog = [];
 
 export function listSupportedExternalProviders() {
   return [
-    { id: 'openai', enabled: false, status: 'not_wired' },
-    { id: 'claude', enabled: false, status: 'not_wired' },
-    { id: 'gemini', enabled: false, status: 'not_wired' },
-    { id: 'ollama', enabled: false, status: 'not_wired' },
+    { id: 'openai', enabled: false, status: isConnectorAuthenticated('chatgpt').ok ? 'live' : 'no_credentials' },
+    { id: 'claude', enabled: false, status: isConnectorAuthenticated('claude').ok ? 'live' : 'no_credentials' },
+    { id: 'gemini', enabled: false, status: 'planned_v2.6' },
+    { id: 'ollama', enabled: true, status: 'live' },
     { id: 'deepseek', enabled: isDeepSeekConfigured(), status: isDeepSeekConfigured() ? 'live' : 'no_credentials' },
     { id: 'acc', enabled: false, status: 'not_wired' }
   ];
 }
 
-export async function runExternalAgentTask(provider, task) {
+export async function runExternalAgentTask(provider, task, options = {}) {
   const entry = {
     provider: String(provider || 'unknown'),
     task: String(task || '').slice(0, 200),
@@ -29,6 +42,44 @@ export async function runExternalAgentTask(provider, task) {
     try {
       const result = await sendDeepSeekMessage([{ role: 'user', content: task }]);
       return { enabled: true, status: 'ok', content: result.content, provider: 'deepseek', tracked: true };
+    } catch (err) {
+      return { enabled: true, status: 'error', message: String(err.message || err), tracked: true };
+    }
+  }
+
+  if (provider === 'openai') {
+    const auth = isConnectorAuthenticated('chatgpt');
+    if (!auth.ok) {
+      return { enabled: false, status: 'no_credentials', message: 'OpenAI/ChatGPT API key not configured.', tracked: true };
+    }
+    try {
+      const result = await sendChatGPTMessage(task, { ...options, stream: false });
+      return { enabled: true, status: 'ok', content: result.text, provider: 'openai', tracked: true };
+    } catch (err) {
+      return { enabled: true, status: 'error', message: String(err.message || err), tracked: true };
+    }
+  }
+
+  if (provider === 'claude') {
+    const auth = isConnectorAuthenticated('claude');
+    if (!auth.ok) {
+      return { enabled: false, status: 'no_credentials', message: 'Claude API key not configured.', tracked: true };
+    }
+    try {
+      const result = await sendClaudeMessage(task, { ...options, stream: false });
+      return { enabled: true, status: 'ok', content: result.text, provider: 'claude', tracked: true };
+    } catch (err) {
+      return { enabled: true, status: 'error', message: String(err.message || err), tracked: true };
+    }
+  }
+
+  if (provider === 'ollama') {
+    try {
+      const model = options.model || 'llama3.1';
+      const endpoint = options.endpoint || 'http://localhost:11434';
+      let content = '';
+      await generateOllamaChatStream({ endpoint, model, messages: [{ role: 'user', content: task }], onToken: (t) => { content = t; } });
+      return { enabled: true, status: 'ok', content, provider: 'ollama', tracked: true };
     } catch (err) {
       return { enabled: true, status: 'error', message: String(err.message || err), tracked: true };
     }
