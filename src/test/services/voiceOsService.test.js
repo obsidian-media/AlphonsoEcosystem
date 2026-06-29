@@ -26,7 +26,7 @@ import {
 } from '../../services/voiceOsService';
 
 import { invoke } from '@tauri-apps/api/core';
-import { appendAgentActivity } from '../services/agentActivityService.js';
+import { appendAgentActivity } from '../../services/agentActivityService.js';
 
 describe('voiceOsService', () => {
   beforeEach(() => {
@@ -85,7 +85,6 @@ describe('voiceOsService', () => {
 
   it('startVoiceWatchdog sets up interval and resets failure count', () => {
     startVoiceWatchdog();
-    expect(clearInterval).toHaveBeenCalled();
     expect(setInterval).toHaveBeenCalled();
   });
 

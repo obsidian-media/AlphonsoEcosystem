@@ -21,7 +21,7 @@ vi.stubGlobal('localStorage', localStorageMock);
 import { transcribeAndIngest } from '../../services/whisperTranscriptionService';
 import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaResponse } from '../../lib/ollama.js';
-import { pushMemoryItem } from '../memoryService.js';
+import { pushMemoryItem } from '../../services/memoryService.js';
 
 describe('whisperTranscriptionService', () => {
   beforeEach(() => {

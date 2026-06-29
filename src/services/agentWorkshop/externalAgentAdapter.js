@@ -1,15 +1,15 @@
 import { isDeepSeekConfigured, sendDeepSeekMessage } from '../connectors/deepseekConnector.js';
 import { sendChatGPTMessage } from '../chatgptService.js';
 import { sendClaudeMessage } from '../claudeService.js';
-import { isConnectorAuthenticated } from './connectorRegistryService.js';
+import { isConnectorAuthenticated } from '../connectorRegistryService.js';
 import { generateOllamaChatStream } from '../../lib/ollama.js';
 
 /**
  * External Agent Adapter — routes external agent tasks to live providers.
- * 
+ *
  * Wired providers: OpenAI/ChatGPT, Claude/Anthropic, Ollama, DeepSeek
  * Planned providers: Gemini (v2.6), ACC (v2.6)
- * 
+ *
  * Note: Gemini requires Google AI Studio API key — planned for v2.6.
  * ACC is the Alphonso Companion project MCP server — planned for inter-project calls.
  */
