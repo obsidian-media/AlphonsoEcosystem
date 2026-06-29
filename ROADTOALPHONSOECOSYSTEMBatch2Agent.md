@@ -375,24 +375,24 @@ Branch: `feat/batch2-testing-completeness`
   - Run: `npm run test -- connectorCircuitBreaker` to confirm all tests pass
   - Commit: `fix(test): correct durableStore import path in connectorCircuitBreakerService.test`
 
-- [ ] **B2-P0-T2: Fix CompanionPairingPanel.test.jsx (3 tests)**
+- [x] **B2-P0-T2: Fix CompanionPairingPanel.test.jsx (3 tests)**
   - Issue: `localIps.map is not a function` — mock returns non-array
   - Find the test's mock for whatever returns `localIps`
   - Fix mock to return an array: `localIps: ['192.168.1.1']`
   - Commit: `fix(test): fix localIps mock in CompanionPairingPanel test`
 
-- [ ] **B2-P0-T3: Fix policyEnforcementService.test.js (3 tests)**
+- [x] **B2-P0-T3: Fix policyEnforcementService.test.js (3 tests)**
   - Issue: `getRuntimePolicySettings` returns different results than expected (caching regression)
   - Inspect the test — likely needs `localStorage.clear()` in `beforeEach`
     or a cache invalidation call after settings are set
   - Fix to match actual behavior without changing production code behavior
   - Commit: `fix(test): fix policyEnforcementService cache regression in tests`
 
-- [ ] **B2-P0-T4: Fix policyEnforcementCaching.test.ts (1 test)**
+- [x] **B2-P0-T4: Fix policyEnforcementCaching.test.ts (1 test)**
   - Same root cause as T3 — fix together or separately
   - Commit: `fix(test): fix policyEnforcementCaching test cache regression`
 
-- [ ] **B2-P0-T5: Verify all 2144+ tests pass**
+- [x] **B2-P0-T5: Verify all 2144+ tests pass**
   - Run full suite: `npm run test`
   - Confirm 0 failures
   - Commit if any additional fixes needed: `fix(test): resolve all pre-existing test failures`
