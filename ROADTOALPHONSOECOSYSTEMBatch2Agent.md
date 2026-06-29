@@ -997,7 +997,7 @@ never been verified to compile. This phase makes the iOS story fully honest.**
   - Settings → connectors tab, confirm all 19 connectors show correct status
   - Automation → schedules tab, create and list a schedule
 
-- [ ] **B2-P7-T6: FINAL BATCH 2 DOC UPDATE — 10/10 DECLARATION**
+- [x] **B2-P7-T6: FINAL BATCH 2 DOC UPDATE — 10/10 DECLARATION**
   - Update `ALPHONSO_GROUND_TRUTH.md` — complete v2.5.0 state
     (exact test count, exact coverage %, all gaps status, all agents status)
   - Update `CLAUDE.md` — every stale count corrected (components, hooks, services, Rust lines)
