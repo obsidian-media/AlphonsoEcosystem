@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 
 const AGENTS = [
-  { path: '../agents/echo/echoProfile.js', name: 'Echo' },
-  { path: '../agents/sentinel/sentinelProfile.js', name: 'Sentinel' },
-  { path: '../agents/nova/novaProfile.js', name: 'Nova' },
-  { path: '../agents/jose/joseProfile.js', name: 'Jose' },
-  { path: '../agents/hector/hectorProfile.js', name: 'Hector' },
-  { path: '../agents/miya/miyaProfile.js', name: 'Miya' },
-  { path: '../agents/maria/mariaProfile.js', name: 'Maria' },
-  { path: '../agents/marcus/marcusProfile.js', name: 'Marcus' },
-  { path: '../agents/alphonso/alphonsoProfile.js', name: 'Alphonso' }
+  { path: '../../agents/echo/echoProfile.js', name: 'Echo' },
+  { path: '../../agents/sentinel/sentinelProfile.js', name: 'Sentinel' },
+  { path: '../../agents/nova/novaProfile.js', name: 'Nova' },
+  { path: '../../agents/jose/joseProfile.js', name: 'Jose' },
+  { path: '../../agents/hector/hectorProfile.js', name: 'Hector' },
+  { path: '../../agents/miya/miyaProfile.js', name: 'Miya' },
+  { path: '../../agents/maria/mariaProfile.js', name: 'Maria' },
+  { path: '../../agents/marcus/marcusProfile.js', name: 'Marcus' },
+  { path: '../../agents/alphonso/alphonsoProfile.js', name: 'Alphonso' }
 ];
 
 const REQUIRED_PROPERTIES = [
