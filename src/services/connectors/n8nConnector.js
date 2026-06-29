@@ -1,4 +1,5 @@
 import { getConnectorCredential } from './connectorAuth';
+import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const N8N_DEFAULT_BASE_URL = 'http://localhost:5678';
 
@@ -12,6 +13,18 @@ function getN8nBaseUrl() {
  */
 export async function isN8nHealthy() {
   const baseUrl = getN8nBaseUrl();
+  // Policy gate check
+  const gateHealth = evaluatePolicyGate({
+    connectorId: 'n8n',
+    actionType: 'health',
+    commandPreview: JSON.stringify({ baseUrl }),
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gateHealth.ok) {
+    throw new Error(gateHealth.reason || 'Policy gate blocked');
+  }
+
   try {
     const response = await fetch(`${baseUrl}/healthz`, {
       method: 'GET',
@@ -41,6 +54,17 @@ export async function triggerN8nWebhook(webhookPath, payload = {}) {
   const normalizedPath = String(webhookPath || '').replace(/^\/+/, '');
 
   try {
+    const gateWebhook = evaluatePolicyGate({
+      connectorId: 'n8n',
+      actionType: 'webhook',
+      commandPreview: JSON.stringify({ baseUrl, normalizedPath, payload }),
+      approved: false,
+      auth: { enabled: false, isAuthorized: false }
+    });
+    if (!gateWebhook.ok) {
+      throw new Error(gateWebhook.reason || 'Policy gate blocked');
+    }
+
     const response = await fetch(`${baseUrl}/webhook/${normalizedPath}`, {
       method: 'POST',
       headers: {
@@ -85,6 +109,17 @@ export async function triggerN8nWebhook(webhookPath, payload = {}) {
 export async function listN8nWorkflows() {
   const baseUrl = getN8nBaseUrl();
   try {
+    const gateList = evaluatePolicyGate({
+      connectorId: 'n8n',
+      actionType: 'list_workflows',
+      commandPreview: JSON.stringify({ baseUrl }),
+      approved: false,
+      auth: { enabled: false, isAuthorized: false }
+    });
+    if (!gateList.ok) {
+      throw new Error(gateList.reason || 'Policy gate blocked');
+    }
+
     const response = await fetch(`${baseUrl}/api/v1/workflows`, {
       method: 'GET',
       signal: AbortSignal.timeout(10000),
@@ -113,6 +148,17 @@ export async function listN8nWorkflows() {
 export async function setN8nWorkflowActive(workflowId, active) {
   const baseUrl = getN8nBaseUrl();
   try {
+    const gateActivate = evaluatePolicyGate({
+      connectorId: 'n8n',
+      actionType: 'activate_workflow',
+      commandPreview: JSON.stringify({ baseUrl, workflowId, active }),
+      approved: false,
+      auth: { enabled: false, isAuthorized: false }
+    });
+    if (!gateActivate.ok) {
+      throw new Error(gateActivate.reason || 'Policy gate blocked');
+    }
+
     const response = await fetch(`${baseUrl}/api/v1/workflows/${workflowId}/activate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

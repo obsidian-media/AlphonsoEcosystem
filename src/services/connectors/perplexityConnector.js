@@ -1,4 +1,5 @@
 import { getConnectorCredential } from './connectorAuth.js';
+import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const PERPLEXITY_API_BASE = 'https://api.perplexity.ai';
 
@@ -9,6 +10,18 @@ export function isPerplexityConfigured() {
 export async function searchPerplexity(query, { maxTokens = 512 } = {}) {
   const apiKey = getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY');
   if (!apiKey) throw new Error('Perplexity API key not configured');
+
+  // Policy gate check
+  const gate = evaluatePolicyGate({
+    connectorId: 'perplexity',
+    actionType: 'search',
+    commandPreview: JSON.stringify({ query, maxTokens }),
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gate.ok) {
+    throw new Error(gate.reason || 'Policy gate blocked');
+  }
 
   const r = await fetch(`${PERPLEXITY_API_BASE}/chat/completions`, {
     method: 'POST',

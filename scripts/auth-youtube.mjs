@@ -22,12 +22,14 @@
 import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
+import { randomUUID } from 'crypto';
 import { exec } from 'node:child_process';
 import { URL, URLSearchParams } from 'node:url';
 import { join } from 'node:path';
 
 const PORT = 8085;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
+const STATE = randomUUID();
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
@@ -90,6 +92,14 @@ async function waitForCode() {
       }
       const code = url.searchParams.get('code');
       const error = url.searchParams.get('error');
+      const stateReturned = url.searchParams.get('state');
+      if (stateReturned !== STATE) {
+        res.writeHead(400);
+        res.end('Invalid state');
+        server.close();
+        reject(new Error('OAuth state mismatch. Possible CSRF attack.'));
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(`<html><body style="font-family:sans-serif;padding:2rem;">
         <h2>${error ? '❌ Authorization denied' : '✅ Authorization complete'}</h2>
@@ -127,6 +137,7 @@ async function main() {
     scope: SCOPES,
     access_type: 'offline',
     prompt: 'consent',
+    state: STATE,
   }).toString();
 
   console.log('\nOpening browser for authorization...');
@@ -147,7 +158,13 @@ async function main() {
     console.error('\n❌ No refresh token returned. This usually means the account already');
     console.error('   authorized this app. Go to https://myaccount.google.com/permissions,');
     console.error('   revoke access for your app, then run this script again.\n');
-    console.error('Raw response:', JSON.stringify(tokens, null, 2));
+    // Log only an error description if present; otherwise a minimal hint.
+    if (tokens.error_description) {
+      console.error('OAuth error details:', tokens.error_description);
+    } else {
+      console.error('No refresh_token in response. The server may have returned:',
+        typeof tokens === 'object' ? Object.keys(tokens) : tokens);
+    }
     process.exit(1);
   }
 

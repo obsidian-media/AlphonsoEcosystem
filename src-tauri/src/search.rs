@@ -53,6 +53,54 @@ fn clean_ws(input: &str) -> String {
   input.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+fn is_private_ip(host: &str) -> bool {
+  let host = host.trim().to_ascii_lowercase();
+  if host.is_empty() {
+    return false;
+  }
+  if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "0.0.0.0" {
+    return true;
+  }
+  if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+    match ip {
+      std::net::IpAddr::V4(v4) => {
+        let octets = v4.octets();
+        if octets[0] == 10 {
+          return true;
+        }
+        if octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31 {
+          return true;
+        }
+        if octets[0] == 192 && octets[1] == 168 {
+          return true;
+        }
+        if octets[0] == 169 && octets[1] == 254 {
+          return true;
+        }
+        if octets[0] == 100 && (octets[1] & 0xc0) == 0x40 {
+          return true;
+        }
+        if octets[0] == 198 && (octets[1] & 0xfe) == 0x12 {
+          return true;
+        }
+      }
+      std::net::IpAddr::V6(v6) => {
+        if v6.is_loopback() || v6.is_multicast() {
+          return true;
+        }
+        let segments = v6.segments();
+        if segments[0] == 0xfc00 || segments[0] == 0xfd00 {
+          return true;
+        }
+        if segments[0] == 0xfe80 {
+          return true;
+        }
+      }
+    }
+  }
+  false
+}
+
 fn extract_title(html: &str) -> Option<String> {
   let lower = html.to_ascii_lowercase();
   let start = lower.find("<title")?;
@@ -312,6 +360,26 @@ pub(crate) async fn fetch_research_sources(
       Ok(u) => u,
       Err(_) => continue, // defensive fallback; should be unreachable due to guard above
     };
+    if let Some(host) = url.host_str() {
+      if is_private_ip(host) {
+        proofs.push(ResearchSourceProof {
+          url: url.to_string(),
+          source_type,
+          official,
+          fetched_at_ms,
+          http_status: None,
+          ok: false,
+          title: None,
+          snippet: None,
+          date_checked: unix_now_iso(),
+          confidence: "failed".to_string(),
+          risk_level: "high".to_string(),
+          verification_state: "blocked".to_string(),
+          error: Some("SSRF blocked: private/internal IP address.".to_string()),
+        });
+        continue;
+      }
+    }
     match client.get(url.clone()).send().await {
       Ok(response) => {
         let status = response.status();
@@ -526,4 +594,62 @@ pub(crate) async fn search_brave_sources(
     .collect();
 
   Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn private_ip_blocks_localhost() {
+    assert!(is_private_ip("localhost"));
+    assert!(is_private_ip("127.0.0.1"));
+    assert!(is_private_ip("::1"));
+  }
+
+  #[test]
+  fn private_ip_blocks_rfc1918() {
+    assert!(is_private_ip("10.0.0.1"));
+    assert!(is_private_ip("10.255.255.255"));
+    assert!(is_private_ip("172.16.0.1"));
+    assert!(is_private_ip("172.31.255.255"));
+    assert!(is_private_ip("192.168.1.1"));
+    assert!(is_private_ip("192.168.0.1"));
+  }
+
+  #[test]
+  fn private_ip_blocks_link_local() {
+    assert!(is_private_ip("169.254.1.1"));
+    assert!(is_private_ip("0.0.0.0"));
+  }
+
+  #[test]
+  fn private_ip_allows_public() {
+    assert!(!is_private_ip("8.8.8.8"));
+    assert!(!is_private_ip("1.1.1.1"));
+    assert!(!is_private_ip("203.0.113.1"));
+    assert!(!is_private_ip("example.com"));
+  }
+
+  #[test]
+  fn private_ip_empty_not_private() {
+    assert!(!is_private_ip(""));
+    assert!(!is_private_ip("  "));
+  }
+
+  #[test]
+  fn private_ip_case_insensitive() {
+    assert!(is_private_ip("Localhost"));
+    assert!(is_private_ip("LOCALHOST"));
+  }
+
+  #[test]
+  fn strip_html_removes_tags() {
+    assert_eq!(strip_html_tags("<p>Hello <b>world</b></p>"), "Hello world");
+  }
+
+  #[test]
+  fn decode_html_entities_basic() {
+    assert_eq!(decode_html_entities("& < >"), "& < >");
+  }
 }

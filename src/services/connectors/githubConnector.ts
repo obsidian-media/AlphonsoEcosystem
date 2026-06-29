@@ -1,3 +1,5 @@
+import { evaluatePolicyGate } from '../policyEnforcementService';
+
 const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubConfig {
@@ -61,6 +63,17 @@ async function githubRequest(
   options: RequestInit = {}
 ): Promise<any> {
   const url = endpoint.startsWith('http') ? endpoint : `${GITHUB_API_BASE}${endpoint}`;
+
+  const gate = evaluatePolicyGate({
+    connectorId: 'github',
+    actionType: (options.method !== undefined ? String(options.method).toLowerCase() : 'get'),
+    commandPreview: JSON.stringify({ endpoint, options }),
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gate.ok) {
+    throw new Error(gate.reason || 'Policy gate blocked');
+  }
 
   const response = await fetch(url, {
     ...options,

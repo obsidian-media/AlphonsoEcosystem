@@ -7,9 +7,23 @@ export function isDeepSeekConfigured() {
   return Boolean(getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
 }
 
+import { evaluatePolicyGate } from '../policyEnforcementService';
+
 export async function sendDeepSeekMessage(messages, { model = DEFAULT_MODEL, maxTokens = 2048, temperature = 0.7 } = {}) {
   const apiKey = getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY');
   if (!apiKey) throw new Error('DeepSeek API key not configured');
+
+  // Policy gate check
+  const gate = evaluatePolicyGate({
+    connectorId: 'deepseek',
+    actionType: 'chat',
+    commandPreview: JSON.stringify({ model, messages, maxTokens, temperature }),
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gate.ok) {
+    throw new Error(gate.reason || 'Policy gate blocked');
+  }
 
   const r = await fetch(`${DEEPSEEK_API_BASE}/chat/completions`, {
     method: 'POST',

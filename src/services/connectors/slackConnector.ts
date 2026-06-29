@@ -1,3 +1,5 @@
+import { evaluatePolicyGate } from '../policyEnforcementService';
+
 const SLACK_API_BASE = 'https://slack.com/api';
 
 export interface SlackConfig {
@@ -26,6 +28,18 @@ async function slackRequest(
   config: SlackConfig,
   payload: Record<string, any> = {}
 ): Promise<any> {
+  // Policy gate check
+  const gate = evaluatePolicyGate({
+    connectorId: 'slack',
+    actionType: method ? String(method).toLowerCase() : 'method',
+    commandPreview: JSON.stringify({ method, payload }),
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gate.ok) {
+    throw new Error(gate.reason || 'Policy gate blocked');
+  }
+
   const response = await fetch(`${SLACK_API_BASE}/${method}`, {
     method: 'POST',
     headers: {

@@ -1017,16 +1017,20 @@ pub(crate) fn read_workspace_file(
     return Err("Unsafe relative path rejected.".to_string());
   }
   let file_path = root_abs.join(rel);
-  if !file_path.exists() {
+  let file_abs = fs::canonicalize(&file_path).unwrap_or_else(|_| file_path.clone());
+  if !file_abs.starts_with(&root_abs) {
+    return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
+  if !file_abs.exists() {
     return Err(format!("File not found: {}", rel.display()));
   }
-  if !file_path.is_file() {
+  if !file_abs.is_file() {
     return Err("Path is not a file.".to_string());
   }
-  let content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
+  let content = fs::read_to_string(&file_abs).map_err(|e| e.to_string())?;
   let bytes = content.len();
   Ok(WorkspaceFileReadProof {
-    file_path: file_path.to_string_lossy().to_string(),
+    file_path: file_abs.to_string_lossy().to_string(),
     relative_path: rel.to_string_lossy().to_string(),
     content,
     bytes,
@@ -1060,12 +1064,16 @@ pub(crate) fn delete_workspace_file(
     return Err("Unsafe relative path rejected.".to_string());
   }
   let file_path = root_abs.join(rel);
-  if !file_path.exists() {
+  let file_abs = fs::canonicalize(&file_path).unwrap_or_else(|_| file_path.clone());
+  if !file_abs.starts_with(&root_abs) {
+    return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
+  if !file_abs.exists() {
     return Err(format!("File not found: {}", rel.display()));
   }
-  fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+  fs::remove_file(&file_abs).map_err(|e| e.to_string())?;
   Ok(WorkspaceFileDeleteProof {
-    file_path: file_path.to_string_lossy().to_string(),
+    file_path: file_abs.to_string_lossy().to_string(),
     relative_path: rel.to_string_lossy().to_string(),
     deleted: true,
     deleted_at_ms: now_ms(),
@@ -1103,6 +1111,11 @@ pub(crate) fn move_workspace_file(
   }
   let from_path = root_abs.join(from_rel);
   let to_path = root_abs.join(to_rel);
+  let from_abs = fs::canonicalize(&from_path).unwrap_or_else(|_| from_path.clone());
+  let to_abs = fs::canonicalize(&to_path).unwrap_or_else(|_| to_path.clone());
+  if !from_abs.starts_with(&root_abs) || !to_abs.starts_with(&root_abs) {
+    return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
   if !from_path.exists() {
     return Err(format!("Source file not found: {}", from_rel.display()));
   }
@@ -1893,11 +1906,14 @@ pub(crate) async fn transcribe_audio_file(
     }
   };
 
+  // Validate and canonicalize the audio path to prevent path traversal
+  let audio_path_abs = fs::canonicalize(&audio_path).map_err(|e| e.to_string())?;
+  // Optionally, enforce that the audio file resides within the system temp directory or a known safe dir
   let out_dir = std::env::temp_dir();
 
   let output = tokio::process::Command::new(&whisper_exe)
     .args([
-      &audio_path,
+        &audio_path_abs,
       "--model", model_name,
       "--output_format", "txt",
       "--output_dir", out_dir.to_str().unwrap_or("."),
@@ -1942,18 +1958,23 @@ pub(crate) fn watch_inbox_poll(
   inbox_path: String,
 ) -> Result<Vec<InboxFileProof>, String> {
   let root = PathBuf::from(&workspace_root);
+  let root_abs = fs::canonicalize(&root).map_err(|e| format!("Invalid workspace root: {e}"))?;
   let inbox = if Path::new(&inbox_path).is_absolute() {
     PathBuf::from(&inbox_path)
   } else {
     root.join(&inbox_path)
   };
+  let inbox_abs = fs::canonicalize(&inbox).map_err(|e| format!("Invalid inbox path: {e}"))?;
+  if !inbox_abs.starts_with(&root_abs) {
+    return Err("Path traversal detected: inbox path escapes workspace sandbox.".to_string());
+  }
 
-  if !inbox.exists() {
+  if !inbox_abs.exists() {
     return Ok(vec![]);
   }
 
   let mut files = Vec::new();
-  let entries = fs::read_dir(&inbox).map_err(|e| format!("Failed to read inbox: {e}"))?;
+  let entries = fs::read_dir(&inbox_abs).map_err(|e| format!("Failed to read inbox: {e}"))?;
 
   for entry in entries.flatten() {
     let path = entry.path();
@@ -1998,11 +2019,16 @@ pub(crate) fn mark_inbox_file_processed(
   relative_path: String,
 ) -> Result<WorkspaceWriteProof, String> {
   let root = PathBuf::from(&workspace_root);
+  let root_abs = fs::canonicalize(&root).map_err(|e| format!("Invalid workspace root: {e}"))?;
   let source = if Path::new(&relative_path).is_absolute() {
     PathBuf::from(&relative_path)
   } else {
     root.join(&relative_path)
   };
+  let source_abs = fs::canonicalize(&source).unwrap_or_else(|_| source.clone());
+  if !source_abs.starts_with(&root_abs) {
+    return Err("Path traversal detected: resolved path escapes workspace sandbox.".to_string());
+  }
 
   if !source.exists() {
     return Err(format!("File not found: {}", source.display()));
@@ -2022,4 +2048,46 @@ pub(crate) fn mark_inbox_file_processed(
     bytes: 0,
     trust: "verified".to_string(),
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::path::Component;
+
+  #[test]
+  fn parent_dir_component_detected() {
+    let path = Path::new("../etc/passwd");
+    assert!(path.components().any(|c| matches!(c, Component::ParentDir)));
+  }
+
+  #[test]
+  fn safe_relative_path_has_no_parent_dir() {
+    let path = Path::new("src/components/App.jsx");
+    assert!(!path.components().any(|c| matches!(c, Component::ParentDir)));
+  }
+
+  #[test]
+  fn absolute_path_detected() {
+    let path = Path::new("/etc/passwd");
+    assert!(path.is_absolute());
+  }
+
+  #[test]
+  fn relative_path_not_absolute() {
+    let path = Path::new("src/App.jsx");
+    assert!(!path.is_absolute());
+  }
+
+  #[test]
+  fn traversal_with_mixed_components() {
+    let path = Path::new("src/../etc/shadow");
+    assert!(path.components().any(|c| matches!(c, Component::ParentDir)));
+  }
+
+  #[test]
+  fn root_dir_component_detected() {
+    let path = Path::new("/etc/passwd");
+    assert!(path.components().any(|c| matches!(c, Component::RootDir)));
+  }
 }

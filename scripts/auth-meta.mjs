@@ -27,12 +27,14 @@
 import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
+import { randomUUID } from 'crypto';
 import { exec } from 'node:child_process';
 import { URL, URLSearchParams } from 'node:url';
 import { join } from 'node:path';
 
 const PORT = 8086;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
+const STATE = randomUUID();
 const GRAPH_VERSION = 'v20.0';
 const SCOPES = [
   'pages_show_list',
@@ -82,6 +84,14 @@ async function waitForCode() {
       if (url.pathname !== '/callback') { res.writeHead(404); res.end(); return; }
       const code = url.searchParams.get('code');
       const error = url.searchParams.get('error');
+      const stateReturned = url.searchParams.get('state');
+      if (stateReturned !== STATE) {
+        res.writeHead(400);
+        res.end('Invalid state');
+        server.close();
+        reject(new Error('OAuth state mismatch. Possible CSRF attack.'));
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(`<html><body style="font-family:sans-serif;padding:2rem;">
         <h2>${error ? '❌ Authorization denied' : '✅ Authorization complete'}</h2>
@@ -120,6 +130,7 @@ async function main() {
     redirect_uri: REDIRECT_URI,
     scope: SCOPES,
     response_type: 'code',
+    state: STATE,
   }).toString();
 
   console.log('\nOpening browser for Meta authorization...');
@@ -144,7 +155,12 @@ async function main() {
   const tokenData = await tokenRes.json();
 
   if (!tokenData.access_token) {
-    console.error('❌ Failed to get access token:', JSON.stringify(tokenData, null, 2));
+    console.error('❌ Failed to get access token.');
+    if (tokenData.error_description) {
+      console.error('Meta error details:', tokenData.error_description);
+    } else {
+      console.error('Token response keys:', Object.keys(tokenData));
+    }
     process.exit(1);
   }
 
