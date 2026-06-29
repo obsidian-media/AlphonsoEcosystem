@@ -60,14 +60,20 @@ export function useJarvisVoice() {
       ws.current = socket;
 
       socket.onopen = () => setIsConnected(true);
-      socket.onclose = () => {
-        setIsConnected(false);
-        setVoiceState('idle');
-      };
-      socket.onerror = () => {
-        setError('WebSocket connection failed');
-        setVoiceState('error');
-      };
+socket.onclose = () => {
+         setIsConnected(false);
+         setVoiceState('idle');
+         window.dispatchEvent(new CustomEvent('alphonso:toast', {
+           detail: { type: 'info', message: 'Voice OS disconnected. Start it from Runtimes tab to use voice.' }
+         }));
+       };
+       socket.onerror = () => {
+         setError('WebSocket connection failed');
+         setVoiceState('error');
+         window.dispatchEvent(new CustomEvent('alphonso:toast', {
+           detail: { type: 'error', message: 'Voice OS not running — start it from Runtime Manager to use voice.' }
+         }));
+       };
 
       socket.onmessage = (e: MessageEvent) => {
         if (e.data instanceof ArrayBuffer) {
