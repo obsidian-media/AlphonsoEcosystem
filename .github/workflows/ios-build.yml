@@ -189,7 +189,7 @@ jobs:
             || echo "::warning::TestFlight upload failed — download IPA from artifacts below"
 
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AlphonsoCompanion-${{ github.run_number }}
           path: ios/AlphonsoCompanion/build/output/AlphonsoCompanion.ipa
