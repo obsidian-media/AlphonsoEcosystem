@@ -635,13 +635,13 @@ Branch: `feat/batch2-testing-completeness`
   - Target: 8+ tests
   - Commit: `test: add tests for nativeSelfDevelopmentAutoStartService (runs on every boot)`
 
-- [ ] **B2-P2-T34: Tests for workflowReceiptService.js + workflowTelemetryService.js**
+- [x] **B2-P2-T34: Tests for workflowReceiptService.js + workflowTelemetryService.js**
   - Create: `src/test/services/workflowReceiptService.test.js`
   - Create: `src/test/services/workflowTelemetryService.test.js`
   - Cover: receipt creation, telemetry event emission, aggregation
   - Target: 10+ tests each
 
-- [ ] **B2-P2-T35: Tests for orchestrationGovernanceService.js**
+- [x] **B2-P2-T35: Tests for orchestrationGovernanceService.js**
   - Create: `src/test/services/orchestrationGovernanceService.test.js`
   - Cover: governance rules evaluation, block/allow decisions, audit emission
   - Target: 12+ tests
@@ -652,7 +652,7 @@ Branch: `feat/batch2-testing-completeness`
   - Cover: execution lifecycle, DNA fingerprint generation, match scoring
   - Target: 10+ tests each
 
-- [ ] **B2-P2-T37: Tests for toolRegistryService.js**
+- [x] **B2-P2-T37: Tests for toolRegistryService.js**
   - Create: `src/test/services/toolRegistryService.test.js`
   - Cover: tool registration, lookup by name, permission checking
   - Target: 10+ tests
