@@ -5,9 +5,11 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 describe('iOS Companion Integration', () => {
-  const { invoke } = await import('@tauri-apps/api/core');
+  let invoke;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const module = await import('@tauri-apps/api/core');
+    invoke = module.invoke;
     vi.clearAllMocks();
   });
 
