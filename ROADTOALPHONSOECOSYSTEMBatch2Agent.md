@@ -932,14 +932,14 @@ the three providers whose credentials already exist in the system.**
 mDNS, JSON-RPC) is confirmed complete. But the Swift client files in `ios/` have
 never been verified to compile. This phase makes the iOS story fully honest.**
 
-- [ ] **B2-P6-T1: Audit the Swift files in ios/**
+- [x] **B2-P6-T1: Audit the Swift files in ios/**
   - Read all Swift files in `ios/` directory
   - Document: how many files, what they do, whether they reference the Rust WebSocket API correctly
   - Check: PIN auth flow, mDNS discovery calls, WebSocket connection handling
   - Report findings in a comment commit or directly fix issues found
   - Commit: `chore(ios): audit Swift companion files and document status`
 
-- [ ] **B2-P6-T2: Verify the companion pairing flow end-to-end**
+- [x] **B2-P6-T2: Verify the companion pairing flow end-to-end**
   - With Alphonso running (`npm run tauri dev`), test the companion WebSocket server
   - Use a WebSocket client (wscat or Insomnia) to connect to the companion port
   - Test PIN auth handshake (the Rust server generates a PIN via `rand`)
@@ -947,20 +947,20 @@ never been verified to compile. This phase makes the iOS story fully honest.**
   - Document what works and what doesn't
   - Commit: `test(ios): verify companion WebSocket + PIN auth flow`
 
-- [ ] **B2-P6-T3: Fix any discovered iOS companion issues**
+- [x] **B2-P6-T3: Fix any discovered iOS companion issues**
   - Based on T1 + T2 findings, fix any mismatches between the Swift client
     and the Rust JSON-RPC protocol definitions in `companion_router.rs`
   - Ensure `companion_types.rs` structs match what Swift expects
   - Commit: `fix(ios): resolve Swift ↔ Rust protocol mismatches in companion`
 
-- [ ] **B2-P6-T4: Add iOS companion integration test**
+- [x] **B2-P6-T4: Add iOS companion integration test**
   - Create: `src/test/services/companionIntegration.test.js` (or a Playwright E2E spec)
   - Test: companion WebSocket server starts with the app, responds to ping, enforces PIN
   - This can be a mock-level test if a real iOS device is not available
   - Target: 8+ tests
   - Commit: `test(ios): add companion integration tests`
 
-- [ ] **B2-P6-T5: Update iOS companion docs**
+- [x] **B2-P6-T5: Update iOS companion docs**
   - Update `ALPHONSO_GROUND_TRUTH.md` — iOS companion fully verified or clearly marked as "Rust complete / Swift unverified"
   - Update `CLAUDE.md` — iOS companion status
   - Commit: `docs: Phase 6 complete — iOS companion status documented`

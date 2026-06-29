@@ -398,11 +398,11 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 These are confirmed gaps as of 2026-06-27 (v2.4.4). Any agent working on these areas should check current state before implementing.
 
 ### OPEN GAPS (as of v2.4.4)
-- [ ] **iOS companion router — events emitted but no frontend listener — companion_router.rs send_command emits companion://command Tauri events but no frontend listener in App.tsx to route to Jose. get_boardroom reads from KV but get_projects has no real implementation. Infrastructure exists but commands don't reach execution engine.
 - [ ] **Voice OS Python dependency** — Voice OS in Runtime Hub can Install/Start, but requires Python 3.10+ on PATH. `find_python()` checks standard paths but won't auto-install Python itself. User must have Python installed first.
 - [ ] **Plugin true execution isolation** — `pluginSandboxService.js` IS imported and wired via `PluginContext.jsx:95` (`evaluatePluginExecutionPolicy`). But the policy check validates args only (arg count, blocked tokens, injection patterns) — there is no Web Worker, iframe, or subprocess isolation. Plugin tools run in the main thread.
 
 ### CLOSED — v2.4.4 (2026-06-28)
+- [x] **iOS companion router — events emitted but no frontend listener** — Already closed: `App.tsx` line 375+ listens for `companion://command`, `companion://abort`, `companion://approve` events and routes them to the execution engine. Swift WebSocketService (MDNSService.swift, WebSocketService.swift) matches Rust JSON-RPC protocol (companion_router.rs). 12 integration tests added in `companionIntegration.test.js`.
 - [x] **DeepSeek connector** — `src/services/connectors/deepseekConnector.js` created: `isDeepSeekConfigured`, `sendDeepSeekMessage`, `searchWithDeepSeek`. Credential UI added to ConnectorSetupPanel. `externalAgentAdapter.js` wired: `runExternalAgentTask('deepseek', task)` calls DeepSeek API live. Hector tier-3 fallback added. 4 tests in `deepseekConnector.test.js`.
 - [x] **PWA offline ChatView wiring** — `saveMessageOffline()` from `offlineChatService.js` now called in ChatView.tsx (import added line 43; called on Ollama stream error at line 687). Messages are saved to IndexedDB when Ollama is unreachable.
 - [x] **Runway API key credential UI** — Already closed in prior sprint (ConnectorSetupPanel.tsx line 701). Ground Truth was stale.
