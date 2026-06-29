@@ -368,7 +368,7 @@ Branch: `feat/batch2-testing-completeness`
 
 **8 failing tests across 4 files:**
 
-- [ ] **B2-P0-T1: Fix connectorCircuitBreakerService.test.js**
+- [x] **B2-P0-T1: Fix connectorCircuitBreakerService.test.js**
   - Issue: imports `../../lib/durableStore.js` which doesn't exist at that path
   - Find where `durableStore.js` actually lives (`src/lib/durableStore.js`)
   - Fix the import path in the test file
@@ -403,7 +403,7 @@ Branch: `feat/batch2-testing-completeness`
 
 **Echo, Sentinel, Nova have 8 properties. Other agents have 20–27. This is the profile debt.**
 
-- [ ] **B2-P1-T1: Enrich Echo profile**
+- [x] **B2-P1-T1: Enrich Echo profile**
   - File: `src/agents/echo/echoProfile.js`
   - Add all 17 missing properties (matching format of `marcusProfile.js` as reference):
     `title`, `purpose`, `accentColor`, `visualIdentity`, `personality`,
@@ -414,13 +414,13 @@ Branch: `feat/batch2-testing-completeness`
   - Migrate to use `createPermissionProfile` from shared `permissionModel.js`
   - Commit: `feat(agents): enrich Echo profile to full 25-property format`
 
-- [ ] **B2-P1-T2: Enrich Sentinel profile**
+- [x] **B2-P1-T2: Enrich Sentinel profile**
   - File: `src/agents/sentinel/sentinelProfile.js`
   - Same as T1 but for Sentinel (security/scanning agent)
   - Sentinel's strengths: threat detection, policy scanning, audit trail, compliance checking
   - Commit: `feat(agents): enrich Sentinel profile to full 25-property format`
 
-- [ ] **B2-P1-T3: Enrich Nova profile**
+- [x] **B2-P1-T3: Enrich Nova profile**
   - File: `src/agents/nova/novaProfile.js`
   - Same as T1 but for Nova (opportunity analysis agent)
   - Nova's strengths: market insight, trend detection, opportunity scoring, growth analysis
@@ -445,28 +445,28 @@ Branch: `feat/batch2-testing-completeness`
 
 **Priority Tier 1 — Critical infrastructure:**
 
-- [ ] **B2-P2-T1: Tests for verificationService.js + verificationChainService.js**
+- [x] **B2-P2-T1: Tests for verificationService.js + verificationChainService.js**
   - Create: `src/test/services/verificationService.test.js`
   - Create: `src/test/services/verificationChainService.test.js`
   - Cover: main verification flow, chain integrity, failure cases
   - Target: 15+ tests each
 
-- [ ] **B2-P2-T2: Tests for a2aProtocolService.ts**
+- [x] **B2-P2-T2: Tests for a2aProtocolService.ts**
   - Create: `src/test/services/a2aProtocolService.test.ts`
   - Cover: `delegate`, `getTaskStatus`, `updateTaskResult`, `listActiveTasks`, `listTasksByAgent`
   - Target: 20+ tests
 
-- [ ] **B2-P2-T3: Tests for workflowBuilderService.js**
+- [x] **B2-P2-T3: Tests for workflowBuilderService.js**
   - Create: `src/test/services/workflowBuilderService.test.js`
   - Cover: node operations, workflow save/load, visual builder state
   - Target: 15+ tests
 
-- [ ] **B2-P2-T4: Tests for moduleRegistryService.ts**
+- [x] **B2-P2-T4: Tests for moduleRegistryService.ts**
   - Create: `src/test/services/moduleRegistryService.test.ts`
   - Cover: `installModule`, `enableModule`, `disableModule`, `listModules`, `uninstallModule`
   - Target: 15+ tests
 
-- [ ] **B2-P2-T5: Tests for runtimeApiService.ts**
+- [x] **B2-P2-T5: Tests for runtimeApiService.ts**
   - Create: `src/test/services/runtimeApiService.test.ts`
   - Cover: `listModulesRemote`, `runModule`, `getRunStatus`, `publishEvent`, offline fallback
   - Target: 12+ tests
@@ -751,7 +751,7 @@ to reach at least 8 tests per file:
 
 ### BATCH 2 — Phase 3: Voice Backend Completion
 
-- [ ] **B2-P3-T1: Complete vad.py (WebRTC VAD)**
+- [x] **B2-P3-T1: Complete vad.py (WebRTC VAD)**
   - File: `voice/backend/vad.py` — currently a 6-line energy heuristic stub
   - Replace with proper WebRTC VAD using `webrtcvad` (already listed in requirements.txt)
   - Implement: `webrtcvad.Vad(aggressiveness=2)`, process 10/20/30ms frames at 16kHz
@@ -759,7 +759,7 @@ to reach at least 8 tests per file:
   - Update `voice/backend/tests/test_router.py` and add VAD-specific tests
   - Commit: `feat(voice): implement WebRTC VAD in vad.py (replace energy heuristic stub)`
 
-- [ ] **B2-P3-T2: Complete router.py (9-agent routing)**
+- [x] **B2-P3-T2: Complete router.py (9-agent routing)**
   - File: `voice/backend/router.py` — currently always returns `'alphonso_core'`
   - Implement regex/keyword routing for all 9 agents:
     - `jose` → task planning, project, schedule, delegate
@@ -787,7 +787,7 @@ to reach at least 8 tests per file:
   - Run: `cd voice/backend && python -m pytest tests/ -v` — all must pass
   - Commit: `test(voice): update Python tests for real VAD and 9-agent routing`
 
-- [ ] **B2-P3-T4: Pin requirements.txt versions**
+- [x] **B2-P3-T4: Pin requirements.txt versions**
   - File: `voice/backend/requirements.txt`
   - Pin all 7 dependencies to exact versions (`==`) for reproducible installs
   - Commit: `chore(voice): pin requirements.txt to exact versions`
@@ -800,7 +800,7 @@ to reach at least 8 tests per file:
 
 ### BATCH 2 — Phase 4: UX Completeness & Discoverability
 
-- [ ] **B2-P4-T1: Add Voice sidebar nav entry**
+- [x] **B2-P4-T1: Add Voice sidebar nav entry**
   - File: `src/components/Sidebar.tsx` (or `.jsx`)
   - Add "Voice" navigation item under the System section
   - On click: navigate to a new `VoiceSettingsView` or the existing RuntimeManagerView
@@ -876,7 +876,7 @@ to reach at least 8 tests per file:
 "external agent" abstraction barely exists. For 10/10 completeness, wire at least
 the three providers whose credentials already exist in the system.**
 
-- [ ] **B2-P5-T1: Wire OpenAI path in externalAgentAdapter.js**
+- [x] **B2-P5-T1: Wire OpenAI path in externalAgentAdapter.js**
   - File: `src/services/externalAgentAdapter.js`
   - Import `chatgptService.js` (already exists, full SSE streaming)
   - In `runExternalAgentTask()` for provider `openai`: call `sendChatGptMessage(task.prompt, options)`
@@ -884,13 +884,13 @@ the three providers whose credentials already exist in the system.**
   - Update `listSupportedExternalProviders()`: set `openai` status to `'live'`
   - Commit: `feat(adapter): wire OpenAI provider in externalAgentAdapter`
 
-- [ ] **B2-P5-T2: Wire Claude/Anthropic path in externalAgentAdapter.js**
+- [x] **B2-P5-T2: Wire Claude/Anthropic path in externalAgentAdapter.js**
   - Import `claudeService.js` (already exists, full SSE streaming)
   - Same pattern as T1 for provider `claude`
   - Credential check: `isConnectorAuthenticated('claude')`
   - Commit: `feat(adapter): wire Claude provider in externalAgentAdapter`
 
-- [ ] **B2-P5-T3: Wire Ollama path in externalAgentAdapter.js**
+- [x] **B2-P5-T3: Wire Ollama path in externalAgentAdapter.js**
   - Import `generateOllamaChatStream` from `src/lib/ollama.js`
   - For provider `ollama`: stream a response using the configured model
   - No credential check needed — Ollama is local
@@ -912,7 +912,7 @@ the three providers whose credentials already exist in the system.**
   - Add auth check: `ACC_MCP_URL` and `ACC_MCP_TOKEN` from env
   - Commit: `feat(adapter): wire ACC provider via MCP server in externalAgentAdapter`
 
-- [ ] **B2-P5-T6: Add tests for externalAgentAdapter.js**
+- [x] **B2-P5-T6: Add tests for externalAgentAdapter.js**
   - Create: `src/test/services/externalAgentAdapter.test.js`
   - Cover: each live provider dispatches correctly, not_wired providers return cleanly,
     credential-missing path returns expected error, `listSupportedExternalProviders` counts
