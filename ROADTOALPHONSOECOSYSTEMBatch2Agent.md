@@ -473,27 +473,27 @@ Branch: `feat/batch2-testing-completeness`
 
 **Priority Tier 2 — Agent-related services:**
 
-- [ ] **B2-P2-T6: Tests for connectorOutbound.js**
+- [x] **B2-P2-T6: Tests for connectorOutbound.js**
   - Create: `src/test/services/connectorOutbound.test.js`
   - Cover: gate calls, circuit breaker integration, fallback paths for key connectors
   - Target: 20+ tests (mock fetch and invoke)
 
-- [ ] **B2-P2-T7: Tests for approvalService.js**
+- [x] **B2-P2-T7: Tests for approvalService.js**
   - Create: `src/test/services/approvalService.test.js`
   - Cover: approval creation, timeout, accept/reject flow
   - Target: 15+ tests
 
-- [ ] **B2-P2-T8: Tests for offlineChatService.js**
+- [x] **B2-P2-T8: Tests for offlineChatService.js**
   - Create: `src/test/services/offlineChatService.test.js`
   - Cover: IndexedDB save, retrieve, mark synced — mock IndexedDB
   - Target: 10+ tests
 
-- [ ] **B2-P2-T9: Tests for coachModeService.js**
+- [x] **B2-P2-T9: Tests for coachModeService.js**
   - Create: `src/test/services/coachModeService.test.js`
   - Cover: mode toggle, session tracking, label retrieval
   - Target: 10+ tests
 
-- [ ] **B2-P2-T10: Tests for policyDslService.ts**
+- [x] **B2-P2-T10: Tests for policyDslService.ts**
   - Create: `src/test/services/policyDslService.test.ts`
   - Cover: rule evaluation, `evaluateAction`, fail-closed defaults
   - Target: 15+ tests (regardless of whether BATCH 1 wires it or removes it)
@@ -501,12 +501,12 @@ Branch: `feat/batch2-testing-completeness`
 
 **Priority Tier 3 — Hooks:**
 
-- [ ] **B2-P2-T11: Tests for useAppShellState hook**
+- [x] **B2-P2-T11: Tests for useAppShellState hook**
   - Create: `src/test/hooks/useAppShellState.test.js`
   - Cover: key state transitions, callback firing, tab switching
   - Target: 15+ tests using `renderHook` from @testing-library/react
 
-- [ ] **B2-P2-T12: Tests for useJarvisVoice hook**
+- [x] **B2-P2-T12: Tests for useJarvisVoice hook**
   - Create: `src/test/hooks/useJarvisVoice.test.ts`
   - Cover: connect/disconnect lifecycle, transcript state, error handling
   - Mock WebSocket with ws (already in devDependencies)
@@ -615,7 +615,7 @@ Branch: `feat/batch2-testing-completeness`
   - Cover: diff creation, approval state machine, apply/reject flow
   - Target: 10+ tests
 
-- [ ] **B2-P2-T32: Inspect and test 5 suspiciously thin service files**
+- [x] **B2-P2-T32: Inspect and test 5 suspiciously thin service files**
   - The audit flagged these as <16 lines, possibly re-export stubs or dead code:
     `workflowMemoryService.js`, `ecosystemMemoryService.js`,
     `connectorRegistryService.js`, `agentAuditService.js`,
@@ -736,7 +736,7 @@ to reach at least 8 tests per file:
   - `runwayService.test.js` (3 tests → 10+): video generation, polling, download
   - Commit: `test: expand 6 more thin test files to 8+ tests each (Batch B)`
 
-- [ ] **B2-P2-T41: Bump coverage threshold**
+- [x] **B2-P2-T41: Bump coverage threshold**
   - After all new tests land, run `npm run test:coverage`
   - Update threshold in `vitest.config.js` to the new measured value
   - Target: push threshold to **50%+** (up from the fictional 38%)
