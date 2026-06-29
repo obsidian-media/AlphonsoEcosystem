@@ -556,34 +556,34 @@ Branch: `feat/batch2-testing-completeness`
 
 **Priority Tier 5 — Connector & storage services (no tests):**
 
-- [ ] **B2-P2-T21: Tests for connectorImageGenerators.js**
+- [x] **B2-P2-T21: Tests for connectorImageGenerators.js**
   - Create: `src/test/services/connectorImageGenerators.test.js`
   - Cover: SD WebUI dispatch, ComfyUI queue + history, circuit breaker check
   - Mock `invoke` for Tauri commands
   - Target: 12+ tests
 
-- [ ] **B2-P2-T22: Tests for connectorPolling.js**
+- [x] **B2-P2-T22: Tests for connectorPolling.js**
   - Create: `src/test/services/connectorPolling.test.js`
   - Cover: poll interval setup/teardown, result dispatch, error handling
   - Target: 10+ tests
 
-- [ ] **B2-P2-T23: Tests for whatsappBrowserConnector.js**
+- [x] **B2-P2-T23: Tests for whatsappBrowserConnector.js**
   - Create: `src/test/services/whatsappBrowserConnector.test.js`
   - Cover: `browserSendWhatsApp`, `browserPollWhatsAppGateway`, credential check
   - Mock fetch
   - Target: 10+ tests
 
-- [ ] **B2-P2-T24: Tests for chatgptService.js**
+- [x] **B2-P2-T24: Tests for chatgptService.js**
   - Create: `src/test/services/chatgptService.test.js`
   - Cover: SSE streaming, reconnection, error states, model selection
   - Target: 10+ tests
 
-- [ ] **B2-P2-T25: Tests for claudeService.js**
+- [x] **B2-P2-T25: Tests for claudeService.js**
   - Create: `src/test/services/claudeService.test.js`
   - Cover: SSE streaming, anthropic-version header, error extraction
   - Target: 10+ tests
 
-- [ ] **B2-P2-T26: Tests for providerAdapterService.js**
+- [x] **B2-P2-T26: Tests for providerAdapterService.js**
   - Create: `src/test/services/providerAdapterService.test.js`
   - Cover: provider routing, fallback chains, credential delegation
   - Target: 10+ tests
