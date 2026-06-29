@@ -896,7 +896,7 @@ the three providers whose credentials already exist in the system.**
   - No credential check needed — Ollama is local
   - Commit: `feat(adapter): wire Ollama provider in externalAgentAdapter`
 
-- [ ] **B2-P5-T4: Wire Gemini path (if API key support is added) OR document as future**
+- [x] **B2-P5-T4: Wire Gemini path (if API key support is added) OR document as future**
   - Assess: does `gemini` need a new `geminiService.js` connector?
   - If yes: create a minimal `src/services/connectors/geminiConnector.js` that calls
     `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
@@ -905,7 +905,7 @@ the three providers whose credentials already exist in the system.**
     "Gemini: planned for v2.6 — requires Google AI Studio key" and mark as `'planned'`
   - Commit: `feat(adapter): wire Gemini or document as v2.6 planned`
 
-- [ ] **B2-P5-T5: Wire ACC path in externalAgentAdapter.js**
+- [x] **B2-P5-T5: Wire ACC path in externalAgentAdapter.js**
   - ACC is the other Alphonso project (sibling repo at `D:\AgentDevWork\repos\ACC`)
   - The adapter should call the ACC MCP server (`mcp-server/server.js` at port 3333)
     using a simple `fetch('http://localhost:3333/mcp/tool/...')` call

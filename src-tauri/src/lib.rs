@@ -453,6 +453,15 @@ fn execute_command_verified(
 
   let output = command.output().map_err(|error| error.to_string())?;
   let finished = now_ms();
+
+  let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+  let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+  let sanitize = |raw: String| {
+    raw
+      .replace(r"(?i)(api_key|token|secret|password|authorization:\s*bearer)\s+[^[:\s]+", "$1 ***")
+  };
+
   let success = output.status.success();
 
   Ok(CommandProof {
@@ -463,8 +472,8 @@ fn execute_command_verified(
     finished_at_ms: finished,
     success,
     exit_code: output.status.code(),
-    stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-    stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+    stdout: sanitize(stdout),
+    stderr: sanitize(stderr),
     trust: if success {
       "verified".to_string()
     } else {
