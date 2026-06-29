@@ -144,14 +144,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Exchange code for short-lived token
+  // Exchange code for short-lived token (client_secret in POST body, not URL)
   console.log('\nExchanging code for short-lived token...');
-  const tokenRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?` + new URLSearchParams({
+  const tokenBody = new URLSearchParams({
     client_id: appId,
     client_secret: appSecret,
     redirect_uri: REDIRECT_URI,
     code,
-  }));
+  });
+  const tokenRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: tokenBody.toString(),
+  });
   const tokenData = await tokenRes.json();
 
   if (!tokenData.access_token) {
@@ -164,14 +169,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Exchange for long-lived token (60 days)
+  // Exchange for long-lived token (60 days) — client_secret in POST body
   console.log('Exchanging for long-lived token (60-day)...');
-  const longRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?` + new URLSearchParams({
+  const longBody = new URLSearchParams({
     grant_type: 'fb_exchange_token',
     client_id: appId,
     client_secret: appSecret,
     fb_exchange_token: tokenData.access_token,
-  }));
+  });
+  const longRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: longBody.toString(),
+  });
   const longData = await longRes.json();
   const longToken = longData.access_token || tokenData.access_token;
 

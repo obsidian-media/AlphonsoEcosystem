@@ -321,6 +321,10 @@ export async function queueComfyUiVideo({
 }
 
 export async function getComfyUiVideoHistory(promptId) {
+  const policyGate = gateConnectorAction('comfyui_video', 'video_history', String(promptId || ''), {});
+  if (!policyGate.ok) {
+    return { ok: false, connectorId: 'comfyui_video', blocked: true, error: policyGate.reason || 'Policy gate blocked', trust: TRUST_STATES.FAILED };
+  }
   const circuit = getConnectorCircuitState('comfyui_video', 'video_history');
   if (!circuit.ok) {
     appendConnectorAudit('comfyui_video', 'video_history_blocked_circuit_open', {

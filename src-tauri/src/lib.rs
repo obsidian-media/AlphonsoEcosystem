@@ -457,9 +457,36 @@ fn execute_command_verified(
   let stdout = String::from_utf8_lossy(&output.stdout).to_string();
   let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-  let sanitize = |raw: String| {
-    raw
-      .replace(r"(?i)(api_key|token|secret|password|authorization:\s*bearer)\s+[^[:\s]+", "$1 ***")
+  let sanitize = |raw: String| -> String {
+    // Redact secret-looking values using a line-by-line scan (no regex dep).
+    // Patterns: KEY=value, "key": "value", Bearer <token>
+    raw.lines().map(|line| {
+      let lower = line.to_ascii_lowercase();
+      let is_sensitive = lower.contains("api_key") || lower.contains("api_secret")
+        || lower.contains("access_token") || lower.contains("refresh_token")
+        || lower.contains("client_secret") || lower.contains("password")
+        || lower.contains("authorization: bearer") || lower.contains("bearer ");
+      if is_sensitive {
+        // Replace token-like values: anything after = or ": that is >8 chars
+        let mut redacted = line.to_string();
+        // Redact KEY=VALUE patterns
+        if let Some(eq) = redacted.find('=') {
+          let val = redacted[eq + 1..].trim();
+          if val.len() > 8 {
+            redacted = format!("{}=***REDACTED***", &redacted[..eq]);
+          }
+        // Redact JSON "key": "value" patterns
+        } else if let Some(colon) = redacted.rfind(": ") {
+          let val = redacted[colon + 2..].trim().trim_matches('"').trim_matches(',');
+          if val.len() > 8 {
+            redacted = format!("{}***REDACTED***", &redacted[..colon + 2]);
+          }
+        }
+        redacted
+      } else {
+        line.to_string()
+      }
+    }).collect::<Vec<_>>().join("\n")
   };
 
   let success = output.status.success();
@@ -1231,6 +1258,13 @@ async fn fetch_url_content(
 ) -> Result<UrlFetchProof, String> {
   if !url.starts_with("http://") && !url.starts_with("https://") {
     return Err("URL must start with http:// or https://".to_string());
+  }
+  // SSRF protection: block requests to private/loopback IP ranges
+  if let Ok(parsed) = reqwest::Url::parse(&url) {
+    let host = parsed.host_str().unwrap_or("");
+    if crate::search::is_private_ip(host) {
+      return Err("Requests to private or loopback addresses are not allowed.".to_string());
+    }
   }
   let response = state
     .get(&url)
