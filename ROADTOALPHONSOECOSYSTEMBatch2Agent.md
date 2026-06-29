@@ -590,12 +590,12 @@ Branch: `feat/batch2-testing-completeness`
 
 **Priority Tier 6 — System & infrastructure services (no tests):**
 
-- [ ] **B2-P2-T27: Tests for systemHealthService.js**
+- [x] **B2-P2-T27: Tests for systemHealthService.js**
   - Create: `src/test/services/systemHealthService.test.js`
   - Cover: health snapshot, degraded detection, service aggregation
   - Target: 10+ tests
 
-- [ ] **B2-P2-T28: Tests for memoryMonitorService.js**
+- [x] **B2-P2-T28: Tests for memoryMonitorService.js**
   - Create: `src/test/services/memoryMonitorService.test.js`
   - Cover: snapshot collection, trend detection, threshold alerts
   - Target: 8+ tests
