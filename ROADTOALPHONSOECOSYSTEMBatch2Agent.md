@@ -426,7 +426,7 @@ Branch: `feat/batch2-testing-completeness`
   - Nova's strengths: market insight, trend detection, opportunity scoring, growth analysis
   - Commit: `feat(agents): enrich Nova profile to full 25-property format`
 
-- [ ] **B2-P1-T4: Add agent profile tests**
+- [x] **B2-P1-T4: Add agent profile tests**
   - Create `src/test/agents/agentProfiles.test.js`
   - Test that ALL 9 agents have the required 20+ properties
   - Test that `hierarchyRank` is defined and unique for all agents
@@ -665,7 +665,7 @@ Branch: `feat/batch2-testing-completeness`
 
 **Priority Tier 6b — Previously missed services (no tests):**
 
-- [ ] **B2-P2-T38b: Tests for MCP bridge server (bridge/server.js)**
+- [x] **B2-P2-T38b: Tests for MCP bridge server (bridge/server.js)**
   - The bridge exposes 5 MCP tools callable from Claude Desktop/Cursor/Windsurf
   - Currently has zero tests — it's the external integration surface
   - Create: `bridge/tests/server.test.js` (or `src/test/bridge/mcpBridge.test.js`)
@@ -674,7 +674,7 @@ Branch: `feat/batch2-testing-completeness`
   - Target: 12+ tests (use supertest or plain node fetch against a started instance)
   - Commit: `test(bridge): add MCP bridge server tests for all 5 tool endpoints`
 
-- [ ] **B2-P2-T38c: Tests for voiceOsService.js**
+- [x] **B2-P2-T38c: Tests for voiceOsService.js**
   - File: `src/services/voiceOsService.js` — starts/stops/monitors Voice OS backend
   - No current tests despite running a background process
   - Create: `src/test/services/voiceOsService.test.js`
@@ -683,7 +683,7 @@ Branch: `feat/batch2-testing-completeness`
   - Target: 10+ tests
   - Commit: `test: add tests for voiceOsService start/stop/watchdog lifecycle`
 
-- [ ] **B2-P2-T38d: Tests for whisperTranscriptionService.js**
+- [x] **B2-P2-T38d: Tests for whisperTranscriptionService.js**
   - File: `src/services/whisperTranscriptionService.js`
   - Critical path: transcription → Ollama summary → memory storage
   - Create: `src/test/services/whisperTranscriptionService.test.js`
@@ -774,7 +774,7 @@ to reach at least 8 tests per file:
   - Update `voice/backend/tests/test_router.py` with routing tests for all 9 agents
   - Commit: `feat(voice): implement 9-agent routing in router.py (replace stub)`
 
-- [ ] **B2-P3-T3: Update all Python voice backend tests after fixes**
+- [x] **B2-P3-T3: Update all Python voice backend tests after fixes**
   - After T1 (vad.py) and T2 (router.py) are done, the existing Python tests will be stale
   - Files: `voice/backend/tests/test_vad.py`, `voice/backend/tests/test_router.py`,
     `voice/backend/tests/test_pipeline.py`
