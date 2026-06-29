@@ -824,20 +824,20 @@ to reach at least 8 tests per file:
   - Include a direct link/button to the Runtime Manager
   - Commit: `feat(ux): surface Voice OS setup guidance on connection failure`
 
-- [ ] **B2-P4-T4: Reduce useAppShellState complexity**
+- [x] **B2-P4-T4: Reduce useAppShellState complexity**
   - File: `src/hooks/useAppShellState.js` (294 lines, ~30 state vars, ~50 callbacks)
   - Extract at least 2 logical groupings into sub-hooks (e.g., `useVoiceState`, `useConnectorState`)
   - Goal: reduce the main hook to under 200 lines
   - All existing behavior must be preserved — run full test suite after
   - Commit: `refactor(ux): extract sub-hooks from useAppShellState to reduce complexity`
 
-- [ ] **B2-P4-T5: Increase E2E test coverage**
+- [x] **B2-P4-T5: Increase E2E test coverage**
   - Add E2E tests for the voice flow in `e2e/smoke.spec.js` or a new `e2e/voice.spec.js`
   - Add a test for the policy gate UI (triggering an approval modal)
   - Target: bring E2E test count from ~19 to ~30
   - Commit: `test(e2e): add voice flow and policy gate E2E tests`
 
-- [ ] **B2-P4-T6: Add visual regression baseline snapshots**
+- [x] **B2-P4-T6: Add visual regression baseline snapshots**
   - The audit explicitly calls out: "No visual regression testing"
   - Playwright already installed — use `expect(page).toHaveScreenshot()` (built-in)
   - Create `e2e/visual.spec.js` with snapshots for:
@@ -850,7 +850,7 @@ to reach at least 8 tests per file:
   - Add `e2e/snapshots/` to `.gitignore` or commit them — document the decision
   - Commit: `test(visual): add Playwright visual regression baseline snapshots for 5 views`
 
-- [ ] **B2-P4-T7: Implement PWA service worker caching strategy**
+- [x] **B2-P4-T7: Implement PWA service worker caching strategy**
   - File: `public/sw.js` — currently registered but has no meaningful caching strategy
   - The audit notes: "No service worker caching strategy for offline mode
     (PWA registration exists but no custom caching)"
