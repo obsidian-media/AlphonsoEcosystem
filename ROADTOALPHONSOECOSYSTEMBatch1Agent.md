@@ -8,7 +8,7 @@
 
 ## HOW TO USE THIS DOCUMENT
 
-- **BATCH 1** → `feat/batch1-security-infra` branch
+- **BATCH 1** → `feat/batch1-security-infra-bobibm` branch
 - **BATCH 2** → `feat/batch2-testing-completeness` branch
 - Each agent works **independently** — no shared files between batches until merge
 - After all phases complete: merge both into `main`, update all docs, cut v2.5.0

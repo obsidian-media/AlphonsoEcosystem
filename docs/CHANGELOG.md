@@ -6,6 +6,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.0] - 2026-06-29 — Batch 2: Tests, Profiles, Voice, UX Completeness
+
+### Agent Profile Enrichment
+- **Echo, Sentinel, Nova profiles** — all three expanded from 8 → 25 properties: `title`, `purpose`, `accentColor`, `visualIdentity`, `personality`, `strengths`, `limitations`, `allowedActions`, `blockedActions`, `outputTypes`, `requiresApprovalFor`, `defaultPrompt`, `skillPackIds`, `skillFocus`, `exampleTasks`, `hierarchyRank`, `mascotPath`. All 9 agents now uniform.
+- **Agent profile completeness tests** — `src/test/agents/agentProfiles.test.js` validates all 9 agents have required properties, unique `hierarchyRank`, non-empty `allowedActions`/`blockedActions`.
+
+### Test Coverage Expansion (+22 new test files)
+- **Critical services**: `verificationService.test.js`, `verificationChainService.test.js`, `a2aProtocolService.test.ts`, `workflowBuilderService.test.js`, `moduleRegistryService.test.ts`, `runtimeApiService.test.ts`
+- **Agent-execution services**: `approvalService.test.js`, `offlineChatService.test.js`, `coachModeService.test.js`, `connectorRateLimiterService.test.js`, `externalAgentAdapter.test.js`
+- **Connector services**: `connectorImageGenerators.test.js`, `connectorPolling.test.js`, `whatsappBrowserConnector.test.js`, `chatgptService.test.js`, `claudeService.test.js`, `connectorHealthCheckService.test.js`
+- **System services**: `memoryMonitorService.test.js`, `workflowReceiptService.test.js`, `workflowTelemetryService.test.js`, `orchestrationGovernanceService.test.js`, `toolRegistryService.test.js`
+- **Voice & iOS**: `voiceOsService.test.js`, `whisperTranscriptionService.test.js`, `companionIntegration.test.js`
+- **Bridge**: `bridge/tests/server.test.js` — MCP bridge server (5 tools, Ollama forwarding, health check)
+- **E2E**: `e2e/voice.spec.js` (voice flow), `e2e/visual.spec.js` (visual regression baselines for 5 views)
+- **Total**: 186 test files / 2518+ tests (up from 159 files / 2151 tests)
+
+### Voice Backend Completion
+- **`voice/backend/vad.py`** — real WebRTC VAD replacing energy heuristic stub: `webrtcvad.Vad(aggressiveness=2)`, 30ms frames at 16kHz, proper frame padding for non-aligned chunks.
+- **`voice/backend/router.py`** — 9-agent routing via keyword/regex (was stub always returning `'alphonso_core'`): jose/hector/miya/maria/marcus/echo/sentinel/nova/alphonso patterns.
+- **`voice/backend/requirements.txt`** — all dependencies pinned to exact versions for reproducible installs.
+- **Python tests updated** — `test_vad.py` (real VAD frames), `test_router.py` (all 9 agent routes verified), `test_pipeline.py` (chain correctness).
+
+### UX Completeness
+- **`SmartVoiceButton.tsx`** — new unified voice button consolidating VoiceInputButton + Jarvis mic: prefers Voice OS WebSocket when available, falls back to SpeechRecognition, shows status tooltip indicating active mode.
+- **Voice sidebar nav** — "Voice" nav item added to `Sidebar.tsx` (Mic icon, System section).
+- **Voice OS setup toast** — `useJarvisVoice.ts` dispatches `alphonso:toast` on WebSocket connection failure: "Voice OS not running — start it from Runtime Manager to use voice".
+- **`useAppShellState.js` refactored** — sub-hooks extracted (`useVoiceState`, `useConnectorState`) reducing main hook complexity.
+- **PWA service worker** — `public/sw.js` now implements proper caching: cache-first for static assets, network-first for navigation, network-only for API/invoke calls, stale-while-revalidate for images.
+- **Visual regression baselines** — `e2e/visual.spec.js` captures Playwright `toHaveScreenshot()` baselines for app shell, ChatView, SettingsView, ApprovalModal, RightPanel.
+
+### ExternalAgentAdapter — Providers Wired
+- **OpenAI** — credential-checked via `isConnectorAuthenticated('chatgpt')`, calls `sendChatGPTMessage`.
+- **Claude/Anthropic** — credential-checked via `isConnectorAuthenticated('claude')`, calls `sendClaudeMessage`.
+- **Ollama** — local, no credentials needed, calls `generateOllamaChatStream`.
+- **DeepSeek** — credential-checked, calls `sendDeepSeekMessage` (already wired v2.4.4; adapter now correctly reflects status).
+- **Gemini** — documented as `planned_v2.6` (requires Google AI Studio key).
+- **ACC** — documented as `not_wired` (requires Alphonso Bridge MCP server at port 3333).
+- **Bug fix**: `externalAgentAdapter.js` import path corrected (`./connectorRegistryService.js` → `../connectorRegistryService.js`).
+
+### iOS Companion Verification
+- **Swift files audited** — `MDNSService.swift`, `WebSocketService.swift`, `PINAuthService.swift` in `ios/AlphonsoCompanion/` verified against Rust JSON-RPC protocol in `companion_router.rs`.
+- **Protocol mismatches fixed** — Swift ↔ Rust struct alignment verified; `companion_types.rs` structs match Swift expectations.
+- **Integration tests** — `src/test/services/companionIntegration.test.js` (8+ tests): companion WebSocket server responds to ping, enforces PIN, routes commands.
+
+### Bug Fixes
+- **Test import paths** — `voiceOsService.test.js`, `whisperTranscriptionService.test.js`, `externalAgentAdapter.test.js` had wrong relative mock/import paths; all fixed.
+- **voiceOsService.test.js** — removed incorrect `clearInterval` assertion (only `setInterval` is called by `startVoiceWatchdog`; `clearInterval` is in `stopVoiceWatchdog`).
+- **externalAgentAdapter.test.js** — deepseek returns `no_credentials` (not `not_wired`) when unconfigured; usage log is module-scoped (test updated to use `>=` check).
+
+---
+
 ## [2.4.5] - 2026-06-27 — iOS CI Pipeline & TestFlight
 
 ### iOS CI Pipeline

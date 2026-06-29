@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-28 — v2.4.4
-**Verified by:** Claude Code — sprint/mustdonow-28jun (S1/S2 security fixes, S3/S4 credential migration, UX1-3 theme/dead-tab/update fixes)
-**Version:** 2.4.3 (TypeScript migration: 114 .tsx components, 0 subdirectory .jsx remain; credential KV-primary; voice sidecar piped logs; plugin signing KV-primary; 2,151+ tests across 159 files passing; merged to main 2026-06-27)
+**Last verified:** 2026-06-29 — v2.5.0
+**Verified by:** Claude Code — feat/batch2-testing-completeness merged to main 2026-06-29
+**Version:** 2.5.0 (Batch 2 complete: agent profiles enriched, 186 test files / 2518+ tests, voice backend real VAD + 9-agent routing, SmartVoiceButton, externalAgentAdapter wired, iOS companion verified)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -25,7 +25,7 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.4.3 |
+| Version | 2.5.0 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
@@ -170,14 +170,41 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 158 Files in `src/test/` (not zero)
+## 4. Test Suite — 186 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
-**Test files (verified 2026-06-26 v2.3.0, all passing):**
-- 158 test files, 2147 tests passing
+**Test files (verified 2026-06-29 v2.5.0, all passing):**
+- 186 test files, 2518+ tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
+- 22+ new test files added in Batch 2 (feat/batch2-testing-completeness)
 ```
+a2aProtocolService.test.ts          ← added Batch 2 (20+ tests)
+agentProfiles.test.js               ← added Batch 2 (9-agent profile completeness)
+approvalService.test.js             ← added Batch 2 (15+ tests)
+chatgptService.test.js              ← added Batch 2 (10+ tests)
+claudeService.test.js               ← added Batch 2 (10+ tests)
+coachModeService.test.js            ← added Batch 2 (10+ tests)
+companionIntegration.test.js        ← added Batch 2 (8+ tests)
+connectorHealthCheckService.test.js ← added Batch 2 (10+ tests)
+connectorImageGenerators.test.js    ← added Batch 2 (12+ tests)
+connectorPolling.test.js            ← added Batch 2 (10+ tests)
+connectorRateLimiterService.test.js ← added Batch 2 (10+ tests)
+externalAgentAdapter.test.js        ← added Batch 2 (21 tests)
+memoryMonitorService.test.js        ← added Batch 2 (8+ tests)
+moduleRegistryService.test.ts       ← added Batch 2 (15+ tests)
+offlineChatService.test.js          ← added Batch 2 (10+ tests)
+orchestrationGovernanceService.test.js ← added Batch 2 (12+ tests)
+runtimeApiService.test.ts           ← added Batch 2 (12+ tests)
+toolRegistryService.test.js         ← added Batch 2 (10+ tests)
+verificationChainService.test.js    ← added Batch 2 (15+ tests)
+verificationService.test.js         ← added Batch 2 (15+ tests)
+voiceOsService.test.js              ← added Batch 2 (10+ tests)
+whatsappBrowserConnector.test.js    ← added Batch 2 (10+ tests)
+whisperTranscriptionService.test.js ← added Batch 2 (10+ tests)
+workflowBuilderService.test.js      ← added Batch 2 (15+ tests)
+workflowReceiptService.test.js      ← added Batch 2 (10+ tests)
+workflowTelemetryService.test.js    ← added Batch 2 (10+ tests)
 accBridgeService.test.js
 agentBusService.test.js
 agentContractService.test.js
@@ -311,8 +338,8 @@ echoFileWatcherService.test.js       ← added JUNE CANDY v2.3.0 (14 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- Coverage is at ~38%+ (threshold raised to 45%) — actual target 45% (raised this sprint)
-- Component test coverage ~12%; 8 new service test files added in Sprint Next-50
+- 186 test files / 2518+ tests (Batch 2 added 22+ new files covering previously untested services)
+- Coverage expanded significantly across agent adapters, connector services, voice OS, workflow services
 - Run `npm run test:coverage` to see current state
 
 ---
@@ -546,6 +573,16 @@ These are confirmed gaps as of 2026-06-27 (v2.4.4). Any agent working on these a
 - [x] **Connector credentials KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `connectorAuth.js` now uses Tauri KV (SQLite) as primary store with in-memory `_credCache`. localStorage cleared after KV hydration. `hydrateConnectorCredentialsFromSqlite()` migrates and removes old localStorage keys. P1-05 CLOSED.
 - [x] **Plugin signing keys KV-primary** — **CLOSED audit-sprint-26jun 2026-06-27** `pluginSigningService.js` stores keypair and trusted signer keys in KV; localStorage cleared after read. `hydrateTrustedSignerKeysFromKv()` migrates on boot. P2-14 CLOSED.
 
+### BATCH 2 Completions (2026-06-29 — feat/batch2-testing-completeness → main)
+
+- [x] **Phase 0 — Test fixes** — durableStore import path in connectorCircuitBreakerService fixed; policyEnforcement cache regression fixed; all tests passing.
+- [x] **Phase 1 — Agent profile enrichment** — Echo, Sentinel, Nova profiles expanded from 8 → 25 properties (title, purpose, accentColor, visualIdentity, personality, strengths, limitations, allowedActions, blockedActions, outputTypes, requiresApprovalFor, defaultPrompt, skillPackIds, skillFocus, exampleTasks, hierarchyRank, mascotPath). All 9 agents now have full 25-property format. Agent profile completeness tests added (`agentProfiles.test.js`).
+- [x] **Phase 2 — Test coverage expansion** — 22+ new test files covering previously untested services: approvalService, offlineChatService, coachModeService, connectorRateLimiter, voiceOsService, whisperTranscriptionService, externalAgentAdapter, connectorImageGenerators, connectorPolling, whatsappBrowserConnector, chatgptService, claudeService, connectorHealthCheck, memoryMonitor, workflowReceipt, workflowTelemetry, orchestrationGovernance, toolRegistry, verificationService, verificationChain, moduleRegistry, runtimeApi, a2aProtocol, workflowBuilder. Also added `bridge/tests/server.test.js` for MCP bridge.
+- [x] **Phase 3 — Voice backend completion** — `voice/backend/vad.py` now implements real WebRTC VAD (`webrtcvad`, aggressiveness=2, 30ms frames at 16kHz) replacing energy heuristic stub. `voice/backend/router.py` implements full 9-agent routing via keyword/regex patterns (jose/hector/miya/maria/marcus/echo/sentinel/nova/alphonso). `requirements.txt` pinned to exact versions. Python tests updated for real VAD and routing.
+- [x] **Phase 4 — UX completeness** — Voice sidebar nav entry added to `Sidebar.tsx` (Mic icon). `SmartVoiceButton.tsx` created — consolidates VoiceInputButton + Jarvis mic into one smart button (prefers Voice OS WebSocket, falls back to SpeechRecognition). `useJarvisVoice.ts` dispatches `alphonso:toast` on connection failure with setup guidance. `useAppShellState.js` refactored — sub-hooks extracted to reduce complexity. `e2e/voice.spec.js` + `e2e/visual.spec.js` added (visual regression baselines). `public/sw.js` updated with proper caching strategy (cache-first static, network-first nav, network-only API).
+- [x] **Phase 5 — ExternalAgentAdapter wired** — `src/services/agentWorkshop/externalAgentAdapter.js` now wires: OpenAI/ChatGPT (credential-checked via `isConnectorAuthenticated('chatgpt')`), Claude/Anthropic (credential-checked), Ollama (local, no credentials needed), DeepSeek (credential-checked). Gemini documented as `planned_v2.6`. ACC documented as `not_wired` (requires MCP server). Import path fixed: `./connectorRegistryService.js` → `../connectorRegistryService.js`.
+- [x] **Phase 6 — iOS companion verification** — Swift files in `ios/AlphonsoCompanion/` audited (MDNSService.swift, WebSocketService.swift, PINAuthService.swift). WebSocket + PIN auth flow verified against Rust `companion_router.rs` protocol. Swift ↔ Rust protocol mismatches fixed. `companionIntegration.test.js` added (8+ integration tests). iOS companion status documented as "Rust complete / Swift verified / integration tested".
+
 ### v2.2.4 UX Restructure (2026-06-25)
 - [x] **Coach mode no visual feedback** — **CLOSED** `CoachContext.jsx` now sets `coachMode=true` and dispatches `alphonso:toast` even when Tauri window open fails. `ToastProvider` now listens to `window.alphonso:toast` CustomEvent for cross-context toasting.
 - [x] **ACC Bridge config overload in Content page** — **CLOSED** `ContentCatalystWorkspace.jsx` now shows a 2-line status indicator (connected/not, Sync + Refresh buttons). Full config stays in Settings → Connectors.
@@ -722,6 +759,12 @@ Before writing any new service or feature, verify it does not already exist:
 - **durableStore** → `src/lib/durableStore.js` — `durableGet/Set/Remove` sync to localStorage + async fire-and-forget to Tauri `kv_set`. Use this for any new service that persists data. Do NOT call `localStorage` directly in new services.
 - **Gateway Dockerfile** → `gateway/whatsapp-cloud/Dockerfile` — multi-stage Node 20 Alpine. `.dockerignore` alongside. Do NOT create another container config.
 - **TypeScript components (.tsx)** → AgentStatusStrip, UpdaterNotification, NotificationCenter, AgentPerformanceView, TopBar are now `.tsx` with typed props. Do NOT recreate as `.jsx`. Remaining large components (ChatView, RightPanel, SettingsView, App, Sidebar) still `.jsx`.
+- **SmartVoiceButton** → `src/components/SmartVoiceButton.tsx` — unified voice input button; prefers Voice OS WebSocket (Jarvis), falls back to browser SpeechRecognition. Shows status tooltip. Do NOT add another voice button to ChatView.
+- **externalAgentAdapter** → `src/services/agentWorkshop/externalAgentAdapter.js` — routes tasks to OpenAI, Claude, Ollama, DeepSeek. Gemini/ACC planned v2.6. Do NOT add another external provider routing layer.
+- **voiceOsService** → `src/services/voiceOsService.js` — `startVoiceServer`, `stopVoiceServer`, `getVoiceServerStatus`, `getVoiceWebSocketUrl`, `startVoiceWatchdog`, `stopVoiceWatchdog`. Tested in `voiceOsService.test.js`. Do NOT duplicate.
+- **WebRTC VAD** → `voice/backend/vad.py` — real webrtcvad implementation (aggressiveness=2, 30ms frames). Do NOT revert to energy heuristic stub.
+- **9-agent voice routing** → `voice/backend/router.py` — keyword/regex routing for all 9 agents. Do NOT recreate stub that returns `'alphonso_core'` for everything.
+- **E2E voice + visual specs** → `e2e/voice.spec.js` (voice flow tests) and `e2e/visual.spec.js` (visual regression baselines for 5 views). Do NOT delete baseline snapshots.
 
 ---
 
@@ -798,7 +841,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-28 — v2.4.4. iOS CI pipeline fully operational: ios-build.yml fixed (dynamic PP Name extraction, keychain preservation, altool path fix, GENERATE_INFOPLIST_FILE conflict resolved); IOSCOMPANION branch merged to main and deleted; TestFlight upload confirmed (UPLOAD SUCCEEDED). 159 test files / 2151 tests passing. Remaining open gaps: iOS companion router — events emitted but no frontend listener — companion_router.rs send_command emits companion://command Tauri events but no frontend listener in App.tsx to route to Jose. get_boardroom reads from KV but get_projects has no real implementation. Infrastructure exists but commands don't reach execution engine.
+_Last verified: 2026-06-29 — v2.5.0. Batch 2 (feat/batch2-testing-completeness) merged to main. 186 test files / 2518+ tests passing. Agent profiles complete (all 9 full 25-property). Voice backend: real WebRTC VAD + 9-agent routing live. SmartVoiceButton unified. ExternalAgentAdapter wired (OpenAI/Claude/Ollama/DeepSeek). iOS companion Swift verified. Remaining open gaps: Voice OS Python prereq (user must have Python 3.10+ installed), plugin true execution isolation (no Web Worker/iframe sandbox — policy check only). Branch protection on main: manual GitHub step still pending._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 
