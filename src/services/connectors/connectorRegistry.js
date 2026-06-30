@@ -8,6 +8,7 @@ import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { requireApproval } from '../approval/approvalService';
 import { hydrateConnectorAuthProfilesFromSqlite } from './connectorAuth.js';
 import { durableSet } from '../../lib/durableStore.js';
+import { evaluateAction as evaluateDslAction } from '../policyDslService';
 
 // Read credentials saved via UI (separate from OS env vars)
 function getStoredCredential(connectorId, key) {
@@ -382,6 +383,11 @@ export function appendConnectorAudit(connectorId, action, details = {}) {
 export function gateConnectorAction(connectorId, actionType, commandPreview, options = {}) {
   try {
     const auth = options.auth || { enabled: false, isAuthorized: false, mode: 'allowlist_required' };
+    // DSL policy layer — evaluated before the main gate as an extra rule set
+    const dslResult = evaluateDslAction(actionType, { connectorId, target: 'external' });
+    if (dslResult.effect === 'deny') {
+      return { ok: false, blocked: true, reason: dslResult.reason || 'DSL policy denied', riskLevel: 'high' };
+    }
     const gate = evaluatePolicyGate({
       connectorId,
       actionType,

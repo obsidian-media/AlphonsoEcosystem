@@ -1324,55 +1324,28 @@ async fn fetch_url_content(
 
 #[tauri::command]
 fn read_clipboard() -> Result<ClipboardProof, String> {
-  #[cfg(target_os = "windows")]
-  {
-    use std::process::Command;
-    let output = Command::new("powershell")
-      .args(["-Command", "Get-Clipboard"])
-      .output()
-      .map_err(|e| e.to_string())?;
-    let content = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    Ok(ClipboardProof {
-      action: "read".to_string(),
-      content,
-      performed_at_ms: now_ms(),
-      trust: "verified".to_string(),
-    })
-  }
-  #[cfg(not(target_os = "windows"))]
-  {
-    Err("Clipboard read not supported on this platform".to_string())
-  }
+  let content = arboard::Clipboard::new()
+    .and_then(|mut cb| cb.get_text())
+    .map_err(|e| e.to_string())?;
+  Ok(ClipboardProof {
+    action: "read".to_string(),
+    content,
+    performed_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
 }
 
 #[tauri::command]
 fn write_clipboard(_content: String) -> Result<ClipboardProof, String> {
-  #[cfg(target_os = "windows")]
-  {
-    use std::process::Command;
-    let mut child = Command::new("powershell")
-      .args(["-Command", "Set-Clipboard"])
-      .stdin(std::process::Stdio::piped())
-      .spawn()
-      .map_err(|e| e.to_string())?;
-    if let Some(mut stdin) = child.stdin.take() {
-      use std::io::Write;
-      stdin
-        .write_all(_content.as_bytes())
-        .map_err(|e| e.to_string())?;
-    }
-    child.wait().map_err(|e| e.to_string())?;
-    Ok(ClipboardProof {
-      action: "write".to_string(),
-      content: _content.chars().take(100).collect(),
-      performed_at_ms: now_ms(),
-      trust: "verified".to_string(),
-    })
-  }
-  #[cfg(not(target_os = "windows"))]
-  {
-    Err("Clipboard write not supported on this platform".to_string())
-  }
+  arboard::Clipboard::new()
+    .and_then(|mut cb| cb.set_text(_content.clone()))
+    .map_err(|e| e.to_string())?;
+  Ok(ClipboardProof {
+    action: "write".to_string(),
+    content: _content.chars().take(100).collect(),
+    performed_at_ms: now_ms(),
+    trust: "verified".to_string(),
+  })
 }
 
 /// Write raw audio bytes (from JS FileReader) to a temp file and return its path.
@@ -1391,55 +1364,36 @@ fn write_temp_audio_file(filename: String, bytes: Vec<u8>) -> Result<String, Str
 }
 
 /// Open a file-picker dialog and return the selected file path.
+/// Uses tauri-plugin-dialog (native OS dialog, no PowerShell required).
 #[tauri::command]
-fn pick_file(filters: Option<Vec<String>>) -> Result<String, String> {
-  let _ = filters; // used in future — currently opens any file
-  #[cfg(target_os = "windows")]
-  {
-    use std::process::Command;
-    let script = concat!(
-      "Add-Type -AssemblyName System.Windows.Forms; ",
-      "$d = New-Object System.Windows.Forms.OpenFileDialog; ",
-      "$d.Filter = 'Audio files|*.mp3;*.wav;*.m4a;*.mp4;*.ogg;*.webm;*.flac|All files|*.*'; ",
-      "if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $d.FileName } else { '' }"
-    );
-    let output = Command::new("powershell")
-      .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", script])
-      .output()
-      .map_err(|e| e.to_string())?;
-    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if path.is_empty() { return Err("cancelled".to_string()); }
-    return Ok(path);
+async fn pick_file(app: tauri::AppHandle, filters: Option<Vec<String>>) -> Result<String, String> {
+  use tauri_plugin_dialog::DialogExt;
+  let _ = filters;
+  let path = app
+    .dialog()
+    .file()
+    .add_filter("Audio files", &["mp3", "wav", "m4a", "mp4", "ogg", "webm", "flac"])
+    .add_filter("All files", &["*"])
+    .blocking_pick_file();
+  match path {
+    Some(p) => Ok(p.to_string()),
+    None => Err("cancelled".to_string()),
   }
-  #[allow(unreachable_code)]
-  Err("File picker is Windows-only in this build".to_string())
 }
 
 #[tauri::command]
-fn pick_folder() -> Result<FolderPickProof, String> {
-  #[cfg(target_os = "windows")]
-  {
-    use std::process::Command;
-    let script = concat!(
-      "Add-Type -AssemblyName System.Windows.Forms; ",
-      "$b = New-Object System.Windows.Forms.FolderBrowserDialog; ",
-      "$b.Description = 'Select output folder'; ",
-      "if ($b.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $b.SelectedPath } else { '' }"
-    );
-    let output = Command::new("powershell")
-      .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", script])
-      .output()
-      .map_err(|e| e.to_string())?;
-    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let picked = !path.is_empty();
-    return Ok(FolderPickProof {
-      path,
-      picked,
-      picked_at_ms: now_ms(),
-    });
-  }
-  #[allow(unreachable_code)]
-  Err("Folder picker is Windows-only".to_string())
+async fn pick_folder(app: tauri::AppHandle) -> Result<FolderPickProof, String> {
+  use tauri_plugin_dialog::DialogExt;
+  let path = app
+    .dialog()
+    .file()
+    .blocking_pick_folder();
+  let picked = path.is_some();
+  Ok(FolderPickProof {
+    path: path.map(|p| p.to_string()).unwrap_or_default(),
+    picked,
+    picked_at_ms: now_ms(),
+  })
 }
 
 #[tauri::command]
@@ -1710,6 +1664,7 @@ pub fn run() {
     .manage(RateLimiter::new())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+    .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
       let proof_output_dir = native_proof_output_dir();

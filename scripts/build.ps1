@@ -18,8 +18,7 @@ npm run tauri build
 if ($LASTEXITCODE -eq 0) {
   Write-Host ""
   Write-Host "Build complete. Installers:" -ForegroundColor Green
-  Write-Host "  NSIS: src-tauri\target\release\bundle\nsis\Alphonso_0.1.0_x64-setup.exe"
-  Write-Host "  MSI:  src-tauri\target\release\bundle\msi\Alphonso_0.1.0_x64_en-US.msi"
+  Write-Host "  NSIS: src-tauri\target\release\bundle\nsis\Alphonso_2.4.4_x64-setup.exe"
 } else {
   Write-Host "Build failed." -ForegroundColor Red
 }
