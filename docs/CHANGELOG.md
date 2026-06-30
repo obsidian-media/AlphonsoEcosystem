@@ -6,6 +6,49 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.0-security] - 2026-07-02 — Batch 1: Security Hardening & Infrastructure
+
+### Boot Crash Fix
+- **TDZ crash on launch resolved** — `appConstants.js` imported `VOICE_STATES` from `voiceService.js` at module scope, creating a circular evaluation chain Rollup could not safely order. Fixed by inlining `VOICE_STATES` as a literal constant directly in `appConstants.js`. All 2,555 tests passing.
+
+### Critical Security Fixes (C-series)
+- **C-2 (verified)**: Policy gate already wired on all 6 browser-only connectors (deepseek, perplexity, tavily, n8n, github, slack).
+- **C-3**: `getComfyUiVideoHistory` — `gateConnectorAction` now called before circuit breaker check.
+- **C-4/C-5 (verified)**: `transcribe_audio_file` and `save_image_to_folder` path traversal already protected.
+- **C-6 (verified)**: All 3 OAuth scripts already had state param and token redaction.
+
+### High-Severity Security Fixes (H-series)
+- **H-1 (verified)**: Shell interpreters already removed from `policy_gate.rs` allowed programs.
+- **H-2**: Fixed `sanitize()` in `execute_command_verified` — `String::replace()` was doing literal string match (regex never applied). Replaced with real line-by-line redaction scanning for `api_key`/`token`/`secret`/`password`/`bearer` patterns.
+- **H-3/H-4**: Added SSRF private IP blocklist to `fetch_url_content` (lib.rs). `fetch_research_sources` was already protected. `is_private_ip()` promoted to `pub(crate)` in `search.rs`.
+- **H-5/H-6 (verified)**: Workspace `read/delete/move` and `watch_inbox_poll` already use `canonicalize` + `starts_with`.
+- **H-7 (verified)**: Gateway `/health` already returns minimal `{ ok, status }` only.
+
+### Medium-Severity Fixes (M-series)
+- **M-1**: `policyDslService.ts` was dead code — wired into `gateConnectorAction` as a DSL pre-check layer. Deny rules now fire before main policy gate evaluation.
+- **M-2**: `gateConnectorAction` wrapped in try/catch, returns `{ ok: false, blocked: true, reason: 'Policy gate internal error' }` on exception.
+- **M-3**: Meta OAuth `client_secret` moved from URL query params to POST body in both short-lived and long-lived token exchanges.
+- **M-4**: PKCE (`code_verifier` / `code_challenge` S256) added to all 3 OAuth scripts (YouTube, Meta, Outlook).
+- **M-5**: `open_url` replaced shell (`cmd /C start`) with `tauri-plugin-opener`.
+- **M-6**: `alphonso_bridge_send_packet` now uses shared `reqwest::Client` from Tauri managed state (connection pooling).
+- **M-7**: Clipboard `read_clipboard`/`write_clipboard` replaced PowerShell with `arboard` crate (cross-platform, no shell).
+- **M-8**: `pick_file`/`pick_folder` replaced PowerShell WinForms with `tauri-plugin-dialog` (native OS dialog).
+
+### Low-Severity Fixes (L-series)
+- **L-1**: `connect-src` CSP narrowed from `http://localhost:*` wildcard to explicit port list: 11434/5173/4444/4000/7860/8188/5678/8765 + WebSocket variants.
+- **L-3**: `.env` value escaping added to `auth-meta.mjs` and `auth-outlook.mjs` (backslash, newline, hash chars).
+- **L-4**: `ALPHONSO_DRAIN_TOKEN` env var added for gateway `/queue/drain` endpoint (no longer reuses `WHATSAPP_VERIFY_TOKEN`).
+- **L-5**: All 3 OAuth callback servers now bind to `127.0.0.1` instead of `0.0.0.0`.
+- **L-6**: `allowed_args()` function added to `policy_gate.rs` with per-program subcommand allowlists for `git`/`cargo`/`docker`/`npm`. Wired into `execute_command_verified`. 6 new unit tests added.
+
+### Infrastructure
+- Added `tauri-plugin-dialog = "2"`, `tauri-plugin-opener = "2"`, `arboard = "3"` to `Cargo.toml`.
+- Created `.nvmrc` (Node 20 LTS) and `.editorconfig` (utf-8, lf, 2-space indent).
+- Fixed stale `Alphonso_0.1.0_x64-setup.exe` version string in `scripts/build.ps1`.
+- `ALPHONSO_DRAIN_TOKEN` documented in `.env.example`.
+
+---
+
 ## [2.5.0] - 2026-06-29 — Batch 2: Tests, Profiles, Voice, UX Completeness
 
 ### Agent Profile Enrichment
