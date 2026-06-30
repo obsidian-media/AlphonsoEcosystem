@@ -22,7 +22,7 @@
 import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes, createHash } from 'crypto';
 import { exec } from 'node:child_process';
 import { URL, URLSearchParams } from 'node:url';
 import { join } from 'node:path';
@@ -30,6 +30,15 @@ import { join } from 'node:path';
 const PORT = 8085;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
 const STATE = randomUUID();
+
+// PKCE helpers
+function generateCodeVerifier() {
+  return randomBytes(48).toString('base64url');
+}
+async function generateCodeChallenge(verifier) {
+  const hash = createHash('sha256').update(verifier).digest();
+  return hash.toString('base64url');
+}
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
@@ -65,13 +74,14 @@ function openBrowser(url) {
   exec(cmd, (err) => { if (err) console.log('\nCould not auto-open browser. Open this URL manually:\n' + url); });
 }
 
-async function exchangeCode(clientId, clientSecret, code) {
+async function exchangeCode(clientId, clientSecret, code, codeVerifier) {
   const body = new URLSearchParams({
     code,
     client_id: clientId,
     client_secret: clientSecret,
     redirect_uri: REDIRECT_URI,
     grant_type: 'authorization_code',
+    code_verifier: codeVerifier,
   });
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -109,8 +119,8 @@ async function waitForCode() {
       if (error) reject(new Error(error));
       else resolve(code);
     });
-    server.listen(PORT, () => {
-      console.log(`\nListening for OAuth callback on http://localhost:${PORT}/callback`);
+    server.listen(PORT, '127.0.0.1', () => {
+      console.log(`\nListening for OAuth callback on http://127.0.0.1:${PORT}/callback`);
     });
     server.on('error', reject);
   });
@@ -130,6 +140,9 @@ async function main() {
     process.exit(1);
   }
 
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
   const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
     client_id: clientId,
     redirect_uri: REDIRECT_URI,
@@ -138,6 +151,8 @@ async function main() {
     access_type: 'offline',
     prompt: 'consent',
     state: STATE,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
   }).toString();
 
   console.log('\nOpening browser for authorization...');
@@ -152,7 +167,7 @@ async function main() {
   }
 
   console.log('\nExchanging code for tokens...');
-  const tokens = await exchangeCode(clientId, clientSecret, code);
+  const tokens = await exchangeCode(clientId, clientSecret, code, codeVerifier);
 
   if (!tokens.refresh_token) {
     console.error('\n❌ No refresh token returned. This usually means the account already');

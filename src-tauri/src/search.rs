@@ -53,7 +53,7 @@ fn clean_ws(input: &str) -> String {
   input.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-fn is_private_ip(host: &str) -> bool {
+pub(crate) fn is_private_ip(host: &str) -> bool {
   let host = host.trim().to_ascii_lowercase();
   if host.is_empty() {
     return false;

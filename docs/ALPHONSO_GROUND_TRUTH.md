@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-29 — v2.5.0
-**Verified by:** Claude Code — feat/batch2-testing-completeness merged to main 2026-06-29
-**Version:** 2.5.0 (Batch 2 complete: agent profiles enriched, 186 test files / 2518+ tests, voice backend real VAD + 9-agent routing, SmartVoiceButton, externalAgentAdapter wired, iOS companion verified)
+**Last verified:** 2026-07-02 — v2.5.0-security
+**Verified by:** Bob (IBM) — feat/batch1-security-infra-bobibm — all 4 phases complete
+**Version:** 2.5.0-security (Batch 1 complete: boot crash fixed, 18 security findings resolved, infrastructure hardened)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -422,11 +422,39 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 
 ## 8. Real Gaps — What Actually Needs Work
 
-These are confirmed gaps as of 2026-06-27 (v2.4.4). Any agent working on these areas should check current state before implementing.
+These are confirmed gaps as of 2026-07-02. Any agent working on these areas should check current state before implementing.
 
-### OPEN GAPS (as of v2.4.4)
+### OPEN GAPS (as of v2.5.0-security)
 - [ ] **Voice OS Python dependency** — Voice OS in Runtime Hub can Install/Start, but requires Python 3.10+ on PATH. `find_python()` checks standard paths but won't auto-install Python itself. User must have Python installed first.
 - [ ] **Plugin true execution isolation** — `pluginSandboxService.js` IS imported and wired via `PluginContext.jsx:95` (`evaluatePluginExecutionPolicy`). But the policy check validates args only (arg count, blocked tokens, injection patterns) — there is no Web Worker, iframe, or subprocess isolation. Plugin tools run in the main thread.
+- [ ] **Rust cargo check for new crates (arboard, tauri-plugin-dialog, tauri-plugin-opener)** — added to Cargo.toml in Batch 1 but not yet verified to compile on CI (first CI run on this branch will confirm).
+
+### CLOSED — Batch 1 Security Sprint (2026-07-02, Bob/IBM)
+- [x] **Boot crash: TDZ ReferenceError on launch** — `appConstants.js` imported `VOICE_STATES` from `voiceService.js` at module scope. Rollup couldn't safely order the module initialization chain, causing a TDZ crash. Fixed by inlining `VOICE_STATES` as a literal const inside `appConstants.js`. Build ✓ Tests ✓ (2,555 passing).
+- [x] **C-2: Policy gate — 6 browser-only connectors** — verified already wired (`deepseekConnector`, `perplexityConnector`, `tavilyConnector`, `n8nConnector`, `githubConnector`, `slackConnector` all call `evaluatePolicyGate`).
+- [x] **C-3: getComfyUiVideoHistory missing policy gate** — `gateConnectorAction` now called at top of function before circuit breaker.
+- [x] **C-4/C-5: Path traversal in transcribe_audio_file + save_image_to_folder** — verified already protected.
+- [x] **C-6: OAuth state + token redaction** — verified all 3 scripts already have proper state validation and safe error logging.
+- [x] **H-1: Shell interpreters in policy_gate.rs** — verified `cmd.exe`, `powershell.exe`, `pwsh.exe` already removed.
+- [x] **H-2: sanitize() in execute_command_verified was a no-op** — `String::replace()` does literal matching; pattern was never applied. Replaced with real line-by-line redaction scanning for api_key/token/secret/password/bearer patterns.
+- [x] **H-3/H-4: SSRF — fetch_url_content had no IP blocklist** — `crate::search::is_private_ip()` now called before every fetch. `fetch_research_sources` was already protected.
+- [x] **H-5/H-6: Symlink escape + watch_inbox_poll** — verified already protected via `canonicalize` + `starts_with`.
+- [x] **H-7: Gateway /health leak** — verified already returns `{ ok: true, status: "ok" }` only.
+- [x] **M-1: policyDslService dead code** — wired into `gateConnectorAction` as a DSL pre-check layer (deny rules block before main gate evaluation).
+- [x] **M-2: gateConnectorAction exception safety** — wrapped in try/catch returning `{ ok: false, blocked: true, reason: 'Policy gate internal error' }`.
+- [x] **M-3: Meta OAuth client_secret in URL** — both token exchanges now POST body.
+- [x] **M-4: PKCE missing from all 3 OAuth scripts** — `code_verifier`/`code_challenge` (S256) added to YouTube, Meta, Outlook.
+- [x] **M-5: open_url used shell (cmd /C start)** — replaced with `tauri-plugin-opener`.
+- [x] **M-6: alphonso_bridge_send_packet created new reqwest::Client per call** — now uses managed shared `reqwest::Client` from Tauri state.
+- [x] **M-7: Clipboard used PowerShell** — replaced with `arboard` crate.
+- [x] **M-8: pick_file/pick_folder used PowerShell WinForms** — replaced with `tauri-plugin-dialog`.
+- [x] **L-1: connect-src CSP was localhost:* wildcard** — narrowed to explicit ports (11434/5173/4444/4000/7860/8188/5678/8765 + ws:// variants).
+- [x] **L-3: .env value escaping in Meta + Outlook auth scripts** — backslash/newline/hash now escaped.
+- [x] **L-4: Queue drain used same token as webhook verification** — `ALPHONSO_DRAIN_TOKEN` env var added with fallback to `VERIFY_TOKEN`.
+- [x] **L-5: OAuth callback servers bound to 0.0.0.0** — all 3 scripts now bind to `127.0.0.1`.
+- [x] **L-6: policy_gate.rs allowed any args for sensitive programs** — `allowed_args()` function added for git/cargo/docker/npm with subcommand allowlists; wired into `execute_command_verified`.
+- [x] **Infrastructure: .nvmrc + .editorconfig missing** — both created.
+- [x] **Infrastructure: build.ps1 had stale 0.1.0 version** — updated to 2.4.4.
 
 ### CLOSED — v2.4.4 (2026-06-28)
 - [x] **iOS companion router — events emitted but no frontend listener** — Already closed: `App.tsx` line 375+ listens for `companion://command`, `companion://abort`, `companion://approve` events and routes them to the execution engine. Swift WebSocketService (MDNSService.swift, WebSocketService.swift) matches Rust JSON-RPC protocol (companion_router.rs). 12 integration tests added in `companionIntegration.test.js`.

@@ -8,6 +8,7 @@ import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { requireApproval } from '../approval/approvalService';
 import { hydrateConnectorAuthProfilesFromSqlite } from './connectorAuth.js';
 import { durableSet } from '../../lib/durableStore.js';
+import { evaluateAction as evaluateDslAction } from '../policyDslService';
 
 // Read credentials saved via UI (separate from OS env vars)
 function getStoredCredential(connectorId, key) {
@@ -380,42 +381,51 @@ export function appendConnectorAudit(connectorId, action, details = {}) {
 }
 
 export function gateConnectorAction(connectorId, actionType, commandPreview, options = {}) {
-  const auth = options.auth || { enabled: false, isAuthorized: false, mode: 'allowlist_required' };
-  const gate = evaluatePolicyGate({
-    connectorId,
-    actionType,
-    commandPreview,
-    approved: Boolean(options.approved),
-    auth
-  });
-  appendConnectorAudit(connectorId, gate.ok ? 'policy_allow' : 'policy_block', {
-    actionType,
-    commandPreview: String(commandPreview || '').slice(0, 200),
-    approved: Boolean(options.approved),
-    reason: gate.reason || null,
-    riskLevel: gate.riskLevel
-  });
-  appendOrchestrationReceipt({
-    workflowId: 'connector_policy',
-    commandId: options.commandId || null,
-    packetId: options.packetId || null,
-    eventType: gate.ok ? 'connector_policy_allow' : 'connector_policy_block',
-    status: gate.ok ? 'allowed' : 'blocked',
-    agent: AGENTS.JOSE,
-    connectorId,
-    actionType,
-    riskLevel: gate.riskLevel || 'medium',
-    approved: Boolean(options.approved),
-    blocked: !gate.ok,
-    setupRequired: Boolean(gate.setupRequired),
-    details: {
+  try {
+    const auth = options.auth || { enabled: false, isAuthorized: false, mode: 'allowlist_required' };
+    // DSL policy layer — evaluated before the main gate as an extra rule set
+    const dslResult = evaluateDslAction(actionType, { connectorId, target: 'external' });
+    if (dslResult.effect === 'deny') {
+      return { ok: false, blocked: true, reason: dslResult.reason || 'DSL policy denied', riskLevel: 'high' };
+    }
+    const gate = evaluatePolicyGate({
+      connectorId,
+      actionType,
+      commandPreview,
+      approved: Boolean(options.approved),
+      auth
+    });
+    appendConnectorAudit(connectorId, gate.ok ? 'policy_allow' : 'policy_block', {
+      actionType,
+      commandPreview: String(commandPreview || '').slice(0, 200),
+      approved: Boolean(options.approved),
       reason: gate.reason || null,
-      authMode: auth.mode || 'allowlist_required'
-    },
-    confidence: gate.confidence || TRUST_STATES.VERIFIED,
-    verificationState: gate.verificationState || TRUST_STATES.UNVERIFIED
-  });
-  return gate;
+      riskLevel: gate.riskLevel
+    });
+    appendOrchestrationReceipt({
+      workflowId: 'connector_policy',
+      commandId: options.commandId || null,
+      packetId: options.packetId || null,
+      eventType: gate.ok ? 'connector_policy_allow' : 'connector_policy_block',
+      status: gate.ok ? 'allowed' : 'blocked',
+      agent: AGENTS.JOSE,
+      connectorId,
+      actionType,
+      riskLevel: gate.riskLevel || 'medium',
+      approved: Boolean(options.approved),
+      blocked: !gate.ok,
+      setupRequired: Boolean(gate.setupRequired),
+      details: {
+        reason: gate.reason || null,
+        authMode: auth.mode || 'allowlist_required'
+      },
+      confidence: gate.confidence || TRUST_STATES.VERIFIED,
+      verificationState: gate.verificationState || TRUST_STATES.UNVERIFIED
+    });
+    return gate;
+  } catch {
+    return { ok: false, blocked: true, reason: 'Policy gate internal error' };
+  }
 }
 
 export async function verifyConnectorEnvironment(connectorId) {

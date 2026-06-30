@@ -1,4 +1,17 @@
-import { VOICE_STATES } from '../services/voiceService';
+// VOICE_STATES inlined here to break circular module dependency.
+// Do NOT re-import from voiceService — that import chain causes a TDZ crash
+// in the bundled output (Rollup cannot safely order the evaluation).
+const VOICE_STATES = {
+  IDLE: 'idle',
+  REQUESTING_PERMISSION: 'requesting_permission',
+  PERMISSION_GRANTED: 'permission_granted',
+  LISTENING: 'listening',
+  STOPPED: 'stopped',
+  PERMISSION_DENIED: 'permission_denied',
+  NO_MICROPHONE: 'no_microphone',
+  UNSUPPORTED: 'unsupported',
+  ERROR: 'error',
+};
 
 export const INITIAL_CONVERSATION_ID = 'default-session';
 export const COACH_LAYOUT_KEY = 'alphonso_coach_layout_v1';

@@ -6,6 +6,8 @@ import { verifyChallenge, verifySignature } from './verify.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const VERIFY_TOKEN = String(process.env.WHATSAPP_VERIFY_TOKEN || '').trim();
+// Separate token for /queue/drain endpoint — do not reuse VERIFY_TOKEN
+const DRAIN_TOKEN = String(process.env.ALPHONSO_DRAIN_TOKEN || '').trim();
 const APP_SECRET = String(process.env.WHATSAPP_APP_SECRET || '').trim();
 const FORWARD_URL = String(process.env.ALPHONSO_FORWARD_URL || '').trim();
 const ALLOWLIST = String(
@@ -38,11 +40,13 @@ function drainQueue(limit = 100) {
 }
 
 function isQueueAuthorized(request, url) {
-  if (!VERIFY_TOKEN) return false;
+  // Use dedicated ALPHONSO_DRAIN_TOKEN; fall back to VERIFY_TOKEN only if drain token not configured
+  const expectedToken = DRAIN_TOKEN || VERIFY_TOKEN;
+  if (!expectedToken) return false;
   const auth = String(request.headers['authorization'] || '');
   const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
   const query = url.searchParams.get('token') || '';
-  return bearer === VERIFY_TOKEN || query === VERIFY_TOKEN;
+  return bearer === expectedToken || query === expectedToken;
 }
 
 function safeLog(message, details = {}) {

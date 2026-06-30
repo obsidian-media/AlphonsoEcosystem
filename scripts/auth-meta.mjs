@@ -27,7 +27,7 @@
 import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes, createHash } from 'crypto';
 import { exec } from 'node:child_process';
 import { URL, URLSearchParams } from 'node:url';
 import { join } from 'node:path';
@@ -59,10 +59,20 @@ function readEnv() {
 }
 
 function upsertEnvVar(content, key, value) {
-  const line = `${key}=${value}`;
+  const escaped = String(value).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/#/g, '\\#');
+  const line = `${key}=${escaped}`;
   const re = new RegExp(`^${key}=.*$`, 'm');
   if (re.test(content)) return content.replace(re, line);
   return content.trimEnd() + '\n' + line + '\n';
+}
+
+// PKCE helpers
+function generateCodeVerifier() {
+  return randomBytes(48).toString('base64url');
+}
+async function generateCodeChallenge(verifier) {
+  const hash = createHash('sha256').update(verifier).digest();
+  return hash.toString('base64url');
 }
 
 function prompt(question) {
@@ -101,7 +111,7 @@ async function waitForCode() {
       if (error) reject(new Error(error));
       else resolve(code);
     });
-    server.listen(PORT, () => console.log(`\nListening for OAuth callback on http://localhost:${PORT}/callback`));
+    server.listen(PORT, '127.0.0.1', () => console.log(`\nListening for OAuth callback on http://127.0.0.1:${PORT}/callback`));
     server.on('error', reject);
   });
 }
@@ -125,12 +135,17 @@ async function main() {
     process.exit(1);
   }
 
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
   const authUrl = `https://www.facebook.com/v20.0/dialog/oauth?` + new URLSearchParams({
     client_id: appId,
     redirect_uri: REDIRECT_URI,
     scope: SCOPES,
     response_type: 'code',
     state: STATE,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
   }).toString();
 
   console.log('\nOpening browser for Meta authorization...');
@@ -144,14 +159,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Exchange code for short-lived token
+  // Exchange code for short-lived token (client_secret in POST body, not URL)
   console.log('\nExchanging code for short-lived token...');
-  const tokenRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?` + new URLSearchParams({
+  const tokenBody = new URLSearchParams({
     client_id: appId,
     client_secret: appSecret,
     redirect_uri: REDIRECT_URI,
     code,
-  }));
+  });
+  const tokenRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: tokenBody.toString(),
+  });
   const tokenData = await tokenRes.json();
 
   if (!tokenData.access_token) {
@@ -164,14 +184,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Exchange for long-lived token (60 days)
+  // Exchange for long-lived token (60 days) — client_secret in POST body
   console.log('Exchanging for long-lived token (60-day)...');
-  const longRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?` + new URLSearchParams({
+  const longBody = new URLSearchParams({
     grant_type: 'fb_exchange_token',
     client_id: appId,
     client_secret: appSecret,
     fb_exchange_token: tokenData.access_token,
-  }));
+  });
+  const longRes = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: longBody.toString(),
+  });
   const longData = await longRes.json();
   const longToken = longData.access_token || tokenData.access_token;
 

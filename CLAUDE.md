@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 2151+ tests across 158 files — all should pass
+npm run test             # Run all 2555+ tests across 186 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command
@@ -51,8 +51,9 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 - **parallelExecutionService.ts**: parallel task execution with concurrency control, retry logic, and task queues
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches
 - **15 connectors**: Telegram, WhatsApp Cloud, YouTube, GitHub, Slack, Claude, ChatGPT, Notion, ClickUp, SD WebUI, ComfyUI, Brave Search, Ollama, Qwen/DashScope, Perplexity — all policy-gated. All have credential input UI in ConnectorSetupPanel.
-- **lib.rs is ~2,024 lines** — 18 modules in src-tauri/src/ (audit_log, connector_commands, kv_store, main, memory_store, meta_publish, native_proof, ollama, plugin_runtime, policy_gate, runway, search, telegram, utils, whatsapp_webhook, workspace, youtube)
-- **All 2151+ tests are in `src/test/`** — 159 test files; Vitest via vitest.config.js (separate from vite build config)
+- **lib.rs is ~2,024 lines** — 25 modules in src-tauri/src/ — see AGENTS.md for full module list
+- **All 2555+ tests are in `src/test/`** — 186 test files; Vitest via vitest.config.js (separate from vite build config)
+- **Security (Batch 1 complete)**: boot TDZ crash fixed; `gateConnectorAction` exception-safe + DSL-wired; SSRF blocking on `fetch_url_content`; `execute_command_verified` real output redaction; PKCE on all 3 OAuth scripts; clipboard/dialog/open_url use native APIs (arboard, tauri-plugin-dialog, tauri-plugin-opener); CSP narrowed to explicit ports; per-program arg allowlist in `policy_gate.rs`.
 - **Two CI workflows**: `ci.yml` (lint + test + build + Tauri artifact + cargo test/clippy + npm audit + cargo audit) and `release.yml` (tag-triggered build + sign + publish).
 - **`.npmrc`** has `legacy-peer-deps=true` — required because `@eslint/js@10` and `eslint@9` have a peer dep mismatch. Do not remove.
 - **Multi-turn Ollama**: `generateOllamaChatStream` in `src/lib/ollama.js` uses `/api/chat` — full conversation history is passed per message. `ChatView.tsx` captures history snapshot before React state updates.
