@@ -443,6 +443,9 @@ fn execute_command_verified(
   if !allowed_program(&program) {
     return Err("Program is not allowed by Alphonso supervised command policy.".to_string());
   }
+  if !allowed_args(&program, &args) {
+    return Err(format!("Arguments are not permitted for program '{}' by Alphonso policy.", program));
+  }
 
   let mut command = Command::new(&program);
   command.args(&args);
@@ -608,7 +611,10 @@ fn alphonso_bridge_status() -> Value {
 }
 
 #[tauri::command]
-async fn alphonso_bridge_send_packet(packet: Value) -> Result<Value, String> {
+async fn alphonso_bridge_send_packet(
+  state: tauri::State<'_, reqwest::Client>,
+  packet: Value,
+) -> Result<Value, String> {
   let base_url = std::env::var("ALPHONSO_BRIDGE_URL")
     .map_err(|_| "ALPHONSO_BRIDGE_URL is not configured.".to_string())?;
   let token = std::env::var("ALPHONSO_BRIDGE_TOKEN")
@@ -622,10 +628,8 @@ async fn alphonso_bridge_send_packet(packet: Value) -> Result<Value, String> {
     .and_then(|value| value.trim().parse::<u64>().ok())
     .unwrap_or(15000);
   let url = format!("{}{}", trim_trailing_slashes(&base_url), path_prefix);
-  let client = reqwest::Client::builder()
-    .timeout(Duration::from_millis(timeout_ms))
-    .build()
-    .map_err(|error| error.to_string())?;
+  // Use shared reqwest::Client from managed state (connection pooling)
+  let client = state.inner().clone();
 
   let response = client
     .post(&url)
@@ -1223,26 +1227,12 @@ fn send_app_notification(app: tauri::AppHandle, title: String, body: String) -> 
 }
 
 #[tauri::command]
-fn open_url(url: String) -> Result<UrlOpenProof, String> {
+fn open_url(app: tauri::AppHandle, url: String) -> Result<UrlOpenProof, String> {
   if !url.starts_with("http://") && !url.starts_with("https://") {
     return Err("URL must start with http:// or https://".to_string());
   }
-  if cfg!(target_os = "windows") {
-    Command::new("cmd")
-      .args(["/C", "start", &url])
-      .spawn()
-      .map_err(|e| e.to_string())?;
-  } else if cfg!(target_os = "macos") {
-    Command::new("open")
-      .arg(&url)
-      .spawn()
-      .map_err(|e| e.to_string())?;
-  } else {
-    Command::new("xdg-open")
-      .arg(&url)
-      .spawn()
-      .map_err(|e| e.to_string())?;
-  }
+  use tauri_plugin_opener::OpenerExt;
+  app.opener().open_url(&url, None::<&str>).map_err(|e| e.to_string())?;
   Ok(UrlOpenProof {
     url,
     opened: true,
@@ -1665,6 +1655,7 @@ pub fn run() {
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
       let proof_output_dir = native_proof_output_dir();
