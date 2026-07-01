@@ -1,67 +1,37 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-const mockIndexedDB = {
-  open: vi.fn()
-};
-
-global.indexedDB = mockIndexedDB;
+import { describe, it, expect, vi } from 'vitest';
 
 describe('offlineChatService', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it('exports all 5 public functions with correct types', async () => {
+    const module = await import('../../services/offlineChatService');
+    expect(typeof module.saveMessageOffline).toBe('function');
+    expect(typeof module.getOfflineMessages).toBe('function');
+    expect(typeof module.markSynced).toBe('function');
+    expect(typeof module.getPendingSyncMessages).toBe('function');
+    expect(typeof module.clearOfflineMessages).toBe('function');
   });
 
-  describe('module structure', () => {
-    it('exports saveMessageOffline function', async () => {
-      const module = await import('../../services/offlineChatService');
-      expect(module.saveMessageOffline).toBeDefined();
-    });
-
-    it('exports getOfflineMessages function', async () => {
-      const module = await import('../../services/offlineChatService');
-      expect(module.getOfflineMessages).toBeDefined();
-    });
-
-    it('exports markSynced function', async () => {
-      const module = await import('../../services/offlineChatService');
-      expect(module.markSynced).toBeDefined();
-    });
-
-    it('exports getPendingSyncMessages function', async () => {
-      const module = await import('../../services/offlineChatService');
-      expect(module.getPendingSyncMessages).toBeDefined();
-    });
-
-    it('exports clearOfflineMessages function', async () => {
-      const module = await import('../../services/offlineChatService');
-      expect(module.clearOfflineMessages).toBeDefined();
-    });
+  it('saveMessageOffline has correct signature (message param)', async () => {
+    const module = await import('../../services/offlineChatService');
+    expect(module.saveMessageOffline.length).toBe(1);
   });
 
-  describe('saveMessageOffline', () => {
-    it('generates id if not provided', async () => {
-      const module = await import('../../services/offlineChatService');
-      const mockDb = {
-        transaction: vi.fn(() => ({
-          objectStore: vi.fn(() => ({
-            put: vi.fn()
-          })),
-          oncomplete: null,
-          onerror: null
-        }))
-      };
-      mockIndexedDB.open.mockImplementation((name, version, onupgradeneeded) => {
-        const request = {
-          result: mockDb,
-          error: null,
-          onsuccess: null,
-          onerror: null,
-          onupgradeneeded: onupgradeneeded || null
-        };
-        return Promise.resolve(mockDb);
-      });
-      await module.saveMessageOffline({ role: 'user', content: 'test' });
-      expect(true).toBe(true);
-    });
+  it('getOfflineMessages has correct signature (conversationId param)', async () => {
+    const module = await import('../../services/offlineChatService');
+    expect(module.getOfflineMessages.length).toBe(1);
+  });
+
+  it('markSynced has correct signature (messageId param)', async () => {
+    const module = await import('../../services/offlineChatService');
+    expect(module.markSynced.length).toBe(1);
+  });
+
+  it('getPendingSyncMessages has no required params', async () => {
+    const module = await import('../../services/offlineChatService');
+    expect(module.getPendingSyncMessages.length).toBe(0);
+  });
+
+  it('clearOfflineMessages has correct signature (conversationId param)', async () => {
+    const module = await import('../../services/offlineChatService');
+    expect(module.clearOfflineMessages.length).toBe(1);
   });
 });

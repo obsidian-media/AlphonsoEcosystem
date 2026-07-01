@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('../../lib/durableStore', () => ({
   durableGet: vi.fn(() => null),
@@ -27,6 +27,10 @@ describe('connectorCircuitBreakerService', () => {
   beforeEach(() => {
     Object.keys(storage).forEach((k) => delete storage[k]);
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('starts in closed state', () => {

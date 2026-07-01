@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../lib/durableStore', () => ({
   durableGet: vi.fn(() => null),
@@ -25,6 +25,10 @@ describe('a2aProtocolService', () => {
     vi.stubGlobal('localStorage', localStorageMock);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('delegate', () => {

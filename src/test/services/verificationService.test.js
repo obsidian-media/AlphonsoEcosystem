@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue(null),
@@ -34,6 +34,10 @@ describe('verificationService', () => {
     Object.keys(storage).forEach((k) => delete storage[k]);
     vi.stubGlobal('localStorage', localStorageMock);
     vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('getVerificationLogs', () => {
