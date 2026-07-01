@@ -22,14 +22,24 @@ vi.mock('qrcode.react', () => ({
 import { invoke } from '@tauri-apps/api/core';
 import { CompanionPairingPanel } from '../components/CompanionPairingPanel.tsx';
 
+function mockInvokeByCommand(overrides = {}) {
+  const defaults = {
+    companion_get_status: { running: true, port: 8765, connected_clients: 0 },
+    companion_get_local_ip: ['192.168.1.1'],
+    companion_get_pin: '123456',
+    companion_start_discovery: undefined,
+  };
+  const map = { ...defaults, ...overrides };
+  invoke.mockImplementation((cmd) => {
+    if (cmd in map) return Promise.resolve(map[cmd]);
+    return Promise.resolve(null);
+  });
+}
+
 describe('CompanionPairingPanel', () => {
-   beforeEach(() => {
-     invoke.mockReset();
-     invoke.mockImplementation((cmd) => {
-       if (cmd === 'companion_get_local_ip') return Promise.resolve(['192.168.1.1']);
-       return Promise.resolve(null);
-     });
-   });
+  beforeEach(() => {
+    invoke.mockReset();
+  });
 
   afterEach(() => {
     vi.useRealTimers();
@@ -44,7 +54,7 @@ describe('CompanionPairingPanel', () => {
   });
 
   it('shows server running with Generate PIN button', async () => {
-    invoke.mockResolvedValue({ running: true, port: 8765, connected_clients: 0 });
+    mockInvokeByCommand();
     render(<CompanionPairingPanel />);
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Generate PIN/i })).toBeTruthy();
@@ -53,9 +63,7 @@ describe('CompanionPairingPanel', () => {
   });
 
   it('generates and displays PIN when button clicked', async () => {
-    invoke
-      .mockResolvedValueOnce({ running: true, port: 8765, connected_clients: 0 })
-      .mockResolvedValueOnce('123456');
+    mockInvokeByCommand({ companion_get_pin: '123456' });
     render(<CompanionPairingPanel />);
     await waitFor(() => screen.getByRole('button', { name: /Generate PIN/i }));
     fireEvent.click(screen.getByRole('button', { name: /Generate PIN/i }));
@@ -67,9 +75,7 @@ describe('CompanionPairingPanel', () => {
   it('copies PIN to clipboard when copy button clicked', async () => {
     const mockClipboard = { writeText: vi.fn() };
     Object.assign(navigator, { clipboard: mockClipboard });
-    invoke
-      .mockResolvedValueOnce({ running: true, port: 8765, connected_clients: 0 })
-      .mockResolvedValueOnce('654321');
+    mockInvokeByCommand({ companion_get_pin: '654321' });
     render(<CompanionPairingPanel />);
     await waitFor(() => screen.getByRole('button', { name: /Generate PIN/i }));
     fireEvent.click(screen.getByRole('button', { name: /Generate PIN/i }));
@@ -79,9 +85,16 @@ describe('CompanionPairingPanel', () => {
   });
 
   it('shows generating state while loading', async () => {
-    invoke
-      .mockResolvedValueOnce({ running: true, port: 8765, connected_clients: 0 })
-      .mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve('123456'), 100)));
+    const { companion_get_local_ip, ...rest } = {
+      companion_get_status: { running: true, port: 8765, connected_clients: 0 },
+      companion_get_local_ip: ['192.168.1.1'],
+    };
+    invoke.mockImplementation((cmd) => {
+      if (cmd === 'companion_get_local_ip') return Promise.resolve(['192.168.1.1']);
+      if (cmd === 'companion_get_status') return Promise.resolve({ running: true, port: 8765, connected_clients: 0 });
+      if (cmd === 'companion_get_pin') return new Promise((resolve) => setTimeout(() => resolve('123456'), 100));
+      return Promise.resolve(null);
+    });
     render(<CompanionPairingPanel />);
     await waitFor(() => screen.getByRole('button', { name: /Generate PIN/i }));
     fireEvent.click(screen.getByRole('button', { name: /Generate PIN/i }));
@@ -90,9 +103,7 @@ describe('CompanionPairingPanel', () => {
   });
 
   it('displays QR code when PIN is generated', async () => {
-    invoke
-      .mockResolvedValueOnce({ running: true, port: 8765, connected_clients: 0 })
-      .mockResolvedValueOnce('123456');
+    mockInvokeByCommand({ companion_get_pin: '123456' });
     render(<CompanionPairingPanel />);
     await waitFor(() => screen.getByRole('button', { name: /Generate PIN/i }));
     fireEvent.click(screen.getByRole('button', { name: /Generate PIN/i }));
@@ -103,7 +114,7 @@ describe('CompanionPairingPanel', () => {
   });
 
   it('displays connected clients count', async () => {
-    invoke.mockResolvedValue({ running: true, port: 8765, connected_clients: 2 });
+    mockInvokeByCommand({ companion_get_status: { running: true, port: 8765, connected_clients: 2 } });
     render(<CompanionPairingPanel />);
     await waitFor(() => {
       expect(screen.getByText('2')).toBeTruthy();
@@ -111,7 +122,7 @@ describe('CompanionPairingPanel', () => {
   });
 
   it('starts discovery when Start Discovery button clicked', async () => {
-    invoke.mockResolvedValue({ running: true, port: 8765, connected_clients: 0 });
+    mockInvokeByCommand();
     render(<CompanionPairingPanel />);
     await waitFor(() => screen.getByRole('button', { name: /Start Discovery/i }));
     fireEvent.click(screen.getByRole('button', { name: /Start Discovery/i }));
