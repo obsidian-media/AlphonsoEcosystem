@@ -118,11 +118,61 @@ describe('echoMemoryService', () => {
       expect(normalizeMemoryConfidence([])).toEqual([]);
     });
 
-  it('normalizes confidence levels', () => {
-    const entries = [{ confidence: 'verified' }, { confidence: 'pending' }];
-    const result = normalizeMemoryConfidence(entries);
-    expect(result[0].confidence).toBe('verified');
-    expect(result[1].confidence).toBeDefined();
-  });
+    it('returns empty for non-array input', () => {
+      expect(normalizeMemoryConfidence(null)).toEqual([]);
+      expect(normalizeMemoryConfidence(undefined)).toEqual([]);
+    });
+
+    it('preserves verified confidence (rank 4 >= 3)', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'verified' }]);
+      expect(result[0].confidence).toBe('verified');
+    });
+
+    it('elevates inferred to verified (rank 3 >= 3)', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'inferred' }]);
+      expect(result[0].confidence).toBe('verified');
+    });
+
+    it('normalizes temporary to inferred (rank 2 >= 2)', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'temporary' }]);
+      expect(result[0].confidence).toBe('inferred');
+    });
+
+    it('normalizes pending to temporary (rank 1 >= 1)', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'pending' }]);
+      expect(result[0].confidence).toBe('temporary');
+    });
+
+    it('keeps unverified as unverified (rank 0)', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'unverified' }]);
+      expect(result[0].confidence).toBe('unverified');
+    });
+
+    it('normalizes failed to unverified (rank -1)', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'failed' }]);
+      expect(result[0].confidence).toBe('unverified');
+    });
+
+    it('handles unknown confidence as unverified (rank 0 default)', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'unknown_state' }]);
+      expect(result[0].confidence).toBe('unverified');
+    });
+
+    it('preserves confidenceLevel from entry if set', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'pending', confidenceLevel: 'custom' }]);
+      expect(result[0].confidenceLevel).toBe('custom');
+    });
+
+    it('sets confidenceLevel to normalized value if not set', () => {
+      const result = normalizeMemoryConfidence([{ confidence: 'pending' }]);
+      expect(result[0].confidenceLevel).toBe('temporary');
+    });
+
+    it('skips non-object entries', () => {
+      const result = normalizeMemoryConfidence([null, 'string', 42]);
+      expect(result[0]).toBeNull();
+      expect(result[1]).toBe('string');
+      expect(result[2]).toBe(42);
+    });
   });
 });

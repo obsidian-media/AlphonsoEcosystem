@@ -4,6 +4,7 @@ import {
   snapshotAgentPerformance, listPerformanceSnapshots, getPerformanceTrend,
   recordAgentExecutionWithPerformance
 } from '../../services/agentPerformanceService';
+import { recordAgentExecution } from '../../services/agentMetricsService';
 
 vi.mock('../../services/trustModel', () => ({
   TRUST_STATES: { VERIFIED: 'verified', INFERRED: 'inferred', TEMPORARY: 'temporary', PENDING: 'pending', UNVERIFIED: 'unverified', FAILED: 'failed' },
@@ -104,9 +105,10 @@ describe('agentPerformanceService', () => {
     expect(Array.isArray(result.trend)).toBe(true);
   });
 
-  it.skip('recordAgentExecutionWithPerformance calls recordAgentExecution', () => {
-    const { recordAgentExecution } = require('../../services/agentMetricsService');
+  it('recordAgentExecutionWithPerformance calls recordAgentExecution', () => {
+    vi.mocked(recordAgentExecution).mockClear();
     const result = recordAgentExecutionWithPerformance({ agent: 'alphonso', command: 'test' });
-    expect(recordAgentExecution).toHaveBeenCalled();
+    expect(recordAgentExecution).toHaveBeenCalledWith({ agent: 'alphonso', command: 'test' });
+    expect(result).toEqual({ id: 'test-entry' });
   });
 });
