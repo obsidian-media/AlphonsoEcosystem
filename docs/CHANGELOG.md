@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.0-test-expansion-2] — 2026-07-01
+
+### Test Coverage Expansion — Phase 3 (Agent Core + Connectors + Communication)
+
+- **+9 new test files, +432 tests** covering previously untested services
+- New agent core tests: `agentBusService` (32), `agentBrainService` (38)
+- New connector tests: `githubConnector` (42), `slackConnector` (31), `n8nConnector` (29), `tavilyConnector` (21)
+- New communication tests: `telegramBrowserConnector` (56), `telegramCompanionService` (36), `whatsappWebhookService` (27)
+
+**Total**: 218 test files / 3,167 tests (up from 209 files / 2,735 tests)
+
+---
+
 ## [2.5.0-sync] - 2026-07-01 — Doc Sync, TypeScript Fix, Dependabot Cleanup
 
 ### Fixes

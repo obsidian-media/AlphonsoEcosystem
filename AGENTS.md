@@ -3,7 +3,7 @@
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 5, Tailwind 3) + Ollama (local LLM)
-- **Version**: 2.5.0 (security hardened, 204 test files, 2,708 tests, 162 services)
+- **Version**: 2.5.0 (security hardened, 218 test files, 3,167 tests, 162 services)
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 
 ## Directory Structure
@@ -15,7 +15,7 @@ src/                   React frontend (.jsx, not .tsx)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                204 test files, 2,708 tests (Vitest, all passing)
+  test/                218 test files, 3,167 tests (Vitest, all passing)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -50,7 +50,7 @@ docs/                  56 documentation files
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 2,708 tests (204 files; all passing)
+npm run test             # 3,167 tests (218 files; all passing)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

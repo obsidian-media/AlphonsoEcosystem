@@ -206,6 +206,6 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
 - Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`)
 - Component test coverage improved to ~28%+ (18 new service test files added in Direction 3 + Test Expansion sprint)
-- Overall coverage ~38%+ (threshold 38%), 204 test files, 2,708+ tests
+- Overall coverage ~38%+ (threshold 38%), 218 test files, 3,167+ tests
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
 - `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI

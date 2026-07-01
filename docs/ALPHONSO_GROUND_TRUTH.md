@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-30 — v2.5.0 (test expansion + fixes)
-**Verified by:** OpenCode agent — 18 new service test files added, 3 weakened tests fixed, 2,708 tests passing
-**Version:** 2.5.0 (security hardened, 204 test files, 2,708 tests, 162 services)
+**Last verified:** 2026-07-01 — v2.5.0 (Phase 3 test expansion)
+**Verified by:** OpenCode agent — 18 new service test files added, 3 weakened tests fixed, 3,167 tests passing
+**Version:** 2.5.0 (security hardened, 218 test files, 3,167 tests, 162 services)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -170,12 +170,12 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 204 Files in `src/test/` (not zero)
+## 4. Test Suite — 218 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-30 v2.5.0, all passing):**
-- 204 test files, 2708 tests passing
+- 218 test files, 3167 tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
 - 22+ new test files added in Batch 2 (feat/batch2-testing-completeness)
 ```
@@ -338,7 +338,7 @@ echoFileWatcherService.test.js       ← added JUNE CANDY v2.3.0 (14 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- 204 test files / 2,755+ tests (Batch 2 + Test Expansion sprint; all passing as of 2026-07-01)
+- 218 test files / 3,167 tests (Batch 2 + Test Expansion Phases 1-3; all passing as of 2026-07-01)
 - Coverage expanded significantly across agent adapters, connector services, voice OS, workflow services
 - Run `npm run test:coverage` to see current state
 
@@ -869,7 +869,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-07-01 — v2.5.0. Security hardening (Batch 1) complete: SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed. TypeScript: 0 errors. Tests: 204 files / 2,755 passing. package.json: 2.5.0. 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live and wired. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred._
+_Last verified: 2026-07-01 — v2.5.0. Security hardening (Batch 1) complete: SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed. TypeScript: 0 errors. Tests: 218 files / 3,167 passing. package.json: 2.5.0. 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live and wired. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

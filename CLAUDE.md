@@ -11,7 +11,7 @@
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 2755+ tests across 204 files — all should pass
+npm run test             # Run all 3167+ tests across 218 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command
@@ -235,8 +235,8 @@ Before writing any new service, component, or feature, check this list:
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
 2. Check `src/services/` for an existing service before writing a new one — there are 163+ services
-3. Check `src/test/` — there are 204 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 2,755 tests must continue to pass
+3. Check `src/test/` — there are 218 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 3,167 tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -264,7 +264,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Composio toolkit toggles~~ — **CLOSED Direction 4** (toggleable cards in SettingsView)
 - ~~Hector RSS failover~~ — **CLOSED Direction 4** (12 curated feeds, parseRssItems, fetchRssSources)
 - ~~WorkflowBuilderView~~ — **CLOSED Direction 4** (new component + AutomationView Builder tab)
-- ~~Component test coverage at ~6%~~ — **CLOSED Direction 3** (204 test files / 2,708+ tests; ~28% component coverage)
+- ~~Component test coverage at ~6%~~ — **CLOSED Direction 3** (218 test files / 3,167+ tests; ~28% component coverage)
 - ~~Notification center~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/NotificationCenter.jsx`)
 - ~~Agent status strip~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/AgentStatusStrip.jsx`)
 - ~~Updater notification banner~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/UpdaterNotification.jsx`)
@@ -356,7 +356,7 @@ src/                   React frontend (mix of .tsx and .jsx, 9+ .ts services)
     ollama.js / ollama.ts    Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
     durableStore.js          SQLite dual-write (localStorage + Tauri kv_set)
     motion.ts                Framer Motion helpers
-  test/                204 test files (Vitest, vitest.config.js)
+  test/                218 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (smoke.spec.js, voice.spec.js, visual.spec.js, multiagent.spec.js)
 src-tauri/
   src/
@@ -423,4 +423,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-07-01 — v2.5.0 — Security hardening (Batch 1) complete: SSRF blocking, PKCE OAuth, tauri-plugin-dialog, arboard clipboard, per-program arg allowlist, policyDslService wired, CSP narrowed. TypeScript: 0 errors. Tests: 204 files / 2,755 passing. 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live. 35+ new components and 40+ new services added since v2.0.5 — see Do Not Duplicate table above. package.json version: 2.5.0._
+_Last verified: 2026-07-01 — v2.5.0 — Security hardening (Batch 1) complete: SSRF blocking, PKCE OAuth, tauri-plugin-dialog, arboard clipboard, per-program arg allowlist, policyDslService wired, CSP narrowed. TypeScript: 0 errors. Tests: 218 files / 3,167 passing. 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live. 35+ new components and 40+ new services added since v2.0.5 — see Do Not Duplicate table above. package.json version: 2.5.0._
