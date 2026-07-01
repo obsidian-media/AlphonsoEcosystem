@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-06-30 — v2.5.0 (test expansion)
-**Verified by:** OpenCode agent — 18 new service test files added, 2,697 tests passing
-**Version:** 2.5.0 (security hardened, 204 test files, 2,697 tests, 162 services)
+**Last verified:** 2026-06-30 — v2.5.0 (test expansion + fixes)
+**Verified by:** OpenCode agent — 18 new service test files added, 3 weakened tests fixed, 2,708 tests passing
+**Version:** 2.5.0 (security hardened, 204 test files, 2,708 tests, 162 services)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -175,7 +175,7 @@ Key services that past audits missed or underestimated:
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-30 v2.5.0, all passing):**
-- 204 test files, 2697 tests passing
+- 204 test files, 2708 tests passing
 - 14 Rust unit tests passing (`cargo test` in src-tauri/)
 - 22+ new test files added in Batch 2 (feat/batch2-testing-completeness)
 ```

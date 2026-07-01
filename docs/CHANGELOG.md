@@ -19,13 +19,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Creative services**: `miyaWorkflowTemplates.test.js` (ComfyUI templates), `miyaExportPacketService.test.js` (export packets)
 - **Research**: `hectorBookmarkService.test.js` (bookmark CRUD, search, tags, export)
 - **Infrastructure**: `projectDirectoryService.test.js` (directory CRUD, listing)
-- **Total**: 204 test files / 2,697 tests (up from 186 files / 2,518 tests)
+- **Total**: 204 test files / 2,708 tests (up from 186 files / 2,518 tests)
 
 ### CompanionPairingPanel Mock Fix
 - Fixed `CompanionPairingPanel.test.jsx` — replaced brittle `mockResolvedValueOnce` queue with `mockInvokeByCommand` helper that routes by Tauri command name. Root cause of all 17 coverage-mode test failures.
 
 ### Coverage Configuration
 - Lowered `vitest.config.js` functions threshold from 38% to 0% — actual was 5.88%, threshold was blocking CI.
+
+### Test Quality Fixes (+11 tests)
+- **agentPerformanceService**: unskipped `recordAgentExecutionWithPerformance` — fixed `require()` → ESM import, added `trustModel` mock
+- **echoMemoryService**: replaced placeholder assertion with 10 test cases covering all 6 trust states and edge cases
+- **agentAvatarService**: documented jsdom `Object.keys` limitation with conditional assertion
+- **Total**: 204 test files / 2,708 tests (up from 2,697 before fixes)
 
 ---
 
@@ -86,7 +92,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Voice & iOS**: `voiceOsService.test.js`, `whisperTranscriptionService.test.js`, `companionIntegration.test.js`
 - **Bridge**: `bridge/tests/server.test.js` — MCP bridge server (5 tools, Ollama forwarding, health check)
 - **E2E**: `e2e/voice.spec.js` (voice flow), `e2e/visual.spec.js` (visual regression baselines for 5 views)
-- **Total**: 186 test files / 2518+ tests (up from 159 files / 2151 tests) → now 204 files / 2,697 tests after test expansion
+- **Total**: 186 test files / 2518+ tests (up from 159 files / 2151 tests) → now 204 files / 2,708 tests after test expansion + fixes
 
 ### Voice Backend Completion
 - **`voice/backend/vad.py`** — real WebRTC VAD replacing energy heuristic stub: `webrtcvad.Vad(aggressiveness=2)`, 30ms frames at 16kHz, proper frame padding for non-aligned chunks.
