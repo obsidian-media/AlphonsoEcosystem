@@ -4,10 +4,10 @@
 
 # Alphonso
 
-> **v2.4.4** — Local-first AI desktop companion with 9 agents, 15 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.0** — Local-first AI desktop companion with 9 agents, 15 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.4.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-2151%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
+[![Version](https://img.shields.io/badge/version-2.5.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-2708%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)

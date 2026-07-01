@@ -174,9 +174,9 @@ Before writing any new service, component, or feature, check this list:
 ## Before Making Changes
 
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
-2. Check `src/services/` for an existing service before writing a new one — there are 130+ services
-3. Check `src/test/` — there are 159 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 2151+ tests must continue to pass
+2. Check `src/services/` for an existing service before writing a new one — there are 162 services
+3. Check `src/test/` — there are 204 test files already; add to them, don't create a parallel test system
+4. Run `npm run test` before and after any change; all 2,708 tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -204,7 +204,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Composio toolkit toggles~~ — **CLOSED Direction 4** (toggleable cards in SettingsView)
 - ~~Hector RSS failover~~ — **CLOSED Direction 4** (12 curated feeds, parseRssItems, fetchRssSources)
 - ~~WorkflowBuilderView~~ — **CLOSED Direction 4** (new component + AutomationView Builder tab)
-- ~~Component test coverage at ~6%~~ — **CLOSED Direction 3** (101 test files / 1439+ tests; ~12% component coverage)
+- ~~Component test coverage at ~6%~~ — **CLOSED Direction 3** (204 test files / 2,708+ tests; ~28% component coverage)
 - ~~Notification center~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/NotificationCenter.jsx`)
 - ~~Agent status strip~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/AgentStatusStrip.jsx`)
 - ~~Updater notification banner~~ — **CLOSED Direction 1 (All 5 Sprint)** (`src/components/UpdaterNotification.jsx`)
@@ -229,7 +229,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~SQLite dual-write for remaining keys~~ — **CLOSED Sprint Next-10 T10** (`src/lib/durableStore.js` + migrated crashLogService, agentAuditService, novaAnalysisService)
 - ~~Test coverage at ~30%~~ — **CLOSED Sprint Next-10 T3** (111 test files / 1621+ tests; 10 new service test files)
 - Branch protection on `main` — manual GitHub step (MCP doesn't expose branch protection API); require CI pass before merge
-- Coverage at ~38%+ — next staged target 40%
+- Coverage at ~38%+ — functions at 5.88% (18 new service test files added in Test Expansion sprint)
 - ~~Runtime Manager 9 gaps~~ — **CLOSED 2026-06-23**
 - ~~Onboarding flow~~ — **CLOSED 2026-06-23** (Ollama auto-start, not-installed detection, Telegram/WhatsApp/Composio inline guides, `OllamaOfflineBanner` in main shell)
 - ~~Ollama offline state~~ — **CLOSED 2026-06-23** (`OllamaOfflineBanner.jsx` — global, persistent, Start/Retry/Runtime Hub)
@@ -272,12 +272,12 @@ src/                   React frontend (all .jsx, 9 .ts services)
     ConnectorHealthPanel.jsx        — full connector panel (lazy chunk)
     ConnectorStatusIndicators.jsx   — small dot/strip components (static-safe import)
     AgentActivityLog.jsx            — activity timeline tab (appendAgentActivity wired)
-  services/            ~131 services
+  services/            ~162 services
     connectors/        GitHub, Slack, and other connector implementations
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/
     ollama.js          Ollama client — generateOllamaChatStream uses /api/chat (multi-turn)
-  test/                159 test files (Vitest, vitest.config.js)
+  test/                204 test files (Vitest, vitest.config.js)
 e2e/                   Playwright E2E tests (Chromium installed)
 src-tauri/
   src/
@@ -320,4 +320,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-06-27 — v2.4.4 — gap-closure sprint: DeepSeek connector live (deepseekConnector.js + credential UI + Hector tier-3 fallback + 4 tests); ChatView offline wiring (saveMessageOffline on Ollama error); alphonso contract fixed (execute_command + filesystem_ in allowedActionPrefixes); 159 test files / 2151 tests passing. cargo clippy -D warnings clean._
+_Last verified: 2026-06-30 — v2.5.0 — Test Expansion sprint: 18 new service test files (163+ test cases) added for echoMemoryService, sentinelSecurityService, sentinelGateService, agentPerformanceService, novaAnalysisService, novaFeedbackService, miyaWorkflowTemplates, miyaExportPacketService, workContractService, connectorConstants, projectDirectoryService, executionModeService, marcusAuditService, mariaWeeklyReportService, hectorBookmarkService, serviceScopes, workflowRegistryService, agentAvatarService; doc updates: README v2.5.0, AGENTS.md 204 files / 2,708 tests; cargo clippy -D warnings clean. 204 test files / 2,708 tests passing._
