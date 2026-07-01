@@ -32,7 +32,7 @@ describe('runtimeApiService', () => {
       }));
 
       const result = await runModule('mod-1', { input: 'test' });
-      expect(result.runId).toBe('run-123');
+      expect((result as { runId: string }).runId).toBe('run-123');
     });
 
     it('returns error on bridge failure', async () => {
@@ -54,7 +54,7 @@ describe('runtimeApiService', () => {
       }));
 
       const result = await getRunStatus('run-123');
-      expect(result.status).toBe('running');
+      expect((result as { status: string }).status).toBe('running');
     });
   });
 

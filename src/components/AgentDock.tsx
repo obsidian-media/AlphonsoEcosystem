@@ -21,7 +21,7 @@ interface Companion {
 interface AgentProfile {
   id: string;
   name: string;
-  role: string;
+  role?: string;
 }
 
 interface AgentDockProps {

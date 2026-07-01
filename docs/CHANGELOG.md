@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.0-sync] - 2026-07-01 — Doc Sync, TypeScript Fix, Dependabot Cleanup
+
+### Fixes
+- **TypeScript 0 errors** — `role` field made optional in `AgentDock.tsx` + `AgentPairingView.tsx` (one agent profile lacked it); discriminated union cast in `runtimeApiService.test.ts`. `tsc --noEmit` now clean.
+- **package.json version** bumped from 2.4.4 → 2.5.0 to match CHANGELOG and releases.
+
+### Dependencies
+- **8 Dependabot PRs merged** (safe patches/minors): `@tanstack/react-virtual` 3.14.4, `lucide-react` 1.22, `eslint-plugin-security` 4.0.1, `mdns-sd` 0.20.1, `hostname` 0.4.2, `actions/upload-artifact` v7, `actions/checkout` v7, `actions/cache` v6.
+- **3 PRs left open** (breaking changes deferred): `rand` 0.10 (Cargo API change), `tailwindcss` v4 (full rewrite), `@vitejs/plugin-react` v6 (removes Babel).
+
+### Docs
+- **CLAUDE.md fully updated** — 35+ new components and 40+ new services added to Do Not Duplicate table; 5 new Rust companion modules documented; test/service counts corrected; Project Structure expanded; TypeScript note updated; Gaps section current.
+- **ALPHONSO_GROUND_TRUTH.md** — test count corrected to 2,755/204, last-verified updated.
+
+---
+
 ## [2.5.0-test-expansion] - 2026-06-30 — Service Test Coverage Expansion
 
 ### Test Coverage Expansion (+18 new service test files)

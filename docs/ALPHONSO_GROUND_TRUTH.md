@@ -338,7 +338,7 @@ echoFileWatcherService.test.js       ← added JUNE CANDY v2.3.0 (14 tests)
 - `cargo clippy -- -D warnings` clean
 
 **What agents working on testing should focus on:**
-- 186 test files / 2518+ tests (Batch 2 added 22+ new files covering previously untested services)
+- 204 test files / 2,755+ tests (Batch 2 + Test Expansion sprint; all passing as of 2026-07-01)
 - Coverage expanded significantly across agent adapters, connector services, voice OS, workflow services
 - Run `npm run test:coverage` to see current state
 
@@ -869,7 +869,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-06-29 — v2.5.0. Batch 2 (feat/batch2-testing-completeness) merged to main. 186 test files / 2518+ tests passing. Agent profiles complete (all 9 full 25-property). Voice backend: real WebRTC VAD + 9-agent routing live. SmartVoiceButton unified. ExternalAgentAdapter wired (OpenAI/Claude/Ollama/DeepSeek). iOS companion Swift verified. Remaining open gaps: Voice OS Python prereq (user must have Python 3.10+ installed), plugin true execution isolation (no Web Worker/iframe sandbox — policy check only). Branch protection on main: manual GitHub step still pending._
+_Last verified: 2026-07-01 — v2.5.0. Security hardening (Batch 1) complete: SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed. TypeScript: 0 errors. Tests: 204 files / 2,755 passing. package.json: 2.5.0. 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live and wired. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 
