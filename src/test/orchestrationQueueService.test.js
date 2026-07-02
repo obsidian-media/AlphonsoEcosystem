@@ -16,6 +16,7 @@ const {
   replayPacketFromDeadLetter,
   forceDeadLetterPacket,
   markPacketInterrupted,
+  recoverInterruptedExecutions,
   getDeadLetterCount,
   getOldestDeadLetterTimestamp,
   retryDeadLetter,
@@ -358,6 +359,36 @@ describe('orchestrationQueueService', () => {
       const result = markPacketInterrupted('pkt-int3');
       expect(result.packet.confidence).toBe('failed');
       expect(result.packet.verificationState).toBe('failed');
+    });
+  });
+
+  describe('recoverInterruptedExecutions', () => {
+    it('returns zero recovered when no packets are queued/executing', () => {
+      seedPacket('p1', 'reported_to_jose');
+      seedPacket('p2', 'dead_letter');
+      const result = recoverInterruptedExecutions();
+      expect(result.recoveredCount).toBe(0);
+      expect(result.packetIds).toEqual([]);
+    });
+
+    it('recovers packets stuck in queued or executing state', () => {
+      seedPacket('p1', 'queued');
+      seedPacket('p2', 'executing');
+      seedPacket('p3', 'reported_to_jose');
+      const result = recoverInterruptedExecutions();
+      expect(result.recoveredCount).toBe(2);
+      expect(result.packetIds.sort()).toEqual(['p1', 'p2']);
+    });
+
+    it('marks recovered packets as failed and retryable via markPacketInterrupted', () => {
+      seedPacket('p1', 'queued');
+      recoverInterruptedExecutions();
+      const raw = localStorage.getItem(PACKET_KEY);
+      const packets = JSON.parse(raw);
+      const recovered = packets.find((p) => p.id === 'p1');
+      expect(recovered.status).toBe('failed');
+      expect(recovered.retryable).toBe(true);
+      expect(recovered.failureReason).toContain('auto-recovered as interrupted on boot');
     });
   });
 

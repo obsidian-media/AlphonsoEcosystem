@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprint 1 closed — Sprint 2 in progress
+**Status:** Sprint 1 and Sprint 2 closed
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -230,9 +230,9 @@ first new connector (Discord) — all without breaking the existing 3,174+ test 
 | 3 | Cross-check skill pack permissions against agent contracts | `agentContractService.ts`, `skillPackService.js` | — | ✅ Done |
 | 4 | Add default skill packs for Alphonso, Marcus, Echo, Sentinel, Nova | `skillPackService.js` | — | ✅ Done |
 | 5 | Add per-execution loop-guard + token/time budget | `joseExecutionEngineService.js`, `agentContractService.ts` | — | ✅ Done |
-| 6 | Add resumable-execution checkpoint on top of existing DLQ | `joseExecutionEngineService.js`, `orchestrationQueueService.ts` | — | ⬜ Backlog → Sprint 2 |
-| 7 | Discord connector (credential UI + service + policy gate) | `src/services/connectors/discordConnector.js` (new), `ConnectorSetupPanel.jsx`, `policyEnforcementService.ts` | — | ⬜ Backlog → Sprint 2 |
-| 8 | Generic inbound webhook connector | new service + Rust command | — | ⬜ Backlog → Sprint 2 |
+| 6 | Add resumable-execution checkpoint on top of existing DLQ | `orchestrationQueueService.ts`, `App.tsx` | — | ✅ Done (Sprint 2) |
+| 7 | Discord connector (credential UI + service + policy gate) | `src/services/connectors/discordConnector.ts` (new), `ConnectorSetupPanel.tsx`, `connectorRegistry.js`, `policyEnforcementService.ts` | — | ✅ Done (Sprint 2) |
+| 8 | Generic inbound webhook connector | `gateway/generic-webhook/` (new), `genericWebhookService.js` (new), `ConnectorSetupPanel.tsx`, `App.tsx` | — | ✅ Done (Sprint 2) |
 | 9 | Update `CLAUDE.md` Do-Not-Duplicate table + Real Gaps section post-sprint | `CLAUDE.md` | — | ✅ Done |
 | 10 | Full test run + typecheck + clippy before marking sprint done | — | — | ✅ Done (with caveat — see §8) |
 
@@ -299,3 +299,73 @@ into Sprint 2+ — not dropped.
     2.5.0 → 2.5.1 to mark this as a real, doc-verified release point.
     Lesson: a "close the sprint" step must explicitly enumerate every doc
     the project's own rules require, not just the two most obvious ones.
+- **2026-07-02 (Sprint 2 close)** — Shipped items 6–8:
+  - **Crash-recovery checkpoint**: `recoverInterruptedExecutions()` added to
+    `orchestrationQueueService.ts`. It turned out `markPacketInterrupted()`
+    already existed in that file (failed + retryable, records a transition)
+    but was never called from anywhere — the primitive was built and
+    abandoned at some earlier point. Wired it up rather than building a
+    parallel mechanism. Boot hook added to `App.tsx` following the exact
+    dynamic-import pattern already used for the scheduler and file-watcher
+    boot services.
+  - **Discord connector**: built as `discordConnector.ts`, mirroring
+    `slackConnector.ts` function-for-function (send/edit/delete message,
+    list channels, get history, add reaction, webhook send) against Discord
+    REST API v10 with Bot token auth. Registered, credential UI added,
+    17 tests written mirroring `slackConnector.test.js`'s structure.
+  - **Generic inbound webhook connector — design deviation from the
+    original plan**: the Sprint 1 backlog table said "new service + Rust
+    command." On inspection, a Rust-side HTTP listener inside the Tauri app
+    doesn't actually work for this use case — a desktop app has no stable
+    public IP, so external services (Stripe, Zapier, etc.) can't reach a
+    port on it directly. `gateway/whatsapp-cloud/` already solved exactly
+    this problem for WhatsApp: deploy a small external Node gateway
+    (Railway-hosted) that receives the webhook and queues it, then
+    Alphonso polls a `/queue/drain` endpoint. Followed that same proven
+    pattern instead, generalized to accept any `sourceId`:
+    `gateway/generic-webhook/` (new standalone deployable, its `security.js`
+    is a verbatim copy of the WhatsApp gateway's — already fully generic,
+    no WhatsApp-specific logic in it) + `genericWebhookService.js` (poller,
+    mirrors `echoFileWatcherService.js`'s config+interval shape). No Rust
+    code was touched this sprint as a result.
+  - `connectorGitHubSlack.test.ts` asserted `DEFAULT_CONNECTORS.length` ===
+    14, which was accurate pre-Sprint-2 (verified against the committed
+    registry, not assumed). Added Discord (15th) and Generic Webhook (16th)
+    and updated the assertion to 16 with explicit coverage for both new
+    entries, so a future connector addition breaks this test loudly instead
+    of silently drifting.
+  - Found, verified as pre-existing (stashed Sprint 2 changes and
+    reproduced identically), and documented rather than fixed: a
+    `ConnectorSetupPanel.test.jsx` failure (7/7 tests) — its `vi.mock` of
+    `connectorAuth` doesn't export `hydrateConnectorCredentialsFromSqlite`,
+    so the component's real hydrate effect throws in the test environment.
+    Out of scope to fix here; logged in `CLAUDE.md` Real Gaps with the exact
+    one-line fix needed.
+  - Verification: 191/191 targeted tests passing across every file touched
+    this sprint, `npx tsc --noEmit` clean, ESLint clean. Full-suite run not
+    re-attempted — the worker-pool timeout root cause from Sprint 1 is
+    unchanged and already logged; re-running it would just reproduce the
+    same partial result for no new information.
+  - Docs updated in the same pass this time, per the Sprint 1 lesson above:
+    `CLAUDE.md`, `README.md`, `docs/CHANGELOG.md`,
+    `docs/ALPHONSO_GROUND_TRUTH.md`, and this file, all together before
+    declaring the sprint done — not as a follow-up.
+
+## Sprint 3 backlog (not started)
+
+Carried forward from the "explicitly rejected/deferred" list in §3 and §5,
+plus new items surfaced this sprint. Not yet broken into tasks:
+
+- Subprocess/sandboxed tool execution (§3.2)
+- MCP as a first-class runtime capability, not a side Express server (§3.4)
+- Scheduler heartbeat/liveness supervision (§3.5)
+- Email connector — SMTP send / IMAP poll (§5)
+- Module-system convergence evaluation: `modules/` TOML packages vs.
+  `skillPackService.js` packs (§4.3)
+- EULA + trademark work, once external distribution is actually planned (§1)
+- Fix `ConnectorSetupPanel.test.jsx`'s `connectorAuth` mock gap (found in
+  Sprint 2, one-line fix: add `hydrateConnectorCredentialsFromSqlite:
+  vi.fn().mockResolvedValue()` to the mock factory)
+- Investigate the vitest worker-pool startup timeout that blocks a full
+  218-file suite run on this dev machine past ~170 files (first logged
+  Sprint 1, still open going into Sprint 3)

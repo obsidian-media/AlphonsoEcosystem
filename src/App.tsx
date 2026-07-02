@@ -272,6 +272,27 @@ function AppShell() {
     })();
   }, []);
 
+  // Crash-recovery checkpoint: on boot, recover any packet left stuck in
+  // 'queued'/'executing' state by a prior crash or forced restart, so
+  // in-flight work never sits silently orphaned. See ALPHONSOTOTHEMOON.md
+  // Sprint 2 item #6.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { recoverInterruptedExecutions } = await import('./services/orchestrationQueueService');
+        const result = recoverInterruptedExecutions();
+        if (result.recoveredCount > 0) {
+          addNotification({
+            type: 'warning',
+            title: 'Recovered interrupted work',
+            message: `${result.recoveredCount} task(s) were left in-flight by a prior restart and marked for retry.`
+          });
+        }
+      } catch { /* non-critical */ }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Wire background services: Sentinel scheduled scans + Maria weekly report
   useEffect(() => {
     let scanStop: (() => void) | null = null;
@@ -341,6 +362,32 @@ function AppShell() {
       } catch { /* non-critical */ }
     })();
     return () => { try { watcherStop?.(); } catch { /* ignore */ } };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Generic webhook gateway poller — drains gateway/generic-webhook/ if configured.
+  // See ALPHONSOTOTHEMOON.md Sprint 2 item #8.
+  useEffect(() => {
+    let webhookPollStop: (() => void) | null = null;
+    (async () => {
+      try {
+        const { startGenericWebhookPolling } = await import('./services/genericWebhookService');
+        const { getConnectorCredential } = await import('./services/connectors/connectorAuth');
+        const drainUrl = getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL');
+        if (drainUrl) {
+          webhookPollStop = startGenericWebhookPolling((result) => {
+            if (result?.events?.length > 0) {
+              addNotification({
+                type: 'info',
+                title: 'Webhook event received',
+                message: `${result.events.length} inbound event(s) drained from the generic webhook gateway.`
+              });
+            }
+          });
+        }
+      } catch { /* non-critical */ }
+    })();
+    return () => { try { webhookPollStop?.(); } catch { /* ignore */ } };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

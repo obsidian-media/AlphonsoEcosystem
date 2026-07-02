@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.1 (ALPHONSOTOTHEMOON Sprint 1: licensing + skill-pack hardening + pipeline budget guard)
-**Verified by:** Claude Code session — targeted test files for all Sprint 1 changes passed 100% (`skillPackService.test.js` 63/63, `joseExecutionEngineService.test.js` 42/42), `npx tsc --noEmit` clean (0 errors). Full 218-file suite could not complete in one run on this dev machine due to a vitest worker-pool startup timeout past ~170 files (reproduced identically with default settings, a 4-worker cap, and the project's own `scripts/run-vitest-programmatic.mjs`); every file that did run passed with 0 assertion failures. This is logged as an open environment item, not a code defect — see "Real Gaps" in `CLAUDE.md`.
-**Version:** 2.5.1 (security hardened, 218 test files, 3,174+ tests, 163 services — no new service files added in Sprint 1, only edits to existing `agentContractService.ts`, `skillPackService.js`, `joseExecutionEngineService.js`)
+**Last verified:** 2026-07-02 — v2.5.2 (ALPHONSOTOTHEMOON Sprint 2: crash-recovery checkpoint + Discord connector + generic inbound webhook connector)
+**Verified by:** Claude Code session — targeted tests for all Sprint 2 changes passed 100% (191/191 across `orchestrationQueueService`, `connectorGitHubSlack`, `connectorRegistryService`, `discordConnector`, `slackConnector`, `genericWebhookService`, `skillPackService`, `joseExecutionEngineService`), `npx tsc --noEmit` clean (0 errors), ESLint clean on all touched files. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted in the Sprint 1 entry below) — not re-attempted this sprint since the root cause is unchanged and already logged.
+**Version:** 2.5.2 (security hardened, 218 test files, 3,174+ tests, 165 services — 2 new files this sprint: `src/services/genericWebhookService.js` and `src/services/connectors/discordConnector.ts`; connector count 14 → 16 via `connectorRegistry.js`)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -899,6 +899,54 @@ the ground-truth summary of what actually changed.
   execution, MCP as a first-class runtime capability (not just a side Express
   server), and scheduler heartbeat/liveness supervision.
 
+## 11.6 ALPHONSOTOTHEMOON Sprint 2 (2026-07-02)
+
+Full context lives in `ALPHONSOTOTHEMOON.md` at repo root.
+
+- **Crash-recovery checkpoint**: `recoverInterruptedExecutions()` added to
+  `src/services/orchestrationQueueService.ts`. Scans all agent packets still
+  in `queued`/`executing` state at app boot and marks each interrupted via
+  `markPacketInterrupted()` — a function that already existed in this file
+  (failed + retryable, records a transition) but was never called from
+  anywhere before this sprint. Wired as a one-shot boot `useEffect` in
+  `src/App.tsx`, right after the runtime-manager autostart block, surfacing
+  a warning notification when work is recovered.
+- **Discord connector**: `src/services/connectors/discordConnector.ts` —
+  Discord REST API v10, Bot token auth, policy-gated identically to the
+  existing `slackConnector.ts` pattern. Functions: `sendMessage`,
+  `editMessage`, `deleteMessage`, `listGuildChannels`, `getChannelHistory`,
+  `addReaction`, `sendWebhookMessage`. Registered in `connectorRegistry.js`
+  as `discord`; credential UI (Bot Token, live-verified against
+  `GET /users/@me`) in `ConnectorSetupPanel.tsx`; 17 tests.
+- **Generic inbound webhook connector**: two halves —
+  1. `gateway/generic-webhook/` — a standalone, Railway-deployable Node HTTP
+     server mirroring `gateway/whatsapp-cloud/`'s proven queue-drain shape,
+     generalized: `POST /webhook/:sourceId` (any external service, shared
+     secret required) enqueues an event; `GET /queue/drain` (separate
+     drain token) lets Alphonso pull queued events. No local port is opened
+     inside the Tauri app itself — this follows the same reasoning as the
+     WhatsApp Cloud gateway: a desktop app has no stable public IP, so the
+     receiving side has to be an externally-deployed service, not a listener
+     inside the app.
+  2. `src/services/genericWebhookService.js` — `pollGenericWebhookGateway()`
+     (one-shot drain, appends an `orchestrationReceiptService` receipt per
+     event for auditability), `startGenericWebhookPolling()` /
+     `stopGenericWebhookPolling()` (30s interval, no-ops until a drain URL
+     is configured). Registered in `connectorRegistry.js` as
+     `generic_webhook`; credential UI (drain URL + token) in
+     `ConnectorSetupPanel.tsx`; boot poller wired in `App.tsx`; 13 tests.
+- Connector count: 14 → 16 (`DEFAULT_CONNECTORS.length` in
+  `connectorRegistry.js`, +Discord +Generic Webhook). The existing
+  `connectorGitHubSlack.test.ts` assertion of `toBe(14)` was accurate before
+  this sprint and was updated to `toBe(16)` with coverage added for both
+  new entries.
+- Found, documented, and left open (pre-existing, independent of this
+  sprint — reproduced identically with Sprint 2 changes stashed out):
+  `src/test/ConnectorSetupPanel.test.jsx` fails 7/7 because its
+  `vi.mock('../services/connectors/connectorAuth', ...)` factory omits
+  `hydrateConnectorCredentialsFromSqlite`, so the component's real hydrate
+  `useEffect` throws on mount inside the test. See `CLAUDE.md` Real Gaps.
+
 ---
 
 ## 12. Known Audit Errors (for future reference)
@@ -919,7 +967,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-07-02 — v2.5.1. ALPHONSOTOTHEMOON Sprint 1 shipped: SHALAUDE License v1.0 added (repo previously had no LICENSE; README's stale BSL 1.1 claim corrected), skill-pack-to-agent-contract validation (`validateSkillPackAgainstContract`), default skill packs for all 9 agents (was 4), pipeline loop-guard/execution budget on `runJoseCommandExecutionPipeline` (50 assignments / 5 min ceiling). TypeScript: 0 errors. package.json: 2.5.1. Targeted Sprint 1 test files: 105/105 passing. Full 218-file suite blocked by a vitest worker-pool startup timeout on this dev machine past ~170 files (reproduced 3 ways — infra issue, not a code defect; open item). Prior state (v2.5.0, 2026-07-01): security hardening (Batch 1) complete — SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed; 218 files / 3,167 tests passing; 8 Dependabot PRs merged, 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking); companion backend 5 Rust modules live. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred, vitest worker-pool timeout on full-suite runs (new), Sprint 2 backlog (resumable-execution checkpoints, Discord connector, generic webhook connector, subprocess sandboxing, MCP-as-runtime-capability, scheduler heartbeat)._
+_Last verified: 2026-07-02 — v2.5.2. ALPHONSOTOTHEMOON Sprint 2 shipped: crash-recovery checkpoint (`recoverInterruptedExecutions()`, wired at boot), Discord connector (`discordConnector.ts`, 17 tests), generic inbound webhook connector (`gateway/generic-webhook/` + `genericWebhookService.js`, 13 tests) — connector count 14 → 16. TypeScript: 0 errors. package.json: 2.5.2. Targeted Sprint 2 tests: 191/191 passing across all touched files. Found and documented (not fixed, pre-existing) a `ConnectorSetupPanel.test.jsx` failure unrelated to this sprint. Full 218-file suite still blocked by the same vitest worker-pool startup timeout noted below (not re-attempted this sprint, root cause unchanged). Prior state (v2.5.1, 2026-07-02): ALPHONSOTOTHEMOON Sprint 1 — SHALAUDE License v1.0 added (repo previously had no LICENSE; README's stale BSL 1.1 claim corrected), skill-pack-to-agent-contract validation, default skill packs for all 9 agents (was 4), pipeline loop-guard/execution budget on `runJoseCommandExecutionPipeline` (50 assignments / 5 min ceiling); 105/105 targeted tests passing; full-suite worker-pool timeout first observed here (reproduced 3 ways — infra issue, not a code defect). Prior state (v2.5.0, 2026-07-01): security hardening (Batch 1) complete — SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed; 218 files / 3,167 tests passing; 8 Dependabot PRs merged, 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking); companion backend 5 Rust modules live. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred, vitest worker-pool timeout on full-suite runs, `ConnectorSetupPanel.test.jsx` mock gap (new), Sprint 3 backlog (subprocess sandboxing, MCP-as-runtime-capability, scheduler heartbeat, email connector, module-system convergence, EULA/trademark work)._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

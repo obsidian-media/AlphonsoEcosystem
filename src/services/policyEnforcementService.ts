@@ -133,7 +133,7 @@ export function classifyConnectorRisk(connectorId: string, actionType: string = 
   let risk: ConnectorRiskLevel = 'low';
   if (id === 'youtube' || action.includes('publish') || action.includes('upload')) risk = 'high';
   else if (id === 'telegram' || id === 'whatsapp') risk = 'high';
-  else if (id === 'chatgpt' || id === 'claude' || id === 'qwen' || id === 'notion' || id === 'clickup' || id === 'github' || id === 'slack') risk = 'medium';
+  else if (id === 'chatgpt' || id === 'claude' || id === 'qwen' || id === 'notion' || id === 'clickup' || id === 'github' || id === 'slack' || id === 'discord') risk = 'medium';
 
   policyCache.set(cacheKey, risk, RISK_CACHE_TTL);
   return risk;

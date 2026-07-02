@@ -221,6 +221,30 @@ export function retryDeadLetter(): number {
   return requeued;
 }
 
+export interface RecoveryResult {
+  recoveredCount: number;
+  packetIds: string[];
+}
+
+/**
+ * Crash-recovery checkpoint. Any packet still in 'queued' or 'executing'
+ * state at app boot was orphaned by a prior crash/forced-restart — nothing
+ * is actively processing it anymore, since the pipeline that owned it died
+ * with the process. Marks each as interrupted (failed + retryable) via the
+ * existing markPacketInterrupted primitive so it surfaces in the normal
+ * failed/retry flow instead of sitting silently stuck. Call once on boot.
+ * See ALPHONSOTOTHEMOON.md Sprint 2 item #6.
+ */
+export function recoverInterruptedExecutions(): RecoveryResult {
+  const packets = listAgentPackets().filter((p: any) => p.status === 'queued' || p.status === 'executing');
+  const packetIds: string[] = [];
+  for (const packet of packets) {
+    const result = markPacketInterrupted(packet.id, 'App restarted mid-execution — auto-recovered as interrupted on boot.');
+    if (result.ok) packetIds.push(packet.id);
+  }
+  return { recoveredCount: packetIds.length, packetIds };
+}
+
 export function markPacketInterrupted(packetId: string, reason: string = 'Pipeline interrupted.'): ReplayResult {
   const packet = getPacketById(packetId);
   if (!packet) return { ok: false, reason: 'Packet not found.' };

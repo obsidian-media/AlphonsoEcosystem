@@ -4,24 +4,31 @@
 
 # Alphonso
 
-> **v2.5.1** — Local-first AI desktop companion with 9 agents, 15 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.2** — Local-first AI desktop companion with 9 agents, 16 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.1-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.2-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
 **Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
-It orchestrates 9 specialized agents, connects to 15 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
+It orchestrates 9 specialized agents, connects to 16 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
 
-**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 15 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
+**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 16 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
 
 [**Download v2.4.4**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.4.4) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 </div>
 
 ---
+
+## What's New in v2.5.2
+
+- **Crash-recovery checkpoint** — on boot, Alphonso now recovers any task left stuck in-flight by a prior crash or forced restart instead of leaving it silently orphaned (`recoverInterruptedExecutions()` in `orchestrationQueueService.ts`).
+- **Discord connector** — send/edit/delete messages, list channels, read history, react, and webhook posting via the Discord REST API. Credential setup in Settings → Connectors → Discord.
+- **Generic inbound webhook connector** — deploy `gateway/generic-webhook/` once and any external service (Stripe, Zapier, a custom script) can push events into Alphonso without a bespoke connector. See `gateway/generic-webhook/README.md`.
+- Connector count: 16.
 
 ## What's New in v2.5.1
 

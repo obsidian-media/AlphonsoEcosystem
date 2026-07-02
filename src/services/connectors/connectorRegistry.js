@@ -161,6 +161,24 @@ export const DEFAULT_CONNECTORS = [
     requiredEnv: ['SLACK_BOT_TOKEN'],
     permissions: ['channel_read', 'channel_write', 'message_send', 'file_upload', 'reaction_add', 'approval_requests'],
     disabledReason: 'Slack bot token is not configured.'
+  },
+  {
+    id: 'discord',
+    name: 'Discord Connector',
+    status: 'not_configured',
+    transport: 'discord_rest_api_v10',
+    requiredEnv: ['DISCORD_BOT_TOKEN'],
+    permissions: ['channel_read', 'channel_write', 'message_send', 'message_edit', 'message_delete', 'reaction_add', 'approval_requests'],
+    disabledReason: 'Discord bot token is not configured.'
+  },
+  {
+    id: 'generic_webhook',
+    name: 'Generic Webhook',
+    status: 'not_configured',
+    transport: 'generic_webhook_gateway_poll',
+    requiredEnv: ['GENERIC_WEBHOOK_DRAIN_URL'],
+    permissions: ['inbound_events'],
+    disabledReason: 'Generic webhook gateway drain URL is not configured. Deploy gateway/generic-webhook/ and set the drain URL.'
   }
 ];
 

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
   GitBranch, MessageSquare, Bot, Zap, Database, ListTodo, Phone, Video,
-  Cpu, Search, Smartphone, Settings2, MessageCircle, Hash
+  Cpu, Search, Smartphone, Settings2, MessageCircle, Hash, AtSign, Webhook
 } from 'lucide-react';
 import { ToolConnectionsPanel } from './ToolConnectionsPanel';
 import {
@@ -39,6 +39,8 @@ const CONNECTOR_ICONS: Record<string, LucideIcon> = {
   whatsapp: Phone,
   github: GitBranch,
   slack: Hash,
+  discord: AtSign,
+  generic_webhook: Webhook,
   claude: Bot,
   chatgpt: Bot,
   notion: Database,
@@ -247,6 +249,9 @@ export function ConnectorSetupPanel(): React.JSX.Element {
 
   const [githubToken, setGithubToken] = useState(() => getConnectorCredential('github', 'GITHUB_TOKEN'));
   const [slackBotToken, setSlackBotToken] = useState(() => getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
+  const [discordBotToken, setDiscordBotToken] = useState(() => getConnectorCredential('discord', 'DISCORD_BOT_TOKEN'));
+  const [genericWebhookDrainUrl, setGenericWebhookDrainUrl] = useState(() => getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL'));
+  const [genericWebhookToken, setGenericWebhookToken] = useState(() => getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_TOKEN'));
   const [anthropicApiKey, setAnthropicApiKey] = useState(() => getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
   const [openaiApiKey, setOpenaiApiKey] = useState(() => getConnectorCredential('chatgpt', 'OPENAI_API_KEY'));
   const [notionApiKey, setNotionApiKey] = useState(() => getConnectorCredential('notion', 'NOTION_API_KEY'));
@@ -281,6 +286,9 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setTelegramChatIds((prev) => prev || getConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS'));
       setGithubToken((prev) => prev || getConnectorCredential('github', 'GITHUB_TOKEN'));
       setSlackBotToken((prev) => prev || getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
+      setDiscordBotToken((prev) => prev || getConnectorCredential('discord', 'DISCORD_BOT_TOKEN'));
+      setGenericWebhookDrainUrl((prev) => prev || getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL'));
+      setGenericWebhookToken((prev) => prev || getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_TOKEN'));
       setAnthropicApiKey((prev) => prev || getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
       setOpenaiApiKey((prev) => prev || getConnectorCredential('chatgpt', 'OPENAI_API_KEY'));
       setNotionApiKey((prev) => prev || getConnectorCredential('notion', 'NOTION_API_KEY'));
@@ -438,6 +446,31 @@ export function ConnectorSetupPanel(): React.JSX.Element {
         }
       } catch {
         showNotice('Could not reach Slack API', 'error');
+      }
+      refresh();
+      return;
+    }
+
+    if (id === 'discord') {
+      const token = discordBotToken.trim() || getConnectorCredential('discord', 'DISCORD_BOT_TOKEN');
+      if (!token) { showNotice('Discord bot token is required.', 'error'); return; }
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch('https://discord.com/api/v10/users/@me', {
+          method: 'GET',
+          headers: { Authorization: `Bot ${token}` },
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (res.ok) {
+          const data = await res.json() as { username?: string; discriminator?: string };
+          showNotice(`Connection verified — authenticated as ${data.username}${data.discriminator && data.discriminator !== '0' ? `#${data.discriminator}` : ''}`, 'success');
+        } else {
+          showNotice(`Invalid Discord token: HTTP ${res.status}`, 'error');
+        }
+      } catch {
+        showNotice('Could not reach Discord API', 'error');
       }
       refresh();
       return;
@@ -667,6 +700,21 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('slack', { SLACK_BOT_TOKEN: slackBotToken })}
             hint="Create a Slack app at api.slack.com/apps, add the chat:write scope, install to your workspace, and copy the Bot User OAuth Token."
             savedLabel="Slack token saved" />
+
+          <CredentialSection title="Discord" icon={AtSign} borderColor="border-indigo-300/20" bgColor="bg-indigo-500/8" accentColor="text-indigo-400"
+            fields={[{ label: 'Bot Token', placeholder: 'Bot token from the Discord Developer Portal', value: discordBotToken, onChange: setDiscordBotToken, key: 'DISCORD_BOT_TOKEN' }]}
+            onSave={() => saveConnectorApiKey('discord', { DISCORD_BOT_TOKEN: discordBotToken })}
+            hint="Create an application at discord.com/developers/applications, add a Bot, enable the Message Content intent, invite it to your server, and copy the Bot Token."
+            savedLabel="Discord token saved" />
+
+          <CredentialSection title="Generic Webhook" icon={Webhook} borderColor="border-amber-300/20" bgColor="bg-amber-500/8" accentColor="text-amber-400"
+            fields={[
+              { label: 'Gateway Drain URL', placeholder: 'https://your-gateway.up.railway.app/queue/drain', value: genericWebhookDrainUrl, onChange: setGenericWebhookDrainUrl, key: 'GENERIC_WEBHOOK_DRAIN_URL' },
+              { label: 'Drain Token', placeholder: 'Shared secret set on the gateway', value: genericWebhookToken, onChange: setGenericWebhookToken, key: 'GENERIC_WEBHOOK_TOKEN' }
+            ]}
+            onSave={() => saveConnectorApiKey('generic_webhook', { GENERIC_WEBHOOK_DRAIN_URL: genericWebhookDrainUrl, GENERIC_WEBHOOK_TOKEN: genericWebhookToken })}
+            hint="Deploy gateway/generic-webhook/ (Railway config included), point any external service at https://<gateway>/webhook/<sourceId> with the shared secret, then set the drain URL and token here so Alphonso can poll for events."
+            savedLabel="Generic webhook config saved" />
 
           <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
             fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}

@@ -35,8 +35,32 @@ describe('connectorRegistry - GitHub and Slack', () => {
       expect(slack.permissions).toContain('approval_requests');
     });
 
-    it('has 14 connectors total', () => {
-      expect(DEFAULT_CONNECTORS.length).toBe(14);
+    it('includes discord connector', () => {
+      const discord = DEFAULT_CONNECTORS.find(c => c.id === 'discord');
+      expect(discord).toBeDefined();
+      expect(discord.name).toBe('Discord Connector');
+      expect(discord.transport).toBe('discord_rest_api_v10');
+      expect(discord.requiredEnv).toContain('DISCORD_BOT_TOKEN');
+      expect(discord.permissions).toContain('channel_read');
+      expect(discord.permissions).toContain('channel_write');
+      expect(discord.permissions).toContain('message_send');
+      expect(discord.permissions).toContain('message_edit');
+      expect(discord.permissions).toContain('message_delete');
+      expect(discord.permissions).toContain('reaction_add');
+      expect(discord.permissions).toContain('approval_requests');
+    });
+
+    it('includes generic_webhook connector', () => {
+      const genericWebhook = DEFAULT_CONNECTORS.find(c => c.id === 'generic_webhook');
+      expect(genericWebhook).toBeDefined();
+      expect(genericWebhook.name).toBe('Generic Webhook');
+      expect(genericWebhook.transport).toBe('generic_webhook_gateway_poll');
+      expect(genericWebhook.requiredEnv).toContain('GENERIC_WEBHOOK_DRAIN_URL');
+      expect(genericWebhook.permissions).toContain('inbound_events');
+    });
+
+    it('has 16 connectors total', () => {
+      expect(DEFAULT_CONNECTORS.length).toBe(16);
     });
 
     it('github connector has not_configured status by default', () => {
@@ -47,6 +71,11 @@ describe('connectorRegistry - GitHub and Slack', () => {
     it('slack connector has not_configured status by default', () => {
       const slack = DEFAULT_CONNECTORS.find(c => c.id === 'slack');
       expect(slack.status).toBe('not_configured');
+    });
+
+    it('discord connector has not_configured status by default', () => {
+      const discord = DEFAULT_CONNECTORS.find(c => c.id === 'discord');
+      expect(discord.status).toBe('not_configured');
     });
   });
 });

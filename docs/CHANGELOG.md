@@ -6,6 +6,53 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.2] — 2026-07-02
+
+### ALPHONSOTOTHEMOON Sprint 2
+
+- **Crash-recovery checkpoint**: `orchestrationQueueService.ts` — added
+  `recoverInterruptedExecutions()`, which scans all agent packets still in
+  `queued`/`executing` state at app boot (orphaned by a prior crash or forced
+  restart, since nothing is actively processing them once the process that
+  owned them dies) and marks each interrupted via the existing
+  `markPacketInterrupted()` primitive — which already existed in this file
+  but was never wired up anywhere. Wired as a one-shot boot `useEffect` in
+  `App.tsx`, surfacing a notification when work is recovered.
+- **Discord connector**: `src/services/connectors/discordConnector.ts` —
+  `sendMessage`, `editMessage`, `deleteMessage`, `listGuildChannels`,
+  `getChannelHistory`, `addReaction`, `sendWebhookMessage` against the
+  Discord REST API v10 with Bot token auth, policy-gated the same way as
+  `slackConnector.ts`. Registered in `connectorRegistry.js` as `discord`;
+  credential UI (Bot Token field + live verify via `/users/@me`) added to
+  `ConnectorSetupPanel.tsx`; 17 tests in
+  `src/test/connectors/discordConnector.test.js`.
+- **Generic inbound webhook connector**: new standalone deployable gateway
+  at `gateway/generic-webhook/` (Node HTTP server, Railway-ready — mirrors
+  `gateway/whatsapp-cloud/`'s queue-drain shape but provider-agnostic:
+  `POST /webhook/:sourceId` with a shared secret in, `GET /queue/drain` for
+  Alphonso to poll out) plus `src/services/genericWebhookService.js`
+  (`pollGenericWebhookGateway`, `startGenericWebhookPolling`/
+  `stopGenericWebhookPolling`). Lets any external service (Stripe, Zapier, a
+  custom script) push events into Alphonso without a bespoke connector.
+  Registered in `connectorRegistry.js` as `generic_webhook`; credential UI
+  (drain URL + token) added to `ConnectorSetupPanel.tsx`; boot poller wired
+  in `App.tsx`; 13 tests in `src/test/genericWebhookService.test.js`.
+- Connector count: 14 → 16 (`DEFAULT_CONNECTORS.length`). Updated the
+  existing `connectorGitHubSlack.test.ts` count assertion and added
+  coverage for both new connectors in that file.
+- Version bumped 2.5.1 → 2.5.2. `CLAUDE.md`, `README.md`, and
+  `docs/ALPHONSO_GROUND_TRUTH.md` updated same-pass (this time including
+  all four docs from the start, after Sprint 1 initially missed three of
+  them — see `ALPHONSOTOTHEMOON.md` running log for that correction).
+- Found (documented, not fixed — pre-existing and independent of this
+  sprint's changes) a failure in `src/test/ConnectorSetupPanel.test.jsx`
+  (7/7 tests): its `vi.mock('../services/connectors/connectorAuth', ...)`
+  factory omits `hydrateConnectorCredentialsFromSqlite`, so the component's
+  real hydrate `useEffect` throws on mount in tests. Reproduced identically
+  with this sprint's changes stashed out. See `CLAUDE.md` Real Gaps.
+
+---
+
 ## [2.5.1] — 2026-07-02
 
 ### ALPHONSOTOTHEMOON Sprint 1
