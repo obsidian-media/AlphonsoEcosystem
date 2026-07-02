@@ -16,6 +16,7 @@ export function CompanionPairingPanel() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [discoveryStarted, setDiscoveryStarted] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
   const refreshStatus = async () => {
     try {
@@ -39,11 +40,13 @@ export function CompanionPairingPanel() {
   };
 
   const startDiscovery = async () => {
+    setDiscoveryError(null);
     try {
       await invoke('companion_start_discovery', { port: status?.port || 8765 });
       setDiscoveryStarted(true);
-    } catch {
+    } catch (err) {
       setDiscoveryStarted(false);
+      setDiscoveryError(String((err as Error)?.message || err || 'Discovery failed to start.'));
     }
   };
 
@@ -99,6 +102,12 @@ export function CompanionPairingPanel() {
             </button>
           </div>
         </div>
+
+        {discoveryError && (
+          <div className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+            Discovery failed to start: {discoveryError}
+          </div>
+        )}
 
         {pin && (
           <div className="space-y-3">
