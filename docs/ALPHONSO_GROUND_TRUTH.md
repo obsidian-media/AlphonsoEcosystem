@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.4 (Sprint 3: Miya/Hector/Jose skill-library taxonomy + per-skill contract scoping)
-**Verified by:** Claude Code session — targeted tests passed 100% (99/99 across `skillPackService`, `agentSkills`, `agentContractService`, `services/agentContract`; plus `ecosystemHub.test.jsx` 8/8), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
-**Version:** 2.5.4 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 22 unchanged this sprint; skill-pack count grew from 11 `agent_skill`-category packs to 23 — 12 new taxonomy packs for Miya/Hector/Jose)
+**Last verified:** 2026-07-02 — v2.5.5 (Sprint 3 discoverability audit: found + fixed a live app-crashing bug in Boardroom Sessions)
+**Verified by:** Claude Code session — drove the actual running app with Playwright (headless Chromium against `npm run dev`), not source-reading alone. Targeted tests passed 100% (46/46 across `boardroomView`, `appLazyImports`, `ecosystemHub`, `agentPairingView`, `selfDevelopmentService`), `npx tsc --noEmit` clean (0 errors). Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.5 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 22 unchanged; skill-pack count 23 unchanged this sprint — this sprint closed the discoverability-audit half of Sprint 3 and fixed a critical crash bug found during it)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -1041,6 +1041,90 @@ big-bang rebuild of all 9 agents' skill systems.
   Sentinel, Nova keep one default pack each), module-system convergence
   between `modules/` TOML manifests and `skillPackService.js` packs, and a
   full skill-marketplace model.
+
+## 11.9 ALPHONSOTOTHEMOON Sprint 3: discoverability audit (2026-07-02, v2.5.5)
+
+The other half of Sprint 3 (skill-library depth was closed in §11.8). This
+half required driving the actual running app rather than reading source —
+done via `npm run dev` + headless Chromium (Playwright), since no project
+skill for running this app existed yet.
+
+- **Critical bug found and fixed: Boardroom Sessions crashed the entire
+  app.** `App.tsx` line 47 was `const BoardroomView = lazy(() =>
+  import('./components/BoardroomView'));` — missing the `.then((mod) => ({
+  default: mod.BoardroomView }))` mapping that every other one of the 25
+  other lazy-loaded views in that file uses. `BoardroomView.tsx` only has a
+  named export (`export function BoardroomView()`), no default export. When
+  a user clicked Sidebar → Boardroom → "Boardroom Sessions" subtab, React's
+  lazy loader resolved `module.default === undefined` as the component
+  type, and React's own dev-mode warning path crashed with an uncaught
+  `TypeError: Cannot convert object to primitive value`, replacing the
+  entire app with a full-screen "BOOT ERROR" overlay. Root cause confirmed
+  by direct comparison against every other lazy import in the file (24 of
+  25 correctly used the `.then(...)` mapping; `RuntimeManagerView` is the
+  one exception, but that's fine because its component file uses `export
+  default function`, so it has an actual default export to resolve).
+  Fixed: added the missing `.then(...)` mapping. Verified live post-fix —
+  renders correctly, zero console errors.
+- **Why the test suite never caught this**: `BoardroomView` had zero test
+  coverage before this sprint, and there is no App.tsx-level render smoke
+  test in the suite. Added two regression tests: `src/test/boardroomView.test.jsx`
+  (renders without throwing + asserts the module has no default export, so a
+  future contributor doesn't "fix" the type error by adding a default export
+  without checking the `App.tsx` side of the contract) and
+  `src/test/appLazyImports.test.js` (a static guard that parses every
+  `lazy(() => import(...))` call in `App.tsx` — 26 total — and verifies the
+  target module's actual export shape matches what each call expects; this
+  is what confirms BoardroomView was the *only* mismatch, not an assumption).
+- **Discoverability findings, all verified live** (this was the actual
+  scope of the audit — is a real, wired feature actually reachable):
+  - **Coach Mode**: real and functional. Clicking the sidebar footer "Coach"
+    button toggles `coachMode` state correctly (confirmed via the Dashboard
+    stat tile flipping "Off" → "On"). Not a bug. It sits in the sidebar
+    footer with the exact same visual weight as Settings and the light/dark
+    toggle — no badge, no distinct color, no explanation — which is the most
+    likely reason a user reported it "feels forgotten." No UI change made
+    this pass (a visual-prominence decision, logged as a follow-up, not
+    silently fixed).
+  - **Boardroom / Mission Room**: reachable via the sidebar "Boardroom" nav
+    item (opens to a "Mission Room" / "Boardroom Sessions" sub-tab pair).
+    Minor naming mismatch: the nav item is labeled "Boardroom" but its
+    default sub-tab is "Mission Room," not "Boardroom Sessions" — cosmetic,
+    not functionally confusing once opened.
+  - **Agent Pairing** (`AgentPairingView`): reachable only via sidebar "All
+    Agents" → "Pairings" tab inside `EcosystemHub`'s 7-tab bar (Overview /
+    Queue / Skills / Workflows / Pairings / Workshop / Advanced) — 2 clicks
+    deep behind a generic tab label that gives no hint agent-to-agent
+    pairing lives there. Confirmed rendering correctly (9-agent pairing grid
+    visible).
+  - **Ecosystem Maturity panels + Self-Development panel**: reachable only
+    via "All Agents" → "Advanced" tab, and only visible after scrolling
+    past the Operator Modes / Trust-Verification-Layer sections that also
+    render there. Confirmed rendering correctly (Live Ecosystem Map
+    Foundation with all 9 agent tiles visible on scroll).
+  - **Operator Dashboard — the clearest "buried" case**: has **no sidebar
+    nav entry at all**. The only path to it is a "Operator" quick-launch
+    card on the Dashboard home tab (`MissionControlHome.tsx` line 251:
+    `{ title: 'Operator', detail: 'Settings, Coach, and memory', tab:
+    'operator', ... }`). When Operator Mode is off (the default for a fresh
+    install), opening this tab shows nothing but a bare "Operator Mode is
+    Off" card with an "Enable" button — no preview of telemetry, proofs,
+    memory dashboards, or supervised runtime tools that exist behind it.
+    A first-time user has zero visual reason to enable it.
+- **Explicitly not changed this pass** (UI-placement/prominence is a design
+  decision, not a bug — flagged for a follow-up, not assumed): whether
+  Operator Dashboard should get a sidebar nav entry, whether Coach Mode
+  should get a status badge, whether the Pairings/Advanced tabs should be
+  renamed or promoted. These are recommendations for a future UX pass, not
+  done silently in this audit.
+- **Environment note, not a code defect**: while starting `npm run dev` for
+  this audit, discovered an unrelated third-party dev server ("MINT — AI
+  Content Workstation") already bound to the wildcard address on port 5173
+  on this dev machine. Vite correctly fell back to binding
+  `127.0.0.1:5173` explicitly and logged a warning; the audit had to target
+  `http://127.0.0.1:5173` rather than `http://localhost:5173` to reach the
+  right server. Not an Alphonso bug — logged here only so a future session
+  doesn't waste time rediscovering it.
 
 ---
 

@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.5] — 2026-07-02
+
+### Critical fix: Boardroom Sessions crashed the entire app (found via Sprint 3 discoverability audit)
+
+- **Root cause**: `App.tsx` did `const BoardroomView = lazy(() => import('./components/BoardroomView'));` with no `.then((mod) => ({ default: mod.BoardroomView }))` mapping. `BoardroomView.tsx` only has a named export (`export function BoardroomView()`), no default export. `React.lazy()` therefore resolved `module.default === undefined` as the component type, and the moment a user opened Sidebar → Boardroom → "Boardroom Sessions" subtab, React crashed with an uncaught `TypeError: Cannot convert object to primitive value` inside its own dev-mode warning path, taking down the whole app behind a full-screen "BOOT ERROR" overlay.
+- **Found by**: live click-through of the running app with Playwright (`npm run dev` + headless Chromium) as the discoverability-audit half of Sprint 3 — this was not caught by the existing test suite because `BoardroomView` had zero test coverage and there is no App.tsx-level render smoke test.
+- **Fixed**: added the missing `.then((mod) => ({ default: mod.BoardroomView }))` mapping, matching the pattern already used by all 25 other lazy-loaded components in `App.tsx`. Verified live in-browser post-fix: renders correctly, zero console errors.
+- **Regression coverage added**: `src/test/boardroomView.test.jsx` (component renders without throwing + asserts it has no default export, so future contributors don't "fix" this by adding one without checking the App.tsx side) and `src/test/appLazyImports.test.js` — a static guard that parses every `lazy(() => import(...))` call in `App.tsx` and verifies the target module's actual export shape matches what each call expects. Confirms this was the only mismatch among all 26 lazy imports.
+
+### Sprint 3: discoverability audit findings (the other half of Sprint 3, now closed)
+
+Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwright, not source-reading alone:
+- **Coach Mode**: reachable and functional (persistent sidebar footer button, toggles real state, Dashboard stat tile updates 0ff→On). Not a bug — it's visually the same weight as Settings/Theme with no distinguishing badge, which is the most likely reason it "feels forgotten." No code change made this pass; recommendation logged for a future UI pass.
+- **Boardroom / Mission Room**: reachable via the sidebar "Boardroom" nav item. Minor naming note: the nav label says "Boardroom" but its default subtab is "Mission Room," not "Boardroom Sessions."
+- **Agent Pairing**: reachable only via "All Agents" → "Pairings" tab — 2 clicks deep behind a generically-labeled tab bar that gives no hint pairing lives there.
+- **Ecosystem Maturity / Self-Development panels**: reachable only via "All Agents" → "Advanced" tab, and only visible after scrolling — confirmed present and rendering, just below the fold.
+- **Operator Dashboard — the clearest "buried" case**: has no sidebar nav entry at all. Reachable only via an "Operator" quick-launch card on the Dashboard home tab. When Operator Mode is off (the default), opening it shows nothing but a bare "Enable" gate card — no preview of what's inside, so a first-time user has no reason to enable it.
+
 ## [2.5.4] — 2026-07-02
 
 ### Sprint 3: agent skill-library depth (Miya / Hector / Jose)

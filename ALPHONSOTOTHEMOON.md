@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprint 1 and Sprint 2 closed; Sprint 3 skill-library-depth half closed (v2.5.4)
+**Status:** Sprint 1 and Sprint 2 closed; Sprint 3 closed in full (skill-library depth v2.5.4 + discoverability audit v2.5.5)
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -444,6 +444,72 @@ into Sprint 2+ — not dropped.
     depth for the remaining 6 agents, module-system convergence, a full
     marketplace model, and the discoverability-audit half of Sprint 3.
     These remain seeded below exactly as before.
+- **2026-07-02 (Sprint 3, discoverability-audit half, v2.5.5)** — User
+  selected this as the next piece of work. This half genuinely required
+  driving the live app, not reading source — used the `run` skill, which
+  found no project-specific run skill existed yet, and fell back to its
+  generic browser-driven pattern: started `npm run dev`, drove headless
+  Chromium via a Playwright script (no `chromium-cli` binary available on
+  this machine).
+  - Hit an environment snag immediately: `curl http://localhost:5173`
+    returned an unrelated third-party app ("MINT — AI Content
+    Workstation"), not Alphonso. Diagnosed via the dev server's own log
+    line ("Port 5173 is in use on a wildcard address, but 127.0.0.1:5173
+    is available") rather than assuming the dev server was broken —
+    retargeted the audit at `http://127.0.0.1:5173` explicitly, which
+    resolved it.
+  - Traced Coach Mode, Boardroom/Mission Room, Agent Pairing, Ecosystem
+    Maturity panels, Self-Development panel, and Operator Dashboard through
+    `App.tsx`/`Sidebar.tsx`/`MissionControlHome.tsx` source first to form
+    hypotheses about reachability, then verified every hypothesis live by
+    actually clicking through in the browser and screenshotting each step
+    — source-reading alone was explicitly what the sprint doc said wasn't
+    sufficient last time, so this pass didn't repeat that shortcut.
+  - Clicking "Boardroom Sessions" crashed the whole app with a full-screen
+    "BOOT ERROR" overlay. Traced the stack trace (`printWarning` →
+    `lazyInitializer` → `mountLazyComponent`) to `App.tsx`'s lazy import of
+    `BoardroomView` missing the `.then((mod) => ({ default: mod.X }))`
+    mapping every sibling lazy import in that file uses — confirmed by
+    diffing against all 25 other lazy imports rather than assuming. Fixed
+    it (one-line addition matching the existing pattern exactly — no new
+    abstraction), then re-drove the same click path live to confirm the
+    fix actually works (zero console errors, correct render) rather than
+    trusting the diff alone.
+  - Wrote two regression tests rather than considering the fix "done" once
+    the manual click-through passed: `boardroomView.test.jsx` (component
+    renders, and explicitly asserts it has *no* default export — so a
+    future contributor doesn't "fix" a similar warning by adding one
+    without checking the `App.tsx` side of this two-file contract) and
+    `appLazyImports.test.js` (parses `App.tsx` and dynamically imports
+    every one of its 26 lazy-loaded modules to verify each resolves the
+    exact export shape its `lazy()` call expects — this is what proves
+    Boardroom was the only mismatch, not an assumption based on eyeballing
+    the diff).
+  - Confirmed live, no further action needed: Coach Mode is real and
+    functional (Dashboard stat tile flips Off→On on click) — the "feels
+    forgotten" report traces to zero visual distinction from Settings/Theme
+    in the sidebar footer, not to it being broken.
+  - Confirmed live and buried: Agent Pairing and the Ecosystem
+    Maturity/Self-Development panels render correctly but sit behind
+    generic tab labels ("Pairings", "Advanced") 2 clicks deep inside "All
+    Agents." Operator Dashboard is the clearest case — no sidebar entry at
+    all, reachable only via a Dashboard quick-launch card, and shows
+    nothing but a bare "Enable" gate when Operator Mode is off (the
+    default).
+  - Deliberately did not make UI-placement changes (e.g. adding Operator
+    Dashboard to the sidebar nav, badging Coach Mode) — these are UX
+    judgment calls the sprint doc itself flagged as needing a decision
+    ("intentional or accidental?"), not something to silently redesign
+    mid-audit. Logged as a follow-up recommendation instead.
+  - Verification: 46/46 targeted tests passing
+    (`boardroomView.test.jsx` 3/3, `appLazyImports.test.js` 26/26,
+    `ecosystemHub.test.jsx` 8/8, `agentPairingView.test.jsx`,
+    `selfDevelopmentService.test.js`), `npx tsc --noEmit` clean.
+  - Version bumped 2.5.4 → 2.5.5. All five docs updated in the same pass.
+    Killed the `npm run dev` process used for the audit before finishing
+    (note: the broad `pkill -f vite` used to stop it may also have
+    stopped the unrelated third-party "MINT" dev server sharing this
+    machine — flagged to the user in the session summary, not hidden).
 
 ## Sprint status at a glance
 
@@ -451,7 +517,7 @@ into Sprint 2+ — not dropped.
 |---|---|---|
 | 1 | Licensing (SHALAUDE) + skill-pack↔contract validation + pipeline loop-guard | ✅ Closed 2026-07-02 |
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
-| 3 | Agent specialization depth (skill library expansion) | ⚠️ Partially closed 2026-07-02 (v2.5.4) — Miya/Hector/Jose taxonomy + per-skill contract scoping shipped; discoverability-audit half still open |
+| 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
 | 4 | Security hardening Batch 2 (attacker-resistance) | 🌱 Seeded, not started |
 | 5 | Service-layer TypeScript migration | 🌱 Seeded, not started |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🌱 Seeded, not started |
@@ -459,31 +525,70 @@ into Sprint 2+ — not dropped.
 Seeded now so scope survives even if priorities shift or a session diverges
 from this exact ordering — treat the numbering as intent, not a hard queue.
 
-## Sprint 3 (seeded, +1 item): Feature discoverability audit
+## Sprint 3 (discoverability-audit half — CLOSED 2026-07-02, v2.5.5)
 
 **Origin:** user flagged that features may exist and work but feel
-"forgotten" — Coach Mode was the concrete example given. Investigated
-2026-07-02: Coach Mode is **not dead code** — `App.tsx` wires
-`onOpenCoach={handleToggleCoachMode}` into the main `Sidebar` component and
-also exposes coach toggles through `OperatorDashboard`. The toggle handler
-is real and reachable, not orphaned plumbing. What's unverified is whether
-it's *prominent* enough in the actual rendered UI — that's a visual
-judgment call that needs a real browser/click-through pass, which wasn't
-available as a tool in the session that did this investigation.
+"forgotten" — Coach Mode was the concrete example given. A prior session
+confirmed Coach Mode's wiring was real via source-reading alone, but
+correctly flagged that *prominence* is a visual judgment call needing an
+actual click-through pass — no browser-automation tool was available in
+that session.
 
-- Do a full click-through pass of the running app (needs a
-  browser-automation-capable session/tool, or the user driving it live)
-  auditing: Coach Mode, Boardroom sessions, Agent Pairing, Mission Room,
-  Self-Development panel, Ecosystem Maturity panels — anything gated
-  behind "Operator Mode" or a nav item that isn't in the default view.
-  These are all real, wired features per `CLAUDE.md`'s Do-Not-Duplicate
-  table — the question is exposure, not existence.
-- For each: is it in the default nav, or buried behind a mode toggle a
-  first-time user would never find? If buried, is that intentional
-  (advanced/operator-only) or accidental?
-- Cross-reference against `CLAUDE.md`'s Real Gaps history — several past
-  entries closed a feature by wiring it, but "wired" and "discoverable"
-  are different bars, and only the first was verified at the time.
+**What happened this pass:** launched `npm run dev` + drove headless
+Chromium via Playwright directly (no `chromium-cli` available on this
+machine, no project-specific run skill existed yet — used the generic
+Playwright dev-server pattern). Environment note: an unrelated third-party
+dev server ("MINT") was already bound to the wildcard address on port
+5173, so Vite fell back to `127.0.0.1:5173` explicitly — the audit had to
+target that exact host, not `localhost`, to reach the right app. Not an
+Alphonso bug, logged so a future session doesn't rediscover it.
+
+**Critical bug found and fixed, not just reported:** clicking Sidebar →
+Boardroom → "Boardroom Sessions" crashed the entire app with a full-screen
+"BOOT ERROR" overlay (`Uncaught TypeError: Cannot convert object to
+primitive value`). Root cause: `App.tsx`'s `lazy(() =>
+import('./components/BoardroomView'))` was missing the `.then((mod) => ({
+default: mod.BoardroomView }))` mapping that all 25 other lazy-loaded
+views in that file use — `BoardroomView.tsx` only exports a named
+`BoardroomView` function, no default export, so React.lazy resolved
+`undefined` as the component type. Fixed (added the missing mapping);
+verified live post-fix with zero console errors. Added
+`src/test/boardroomView.test.jsx` and `src/test/appLazyImports.test.js`
+(a static guard checking all 26 `lazy()` calls in `App.tsx` against their
+target modules' actual export shape) so this exact class of bug — real,
+silent, whole-app-crashing, zero test coverage before this — can't
+reappear unnoticed.
+
+**Discoverability findings, all confirmed live** (not source-reading):
+- **Coach Mode**: real, functional, not a bug. Sits in the sidebar footer
+  with identical visual weight to Settings/Theme — no badge, no color
+  distinction — which is the likely reason it "feels forgotten." No UI
+  change made; recommendation only (e.g. a status dot matching the
+  Connectors nav item's pattern).
+- **Boardroom / Mission Room**: reachable via sidebar "Boardroom" nav item.
+  Minor cosmetic mismatch: nav label says "Boardroom," default sub-tab is
+  "Mission Room."
+- **Agent Pairing**: reachable only via "All Agents" → "Pairings" tab — 2
+  clicks deep behind a generic tab bar with no hint of what's there.
+  Confirmed rendering correctly.
+- **Ecosystem Maturity panels + Self-Development panel**: reachable only
+  via "All Agents" → "Advanced" tab, below the fold. Confirmed rendering
+  correctly on scroll.
+- **Operator Dashboard — the clearest "buried" case**: **no sidebar nav
+  entry at all**. Reachable only via a "Operator" quick-launch card on the
+  Dashboard home tab. With Operator Mode off (the default), the entire tab
+  shows nothing but a bare "Enable" gate — no preview of what's behind it.
+- Cross-referencing `CLAUDE.md`'s Real Gaps history against this: several
+  past entries closed a feature by confirming it's wired — correct as far
+  as it went, but "wired" and "discoverable" really are different bars,
+  and Operator Dashboard is the clearest proof: fully wired, genuinely
+  useful, effectively invisible to a first-time user.
+
+**Explicitly not changed this pass** (a UI/UX design decision, not a bug —
+flagged for a follow-up, not silently fixed or silently dropped): whether
+Operator Dashboard should get a sidebar nav entry, whether Coach Mode
+should get a visual badge, whether Pairings/Advanced tabs should be
+renamed or promoted to top-level nav items.
 
 ## Sprint 3 (skill-library-depth half — CLOSED 2026-07-02, v2.5.4)
 

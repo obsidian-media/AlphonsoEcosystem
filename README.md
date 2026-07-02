@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.5.4** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.5** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.5-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -22,6 +22,11 @@ It orchestrates 9 specialized agents, connects to 22 external services, and uses
 </div>
 
 ---
+
+## What's New in v2.5.5
+
+- **Fixed a crash**: opening Boardroom → "Boardroom Sessions" took down the entire app with an uncaught error, because `App.tsx`'s lazy-loading of `BoardroomView` was missing a required export mapping. Found via a live Playwright click-through audit (Sprint 3's discoverability half), fixed, and covered by new regression tests.
+- **Sprint 3 discoverability audit complete**: verified live (not just by reading source) which features are reachable from the UI and how many clicks deep. Operator Dashboard has no sidebar entry at all (reachable only via a Dashboard quick-launch card); Agent Pairing and the Ecosystem Maturity/Self-Development panels are 2 clicks deep behind generically-labeled tabs. Coach Mode is real and functional, just visually understated. Full findings in `ALPHONSOTOTHEMOON.md`.
 
 ## What's New in v2.5.4
 
