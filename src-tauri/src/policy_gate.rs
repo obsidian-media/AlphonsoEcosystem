@@ -39,7 +39,11 @@ pub(crate) fn allowed_args(program: &str, args: &[String]) -> bool {
   let prog = program.to_ascii_lowercase();
   match prog.as_str() {
     "git" | "git.exe" => {
-      // Only allow read-only / safe git subcommands
+      // Allow non-destructive git subcommands: read-only inspection (status, log, diff,
+      // show, ls-files, ls-tree, rev-parse, branch, tag, remote, describe, shortlog) plus
+      // network sync commands that write to disk/working tree but do not discard local
+      // history or force-overwrite state (fetch, pull, clone, stash). Excludes destructive
+      // commands like push --force, reset --hard, and clean.
       let allowed = ["status", "log", "diff", "show", "ls-files", "ls-tree",
                      "rev-parse", "branch", "tag", "fetch", "pull", "clone",
                      "remote", "describe", "shortlog", "stash"];

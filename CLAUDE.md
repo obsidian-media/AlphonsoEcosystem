@@ -46,7 +46,7 @@ npm run test:e2e         # Run Playwright golden-path smoke test
 ## Key Architecture Facts
 
 - **9 agents**: Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova — all in `src/agents/`, all enforced by `agentContractService.ts`
-- **policyEnforcementService.ts is fail-closed**: every outbound connector call goes through this gate; if credentials are missing or the action is ambiguous it is blocked, not allowed
+- **policyEnforcementService.ts gates every outbound connector call**, but is only fail-closed on specific conditions by default: missing credentials always block, and Zero-Cost Mode (`zeroCostMode: true` by default) blocks paid/metered connectors. General high-risk-action approval gating (`approvalMode`) is **off by default** (`approvalMode: false`) — a fresh install does not require explicit approval for arbitrary high-risk actions unless the user turns Approval Mode on in Settings. Do not describe this service as "blocks anything ambiguous by default" — verify current defaults in `src/services/policyEnforcementService.ts` before relying on this in security-sensitive work.
 - **licenseService.ts**: license tier validation (Free/Pro/Enterprise) gates premium connectors (GitHub, Slack, Claude, ChatGPT, YouTube, Notion, ClickUp, SD WebUI, ComfyUI)
 - **parallelExecutionService.ts**: parallel task execution with concurrency control, retry logic, and task queues
 - **cacheService.ts**: memory caching with TTL, LRU eviction, and global/connector/agent caches

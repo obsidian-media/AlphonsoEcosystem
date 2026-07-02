@@ -1,18 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+const durableStore = {};
 vi.mock('../../lib/durableStore', () => ({
-  durableGet: vi.fn(() => null),
-  durableSet: vi.fn(),
-  durableRemove: vi.fn(),
+  durableGet: vi.fn((key) => durableStore[key] ?? null),
+  durableSet: vi.fn((key, value) => { durableStore[key] = value; }),
+  durableRemove: vi.fn((key) => { delete durableStore[key]; }),
 }));
-
-const storage = {};
-const localStorageMock = {
-  getItem: vi.fn((k) => storage[k] ?? null),
-  setItem: vi.fn((k, v) => { storage[k] = v; }),
-  removeItem: vi.fn((k) => { delete storage[k]; }),
-};
-vi.stubGlobal('localStorage', localStorageMock);
 
 import {
   recordSuccess,
@@ -25,7 +18,7 @@ import {
 
 describe('connectorCircuitBreakerService', () => {
   beforeEach(() => {
-    Object.keys(storage).forEach((k) => delete storage[k]);
+    Object.keys(durableStore).forEach((k) => delete durableStore[k]);
     vi.clearAllMocks();
   });
 

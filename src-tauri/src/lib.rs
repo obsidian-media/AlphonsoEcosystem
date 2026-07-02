@@ -635,6 +635,7 @@ async fn alphonso_bridge_send_packet(
     .post(&url)
     .bearer_auth(token.trim())
     .json(&packet)
+    .timeout(Duration::from_millis(timeout_ms))
     .send()
     .await
     .map_err(|error| error.to_string())?;
@@ -1249,10 +1250,11 @@ async fn fetch_url_content(
   if !url.starts_with("http://") && !url.starts_with("https://") {
     return Err("URL must start with http:// or https://".to_string());
   }
-  // SSRF protection: block requests to private/loopback IP ranges
+  // SSRF protection: block requests to private/loopback IP ranges, resolving DNS first
+  // so a public-looking hostname that resolves to a private address can't bypass this.
   if let Ok(parsed) = reqwest::Url::parse(&url) {
     let host = parsed.host_str().unwrap_or("");
-    if crate::search::is_private_ip(host) {
+    if crate::search::is_private_host(host).await {
       return Err("Requests to private or loopback addresses are not allowed.".to_string());
     }
   }

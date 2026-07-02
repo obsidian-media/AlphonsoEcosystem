@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const mockDurableGet = vi.fn(() => null);
-const mockDurableSet = vi.fn();
+const mockDurableGet = vi.fn((...args: unknown[]) => null);
+const mockDurableSet = vi.fn((...args: unknown[]) => undefined);
 vi.mock('../../lib/durableStore', () => ({
-  durableGet: (...args) => mockDurableGet(...args),
-  durableSet: (...args) => mockDurableSet(...args),
+  durableGet: (...args: unknown[]) => mockDurableGet(...args),
+  durableSet: (...args: unknown[]) => mockDurableSet(...args),
 }));
 
 vi.mock('../../services/runtimeLedgerService', () => ({

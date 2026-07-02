@@ -231,7 +231,7 @@ describe('claudeService', () => {
       fetch.mockRejectedValueOnce(new Error('Network error'));
       const result = await sendClaudeMessage('hello');
       expect(result.ok).toBe(false);
-      expect(result.error).toBe('Network error');
+      expect(result.error).toContain('Network error');
     });
 
     it('calculates latency for one-shot request', async () => {

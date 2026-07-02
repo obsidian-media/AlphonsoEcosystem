@@ -17,6 +17,10 @@ vi.mock('../services/orchestrationReceiptService', () => ({
   appendOrchestrationReceipt: vi.fn()
 }));
 
+vi.mock('../services/policyDslService', () => ({
+  evaluateAction: vi.fn(() => ({ allowed: true, effect: 'allow', ruleId: 'test' }))
+}));
+
 vi.mock('../services/policyEnforcementService', () => ({
   evaluatePolicyGate: vi.fn(({ connectorId, actionType }) => {
     if (actionType === 'blocked_action') return { ok: false, reason: 'blocked', riskLevel: 'high' };

@@ -1912,8 +1912,8 @@ pub(crate) async fn transcribe_audio_file(
   let out_dir = std::env::temp_dir();
 
   let output = tokio::process::Command::new(&whisper_exe)
+    .arg(&audio_path_abs)
     .args([
-        &audio_path_abs,
       "--model", model_name,
       "--output_format", "txt",
       "--output_dir", out_dir.to_str().unwrap_or("."),
