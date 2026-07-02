@@ -16,16 +16,28 @@ describe('agent skill integration', () => {
     expect(ALPHONSO_PROFILE.skillPackIds).toContain('pack.coding.full-stack');
     expect(ALPHONSO_PROFILE.skillFocus).toContain('Codex Professional Coding');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-professional-marketing');
+    expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-market-research');
+    expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-competitive-analysis');
+    expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-source-verification');
+    expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-rss-monitoring');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.workflow.executing-plans');
-    expect(HECTOR_PROFILE.skillFocus).toBe('Professional Marketing Skill + Execution Skill + GitHub Research');
+    expect(HECTOR_PROFILE.skillFocus).toBe('Professional Marketing + Market Research + Competitive Analysis + Source Verification + RSS Monitoring + Execution Skills + GitHub Research');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-audit-governance');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-trust-verification');
     expect(MARIA_PROFILE.skillFocus).toBe('Audit Governance Skill + Trust Verification Skill');
     expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-runway-video-generation');
-    expect(MIYA_PROFILE.skillFocus).toBe('Runway Video Generation Skill');
+    expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-creative-image');
+    expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-ui-ux-design');
+    expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-brand-identity');
+    expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-motion-graphics');
+    expect(MIYA_PROFILE.skillFocus).toBe('Runway Video Generation + Creative Image + UI/UX Design + Brand Identity + Motion Graphics Skills');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-professional-orchestration');
+    expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-task-routing');
+    expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-approval-gating');
+    expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-cross-agent-synthesis');
+    expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-pipeline-governance');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.workflow.executing-plans');
-    expect(JOSE_PROFILE.skillFocus).toBe('Professional Orchestration Skill');
+    expect(JOSE_PROFILE.skillFocus).toBe('Professional Orchestration + Task Routing + Approval Gating + Cross-Agent Synthesis + Pipeline Governance Skills');
   });
 
   it('seeds the new professional skill packs into the registry', () => {
@@ -38,6 +50,24 @@ describe('agent skill integration', () => {
     expect(ids).toContain('pack.maria-audit-governance');
     expect(ids).toContain('pack.maria-trust-verification');
     expect(ids).toContain('pack.jose-professional-orchestration');
+  });
+
+  it('seeds the Miya/Hector/Jose skill-library taxonomy (Sprint 3)', () => {
+    const packs = listSkillPacks();
+    const ids = packs.map((pack) => pack.id);
+
+    ['pack.miya-creative-image', 'pack.miya-ui-ux-design', 'pack.miya-brand-identity', 'pack.miya-motion-graphics'].forEach((id) => {
+      expect(ids).toContain(id);
+      expect(packs.find((p) => p.id === id).ownerAgent).toBe('miya');
+    });
+    ['pack.hector-market-research', 'pack.hector-competitive-analysis', 'pack.hector-source-verification', 'pack.hector-rss-monitoring'].forEach((id) => {
+      expect(ids).toContain(id);
+      expect(packs.find((p) => p.id === id).ownerAgent).toBe('hector');
+    });
+    ['pack.jose-task-routing', 'pack.jose-approval-gating', 'pack.jose-cross-agent-synthesis', 'pack.jose-pipeline-governance'].forEach((id) => {
+      expect(ids).toContain(id);
+      expect(packs.find((p) => p.id === id).ownerAgent).toBe('jose');
+    });
   });
 
   it('seeds the full agent-workflows topic into the registry', () => {

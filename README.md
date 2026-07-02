@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.5.3** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.4** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.3-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.4-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -22,6 +22,10 @@ It orchestrates 9 specialized agents, connects to 22 external services, and uses
 </div>
 
 ---
+
+## What's New in v2.5.4
+
+- **Agent skill-library depth (Sprint 3)** — Miya, Hector, and Jose each moved from one catch-all skill pack to a real 5-pack taxonomy (e.g. Miya: video / image / UI-UX / brand-identity / motion-graphics), so a request that touches a specific sub-domain pulls in narrow guidance instead of one shallow pack handling everything. `validateSkillPackAgainstContract()` now supports optional per-pack permission scoping (`AGENT_SKILL_PACK_SCOPE_OVERRIDES`) on top of the existing per-agent check, so an individual skill pack can be scoped tighter than its owning agent's default boundary. The Skills tab in the Ecosystem Hub now groups packs by owning agent instead of one flat list.
 
 ## What's New in v2.5.3
 

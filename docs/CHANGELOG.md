@@ -6,6 +6,61 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.4] — 2026-07-02
+
+### Sprint 3: agent skill-library depth (Miya / Hector / Jose)
+
+- **Real per-agent skill taxonomy, not a placeholder.** Sprint 1 gave every
+  agent exactly one default skill pack. Sprint 3 replaces that placeholder
+  for the 3 highest-traffic agents with a genuine multi-pack library:
+  - Miya: `pack.miya-runway-video-generation` (existing) +
+    `pack.miya-creative-image`, `pack.miya-ui-ux-design`,
+    `pack.miya-brand-identity`, `pack.miya-motion-graphics` (new).
+  - Hector: `pack.hector-professional-marketing` (existing) +
+    `pack.hector-market-research`, `pack.hector-competitive-analysis`,
+    `pack.hector-source-verification`, `pack.hector-rss-monitoring` (new —
+    the RSS pack describes the already-shipped `hectorResearchService.js`
+    RSS-failover capability rather than inventing new scope).
+  - Jose: `pack.jose-professional-orchestration` (existing) +
+    `pack.jose-task-routing`, `pack.jose-approval-gating`,
+    `pack.jose-cross-agent-synthesis`, `pack.jose-pipeline-governance` (new
+    — the governance pack describes the Sprint 1 loop-guard already shipped
+    in `runJoseCommandExecutionPipeline`).
+  - `SKILL_WORKFLOW_GUIDANCE` in `skillPackService.js` was extended with
+    real guidance/steps for all 12 new packs so `loadAgentSkillGuidance()`
+    returns actual content, not just a generic permissions fallback.
+- **Per-skill contract scoping.** `validateSkillPackAgainstContract()` in
+  `agentContractService.ts` gained an optional third `packId` parameter and
+  a new `AGENT_SKILL_PACK_SCOPE_OVERRIDES` map. When a pack ID has an
+  override entry, that pack is validated against its own narrower allowlist
+  instead of its owning agent's full agent-wide list — e.g. Miya's
+  brand-identity pack cannot carry `video.draft` even though Miya's
+  agent-wide contract permits it for her video-generation pack. Packs with
+  no override fall back to the original agent-wide check — fully backward
+  compatible, no behavior change for existing packs.
+  `skillPackService.js`'s `installSkillPack`/`setSkillPackEnabled` now pass
+  the pack ID through so the narrower check actually applies.
+- **UI**: the Skills tab in `EcosystemHub.tsx` now groups packs by
+  `ownerAgent` (falling back to "Agent Workflows" / "General" for
+  cross-agent packs) instead of rendering one flat list — makes each
+  agent's active taxonomy visible at a glance.
+- Agent profiles (`miyaProfile.js`, `hectorProfile.js`, `joseProfile.js`)
+  updated: `skillPackIds` now lists the full taxonomy per agent, `skillFocus`
+  updated to describe it.
+- Tests: `agentSkills.test.js` updated for the new `skillFocus` strings and
+  extended with a dedicated taxonomy-coverage test; `agentContractService.test.js`
+  gained 6 new tests covering the per-skill override behavior (narrower
+  override enforced, fallback to agent-wide list when no override exists,
+  cross-taxonomy coverage for Hector/Jose). 99/99 targeted tests passing
+  across `skillPackService`, `agentSkills`, `agentContractService`,
+  `services/agentContract`; `ecosystemHub.test.jsx` (8/8) confirms the UI
+  change didn't break existing coverage. `npx tsc --noEmit` clean.
+- Explicitly out of scope for this sprint (per the roadmap's own v1
+  guidance): module-system convergence (`modules/` TOML vs. skill packs),
+  a full skill marketplace model, and taxonomy work for the remaining 6
+  agents (Alphonso, Maria, Marcus, Echo, Sentinel, Nova keep their single
+  default pack — tracked, not forgotten).
+
 ## [2.5.3] — 2026-07-02
 
 ### Bug fix: auto-updater never actually checked for updates

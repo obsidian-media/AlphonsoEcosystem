@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.3 (auto-updater fix + connector registry completeness + Sprint 3-6 roadmap seeded)
-**Verified by:** Claude Code session — targeted tests passed 100% (183/183 across `appUpdateService`, `updaterReleaseUtils`, `connectorGitHubSlack`, `connectorRegistryService`, `orchestrationQueueService`, `discordConnector`, `genericWebhookService`, `skillPackService`, `joseExecutionEngineService`), `npx tsc --noEmit` clean (0 errors). Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
-**Version:** 2.5.3 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 16 → 22 — added Ollama, Brave Search, Perplexity, Tavily, DeepSeek, n8n to `connectorRegistry.js`, each of which already had working credential UI/service code but no central registry entry)
+**Last verified:** 2026-07-02 — v2.5.4 (Sprint 3: Miya/Hector/Jose skill-library taxonomy + per-skill contract scoping)
+**Verified by:** Claude Code session — targeted tests passed 100% (99/99 across `skillPackService`, `agentSkills`, `agentContractService`, `services/agentContract`; plus `ecosystemHub.test.jsx` 8/8), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.4 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 22 unchanged this sprint; skill-pack count grew from 11 `agent_skill`-category packs to 23 — 12 new taxonomy packs for Miya/Hector/Jose)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -988,6 +988,59 @@ Full context lives in `ALPHONSOTOTHEMOON.md` at repo root.
   the live app, so this is a source-level confirmation of wiring, not a
   visual UX verdict. Seeded as a "feature discoverability audit" in
   `ALPHONSOTOTHEMOON.md` Sprint 3.
+
+## 11.8 ALPHONSOTOTHEMOON Sprint 3: agent skill-library depth (2026-07-02)
+
+Full context lives in `ALPHONSOTOTHEMOON.md` at repo root. Scoped to the 3
+highest-traffic agents per the roadmap's own v1 recommendation — not a
+big-bang rebuild of all 9 agents' skill systems.
+
+- **Miya** (`src/services/skillPackService.js`): kept
+  `pack.miya-runway-video-generation`; added `pack.miya-creative-image`,
+  `pack.miya-ui-ux-design`, `pack.miya-brand-identity`,
+  `pack.miya-motion-graphics`. `miyaProfile.js`'s `skillPackIds`/`skillFocus`
+  updated to match.
+- **Hector**: kept `pack.hector-professional-marketing`; added
+  `pack.hector-market-research`, `pack.hector-competitive-analysis`,
+  `pack.hector-source-verification`, `pack.hector-rss-monitoring` — the
+  RSS pack deliberately describes the RSS-failover capability
+  `hectorResearchService.js` already ships (`RSS_FEED_CATALOG`,
+  `fetchRssSources`), not new scope. `hectorProfile.js` updated.
+- **Jose**: kept `pack.jose-professional-orchestration`; added
+  `pack.jose-task-routing`, `pack.jose-approval-gating`,
+  `pack.jose-cross-agent-synthesis`, `pack.jose-pipeline-governance` — the
+  governance pack describes the Sprint 1 `PIPELINE_MAX_ASSIGNMENTS`/
+  `PIPELINE_MAX_DURATION_MS` loop-guard already shipped in
+  `runJoseCommandExecutionPipeline`. `joseProfile.js` updated.
+- **Per-skill contract scoping**: `validateSkillPackAgainstContract()` in
+  `src/services/agentContractService.ts` gained an optional third `packId`
+  parameter and a new `AGENT_SKILL_PACK_SCOPE_OVERRIDES` map. A pack with an
+  override entry is checked against that pack's own narrower permission
+  list instead of its owning agent's full agent-wide list — e.g. Miya's
+  `pack.miya-brand-identity` cannot carry `video.draft` even though Miya's
+  agent-wide contract allows it (for her separate video pack). Packs with
+  no override entry, or callers that omit `packId`, get the exact original
+  agent-wide behavior — fully backward compatible.
+  `skillPackService.js`'s `installSkillPack`/`setSkillPackEnabled` updated
+  to pass `manifest.id`/`target.id` through so the narrower check actually
+  applies at install/enable time.
+- **UI**: `src/components/EcosystemHub.tsx`'s Skills tab now groups packs by
+  `ownerAgent` (falling back to "Agent Workflows" for `category:
+  'agent_workflow'` packs, "General" otherwise) instead of one flat list —
+  makes each agent's taxonomy visible without a new panel.
+- `SKILL_WORKFLOW_GUIDANCE` extended with real guidance/steps for all 12 new
+  packs so `loadAgentSkillGuidance()` returns actual content for them.
+- Tests: `agentSkills.test.js` updated for new `skillFocus` strings + a
+  dedicated taxonomy-coverage test; `agentContractService.test.js` gained 6
+  tests covering the override behavior (narrower-than-agent-wide
+  enforcement, fallback when no override exists, cross-agent coverage).
+  99/99 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean on
+  every touched file.
+- Explicitly deferred (per the roadmap's own scope note, not dropped):
+  taxonomy depth for the other 6 agents (Alphonso, Maria, Marcus, Echo,
+  Sentinel, Nova keep one default pack each), module-system convergence
+  between `modules/` TOML manifests and `skillPackService.js` packs, and a
+  full skill-marketplace model.
 
 ---
 

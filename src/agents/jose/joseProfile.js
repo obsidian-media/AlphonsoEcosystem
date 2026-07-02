@@ -43,8 +43,15 @@ export const JOSE_PROFILE = {
   ],
   requiresApprovalFor: ['external_execution', 'destructive_file_changes', 'production_deploy'],
   defaultPrompt: 'Act as Jose via Hermes. Decompose work, route safely, enforce approvals, then synthesize one final response.',
-  skillPackIds: ['pack.jose-professional-orchestration', 'pack.workflow.executing-plans'],
-  skillFocus: 'Professional Orchestration Skill',
+  skillPackIds: [
+    'pack.jose-professional-orchestration',
+    'pack.jose-task-routing',
+    'pack.jose-approval-gating',
+    'pack.jose-cross-agent-synthesis',
+    'pack.jose-pipeline-governance',
+    'pack.workflow.executing-plans'
+  ],
+  skillFocus: 'Professional Orchestration + Task Routing + Approval Gating + Cross-Agent Synthesis + Pipeline Governance Skills',
   exampleTasks: [
     'Split TapCash into requirements, research, UI, implementation, and audit tracks.',
     'Create approval gates for payout, posting, and deployment actions.'

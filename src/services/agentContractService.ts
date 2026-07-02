@@ -72,8 +72,8 @@ export const AGENT_EXECUTION_CONTRACTS: Record<string, AgentExecutionContract> =
 const AGENT_SKILL_PERMISSION_PREFIXES: Record<string, string[]> = {
   [AGENTS.JOSE]: ['task_routing', 'approval_gating', 'cross_agent_synthesis', 'execution_tracking', 'workflows.', 'runtime.read'],
   [AGENTS.ALPHONSO]: ['workflows.', 'runtime.', 'code.', 'local_operation', 'verification_', 'execute_command', 'filesystem_'],
-  [AGENTS.MIYA]: ['media.', 'video.', 'creative.', 'runway.'],
-  [AGENTS.HECTOR]: ['market_research', 'content_strategy', 'campaign_planning', 'workflow_review', 'research'],
+  [AGENTS.MIYA]: ['media.', 'video.', 'image.', 'creative.', 'runway.'],
+  [AGENTS.HECTOR]: ['market_research', 'content_strategy', 'campaign_planning', 'workflow_review', 'research', 'competitive_scan', 'source_verification', 'citation_gathering', 'confidence_scoring', 'feed_monitoring'],
   [AGENTS.MARIA]: ['workflow.audit', 'risk.', 'claim.', 'approval.', 'trust.', 'receipt.', 'evidence.', 'state.'],
   [AGENTS.MARCUS]: ['distribution.', 'engagement.', 'performance.', 'approved_'],
   [AGENTS.ECHO]: ['memory.', 'retention.', 'knowledge.', 'timeline.'],
@@ -83,6 +83,28 @@ const AGENT_SKILL_PERMISSION_PREFIXES: Record<string, string[]> = {
 
 // Permission tags no agent skill pack may carry except Alphonso's own operator role.
 const UNIVERSAL_BLOCKED_SKILL_PERMISSIONS = ['filesystem.write', 'execute_command', 'external_publish', 'purchase'];
+
+// Optional narrower allowlist for a SPECIFIC pack ID, scoped tighter than its
+// owning agent's default AGENT_SKILL_PERMISSION_PREFIXES. Lets a multi-skill
+// library (e.g. Miya's 5 packs) enforce per-skill boundaries instead of only
+// a flat per-agent boundary — e.g. Miya's brand-identity pack should not be
+// able to carry video/runway permissions even though Miya's agent-wide list
+// allows them for her video-generation pack. Packs with no entry here fall
+// back to the agent-wide list (fully backward compatible).
+const AGENT_SKILL_PACK_SCOPE_OVERRIDES: Record<string, string[]> = {
+  'pack.miya-creative-image': ['media.generate', 'image.', 'creative.preview'],
+  'pack.miya-ui-ux-design': ['creative.ui_direction', 'creative.ux_flow', 'creative.wireframe'],
+  'pack.miya-brand-identity': ['creative.brand_direction', 'creative.style_guide'],
+  'pack.miya-motion-graphics': ['media.generate', 'video.motion', 'creative.animation'],
+  'pack.hector-market-research': ['market_research', 'source_verification', 'citation_gathering'],
+  'pack.hector-competitive-analysis': ['competitive_scan', 'market_research', 'campaign_planning'],
+  'pack.hector-source-verification': ['source_verification', 'citation_gathering', 'confidence_scoring'],
+  'pack.hector-rss-monitoring': ['feed_monitoring', 'source_verification'],
+  'pack.jose-task-routing': ['task_routing', 'execution_tracking'],
+  'pack.jose-approval-gating': ['approval_gating', 'execution_tracking'],
+  'pack.jose-cross-agent-synthesis': ['cross_agent_synthesis', 'task_routing'],
+  'pack.jose-pipeline-governance': ['execution_tracking', 'approval_gating']
+};
 
 export interface SkillPermissionValidationResult {
   ok: boolean;
@@ -94,13 +116,20 @@ export interface SkillPermissionValidationResult {
  * Cross-checks a skill pack's declared permissions against its owning agent's
  * execution contract. Packs with no ownerAgent (generic/cross-agent workflow
  * packs) are not scoped by this check — only agent-owned packs are.
+ *
+ * When `packId` is supplied and has an entry in
+ * AGENT_SKILL_PACK_SCOPE_OVERRIDES, that pack is validated against its own
+ * narrower allowlist instead of the agent-wide default — this is the
+ * per-skill scoping layer on top of the original per-agent check. Omitting
+ * `packId` (or passing one with no override) preserves the original
+ * agent-wide behavior exactly.
  */
-export function validateSkillPackAgainstContract(agentName: string | undefined, permissions: string[] = []): SkillPermissionValidationResult {
+export function validateSkillPackAgainstContract(agentName: string | undefined, permissions: string[] = [], packId?: string): SkillPermissionValidationResult {
   if (!agentName) {
     return { ok: true, reason: null };
   }
   const contract = AGENT_EXECUTION_CONTRACTS[agentName];
-  const allowedPrefixes = AGENT_SKILL_PERMISSION_PREFIXES[agentName];
+  const allowedPrefixes = (packId && AGENT_SKILL_PACK_SCOPE_OVERRIDES[packId]) || AGENT_SKILL_PERMISSION_PREFIXES[agentName];
   if (!contract || !allowedPrefixes) {
     // Unknown agent or no declared skill-permission scope — nothing to validate against.
     return { ok: true, reason: null };

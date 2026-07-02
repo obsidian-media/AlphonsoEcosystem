@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprint 1 and Sprint 2 closed
+**Status:** Sprint 1 and Sprint 2 closed; Sprint 3 skill-library-depth half closed (v2.5.4)
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -394,6 +394,56 @@ into Sprint 2+ — not dropped.
     was surfaced but not taken.
   - Version bumped 2.5.2 → 2.5.3. Full targeted test sweep: 183/183
     passing. All five docs updated in the same pass.
+- **2026-07-02 (Sprint 3, skill-library-depth half, v2.5.4)** — User
+  selected this half of Sprint 3 to execute next (the other half,
+  discoverability audit, remains seeded/open). Shipped:
+  - Read `skillPackService.js`, `agentContractService.ts`, and all three
+    agent profile files (`miyaProfile.js`, `hectorProfile.js`,
+    `joseProfile.js`) plus their referencing tests
+    (`agentSkills.test.js`) before changing anything, to avoid breaking the
+    existing catch-all packs referenced by `skillPackIds` — kept every
+    existing pack ID and added new ones alongside rather than replacing,
+    since a full replace would have required rewriting more test
+    assertions than the taxonomy work justified for a v1 pass.
+  - Added 4 new packs each for Miya, Hector, and Jose (12 total), each
+    `category: 'agent_skill'`, matching the existing `BASE_PACKS` shape
+    exactly — no new abstraction introduced.
+  - Extended `validateSkillPackAgainstContract()` with an optional third
+    `packId` parameter and `AGENT_SKILL_PACK_SCOPE_OVERRIDES` map — chose
+    an additive, backward-compatible design (no `packId` = identical to
+    pre-Sprint-3 behavior) specifically so this didn't risk regressing the
+    Sprint 1 per-agent check that 9 agents already depend on.
+  - Grouped the existing `EcosystemHub.tsx` Skills tab by `ownerAgent`
+    rather than building a new panel — checked first (per this project's
+    own "Before Making Changes" rule) whether a dedicated
+    skill-visibility UI already existed; it didn't, but a flat list
+    already rendering all packs did, so extended it instead of adding a
+    second skills UI.
+  - `SKILL_WORKFLOW_GUIDANCE` extended with real (not placeholder)
+    guidance/steps for all 12 new packs, since the whole point of this
+    sprint is depth over placeholders.
+  - Verification: 99/99 targeted tests passing across
+    `skillPackService.test.js`, `agentSkills.test.js`,
+    `agentContractService.test.js`, `src/test/services/agentContract.test.ts`
+    (new `describe` block with 6 tests added covering the override
+    behavior specifically — both "narrower override enforced" and
+    "falls back to agent-wide list when no override exists" cases,
+    since an additive change with no negative-case test would be an
+    unverified claim, not a verified one). `ecosystemHub.test.jsx` (8/8)
+    re-run to confirm the UI grouping change didn't break existing
+    coverage. `npx tsc --noEmit` clean (0 errors). ESLint clean on every
+    touched file (2 pre-existing "no matching configuration" warnings on
+    `.tsx`/`.ts` files, unrelated to this change — confirmed by running
+    ESLint before touching them was not done, but the warning text itself
+    names it as a config-scope issue, not a rule violation).
+  - Version bumped 2.5.3 → 2.5.4. All five docs (`CLAUDE.md`,
+    `ALPHONSOTOTHEMOON.md`, `docs/ALPHONSO_GROUND_TRUTH.md`, `README.md`,
+    `docs/CHANGELOG.md`) updated in the same pass, per the Sprint 1 lesson
+    logged above — not deferred to a follow-up.
+  - Explicitly deferred (not attempted, not silently dropped): taxonomy
+    depth for the remaining 6 agents, module-system convergence, a full
+    marketplace model, and the discoverability-audit half of Sprint 3.
+    These remain seeded below exactly as before.
 
 ## Sprint status at a glance
 
@@ -401,7 +451,7 @@ into Sprint 2+ — not dropped.
 |---|---|---|
 | 1 | Licensing (SHALAUDE) + skill-pack↔contract validation + pipeline loop-guard | ✅ Closed 2026-07-02 |
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
-| 3 | Agent specialization depth (skill library expansion) | 🌱 Seeded, not started |
+| 3 | Agent specialization depth (skill library expansion) | ⚠️ Partially closed 2026-07-02 (v2.5.4) — Miya/Hector/Jose taxonomy + per-skill contract scoping shipped; discoverability-audit half still open |
 | 4 | Security hardening Batch 2 (attacker-resistance) | 🌱 Seeded, not started |
 | 5 | Service-layer TypeScript migration | 🌱 Seeded, not started |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🌱 Seeded, not started |
@@ -434,6 +484,42 @@ available as a tool in the session that did this investigation.
 - Cross-reference against `CLAUDE.md`'s Real Gaps history — several past
   entries closed a feature by wiring it, but "wired" and "discoverable"
   are different bars, and only the first was verified at the time.
+
+## Sprint 3 (skill-library-depth half — CLOSED 2026-07-02, v2.5.4)
+
+**What shipped:** Miya, Hector, and Jose each moved from one catch-all
+default skill pack to a real 5-pack taxonomy:
+- Miya: `pack.miya-runway-video-generation` (existing) +
+  `pack.miya-creative-image`, `pack.miya-ui-ux-design`,
+  `pack.miya-brand-identity`, `pack.miya-motion-graphics`.
+- Hector: `pack.hector-professional-marketing` (existing) +
+  `pack.hector-market-research`, `pack.hector-competitive-analysis`,
+  `pack.hector-source-verification`, `pack.hector-rss-monitoring`.
+- Jose: `pack.jose-professional-orchestration` (existing) +
+  `pack.jose-task-routing`, `pack.jose-approval-gating`,
+  `pack.jose-cross-agent-synthesis`, `pack.jose-pipeline-governance`.
+
+`validateSkillPackAgainstContract()` was extended with an optional `packId`
+parameter and a new `AGENT_SKILL_PACK_SCOPE_OVERRIDES` map in
+`agentContractService.ts` — this is the "extend to per-skill scoping, not
+just per-agent" item called out below, done. `EcosystemHub.tsx`'s Skills
+tab now groups by owner agent — this is the "surface which skills are
+active per-agent in the UI" item, done using the existing panel rather than
+building a new one. Agent profiles and `SKILL_WORKFLOW_GUIDANCE` updated to
+match. 99/99 targeted tests passing, `npx tsc --noEmit` clean.
+
+**Explicitly still deferred** (per this section's own original "peak scope"
+guidance — 3-5 packs for 2-3 highest-traffic agents was the v1 target, not
+a full rebuild):
+- Taxonomy depth for the remaining 6 agents (Alphonso, Maria, Marcus, Echo,
+  Sentinel, Nova each still have one default pack).
+- Module-system convergence between `modules/` TOML manifests and
+  `skillPackService.js` packs (§4.3) — not attempted this pass.
+- A genuine skill-marketplace model — the recommendation to start with
+  curated packs rather than a marketplace was followed as-is.
+- The **discoverability-audit half** of Sprint 3 (Coach Mode / Boardroom /
+  Agent Pairing / Mission Room click-through) is a separate, still-open
+  piece of this sprint — see the section below, unchanged.
 
 ## Sprint 3 (seeded): Agent specialization depth — the "skill library" gap
 

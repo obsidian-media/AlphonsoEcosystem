@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-const { AGENT_EXECUTION_CONTRACTS, validateAgentExecutionContract } = await import('../services/agentContractService.ts');
+const { AGENT_EXECUTION_CONTRACTS, validateAgentExecutionContract, validateSkillPackAgainstContract } = await import('../services/agentContractService.ts');
 
 describe('agentContractService', () => {
   describe('AGENT_EXECUTION_CONTRACTS', () => {
@@ -380,6 +380,44 @@ describe('agentContractService', () => {
         actionType: 'research_discover_sources'
       });
       expect(result.ok).toBe(true);
+    });
+  });
+
+  describe('validateSkillPackAgainstContract — per-skill scoping (Sprint 3)', () => {
+    it('passes when permissions fit the agent-wide list and no packId is given', () => {
+      const result = validateSkillPackAgainstContract('miya', ['media.generate', 'video.draft']);
+      expect(result.ok).toBe(true);
+    });
+
+    it('rejects a permission outside the agent-wide list', () => {
+      const result = validateSkillPackAgainstContract('miya', ['distribution.publish']);
+      expect(result.ok).toBe(false);
+      expect(result.offendingPermissions).toContain('distribution.publish');
+    });
+
+    it('enforces a narrower per-pack override even though the agent-wide list would allow it', () => {
+      // pack.miya-brand-identity's override only allows creative.brand_direction/style_guide —
+      // 'video.draft' passes Miya's agent-wide list but must fail this pack's own scope.
+      const result = validateSkillPackAgainstContract('miya', ['video.draft'], 'pack.miya-brand-identity');
+      expect(result.ok).toBe(false);
+      expect(result.offendingPermissions).toContain('video.draft');
+    });
+
+    it('allows a pack-scoped permission that matches its own override', () => {
+      const result = validateSkillPackAgainstContract('miya', ['creative.brand_direction'], 'pack.miya-brand-identity');
+      expect(result.ok).toBe(true);
+    });
+
+    it('falls back to the agent-wide list for a packId with no override entry', () => {
+      const result = validateSkillPackAgainstContract('miya', ['media.generate'], 'pack.miya-runway-video-generation');
+      expect(result.ok).toBe(true);
+    });
+
+    it('enforces per-pack overrides for Hector and Jose taxonomy packs too', () => {
+      expect(validateSkillPackAgainstContract('hector', ['feed_monitoring'], 'pack.hector-rss-monitoring').ok).toBe(true);
+      expect(validateSkillPackAgainstContract('hector', ['campaign_planning'], 'pack.hector-rss-monitoring').ok).toBe(false);
+      expect(validateSkillPackAgainstContract('jose', ['task_routing'], 'pack.jose-task-routing').ok).toBe(true);
+      expect(validateSkillPackAgainstContract('jose', ['cross_agent_synthesis'], 'pack.jose-task-routing').ok).toBe(false);
     });
   });
 });

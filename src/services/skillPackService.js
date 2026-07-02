@@ -44,11 +44,91 @@ const BASE_PACKS = [
     trust: TRUST_STATES.VERIFIED
   },
   {
+    id: 'pack.hector-market-research',
+    name: 'Hector Market Research Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['market_research', 'source_verification', 'citation_gathering'],
+    category: 'agent_skill',
+    ownerAgent: 'hector',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.hector-competitive-analysis',
+    name: 'Hector Competitive Analysis Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['competitive_scan', 'market_research', 'campaign_planning'],
+    category: 'agent_skill',
+    ownerAgent: 'hector',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.hector-source-verification',
+    name: 'Hector Source Verification Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['source_verification', 'citation_gathering', 'confidence_scoring'],
+    category: 'agent_skill',
+    ownerAgent: 'hector',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.hector-rss-monitoring',
+    name: 'Hector RSS Monitoring Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['feed_monitoring', 'source_verification'],
+    category: 'agent_skill',
+    ownerAgent: 'hector',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
     id: 'pack.jose-professional-orchestration',
     name: 'Jose Professional Orchestration Skill',
     version: '1.0.0',
     enabled: true,
     permissions: ['task_routing', 'approval_gating', 'cross_agent_synthesis', 'execution_tracking'],
+    category: 'agent_skill',
+    ownerAgent: 'jose',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.jose-task-routing',
+    name: 'Jose Task Routing Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['task_routing', 'execution_tracking'],
+    category: 'agent_skill',
+    ownerAgent: 'jose',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.jose-approval-gating',
+    name: 'Jose Approval Gating Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['approval_gating', 'execution_tracking'],
+    category: 'agent_skill',
+    ownerAgent: 'jose',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.jose-cross-agent-synthesis',
+    name: 'Jose Cross-Agent Synthesis Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['cross_agent_synthesis', 'task_routing'],
+    category: 'agent_skill',
+    ownerAgent: 'jose',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.jose-pipeline-governance',
+    name: 'Jose Pipeline Governance Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['execution_tracking', 'approval_gating'],
     category: 'agent_skill',
     ownerAgent: 'jose',
     trust: TRUST_STATES.VERIFIED
@@ -63,6 +143,46 @@ const BASE_PACKS = [
     ownerAgent: 'miya',
     source: 'runwayml/skills',
     sourceSkill: 'rw-generate-video',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.miya-creative-image',
+    name: 'Miya Creative Image Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['media.generate', 'image.compose', 'creative.preview'],
+    category: 'agent_skill',
+    ownerAgent: 'miya',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.miya-ui-ux-design',
+    name: 'Miya UI/UX Design Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['creative.ui_direction', 'creative.ux_flow', 'creative.wireframe'],
+    category: 'agent_skill',
+    ownerAgent: 'miya',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.miya-brand-identity',
+    name: 'Miya Brand Identity Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['creative.brand_direction', 'creative.style_guide'],
+    category: 'agent_skill',
+    ownerAgent: 'miya',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.miya-motion-graphics',
+    name: 'Miya Motion Graphics Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['media.generate', 'video.motion', 'creative.animation'],
+    category: 'agent_skill',
+    ownerAgent: 'miya',
     trust: TRUST_STATES.VERIFIED
   },
   {
@@ -336,7 +456,7 @@ export function installSkillPack(manifest) {
     };
   }
 
-  const contractCheck = validateSkillPackAgainstContract(manifest.ownerAgent, manifest.permissions);
+  const contractCheck = validateSkillPackAgainstContract(manifest.ownerAgent, manifest.permissions, manifest.id);
   if (!contractCheck.ok) {
     audit('install_blocked', manifest.id, { ownerAgent: manifest.ownerAgent, reason: contractCheck.reason });
     return {
@@ -372,7 +492,7 @@ export function setSkillPackEnabled(packId, enabled) {
   const target = existing.find((pack) => pack.id === packId);
 
   if (enabled && target?.ownerAgent) {
-    const contractCheck = validateSkillPackAgainstContract(target.ownerAgent, target.permissions);
+    const contractCheck = validateSkillPackAgainstContract(target.ownerAgent, target.permissions, target.id);
     if (!contractCheck.ok) {
       audit('enable_blocked', packId, { ownerAgent: target.ownerAgent, reason: contractCheck.reason });
       return existing;
@@ -430,6 +550,54 @@ const SKILL_WORKFLOW_GUIDANCE = {
   'pack.workflow.skill-creator': {
     guidance: 'When creating new skills, define clear permissions, test in isolation, then publish.',
     steps: ['Define skill manifest', 'Implement permissions', 'Test skill', 'Publish to registry']
+  },
+  'pack.miya-creative-image': {
+    guidance: 'Compose still-image creative direction and previews. Do not claim a generated asset exists unless the media engine is actually connected.',
+    steps: ['Clarify visual intent', 'Draft composition notes', 'Generate preview', 'Flag if engine unconnected']
+  },
+  'pack.miya-ui-ux-design': {
+    guidance: 'Produce implementable UI/UX direction: information architecture, component maps, and flow notes engineering can build directly from.',
+    steps: ['Map information architecture', 'Define component structure', 'Draft flow notes', 'Check against design system']
+  },
+  'pack.miya-brand-identity': {
+    guidance: 'Define brand direction and style-guide notes. Route any production brand change through approval per Miya\'s contract.',
+    steps: ['Clarify brand intent', 'Draft style guide notes', 'Flag production-change approval requirement']
+  },
+  'pack.miya-motion-graphics': {
+    guidance: 'Direct motion/animation treatment for generated media. Distinct from static video draft — covers timing, easing, and transition notes.',
+    steps: ['Define motion intent', 'Draft timing/easing notes', 'Generate motion preview']
+  },
+  'pack.hector-market-research': {
+    guidance: 'Research market signals with source-backed structure. Always attach a citation to a claim.',
+    steps: ['Define research question', 'Gather sources', 'Attach citations', 'Summarize with confidence label']
+  },
+  'pack.hector-competitive-analysis': {
+    guidance: 'Scan competitor positioning and structure findings for Jose/Marcus handoff.',
+    steps: ['Identify competitors', 'Scan public positioning', 'Structure comparison', 'Flag confidence gaps']
+  },
+  'pack.hector-source-verification': {
+    guidance: 'Score source confidence before a claim is used downstream. Mirrors sourceConfidenceService.js.',
+    steps: ['Identify source', 'Score confidence', 'Flag low-confidence sources', 'Attach score to report']
+  },
+  'pack.hector-rss-monitoring': {
+    guidance: 'Use the curated RSS feed catalog as a failover research channel when direct search is unavailable.',
+    steps: ['Check RSS feed catalog', 'Fetch and parse items', 'Cross-check against direct sources']
+  },
+  'pack.jose-task-routing': {
+    guidance: 'Route decomposed work to the correct agent based on its execution contract, not convenience.',
+    steps: ['Decompose task', 'Match to agent contract', 'Route', 'Track execution']
+  },
+  'pack.jose-approval-gating': {
+    guidance: 'Never let a high-risk action bypass approval. Gate before execution, not after.',
+    steps: ['Classify risk', 'Create approval gate', 'Wait for decision', 'Proceed only on approval']
+  },
+  'pack.jose-cross-agent-synthesis': {
+    guidance: 'Merge multiple agents\' outputs into one coherent, supervised response without dropping caveats.',
+    steps: ['Collect agent outputs', 'Reconcile conflicts', 'Preserve caveats', 'Synthesize final response']
+  },
+  'pack.jose-pipeline-governance': {
+    guidance: 'Enforce the pipeline loop-guard: hard-stop on budget breach (max assignments / max wall-clock) rather than letting a run continue unbounded.',
+    steps: ['Track assignment count', 'Track wall-clock time', 'Hard-stop on breach', 'Write budget_exceeded receipt']
   }
 };
 

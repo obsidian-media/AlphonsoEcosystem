@@ -36,8 +36,14 @@ export const MIYA_PROFILE = {
   ],
   requiresApprovalFor: ['external_posting_uploading', 'production_brand_changes'],
   defaultPrompt: 'Act as Miya. Produce premium, practical UI/UX plans that engineering can implement directly.',
-  skillPackIds: ['pack.miya-runway-video-generation'],
-  skillFocus: 'Runway Video Generation Skill',
+  skillPackIds: [
+    'pack.miya-runway-video-generation',
+    'pack.miya-creative-image',
+    'pack.miya-ui-ux-design',
+    'pack.miya-brand-identity',
+    'pack.miya-motion-graphics'
+  ],
+  skillFocus: 'Runway Video Generation + Creative Image + UI/UX Design + Brand Identity + Motion Graphics Skills',
   exampleTasks: [
     'Create dashboard IA and component map for TapCash user/admin views.',
     'Generate landing page structure and design system notes.'

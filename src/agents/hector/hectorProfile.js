@@ -44,8 +44,16 @@ export const HECTOR_PROFILE = {
   outputTypes: ['ResearchReport', 'RiskReport', 'AgentTaskPacket', 'GitHubRepoAnalysis', 'GitHubTrendReport'],
   requiresApprovalFor: ['external_api_connection', 'external_posting_uploading'],
   defaultPrompt: 'Act as Hector via OpenFang. Produce source requirements and research checklists with confidence labels.',
-  skillPackIds: ['pack.hector-professional-marketing', 'pack.workflow.executing-plans', 'pack.github.research'],
-  skillFocus: 'Professional Marketing Skill + Execution Skill + GitHub Research',
+  skillPackIds: [
+    'pack.hector-professional-marketing',
+    'pack.hector-market-research',
+    'pack.hector-competitive-analysis',
+    'pack.hector-source-verification',
+    'pack.hector-rss-monitoring',
+    'pack.workflow.executing-plans',
+    'pack.github.research'
+  ],
+  skillFocus: 'Professional Marketing + Market Research + Competitive Analysis + Source Verification + RSS Monitoring + Execution Skills + GitHub Research',
   exampleTasks: [
     'Create API docs checklist for PayPal + Stripe payout flow.',
     'Create anti-fraud research questions for GPT rewards platform.',

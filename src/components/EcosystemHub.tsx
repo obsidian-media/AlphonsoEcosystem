@@ -85,6 +85,19 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   const [handoffNote, setHandoffNote] = useState('Creative packet validated and queued for supervised execution.');
 
   const approvalQueue = useMemo(() => listApprovalQueue() as { id: string; title: string; fromAgent: string; toAgent: string; packetType: string }[], [packets]);
+  const skillGroups = useMemo(() => {
+    const groups = new Map<string, typeof skills>();
+    for (const skill of skills) {
+      const ownerAgent = typeof skill.ownerAgent === 'string' ? skill.ownerAgent : undefined;
+      const category = typeof skill.category === 'string' ? skill.category : undefined;
+      const label = ownerAgent
+        ? ownerAgent.charAt(0).toUpperCase() + ownerAgent.slice(1)
+        : (category === 'agent_workflow' ? 'Agent Workflows' : 'General');
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label)!.push(skill);
+    }
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [skills]);
   const timeline = useMemo(() => listSessionEvents().slice(-30).reverse() as { id: string; title: string; category: string; timestampMs: number }[], [sessionSummary, packets, workflows, resourceSnapshots]);
 
   const refreshAll = () => {
@@ -312,17 +325,24 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
           {/* SKILLS TAB */}
           {showAdvancedSections === 'skills' && (
             <Panel icon={Layers3} title="Skill Pack System">
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {skills.length === 0 && <p className="text-sm text-zinc-500">No skill packs installed.</p>}
-                {skills.map((skill) => (
-                  <div key={skill.id} className="rounded-lg border border-white/10 bg-zinc-900/55 px-3 py-2 flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-semibold text-zinc-200">{skill.name}</div>
-                      <div className="text-[11px] text-zinc-500">{skill.id} | v{skill.version}</div>
-                    </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => { setSkillPackEnabled(skill.id, !skill.enabled); refreshAll(); }} className="rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-200">{skill.enabled ? 'Disable' : 'Enable'}</button>
-                      <button onClick={() => { uninstallSkillPack(skill.id); refreshAll(); }} className="rounded bg-red-500/20 px-2 py-1 text-[10px] text-red-200">Remove</button>
+                {skillGroups.map(([groupLabel, groupSkills]) => (
+                  <div key={groupLabel}>
+                    <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-zinc-500">{groupLabel} <span className="text-zinc-600">({groupSkills.length})</span></div>
+                    <div className="space-y-2">
+                      {groupSkills.map((skill) => (
+                        <div key={skill.id} className="rounded-lg border border-white/10 bg-zinc-900/55 px-3 py-2 flex items-center justify-between">
+                          <div>
+                            <div className="text-xs font-semibold text-zinc-200">{skill.name}</div>
+                            <div className="text-[11px] text-zinc-500">{skill.id} | v{skill.version}</div>
+                          </div>
+                          <div className="flex gap-1">
+                            <button onClick={() => { setSkillPackEnabled(skill.id, !skill.enabled); refreshAll(); }} className="rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-200">{skill.enabled ? 'Disable' : 'Enable'}</button>
+                            <button onClick={() => { uninstallSkillPack(skill.id); refreshAll(); }} className="rounded bg-red-500/20 px-2 py-1 text-[10px] text-red-200">Remove</button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
