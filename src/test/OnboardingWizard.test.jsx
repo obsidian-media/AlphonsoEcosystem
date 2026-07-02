@@ -33,10 +33,23 @@ vi.mock('../services/composioService', () => ({
   getComposioConfig: vi.fn(() => ({ enabled: false, apiKey: '', userId: 'alphonso-user' })),
 }));
 
+vi.mock('../services/policyEnforcementService', () => ({
+  setRuntimePolicySettings: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../services/chromaDbService', () => ({
+  isChromaHealthy: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('../services/voiceOsService', () => ({
+  getVoiceServerStatus: vi.fn().mockResolvedValue('stopped'),
+}));
+
 import { OnboardingWizard } from '../components/OnboardingWizard';
 import { checkOllama, fetchOllamaModels } from '../lib/ollama';
 import { checkPrerequisites, startTool, waitForTool } from '../services/runtimeManagerService';
 import { setComposioConfig } from '../services/composioService';
+import { setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { setStorage } from '../lib/appStorage';
 
 const mockOnComplete = vi.fn();
@@ -46,7 +59,34 @@ beforeEach(() => {
   checkPrerequisites.mockResolvedValue({ ollamaFound: true, pythonFound: true, gitFound: true, missing: [] });
   checkOllama.mockResolvedValue({ state: 'connected' });
   fetchOllamaModels.mockResolvedValue({ models: [{ name: 'llama3.2:3b', size: 2_000_000_000 }] });
+  setRuntimePolicySettings.mockResolvedValue(undefined);
 });
+
+// Advances from step 0 (Ollama) through step 1 (model pick) to step 2 (Approval mode)
+async function advanceToApprovalStep() {
+  render(<OnboardingWizard onComplete={mockOnComplete} />);
+  await waitFor(() => expect(screen.getByText('Connected')).toBeTruthy());
+  fireEvent.click(screen.getByText('Continue'));
+  await waitFor(() => expect(screen.getByText('llama3.2:3b')).toBeTruthy());
+  fireEvent.click(screen.getByText('llama3.2:3b'));
+  fireEvent.click(screen.getByText('Continue'));
+  await waitFor(() => expect(screen.getByText('Approval mode')).toBeTruthy());
+}
+
+// Advances through Approval mode (keeping the default) to the Connect step
+async function advanceToConnectStep() {
+  await advanceToApprovalStep();
+  fireEvent.click(screen.getByText('Continue'));
+  await waitFor(() => expect(screen.getByText('Connect')).toBeTruthy());
+}
+
+// Advances through Connect (skip) to the Advanced services step
+async function advanceToAdvancedStep() {
+  await advanceToConnectStep();
+  const continueBtns = screen.getAllByText('Continue');
+  fireEvent.click(continueBtns[continueBtns.length - 1]);
+  await waitFor(() => expect(screen.getByText('Optional services')).toBeTruthy());
+}
 
 describe('OnboardingWizard — Step 1 (Ollama check)', () => {
   it('shows "Connected" when Ollama is running', async () => {
@@ -114,16 +154,24 @@ describe('OnboardingWizard — Step 2 (model picker)', () => {
   });
 });
 
-describe('OnboardingWizard — Step 3 (connect)', () => {
-  const advanceToStep3 = async () => {
-    render(<OnboardingWizard onComplete={mockOnComplete} />);
-    await waitFor(() => expect(screen.getByText('Connected')).toBeTruthy());
+describe('OnboardingWizard — Step 3 (approval mode)', () => {
+  it('defaults to "ask before high-risk actions" and saves approvalMode true on Continue', async () => {
+    await advanceToApprovalStep();
+    expect(screen.getByText(/Ask before high-risk actions/i)).toBeTruthy();
     fireEvent.click(screen.getByText('Continue'));
-    await waitFor(() => expect(screen.getByText('llama3.2:3b')).toBeTruthy());
-    fireEvent.click(screen.getByText('llama3.2:3b'));
+    await waitFor(() => expect(setRuntimePolicySettings).toHaveBeenCalledWith({ approvalMode: true }));
+  });
+
+  it('saves approvalMode false when "act autonomously" is selected', async () => {
+    await advanceToApprovalStep();
+    fireEvent.click(screen.getByText(/Act autonomously without asking/i));
     fireEvent.click(screen.getByText('Continue'));
-    await waitFor(() => expect(screen.getByText('Connect')).toBeTruthy());
-  };
+    await waitFor(() => expect(setRuntimePolicySettings).toHaveBeenCalledWith({ approvalMode: false }));
+  });
+});
+
+describe('OnboardingWizard — Step 4 (connect)', () => {
+  const advanceToStep3 = advanceToConnectStep;
 
   it('shows all 4 channel options', async () => {
     await advanceToStep3();
@@ -161,15 +209,24 @@ describe('OnboardingWizard — Step 3 (connect)', () => {
   });
 });
 
-describe('OnboardingWizard — Step 4 (ready)', () => {
+describe('OnboardingWizard — Step 5 (advanced services)', () => {
+  it('shows semantic memory and voice OS rows with Check buttons', async () => {
+    await advanceToAdvancedStep();
+    expect(screen.getByText(/Semantic memory \(ChromaDB\)/i)).toBeTruthy();
+    expect(screen.getByText(/Voice OS \(Jarvis voice\)/i)).toBeTruthy();
+  });
+
+  it('reports ChromaDB unavailable when isChromaHealthy resolves false', async () => {
+    await advanceToAdvancedStep();
+    const checkButtons = screen.getAllByText('Check');
+    fireEvent.click(checkButtons[0]);
+    await waitFor(() => expect(screen.getByText(/Not detected/i)).toBeTruthy());
+  });
+});
+
+describe('OnboardingWizard — Step 6 (ready)', () => {
   it('calls onComplete with selected model on finish', async () => {
-    render(<OnboardingWizard onComplete={mockOnComplete} />);
-    await waitFor(() => expect(screen.getByText('Connected')).toBeTruthy());
-    fireEvent.click(screen.getByText('Continue'));
-    await waitFor(() => expect(screen.getByText('llama3.2:3b')).toBeTruthy());
-    fireEvent.click(screen.getByText('llama3.2:3b'));
-    fireEvent.click(screen.getByText('Continue'));
-    await waitFor(() => expect(screen.getByText('Connect')).toBeTruthy());
+    await advanceToAdvancedStep();
     fireEvent.click(screen.getByText('Continue'));
     await waitFor(() => expect(screen.getByText("You're ready")).toBeTruthy());
     expect(screen.getByText('llama3.2:3b')).toBeTruthy();

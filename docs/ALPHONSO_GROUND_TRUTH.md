@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-01 — v2.5.0 (Phase 3 test expansion)
-**Verified by:** OpenCode agent — 18 new service test files added, 3 weakened tests fixed, 3,167 tests passing
-**Version:** 2.5.0 (security hardened, 218 test files, 3,167 tests, 162 services)
+**Last verified:** 2026-07-02 — v2.5.0 (Onboarding wizard expansion + Phase 0 audit verification)
+**Verified by:** Claude Code session — full `verify:app` re-run in isolation (218 files / 3,174 tests passing, 0 failures), `cargo test` re-run in isolation (91 passed / 3 pre-existing failures, unchanged from `todo.md`), production build clean.
+**Version:** 2.5.0 (security hardened, 218 test files, 3,174 tests, 162 services)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -175,8 +175,8 @@ Key services that past audits missed or underestimated:
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-30 v2.5.0, all passing):**
-- 218 test files, 3167 tests passing
-- 14 Rust unit tests passing (`cargo test` in src-tauri/)
+- 218 test files, 3174 tests passing (re-verified in isolation 2026-07-02; +7 tests added for onboarding wizard approval-mode/advanced-services steps)
+- 94 Rust unit tests total (`cargo test` in src-tauri/): 91 passing, 3 known pre-existing failures unrelated to any recent change — tracked in `todo.md` (`runtime_manager::tests::all_tools_have_unique_ports`, `runtime_manager::tests::autostart_prefs_defaults_ollama_only`, `workspace::tests::absolute_path_detected`). Re-verified in isolation 2026-07-02; count grew from the historical "14" figure as more modules gained test coverage over time — that figure is stale, do not cite it as current.
 - 22+ new test files added in Batch 2 (feat/batch2-testing-completeness)
 ```
 a2aProtocolService.test.ts          ← added Batch 2 (20+ tests)
@@ -423,6 +423,12 @@ All paths: fail-closed on missing credentials, blocked in zero-cost mode unless 
 ## 8. Real Gaps — What Actually Needs Work
 
 These are confirmed gaps as of 2026-07-02. Any agent working on these areas should check current state before implementing.
+
+### CLOSED — 2026-07-02 (Onboarding wizard expansion, post-audit)
+- [x] **Approval mode default was invisible to users** — `OnboardingWizard.tsx` now has a dedicated "Approval mode" step (new step 3 of 6) that asks the user explicitly whether Alphonso should ask before high-risk actions, defaulting to ON during onboarding, and writes the choice via `setRuntimePolicySettings({ approvalMode })`. Previously `approvalMode: false` was silently the default with no onboarding-time decision point (flagged as a P0 risk in `ALPHONSOAUDIT25.06.2026.md`'s completion report).
+- [x] **Connect step copy overstated connector readiness** — `ConnectChannelStep` copy changed from "pick a channel" to explicitly state every connector stays disabled until credentials are added and skipping is normal — addresses the audit finding that a fresh install has zero working connectors and users were not told this.
+- [x] **Optional/external-dependency services were silent** — New "Advanced" onboarding step (`AdvancedServicesStep`, step 5 of 6) surfaces ChromaDB (semantic memory) and Voice OS (Python-dependent) with live status checks (`isChromaHealthy`, `getVoiceServerStatus` + `checkPrerequisites().pythonFound`) instead of failing silently later. No new backend surface added — reuses existing Tauri commands only.
+- [x] **Onboarding wizard is now 6 steps**, not 4: Check Ollama → Pick a model → **Approval mode (new)** → Connect → **Advanced services (new)** → Ready. `StepIndicator` and both test files (`src/test/OnboardingWizard.test.jsx`, `src/test/components/OnboardingWizard.test.tsx`) updated accordingly.
 
 ### OPEN GAPS (as of v2.5.0-security)
 - [ ] **Voice OS Python dependency** — Voice OS in Runtime Hub can Install/Start, but requires Python 3.10+ on PATH. `find_python()` checks standard paths but won't auto-install Python itself. User must have Python installed first.

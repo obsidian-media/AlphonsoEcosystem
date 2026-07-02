@@ -31,6 +31,18 @@ vi.mock('../../services/runtimeManagerService', () => ({
   waitForTool: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock('../../services/policyEnforcementService', () => ({
+  setRuntimePolicySettings: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../services/chromaDbService', () => ({
+  isChromaHealthy: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('../../services/voiceOsService', () => ({
+  getVoiceServerStatus: vi.fn().mockResolvedValue('stopped'),
+}));
+
 import { OnboardingWizard } from '../../components/OnboardingWizard';
 
 // Helper: wait for step 0's Continue button to become enabled (Ollama check completes)
@@ -106,6 +118,9 @@ describe('OnboardingWizard', () => {
       (b) => !(b as HTMLButtonElement).disabled
     )!;
     fireEvent.click(btn1);
+    // Step 2 → Step 3 (approval mode has a default selection, so Continue is always enabled)
+    await screen.findByText('Approval mode', {}, { timeout: 5000 });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
     await screen.findByText('Connect', {}, { timeout: 5000 });
     expect(screen.getByText('Skip for now')).toBeTruthy();
   });
@@ -133,10 +148,17 @@ describe('OnboardingWizard', () => {
         (b) => !(b as HTMLButtonElement).disabled
       )!
     );
-    // Step 2 → Step 3
+    // Step 2 → Step 3 (approval mode)
+    await screen.findByText('Approval mode', {}, { timeout: 5000 });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    // Step 3 → Step 4 (connect)
     await screen.findByText('Connect', {}, { timeout: 5000 });
     const btns2 = screen.getAllByRole('button', { name: /Continue/i });
     fireEvent.click(btns2[btns2.length - 1]);
+    // Step 4 → Step 5 (advanced services)
+    await screen.findByText('Optional services', {}, { timeout: 5000 });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    // Step 5 → Step 6 (ready)
     await screen.findByText("You're ready", {}, { timeout: 5000 });
     fireEvent.click(screen.getByRole('button', { name: /Start chatting/i }));
     expect(onComplete).toHaveBeenCalledTimes(1);

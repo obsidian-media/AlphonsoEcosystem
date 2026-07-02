@@ -21,6 +21,9 @@ import { setStorage } from '../lib/appStorage';
 import { buildOllamaPreflightEvent, recordEvent as recordOllamaPreflightEvent } from '../services/eventsService';
 import { invoke } from '@tauri-apps/api/core';
 import { setComposioConfig } from '../services/composioService';
+import { setRuntimePolicySettings } from '../services/policyEnforcementService';
+import { isChromaHealthy } from '../services/chromaDbService';
+import { getVoiceServerStatus } from '../services/voiceOsService';
 
 function openExternal(url) {
   invoke('open_url', { url }).catch(() => { window.open(url, '_blank'); });
@@ -32,7 +35,7 @@ const PREFERRED_PRESELECT = 'llama3.2:3b';
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
 function StepIndicator({ currentStep }) {
-  const steps = ['Check Ollama', 'Pick a model', 'Connect', "You're ready"];
+  const steps = ['Check Ollama', 'Pick a model', 'Approval', 'Connect', 'Advanced', "You're ready"];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((label, i) => (
@@ -412,6 +415,82 @@ function PickModelStep({ onNext }) {
   );
 }
 
+// ─── Step 3: Approval mode decision ───────────────────────────────────────────
+
+function ApprovalModeStep({ onNext }) {
+  const [approvalMode, setApprovalMode] = useState(true); // default ON during onboarding
+  const [saving, setSaving] = useState(false);
+
+  const handleContinue = async () => {
+    setSaving(true);
+    try {
+      await setRuntimePolicySettings({ approvalMode });
+    } catch {
+      // non-fatal — user can change this later in Settings → Security
+    } finally {
+      setSaving(false);
+      onNext();
+    }
+  };
+
+  return (
+    <div className="flex flex-col">
+      <h2 className="text-lg font-bold text-white mb-1">Approval mode</h2>
+      <p className="text-[var(--text-3)] text-sm mb-6">
+        Should Alphonso ask for your confirmation before high-risk actions — sending messages,
+        publishing content, running system commands? You can change this anytime in Settings → Security.
+      </p>
+
+      <div className="space-y-2 mb-6">
+        <button
+          onClick={() => setApprovalMode(true)}
+          className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+            approvalMode
+              ? 'border-emerald-500/50 bg-emerald-500/10 ring-1 ring-emerald-500/20'
+              : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
+          }`}
+        >
+          <div className="mt-0.5">{approvalMode && <CheckCircle className="w-4 h-4 text-emerald-400" />}</div>
+          <div>
+            <div className="text-sm font-semibold text-[var(--text-1)]">Ask before high-risk actions (recommended)</div>
+            <div className="text-[11px] text-[var(--text-4)] mt-0.5">
+              Alphonso will pause and show an approval prompt before publishing, sending, or running
+              risky commands. Safer for a first-time setup.
+            </div>
+          </div>
+        </button>
+        <button
+          onClick={() => setApprovalMode(false)}
+          className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+            !approvalMode
+              ? 'border-amber-500/50 bg-amber-500/10 ring-1 ring-amber-500/20'
+              : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
+          }`}
+        >
+          <div className="mt-0.5">{!approvalMode && <CheckCircle className="w-4 h-4 text-amber-400" />}</div>
+          <div>
+            <div className="text-sm font-semibold text-[var(--text-1)]">Act autonomously without asking</div>
+            <div className="text-[11px] text-[var(--text-4)] mt-0.5">
+              Alphonso executes high-risk actions without stopping to confirm. Faster, but only
+              recommended once you trust the setup.
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div className="flex justify-end mt-2">
+        <button
+          onClick={handleContinue}
+          disabled={saving}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] text-white text-xs font-bold rounded-xl transition-colors"
+        >
+          Continue <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Step 3: Connect (channel + Composio) ────────────────────────────────────
 
 const CHANNEL_OPTIONS = [
@@ -615,7 +694,8 @@ function ConnectChannelStep({ onNext }) {
     <div className="flex flex-col">
       <h2 className="text-lg font-bold text-white mb-1">Connect</h2>
       <p className="text-[var(--text-3)] text-sm mb-6">
-        Pick a channel or toolkit to extend Alphonso's reach. You can configure all of these later in Settings.
+        None of these are required. Every connector below stays disabled until you add credentials —
+        skip freely and add one later in Settings → Connectors whenever you're ready.
       </p>
 
       <div className="space-y-2 mb-4">
@@ -653,6 +733,113 @@ function ConnectChannelStep({ onNext }) {
       <div className="flex justify-end">
         <button
           onClick={handleContinue}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold rounded-xl transition-colors"
+        >
+          Continue <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 5: Advanced / optional services ─────────────────────────────────────
+
+function AdvancedServiceRow({ label, description, checking, ok, hint, onCheck }) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-[var(--surface-1)/0.6] px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-[var(--text-1)]">{label}</div>
+          <div className="text-[11px] text-[var(--text-4)] mt-0.5">{description}</div>
+        </div>
+        <button
+          onClick={onCheck}
+          disabled={checking}
+          className="shrink-0 flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border border-white/10 text-[var(--text-3)] hover:text-[var(--text-1)] hover:border-white/20 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3 h-3 ${checking ? 'animate-spin' : ''}`} />
+          {checking ? 'Checking…' : 'Check'}
+        </button>
+      </div>
+      {ok !== null && (
+        <div className={`mt-2 flex items-center gap-1.5 text-[11px] ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+          {ok ? 'Available' : hint}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdvancedServicesStep({ onNext }) {
+  const [chroma, setChroma] = useState({ checking: false, ok: null });
+  const [voice, setVoice] = useState({ checking: false, ok: null });
+  const [pythonChecked, setPythonChecked] = useState(null);
+
+  const checkChroma = async () => {
+    setChroma({ checking: true, ok: null });
+    try {
+      const ok = await isChromaHealthy();
+      setChroma({ checking: false, ok: !!ok });
+    } catch {
+      setChroma({ checking: false, ok: false });
+    }
+  };
+
+  const checkVoice = async () => {
+    setVoice({ checking: true, ok: null });
+    try {
+      const [status, prereqs] = await Promise.all([
+        getVoiceServerStatus().catch(() => null),
+        (async () => {
+          const { checkPrerequisites } = await import('../services/runtimeManagerService');
+          return checkPrerequisites();
+        })().catch(() => null),
+      ]);
+      setPythonChecked(prereqs ? !!prereqs.pythonFound : null);
+      const running = status === 'running';
+      setVoice({ checking: false, ok: running });
+    } catch {
+      setVoice({ checking: false, ok: false });
+    }
+  };
+
+  return (
+    <div className="flex flex-col">
+      <h2 className="text-lg font-bold text-white mb-1">Optional services</h2>
+      <p className="text-[var(--text-3)] text-sm mb-6">
+        These extras aren't required to use Alphonso. They need something running locally first —
+        check now so you know what's on, and what still needs a separate install.
+      </p>
+
+      <div className="space-y-3 mb-6">
+        <AdvancedServiceRow
+          label="Semantic memory (ChromaDB)"
+          description="Improves memory search relevance. Needs ChromaDB running locally on port 8000."
+          checking={chroma.checking}
+          ok={chroma.ok}
+          hint="Not detected — install ChromaDB and run it on localhost:8000, or skip this."
+          onCheck={checkChroma}
+        />
+        <AdvancedServiceRow
+          label="Voice OS (Jarvis voice)"
+          description={`Local speech-to-text/text-to-speech pipeline. Needs Python 3.10+ on PATH${
+            pythonChecked === false ? ' — not found on this machine' : ''
+          }.`}
+          checking={voice.checking}
+          ok={voice.ok}
+          hint={
+            pythonChecked === false
+              ? 'Python 3.10+ not found. Install Python, then start Voice OS from Runtime Hub.'
+              : 'Not running yet — start it later from Runtime Hub.'
+          }
+          onCheck={checkVoice}
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={onNext}
           className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold rounded-xl transition-colors"
         >
           Continue <ArrowRight className="w-3.5 h-3.5" />
@@ -723,8 +910,10 @@ export function OnboardingWizard({ onComplete }) {
 
           {step === 0 && <CheckOllamaStep onNext={() => setStep(1)} />}
           {step === 1 && <PickModelStep onNext={(model) => { setSelectedModel(model); setStep(2); }} />}
-          {step === 2 && <ConnectChannelStep onNext={() => setStep(3)} />}
-          {step === 3 && <ReadyStep selectedModel={selectedModel} onFinish={handleFinish} />}
+          {step === 2 && <ApprovalModeStep onNext={() => setStep(3)} />}
+          {step === 3 && <ConnectChannelStep onNext={() => setStep(4)} />}
+          {step === 4 && <AdvancedServicesStep onNext={() => setStep(5)} />}
+          {step === 5 && <ReadyStep selectedModel={selectedModel} onFinish={handleFinish} />}
         </div>
         <div className="mt-4 text-center text-[10px] text-[var(--text-4)]">
           Local-first · Zero cloud · All data stays on your machine

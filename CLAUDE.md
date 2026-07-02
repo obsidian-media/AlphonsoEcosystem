@@ -85,7 +85,7 @@ Before writing any new service, component, or feature, check this list:
 | Prereq auto-install (winget/brew) | `runtime_install_prerequisite` Tauri command — do not add a separate install flow |
 | Boot status banner | `src/components/BootStatusBanner.jsx` — listens to `runtime://boot_status` events |
 | Ollama offline global banner | `src/components/OllamaOfflineBanner.jsx` — shown in App.tsx shell; Start/Retry/Open Runtime Hub; uses `startTool('ollama')` |
-| Onboarding wizard | `src/components/OnboardingWizard.jsx` — 4 steps: Ollama check (auto-start via Runtime Hub), model picker, connect (Telegram/WhatsApp/Composio guides inline), ready |
+| Onboarding wizard | `src/components/OnboardingWizard.tsx` — 6 steps: Ollama check (auto-start via Runtime Hub), model picker, **approval mode decision**, connect (Telegram/WhatsApp/Composio guides inline), **advanced/optional services check (ChromaDB + Voice OS)**, ready |
 | External URL opening (Tauri) | Use `invoke('open_url', { url })` — NOT bare `<a href target="_blank">` which fails silently in Tauri webview |
 | Autostart prefs (per-tool) | `runtime_get_autostart_prefs` / `runtime_save_autostart_pref` + JSON at `%APPDATA%\Alphonso\runtimes\autostart_prefs.json` |
 | Live install log streaming | `runtime://log` Tauri events + `onLogLine()` in runtimeManagerService + `LiveLogPanel` in RuntimeManagerView |
@@ -138,7 +138,9 @@ Before writing any new service, component, or feature, check this list:
 | Jarvis voice button (ChatView) | `src/components/ChatView.tsx` — `useJarvisVoice` WebSocket mic button; pulses on listening; transcript → input field |
 | Browse folder fallback (SettingsView) | `src/components/SettingsView.tsx` — hidden `<input webkitdirectory>` refs for Output Folder + ComfyUI Dir when `invoke('pick_folder')` fails |
 | RightPanel auto-refresh | `src/components/RightPanel.tsx` — 10-min `setInterval` calling `runQuickScan()` |
-| Onboarding connector step | `src/components/OnboardingWizard.jsx` — step 3 "Connect a channel" with Telegram/WhatsApp/Skip cards, saves to `alphonso_onboarding_connector_v1` |
+| Onboarding connector step | `src/components/OnboardingWizard.tsx` — "Connect" step with Telegram/WhatsApp/Composio/Skip cards, saves to `alphonso_onboarding_connector_v1` |
+| Onboarding approval-mode step | `src/components/OnboardingWizard.tsx` — `ApprovalModeStep`, writes decision via `setRuntimePolicySettings({ approvalMode })` from `policyEnforcementService.ts` |
+| Onboarding advanced services step | `src/components/OnboardingWizard.tsx` — `AdvancedServicesStep`, checks `isChromaHealthy()` and `getVoiceServerStatus()` + `checkPrerequisites().pythonFound` |
 | Crash log viewer | `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as Logs tab in SettingsView |
 | Nova history chart | `src/components/NovaHistoryChart.jsx` — SVG sparkline of last 10 scores, most-recent recommendation, wired in SettingsView |
 | Sentinel findings modal | `src/components/SentinelFindingModal.jsx` — fixed overlay, severity badge, pattern + recommendation rows; triggered by clicking findings in RightPanel |
@@ -236,7 +238,7 @@ Before writing any new service, component, or feature, check this list:
 1. Read `docs/ALPHONSO_GROUND_TRUTH.md`
 2. Check `src/services/` for an existing service before writing a new one — there are 163+ services
 3. Check `src/test/` — there are 218 test files already; add to them, don't create a parallel test system
-4. Run `npm run test` before and after any change; all 3,167 tests must continue to pass
+4. Run `npm run test` before and after any change; all 3,174 tests must continue to pass
 5. For Rust changes, run `cargo check` AND `cargo clippy -- -D warnings` from `src-tauri/` — CI enforces `-D warnings`
 6. Do not commit `.env`, `.tauri-updater-key`, or `.tauri-updater-key.pub` — they are in `.gitignore`
 
@@ -423,4 +425,4 @@ scripts/               Build, release, and auth helper scripts
 
 ---
 
-_Last verified: 2026-07-01 — v2.5.0 — Security hardening (Batch 1) complete: SSRF blocking, PKCE OAuth, tauri-plugin-dialog, arboard clipboard, per-program arg allowlist, policyDslService wired, CSP narrowed. TypeScript: 0 errors. Tests: 218 files / 3,167 passing. 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live. 35+ new components and 40+ new services added since v2.0.5 — see Do Not Duplicate table above. package.json version: 2.5.0._
+_Last verified: 2026-07-02 — v2.5.0 — Security hardening (Batch 1) complete: SSRF blocking, PKCE OAuth, tauri-plugin-dialog, arboard clipboard, per-program arg allowlist, policyDslService wired, CSP narrowed. TypeScript: 0 errors. Tests: 218 files / 3,174 passing (re-verified in isolation post-audit; +7 new tests from onboarding wizard expansion). Rust: 91 passed / 3 pre-existing failures (see `todo.md`, unchanged). Onboarding wizard expanded to 6 steps (approval-mode decision + optional-services check added — see `docs/ALPHONSO_GROUND_TRUTH.md`). 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live. 35+ new components and 40+ new services added since v2.0.5 — see Do Not Duplicate table above. package.json version: 2.5.0._
