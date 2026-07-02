@@ -233,6 +233,15 @@ export function ProjectExecutionMode(): React.JSX.Element {
           <div className="space-y-4">
             <Card label="Project Details">
               <ProjectIntakePanel intake={intake} setIntake={setIntake as never} presets={{}} onApplyPreset={() => {}} />
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
+                <p className="text-[11px] text-zinc-500">
+                  {intake.projectName ? 'Ready — generate the execution packet on the Execution tab.' : 'Enter a project name to continue.'}
+                </p>
+                <button type="button" onClick={() => setActiveTab('execution')} disabled={!intake.projectName}
+                  className="shrink-0 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-200 hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                  Continue to Execution →
+                </button>
+              </div>
             </Card>
             <Card label="System Health"><SystemHealthPanel /></Card>
             <Card label="Operational Mode">

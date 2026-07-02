@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, Search, CheckCircle, AlertTriangle } from 'lucide-react';
+import { openExternalUrl } from '../../services/browserAutomationService';
 
 interface ResearchSource {
   url?: string;
@@ -56,7 +57,18 @@ export function HectorResearchPanel({ researchBrief, loading = false }: Props): 
               {researchBrief.sources.slice(0, 5).map((source, idx) => (
                 <div key={idx} className="flex items-center gap-1 text-[10px] text-zinc-500 truncate">
                   <span className="shrink-0">{source.verificationState === 'verified' ? '✓' : '○'}</span>
-                  <span className="truncate">{source.url ?? source.title ?? 'Unknown source'}</span>
+                  {source.url ? (
+                    <button
+                      type="button"
+                      onClick={() => openExternalUrl(source.url)}
+                      className="truncate text-teal-400 underline decoration-teal-800 hover:text-teal-300 hover:decoration-teal-500 transition-colors text-left"
+                      title={source.url}
+                    >
+                      {source.title ?? source.url}
+                    </button>
+                  ) : (
+                    <span className="truncate">{source.title ?? 'Unknown source'}</span>
+                  )}
                 </div>
               ))}
             </div>

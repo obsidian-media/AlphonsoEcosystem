@@ -29,7 +29,7 @@ import {
   proveTelegramConnectorPath
 } from '../services/connectorRegistryService';
 import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/telegramAutoPollService';
-import { saveConnectorCredential, getConnectorCredential } from '../services/connectors/connectorAuth';
+import { saveConnectorCredential, getConnectorCredential, hydrateConnectorCredentialsFromSqlite } from '../services/connectors/connectorAuth';
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
@@ -266,6 +266,43 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
   const [n8nBaseUrl, setN8nBaseUrl] = useState(() => getConnectorCredential('n8n', 'N8N_BASE_URL') || 'http://localhost:5678');
   const [deepseekApiKey, setDeepseekApiKey] = useState(() => getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
+
+  // The credential useState initializers above read from an in-memory cache that starts
+  // empty until hydrated from the Tauri SQLite store. Nothing hydrates that cache at app
+  // boot, so on a fresh mount (or shortly after a restart) every field above reads back
+  // empty even when a credential was previously saved. Re-sync all fields once hydration
+  // completes so previously-saved credentials actually show up, and so a save made before
+  // hydration resolves isn't clobbered when the hydrate call finally lands.
+  useEffect(() => {
+    let cancelled = false;
+    hydrateConnectorCredentialsFromSqlite(true).then(() => {
+      if (cancelled) return;
+      setTelegramBotToken((prev) => prev || getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN'));
+      setTelegramChatIds((prev) => prev || getConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS'));
+      setGithubToken((prev) => prev || getConnectorCredential('github', 'GITHUB_TOKEN'));
+      setSlackBotToken((prev) => prev || getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
+      setAnthropicApiKey((prev) => prev || getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
+      setOpenaiApiKey((prev) => prev || getConnectorCredential('chatgpt', 'OPENAI_API_KEY'));
+      setNotionApiKey((prev) => prev || getConnectorCredential('notion', 'NOTION_API_KEY'));
+      setNotionParentPageId((prev) => prev || getConnectorCredential('notion', 'NOTION_PARENT_PAGE_ID'));
+      setClickupApiKey((prev) => prev || getConnectorCredential('clickup', 'CLICKUP_API_KEY'));
+      setClickupListId((prev) => prev || getConnectorCredential('clickup', 'CLICKUP_LIST_ID'));
+      setWhatsappAccessToken((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN'));
+      setWhatsappPhoneNumberId((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID'));
+      setWhatsappVerifyToken((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_VERIFY_TOKEN'));
+      setYoutubeClientId((prev) => prev || getConnectorCredential('youtube', 'YOUTUBE_CLIENT_ID'));
+      setYoutubeClientSecret((prev) => prev || getConnectorCredential('youtube', 'YOUTUBE_CLIENT_SECRET'));
+      setYoutubeRefreshToken((prev) => prev || getConnectorCredential('youtube', 'YOUTUBE_REFRESH_TOKEN'));
+      setYoutubeChannelId((prev) => prev || getConnectorCredential('youtube', 'YOUTUBE_CHANNEL_ID'));
+      setQwenApiKey((prev) => prev || getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
+      setBraveApiKey((prev) => prev || getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
+      setTavilyApiKey((prev) => prev || getConnectorCredential('tavily', 'TAVILY_API_KEY'));
+      setRunwayApiKey((prev) => prev || getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
+      setDeepseekApiKey((prev) => prev || getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
+    }).catch(() => { /* best-effort — in-memory cache stays as-is */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

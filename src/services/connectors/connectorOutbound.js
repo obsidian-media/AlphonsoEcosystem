@@ -80,16 +80,6 @@ async function guardConnectorRateLimit(connectorId) {
   }
 }
 
-function getConnectorEnvironment() {
-  try {
-    const raw = localStorage.getItem('alphonso_connector_credentials_v1');
-    const all = raw ? JSON.parse(raw) : {};
-    return all?.telegram || {};
-  } catch {
-    return {};
-  }
-}
-
 export async function sendTelegramConnectorMessage(chatId, text, options = {}) {
   const auth = isConnectorAuthenticated('telegram');
   if (!auth.ok) {
@@ -128,8 +118,7 @@ export async function sendTelegramConnectorMessage(chatId, text, options = {}) {
     };
   }
 
-  const env = getConnectorEnvironment();
-  const token = (env?.TELEGRAM_BOT_TOKEN || '').trim();
+  const token = getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN').trim();
   if (!token) {
     return {
       ok: false,

@@ -1,4 +1,5 @@
 import React from 'react';
+import { openExternalUrl } from '../../services/browserAutomationService';
 
 interface SourceProof {
   ok?: boolean;
@@ -64,11 +65,26 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
               : `${report.status}. Sources and citations are generated from real live discovery/fetch runs.`}
           </div>
           {Array.isArray(report.sourceProofs) && report.sourceProofs.length > 0 && (
-            <ReportList
-              title="Source Proofs"
-              rows={report.sourceProofs.map((proof) => `${proof.ok ? 'Verified' : 'Failed'} ${proof.url} ${proof.httpStatus ? `(HTTP ${proof.httpStatus})` : ''}${proof.error ? ` - ${proof.error}` : ''}`)}
-              empty="No source proofs yet."
-            />
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Source Proofs</div>
+              <div className="mt-2 space-y-1">
+                {report.sourceProofs.map((proof) => (
+                  <div key={proof.url} className="rounded-lg border border-white/10 bg-zinc-900/45 px-3 py-2 text-[11px] text-zinc-300">
+                    <span className={proof.ok ? 'text-emerald-400' : 'text-red-400'}>{proof.ok ? 'Verified' : 'Failed'}</span>{' '}
+                    <button
+                      type="button"
+                      onClick={() => openExternalUrl(proof.url)}
+                      className="text-teal-300 underline decoration-teal-700 hover:text-teal-200 hover:decoration-teal-400 transition-colors break-all text-left"
+                      title={proof.url}
+                    >
+                      {proof.url}
+                    </button>
+                    {proof.httpStatus ? ` (HTTP ${proof.httpStatus})` : ''}
+                    {proof.error ? ` - ${proof.error}` : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
           <ReportList title="Verified Facts" rows={report.verifiedFacts} empty="No verified facts yet." />
           <ReportList title="Inferred Points" rows={report.inferredPoints} empty="No inferred points yet." />

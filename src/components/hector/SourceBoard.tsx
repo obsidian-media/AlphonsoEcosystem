@@ -1,4 +1,5 @@
 import React from 'react';
+import { openExternalUrl } from '../../services/browserAutomationService';
 
 interface Source {
   url: string;
@@ -34,7 +35,14 @@ export function SourceBoard({ report }: Props): React.JSX.Element {
         <div className="space-y-2">
           {sources.map((source) => (
             <div key={source.url} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
-              <div className="truncate text-xs font-semibold text-teal-100">{source.url}</div>
+              <button
+                type="button"
+                onClick={() => openExternalUrl(source.url)}
+                className="block truncate text-xs font-semibold text-teal-100 underline decoration-teal-700 hover:text-teal-50 hover:decoration-teal-400 transition-colors text-left"
+                title={source.url}
+              >
+                {source.url}
+              </button>
               <div className="mt-1 text-[11px] text-zinc-500">
                 {source.type} | {source.verificationState ?? source.confidence} | {source.httpStatus ? `HTTP ${source.httpStatus}` : 'not fetched'} | expires {source.expiresAt ? new Date(source.expiresAt).toLocaleDateString() : 'n/a'}
               </div>

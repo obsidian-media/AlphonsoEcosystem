@@ -1,4 +1,5 @@
 import React from 'react';
+import { openExternalUrl } from '../../services/browserAutomationService';
 
 interface SourceProof {
   url: string;
@@ -30,7 +31,15 @@ export function CitationPanel({ report }: Props): React.JSX.Element {
         <ol className="space-y-2">
           {urls.map((url, index) => (
             <li key={url} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-300">
-              [{index + 1}] {url}
+              [{index + 1}]{' '}
+              <button
+                type="button"
+                onClick={() => openExternalUrl(url)}
+                className="text-teal-300 underline decoration-teal-700 hover:text-teal-200 hover:decoration-teal-400 transition-colors break-all text-left"
+                title={url}
+              >
+                {url}
+              </button>
               {proofs[index] && (
                 <div className="mt-1 text-zinc-500">
                   checked {proofs[index].dateChecked ?? 'n/a'} | {proofs[index].verificationState} | {proofs[index].httpStatus ? `HTTP ${proofs[index].httpStatus}` : 'no status'}

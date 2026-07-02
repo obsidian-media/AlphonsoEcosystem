@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React from 'react';
+import { openExternalUrl } from '../services/browserAutomationService';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { messageIn } from '../lib/motion';
@@ -1014,7 +1015,7 @@ export function ChatView({
                               <a
                                 key={i}
                                 href="#"
-                                onClick={(e) => { e.preventDefault(); window.open(src.url, '_blank'); }}
+                                onClick={(e) => { e.preventDefault(); openExternalUrl(src.url); }}
                                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-900/40 border border-sky-700/50 rounded text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/60"
                                 title={src.url}
                               >

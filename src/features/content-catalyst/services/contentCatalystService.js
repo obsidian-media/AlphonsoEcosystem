@@ -373,8 +373,14 @@ export async function generateContentImage(job) {
     cfgScale: 7
   });
   if (!result?.ok) {
+    const reason = result?.error || result?.message;
     window.dispatchEvent(new CustomEvent('alphonso:toast', {
-      detail: { type: 'warning', message: 'Image generation skipped — ComfyUI not running. Start it in Runtimes.' }
+      detail: {
+        type: 'warning',
+        message: reason
+          ? `Image generation skipped — ${reason}`
+          : 'Image generation skipped — ComfyUI not running. Start it in Runtimes.'
+      }
     }));
     return {
       ...job,

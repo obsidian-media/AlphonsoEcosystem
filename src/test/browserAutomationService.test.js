@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import {
   openUrl,
+  openExternalUrl,
   fetchUrlContent,
   readClipboard,
   writeClipboard,
@@ -35,6 +36,41 @@ describe('openUrl', () => {
     mockInvoke.mockResolvedValueOnce(undefined);
     await openUrl('http://localhost:3000');
     expect(mockInvoke).toHaveBeenCalledWith('open_url', { url: 'http://localhost:3000' });
+  });
+});
+
+// ── openExternalUrl ──────────────────────────────────────────────────────────
+// Tauri's webview silently no-ops on window.open()/<a target="_blank">, so every
+// citation/source link click must route through invoke('open_url', ...) instead.
+
+describe('openExternalUrl', () => {
+  const originalOpen = window.open;
+
+  beforeEach(() => {
+    window.open = vi.fn();
+  });
+
+  afterAll(() => {
+    window.open = originalOpen;
+  });
+
+  it('calls invoke with open_url and the url, without falling back to window.open', async () => {
+    mockInvoke.mockResolvedValueOnce(undefined);
+    await openExternalUrl('https://example.com');
+    expect(mockInvoke).toHaveBeenCalledWith('open_url', { url: 'https://example.com' });
+    expect(window.open).not.toHaveBeenCalled();
+  });
+
+  it('falls back to window.open when invoke rejects (e.g. running outside Tauri)', async () => {
+    mockInvoke.mockRejectedValueOnce(new Error('invoke unavailable'));
+    await openExternalUrl('https://example.com');
+    expect(window.open).toHaveBeenCalledWith('https://example.com', '_blank', 'noopener,noreferrer');
+  });
+
+  it('does nothing when called with no url', async () => {
+    await openExternalUrl('');
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(window.open).not.toHaveBeenCalled();
   });
 });
 

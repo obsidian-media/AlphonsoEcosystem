@@ -6,16 +6,19 @@ import { persistScopeRows } from '../runtimeLedgerService';
 import { evaluatePolicyGate } from '../policyEnforcementService';
 import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { requireApproval } from '../approval/approvalService';
-import { hydrateConnectorAuthProfilesFromSqlite } from './connectorAuth.js';
+import { hydrateConnectorAuthProfilesFromSqlite, getConnectorCredential } from './connectorAuth.js';
 import { durableSet } from '../../lib/durableStore.js';
 import { evaluateAction as evaluateDslAction } from '../policyDslService';
 
-// Read credentials saved via UI (separate from OS env vars)
+// Read credentials saved via UI (separate from OS env vars). Delegates to
+// connectorAuth.js's SQLite-backed credential store — do NOT read
+// 'alphonso_connector_credentials_v1' from localStorage directly here; that key
+// is cleared after KV hydration (credentials are KV/SQLite-primary), so a direct
+// localStorage read always returns empty and makes verification wrongly report
+// a saved credential as missing.
 function getStoredCredential(connectorId, key) {
   try {
-    const raw = localStorage.getItem('alphonso_connector_credentials_v1');
-    const all = raw ? JSON.parse(raw) : {};
-    const val = all?.[connectorId]?.[key];
+    const val = getConnectorCredential(connectorId, key);
     return typeof val === 'string' ? val.trim() : '';
   } catch {
     return '';

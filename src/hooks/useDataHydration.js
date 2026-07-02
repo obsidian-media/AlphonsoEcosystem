@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { hydrateMemoryFromDurable, listMemoryItems } from '../services/memoryService';
+import { hydrateConnectorCredentialsFromSqlite } from '../services/connectors/connectorAuth';
 import { discoverDiskPluginManifests, listPlugins, listPluginAudit } from '../services/pluginRegistryService';
 import { readDurableAuditLog } from '../services/verificationService';
 import { bootstrapRuntimeLedgerHydration } from '../services/runtimeLedgerService';
@@ -88,6 +89,21 @@ export function useDataHydration({
     }, 2000);
     return () => { cancelled = true; window.clearTimeout(timerId); };
   }, [settings.workspaceRoot, setDurableAuditLogs, setDiskPluginManifests]);
+
+  // Connector credential hydration — deferred. Runs early (before most connector
+  // services get a chance to touch the credential cache) and forces a re-fetch from
+  // SQLite even if something already lazily initialized the in-memory cache to empty,
+  // since the cache's own lazy-init would otherwise skip the SQLite read entirely.
+  useEffect(() => {
+    let cancelled = false;
+    const timerId = window.setTimeout(async () => {
+      if (cancelled) return;
+      try {
+        await hydrateConnectorCredentialsFromSqlite(true);
+      } catch { /* best-effort — in-memory cache stays as-is */ }
+    }, 500);
+    return () => { cancelled = true; window.clearTimeout(timerId); };
+  }, []);
 
   // Memory hydration from durable — deferred
   useEffect(() => {
