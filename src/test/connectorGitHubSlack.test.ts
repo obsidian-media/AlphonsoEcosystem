@@ -59,8 +59,18 @@ describe('connectorRegistry - GitHub and Slack', () => {
       expect(genericWebhook.permissions).toContain('inbound_events');
     });
 
-    it('has 16 connectors total', () => {
-      expect(DEFAULT_CONNECTORS.length).toBe(16);
+    it('includes ollama, brave_search, perplexity, tavily, deepseek, n8n connectors', () => {
+      // These previously had bespoke credential UI/service wiring but no
+      // central registry entry — added to close that inconsistency.
+      const ids = ['ollama', 'brave_search', 'perplexity', 'tavily', 'deepseek', 'n8n'];
+      for (const id of ids) {
+        const connector = DEFAULT_CONNECTORS.find(c => c.id === id);
+        expect(connector, `expected connector "${id}" to be registered`).toBeDefined();
+      }
+    });
+
+    it('has 22 connectors total', () => {
+      expect(DEFAULT_CONNECTORS.length).toBe(22);
     });
 
     it('github connector has not_configured status by default', () => {

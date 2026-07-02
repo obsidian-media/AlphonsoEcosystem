@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.2 (ALPHONSOTOTHEMOON Sprint 2: crash-recovery checkpoint + Discord connector + generic inbound webhook connector)
-**Verified by:** Claude Code session — targeted tests for all Sprint 2 changes passed 100% (191/191 across `orchestrationQueueService`, `connectorGitHubSlack`, `connectorRegistryService`, `discordConnector`, `slackConnector`, `genericWebhookService`, `skillPackService`, `joseExecutionEngineService`), `npx tsc --noEmit` clean (0 errors), ESLint clean on all touched files. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted in the Sprint 1 entry below) — not re-attempted this sprint since the root cause is unchanged and already logged.
-**Version:** 2.5.2 (security hardened, 218 test files, 3,174+ tests, 165 services — 2 new files this sprint: `src/services/genericWebhookService.js` and `src/services/connectors/discordConnector.ts`; connector count 14 → 16 via `connectorRegistry.js`)
+**Last verified:** 2026-07-02 — v2.5.3 (auto-updater fix + connector registry completeness + Sprint 3-6 roadmap seeded)
+**Verified by:** Claude Code session — targeted tests passed 100% (183/183 across `appUpdateService`, `updaterReleaseUtils`, `connectorGitHubSlack`, `connectorRegistryService`, `orchestrationQueueService`, `discordConnector`, `genericWebhookService`, `skillPackService`, `joseExecutionEngineService`), `npx tsc --noEmit` clean (0 errors). Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.3 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 16 → 22 — added Ollama, Brave Search, Perplexity, Tavily, DeepSeek, n8n to `connectorRegistry.js`, each of which already had working credential UI/service code but no central registry entry)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -947,6 +947,48 @@ Full context lives in `ALPHONSOTOTHEMOON.md` at repo root.
   `hydrateConnectorCredentialsFromSqlite`, so the component's real hydrate
   `useEffect` throws on mount inside the test. See `CLAUDE.md` Real Gaps.
 
+## 11.7 Auto-updater fix + connector registry completeness (2026-07-02)
+
+- **Auto-updater was never functional despite being fully coded.**
+  `src/services/appUpdateService.ts` (`checkAppUpdate()`) and
+  `src/components/UpdaterNotification.tsx` both already existed and
+  `appUpdateService` had 19 passing tests — but `App.tsx` never called
+  `checkAppUpdate()`, so `updaterVersion` state stayed `null` forever and
+  the banner could never render. Separately, the banner's `onUpdate` prop
+  was hardcoded to `() => {}}` — a no-op even if the banner had shown.
+  Fixed: added a Tauri-only boot `useEffect` calling `checkAppUpdate()`
+  with the real endpoint/pubkey from `tauri.conf.json`, wired the button to
+  `invoke('open_url', ...)` opening the release download. Verified
+  separately that no GitHub release newer than v2.4.4 existed (checked via
+  `gh release list`) and that the live `latest.json` at the configured
+  endpoint was well-formed — so the user-facing symptom was compounded by
+  simply not having tagged a release in ~6 days of active development, not
+  purely a code defect.
+  **Not done**: full in-app download+install+relaunch. Needs
+  `@tauri-apps/plugin-updater` + `@tauri-apps/plugin-process` as npm
+  dependencies — the Rust side (`tauri-plugin-updater`) is already
+  registered and ready in `lib.rs`, only the JS side is missing. Tracked in
+  `ALPHONSOTOTHEMOON.md` as a follow-up, not silently dropped.
+- **Connector registry completeness.** `connectorRegistry.js`'s
+  `DEFAULT_CONNECTORS` was missing Ollama, Brave Search, Perplexity,
+  Tavily, DeepSeek, and n8n — each had working credential UI in
+  `ConnectorSetupPanel.tsx` and a real service implementation, just no
+  central registry entry. Traced via git log: each was added in a separate
+  earlier feature push (DeepSeek in a v2.4.4 gap-closure sprint, n8n in
+  its own dedicated commit) that wired credential UI directly to one
+  consumer without circling back to register centrally — genuine drift
+  across several sprints, not a deliberate design choice. Added all 6;
+  connector count 16 → 22.
+- **Coach Mode investigated, confirmed live.** User reported it "feels
+  forgotten." Traced `handleToggleCoachMode` through `App.tsx`: it's passed
+  as `onOpenCoach` into the main `Sidebar` component and also exposed via
+  `OperatorDashboard`'s coach toggle props. Not dead code. Whether it's
+  *prominent* enough in the actual rendered UI is unverified — no
+  browser-automation tool was available in this session to click through
+  the live app, so this is a source-level confirmation of wiring, not a
+  visual UX verdict. Seeded as a "feature discoverability audit" in
+  `ALPHONSOTOTHEMOON.md` Sprint 3.
+
 ---
 
 ## 12. Known Audit Errors (for future reference)
@@ -967,7 +1009,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-07-02 — v2.5.2. ALPHONSOTOTHEMOON Sprint 2 shipped: crash-recovery checkpoint (`recoverInterruptedExecutions()`, wired at boot), Discord connector (`discordConnector.ts`, 17 tests), generic inbound webhook connector (`gateway/generic-webhook/` + `genericWebhookService.js`, 13 tests) — connector count 14 → 16. TypeScript: 0 errors. package.json: 2.5.2. Targeted Sprint 2 tests: 191/191 passing across all touched files. Found and documented (not fixed, pre-existing) a `ConnectorSetupPanel.test.jsx` failure unrelated to this sprint. Full 218-file suite still blocked by the same vitest worker-pool startup timeout noted below (not re-attempted this sprint, root cause unchanged). Prior state (v2.5.1, 2026-07-02): ALPHONSOTOTHEMOON Sprint 1 — SHALAUDE License v1.0 added (repo previously had no LICENSE; README's stale BSL 1.1 claim corrected), skill-pack-to-agent-contract validation, default skill packs for all 9 agents (was 4), pipeline loop-guard/execution budget on `runJoseCommandExecutionPipeline` (50 assignments / 5 min ceiling); 105/105 targeted tests passing; full-suite worker-pool timeout first observed here (reproduced 3 ways — infra issue, not a code defect). Prior state (v2.5.0, 2026-07-01): security hardening (Batch 1) complete — SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed; 218 files / 3,167 tests passing; 8 Dependabot PRs merged, 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking); companion backend 5 Rust modules live. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred, vitest worker-pool timeout on full-suite runs, `ConnectorSetupPanel.test.jsx` mock gap (new), Sprint 3 backlog (subprocess sandboxing, MCP-as-runtime-capability, scheduler heartbeat, email connector, module-system convergence, EULA/trademark work)._
+_Last verified: 2026-07-02 — v2.5.3. Fixed the auto-updater (it never checked for updates — `checkAppUpdate()` existed, tested, but was never called from `App.tsx`, and the Update button was a no-op; both fixed, full in-app install still needs `@tauri-apps/plugin-updater`, not yet installed). Closed a connector registry gap — Ollama, Brave Search, Perplexity, Tavily, DeepSeek, n8n each had working credential UI but no central registry entry; added all 6 (16 → 22). Seeded Sprint 3 (agent skill-library depth + feature-discoverability audit — investigated a "Coach Mode feels forgotten" report and confirmed it's actually wired via the main Sidebar, not dead code), Sprint 4 (security hardening Batch 2 — adversarial/attacker-resistance pass, not yet started), Sprint 5 (service-layer TS migration — corrected a stale claim that components were only 10/73 migrated; components are actually 100% done, the real gap is services at 115 `.js` / 16 `.ts`), Sprint 6 (runtime-hardening carryover). Confirmed via `.github/workflows/release.yml` that installer releases are built entirely by CI on tag push, not locally — this dev machine correctly has no signing key. TypeScript: 0 errors. package.json: 2.5.3. Targeted tests: 183/183 passing. Prior state (v2.5.2, 2026-07-02): ALPHONSOTOTHEMOON Sprint 2 — crash-recovery checkpoint, Discord connector, generic inbound webhook connector; connector count 14 → 16; found (documented, not fixed) a pre-existing `ConnectorSetupPanel.test.jsx` failure unrelated to any session change. Prior state (v2.5.1, 2026-07-02): ALPHONSOTOTHEMOON Sprint 1 — SHALAUDE License v1.0 added, skill-pack-to-agent-contract validation, default skill packs for all 9 agents, pipeline loop-guard/execution budget. Prior state (v2.5.0, 2026-07-01): security hardening (Batch 1) complete — SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred, vitest worker-pool timeout on full-suite runs, `ConnectorSetupPanel.test.jsx` mock gap, full in-app updater install (needs plugin-updater/plugin-process deps), Sprint 3-6 backlog (see `ALPHONSOTOTHEMOON.md`)._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 

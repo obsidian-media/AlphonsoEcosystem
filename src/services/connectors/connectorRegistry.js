@@ -179,6 +179,60 @@ export const DEFAULT_CONNECTORS = [
     requiredEnv: ['GENERIC_WEBHOOK_DRAIN_URL'],
     permissions: ['inbound_events'],
     disabledReason: 'Generic webhook gateway drain URL is not configured. Deploy gateway/generic-webhook/ and set the drain URL.'
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama (Local Inference)',
+    status: 'foundation_only',
+    transport: 'ollama_local_api',
+    requiredEnv: [],
+    permissions: ['local_inference', 'model_management'],
+    disabledReason: 'Requires local Ollama runtime (default: http://127.0.0.1:11434).'
+  },
+  {
+    id: 'brave_search',
+    name: 'Brave Search',
+    status: 'not_configured',
+    transport: 'brave_search_api',
+    requiredEnv: ['BRAVE_SEARCH_API_KEY'],
+    permissions: ['web_search'],
+    disabledReason: 'Brave Search API key is not configured.'
+  },
+  {
+    id: 'perplexity',
+    name: 'Perplexity',
+    status: 'not_configured',
+    transport: 'perplexity_api',
+    requiredEnv: ['PERPLEXITY_API_KEY'],
+    permissions: ['web_search', 'prompt_exchange'],
+    disabledReason: 'Perplexity API key is not configured.'
+  },
+  {
+    id: 'tavily',
+    name: 'Tavily',
+    status: 'not_configured',
+    transport: 'tavily_search_api',
+    requiredEnv: ['TAVILY_API_KEY'],
+    permissions: ['web_search'],
+    disabledReason: 'Tavily API key is not configured.'
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    status: 'not_configured',
+    transport: 'deepseek_api',
+    requiredEnv: ['DEEPSEEK_API_KEY'],
+    permissions: ['prompt_exchange', 'web_search'],
+    disabledReason: 'DeepSeek API key is not configured.'
+  },
+  {
+    id: 'n8n',
+    name: 'n8n Automation',
+    status: 'foundation_only',
+    transport: 'n8n_rest_api',
+    requiredEnv: ['N8N_BASE_URL'],
+    permissions: ['workflow_trigger', 'workflow_read'],
+    disabledReason: 'Requires local or self-hosted n8n instance (default: http://localhost:5678).'
   }
 ];
 

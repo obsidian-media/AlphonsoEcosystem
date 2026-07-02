@@ -350,6 +350,50 @@ into Sprint 2+ — not dropped.
     `CLAUDE.md`, `README.md`, `docs/CHANGELOG.md`,
     `docs/ALPHONSO_GROUND_TRUTH.md`, and this file, all together before
     declaring the sprint done — not as a follow-up.
+- **2026-07-02 (post-Sprint-2, v2.5.3) — bug fix + registry cleanup +
+  Sprint 3-6 seeding, prompted by user follow-up questions**:
+  - **Auto-updater was silently non-functional.** User reported "the
+    updater does not work." Investigation found `appUpdateService.ts`'s
+    `checkAppUpdate()` fully implemented with 19 passing tests, but
+    `App.tsx` never called it — `updaterVersion` state stayed `null`
+    forever, so the banner could never show. Separately, the Update
+    button's `onUpdate` handler was hardcoded to `() => {}}`. Also
+    confirmed (via `gh release list`) that no release newer than v2.4.4
+    had actually been published in ~6 days of dev — so even a working
+    updater would have found nothing, since nothing newer was ever tagged.
+    Fixed both the check-wiring and the button; full in-app
+    download+install+relaunch is explicitly NOT done (needs
+    `@tauri-apps/plugin-updater`/`plugin-process`, not installed) —
+    logged as a real follow-up, not quietly skipped.
+  - **Connector registry had a real, traceable gap.** User asked why
+    Brave Search/Ollama/Perplexity/Tavily/DeepSeek/n8n weren't in the
+    central registry despite having working credential UI. Traced via git
+    log: each was added in a separate earlier sprint that wired credential
+    UI directly to one consumer without registering centrally — confirmed
+    drift, not intentional design. Added all 6.
+  - **Investigated "features feel forgotten," Coach Mode specifically.**
+    Traced the toggle handler through `App.tsx` — it's real, wired into
+    the main `Sidebar` and `OperatorDashboard`. Not dead code. Could not
+    go further (no browser-automation tool available this session to
+    actually click through the rendered UI), so reported exactly that
+    boundary instead of guessing at UI prominence. Seeded a proper
+    discoverability audit for Sprint 3 rather than closing the loop on an
+    unverifiable claim.
+  - **Corrected a stale doc claim while seeding Sprint 5** (service TS
+    migration): `CLAUDE.md` said "10 components migrated, 63 .jsx
+    remaining." Checked directly — `src/components/` is 100% `.tsx`, 0
+    `.jsx`. The claim was simply wrong, not even stale-by-drift; nobody
+    had verified it in a while. Corrected and re-scoped Sprint 5 to the
+    actual remaining gap (services).
+  - **Clarified the release process** rather than assuming a local build
+    was needed: read `.github/workflows/release.yml` and confirmed every
+    prior release was built by CI on tag push, signed with a GitHub
+    Actions repo secret — not locally. This dev machine correctly lacks a
+    signing key; generating a new one would have broken the existing
+    update-trust chain for anyone already running Alphonso, so that option
+    was surfaced but not taken.
+  - Version bumped 2.5.2 → 2.5.3. Full targeted test sweep: 183/183
+    passing. All five docs updated in the same pass.
 
 ## Sprint status at a glance
 
@@ -364,6 +408,32 @@ into Sprint 2+ — not dropped.
 
 Seeded now so scope survives even if priorities shift or a session diverges
 from this exact ordering — treat the numbering as intent, not a hard queue.
+
+## Sprint 3 (seeded, +1 item): Feature discoverability audit
+
+**Origin:** user flagged that features may exist and work but feel
+"forgotten" — Coach Mode was the concrete example given. Investigated
+2026-07-02: Coach Mode is **not dead code** — `App.tsx` wires
+`onOpenCoach={handleToggleCoachMode}` into the main `Sidebar` component and
+also exposes coach toggles through `OperatorDashboard`. The toggle handler
+is real and reachable, not orphaned plumbing. What's unverified is whether
+it's *prominent* enough in the actual rendered UI — that's a visual
+judgment call that needs a real browser/click-through pass, which wasn't
+available as a tool in the session that did this investigation.
+
+- Do a full click-through pass of the running app (needs a
+  browser-automation-capable session/tool, or the user driving it live)
+  auditing: Coach Mode, Boardroom sessions, Agent Pairing, Mission Room,
+  Self-Development panel, Ecosystem Maturity panels — anything gated
+  behind "Operator Mode" or a nav item that isn't in the default view.
+  These are all real, wired features per `CLAUDE.md`'s Do-Not-Duplicate
+  table — the question is exposure, not existence.
+- For each: is it in the default nav, or buried behind a mode toggle a
+  first-time user would never find? If buried, is that intentional
+  (advanced/operator-only) or accidental?
+- Cross-reference against `CLAUDE.md`'s Real Gaps history — several past
+  entries closed a feature by wiring it, but "wired" and "discoverable"
+  are different bars, and only the first was verified at the time.
 
 ## Sprint 3 (seeded): Agent specialization depth — the "skill library" gap
 

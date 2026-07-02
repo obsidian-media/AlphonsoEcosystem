@@ -131,6 +131,7 @@ function AppShell() {
   const voice = useVoiceInput();
   const toast = useToast();
   const [updaterVersion, setUpdaterVersion] = useState<string | null>(null);
+  const [updaterDownloadUrl, setUpdaterDownloadUrl] = useState<string | null>(null);
 
   // Notification center state
   type NotificationType = 'success' | 'warning' | 'error' | 'info';
@@ -391,6 +392,36 @@ function AppShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // App update check (Tauri-only) — mirrors the endpoint/pubkey configured in
+  // tauri-conf.json's plugins.updater block. checkAppUpdate() and the
+  // UpdaterNotification component already existed and were already tested,
+  // but nothing ever called the former or wired a real handler to the
+  // latter's Update button, so the banner could never appear. Fixed here.
+  // Full in-app download+install+relaunch (vs. opening the release page)
+  // needs @tauri-apps/plugin-updater + plugin-process, not installed yet —
+  // tracked as a Sprint follow-up in ALPHONSOTOTHEMOON.md.
+  useEffect(() => {
+    if (typeof window.__TAURI_INTERNALS__ === 'undefined') return;
+    (async () => {
+      try {
+        const { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } = await import('./services/appUpdateService');
+        const result = await checkAppUpdate({
+          endpoint: 'https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json',
+          pubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJENzgyMEY4MkZGMTE3OUMKUldTY0YvRXYrQ0I0TGRlVWt2cmZhcGVaUVRtQ0lZcDZkZUl5YmxqcEZvbjFYTG01ZnJvWVgwMUgK'
+        });
+        if (result.available && result.latestVersion) {
+          const lastNotice = getLastUpdateNotice();
+          if (lastNotice?.latestVersion !== result.latestVersion) {
+            setUpdaterVersion(result.latestVersion);
+            setUpdaterDownloadUrl(result.downloadUrl);
+            setLastUpdateNotice({ latestVersion: result.latestVersion, noticedAtMs: Date.now() });
+          }
+        }
+      } catch { /* non-critical */ }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Voice OS watchdog — restarts voice server if it dies (Tauri-only)
   useEffect(() => {
     if (typeof window.__TAURI_INTERNALS__ === 'undefined') return;
@@ -539,7 +570,17 @@ function AppShell() {
 
   return (
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-cyan-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-[var(--surface-0)] text-[var(--text-1)]'} ${themeClassFromSettings(settings)}`}>
-      <UpdaterNotification version={updaterVersion} onUpdate={() => {}} onDismiss={() => setUpdaterVersion(null)} />
+      <UpdaterNotification
+        version={updaterVersion}
+        onUpdate={() => {
+          if (updaterDownloadUrl) {
+            invoke('open_url', { url: updaterDownloadUrl }).catch(() => {
+              window.open(updaterDownloadUrl, '_blank', 'noopener,noreferrer');
+            });
+          }
+        }}
+        onDismiss={() => setUpdaterVersion(null)}
+      />
       {notificationsOpen && (
         <NotificationCenter
           notifications={notifications}

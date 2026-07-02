@@ -6,6 +6,83 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.3] — 2026-07-02
+
+### Bug fix: auto-updater never actually checked for updates
+
+- Root cause: `src/services/appUpdateService.ts`'s `checkAppUpdate()`
+  function existed, was fully implemented, and had 19 passing tests — but
+  nothing in `App.tsx` ever called it, and `updaterVersion` state
+  (controls whether the `UpdaterNotification` banner shows) was never set
+  anywhere. Separately, `onUpdate={() => {}}` on the banner was a literal
+  no-op — even a manually-set banner's "Update & Restart" button did
+  nothing. Confirmed via `gh release list` that no release newer than
+  v2.4.4 had been published in the ~6 days since, and the live
+  `latest.json` manifest (fetched directly) was well-formed and correctly
+  pointed at v2.4.4 — so part of the user-facing symptom was also simply
+  "no newer release has been tagged," not purely a code bug.
+- Fix: added a Tauri-only boot `useEffect` in `App.tsx` that calls
+  `checkAppUpdate()` with the real endpoint/pubkey from `tauri.conf.json`'s
+  `plugins.updater` block, sets `updaterVersion` when an update is
+  available (deduped per-version via the existing
+  `getLastUpdateNotice`/`setLastUpdateNotice` helpers, which also already
+  existed and were unused for this purpose), and wires the button to open
+  the release download via the existing `invoke('open_url', ...)` pattern.
+- Explicitly not done: full in-app download+install+relaunch. That needs
+  `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process`, neither of
+  which is an installed dependency — the Rust side has
+  `tauri-plugin-updater` registered and ready, but the JS side has no way
+  to call `downloadAndInstall()`/`relaunch()` yet. Tracked as a Sprint
+  follow-up in `ALPHONSOTOTHEMOON.md`, not silently scoped out.
+
+### Connector registry completeness
+
+- `connectorRegistry.js`'s `DEFAULT_CONNECTORS` was missing 6 connectors
+  that already had working credential UI and service implementations:
+  Ollama, Brave Search, Perplexity, Tavily, DeepSeek, n8n. Each had been
+  added in a separate, earlier feature push that wired credential UI
+  directly to its one consumer (e.g. DeepSeek → Hector's research fallback
+  chain) without also registering a central entry — genuine architectural
+  drift across several past sprints, not a deliberate design choice. Added
+  all 6 with accurate `requiredEnv`/`permissions`/`transport` metadata.
+  Connector count: 16 → 22. `connectorGitHubSlack.test.ts` updated with
+  explicit coverage for all 6 plus the corrected total.
+
+### Roadmap: Sprint 3-6 seeded in ALPHONSOTOTHEMOON.md
+
+- **Sprint 3**: agent specialization depth — every agent currently has
+  exactly one default skill pack (from Sprint 1); real specialization
+  needs a multi-skill library per agent (e.g. Miya: separate creative-video,
+  ui-ux-design, brand-identity packs instead of one catch-all). Also
+  folded in a feature-discoverability audit item after investigating a
+  "Coach Mode feels forgotten" report — confirmed Coach Mode is actually
+  wired (reachable via the main Sidebar and OperatorDashboard), not dead
+  code; true UI prominence is unverified pending a real click-through pass.
+- **Sprint 4**: security hardening Batch 2 — the existing "Batch 1" was
+  app-integrity hardening (SSRF, PKCE, CSP); Batch 2 should be the
+  adversarial pass (prompt-injection resistance, credential storage audit,
+  threat-modeling the two new Sprint 2 inbound surfaces specifically).
+- **Sprint 5**: service-layer TypeScript migration. Correction to a stale
+  `CLAUDE.md` claim found while seeding this: component migration is
+  actually complete (`src/components/` is 100% `.tsx`, 114 files, 0
+  `.jsx`), not "10 migrated, 63 remaining" as previously documented. The
+  real gap is services: 115 `.js` vs. 16 `.ts` in `src/services/`.
+- **Sprint 6**: runtime-hardening carryover from Sprint 2's original
+  backlog (subprocess sandboxing, MCP-as-runtime-capability, scheduler
+  heartbeat, email connector, module-system convergence, EULA/trademark).
+
+### Release process clarification
+
+- Confirmed (via `.github/workflows/release.yml`) that installer releases
+  have always been built by CI, not locally: pushing a `v*` tag triggers a
+  `windows-latest` GitHub Actions job that runs `tauri build` signed with
+  `TAURI_SIGNING_PRIVATE_KEY` from repo secrets, then publishes a GitHub
+  Release with the installer + `latest.json` updater manifest attached.
+  This dev environment correctly has no local signing key — it was never
+  meant to.
+
+---
+
 ## [2.5.2] — 2026-07-02
 
 ### ALPHONSOTOTHEMOON Sprint 2
