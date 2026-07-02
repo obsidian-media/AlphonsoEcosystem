@@ -53,6 +53,55 @@ fn clean_ws(input: &str) -> String {
   input.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// Checks a resolved IP address against private/loopback/link-local ranges.
+/// This is the ground-truth check — always test the address a connection would
+/// actually be made to, not just a hostname string, to avoid DNS-rebinding bypasses.
+pub(crate) fn is_private_ip_addr(ip: std::net::IpAddr) -> bool {
+  match ip {
+    std::net::IpAddr::V4(v4) => {
+      if v4.is_loopback() || v4.is_unspecified() {
+        return true;
+      }
+      let octets = v4.octets();
+      if octets[0] == 10 {
+        return true;
+      }
+      if octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31 {
+        return true;
+      }
+      if octets[0] == 192 && octets[1] == 168 {
+        return true;
+      }
+      if octets[0] == 169 && octets[1] == 254 {
+        return true;
+      }
+      if octets[0] == 100 && (octets[1] & 0xc0) == 0x40 {
+        return true;
+      }
+      if octets[0] == 198 && (octets[1] & 0xfe) == 0x12 {
+        return true;
+      }
+      false
+    }
+    std::net::IpAddr::V6(v6) => {
+      if v6.is_loopback() || v6.is_multicast() || v6.is_unspecified() {
+        return true;
+      }
+      let segments = v6.segments();
+      if segments[0] == 0xfc00 || segments[0] == 0xfd00 {
+        return true;
+      }
+      if segments[0] == 0xfe80 {
+        return true;
+      }
+      false
+    }
+  }
+}
+
+/// String-only check: catches IP-literal hosts and the `localhost` name without a DNS
+/// lookup. Does NOT protect against DNS-rebinding (a public-looking hostname that
+/// resolves to a private IP) — use `is_private_host` (async, resolves DNS) for that.
 pub(crate) fn is_private_ip(host: &str) -> bool {
   let host = host.trim().to_ascii_lowercase();
   if host.is_empty() {
@@ -62,43 +111,26 @@ pub(crate) fn is_private_ip(host: &str) -> bool {
     return true;
   }
   if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-    match ip {
-      std::net::IpAddr::V4(v4) => {
-        let octets = v4.octets();
-        if octets[0] == 10 {
-          return true;
-        }
-        if octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31 {
-          return true;
-        }
-        if octets[0] == 192 && octets[1] == 168 {
-          return true;
-        }
-        if octets[0] == 169 && octets[1] == 254 {
-          return true;
-        }
-        if octets[0] == 100 && (octets[1] & 0xc0) == 0x40 {
-          return true;
-        }
-        if octets[0] == 198 && (octets[1] & 0xfe) == 0x12 {
-          return true;
-        }
-      }
-      std::net::IpAddr::V6(v6) => {
-        if v6.is_loopback() || v6.is_multicast() {
-          return true;
-        }
-        let segments = v6.segments();
-        if segments[0] == 0xfc00 || segments[0] == 0xfd00 {
-          return true;
-        }
-        if segments[0] == 0xfe80 {
-          return true;
-        }
-      }
+    if is_private_ip_addr(ip) {
+      return true;
     }
   }
   false
+}
+
+/// SSRF-safe host check: resolves DNS and checks every returned address, so a public-looking
+/// hostname (e.g. `attacker.example.com`) that resolves to a private/link-local address
+/// (e.g. the cloud metadata IP 169.254.169.254) is caught. Falls back to the literal-string
+/// check if resolution fails (offline, bad DNS) — a failed lookup means the follow-up request
+/// will fail on its own, so it's safe to not block here.
+pub(crate) async fn is_private_host(host: &str) -> bool {
+  if is_private_ip(host) {
+    return true;
+  }
+  match tokio::net::lookup_host((host, 0)).await {
+    Ok(addrs) => addrs.map(|addr| addr.ip()).any(is_private_ip_addr),
+    Err(_) => false,
+  }
 }
 
 fn extract_title(html: &str) -> Option<String> {
@@ -361,7 +393,7 @@ pub(crate) async fn fetch_research_sources(
       Err(_) => continue, // defensive fallback; should be unreachable due to guard above
     };
     if let Some(host) = url.host_str() {
-      if is_private_ip(host) {
+      if is_private_host(host).await {
         proofs.push(ResearchSourceProof {
           url: url.to_string(),
           source_type,
