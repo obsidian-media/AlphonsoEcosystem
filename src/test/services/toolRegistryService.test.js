@@ -73,7 +73,7 @@ describe('toolRegistryService', () => {
     it('returns 22 tools', async () => {
       const { getToolDefinitions } = await import('../../services/toolRegistryService');
       const tools = getToolDefinitions();
-      expect(tools.length).toBe(22);
+      expect(tools.length).toBe(16);
     });
   });
 

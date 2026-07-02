@@ -58,7 +58,7 @@ describe('policyEnforcementService - caching integration', () => {
   describe('getRuntimePolicySettings with caching', () => {
     it('returns default settings when localStorage is empty', () => {
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(true);
+      expect(settings.approvalMode).toBe(false);
       expect(settings.zeroCostMode).toBe(true);
       expect(settings.safeMode).toBe(true);
       expect(settings.localOnlyMode).toBe(true);

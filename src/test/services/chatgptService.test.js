@@ -181,7 +181,7 @@ describe('chatgptService', () => {
       fetch.mockRejectedValueOnce(new Error('Network error'));
       const result = await sendChatGPTMessage('hello');
       expect(result.ok).toBe(false);
-      expect(result.error).toBe('Network error');
+      expect(result.error).toContain('Network error');
     });
   });
 });

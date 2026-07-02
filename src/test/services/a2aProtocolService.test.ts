@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+const durableStore: Record<string, string> = {};
 vi.mock('../../lib/durableStore', () => ({
-  durableGet: vi.fn(() => null),
-  durableSet: vi.fn(),
-  durableRemove: vi.fn(),
+  durableGet: vi.fn((k: string) => durableStore[k] ?? null),
+  durableSet: vi.fn((k: string, v: string) => { durableStore[k] = v; }),
+  durableRemove: vi.fn((k: string) => { delete durableStore[k]; }),
 }));
 
 vi.mock('../../services/agentBusService', () => ({
@@ -22,6 +23,7 @@ describe('a2aProtocolService', () => {
 
   beforeEach(() => {
     Object.keys(storage).forEach(k => delete storage[k]);
+    Object.keys(durableStore).forEach(k => delete durableStore[k]);
     vi.stubGlobal('localStorage', localStorageMock);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01'));

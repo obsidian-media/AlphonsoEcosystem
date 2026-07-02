@@ -1,11 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn()
+  invoke: vi.fn(() => Promise.resolve())
 }));
 
 vi.mock('@tauri-apps/api/event', () => ({
   emit: vi.fn()
+}));
+
+vi.mock('../../lib/durableStore', () => ({
+  durableGet: vi.fn((key) => {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }),
+  durableSet: vi.fn((key, value) => {
+    try { localStorage.setItem(key, value); } catch { /* ignore */ }
+  }),
+  durableRemove: vi.fn((key) => {
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+  })
 }));
 
 describe('connectorImageGenerators', () => {

@@ -25,6 +25,10 @@ export async function generateSdWebUiImage({
   }
   const gate = gateConnectorAction('sd_webui', 'local_image_generation', prompt, { ...options, approved: true });
   if (!gate.ok) {
+    appendConnectorAudit('sd_webui', 'image_generation_blocked_policy_gate', {
+      reason: gate.reason || null,
+      riskLevel: gate.riskLevel
+    });
     return {
       ok: false,
       connectorId: 'sd_webui',
@@ -202,6 +206,10 @@ export async function generateComfyUiImage({
   }
   const gate = gateConnectorAction('comfyui_video', 'local_image_generation', prompt, { ...options, approved: true });
   if (!gate.ok) {
+    appendConnectorAudit('comfyui_video', 'image_generation_blocked_policy_gate', {
+      reason: gate.reason || null,
+      riskLevel: gate.riskLevel
+    });
     return { ok: false, connectorId: 'comfyui_video', blocked: true, trust: gate.verificationState || TRUST_STATES.PENDING, error: gate.reason || 'ComfyUI policy gate blocked the action.' };
   }
   let workflow;

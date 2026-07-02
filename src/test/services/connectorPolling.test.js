@@ -1,7 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+const mockInvoke = vi.fn((cmd) => {
+  if (cmd === 'check_env_vars_presence') return Promise.resolve({});
+  return Promise.reject(new Error('test rejection'));
+});
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn()
+  invoke: mockInvoke
+}));
+
+vi.mock('../../lib/durableStore', () => ({
+  durableGet: vi.fn((key) => {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }),
+  durableSet: vi.fn((key, value) => {
+    try { localStorage.setItem(key, value); } catch { /* ignore */ }
+  }),
+  durableRemove: vi.fn((key) => {
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+  })
 }));
 
 vi.mock('../telegramBrowserConnector', () => ({

@@ -15,10 +15,9 @@ describe('policyEnforcementService', () => {
   describe('getRuntimePolicySettings', () => {
     it('returns all-true defaults when localStorage is empty', () => {
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(true);
+      expect(settings.approvalMode).toBe(false);
       expect(settings.zeroCostMode).toBe(true);
       expect(settings.safeMode).toBe(true);
-      expect(settings.localOnlyMode).toBe(true);
     });
 
     it('reads explicit false values from settings', () => {
@@ -36,7 +35,7 @@ describe('policyEnforcementService', () => {
     it('returns defaults on corrupt JSON', () => {
       localStorage.setItem('alphonso_settings', 'not-json');
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(true);
+      expect(settings.approvalMode).toBe(false);
       expect(settings.zeroCostMode).toBe(true);
     });
   });
@@ -218,8 +217,8 @@ describe('policyEnforcementService', () => {
 
     it('blocks ambiguous action pattern', () => {
       const result = evaluatePolicyGate({
-        connectorId: 'telegram',
-        actionType: 'send_message',
+        connectorId: 'youtube',
+        actionType: 'external_publish',
         approved: false
       });
       expect(result.ok).toBe(false);

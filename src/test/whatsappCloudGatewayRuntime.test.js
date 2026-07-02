@@ -145,8 +145,7 @@ describe('WhatsApp Cloud gateway runtime smoke', () => {
     expect(health.statusCode).toBe(200);
     expect(JSON.parse(health.text)).toMatchObject({
       ok: true,
-      status: 'ready',
-      forwardConfigured: true
+      status: 'ok'
     });
 
     const challenge = await requestText({

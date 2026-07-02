@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+const mockGetConnectorCredential = vi.fn((connector, key) => {
+  if (connector === 'whatsapp' && key === 'WHATSAPP_ACCESS_TOKEN') return 'mock-token';
+  if (connector === 'whatsapp' && key === 'WHATSAPP_PHONE_NUMBER_ID') return '1234567890';
+  if (connector === 'whatsapp' && key === 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL') return 'http://localhost:8000/drain';
+  if (connector === 'whatsapp' && key === 'WHATSAPP_VERIFY_TOKEN') return 'mock-token';
+  return '';
+});
+
 vi.mock('../../services/connectors/connectorAuth.js', () => ({
-  getConnectorCredential: vi.fn((connector, key) => {
-    if (connector === 'whatsapp' && key === 'WHATSAPP_ACCESS_TOKEN') return 'mock-token';
-    if (connector === 'whatsapp' && key === 'WHATSAPP_PHONE_NUMBER_ID') return '123456789';
-    if (connector === 'whatsapp' && key === 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL') return 'http://localhost:8000/drain';
-    if (connector === 'whatsapp' && key === 'WHATSAPP_VERIFY_TOKEN') return 'mock-token';
-    return '';
-  })
+  getConnectorCredential: mockGetConnectorCredential
 }));
 
 global.fetch = vi.fn();
@@ -15,6 +17,13 @@ global.fetch = vi.fn();
 describe('whatsappBrowserConnector', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetConnectorCredential.mockImplementation((connector, key) => {
+      if (connector === 'whatsapp' && key === 'WHATSAPP_ACCESS_TOKEN') return 'mock-token';
+      if (connector === 'whatsapp' && key === 'WHATSAPP_PHONE_NUMBER_ID') return '1234567890';
+      if (connector === 'whatsapp' && key === 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL') return 'http://localhost:8000/drain';
+      if (connector === 'whatsapp' && key === 'WHATSAPP_VERIFY_TOKEN') return 'mock-token';
+      return '';
+    });
   });
 
   describe('browserSendWhatsApp', () => {
@@ -25,21 +34,19 @@ describe('whatsappBrowserConnector', () => {
 
     it('throws error when WHATSAPP_ACCESS_TOKEN missing', async () => {
       const mod = await import('../../services/whatsappBrowserConnector');
-      const { getConnectorCredential } = await import('../../services/connectors/connectorAuth.js');
-      getConnectorCredential.mockReturnValueOnce('');
+      mockGetConnectorCredential.mockReturnValueOnce('');
       await expect(mod.browserSendWhatsApp({ to: '123', text: 'hello' })).rejects.toThrow('WHATSAPP_ACCESS_TOKEN');
     });
 
     it('throws error when WHATSAPP_PHONE_NUMBER_ID missing', async () => {
       const mod = await import('../../services/whatsappBrowserConnector');
-      const { getConnectorCredential } = await import('../../services/connectors/connectorAuth.js');
-      getConnectorCredential.mockReturnValueOnce('token').mockReturnValueOnce('');
+      mockGetConnectorCredential.mockReturnValueOnce('token').mockReturnValueOnce('');
       await expect(mod.browserSendWhatsApp({ to: '123', text: 'hello' })).rejects.toThrow('WHATSAPP_PHONE_NUMBER_ID');
     });
 
     it('normalizes phone number by removing + prefix', async () => {
       const { browserSendWhatsApp } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({ messages: [{ id: 'msg123' }] })
@@ -55,7 +62,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('includes replyToId in context when provided', async () => {
       const { browserSendWhatsApp } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({ messages: [{ id: 'msg123' }] })
@@ -68,7 +75,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('returns ok true on successful send', async () => {
       const { browserSendWhatsApp } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({ messages: [{ id: 'msg123' }] })
@@ -80,7 +87,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('returns error object on failed send', async () => {
       const { browserSendWhatsApp } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: false,
         status: 500,
         json: async () => ({ error: { message: 'Internal error' } })
@@ -92,7 +99,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('handles non-retryable HTTP status codes', async () => {
       const { browserSendWhatsApp } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: false,
         status: 401,
         json: async () => ({ error: { message: 'Unauthorized' } })
@@ -111,14 +118,13 @@ describe('whatsappBrowserConnector', () => {
 
     it('throws error when WHATSAPP_CLOUD_GATEWAY_DRAIN_URL missing', async () => {
       const mod = await import('../../services/whatsappBrowserConnector');
-      const { getConnectorCredential } = await import('../../services/connectors/connectorAuth.js');
-      getConnectorCredential.mockReturnValue('');
+      mockGetConnectorCredential.mockReturnValue('');
       await expect(mod.browserPollWhatsAppGateway({})).rejects.toThrow('WHATSAPP_CLOUD_GATEWAY_DRAIN_URL');
     });
 
     it('includes limit in URL params', async () => {
       const { browserPollWhatsAppGateway } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         json: async () => ({ messages: [] })
       });
@@ -128,7 +134,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('includes authorization header when token present', async () => {
       const { browserPollWhatsAppGateway } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         json: async () => ({ messages: [] })
       });
@@ -139,7 +145,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('maps messages to standard format', async () => {
       const { browserPollWhatsAppGateway } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         json: async () => ({
           messages: [{ from: 'user123', text: 'hello', id: 'msg1' }]
@@ -153,7 +159,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('handles array response format', async () => {
       const { browserPollWhatsAppGateway } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         json: async () => ([{ chatId: 'abc', text: 'test', id: 'x1' }])
       });
@@ -163,7 +169,7 @@ describe('whatsappBrowserConnector', () => {
 
     it('returns trust verified on success', async () => {
       const { browserPollWhatsAppGateway } = await import('../../services/whatsappBrowserConnector');
-      fetch.mockResolvedValueOnce({
+      fetch.mockResolvedValue({
         ok: true,
         json: async () => ({ messages: [] })
       });
