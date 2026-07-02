@@ -13,17 +13,20 @@ import {
 } from './connectorRegistry.js';
 import { durableGet, durableSet } from '../../lib/durableStore.js';
 const CREDS_KEY = 'alphonso_connector_credentials_v1';
+const CRED_CACHE_TTL_MS = 60_000;
 
 let _credCache = null;
+let _credCacheHydratedAt = 0;
 
-export async function hydrateConnectorCredentialsFromSqlite() {
-  if (_credCache !== null) return;
+export async function hydrateConnectorCredentialsFromSqlite(force = false) {
+  if (_credCache !== null && !force && (Date.now() - _credCacheHydratedAt) < CRED_CACHE_TTL_MS) return;
   try {
     const json = await invoke('kv_get', { key: CREDS_KEY });
     if (json) {
       const parsed = JSON.parse(json);
       if (parsed && typeof parsed === 'object') {
         _credCache = parsed;
+        _credCacheHydratedAt = Date.now();
         try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
         return;
       }
@@ -33,6 +36,7 @@ export async function hydrateConnectorCredentialsFromSqlite() {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         _credCache = parsed;
+        _credCacheHydratedAt = Date.now();
         invoke('kv_set', { key: CREDS_KEY, value: raw }).catch(() => {});
         localStorage.removeItem(CREDS_KEY);
       }
@@ -43,11 +47,21 @@ export async function hydrateConnectorCredentialsFromSqlite() {
 }
 
 function readAllCredentials() {
-  return _credCache !== null ? _credCache : (_credCache = {});
+  if (_credCache === null) {
+    _credCache = {};
+    _credCacheHydratedAt = Date.now();
+  } else if ((Date.now() - _credCacheHydratedAt) >= CRED_CACHE_TTL_MS) {
+    // Stale beyond TTL — trigger an async re-hydrate from the durable store so a
+    // credential update made elsewhere (e.g. app restart racing a write) is
+    // eventually picked up. Return the current value now; refresh applies on next read.
+    hydrateConnectorCredentialsFromSqlite(true).catch(() => {});
+  }
+  return _credCache;
 }
 
 function writeAllCredentials(creds) {
   _credCache = creds;
+  _credCacheHydratedAt = Date.now();
   try {
     invoke('kv_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => {});
   } catch {

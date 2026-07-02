@@ -85,7 +85,11 @@ export function validateAgentExecutionContract(packet: AgentContractPacket): Con
   const toAgent = packet?.toAgent;
   const action = String(packet?.actionType || '').toLowerCase();
   const preview = String(packet?.commandPreview || '').toLowerCase();
-  const contract = AGENT_EXECUTION_CONTRACTS[toAgent || ''];
+  if (!toAgent) {
+    return { ok: false, reason: 'Missing toAgent — contract validation requires an explicit target agent.' };
+  }
+
+  const contract = AGENT_EXECUTION_CONTRACTS[toAgent];
 
   if (!contract) {
     return { ok: true, reason: null };

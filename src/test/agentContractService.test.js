@@ -156,6 +156,30 @@ describe('agentContractService', () => {
       expect(result.ok).toBe(false);
     });
 
+    it('fails closed when toAgent is missing', () => {
+      const result = validateAgentExecutionContract({
+        actionType: 'execute_command_run_tests'
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain('Missing toAgent');
+    });
+
+    it('fails closed when toAgent is undefined explicitly', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: undefined,
+        actionType: 'execute_command_run_tests'
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('fails closed when toAgent is an empty string', () => {
+      const result = validateAgentExecutionContract({
+        toAgent: '',
+        actionType: 'execute_command_run_tests'
+      });
+      expect(result.ok).toBe(false);
+    });
+
     it('returns ok for unknown agent', () => {
       const result = validateAgentExecutionContract({
         toAgent: 'unknown_agent',
