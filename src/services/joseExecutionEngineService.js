@@ -52,6 +52,12 @@ import { parseJsonResponse } from '../lib/jsonUtils';
 import { executeParallel } from './parallelExecutionService';
 import { agentCache } from './cacheService';
 
+// Loop-guard / execution budget ceilings for a single pipeline run.
+// See ALPHONSOTOTHEMOON.md §3.1 — prevents a malformed command graph or a
+// stuck agent from spinning unbounded iterations or wall-clock time.
+const PIPELINE_MAX_ASSIGNMENTS = 50;
+const PIPELINE_MAX_DURATION_MS = 5 * 60 * 1000;
+
 export function isJoseIntakeCommand(text) {
   return /^(\/jose\b|ask\s+jose\b|jose[:\s])/i.test(String(text || '').trim());
 }
@@ -1238,10 +1244,24 @@ export async function runJoseCommandExecutionPipeline({
 
   const { waves, assignmentMap } = buildExecutionPlan(command.assignments || []);
 
+  // Loop-guard + budget: hard ceiling on a single pipeline run so a malformed
+  // command graph or a stuck agent can never spin unbounded iterations or
+  // wall-clock time. See ALPHONSOTOTHEMOON.md §3.1.
+  const pipelineStartMs = timestampMs();
+  let processedAssignmentCount = 0;
+  let budgetExceeded = false;
+
+  waveLoop:
   for (const [waveIndex, wave] of waves.entries()) {
     const waveAssignments = wave.map((agent) => assignmentMap[agent]).filter(Boolean);
     onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
+      if (processedAssignmentCount >= PIPELINE_MAX_ASSIGNMENTS || (timestampMs() - pipelineStartMs) >= PIPELINE_MAX_DURATION_MS) {
+        budgetExceeded = true;
+        break waveLoop;
+      }
+      processedAssignmentCount += 1;
+
       const packet = getPacketById(assignment.packetId);
       if (!packet) {
         failedCount += 1;
@@ -1584,6 +1604,40 @@ export async function runJoseCommandExecutionPipeline({
         verificationState: TRUST_STATES.VERIFIED
       });
     }
+  }
+
+  if (budgetExceeded) {
+    appendOrchestrationReceipt({
+      workflowId: 'jose_execution_pipeline',
+      commandId: command.id,
+      packetId: null,
+      eventType: 'pipeline_budget_exceeded',
+      status: 'budget_exceeded',
+      agent: AGENTS.JOSE,
+      actionType: 'orchestration_budget_guard',
+      riskLevel: 'high',
+      approved: false,
+      blocked: true,
+      setupRequired: false,
+      details: {
+        processedAssignmentCount,
+        elapsedMs: timestampMs() - pipelineStartMs,
+        maxAssignments: PIPELINE_MAX_ASSIGNMENTS,
+        maxDurationMs: PIPELINE_MAX_DURATION_MS
+      },
+      confidence: TRUST_STATES.FAILED,
+      verificationState: TRUST_STATES.FAILED
+    });
+    onProgress?.({ stage: 'pipeline_budget_exceeded', processedAssignmentCount, commandId: command.id });
+    return {
+      ok: false,
+      reason: 'budget_exceeded',
+      executedCount,
+      pendingApprovalCount,
+      failedCount,
+      budgetExceeded: true,
+      command
+    };
   }
 
   const confirmationText = pendingApprovalCount > 0

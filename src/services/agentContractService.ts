@@ -66,6 +66,64 @@ export const AGENT_EXECUTION_CONTRACTS: Record<string, AgentExecutionContract> =
   }
 };
 
+// Permission-tag prefixes each agent's skill packs are allowed to carry.
+// Distinct from allowedActionPrefixes above: those gate orchestration action
+// packets, this gates skill-pack permissions declared in skillPackService.js.
+const AGENT_SKILL_PERMISSION_PREFIXES: Record<string, string[]> = {
+  [AGENTS.JOSE]: ['task_routing', 'approval_gating', 'cross_agent_synthesis', 'execution_tracking', 'workflows.', 'runtime.read'],
+  [AGENTS.ALPHONSO]: ['workflows.', 'runtime.', 'code.', 'local_operation', 'verification_', 'execute_command', 'filesystem_'],
+  [AGENTS.MIYA]: ['media.', 'video.', 'creative.', 'runway.'],
+  [AGENTS.HECTOR]: ['market_research', 'content_strategy', 'campaign_planning', 'workflow_review', 'research'],
+  [AGENTS.MARIA]: ['workflow.audit', 'risk.', 'claim.', 'approval.', 'trust.', 'receipt.', 'evidence.', 'state.'],
+  [AGENTS.MARCUS]: ['distribution.', 'engagement.', 'performance.', 'approved_'],
+  [AGENTS.ECHO]: ['memory.', 'retention.', 'knowledge.', 'timeline.'],
+  [AGENTS.SENTINEL]: ['security.', 'risk.', 'permission.', 'audit.'],
+  [AGENTS.NOVA]: ['opportunity.', 'analysis.', 'prioritization.', 'strategy.']
+};
+
+// Permission tags no agent skill pack may carry except Alphonso's own operator role.
+const UNIVERSAL_BLOCKED_SKILL_PERMISSIONS = ['filesystem.write', 'execute_command', 'external_publish', 'purchase'];
+
+export interface SkillPermissionValidationResult {
+  ok: boolean;
+  reason: string | null;
+  offendingPermissions?: string[];
+}
+
+/**
+ * Cross-checks a skill pack's declared permissions against its owning agent's
+ * execution contract. Packs with no ownerAgent (generic/cross-agent workflow
+ * packs) are not scoped by this check — only agent-owned packs are.
+ */
+export function validateSkillPackAgainstContract(agentName: string | undefined, permissions: string[] = []): SkillPermissionValidationResult {
+  if (!agentName) {
+    return { ok: true, reason: null };
+  }
+  const contract = AGENT_EXECUTION_CONTRACTS[agentName];
+  const allowedPrefixes = AGENT_SKILL_PERMISSION_PREFIXES[agentName];
+  if (!contract || !allowedPrefixes) {
+    // Unknown agent or no declared skill-permission scope — nothing to validate against.
+    return { ok: true, reason: null };
+  }
+
+  const offendingPermissions = (permissions || []).filter((permission) => {
+    const value = String(permission || '').toLowerCase();
+    if (agentName !== AGENTS.ALPHONSO && startsWithAny(value, UNIVERSAL_BLOCKED_SKILL_PERMISSIONS)) {
+      return true;
+    }
+    return !startsWithAny(value, allowedPrefixes);
+  });
+
+  if (offendingPermissions.length > 0) {
+    return {
+      ok: false,
+      reason: `${agentName} contract does not permit skill permissions: ${offendingPermissions.join(', ')}.`,
+      offendingPermissions
+    };
+  }
+  return { ok: true, reason: null };
+}
+
 export interface AgentContractPacket {
   toAgent?: string;
   actionType?: string;

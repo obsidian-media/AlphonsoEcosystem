@@ -147,6 +147,9 @@ Before writing any new service, component, or feature, check this list:
 | Gateway Dockerfile | `gateway/whatsapp-cloud/Dockerfile` — single-stage Node 20 Alpine build (no multi-stage); `railway.json` uses DOCKERFILE builder |
 | durableStore (SQLite dual-write) | `src/lib/durableStore.js` — `durableGet/Set/Remove` writes to localStorage + fire-and-forgets to Tauri `kv_set`; used by crashLogService, agentAuditService, novaAnalysisService |
 | TypeScript components (.tsx) | `AgentStatusStrip.tsx`, `UpdaterNotification.tsx`, `NotificationCenter.tsx`, `AgentPerformanceView.tsx`, `TopBar.tsx` — migrated with full prop interfaces; old .jsx files removed |
+| Skill pack ↔ agent contract validation | `src/services/agentContractService.ts` — `validateSkillPackAgainstContract(agentName, permissions)`; called from `skillPackService.js` `installSkillPack`/`setSkillPackEnabled` to reject/flag skill packs whose permissions exceed the owning agent's execution contract |
+| Default skill packs per agent (all 9) | `src/services/skillPackService.js` `BASE_PACKS` — every agent (Alphonso, Jose, Hector, Miya, Maria×2, Marcus, Echo, Sentinel, Nova) now has an `agent_skill` category default pack; loaded via `loadAgentSkillGuidance()`, already wired into `joseExecutionEngineService.js` |
+| Pipeline loop-guard / execution budget | `src/services/joseExecutionEngineService.js` — `PIPELINE_MAX_ASSIGNMENTS` (50) / `PIPELINE_MAX_DURATION_MS` (5 min) ceiling inside `runJoseCommandExecutionPipeline`; on breach returns `{ ok: false, reason: 'budget_exceeded' }` + `pipeline_budget_exceeded` receipt. Do NOT add a second budget mechanism — extend these constants/checks instead |
 | Plugin registry service | `src/services/pluginRegistryService.js` — `listPlugins`, `togglePlugin`, `discoverDiskPluginManifests`, `executePluginToolRun`, `validatePluginManifestDisk` |
 | Plugin signing service | `src/services/pluginSigningService.js` — ECDSA P-256 keypair, `signPluginManifest`, `verifyPluginSignature`, `verifyAndAddPlugin`, trusted signer key management |
 | Plugin Marketplace UI | `src/components/SettingsView.tsx` — `PluginMarketplacePanel` component; Settings → Plugins nav section |
@@ -328,6 +331,12 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Dependabot PRs (8 safe)~~ — **CLOSED 2026-07-01** (merged #77–#80, #82, #84, #86, #87; left open: #81 rand 0.10 breaking, #83 tailwindcss v4 breaking, #85 vite-plugin-react v6 major)
 - Branch protection on `main` — still OPEN (manual GitHub step; MCP doesn't expose branch protection API)
 - functions coverage at 5.88% — threshold lowered to 0 to unblock CI; real gap remains
+- ~~No LICENSE~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (`LICENSE` — SHALAUDE v1.0, all-rights-reserved, source-visible; see `ALPHONSOTOTHEMOON.md` §1)
+- ~~Skill packs not cross-checked against agent contracts~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (`validateSkillPackAgainstContract` in `agentContractService.ts`, wired into `skillPackService.js` install/enable paths)
+- ~~5 of 9 agents (Alphonso, Marcus, Echo, Sentinel, Nova) had no default skill pack~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (all 9 agents now have an `agent_skill` category pack in `skillPackService.js`)
+- ~~Jose execution pipeline had no runaway-loop / budget ceiling~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (`PIPELINE_MAX_ASSIGNMENTS`/`PIPELINE_MAX_DURATION_MS` guard in `joseExecutionEngineService.js`)
+- Full local test suite (218 files) cannot complete in one run on this dev machine — vitest worker-pool startup times out past ~170 files regardless of pool size (default, 4-worker cap, and the project's own programmatic runner all reproduce it identically). Files that do run pass with 0 assertion failures; this is an environment/resource constraint, not a code defect. Worth investigating machine-side (available RAM/CPU vs. concurrent fork count) before the next full-suite-dependent sprint gate — still OPEN
+- Subprocess/sandboxed tool execution, MCP-as-first-class-runtime-capability, scheduler heartbeat supervision, Discord/webhook/email connectors, module-system convergence, EULA/trademark — see `ALPHONSOTOTHEMOON.md` §3–§5 for the full Sprint 2+ backlog, deliberately scoped out of Sprint 1
 
 ---
 

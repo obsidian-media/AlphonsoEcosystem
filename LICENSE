@@ -1,0 +1,55 @@
+SHALAUDE LICENSE v1.0
+(Shayan + Claude — All Rights Reserved, Source-Visible)
+
+Copyright (c) 2026 Shayan. All rights reserved.
+
+1. GRANT
+   No rights are granted by this license except the right to view this
+   source code as published. No license — express, implied, or by
+   estoppel — is granted to use, copy, modify, merge, publish,
+   distribute, sublicense, host, deploy, or sell copies of this
+   software or any derivative work, in whole or in part, for any
+   purpose, without the prior written permission of the copyright
+   holder.
+
+2. NO USE WITHOUT PERMISSION
+   You may not run this software, incorporate it into another product,
+   or use any portion of its source code, architecture, prompts, agent
+   definitions, or design in a commercial or non-commercial product
+   without a separate written agreement with the copyright holder.
+
+3. CONTRIBUTIONS
+   Any contribution submitted to this repository (pull request, patch,
+   or suggested change) is, unless otherwise agreed in writing, assigned
+   to the copyright holder and becomes subject to this same license.
+
+4. THIRD-PARTY COMPONENTS
+   This project may incorporate or reference third-party open-source
+   components (including code studied or adapted from Apache-2.0 or
+   MIT licensed projects). Those components remain governed by their
+   original licenses; see NOTICE for attribution. Nothing in this
+   license reduces the rights granted by those upstream licenses to
+   their respective works, and nothing in those upstream licenses
+   grants rights to the proprietary portions of this project.
+
+5. NO WARRANTY
+   THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+   CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR THE
+   USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+6. TERMINATION
+   Any use in violation of this license automatically terminates
+   whatever limited viewing permission this license implies, and
+   requires immediate cessation of use and destruction of any copies.
+
+7. CONTACT
+   For licensing inquiries, commercial use, or partnership requests,
+   contact the copyright holder directly.
+
+This is a source-available, all-rights-reserved license. It is not an
+OSI-approved open-source license. "SHALAUDE" is a project-internal name
+for this license text and carries no separate legal meaning beyond the
+terms stated above.

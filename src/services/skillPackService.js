@@ -1,4 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
+import { validateSkillPackAgainstContract } from './agentContractService';
 
 const SKILL_PACK_KEY = 'alphonso_skill_packs_v1';
 const SKILL_AUDIT_KEY = 'alphonso_skill_pack_audit_v1';
@@ -82,6 +83,56 @@ const BASE_PACKS = [
     permissions: ['trust.validation', 'receipt.validation', 'evidence.review', 'state.confirmation'],
     category: 'agent_skill',
     ownerAgent: 'maria',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.alphonso-runtime-operations',
+    name: 'Alphonso Runtime Operations Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['runtime.read', 'runtime.manage', 'workflows.read', 'verification_before_completion', 'local_operation'],
+    category: 'agent_skill',
+    ownerAgent: 'alphonso',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.marcus-distribution-execution',
+    name: 'Marcus Distribution Execution Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['distribution.publish', 'distribution.schedule', 'engagement.track', 'performance.report', 'approved_dispatch'],
+    category: 'agent_skill',
+    ownerAgent: 'marcus',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.echo-memory-synthesis',
+    name: 'Echo Memory Synthesis Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['memory.synthesize', 'retention.classify', 'knowledge.timeline', 'timeline.summarize'],
+    category: 'agent_skill',
+    ownerAgent: 'echo',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.sentinel-vuln-scan',
+    name: 'Sentinel Vulnerability Scan Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['security.scan', 'risk.classification', 'permission.review', 'audit.findings'],
+    category: 'agent_skill',
+    ownerAgent: 'sentinel',
+    trust: TRUST_STATES.VERIFIED
+  },
+  {
+    id: 'pack.nova-opportunity-analysis',
+    name: 'Nova Opportunity Analysis Skill',
+    version: '1.0.0',
+    enabled: true,
+    permissions: ['opportunity.score', 'analysis.trend', 'prioritization.rank', 'strategy.recommend'],
+    category: 'agent_skill',
+    ownerAgent: 'nova',
     trust: TRUST_STATES.VERIFIED
   }
 ];
@@ -285,6 +336,15 @@ export function installSkillPack(manifest) {
     };
   }
 
+  const contractCheck = validateSkillPackAgainstContract(manifest.ownerAgent, manifest.permissions);
+  if (!contractCheck.ok) {
+    audit('install_blocked', manifest.id, { ownerAgent: manifest.ownerAgent, reason: contractCheck.reason });
+    return {
+      installed: false,
+      validation: { valid: false, errors: [contractCheck.reason] }
+    };
+  }
+
   const packs = listSkillPacks();
   const next = {
     id: manifest.id,
@@ -293,6 +353,7 @@ export function installSkillPack(manifest) {
     enabled: manifest.enabled ?? true,
     permissions: manifest.permissions,
     category: manifest.category || 'custom',
+    ownerAgent: manifest.ownerAgent,
     trust: TRUST_STATES.TEMPORARY,
     installedAtMs: timestampMs()
   };
@@ -307,7 +368,18 @@ export function installSkillPack(manifest) {
 }
 
 export function setSkillPackEnabled(packId, enabled) {
-  const packs = listSkillPacks().map((pack) => (
+  const existing = listSkillPacks();
+  const target = existing.find((pack) => pack.id === packId);
+
+  if (enabled && target?.ownerAgent) {
+    const contractCheck = validateSkillPackAgainstContract(target.ownerAgent, target.permissions);
+    if (!contractCheck.ok) {
+      audit('enable_blocked', packId, { ownerAgent: target.ownerAgent, reason: contractCheck.reason });
+      return existing;
+    }
+  }
+
+  const packs = existing.map((pack) => (
     pack.id === packId ? { ...pack, enabled } : pack
   ));
   write(SKILL_PACK_KEY, packs);
