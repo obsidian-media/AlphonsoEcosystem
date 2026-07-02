@@ -351,21 +351,109 @@ into Sprint 2+ — not dropped.
     `docs/ALPHONSO_GROUND_TRUTH.md`, and this file, all together before
     declaring the sprint done — not as a follow-up.
 
-## Sprint 3 backlog (not started)
+## Sprint status at a glance
 
-Carried forward from the "explicitly rejected/deferred" list in §3 and §5,
-plus new items surfaced this sprint. Not yet broken into tasks:
+| Sprint | Theme | Status |
+|---|---|---|
+| 1 | Licensing (SHALAUDE) + skill-pack↔contract validation + pipeline loop-guard | ✅ Closed 2026-07-02 |
+| 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
+| 3 | Agent specialization depth (skill library expansion) | 🌱 Seeded, not started |
+| 4 | Security hardening Batch 2 (attacker-resistance) | 🌱 Seeded, not started |
+| 5 | Service-layer TypeScript migration | 🌱 Seeded, not started |
+| 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🌱 Seeded, not started |
+
+Seeded now so scope survives even if priorities shift or a session diverges
+from this exact ordering — treat the numbering as intent, not a hard queue.
+
+## Sprint 3 (seeded): Agent specialization depth — the "skill library" gap
+
+**The gap this addresses:** Sprint 1 gave every agent exactly one default
+skill pack (e.g. `pack.miya-runway-video-generation`). That's a placeholder,
+not real specialization. The actual ask: an agent like Miya should be able
+to carry a *library* of narrow, high-quality skills — the way Claude Code
+itself has dozens of narrow skills (e.g. a UI/UX-focused design skill is one
+of many available, not Claude's whole personality) — so a request that
+touches UI/UX pulls in deep, specific guidance instead of Miya's one generic
+creative pack handling everything shallowly.
+
+- Design a skill-pack taxonomy per agent (e.g. Miya: creative-video,
+  creative-image, ui-ux-design, brand-identity, motion-graphics — instead
+  of one `pack.miya-*` catch-all).
+- Decide sourcing: hand-author packs (mirrors the existing `SKILL_WORKFLOW_GUIDANCE`
+  map in `skillPackService.js`), or build an import path from an external
+  skill catalog (the `pack.workflow.find-skills` pack already references
+  skills.sh — worth checking if that integration is real or aspirational).
+- Extend `validateSkillPackAgainstContract()` (Sprint 1) to scale — right
+  now it's a flat prefix-allowlist per agent; a real multi-skill library
+  needs per-skill scoping, not just per-agent.
+- Surface which skills are active per-agent in the UI (Agent Workshop /
+  AgentPairingView are candidate locations — check what exists first).
+- Decide the "peak" scope honestly: is this 5-10 curated packs per agent,
+  or a genuine marketplace model? Recommend starting with 3-5 real packs
+  for the 2-3 highest-traffic agents (Miya, Hector, Jose) as a v1, not a
+  big-bang rebuild.
+
+## Sprint 4 (seeded): Security hardening Batch 2 — attacker resistance
+
+**Context:** `CLAUDE.md` currently documents "Security (Batch 1 complete)"
+— SSRF blocking, PKCE OAuth, native clipboard/dialog/open_url APIs, CSP
+narrowing, per-program arg allowlist. That's app-integrity hardening
+(don't let the app do something wrong). Batch 2 should be the adversarial
+pass: can an external attacker (malicious webhook payload, malicious skill
+pack, malicious MCP tool, compromised connector credential) actually cause
+harm.
+
+- Threat-model the two new Sprint 2 inbound surfaces specifically: the
+  generic webhook gateway (unauthenticated-until-token-checked JSON from
+  the internet) and Discord (bot token scope creep, message content from
+  untrusted users reaching agent prompts).
+- Prompt-injection resistance audit: what happens when webhook payload
+  content, Discord message content, or Telegram/WhatsApp inbound text
+  contains an injection attempt aimed at Jose's routing or an agent's
+  system prompt.
+- Credential storage audit: connector credentials currently live in
+  localStorage + SQLite dual-write (`durableStore.js`) — evaluate whether
+  that's sufficient or whether OS-level secret storage (Windows Credential
+  Manager via a Tauri plugin) is warranted for a security-conscious release.
+- Rate-limiting audit across all inbound surfaces (webhook gateway already
+  has one; check Telegram/WhatsApp/Discord polling paths).
+- Dependency/supply-chain pass: `npm audit` + `cargo audit` are already in
+  CI per `ci.yml` — verify they're actually gating merges, not just running.
+- This is the sprint to actually engage a real security-focused review
+  pass (e.g. `/code-review security` or a dedicated pentest-style pass)
+  rather than self-assessed hardening.
+
+## Sprint 5 (seeded): Service-layer TypeScript migration
+
+**Correction to a stale CLAUDE.md claim** (caught 2026-07-02): the
+component migration is actually **complete** — `src/components/` is 100%
+`.tsx` (114 files, 0 `.jsx` remaining), not "10 migrated, 63 remaining" as
+CLAUDE.md said before this correction. The real remaining gap is the
+**service layer**: `src/services/` is 115 `.js` files vs. only 16 `.ts`
+files. That's the actual next migration target, not components.
+
+- Prioritize services with complex state/contracts first (this sprint's
+  own `agentContractService.ts` and `orchestrationQueueService.ts` are
+  already `.ts` — good models to extend from).
+- Do not attempt this in one pass — batch by subsystem (connectors first,
+  since `discordConnector.ts`/`slackConnector.ts` are already `.ts` and
+  most connector `.js` files are small and self-contained).
+
+## Sprint 6 (seeded): Runtime hardening carryover + remaining connectors
+
+Carried forward from Sprint 2's original backlog, still not started:
 
 - Subprocess/sandboxed tool execution (§3.2)
 - MCP as a first-class runtime capability, not a side Express server (§3.4)
 - Scheduler heartbeat/liveness supervision (§3.5)
 - Email connector — SMTP send / IMAP poll (§5)
 - Module-system convergence evaluation: `modules/` TOML packages vs.
-  `skillPackService.js` packs (§4.3)
+  `skillPackService.js` packs (§4.3) — directly relevant to Sprint 3 above,
+  should probably be resolved before or alongside Sprint 3, not after
 - EULA + trademark work, once external distribution is actually planned (§1)
 - Fix `ConnectorSetupPanel.test.jsx`'s `connectorAuth` mock gap (found in
   Sprint 2, one-line fix: add `hydrateConnectorCredentialsFromSqlite:
   vi.fn().mockResolvedValue()` to the mock factory)
 - Investigate the vitest worker-pool startup timeout that blocks a full
   218-file suite run on this dev machine past ~170 files (first logged
-  Sprint 1, still open going into Sprint 3)
+  Sprint 1, still open)

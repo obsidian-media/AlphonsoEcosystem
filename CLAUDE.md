@@ -302,7 +302,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~Onboarding flow~~ — **CLOSED 2026-06-23** (Ollama auto-start, not-installed detection, Telegram/WhatsApp/Composio inline guides, `OllamaOfflineBanner` in main shell)
 - ~~Ollama offline state~~ — **CLOSED 2026-06-23** (`OllamaOfflineBanner.jsx` — global, persistent, Start/Retry/Runtime Hub)
 - ~~Composio onboarding~~ — **CLOSED 2026-06-23** (inline API key entry in OnboardingWizard Step 3, saves via `setComposioConfig`) (prereq detection, async streaming, venv isolation, AudioCraft fix, InvokeAI venv exe, boot status banner, autostart prefs JSON)
-- TypeScript migration — 10 components migrated (all major ones done). Remaining: bulk of 63 .jsx component files
+- ~~TypeScript migration (components)~~ — **CLOSED, verified 2026-07-02**: `src/components/` is 100% `.tsx` (114 files, 0 `.jsx` remaining) — this line was stale, corrected during ALPHONSOTOTHEMOON Sprint 3 seeding. The real remaining gap is the **service layer**: `src/services/` is 115 `.js` vs. 16 `.ts`. Tracked as Sprint 5 in `ALPHONSOTOTHEMOON.md`.
 - ~~Boot null-guard crashes~~ — **CLOSED 2026-06-25 patch2** (3 `invoke()` calls returning `null` — `getAllStatus`, both `check_env_vars_presence` — guarded with `?? []/{}`)
 - ~~Coach mode button broken in web mode~~ — **CLOSED 2026-06-25 patch2** (`CoachContext` `handleToggleCoachMode/Top` wrapped in try/catch; `coachModeService` `getByLabel` gets `.catch(() => null)`)
 - ~~Browse buttons broken in web mode~~ — **CLOSED 2026-06-25 patch2** (Output Folder + ComfyUI Dir fallback to hidden `<input webkitdirectory>` in `SettingsView.tsx`)
