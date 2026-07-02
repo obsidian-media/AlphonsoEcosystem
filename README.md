@@ -4,11 +4,11 @@
 
 # Alphonso
 
-> **v2.5.0** — Local-first AI desktop companion with 9 agents, 15 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.1** — Local-first AI desktop companion with 9 agents, 15 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.1-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
-[![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
+[![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
@@ -22,6 +22,14 @@ It orchestrates 9 specialized agents, connects to 15 external services, and uses
 </div>
 
 ---
+
+## What's New in v2.5.1
+
+- **SHALAUDE License v1.0** — project now carries an explicit all-rights-reserved, source-visible license (`LICENSE`). Replaces the prior unlicensed/ambiguous public-repo state.
+- **`ALPHONSOTOTHEMOON.md`** — roadmap built from a structural comparison against OpenFang and LibreFang's agent-orchestration patterns; tracks what's being adopted, what's deliberately rejected, and sprint-by-sprint progress.
+- **Skill pack ↔ agent contract validation** — `validateSkillPackAgainstContract()` in `agentContractService.ts` now blocks a skill pack from granting an agent permissions beyond its execution contract.
+- **Default skill packs for all 9 agents** — Alphonso, Marcus, Echo, Sentinel, and Nova each now carry a default `agent_skill` pack (previously only Jose/Hector/Miya/Maria did).
+- **Pipeline loop-guard / execution budget** — `runJoseCommandExecutionPipeline` now hard-stops at 50 assignments or 5 minutes wall-clock per run, preventing a malformed command graph or stuck agent from spinning unbounded.
 
 ## What's New in v2.4.4
 
@@ -381,8 +389,8 @@ Security contact: [security@obsidianmedia.online](mailto:security@obsidianmedia.
 
 ## License
 
-Business Source License 1.1 (BSL 1.1) — see [LICENSE](LICENSE) for details.  
-Change date: four years from release. Personal use is free. Commercial use requires a license.
+SHALAUDE License v1.0 — All Rights Reserved, source-visible. See [LICENSE](LICENSE) for details.  
+No use, copy, modification, or distribution is permitted without prior written permission from the copyright holder. This is not an OSI-approved open-source license.
 
 ---
 

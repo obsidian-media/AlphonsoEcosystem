@@ -6,6 +6,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.1] — 2026-07-02
+
+### ALPHONSOTOTHEMOON Sprint 1
+
+- **Licensing**: added `LICENSE` — SHALAUDE License v1.0, an all-rights-reserved,
+  source-visible license. Replaces the prior state where the public repo carried
+  no explicit license file (README previously referenced BSL 1.1, which was never
+  actually present as `LICENSE`; corrected to match reality).
+- Added `ALPHONSOTOTHEMOON.md` — a roadmap built from comparing AlphonsoEcosystem's
+  orchestration architecture against `RightNow-AI/openfang` and its community fork
+  `librefang/librefang`. Documents what's being adopted (loop-guard/budget patterns,
+  subprocess sandboxing, crash-recovery checkpoints, MCP-as-runtime-capability,
+  scheduler heartbeat supervision, connector breadth) and what's deliberately
+  rejected (a full Rust kernel rewrite; the "autonomous, minimal human-in-loop"
+  posture, which conflicts with Alphonso's approval-gated design).
+- `agentContractService.ts` — added `validateSkillPackAgainstContract(agentName, permissions)`.
+  Wired into `skillPackService.js` `installSkillPack`/`setSkillPackEnabled` so a
+  skill pack can no longer grant an agent capabilities outside its execution contract.
+- `skillPackService.js` — added default `agent_skill` category packs for the 5 agents
+  that lacked one: Alphonso (`pack.alphonso-runtime-operations`), Marcus
+  (`pack.marcus-distribution-execution`), Echo (`pack.echo-memory-synthesis`),
+  Sentinel (`pack.sentinel-vuln-scan`), Nova (`pack.nova-opportunity-analysis`).
+  All 9 agents now carry a default skill pack.
+- `joseExecutionEngineService.js` — added a loop-guard / execution budget to
+  `runJoseCommandExecutionPipeline`: `PIPELINE_MAX_ASSIGNMENTS` (50) and
+  `PIPELINE_MAX_DURATION_MS` (5 minutes) hard-stop a single pipeline run, emitting
+  a `pipeline_budget_exceeded` orchestration receipt on breach instead of allowing
+  unbounded iteration.
+- Version bumped 2.5.0 → 2.5.1. `CLAUDE.md`, `README.md`, and
+  `docs/ALPHONSO_GROUND_TRUTH.md` updated same-pass.
+
+---
+
 ## [2.5.0-test-expansion-2] — 2026-07-01
 
 ### Test Coverage Expansion — Phase 3 (Agent Core + Connectors + Communication)

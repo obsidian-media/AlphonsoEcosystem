@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Draft v1.0 — Sprint 1 kickoff
+**Status:** Sprint 1 closed — Sprint 2 in progress
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -285,3 +285,17 @@ into Sprint 2+ — not dropped.
     treated as a code defect — flagged in `CLAUDE.md` Real Gaps for follow-up.
   - Items 6–8 (resumable-execution checkpoint, Discord connector, generic
     webhook connector) rolled to Sprint 2 as originally scoped.
+  - **Doc-currency correction**: the initial Sprint 1 close only updated
+    `CLAUDE.md` and this file, missing `docs/ALPHONSO_GROUND_TRUTH.md`,
+    `README.md`, and `docs/CHANGELOG.md` — a direct violation of this
+    project's own "all docs updated same-commit" rule. Caught and fixed
+    before Sprint 2 proceeded. While auditing those docs, found and fixed a
+    real inconsistency: `README.md` still advertised "Business Source
+    License 1.1 (BSL 1.1)" with a badge and a "personal use free, commercial
+    requires a license" clause — but no BSL license file had ever existed in
+    the repo, and it now directly contradicted the SHALAUDE all-rights-
+    reserved `LICENSE` added in this sprint. Corrected README's badge and
+    License section to reference SHALAUDE accurately. Bumped package.json
+    2.5.0 → 2.5.1 to mark this as a real, doc-verified release point.
+    Lesson: a "close the sprint" step must explicitly enumerate every doc
+    the project's own rules require, not just the two most obvious ones.

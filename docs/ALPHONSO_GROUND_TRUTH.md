@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.0 (Onboarding wizard expansion + Phase 0 audit verification)
-**Verified by:** Claude Code session — full `verify:app` re-run in isolation (218 files / 3,174 tests passing, 0 failures), `cargo test` re-run in isolation (91 passed / 3 pre-existing failures, unchanged from `todo.md`), production build clean.
-**Version:** 2.5.0 (security hardened, 218 test files, 3,174 tests, 162 services)
+**Last verified:** 2026-07-02 — v2.5.1 (ALPHONSOTOTHEMOON Sprint 1: licensing + skill-pack hardening + pipeline budget guard)
+**Verified by:** Claude Code session — targeted test files for all Sprint 1 changes passed 100% (`skillPackService.test.js` 63/63, `joseExecutionEngineService.test.js` 42/42), `npx tsc --noEmit` clean (0 errors). Full 218-file suite could not complete in one run on this dev machine due to a vitest worker-pool startup timeout past ~170 files (reproduced identically with default settings, a 4-worker cap, and the project's own `scripts/run-vitest-programmatic.mjs`); every file that did run passed with 0 assertion failures. This is logged as an open environment item, not a code defect — see "Real Gaps" in `CLAUDE.md`.
+**Version:** 2.5.1 (security hardened, 218 test files, 3,174+ tests, 163 services — no new service files added in Sprint 1, only edits to existing `agentContractService.ts`, `skillPackService.js`, `joseExecutionEngineService.js`)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -867,6 +867,40 @@ After Railway deploy: point Meta webhook URL to `https://<your-railway-url>/webh
 
 ---
 
+## 11.5 ALPHONSOTOTHEMOON Sprint 1 (2026-07-02)
+
+Full context and rationale live in `ALPHONSOTOTHEMOON.md` at repo root — this is
+the ground-truth summary of what actually changed.
+
+- **Licensing**: `LICENSE` added — SHALAUDE License v1.0 (all-rights-reserved,
+  source-visible, not OSI-approved). The repo previously had no LICENSE file at
+  all; README's prior "BSL 1.1" claim did not match reality (no BSL file ever
+  existed in the repo) and has been corrected to reference SHALAUDE.
+- **Skill pack ↔ agent contract enforcement**: `validateSkillPackAgainstContract()`
+  in `src/services/agentContractService.ts` cross-checks a skill pack's declared
+  `permissions` against its owning agent's `AGENT_EXECUTION_CONTRACTS` entry.
+  Wired into `installSkillPack`/`setSkillPackEnabled` in `skillPackService.js` —
+  a pack whose permissions exceed its agent's contract is rejected (install) or
+  refused (enable), with an `install_blocked`/`enable_blocked` audit entry.
+- **Default skill packs for all 9 agents**: previously only Jose, Hector, Miya,
+  and Maria (×2) had an `agent_skill` category default pack. Added:
+  `pack.alphonso-runtime-operations`, `pack.marcus-distribution-execution`,
+  `pack.echo-memory-synthesis`, `pack.sentinel-vuln-scan`,
+  `pack.nova-opportunity-analysis`.
+- **Pipeline loop-guard / execution budget**: `runJoseCommandExecutionPipeline`
+  in `joseExecutionEngineService.js` now hard-stops at `PIPELINE_MAX_ASSIGNMENTS`
+  (50) or `PIPELINE_MAX_DURATION_MS` (5 minutes), whichever comes first. On
+  breach it returns `{ ok: false, reason: 'budget_exceeded' }` and appends a
+  `pipeline_budget_exceeded` orchestration receipt — this did not exist before;
+  a malformed command graph or stuck agent could previously iterate unbounded.
+- Deferred to Sprint 2 (tracked in `ALPHONSOTOTHEMOON.md`, not dropped): resumable-
+  execution checkpoints on top of the existing dead-letter queue, a Discord
+  connector, a generic inbound webhook connector, subprocess/sandboxed tool
+  execution, MCP as a first-class runtime capability (not just a side Express
+  server), and scheduler heartbeat/liveness supervision.
+
+---
+
 ## 12. Known Audit Errors (for future reference)
 
 These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_SUBAGENTS_2026-05-31.md`. They are recorded here so future sessions do not repeat them.
@@ -885,7 +919,7 @@ These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_S
 
 ---
 
-_Last verified: 2026-07-01 — v2.5.0. Security hardening (Batch 1) complete: SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed. TypeScript: 0 errors. Tests: 218 files / 3,167 passing. package.json: 2.5.0. 8 Dependabot PRs merged (safe patches); 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking). Companion backend: 5 Rust modules live and wired. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred._
+_Last verified: 2026-07-02 — v2.5.1. ALPHONSOTOTHEMOON Sprint 1 shipped: SHALAUDE License v1.0 added (repo previously had no LICENSE; README's stale BSL 1.1 claim corrected), skill-pack-to-agent-contract validation (`validateSkillPackAgainstContract`), default skill packs for all 9 agents (was 4), pipeline loop-guard/execution budget on `runJoseCommandExecutionPipeline` (50 assignments / 5 min ceiling). TypeScript: 0 errors. package.json: 2.5.1. Targeted Sprint 1 test files: 105/105 passing. Full 218-file suite blocked by a vitest worker-pool startup timeout on this dev machine past ~170 files (reproduced 3 ways — infra issue, not a code defect; open item). Prior state (v2.5.0, 2026-07-01): security hardening (Batch 1) complete — SSRF, PKCE, tauri-plugin-dialog, arboard, per-program arg allowlist, policyDslService live, CSP narrowed; 218 files / 3,167 tests passing; 8 Dependabot PRs merged, 3 left open (rand 0.10, Tailwind v4, vite-plugin-react v6 — all breaking); companion backend 5 Rust modules live. Open gaps: Voice OS Python prereq, plugin sandbox isolation, branch protection on main (manual step), rand/Tailwind/Vite major upgrades deferred, vitest worker-pool timeout on full-suite runs (new), Sprint 2 backlog (resumable-execution checkpoints, Discord connector, generic webhook connector, subprocess sandboxing, MCP-as-runtime-capability, scheduler heartbeat)._
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
 
