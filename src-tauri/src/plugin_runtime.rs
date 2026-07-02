@@ -18,6 +18,13 @@ pub(crate) struct PluginManifestDisk {
   enabled_by_default: Option<bool>,
   manifest_version: Option<String>,
   tools: Option<Vec<PluginToolDisk>>,
+  // Per-plugin program allowlist. When present, execute_plugin_tool rejects any
+  // tool.program not explicitly declared here, on top of the shared system-wide
+  // allowed_program() check. Optional for backward compatibility with existing
+  // manifests — when absent, only the shared allowlist applies (unchanged
+  // behavior). See validate_plugin_manifest_disk, which warns when this is
+  // missing so plugin authors are nudged toward declaring it.
+  declared_programs: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -85,6 +92,25 @@ fn plugin_blocked_token_present(value: &str) -> Option<&'static str> {
     .into_iter()
     .find(|&token| value.contains(token))
     .map(|v| v as _)
+}
+
+/// Per-plugin program allowlist check. When a manifest declares
+/// `declared_programs`, a tool's program must be a member (case-insensitive) of
+/// that list — this is enforced IN ADDITION TO the shared system-wide
+/// `allowed_program()` check, not instead of it. When the manifest omits
+/// `declared_programs` entirely (the field is `None`), this returns `true` for
+/// backward compatibility with manifests written before this restriction
+/// existed — those manifests still get the shared allowlist check.
+fn program_allowed_by_manifest(declared_programs: Option<&Vec<String>>, program: &str) -> bool {
+  match declared_programs {
+    None => true,
+    Some(declared) => {
+      let program_lower = program.to_ascii_lowercase();
+      declared
+        .iter()
+        .any(|entry| entry.to_ascii_lowercase() == program_lower)
+    }
+  }
 }
 
 pub(crate) fn validate_plugin_extra_args(extra_args: &[String]) -> Result<(), String> {
@@ -271,6 +297,19 @@ pub(crate) fn validate_plugin_manifest_disk(
       {
         warnings.push("Plugin has no declared tools.".to_string());
       }
+      if parsed
+        .declared_programs
+        .as_ref()
+        .map(|d| d.is_empty())
+        .unwrap_or(true)
+      {
+        warnings.push(
+          "Plugin manifest has no declared_programs allowlist — execute_plugin_tool will only \
+           enforce the shared system-wide program allowlist, not a per-plugin restriction. \
+           Add declared_programs to scope this plugin to only the programs it actually needs."
+            .to_string(),
+        );
+      }
       if let Some(tools) = parsed.tools {
         for tool in tools {
           if tool.id.trim().is_empty() {
@@ -282,6 +321,12 @@ pub(crate) fn validate_plugin_manifest_disk(
           if !allowed_program(&tool.program) {
             warnings.push(format!(
               "Plugin tool {} program '{}' is outside supervised allowlist.",
+              tool.id, tool.program
+            ));
+          }
+          if !program_allowed_by_manifest(parsed.declared_programs.as_ref(), &tool.program) {
+            errors.push(format!(
+              "Plugin tool {} program '{}' is not listed in declared_programs.",
               tool.id, tool.program
             ));
           }
@@ -478,6 +523,27 @@ pub(crate) fn execute_plugin_tool(
     return Err(reason);
   }
 
+  if !program_allowed_by_manifest(parsed.declared_programs.as_ref(), &tool.program) {
+    let reason = format!(
+      "Plugin tool program '{}' is not in this plugin's declared_programs allowlist.",
+      tool.program
+    );
+    let _ = append_plugin_audit_event(
+      &app,
+      "plugin_tool_execution_blocked",
+      serde_json::json!({
+        "pluginId": plugin_id,
+        "toolId": tool_id,
+        "manifestPath": manifest_path,
+        "program": tool.program,
+        "declaredPrograms": parsed.declared_programs,
+        "reason": reason,
+        "trust": "failed"
+      }),
+    );
+    return Err(reason);
+  }
+
   let mut args = tool.args.unwrap_or_default();
   args.extend(extra);
   let cwd = resolve_plugin_cwd(&manifest_path_buf, &tool.cwd, &workspace_root)?;
@@ -577,5 +643,32 @@ mod tests {
     assert!(plugin_blocked_token_present("$(").is_some());
     assert!(plugin_blocked_token_present("`").is_some());
     assert!(plugin_blocked_token_present("safe_arg").is_none());
+  }
+
+  #[test]
+  fn program_allowed_by_manifest_allows_when_declared_programs_absent() {
+    assert!(program_allowed_by_manifest(None, "npm"));
+    assert!(program_allowed_by_manifest(None, "anything"));
+  }
+
+  #[test]
+  fn program_allowed_by_manifest_enforces_allowlist_when_present() {
+    let declared = vec!["npm".to_string(), "git".to_string()];
+    assert!(program_allowed_by_manifest(Some(&declared), "npm"));
+    assert!(program_allowed_by_manifest(Some(&declared), "git"));
+    assert!(!program_allowed_by_manifest(Some(&declared), "docker"));
+  }
+
+  #[test]
+  fn program_allowed_by_manifest_is_case_insensitive() {
+    let declared = vec!["NPM".to_string()];
+    assert!(program_allowed_by_manifest(Some(&declared), "npm"));
+    assert!(program_allowed_by_manifest(Some(&declared), "Npm"));
+  }
+
+  #[test]
+  fn program_allowed_by_manifest_rejects_all_when_declared_list_empty() {
+    let declared: Vec<String> = vec![];
+    assert!(!program_allowed_by_manifest(Some(&declared), "npm"));
   }
 }
