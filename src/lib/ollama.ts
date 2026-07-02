@@ -143,6 +143,20 @@ export function classifyOllamaError(error: unknown): OllamaErrorClassification {
     };
   }
 
+  if (
+    text.includes('failed to allocate') ||
+    text.includes('alloc_tensor_range') ||
+    text.includes('unable to allocate') ||
+    text.includes('out of memory') ||
+    text.includes('cuda_host buffer')
+  ) {
+    return {
+      code: 'out_of_memory',
+      label: 'Model too large for available memory',
+      message: 'This model needs more RAM/VRAM than your system has free. Try a smaller model, quit other GPU/RAM-heavy apps, or check GPU memory usage before retrying.'
+    };
+  }
+
   return {
     code: 'disconnected',
     label: 'Disconnected',
