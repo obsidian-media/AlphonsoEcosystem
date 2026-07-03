@@ -19,11 +19,31 @@ const CRITICAL_RISK_SIGNALS = [
   'data_exfiltration'
 ];
 
-export function evaluateRisk(assignments) {
+interface Assignment {
+  actionType?: string;
+  riskLevel?: string;
+  agent?: string;
+  [key: string]: unknown;
+}
+
+interface FlaggedItem {
+  agent: string;
+  actionType: string | undefined;
+  riskLevel: string;
+  reasons: string[];
+}
+
+interface RiskEvaluation {
+  flagged: FlaggedItem[];
+  highRiskCount: number;
+  criticalCount: number;
+}
+
+export function evaluateRisk(assignments: Assignment[]): RiskEvaluation {
   if (!Array.isArray(assignments) || assignments.length === 0) {
     return { flagged: [], highRiskCount: 0, criticalCount: 0 };
   }
-  const flagged = [];
+  const flagged: FlaggedItem[] = [];
   let highRiskCount = 0;
   let criticalCount = 0;
 
@@ -31,7 +51,7 @@ export function evaluateRisk(assignments) {
     const action = String(assignment?.actionType || '').toLowerCase();
     const risk = String(assignment?.riskLevel || '').toLowerCase();
     const agent = String(assignment?.agent || '').toLowerCase();
-    const reasons = [];
+    const reasons: string[] = [];
 
     const isHighRiskAction = HIGH_RISK_ACTIONS.some((prefix) => action.startsWith(prefix) || action.includes(prefix));
     const isHighRiskLevel = risk === 'high' || risk === 'critical';
@@ -60,7 +80,21 @@ export function evaluateRisk(assignments) {
   return { flagged, highRiskCount, criticalCount };
 }
 
-export function checkSentinelAlerts(commandId, agentName = 'sentinel') {
+interface SentinelAlert {
+  type: string;
+  signal?: string;
+  artifactType?: string;
+  status?: string;
+  state?: string;
+}
+
+interface SentinelAlertsResult {
+  found: boolean;
+  alerts: SentinelAlert[];
+  output: Record<string, unknown> | null;
+}
+
+export function checkSentinelAlerts(commandId: string, agentName: string = 'sentinel'): SentinelAlertsResult {
   if (!commandId) {
     return { found: false, alerts: [], output: null };
   }
@@ -69,7 +103,7 @@ export function checkSentinelAlerts(commandId, agentName = 'sentinel') {
     return { found: false, alerts: [], output: null };
   }
 
-  const alerts = [];
+  const alerts: SentinelAlert[] = [];
   const summary = String(sentinelOutput.summary || '').toLowerCase();
   const artifacts = Array.isArray(sentinelOutput.artifacts) ? sentinelOutput.artifacts : [];
   const resultState = String(sentinelOutput.resultState || '').toLowerCase();
@@ -81,8 +115,8 @@ export function checkSentinelAlerts(commandId, agentName = 'sentinel') {
   }
 
   for (const artifact of artifacts) {
-    const status = String(artifact?.status || '').toLowerCase();
-    const type = String(artifact?.type || '').toLowerCase();
+    const status = String((artifact as Record<string, unknown>)?.status || '').toLowerCase();
+    const type = String((artifact as Record<string, unknown>)?.type || '').toLowerCase();
     if (status === 'blocked' || status === 'denied' || status === 'violation') {
       alerts.push({ type: 'artifact_blocked', artifactType: type, status });
     }
@@ -102,7 +136,12 @@ export function checkSentinelAlerts(commandId, agentName = 'sentinel') {
   };
 }
 
-export function shouldBlock(assignment, sentinelOutput) {
+interface BlockResult {
+  blocked: boolean;
+  reason: string;
+}
+
+export function shouldBlock(assignment: Assignment, sentinelOutput: Record<string, unknown> | null): BlockResult {
   if (!assignment) {
     return { blocked: false, reason: '' };
   }
@@ -123,15 +162,15 @@ export function shouldBlock(assignment, sentinelOutput) {
   const artifacts = Array.isArray(sentinelOutput.artifacts) ? sentinelOutput.artifacts : [];
   const resultState = String(sentinelOutput.resultState || '').toLowerCase();
 
-  const alerts = [];
+  const alerts: SentinelAlert[] = [];
   for (const signal of CRITICAL_RISK_SIGNALS) {
     if (summary.includes(signal)) {
       alerts.push({ type: 'summary_signal', signal });
     }
   }
   for (const artifact of artifacts) {
-    const status = String(artifact?.status || '').toLowerCase();
-    const type = String(artifact?.type || '').toLowerCase();
+    const status = String((artifact as Record<string, unknown>)?.status || '').toLowerCase();
+    const type = String((artifact as Record<string, unknown>)?.type || '').toLowerCase();
     if (status === 'blocked' || status === 'denied' || status === 'violation') {
       alerts.push({ type: 'artifact_blocked', artifactType: type, status });
     }
@@ -158,7 +197,15 @@ export function shouldBlock(assignment, sentinelOutput) {
   return { blocked: false, reason: '' };
 }
 
-export function getGateStatus(commandId) {
+interface GateStatus {
+  status: string;
+  blocked: boolean;
+  alertCount: number;
+  sentinelPresent: boolean;
+  alerts?: SentinelAlert[];
+}
+
+export function getGateStatus(commandId: string): GateStatus {
   if (!commandId) {
     return { status: 'no_command', blocked: false, alertCount: 0, sentinelPresent: false };
   }

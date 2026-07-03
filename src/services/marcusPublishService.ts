@@ -22,7 +22,34 @@ export const MARCUS_PUBLISH_PLATFORMS = [
   { id: 'clickup',   label: 'ClickUp',   connector: 'clickup', fields: ['title', 'content', 'listId'] },
 ];
 
-export function buildMarcusPublishPacket({ platform, payload, workflowId = '', commandId = '' }) {
+interface PublishPayload {
+  caption?: string;
+  message?: string;
+  title?: string;
+  text?: string;
+  link?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  mediaType?: string;
+  filePath?: string;
+  description?: string;
+  tags?: string | string[];
+  privacyStatus?: string;
+  chatId?: string;
+  to?: string;
+  content?: string;
+  parentPageId?: string;
+  listId?: string;
+}
+
+interface BuildPacketOptions {
+  platform: string;
+  payload: PublishPayload;
+  workflowId?: string;
+  commandId?: string;
+}
+
+export function buildMarcusPublishPacket({ platform, payload, workflowId = '', commandId = '' }: BuildPacketOptions) {
   return createAgentPacket({
     fromAgent: AGENTS.MARCUS,
     toAgent: AGENTS.JOSE,
@@ -41,7 +68,15 @@ export function buildMarcusPublishPacket({ platform, payload, workflowId = '', c
   });
 }
 
-async function requireMarcusApproval({ platform, summary, packetId, commandId, workflowId }) {
+interface RequireApprovalOptions {
+  platform: string;
+  summary: string;
+  packetId: string | null;
+  commandId: string | null;
+  workflowId: string | null;
+}
+
+async function requireMarcusApproval({ platform, summary, packetId, commandId, workflowId }: RequireApprovalOptions) {
   return requireApproval({
     actionType: 'external_publish',
     approved: false,
@@ -53,10 +88,20 @@ async function requireMarcusApproval({ platform, summary, packetId, commandId, w
     commandId: commandId || null,
     packetId: packetId || null,
     metadata: { platform },
-  });
+  } as Record<string, unknown>);
 }
 
-function publishReceipt({ ok, platform, packetId, commandId, workflowId, result, error }) {
+interface PublishReceiptOptions {
+  ok: boolean;
+  platform: string;
+  packetId: string | null;
+  commandId: string | null;
+  workflowId: string | null;
+  result?: Record<string, unknown> | null;
+  error?: string | null;
+}
+
+function publishReceipt({ ok, platform, packetId, commandId, workflowId, result, error }: PublishReceiptOptions): void {
   const status = ok ? 'executed' : 'failed';
   appendOrchestrationReceipt({
     workflowId: workflowId || 'marcus_publish',
@@ -85,7 +130,24 @@ function publishReceipt({ ok, platform, packetId, commandId, workflowId, result,
   });
 }
 
-export async function executeMarcusPublish({ platform, payload, packetId = null, commandId = null, workflowId = null, preApproved = false }) {
+interface ExecutePublishOptions {
+  platform: string;
+  payload: PublishPayload;
+  packetId?: string | null;
+  commandId?: string | null;
+  workflowId?: string | null;
+  preApproved?: boolean;
+}
+
+interface ExecutePublishResult {
+  ok: boolean;
+  result?: unknown;
+  platform?: string;
+  error?: string;
+  approval?: { ok: boolean; reason?: string };
+}
+
+export async function executeMarcusPublish({ platform, payload, packetId = null, commandId = null, workflowId = null, preApproved = false }: ExecutePublishOptions): Promise<ExecutePublishResult> {
   const summary = payload.caption || payload.message || payload.title || payload.text || platform;
 
   if (packetId) {
@@ -106,7 +168,7 @@ export async function executeMarcusPublish({ platform, payload, packetId = null,
   }
 
   try {
-    let result;
+    let result: Record<string, unknown> | null = null;
 
     if (platform === 'instagram' || platform === 'facebook') {
       result = await publishMetaContent({}, {
@@ -119,7 +181,7 @@ export async function executeMarcusPublish({ platform, payload, packetId = null,
         imageUrl: payload.imageUrl || '',
         videoUrl: payload.videoUrl || '',
         mediaType: payload.mediaType || '',
-      });
+      }) as Record<string, unknown>;
     } else if (platform === 'youtube') {
       result = await uploadYouTubeConnectorVideo({
         filePath: payload.filePath || '',
@@ -127,15 +189,15 @@ export async function executeMarcusPublish({ platform, payload, packetId = null,
         description: payload.description || '',
         tags: Array.isArray(payload.tags) ? payload.tags : [],
         privacyStatus: payload.privacyStatus || 'private',
-      }, { approved: true, packetId, commandId });
+      }, { approved: true, packetId, commandId }) as Record<string, unknown>;
     } else if (platform === 'telegram') {
-      result = await sendTelegramConnectorMessage(payload.chatId || '', payload.text || '', { approved: true, packetId, commandId });
+      result = await sendTelegramConnectorMessage(payload.chatId || '', payload.text || '', { approved: true, packetId, commandId }) as Record<string, unknown>;
     } else if (platform === 'whatsapp') {
-      result = await sendWhatsAppConnectorMessage(payload.to || '', payload.text || '', { approved: true, packetId, commandId });
+      result = await sendWhatsAppConnectorMessage(payload.to || '', payload.text || '', { approved: true, packetId, commandId }) as Record<string, unknown>;
     } else if (platform === 'notion') {
-      result = await sendNotionConnectorEntry({ title: payload.title || '', content: payload.content || '', parentPageId: payload.parentPageId || '' }, { approved: true, packetId, commandId });
+      result = await sendNotionConnectorEntry({ title: payload.title || '', content: payload.content || '', parentPageId: payload.parentPageId || '' }, { approved: true, packetId, commandId }) as Record<string, unknown>;
     } else if (platform === 'clickup') {
-      result = await sendClickUpConnectorTask({ title: payload.title || '', content: payload.content || '', listId: payload.listId || '' }, { approved: true, packetId, commandId });
+      result = await sendClickUpConnectorTask({ title: payload.title || '', content: payload.content || '', listId: payload.listId || '' }, { approved: true, packetId, commandId }) as Record<string, unknown>;
     } else {
       throw new Error(`Unsupported Marcus publish platform: ${platform}`);
     }
@@ -149,7 +211,7 @@ export async function executeMarcusPublish({ platform, payload, packetId = null,
         executionResult: result,
       });
     }
-    publishReceipt({ ok, platform, packetId, commandId, workflowId, result, error: ok ? null : result?.error });
+    publishReceipt({ ok, platform, packetId, commandId, workflowId, result, error: ok ? null : (result?.error as string) || null });
     return { ok, result, platform };
 
   } catch (error) {

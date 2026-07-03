@@ -1,4 +1,20 @@
-export const MIYA_WORKFLOW_TEMPLATES = [
+interface ComfyUINode {
+  class_type: string;
+  inputs: Record<string, unknown>;
+}
+
+interface WorkflowJsonTemplate {
+  [nodeId: string]: ComfyUINode;
+}
+
+export interface MiyaWorkflowTemplate {
+  name: string;
+  description: string;
+  required_inputs: string[];
+  workflow_json_template: WorkflowJsonTemplate;
+}
+
+export const MIYA_WORKFLOW_TEMPLATES: MiyaWorkflowTemplate[] = [
   {
     name: 'text-to-image',
     description: 'Starter ComfyUI graph for generating a single image from a prompt.',
@@ -206,13 +222,13 @@ export const MIYA_WORKFLOW_TEMPLATES = [
   }
 ];
 
-export function listMiyaWorkflowTemplates() {
-  const clone = (value) => (typeof structuredClone === 'function'
+export function listMiyaWorkflowTemplates(): MiyaWorkflowTemplate[] {
+  const clone = <T>(value: T): T => (typeof structuredClone === 'function'
     ? structuredClone(value)
     : JSON.parse(JSON.stringify(value)));
   return MIYA_WORKFLOW_TEMPLATES.map((template) => ({ ...template, workflow_json_template: clone(template.workflow_json_template) }));
 }
 
-export function getMiyaWorkflowTemplate(name) {
+export function getMiyaWorkflowTemplate(name: string): MiyaWorkflowTemplate | null {
   return MIYA_WORKFLOW_TEMPLATES.find((template) => template.name === name) || null;
 }

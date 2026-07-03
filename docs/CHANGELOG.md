@@ -6,6 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.15] — 2026-07-03
+
+### Sprint 5 batch 7: 15 more root-level services migrated to TypeScript
+
+- Migrated `agentOutputStoreService`, `nativeRc0ProofService`,
+  `novaFeedbackService`, `echoFileWatcherService`,
+  `agentPerformanceService`, `repoAuditService`, `backupService`,
+  `telegramAutoPollService`, `miyaWorkflowTemplates`,
+  `toolNotificationDispatcher`, `sentinelGateService`, `chatgptService`,
+  `claudeService`, `coachInterventionService`, `marcusPublishService`
+  — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 53 `.js` / 78 `.ts` → 38 `.js` / 93 `.ts`.
+- Type-safety additions: `AllOutputs`, `AgentOutput`, `NovaScoreEntry`,
+  `WatcherConfig`, `PerformanceSnapshot`, `RepoAuditReport`, `BackupData`,
+  `ChatGPTMessage`, `ClaudeMessage`, `SentinelAlert` and many more
+  custom interfaces.
+- Verification: 265/265 targeted tests passing across 16 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
 ## [2.5.14] — 2026-07-03
 
 ### Sprint 5 batch 6: 15 more root-level services migrated to TypeScript

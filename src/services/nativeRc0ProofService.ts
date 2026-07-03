@@ -3,22 +3,38 @@ import { invoke } from '@tauri-apps/api/core';
 export const PROOF_AUTHORITY = {
   RUST_ENGINE: 'rust_engine',
   JS_BRIDGE: 'js_bridge'
-};
+} as const;
 
-function firstArtifactPath(artifacts = [], suffix) {
+interface RawProofResult {
+  ok?: boolean;
+  error?: string;
+  p0Count?: number;
+  p1Count?: number;
+  p2Count?: number;
+  filesScanned?: number;
+  sentinels?: string[];
+  artifacts?: string[];
+  outputDir?: string;
+  workspaceRoot?: string;
+  mode?: string;
+  topPackets?: Array<{ packetId?: string; packet_id?: string; id?: string; title?: string; priority?: string; riskLevel?: string; risk_level?: string }>;
+  [key: string]: unknown;
+}
+
+function firstArtifactPath(artifacts: string[] = [], suffix: string): string | null {
   return Array.isArray(artifacts)
     ? artifacts.find((entry) => String(entry || '').replace(/\\/g, '/').endsWith(suffix)) || null
     : null;
 }
 
-export function hasRustProofReceipts(result = {}) {
+export function hasRustProofReceipts(result: RawProofResult = {}): boolean {
   const sentinels = Array.isArray(result.sentinels) ? result.sentinels : [];
   const artifacts = Array.isArray(result.artifacts) ? result.artifacts : [];
   return sentinels.some((entry) => String(entry || '').replace(/\\/g, '/').includes('10_rc0_package_written.json'))
     || artifacts.some((entry) => String(entry || '').replace(/\\/g, '/').endsWith('self-development-proof.md'));
 }
 
-function normalizeState(result) {
+function normalizeState(result: RawProofResult): string {
   if (!result?.ok) {
     const error = String(result?.error || '').toLowerCase();
     if (error.includes('workspace validation') || error.includes('missing entries')) {
@@ -35,7 +51,7 @@ function normalizeState(result) {
   return 'confirmed';
 }
 
-function normalizeWorkspaceRootValid(result) {
+function normalizeWorkspaceRootValid(result: RawProofResult): boolean {
   const error = String(result?.error || '').toLowerCase();
   if (error.includes('workspace validation') || error.includes('missing entries')) {
     return false;
@@ -46,7 +62,17 @@ function normalizeWorkspaceRootValid(result) {
   return Boolean(result?.ok);
 }
 
-function normalizeTopPackets(packets = []) {
+interface TopPacket {
+  packetId?: string;
+  packet_id?: string;
+  id?: string;
+  title?: string;
+  priority?: string;
+  riskLevel?: string;
+  risk_level?: string;
+}
+
+function normalizeTopPackets(packets: TopPacket[] = []): Array<{ id: string; title: string; priority: string; riskLevel: string }> {
   return packets.slice(0, 10).map((packet) => ({
     id: packet.packetId || packet.packet_id || packet.id || '',
     title: packet.title || '',
@@ -55,7 +81,14 @@ function normalizeTopPackets(packets = []) {
   }));
 }
 
-export function formatNativeProofDetail(proof) {
+interface ProofRecord {
+  proofAuthority?: string;
+  proofMode?: string;
+  runtime?: string;
+  [key: string]: unknown;
+}
+
+export function formatNativeProofDetail(proof: any): string {
   if (!proof) {
     return 'Native proof has not been recorded yet. Run the Rust-backed proof cycle or verify release/rc0/proof/*.json on disk.';
   }
@@ -71,7 +104,34 @@ export function formatNativeProofDetail(proof) {
   return 'Native proof has not been recorded yet.';
 }
 
-export function formatNativeRc0ProofResult(result = {}, fallbackWorkspaceRoot = '') {
+export interface NativeRc0ProofResult {
+  runtime: string;
+  proofAuthority: string;
+  proofMode: string;
+  autorun: boolean;
+  state: string;
+  workspaceRoot: string;
+  workspaceRootValid: boolean;
+  filesScanned: number;
+  p0Count: number;
+  p1Count: number;
+  p2Count: number;
+  topPackets: Array<{ id: string; title: string; priority: string; riskLevel: string }>;
+  exportPath: string;
+  proofReceiptsWritten: boolean;
+  rc0Proof: {
+    proofPath: string;
+    readmePath: string;
+    artifacts: string[];
+    sentinels: string[];
+  };
+  timestampMs: number;
+  note: string;
+  error: string | null;
+  [key: string]: unknown;
+}
+
+export function formatNativeRc0ProofResult(result: RawProofResult = {}, fallbackWorkspaceRoot: string = ''): NativeRc0ProofResult {
   const artifacts = Array.isArray(result.artifacts) ? result.artifacts : [];
   const outputDir = String(result.outputDir || 'release/rc0').trim() || 'release/rc0';
   const proofPath = firstArtifactPath(artifacts, 'self-development-proof.md') || `${outputDir}/self-development-proof.md`;
@@ -109,12 +169,19 @@ export function formatNativeRc0ProofResult(result = {}, fallbackWorkspaceRoot = 
   };
 }
 
+interface RunNativeRc0ProofOptions {
+  workspaceRoot?: string;
+  outputDir?: string;
+  mode?: string;
+  maxFiles?: number;
+}
+
 export async function runNativeRc0Proof({
   workspaceRoot,
   outputDir = 'release/rc0',
   mode = 'supervised',
   maxFiles = 240
-} = {}) {
+}: RunNativeRc0ProofOptions = {}): Promise<Record<string, unknown>> {
   const result = await invoke('run_native_rc0_proof', {
     input: {
       workspaceRoot,
@@ -123,5 +190,5 @@ export async function runNativeRc0Proof({
       maxFiles
     }
   });
-  return result || {};
+  return (result as Record<string, unknown>) || {};
 }

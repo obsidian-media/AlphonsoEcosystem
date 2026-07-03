@@ -5,7 +5,7 @@ export const COACH_INTERVENTION_LEVELS = {
   QUIET: 'quiet',
   FIRM: 'firm',
   HARD: 'hard'
-};
+} as const;
 
 export const SESSION_GUARD_EVENT_TYPES = {
   LOSS_STRETCH: 'loss_stretch',
@@ -13,23 +13,66 @@ export const SESSION_GUARD_EVENT_TYPES = {
   TIME_LIMIT: 'time_limit',
   CHASE_PATTERN: 'chase_pattern',
   HIGH_VOLATILITY: 'high_volatility'
-};
+} as const;
 
 export const SESSION_GUARD_BRIDGE_STORAGE_KEY = 'alphonso_sessionguard_bridge_events_v1';
 export const COACH_INTERVENTION_ACTION_LOG_KEY = 'alphonso_coach_intervention_action_log_v1';
 export const SESSION_GUARD_BRIDGE_EVENT = 'alphonso:sessionguard-event';
 
-function readJsonArray(key) {
+interface SessionGuardMetrics {
+  spinCount?: number;
+  spins?: number;
+  netResult?: number;
+  net?: number;
+  longestLosingStretch?: number;
+  losingStretch?: number;
+  elapsedMinutes?: number;
+}
+
+interface SessionGuardEvent {
+  id?: string;
+  source?: string;
+  sessionType?: string;
+  type?: string;
+  severity?: string;
+  riskLevel?: string;
+  message?: string;
+  summary?: string;
+  metrics?: SessionGuardMetrics;
+  timestampMs?: number;
+  localOnly?: boolean;
+  [key: string]: unknown;
+}
+
+interface NormalizedSessionGuardEvent {
+  id: string;
+  source: string;
+  sessionType: string;
+  type: string;
+  severity: string;
+  message: string;
+  metrics: {
+    spinCount: number;
+    netResult: number;
+    longestLosingStretch: number;
+    elapsedMinutes: number;
+  };
+  timestampMs: number;
+  localOnly: boolean;
+  [key: string]: unknown;
+}
+
+function readJsonArray(key: string): Record<string, unknown>[] {
   if (typeof localStorage === 'undefined') return [];
   try {
-    const parsed = JSON.parse(localStorage.getItem(key) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(parsed) ? (parsed as Record<string, unknown>[]) : [];
   } catch {
     return [];
   }
 }
 
-function writeJsonArray(key, rows, limit = 50) {
+function writeJsonArray(key: string, rows: Record<string, unknown>[], limit: number = 50): void {
   if (typeof localStorage === 'undefined') return;
   const sliced = rows.slice(-limit);
   try {
@@ -40,7 +83,7 @@ function writeJsonArray(key, rows, limit = 50) {
   localStorage.setItem(key, JSON.stringify(sliced));
 }
 
-export function normalizeSessionGuardEvent(event = {}) {
+export function normalizeSessionGuardEvent(event: SessionGuardEvent = {}): NormalizedSessionGuardEvent {
   const metrics = event.metrics || {};
   return {
     id: event.id || `sessionguard-${timestampMs()}`,
@@ -60,13 +103,13 @@ export function normalizeSessionGuardEvent(event = {}) {
   };
 }
 
-function money(value) {
+function money(value: number): string {
   const number = Number(value || 0);
   const sign = number < 0 ? '-' : '';
   return `${sign}$${Math.abs(number).toFixed(2)}`;
 }
 
-export function chooseCoachInterventionLevel(event = {}) {
+export function chooseCoachInterventionLevel(event: SessionGuardEvent = {}): string {
   const normalized = normalizeSessionGuardEvent(event);
   const { metrics, severity, type } = normalized;
 
@@ -91,12 +134,27 @@ export function chooseCoachInterventionLevel(event = {}) {
   return COACH_INTERVENTION_LEVELS.QUIET;
 }
 
-export function buildCoachIntervention(event = {}) {
+interface CoachIntervention {
+  id: string;
+  source: string;
+  sessionType: string;
+  type: string;
+  level: string;
+  title: string;
+  message: string;
+  rawMessage: string;
+  metrics: NormalizedSessionGuardEvent['metrics'];
+  timestampMs: number;
+  localOnly: boolean;
+  actions: string[];
+}
+
+export function buildCoachIntervention(event: SessionGuardEvent = {}): CoachIntervention {
   const normalized = normalizeSessionGuardEvent(event);
   const level = chooseCoachInterventionLevel(normalized);
   const { metrics } = normalized;
 
-  const parts = [];
+  const parts: string[] = [];
   if (metrics.spinCount) parts.push(`${metrics.spinCount} spins in`);
   if (metrics.netResult) parts.push(`net ${money(metrics.netResult)}`);
   if (metrics.longestLosingStretch) parts.push(`${metrics.longestLosingStretch}-spin losing stretch`);
@@ -131,7 +189,7 @@ export function buildCoachIntervention(event = {}) {
   };
 }
 
-export function buildDemoSlotIntervention() {
+export function buildDemoSlotIntervention(): CoachIntervention {
   return buildCoachIntervention({
     source: 'sessionguard',
     sessionType: 'slot_machine',
@@ -148,20 +206,25 @@ export function buildDemoSlotIntervention() {
   });
 }
 
-export function listSessionGuardBridgeEvents() {
-  return readJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY);
+interface BridgeEvent extends NormalizedSessionGuardEvent {
+  intervention: CoachIntervention;
+  receivedAtMs: number;
 }
 
-export function pushSessionGuardBridgeEvent(event = {}) {
+export function listSessionGuardBridgeEvents(): BridgeEvent[] {
+  return readJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY) as unknown as BridgeEvent[];
+}
+
+export function pushSessionGuardBridgeEvent(event: SessionGuardEvent = {}): BridgeEvent {
   const intervention = buildCoachIntervention(event);
-  const bridgeEvent = {
+  const bridgeEvent: BridgeEvent = {
     ...normalizeSessionGuardEvent(event),
     intervention,
     receivedAtMs: timestampMs()
   };
 
   const events = [...listSessionGuardBridgeEvents(), bridgeEvent];
-  writeJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY, events, 20);
+  writeJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY, events as unknown as Record<string, unknown>[], 20);
 
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(SESSION_GUARD_BRIDGE_EVENT, { detail: bridgeEvent }));
@@ -170,18 +233,19 @@ export function pushSessionGuardBridgeEvent(event = {}) {
   return bridgeEvent;
 }
 
-export function getLatestSessionGuardBridgeIntervention() {
+export function getLatestSessionGuardBridgeIntervention(): CoachIntervention | null {
   return listSessionGuardBridgeEvents().at(-1)?.intervention || null;
 }
 
-export function subscribeSessionGuardBridge(onBridgeEvent) {
+export function subscribeSessionGuardBridge(onBridgeEvent: (event: BridgeEvent) => void): () => void {
   if (typeof window === 'undefined') return () => {};
 
-  const handleCustomEvent = (event) => {
-    if (event?.detail?.intervention) onBridgeEvent(event.detail);
+  const handleCustomEvent = (event: Event) => {
+    const ce = event as CustomEvent<BridgeEvent>;
+    if (ce?.detail?.intervention) onBridgeEvent(ce.detail);
   };
 
-  const handleStorageEvent = (event) => {
+  const handleStorageEvent = (event: StorageEvent) => {
     if (event.key !== SESSION_GUARD_BRIDGE_STORAGE_KEY) return;
     const latest = listSessionGuardBridgeEvents().at(-1);
     if (latest?.intervention) onBridgeEvent(latest);
@@ -196,12 +260,26 @@ export function subscribeSessionGuardBridge(onBridgeEvent) {
   };
 }
 
-export function listCoachInterventionActionLog() {
-  return readJsonArray(COACH_INTERVENTION_ACTION_LOG_KEY);
+interface ActionLogEntry {
+  id: string;
+  interventionId: string | null;
+  source: string;
+  action: string;
+  details: Record<string, unknown>;
+  timestampMs: number;
+  localOnly: boolean;
 }
 
-export function recordCoachInterventionAction(intervention, action, details = {}) {
-  const entry = {
+export function listCoachInterventionActionLog(): ActionLogEntry[] {
+  return readJsonArray(COACH_INTERVENTION_ACTION_LOG_KEY) as unknown as ActionLogEntry[];
+}
+
+export function recordCoachInterventionAction(
+  intervention: CoachIntervention | null,
+  action: string,
+  details: Record<string, unknown> = {}
+): ActionLogEntry {
+  const entry: ActionLogEntry = {
     id: `coach-action-${timestampMs()}`,
     interventionId: intervention?.id || null,
     source: intervention?.source || 'coach',
@@ -210,6 +288,6 @@ export function recordCoachInterventionAction(intervention, action, details = {}
     timestampMs: timestampMs(),
     localOnly: true
   };
-  writeJsonArray(COACH_INTERVENTION_ACTION_LOG_KEY, [...listCoachInterventionActionLog(), entry], 100);
+  writeJsonArray(COACH_INTERVENTION_ACTION_LOG_KEY, [...listCoachInterventionActionLog(), entry] as unknown as Record<string, unknown>[], 100);
   return entry;
 }

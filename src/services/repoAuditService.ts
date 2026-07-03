@@ -5,20 +5,52 @@ import { persistScopeRows } from './runtimeLedgerService';
 const REPO_AUDIT_KEY = 'alphonso_repo_audits_v1';
 export const REPO_AUDIT_SCOPE = 'repo_audits_v1';
 
-function readReports() {
+interface RepoAuditFinding {
+  id: string;
+  path: string;
+  lineNumber: number;
+  surface: string;
+  kind: string;
+  priority: string;
+  severity: string;
+  message: string;
+  excerpt: string;
+}
+
+interface RepoAuditReport {
+  id: string;
+  root: string;
+  generatedAtMs: number;
+  filesScanned: number;
+  findings: RepoAuditFinding[];
+  issueCount: number;
+  todoCount: number;
+  needsSetupCount: number;
+  blockedCount: number;
+  failedCount: number;
+  partialCount: number;
+  overallStatus: string;
+  trust: string;
+  error: string | null;
+  options: Record<string, unknown>;
+  blockerFiles: string[];
+  needsSetupFiles: string[];
+}
+
+function readReports(): RepoAuditReport[] {
   try {
     const raw = localStorage.getItem(REPO_AUDIT_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as RepoAuditReport[]) : [];
   } catch {
     return [];
   }
 }
 
-function writeReports(reports) {
+function writeReports(reports: RepoAuditReport[]): void {
   const next = reports.slice(0, 20);
   localStorage.setItem(REPO_AUDIT_KEY, JSON.stringify(next));
-  persistScopeRows(REPO_AUDIT_SCOPE, next, (row) => ({
+  persistScopeRows(REPO_AUDIT_SCOPE, next, (row: RepoAuditReport) => ({
     id: row.id,
     data: row,
     status: row.overallStatus || row.trust || 'recorded',
@@ -28,7 +60,20 @@ function writeReports(reports) {
   }));
 }
 
-function normalizeFinding(finding, index) {
+interface RawFinding {
+  id?: string;
+  path?: string;
+  lineNumber?: number;
+  line_number?: number;
+  surface?: string;
+  kind?: string;
+  priority?: string;
+  severity?: string;
+  message?: string;
+  excerpt?: string;
+}
+
+function normalizeFinding(finding: RawFinding, index: number): RepoAuditFinding {
   return {
     id: finding.id || `finding-${index + 1}`,
     path: String(finding.path || ''),
@@ -42,8 +87,17 @@ function normalizeFinding(finding, index) {
   };
 }
 
-function summarizeFindings(findings) {
-  const summary = {
+interface FindingsSummary {
+  issueCount: number;
+  todoCount: number;
+  needsSetupCount: number;
+  blockedCount: number;
+  failedCount: number;
+  partialCount: number;
+}
+
+function summarizeFindings(findings: RepoAuditFinding[]): FindingsSummary {
+  const summary: FindingsSummary = {
     issueCount: 0,
     todoCount: 0,
     needsSetupCount: 0,
@@ -75,12 +129,27 @@ function summarizeFindings(findings) {
   return summary;
 }
 
-function normalizeReport(scan, root, options = {}) {
+interface RawScan {
+  findings?: RawFinding[];
+  generatedAtMs?: number;
+  root?: string;
+  filesScanned?: number;
+  issueCount?: number;
+  todoCount?: number;
+  needsSetupCount?: number;
+  blockedCount?: number;
+  failedCount?: number;
+  partialCount?: number;
+  trust?: string;
+  error?: string;
+}
+
+function normalizeReport(scan: RawScan | null, root: string, options: Record<string, unknown> = {}): RepoAuditReport {
   const findings = Array.isArray(scan?.findings)
-    ? scan.findings.map(normalizeFinding)
+    ? scan!.findings.map(normalizeFinding)
     : [];
   const sortedFindings = findings.slice().sort((a, b) => {
-    const order = { P0: 0, P1: 1, P2: 2 };
+    const order: Record<string, number> = { P0: 0, P1: 1, P2: 2 };
     return (order[a.priority] ?? 3) - (order[b.priority] ?? 3) || a.path.localeCompare(b.path) || a.lineNumber - b.lineNumber;
   });
   const summary = summarizeFindings(sortedFindings);
@@ -105,27 +174,44 @@ function normalizeReport(scan, root, options = {}) {
   };
 }
 
-export function listRepoAudits() {
+export function listRepoAudits(): RepoAuditReport[] {
   return readReports();
 }
 
-export function getLastRepoAudit() {
+export function getLastRepoAudit(): RepoAuditReport | null {
   return readReports()[0] || null;
 }
 
-export async function runRepoAudit({ root, maxFiles = 1200, maxFindings = 240, options = {} } = {}) {
+interface RunRepoAuditOptions {
+  root?: string;
+  maxFiles?: number;
+  maxFindings?: number;
+  options?: Record<string, unknown>;
+}
+
+export async function runRepoAudit({ root, maxFiles = 1200, maxFindings = 240, options = {} }: RunRepoAuditOptions = {}): Promise<RepoAuditReport> {
   const scan = await invoke('scan_workspace_readiness', {
     root: String(root || ''),
     maxFiles,
     maxFindings
-  });
-  const report = normalizeReport(scan, root, options);
+  }) as RawScan;
+  const report = normalizeReport(scan, root || '', options);
   const current = readReports().filter((row) => row.id !== report.id);
   writeReports([report, ...current]);
   return report;
 }
 
-export function summarizeRepoAudit(report) {
+interface RepoAuditSummary {
+  filesScanned: number;
+  blockerCount: number;
+  partialCount: number;
+  needsSetupCount: number;
+  issueCount: number;
+  todoCount: number;
+  status: string;
+}
+
+export function summarizeRepoAudit(report: RepoAuditReport | null): RepoAuditSummary {
   if (!report) {
     return {
       filesScanned: 0,

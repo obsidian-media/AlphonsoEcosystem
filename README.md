@@ -4,15 +4,15 @@
 
 # Alphonso
 
-> **v2.5.14** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.15** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.14-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.15-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 
-[**Download v2.5.14**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.14) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.5.15**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.15) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-## What's New in v2.5.14
+## What's New in v2.5.15
 
-- **Sprint 5 batch 6: 15 more services migrated to TypeScript.** `workspaceIntelligenceService`, `connectorRateLimiterService`, `agentPairingExecutionService`, `coachSoundCueService`, `runtimeLedgerService`, `offlineChatService`, `memoryMonitorService`, `runtimeManagerService`, `mariaWeeklyReportService`, `workflowGovernanceService`, `voiceService`, `connectorHealthCheckService`, `whatsappBrowserConnector`, `streamingService`, `workflowBuilderService` — all root-level `.js` → `.ts`. Root-level count now 53 `.js` / 78 `.ts`.
+- **Sprint 5 batch 7: 15 more services migrated to TypeScript.** `agentOutputStoreService`, `nativeRc0ProofService`, `novaFeedbackService`, `echoFileWatcherService`, `agentPerformanceService`, `repoAuditService`, `backupService`, `telegramAutoPollService`, `miyaWorkflowTemplates`, `toolNotificationDispatcher`, `sentinelGateService`, `chatgptService`, `claudeService`, `coachInterventionService`, `marcusPublishService` — all root-level `.js` → `.ts`. Root-level count now 38 `.js` / 93 `.ts`.
 
 ## What's New in v2.5.9
 

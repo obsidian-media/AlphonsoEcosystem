@@ -4,12 +4,12 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
-function delayMs(ms) {
+function delayMs(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-async function streamWithReconnect(fn, maxRetries = 3) {
-  let lastError = null;
+async function streamWithReconnect<T>(fn: () => Promise<T>, maxRetries: number = 3): Promise<T> {
+  let lastError: unknown = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
@@ -24,11 +24,11 @@ async function streamWithReconnect(fn, maxRetries = 3) {
   throw lastError;
 }
 
-function getApiKey() {
+function getApiKey(): string {
   return getConnectorCredential('claude', 'ANTHROPIC_API_KEY');
 }
 
-function buildHeaders(apiKey) {
+function buildHeaders(apiKey: string): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     'x-api-key': apiKey,
@@ -37,7 +37,13 @@ function buildHeaders(apiKey) {
   };
 }
 
-function parseSSELine(line) {
+interface SSEEvent {
+  type?: string;
+  delta?: { text?: string };
+  [key: string]: unknown;
+}
+
+function parseSSELine(line: string): SSEEvent | null {
   if (!line.startsWith('data: ')) return null;
   const json = line.slice(6);
   if (json === '[DONE]') return { type: 'done' };
@@ -48,7 +54,11 @@ function parseSSELine(line) {
   }
 }
 
-async function readSSEStream(reader, decoder, onChunk) {
+async function readSSEStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+  onChunk?: (delta: string, full: string) => void
+): Promise<string> {
   let buffer = '';
   let full = '';
 
@@ -76,7 +86,34 @@ async function readSSEStream(reader, decoder, onChunk) {
   return full;
 }
 
-export async function sendClaudeMessage(text, options = {}) {
+interface ClaudeMessage {
+  role: string;
+  content: string;
+}
+
+interface ClaudeOptions {
+  apiKey?: string;
+  model?: string;
+  maxTokens?: number;
+  messages?: ClaudeMessage[];
+  stream?: boolean;
+  system?: string;
+  onChunk?: (delta: string, full: string) => void;
+}
+
+interface ClaudeResult {
+  success: boolean;
+  ok: boolean;
+  connectorId: string;
+  text?: string;
+  model?: string;
+  usage?: { input_tokens?: number; output_tokens?: number } | null;
+  latencyMs?: number;
+  error?: string;
+  trust: string;
+}
+
+export async function sendClaudeMessage(text: string, options: ClaudeOptions = {}): Promise<ClaudeResult> {
   const auth = isConnectorAuthenticated('claude');
   if (!auth.ok) {
     appendConnectorAudit('claude', 'send_blocked_not_authenticated', {
@@ -103,10 +140,18 @@ export async function sendClaudeMessage(text, options = {}) {
   return sendClaudeStreaming({ apiKey, model, maxTokens, messages, systemPrompt, onChunk: options.onChunk });
 }
 
-async function sendClaudeOneShot({ apiKey, model, maxTokens, messages, systemPrompt }) {
+interface OneShotParams {
+  apiKey: string;
+  model: string;
+  maxTokens: number;
+  messages: ClaudeMessage[];
+  systemPrompt: string;
+}
+
+async function sendClaudeOneShot({ apiKey, model, maxTokens, messages, systemPrompt }: OneShotParams): Promise<ClaudeResult> {
   const startTime = timestampMs();
   try {
-    const body = { model, max_tokens: maxTokens, messages };
+    const body: Record<string, unknown> = { model, max_tokens: maxTokens, messages };
     if (systemPrompt) body.system = systemPrompt;
 
     const response = await fetch(ANTHROPIC_API_URL, {
@@ -150,10 +195,19 @@ async function sendClaudeOneShot({ apiKey, model, maxTokens, messages, systemPro
   }
 }
 
-async function sendClaudeStreaming({ apiKey, model, maxTokens, messages, systemPrompt, onChunk }) {
+interface StreamingParams {
+  apiKey: string;
+  model: string;
+  maxTokens: number;
+  messages: ClaudeMessage[];
+  systemPrompt: string;
+  onChunk?: (delta: string, full: string) => void;
+}
+
+async function sendClaudeStreaming({ apiKey, model, maxTokens, messages, systemPrompt, onChunk }: StreamingParams): Promise<ClaudeResult> {
   const startTime = timestampMs();
-  const attemptStream = async () => {
-    const body = { model, max_tokens: maxTokens, messages, stream: true };
+  const attemptStream = async (): Promise<string> => {
+    const body: Record<string, unknown> = { model, max_tokens: maxTokens, messages, stream: true };
     if (systemPrompt) body.system = systemPrompt;
 
     const response = await fetch(ANTHROPIC_API_URL, {
@@ -168,7 +222,7 @@ async function sendClaudeStreaming({ apiKey, model, maxTokens, messages, systemP
       throw new Error(errorMsg);
     }
 
-    const reader = response.body.getReader();
+    const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     return await readSSEStream(reader, decoder, onChunk);
   };
@@ -195,6 +249,6 @@ async function sendClaudeStreaming({ apiKey, model, maxTokens, messages, systemP
   }
 }
 
-export async function streamClaudeMessage(text, options = {}) {
+export async function streamClaudeMessage(text: string, options: ClaudeOptions = {}): Promise<ClaudeResult> {
   return sendClaudeMessage(text, { ...options, stream: true });
 }

@@ -38,14 +38,40 @@ const DEFAULT_NOTIFY_ON = new Set([
   'dead_letter'
 ]);
 
-function normalizeList(value) {
+function normalizeList(value: string | string[] | undefined): string[] {
   return String(value || '')
     .split(/\r?\n|,/)
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 }
 
-function receiptCategory(receipt = {}) {
+interface Receipt {
+  eventType?: string;
+  workflowId?: string;
+  commandId?: string;
+  packetId?: string;
+  connectorId?: string;
+  actionType?: string;
+  riskLevel?: string;
+  approved?: boolean;
+  blocked?: boolean;
+  setupRequired?: boolean;
+  status?: string;
+  id?: string;
+  timestampMs?: number;
+  [key: string]: unknown;
+}
+
+interface ToolConnection {
+  id: string;
+  active: boolean;
+  platform: string;
+  notifyOn?: string | string[];
+  label: string;
+  [key: string]: unknown;
+}
+
+function receiptCategory(receipt: Receipt): string {
   const eventType = String(receipt.eventType || '').toLowerCase();
   if (eventType.includes('approval')) return 'approval';
   if (eventType.includes('policy')) return 'policy';
@@ -58,7 +84,7 @@ function receiptCategory(receipt = {}) {
   return 'general';
 }
 
-function shouldNotifyReceipt(receipt, connection) {
+function shouldNotifyReceipt(receipt: Receipt, connection: ToolConnection): boolean {
   const eventType = String(receipt?.eventType || '').trim();
   if (!eventType || !IMPORTANT_EVENTS.has(eventType)) return false;
   if (EXCLUDED_WORKFLOWS.has(String(receipt.workflowId || '').trim())) return false;
@@ -75,7 +101,7 @@ function shouldNotifyReceipt(receipt, connection) {
   return notifyOn.has(category) || notifyOn.has('all');
 }
 
-function formatReceiptMessage(receipt) {
+function formatReceiptMessage(receipt: Receipt): string {
   const status = String(receipt.status || receipt.eventType || 'event').replace(/_/g, ' ');
   const connector = receipt.connectorId ? ` on ${receipt.connectorId}` : '';
   const action = receipt.actionType ? ` ${receipt.actionType}` : '';
@@ -83,9 +109,23 @@ function formatReceiptMessage(receipt) {
   return `Alphonso ${status}${connector}${action}${workflow}`;
 }
 
-function buildReceiptPayload(receipt, connection) {
+interface ReceiptDetails {
+  eventType?: string;
+  workflowId: string | null;
+  commandId: string | null;
+  packetId: string | null;
+  connectorId: string | null;
+  actionType: string | null;
+  riskLevel: string | null;
+  approved: boolean;
+  blocked: boolean;
+  setupRequired: boolean;
+  timestampMs: number;
+}
+
+function buildReceiptPayload(receipt: Receipt, connection: ToolConnection): Record<string, unknown> {
   const summary = formatReceiptMessage(receipt);
-  const details = {
+  const details: ReceiptDetails = {
     eventType: receipt.eventType,
     workflowId: receipt.workflowId || null,
     commandId: receipt.commandId || null,
@@ -111,7 +151,7 @@ function buildReceiptPayload(receipt, connection) {
   if (connection.platform === 'discord') {
     return {
       content: `${summary}\n${JSON.stringify(details).slice(0, 1500)}`,
-      allowed_mentions: { parse: [] }
+      allowed_mentions: { parse: [] as string[] }
     };
   }
 
@@ -124,13 +164,20 @@ function buildReceiptPayload(receipt, connection) {
   };
 }
 
-export async function dispatchReceiptNotifications(receipt) {
+interface DispatchResult {
+  ok: boolean;
+  sent?: number;
+  eligible?: number;
+  skipped?: boolean;
+}
+
+export async function dispatchReceiptNotifications(receipt: Receipt): Promise<DispatchResult> {
   if (!receipt || EXCLUDED_WORKFLOWS.has(String(receipt.workflowId || '').trim())) {
     return { ok: false, skipped: true };
   }
 
   const connections = listToolConnections();
-  const eligible = connections.filter((connection) => shouldNotifyReceipt(receipt, connection));
+  const eligible = connections.filter((connection) => shouldNotifyReceipt(receipt, connection as ToolConnection));
   if (eligible.length === 0) {
     return { ok: true, sent: 0, skipped: true };
   }
@@ -147,7 +194,7 @@ export async function dispatchReceiptNotifications(receipt) {
         commandId: receipt.commandId || null,
         packetId: receipt.packetId || null,
         notificationReceiptId: receipt.id,
-        notificationPayload: buildReceiptPayload(receipt, connection)
+        notificationPayload: buildReceiptPayload(receipt, connection as ToolConnection)
       });
       if (result?.ok) {
         sent += 1;
@@ -170,4 +217,3 @@ export async function dispatchReceiptNotifications(receipt) {
     eligible: eligible.length
   };
 }
-

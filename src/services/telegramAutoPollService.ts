@@ -7,7 +7,13 @@ import { getConnectorCredential, getConnectorCredentials } from './connectors/co
 
 const TELEGRAM_AUTO_POLL_STATE_KEY = 'alphonso_telegram_auto_poll_state_v1';
 
-export function getTelegramAutoPollState() {
+interface TelegramAutoPollState {
+  enabled: boolean;
+  lastPolledAtMs: number | null;
+  errors: number;
+}
+
+export function getTelegramAutoPollState(): TelegramAutoPollState {
   try {
     const raw = localStorage.getItem(TELEGRAM_AUTO_POLL_STATE_KEY);
     if (!raw) return { enabled: false, lastPolledAtMs: null, errors: 0 };
@@ -22,7 +28,7 @@ export function getTelegramAutoPollState() {
   }
 }
 
-function setTelegramAutoPollState(state) {
+function setTelegramAutoPollState(state: TelegramAutoPollState): void {
   try {
     invoke('kv_set', { key: TELEGRAM_AUTO_POLL_STATE_KEY, value: JSON.stringify(state) }).catch(() => {});
   } catch {
@@ -35,7 +41,16 @@ function setTelegramAutoPollState(state) {
   }
 }
 
-export async function runSingleTelegramPoll({ limit = 12 } = {}) {
+interface PollResult {
+  ok: boolean;
+  reason?: string;
+  count?: number;
+  routed?: number;
+  rejected?: number;
+  commandReplies?: number;
+}
+
+export async function runSingleTelegramPoll({ limit = 12 } = {}): Promise<PollResult> {
   const token = getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
   if (!token) {
     appendConnectorAudit('telegram', 'poll_failed', { reason: 'missing_bot_token' });
@@ -48,7 +63,7 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}) {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const proof = await browserPollTelegram({ botToken: token, limit });
+  const proof = await browserPollTelegram({ botToken: token, limit } as { botToken: string; limit: number });
   const state = getTelegramAutoPollState();
   state.lastPolledAtMs = timestampMs();
   state.errors = proof.ok ? 0 : state.errors + 1;
@@ -71,7 +86,6 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}) {
     const senderId = message?.from_id || chatId;
     const text = message?.text || '';
 
-    // Bot command path — reply directly without Jose routing
     if (text.startsWith('/')) {
       if (allowedChatIds.length > 0 && !allowedChatIds.includes(chatId) && !allowedChatIds.includes(senderId)) {
         rejected += 1;
@@ -85,7 +99,6 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}) {
       try {
         const cmd = text.split(/\s+/)[0].slice(1).toLowerCase().replace(/@\w+$/, '');
         const args = text.split(/\s+/).slice(1).join(' ');
-        // For /ask, also route to Jose
         if (cmd === 'ask' && args) {
           await createJoseCommandRoute({ commandText: args, source: 'telegram' }).catch(() => {});
         }
@@ -98,7 +111,6 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}) {
       continue;
     }
 
-    // Regular message path — route to Jose
     const route = createConnectorRoutePacket('telegram', text, senderId);
     if (route?.rejected) {
       rejected += 1;
@@ -120,7 +132,6 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}) {
           commandText: route?.parsed?.originalText || text,
           source: 'telegram'
         });
-        // Acknowledge the message
         await browserSendTelegram({ botToken: token, chatId, text: '📨 Received. Jose is processing your request.' }).catch(() => {});
       } catch (error) {
         appendConnectorAudit('telegram', 'jose_routing_failed', {
@@ -142,7 +153,7 @@ export async function runSingleTelegramPoll({ limit = 12 } = {}) {
   return { ok: true, count: messages.length, routed, rejected, commandReplies };
 }
 
-export function getTelegramEnvSafe() {
+export function getTelegramEnvSafe(): { TELEGRAM_BOT_TOKEN: string } {
   const token = getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
   return { TELEGRAM_BOT_TOKEN: token || '' };
 }

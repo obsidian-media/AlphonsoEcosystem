@@ -24,23 +24,38 @@ const BACKUP_KEYS = [
   'alphonso_agent_avatars_v1'
 ];
 
-export async function createBackup() {
-  const data = {
+interface BackupData {
+  version: string;
+  createdAtMs: number;
+  localStorage: Record<string, unknown>;
+  sqlite: {
+    memoryRecords: unknown[];
+    kvStore?: Record<string, unknown>;
+    error?: string;
+  } | null;
+}
+
+interface RestoreResult {
+  localStorageRestored: number;
+  sqliteRestored: number;
+  errors: string[];
+}
+
+export async function createBackup(): Promise<BackupData> {
+  const data: BackupData = {
     version: BACKUP_VERSION,
     createdAtMs: timestampMs(),
     localStorage: {},
     sqlite: null
   };
 
-  // Export localStorage
   for (const key of BACKUP_KEYS) {
     if (key.endsWith('_')) {
-      // Prefix match (e.g., chat messages)
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k && k.startsWith(key)) {
           try {
-            data.localStorage[k] = JSON.parse(localStorage.getItem(k));
+            data.localStorage[k] = JSON.parse(localStorage.getItem(k) || 'null');
           } catch {
             data.localStorage[k] = localStorage.getItem(k);
           }
@@ -57,7 +72,6 @@ export async function createBackup() {
     }
   }
 
-  // Export SQLite memory records
   try {
     const memoryRecords = await invoke('list_memory_records', { filters: {} });
     data.sqlite = { memoryRecords: Array.isArray(memoryRecords) ? memoryRecords : [] };
@@ -65,16 +79,15 @@ export async function createBackup() {
     data.sqlite = { memoryRecords: [], error: 'SQLite not available' };
   }
 
-  // Export KV store
   try {
-    const kvKeys = await invoke('kv_list_keys', { prefix: 'alphonso_' });
-    const kvData = {};
+    const kvKeys = await invoke('kv_list_keys', { prefix: 'alphonso_' }) as string[];
+    const kvData: Record<string, unknown> = {};
     for (const k of (kvKeys || [])) {
       try {
         kvData[k] = await invoke('kv_get', { key: k });
       } catch { /* skip unreadable keys */ }
     }
-    data.sqlite = data.sqlite || {};
+    data.sqlite = data.sqlite || { memoryRecords: [] };
     data.sqlite.kvStore = kvData;
   } catch {
     // KV store not available
@@ -83,47 +96,44 @@ export async function createBackup() {
   return data;
 }
 
-export async function restoreBackup(backupData) {
+export async function restoreBackup(backupData: BackupData): Promise<RestoreResult> {
   if (!backupData || backupData.version !== BACKUP_VERSION) {
     throw new Error('Invalid backup format or version mismatch');
   }
 
-  const results = {
+  const results: RestoreResult = {
     localStorageRestored: 0,
     sqliteRestored: 0,
     errors: []
   };
 
-  // Restore localStorage
   if (backupData.localStorage) {
     for (const [key, value] of Object.entries(backupData.localStorage)) {
       try {
         localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
         results.localStorageRestored++;
       } catch (err) {
-        results.errors.push(`localStorage ${key}: ${err.message || err}`);
+        results.errors.push(`localStorage ${key}: ${(err as Error).message || err}`);
       }
     }
   }
 
-  // Restore SQLite memory records
-  if (backupData.sqlite?.memoryRecords?.length > 0) {
+  if (backupData.sqlite?.memoryRecords?.length && backupData.sqlite.memoryRecords.length > 0) {
     try {
-      const proof = await invoke('upsert_memory_records', { records: backupData.sqlite.memoryRecords });
+      const proof = await invoke('upsert_memory_records', { records: backupData.sqlite.memoryRecords }) as { written?: number } | null;
       results.sqliteRestored += proof?.written || backupData.sqlite.memoryRecords.length;
     } catch (err) {
-      results.errors.push(`SQLite memory: ${err.message || err}`);
+      results.errors.push(`SQLite memory: ${(err as Error).message || err}`);
     }
   }
 
-  // Restore KV store
   if (backupData.sqlite?.kvStore) {
     for (const [key, value] of Object.entries(backupData.sqlite.kvStore)) {
       try {
         await invoke('kv_set', { key, value: typeof value === 'string' ? value : JSON.stringify(value) });
         results.sqliteRestored++;
       } catch (err) {
-        results.errors.push(`KV ${key}: ${err.message || err}`);
+        results.errors.push(`KV ${key}: ${(err as Error).message || err}`);
       }
     }
   }
@@ -131,7 +141,7 @@ export async function restoreBackup(backupData) {
   return results;
 }
 
-export function exportBackupToFile(backupData) {
+export function exportBackupToFile(backupData: BackupData): void {
   const json = JSON.stringify(backupData, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -144,15 +154,15 @@ export function exportBackupToFile(backupData) {
   URL.revokeObjectURL(url);
 }
 
-export async function importBackupFromFile(file) {
+export async function importBackupFromFile(file: File): Promise<BackupData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target.result);
+        const data = JSON.parse(e.target?.result as string);
         resolve(data);
       } catch (err) {
-        reject(new Error(`Invalid backup file: ${err.message || err}`));
+        reject(new Error(`Invalid backup file: ${(err as Error).message || err}`));
       }
     };
     reader.onerror = () => reject(new Error('Failed to read backup file'));
@@ -160,14 +170,20 @@ export async function importBackupFromFile(file) {
   });
 }
 
-export function getBackupSizeEstimate() {
+interface BackupSizeEstimate {
+  bytes: number;
+  kb: number;
+  mb: string;
+}
+
+export function getBackupSizeEstimate(): BackupSizeEstimate {
   let totalBytes = 0;
   for (const key of BACKUP_KEYS) {
     if (key.endsWith('_')) {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k && k.startsWith(key)) {
-          totalBytes += (localStorage.getItem(k) || '').length * 2; // UTF-16
+          totalBytes += (localStorage.getItem(k) || '').length * 2;
         }
       }
     } else {

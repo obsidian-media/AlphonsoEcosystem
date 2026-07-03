@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-03 — v2.5.14 (Sprint 5 batch 6: 15 more services migrated to TS)
-**Verified by:** Kilo CLI session — `npm run lint` and `npx tsc --noEmit` both clean, 166/166 targeted tests passing across 15 test files. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
-**Version:** 2.5.14 (Sprint 5 batch 6 complete; 218 test files, 3,174+ tests, 165 services; root-level `src/services/*.js` count: 53 `.js` / 78 `.ts`)
+**Last verified:** 2026-07-03 — v2.5.15 (Sprint 5 batch 7: 15 more services migrated to TS)
+**Verified by:** Kilo CLI session — `npm run lint` and `npx tsc --noEmit` both clean, 265/265 targeted tests passing across 16 test files. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.15 (Sprint 5 batch 7 complete; 218 test files, 3,174+ tests, 165 services; root-level `src/services/*.js` count: 38 `.js` / 93 `.ts`)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---

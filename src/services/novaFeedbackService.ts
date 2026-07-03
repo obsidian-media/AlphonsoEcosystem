@@ -6,17 +6,25 @@ const STORE_KEY = 'alphonso_nova_scores_v1';
 export const NOVA_SCORE_SCOPE = 'nova_scores_v1';
 const MAX_SCORES = 500;
 
-function readAllScores() {
+interface NovaScoreEntry {
+  commandId: string;
+  score: number;
+  opportunityScore: number;
+  riskScore: number;
+  timestampMs: number;
+}
+
+function readAllScores(): NovaScoreEntry[] {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as NovaScoreEntry[]) : [];
   } catch {
     return [];
   }
 }
 
-function writeAllScores(scores) {
+function writeAllScores(scores: NovaScoreEntry[]): void {
   const rows = scores.slice(-MAX_SCORES);
   try {
     invoke('kv_set', { key: STORE_KEY, value: JSON.stringify(rows) }).catch(() => {});
@@ -28,7 +36,7 @@ function writeAllScores(scores) {
   } catch {
     // localStorage unavailable
   }
-  void persistScopeRows(NOVA_SCORE_SCOPE, rows, (row) => ({
+  void persistScopeRows(NOVA_SCORE_SCOPE, rows, (row: NovaScoreEntry) => ({
     id: row.commandId,
     data: row,
     status: 'recorded',
@@ -38,13 +46,18 @@ function writeAllScores(scores) {
   }));
 }
 
-export function storeNovaScore(commandId, score) {
+interface ScoreInput {
+  opportunityScore?: number;
+  riskScore?: number;
+}
+
+export function storeNovaScore(commandId: string, score: ScoreInput | number | null): NovaScoreEntry | null {
   if (!commandId || score == null) return null;
-  const opportunityScore = Number(score?.opportunityScore ?? score);
-  const riskScore = Number(score?.riskScore ?? 0);
+  const opportunityScore = Number((score && typeof score === 'object' ? score.opportunityScore : undefined) ?? (typeof score === 'number' ? score : (score as ScoreInput)?.opportunityScore) ?? score);
+  const riskScore = Number((score && typeof score === 'object' ? (score as ScoreInput).riskScore : undefined) ?? 0);
   if (Number.isNaN(opportunityScore) || Number.isNaN(riskScore)) return null;
   const numericScore = Number.isNaN(opportunityScore) ? 0 : opportunityScore;
-  const entry = {
+  const entry: NovaScoreEntry = {
     commandId,
     score: numericScore,
     opportunityScore: Number.isNaN(opportunityScore) ? 0 : opportunityScore,
@@ -62,17 +75,22 @@ export function storeNovaScore(commandId, score) {
   return entry;
 }
 
-export function getNovaScore(commandId) {
+export function getNovaScore(commandId: string): NovaScoreEntry | null {
   if (!commandId) return null;
   const allScores = readAllScores();
   return allScores.find((s) => s.commandId === commandId) || null;
 }
 
-export function getDecompositionHints(commandId) {
+interface DecompositionHint {
+  type: string;
+  message: string;
+}
+
+export function getDecompositionHints(commandId: string): { hints: DecompositionHint[]; score: NovaScoreEntry | null } {
   const scoreEntry = getNovaScore(commandId);
   if (!scoreEntry) return { hints: [], score: null };
 
-  const hints = [];
+  const hints: DecompositionHint[] = [];
   const opportunityScore = Number(scoreEntry.opportunityScore ?? scoreEntry.score ?? 0);
   const riskScore = Number(scoreEntry.riskScore ?? 0);
 
@@ -99,13 +117,19 @@ export function getDecompositionHints(commandId) {
   return { hints, score: scoreEntry };
 }
 
-export function listRecentScores(count = 10) {
+export function listRecentScores(count: number = 10): NovaScoreEntry[] {
   const allScores = readAllScores();
   const limit = Math.max(1, Math.min(Number(count) || 10, MAX_SCORES));
   return allScores.slice(-limit);
 }
 
-export function computeScoreTrend(scores) {
+interface ScoreTrend {
+  trend: 'improving' | 'declining' | 'stable';
+  delta?: number;
+  dataPoints: number;
+}
+
+export function computeScoreTrend(scores: NovaScoreEntry[]): ScoreTrend {
   if (!Array.isArray(scores) || scores.length < 2) {
     return { trend: 'stable', dataPoints: scores?.length || 0 };
   }
@@ -130,7 +154,7 @@ export function computeScoreTrend(scores) {
   return { trend: 'stable', delta, dataPoints: numericScores.length };
 }
 
-export function clearNovaScores() {
+export function clearNovaScores(): void {
   try {
     localStorage.removeItem(STORE_KEY);
   } catch {
