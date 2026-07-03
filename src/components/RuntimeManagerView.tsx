@@ -117,7 +117,7 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
   'voice-os': {
     icon: '🎙️',
     category: 'Voice',
-    docsUrl: 'https://github.com/ObsidianMedia/AlphonsoEcosystem',
+    docsUrl: 'https://github.com/obsidian-studios/AlphonsoEcosystem',
     color: 'text-cyan-400',
     bg: 'bg-cyan-500/10 border-cyan-500/20',
   },

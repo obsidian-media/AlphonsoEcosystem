@@ -1,18 +1,18 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/ObsidianMedia/AlphonsoEcosystem/main/ALPHONSO_THUMBNAIL.webp" alt="Alphonso" width="180"/>
+<img src="https://raw.githubusercontent.com/obsidian-studios/AlphonsoEcosystem/main/ALPHONSO_THUMBNAIL.webp" alt="Alphonso" width="180"/>
 
 # Alphonso
 
 > **v2.5.18** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.18-blue)](https://github.com/ObsidianMedia/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/ObsidianMedia/AlphonsoEcosystem)
-[![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/ObsidianMedia/AlphonsoEcosystem/blob/main/LICENSE)
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/ObsidianMedia/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.18-blue)](https://github.com/obsidian-studios/AlphonsoEcosystem/releases)
+[![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/obsidian-studios/AlphonsoEcosystem)
+[![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/obsidian-studios/AlphonsoEcosystem/blob/main/LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-studios/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
-[**Download v2.5.18**](https://github.com/ObsidianMedia/AlphonsoEcosystem/releases/tag/v2.5.18) · [Docs](https://github.com/ObsidianMedia/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/ObsidianMedia/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.5.18**](https://github.com/obsidian-studios/AlphonsoEcosystem/releases/tag/v2.5.18) · [Docs](https://github.com/obsidian-studios/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-studios/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 ## What's New in v2.5.18
 
@@ -187,7 +187,7 @@
 
 ### Download the Installer (Windows)
 
-1. Go to [Releases](https://github.com/ObsidianMedia/AlphonsoEcosystem/releases)
+1. Go to [Releases](https://github.com/obsidian-studios/AlphonsoEcosystem/releases)
 1. Download the latest `Alphonso_x64-setup.exe`
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
@@ -207,7 +207,7 @@
 ### Build from Source
 
 ```bash
-git clone https://github.com/ObsidianMedia/AlphonsoEcosystem.git
+git clone https://github.com/obsidian-studios/AlphonsoEcosystem.git
 cd AlphonsoEcosystem
 npm install
 

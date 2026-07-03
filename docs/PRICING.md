@@ -124,4 +124,4 @@ Payments are processed through Lemon Squeezy (credit card, PayPal). Enterprise i
 
 ## License
 
-Alphonso is licensed under **BSL 1.1** (Business Source License). Personal use is free. Commercial use of connectors beyond the Free tier requires a paid license. See [LICENSE](https://github.com/ObsidianMedia/AlphonsoEcosystem/blob/main/LICENSE) for details.
+Alphonso is licensed under **BSL 1.1** (Business Source License). Personal use is free. Commercial use of connectors beyond the Free tier requires a paid license. See [LICENSE](https://github.com/obsidian-studios/AlphonsoEcosystem/blob/main/LICENSE) for details.

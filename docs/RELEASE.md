@@ -2,7 +2,7 @@
 
 ## Overview
 
-Alphonso uses [Tauri's built-in updater](https://tauri.app/plugin/updater/) with ed25519 signing. When a user runs an installed copy of Alphonso, it checks `https://github.com/ObsidianMedia/AlphonsoEcosystem/releases/latest/download/latest.json` on launch and prompts the user to install the new version if one is available.
+Alphonso uses [Tauri's built-in updater](https://tauri.app/plugin/updater/) with ed25519 signing. When a user runs an installed copy of Alphonso, it checks `https://github.com/obsidian-studios/AlphonsoEcosystem/releases/latest/download/latest.json` on launch and prompts the user to install the new version if one is available.
 
 The release pipeline is fully automated via `.github/workflows/release.yml`. The only manual step is adding two GitHub Secrets — which only needs to be done once.
 
@@ -53,7 +53,7 @@ npm run updater:setup
 
 ## Step 2 — Add GitHub Secrets
 
-Go to: `https://github.com/ObsidianMedia/AlphonsoEcosystem/settings/secrets/actions`
+Go to: `https://github.com/obsidian-studios/AlphonsoEcosystem/settings/secrets/actions`
 
 Add the following two repository secrets:
 
@@ -109,7 +109,7 @@ Enter the version tag (e.g. `v2.0.1`) in the input field and click Run.
 
 The updater endpoint in `tauri.conf.json` points to:
 ```
-https://github.com/ObsidianMedia/AlphonsoEcosystem/releases/latest/download/latest.json
+https://github.com/obsidian-studios/AlphonsoEcosystem/releases/latest/download/latest.json
 ```
 
 GitHub's `/releases/latest/download/` path always serves the most recent non-prerelease's assets, so no manifest hosting infrastructure is needed.
