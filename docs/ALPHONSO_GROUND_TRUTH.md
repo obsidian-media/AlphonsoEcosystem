@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.6 (Sprint 4 security hardening: fixed a real Telegram owner-registration auth bypass + constant-time gateway token comparisons)
-**Verified by:** Claude Code session — audited already-merged Sprint 2 code directly (grep + read, not a diff review — the `security-review` skill is diff-scoped and didn't apply). Targeted tests passed 100% (48/48 across `telegramCompanionService`, `ConnectorSetupPanel`, `whatsappCloudGateway`, `whatsappGatewaySecurity`, `genericWebhookService`), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
-**Version:** 2.5.6 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 22 unchanged; also closed the `ConnectorSetupPanel.test.jsx` mock gap open since Sprint 2 as a bonus fix)
+**Last verified:** 2026-07-02 — v2.5.7 (Sprint 5 batch 1: connectors subsystem migrated to TypeScript)
+**Verified by:** Claude Code session — targeted tests passed 100% (275/275 across `connectorAuth`, `connectors/n8nConnector`, `connectors/tavilyConnector`, `connectors/telegramCompanionService`, `ConnectorSetupPanel`, `deepseekConnector`, `genericWebhookService`, `marcusExecutionService`, `n8nConnector`, `chatgptService`, `claudeService`, `whatsappBrowserConnector`, `tavilyConnector`, `telegramAutoPollService`, `telegramCompanionService`), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.7 (security hardened, 218 test files, 3,174+ tests, 165 services; `src/services/connectors/` now 9 `.ts` / 4 `.js`, up from 3 `.ts` / 10 `.js`; root-level `src/services/*.js` count of 115 unaffected — this batch targeted the connectors subdirectory specifically)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -1180,6 +1180,50 @@ since there was no pending PR to review.
   its `connectorAuth` mock factory) — found while already touching that
   file for the Telegram UI copy change.
 - Verification: 48/48 targeted tests passing, `npx tsc --noEmit` clean,
+  ESLint clean.
+
+## 11.11 ALPHONSOTOTHEMOON Sprint 5, batch 1: connectors subsystem TS migration (2026-07-02, v2.5.7)
+
+Full context in `ALPHONSOTOTHEMOON.md`. `src/services/` root level is still
+115 `.js` / 16 `.ts` — this batch targeted the `connectors/` subdirectory
+specifically, per the sprint's own "batch by subsystem, connectors first"
+guidance, not the root-level count.
+
+- **Migrated 6 files**: `connectorConstants.ts`, `tavilyConnector.ts`,
+  `perplexityConnector.ts`, `deepseekConnector.ts`, `n8nConnector.ts`,
+  `connectorAuth.ts`. `src/services/connectors/` moved from 3 `.ts` / 10
+  `.js` to 9 `.ts` / 4 `.js`.
+- **Deliberately deferred** to a follow-up batch:
+  `connectorImageGenerators.js` (375 lines), `connectorOutbound.js` (952
+  lines), `connectorPolling.js` (452 lines), `connectorRegistry.js` (682
+  lines) — larger files, more surface area per migration, consistent with
+  "do not attempt in one pass."
+- **Verified the rename pattern was safe before touching anything**: this
+  codebase already imports `.ts` connector modules
+  (`discordConnector.ts`/`slackConnector.ts`/`githubConnector.ts`) via
+  literal `.js`-suffixed import specifiers in several other files (Vite's
+  bundler module resolution rewrites the extension) — confirmed by
+  grepping for `discordConnector.js`/`slackConnector.js` and finding real
+  hits before assuming the same would work for the 6 files in this batch.
+  No import statement needed changing across the ~15 files that reference
+  these connectors.
+- **Real bug caught by typechecking, not just a mechanical rename**:
+  `connectorAuth.ts`'s new `updateConnectorAuthProfile()` type signature
+  caught `ConnectorSetupPanel.tsx` passing a raw, unnormalized string as
+  `allowlist` — the function's own `normalizeAllowlist()` call already
+  handled this correctly at runtime, but the untyped JS had been silently
+  accepting the mismatch. Fixed the type to explicitly accept the
+  pre-normalization string input this call site actually passes, rather
+  than loosening the type to `any` to make the error disappear.
+- **Found and fixed a related test gap while running the full targeted
+  suite**: `src/test/connectors/telegramCompanionService.test.js` is a
+  second, duplicate Telegram companion test file that Sprint 4's
+  owner-registration security fix hadn't touched (only
+  `src/test/telegramCompanionService.test.js` was updated at the time).
+  It had the same `TELEGRAM_ALLOWED_CHAT_IDS` mock gap and 2 failing
+  tests as a result — fixed with the same mock pattern plus 2 new
+  regression tests (empty-allowlist refusal, wrong-chat-id refusal).
+- Verification: 275/275 targeted tests passing, `npx tsc --noEmit` clean,
   ESLint clean.
 
 ---

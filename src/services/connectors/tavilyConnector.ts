@@ -1,13 +1,35 @@
-import { getConnectorCredential } from './connectorAuth.js';
+import { getConnectorCredential } from './connectorAuth';
 import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const TAVILY_API_BASE = 'https://api.tavily.com';
 
-export function isTavilyConfigured() {
+export interface TavilySearchOptions {
+  maxResults?: number;
+  searchDepth?: 'basic' | 'advanced';
+}
+
+export interface TavilySource {
+  url: string;
+  title: string;
+  snippet: string;
+  relevance: number;
+}
+
+export interface TavilySearchResult {
+  summary: string;
+  sources: TavilySource[];
+  confidenceLevel: string;
+  provider: string;
+}
+
+export function isTavilyConfigured(): boolean {
   return Boolean(getConnectorCredential('tavily', 'TAVILY_API_KEY'));
 }
 
-export async function searchTavily(query, { maxResults = 8, searchDepth = 'basic' } = {}) {
+export async function searchTavily(
+  query: string,
+  { maxResults = 8, searchDepth = 'basic' }: TavilySearchOptions = {}
+): Promise<TavilySearchResult> {
   const apiKey = getConnectorCredential('tavily', 'TAVILY_API_KEY');
   if (!apiKey) throw new Error('Tavily API key not configured');
 
@@ -48,7 +70,7 @@ export async function searchTavily(query, { maxResults = 8, searchDepth = 'basic
 
   return {
     summary: data.answer || results[0]?.content || '',
-    sources: results.map(item => ({
+    sources: results.map((item: any) => ({
       url: item.url,
       title: item.title,
       snippet: item.content?.slice(0, 300) || '',

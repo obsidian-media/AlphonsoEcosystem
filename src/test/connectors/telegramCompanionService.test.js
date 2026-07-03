@@ -119,8 +119,15 @@ describe('telegramCompanionService', () => {
   });
 
   describe('owner registration flow', () => {
-    it('registers owner chatId on /start when no owner exists', async () => {
+    // Sprint 4 security fix: first-time /start registration is now gated on
+    // TELEGRAM_ALLOWED_CHAT_IDS — the chat must be pre-allowlisted before it
+    // can claim ownership. These tests configure the allowlist to include
+    // 'chat-123' so the pre-existing "happy path" assertions still hold.
+    it('registers owner chatId on /start when the chat is allowlisted and no owner exists', async () => {
       mockAppStorage.getStorage.mockReturnValue(null);
+      mockAuth.getConnectorCredential.mockImplementation((_connector, key) =>
+        key === 'TELEGRAM_ALLOWED_CHAT_IDS' ? 'chat-123' : 'test-token'
+      );
 
       await service.processInboundCommands('test-token', {
         ok: true,
@@ -130,8 +137,11 @@ describe('telegramCompanionService', () => {
       expect(mockAppStorage.setStorage).toHaveBeenCalledWith('alphonso_telegram_owner_chat_id', 'chat-123');
     });
 
-    it('prompts /start when no owner and command is not /start', async () => {
+    it('prompts /start when no owner, chat is allowlisted, and command is not /start', async () => {
       mockAppStorage.getStorage.mockReturnValue(null);
+      mockAuth.getConnectorCredential.mockImplementation((_connector, key) =>
+        key === 'TELEGRAM_ALLOWED_CHAT_IDS' ? 'chat-123' : 'test-token'
+      );
 
       await service.processInboundCommands('test-token', {
         ok: true,
@@ -141,6 +151,34 @@ describe('telegramCompanionService', () => {
       const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
       const startPrompt = calls.find(c => c[1].text.includes('/start to register'));
       expect(startPrompt).toBeTruthy();
+    });
+
+    it('refuses to register an owner when TELEGRAM_ALLOWED_CHAT_IDS is not configured', async () => {
+      mockAppStorage.getStorage.mockReturnValue(null);
+      mockAuth.getConnectorCredential.mockImplementation((_connector, key) =>
+        key === 'TELEGRAM_ALLOWED_CHAT_IDS' ? '' : 'test-token'
+      );
+
+      await service.processInboundCommands('test-token', {
+        ok: true,
+        messages: [{ chat: { id: 'chat-123' }, message: { text: '/start' }, update_id: 1 }]
+      });
+
+      expect(mockAppStorage.setStorage).not.toHaveBeenCalled();
+    });
+
+    it('refuses to register an owner from a chat not on the allowlist', async () => {
+      mockAppStorage.getStorage.mockReturnValue(null);
+      mockAuth.getConnectorCredential.mockImplementation((_connector, key) =>
+        key === 'TELEGRAM_ALLOWED_CHAT_IDS' ? 'some-other-chat' : 'test-token'
+      );
+
+      await service.processInboundCommands('test-token', {
+        ok: true,
+        messages: [{ chat: { id: 'attacker-chat' }, message: { text: '/start' }, update_id: 1 }]
+      });
+
+      expect(mockAppStorage.setStorage).not.toHaveBeenCalled();
     });
 
     it('rejects /start when owner already registered', async () => {

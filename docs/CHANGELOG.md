@@ -6,6 +6,38 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.7] — 2026-07-02
+
+### Sprint 5 (batch 1 of N): service-layer TypeScript migration — connectors subsystem
+
+- Migrated 6 of the 10 remaining `.js` files in `src/services/connectors/` to
+  `.ts`: `connectorConstants.ts`, `tavilyConnector.ts`, `perplexityConnector.ts`,
+  `deepseekConnector.ts`, `n8nConnector.ts`, `connectorAuth.ts`. The
+  `connectors/` subsystem is now 9 `.ts` / 4 `.js` (up from 3 `.ts` / 10 `.js`),
+  following this project's own guidance to batch the service-layer migration
+  by subsystem rather than attempt all 115 root-level `.js` files at once.
+  `connectorImageGenerators.js`, `connectorOutbound.js`, `connectorPolling.js`,
+  and `connectorRegistry.js` remain `.js` — deliberately deferred to a
+  follow-up batch (452-952 lines each, larger scope per file).
+- All renames verified safe before touching anything: this codebase already
+  imports `.ts` connector modules (`discordConnector.ts`, `slackConnector.ts`,
+  `githubConnector.ts`) via literal `.js`-suffixed import specifiers
+  elsewhere (Vite's bundler module resolution rewrites the extension), so no
+  import statements needed updating across the ~15 files that import these
+  connectors.
+- `connectorAuth.ts`'s new real types caught one true type mismatch at
+  `npx tsc --noEmit` time: `ConnectorSetupPanel.tsx` was passing a raw comma/
+  newline-separated string as `allowlist` to `updateConnectorAuthProfile()`,
+  which the (previously untyped) JS silently accepted — fixed the type
+  signature to accept the pre-normalization string input explicitly rather
+  than loosening it to `any`.
+- Found and fixed a second test file with the same allowlist-mock gap the
+  Sprint 4 security fix had introduced (`src/test/connectors/telegramCompanionService.test.js`
+  — a duplicate of `src/test/telegramCompanionService.test.js` that Sprint 4
+  didn't touch): added the same `TELEGRAM_ALLOWED_CHAT_IDS` mock plus 2 new
+  regression tests for the empty-allowlist and wrong-chat-id refusal cases.
+- 275/275 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean.
+
 ## [2.5.6] — 2026-07-02
 
 ### Sprint 4: security hardening Batch 2 — attacker resistance

@@ -3,15 +3,35 @@ import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const N8N_DEFAULT_BASE_URL = 'http://localhost:5678';
 
-function getN8nBaseUrl() {
+export interface N8nHealthResult {
+  ok: boolean;
+  status: string;
+  statusCode?: number;
+}
+
+export interface N8nWebhookResult {
+  ok: boolean;
+  data?: any;
+  error?: string;
+}
+
+export interface N8nWorkflowListResult {
+  ok: boolean;
+  workflows?: any[];
+  error?: string;
+}
+
+export interface N8nActionResult {
+  ok: boolean;
+  error?: string;
+}
+
+function getN8nBaseUrl(): string {
   return getConnectorCredential('n8n', 'N8N_BASE_URL') || N8N_DEFAULT_BASE_URL;
 }
 
-/**
- * Check if n8n instance is healthy.
- * @returns {Promise<{ ok: boolean, status: string, statusCode?: number }>}
- */
-export async function isN8nHealthy() {
+/** Check if n8n instance is healthy. */
+export async function isN8nHealthy(): Promise<N8nHealthResult> {
   const baseUrl = getN8nBaseUrl();
   // Policy gate check
   const gateHealth = evaluatePolicyGate({
@@ -35,7 +55,7 @@ export async function isN8nHealthy() {
       status: response.ok ? 'healthy' : 'unhealthy',
       statusCode: response.status,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       ok: false,
       status: `connection_failed: ${String(error?.message || error).slice(0, 100)}`,
@@ -45,11 +65,10 @@ export async function isN8nHealthy() {
 
 /**
  * Trigger an n8n webhook by path.
- * @param {string} webhookPath - The webhook path (e.g., "my-workflow" or "hook/abc123")
- * @param {object} payload - JSON payload to send to the webhook
- * @returns {Promise<{ ok: boolean, data?: object, error?: string }>}
+ * @param webhookPath - The webhook path (e.g., "my-workflow" or "hook/abc123")
+ * @param payload - JSON payload to send to the webhook
  */
-export async function triggerN8nWebhook(webhookPath, payload = {}) {
+export async function triggerN8nWebhook(webhookPath: string, payload: Record<string, any> = {}): Promise<N8nWebhookResult> {
   const baseUrl = getN8nBaseUrl();
   const normalizedPath = String(webhookPath || '').replace(/^\/+/, '');
 
@@ -91,7 +110,7 @@ export async function triggerN8nWebhook(webhookPath, payload = {}) {
     }
 
     return { ok: true, data };
-  } catch (error) {
+  } catch (error: any) {
     if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
       return { ok: false, error: 'n8n webhook timeout (15s)' };
     }
@@ -102,11 +121,8 @@ export async function triggerN8nWebhook(webhookPath, payload = {}) {
   }
 }
 
-/**
- * List available workflows from n8n (for discovery).
- * @returns {Promise<{ ok: boolean, workflows?: object[], error?: string }>}
- */
-export async function listN8nWorkflows() {
+/** List available workflows from n8n (for discovery). */
+export async function listN8nWorkflows(): Promise<N8nWorkflowListResult> {
   const baseUrl = getN8nBaseUrl();
   try {
     const gateList = evaluatePolicyGate({
@@ -131,7 +147,7 @@ export async function listN8nWorkflows() {
 
     const data = await response.json();
     return { ok: true, workflows: data.data || data || [] };
-  } catch (error) {
+  } catch (error: any) {
     return {
       ok: false,
       error: `n8n workflow list failed: ${String(error?.message || error).slice(0, 200)}`,
@@ -139,13 +155,8 @@ export async function listN8nWorkflows() {
   }
 }
 
-/**
- * Activate or deactivate an n8n workflow by ID.
- * @param {string} workflowId
- * @param {boolean} active
- * @returns {Promise<{ ok: boolean, error?: string }>}
- */
-export async function setN8nWorkflowActive(workflowId, active) {
+/** Activate or deactivate an n8n workflow by ID. */
+export async function setN8nWorkflowActive(workflowId: string, active: boolean): Promise<N8nActionResult> {
   const baseUrl = getN8nBaseUrl();
   try {
     const gateActivate = evaluatePolicyGate({
@@ -171,7 +182,7 @@ export async function setN8nWorkflowActive(workflowId, active) {
     }
 
     return { ok: true };
-  } catch (error) {
+  } catch (error: any) {
     return {
       ok: false,
       error: `n8n activate failed: ${String(error?.message || error).slice(0, 200)}`,

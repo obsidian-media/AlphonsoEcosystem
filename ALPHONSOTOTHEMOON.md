@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprints 1-4 closed. Sprint 4 (v2.5.6) fixed a real Telegram owner-registration auth bypass + constant-time token comparisons on both gateways.
+**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 1 of N, v2.5.7): connectors subsystem migrated to TypeScript.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -581,6 +581,41 @@ into Sprint 2+ — not dropped.
     `whatsappGatewaySecurity`, `genericWebhookService`. `npx tsc --noEmit`
     clean. ESLint clean.
   - Version bumped 2.5.5 → 2.5.6. All docs updated in the same pass.
+- **2026-07-02 (Sprint 5, batch 1, v2.5.7)** — User clarified "phase 5" meant
+  Sprint 5 mid-request; proceeded on service-layer TS migration. Counted
+  `src/services/connectors/` directly (10 `.js` + 3 `.ts`) rather than
+  assuming from the doc's root-level 115/16 figure, and picked the smallest
+  files first within that subsystem, per its own "small and self-contained"
+  guidance: `connectorConstants.js` (6 lines) as a pattern sanity-check,
+  then `tavilyConnector.js`/`perplexityConnector.js`/`deepseekConnector.js`
+  (55-67 lines), then `n8nConnector.js` (180 lines), then `connectorAuth.js`
+  (236 lines, saved for last since it's the most depended-upon).
+  - Before renaming anything, grepped for `discordConnector.js` /
+    `slackConnector.js` literal-extension imports elsewhere in the
+    codebase to confirm the already-`.ts` connectors were being imported
+    with a `.js` specifier and it was working — established this was a
+    safe, already-proven pattern rather than assuming it would be.
+  - `connectorAuth.ts`'s new real types immediately caught a genuine
+    type mismatch at `npx tsc --noEmit`: `ConnectorSetupPanel.tsx` passing
+    a raw string where `allowlist: string[]` was expected. Fixed the
+    function's type signature to reflect what it actually accepts
+    (pre-normalization string, normalized internally) rather than take
+    the easy way out and type it `any`.
+  - Running the full targeted test batch surfaced an unrelated but real
+    gap: a second, duplicate Telegram companion test file
+    (`src/test/connectors/telegramCompanionService.test.js`) existed
+    alongside the one already fixed in Sprint 4, and Sprint 4 had only
+    updated the other one — 2 tests failing here as a direct result.
+    Fixed with the same allowlist-mock pattern already used in Sprint 4,
+    plus 2 additional regression tests, rather than leaving a second,
+    now-inconsistent copy of the same test suite half-fixed.
+  - Deliberately did not touch `connectorImageGenerators.js`,
+    `connectorOutbound.js`, `connectorPolling.js`, or
+    `connectorRegistry.js` this pass (452-952 lines each) — matches this
+    sprint's own explicit "do not attempt in one pass" instruction.
+  - Verification: 275/275 targeted tests passing across 15 test files,
+    `npx tsc --noEmit` clean, ESLint clean.
+  - Version bumped 2.5.6 → 2.5.7. All docs updated in the same pass.
 
 ## Sprint status at a glance
 
@@ -590,7 +625,7 @@ into Sprint 2+ — not dropped.
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
 | 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
 | 4 | Security hardening Batch 2 (attacker-resistance) | ✅ Closed 2026-07-02 (v2.5.6) — fixed Telegram owner-registration auth bypass + constant-time gateway token comparisons; audited Discord/webhook/CI-gating with no further fix needed; credential-storage upgrade documented as a Sprint 6 recommendation |
-| 5 | Service-layer TypeScript migration | 🌱 Seeded, not started |
+| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 closed 2026-07-02 (v2.5.7): `connectors/` subsystem 3→9 `.ts` files. Root-level `src/services/*.js` (115 files) still open, tracked as future batches |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🌱 Seeded, not started |
 
 Seeded now so scope survives even if priorities shift or a session diverges
@@ -824,21 +859,50 @@ route, fixed the known pre-existing `ConnectorSetupPanel.test.jsx` failure
 `hydrateConnectorCredentialsFromSqlite: vi.fn().mockResolvedValue()` to its
 `connectorAuth` mock factory, exactly as previously diagnosed.
 
-## Sprint 5 (seeded): Service-layer TypeScript migration
+## Sprint 5 (batch 1 CLOSED 2026-07-02, v2.5.7): Service-layer TypeScript migration
 
 **Correction to a stale CLAUDE.md claim** (caught 2026-07-02): the
 component migration is actually **complete** — `src/components/` is 100%
 `.tsx` (114 files, 0 `.jsx` remaining), not "10 migrated, 63 remaining" as
 CLAUDE.md said before this correction. The real remaining gap is the
 **service layer**: `src/services/` is 115 `.js` files vs. only 16 `.ts`
-files. That's the actual next migration target, not components.
+files (root level). That's the actual migration target, not components.
 
-- Prioritize services with complex state/contracts first (this sprint's
+**Batch 1 (this pass): `src/services/connectors/` subsystem.**
+- Migrated 6 files: `connectorConstants.ts`, `tavilyConnector.ts`,
+  `perplexityConnector.ts`, `deepseekConnector.ts`, `n8nConnector.ts`,
+  `connectorAuth.ts`. Subsystem is now 9 `.ts` / 4 `.js` (was 3 `.ts` / 10
+  `.js`).
+- Deferred to a follow-up batch: `connectorImageGenerators.js` (375
+  lines), `connectorOutbound.js` (952 lines), `connectorPolling.js` (452
+  lines), `connectorRegistry.js` (682 lines) — larger files, more surface
+  area, consistent with "do not attempt this in one pass."
+- Confirmed before renaming anything that this codebase already resolves
+  literal `.js`-suffixed imports to actual `.ts` files (Vite bundler
+  resolution) — `discordConnector.ts`/`slackConnector.ts`/`githubConnector.ts`
+  were already imported this way elsewhere. No import statement needed
+  changing across the ~15 files that reference the 6 migrated connectors.
+- Real types caught a real bug: `connectorAuth.ts`'s new
+  `updateConnectorAuthProfile()` signature flagged `ConnectorSetupPanel.tsx`
+  passing a raw unnormalized string as `allowlist` — previously silently
+  accepted by untyped JS. Fixed the type to match the actual call site
+  rather than loosening it to `any`.
+- While running the full targeted suite, found a second, duplicate
+  Telegram test file (`src/test/connectors/telegramCompanionService.test.js`)
+  that Sprint 4's owner-registration fix hadn't updated — same
+  `TELEGRAM_ALLOWED_CHAT_IDS` mock gap, 2 tests failing as a result. Fixed
+  with the same mock pattern used in the other test file, plus 2 new
+  regression tests.
+- Verification: 275/275 targeted tests passing, `npx tsc --noEmit` clean,
+  ESLint clean.
+
+**Remaining batches (not yet started, still tracked here):**
+- Root-level `src/services/*.js` — 115 files, unaffected by batch 1 since
+  it targeted a subdirectory, not root level. Needs its own batching
+  strategy (by subsystem/complexity) when picked up.
+- Prioritize services with complex state/contracts first — this sprint's
   own `agentContractService.ts` and `orchestrationQueueService.ts` are
-  already `.ts` — good models to extend from).
-- Do not attempt this in one pass — batch by subsystem (connectors first,
-  since `discordConnector.ts`/`slackConnector.ts` are already `.ts` and
-  most connector `.js` files are small and self-contained).
+  already `.ts` and remain good models to extend from.
 
 ## Sprint 6 (seeded): Runtime hardening carryover + remaining connectors
 

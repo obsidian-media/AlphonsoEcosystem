@@ -12,16 +12,26 @@ import {
   writeRows
 } from './connectorRegistry.js';
 import { durableGet, durableSet } from '../../lib/durableStore.js';
+
 const CREDS_KEY = 'alphonso_connector_credentials_v1';
 const CRED_CACHE_TTL_MS = 60_000;
 
-let _credCache = null;
+export interface ConnectorAuthProfile {
+  enabled: boolean;
+  allowlist: string[];
+  mode: string;
+}
+
+export type ConnectorAuthProfiles = Record<string, ConnectorAuthProfile>;
+export type ConnectorCredentials = Record<string, Record<string, string>>;
+
+let _credCache: ConnectorCredentials | null = null;
 let _credCacheHydratedAt = 0;
 
-export async function hydrateConnectorCredentialsFromSqlite(force = false) {
+export async function hydrateConnectorCredentialsFromSqlite(force = false): Promise<void> {
   if (_credCache !== null && !force && (Date.now() - _credCacheHydratedAt) < CRED_CACHE_TTL_MS) return;
   try {
-    const json = await invoke('kv_get', { key: CREDS_KEY });
+    const json = await invoke('kv_get', { key: CREDS_KEY }) as string | null;
     if (json) {
       const parsed = JSON.parse(json);
       if (parsed && typeof parsed === 'object') {
@@ -46,7 +56,7 @@ export async function hydrateConnectorCredentialsFromSqlite(force = false) {
   }
 }
 
-function readAllCredentials() {
+function readAllCredentials(): ConnectorCredentials {
   if (_credCache === null) {
     _credCache = {};
     _credCacheHydratedAt = Date.now();
@@ -59,7 +69,7 @@ function readAllCredentials() {
   return _credCache;
 }
 
-function writeAllCredentials(creds) {
+function writeAllCredentials(creds: ConnectorCredentials): void {
   _credCache = creds;
   _credCacheHydratedAt = Date.now();
   try {
@@ -69,14 +79,14 @@ function writeAllCredentials(creds) {
   }
 }
 
-export function saveConnectorCredential(connectorId, key, value) {
+export function saveConnectorCredential(connectorId: string, key: string, value: unknown): void {
   const all = readAllCredentials();
   if (!all[connectorId]) all[connectorId] = {};
   all[connectorId][key] = String(value || '').trim();
   writeAllCredentials(all);
 }
 
-export function getConnectorCredential(connectorId, key) {
+export function getConnectorCredential(connectorId: string, key: string): string {
   try {
     const all = readAllCredentials();
     return all?.[connectorId]?.[key] || '';
@@ -85,7 +95,7 @@ export function getConnectorCredential(connectorId, key) {
   }
 }
 
-export function getConnectorCredentials(connectorId) {
+export function getConnectorCredentials(connectorId: string): Record<string, string> {
   try {
     const all = readAllCredentials();
     return all?.[connectorId] || {};
@@ -94,7 +104,7 @@ export function getConnectorCredentials(connectorId) {
   }
 }
 
-export const DEFAULT_AUTH_PROFILES = {
+export const DEFAULT_AUTH_PROFILES: ConnectorAuthProfiles = {
   telegram: { enabled: false, allowlist: [], mode: 'allowlist_required' },
   whatsapp: { enabled: false, allowlist: [], mode: 'allowlist_required' },
   youtube: { enabled: false, allowlist: [], mode: 'allowlist_required' },
@@ -108,7 +118,7 @@ export const DEFAULT_AUTH_PROFILES = {
   runway: { enabled: false, allowlist: [], mode: 'allowlist_required' }
 };
 
-export function readAuthProfiles() {
+export function readAuthProfiles(): ConnectorAuthProfiles {
   try {
     const raw = durableGet(CONNECTOR_AUTH_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
@@ -118,13 +128,13 @@ export function readAuthProfiles() {
   }
 }
 
-export function writeAuthProfiles(profiles) {
+export function writeAuthProfiles(profiles: ConnectorAuthProfiles): void {
   durableSet(CONNECTOR_AUTH_KEY, JSON.stringify(profiles));
   const rows = Object.entries(profiles || {}).map(([id, profile]) => ({
     id: `auth-${id}`,
     ...profile
   }));
-  persistScopeRows(CONNECTOR_AUTH_SCOPE, rows, (row) => ({
+  persistScopeRows(CONNECTOR_AUTH_SCOPE, rows, (row: any) => ({
     id: row.id,
     data: row,
     status: row.enabled ? 'enabled' : 'disabled',
@@ -134,9 +144,9 @@ export function writeAuthProfiles(profiles) {
   }));
 }
 
-export async function hydrateConnectorAuthProfilesFromSqlite() {
+export async function hydrateConnectorAuthProfilesFromSqlite(): Promise<ConnectorAuthProfiles | null> {
   try {
-    const json = await invoke('kv_get', { key: CONNECTOR_AUTH_KEY });
+    const json = await invoke('kv_get', { key: CONNECTOR_AUTH_KEY }) as string | null;
     if (!json) return null;
     const parsed = JSON.parse(json);
     return typeof parsed === 'object' && parsed !== null ? parsed : null;
@@ -145,7 +155,7 @@ export async function hydrateConnectorAuthProfilesFromSqlite() {
   }
 }
 
-export function normalizeAllowlist(value) {
+export function normalizeAllowlist(value: unknown): string[] {
   return String(value || '')
     .split(/\r?\n|,/)
     .map((item) => item.trim())
@@ -153,7 +163,7 @@ export function normalizeAllowlist(value) {
     .slice(0, 120);
 }
 
-export function authorizeConnectorRequest(connectorId) {
+export function authorizeConnectorRequest(connectorId: string): { enabled: boolean; isAuthorized: boolean; mode: string } {
   const profiles = readAuthProfiles();
   const profile = profiles?.[connectorId] || { enabled: false, allowlist: [], mode: 'allowlist_required' };
   if (profile.mode === 'local_only') {
@@ -165,7 +175,7 @@ export function authorizeConnectorRequest(connectorId) {
   return { enabled: true, isAuthorized: true, mode: profile.mode || 'allowlist_required' };
 }
 
-export function isConnectorAuthenticated(connectorId) {
+export function isConnectorAuthenticated(connectorId: string): { ok: boolean; success: boolean; connector: string; enabled: boolean; mode: string } {
   const auth = authorizeConnectorRequest(connectorId);
   return {
     ok: Boolean(auth.isAuthorized),
@@ -176,7 +186,18 @@ export function isConnectorAuthenticated(connectorId) {
   };
 }
 
-export function logUnauthenticatedConnectorRequest(connectorId, actionType, commandPreview = '', options = {}) {
+export interface LogUnauthenticatedOptions {
+  requestedBy?: string;
+  commandId?: string | null;
+  packetId?: string | null;
+}
+
+export function logUnauthenticatedConnectorRequest(
+  connectorId: string,
+  actionType: string,
+  commandPreview = '',
+  options: LogUnauthenticatedOptions = {}
+) {
   const detail = {
     connector: connectorId,
     action: actionType,
@@ -213,18 +234,18 @@ export function logUnauthenticatedConnectorRequest(connectorId, actionType, comm
   };
 }
 
-export function listConnectorAuthProfiles() {
+export function listConnectorAuthProfiles(): ConnectorAuthProfiles {
   return readAuthProfiles();
 }
 
-export function updateConnectorAuthProfile(connectorId, patch = {}) {
+export function updateConnectorAuthProfile(connectorId: string, patch: Omit<Partial<ConnectorAuthProfile>, 'allowlist'> & { allowlist?: unknown } = {}): ConnectorAuthProfile {
   const profiles = readAuthProfiles();
   const current = profiles[connectorId] || { enabled: false, allowlist: [], mode: 'allowlist_required' };
-  const next = {
+  const next: ConnectorAuthProfile = {
     ...current,
     ...patch,
     allowlist: patch.allowlist ? normalizeAllowlist(patch.allowlist) : current.allowlist
-  };
+  } as ConnectorAuthProfile;
   profiles[connectorId] = next;
   writeAuthProfiles(profiles);
   appendConnectorAudit(connectorId, 'auth_profile_updated', {

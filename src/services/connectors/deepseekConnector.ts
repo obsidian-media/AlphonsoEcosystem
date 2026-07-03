@@ -1,15 +1,42 @@
-import { getConnectorCredential } from './connectorAuth.js';
+import { getConnectorCredential } from './connectorAuth';
+import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const DEEPSEEK_API_BASE = 'https://api.deepseek.com/v1';
 const DEFAULT_MODEL = 'deepseek-chat';
 
-export function isDeepSeekConfigured() {
+export interface DeepSeekMessage {
+  role: string;
+  content: string;
+}
+
+export interface DeepSeekChatOptions {
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+}
+
+export interface DeepSeekChatResult {
+  content: string;
+  model: string;
+  usage: any;
+  provider: string;
+}
+
+export interface DeepSeekSearchResult {
+  summary: string;
+  sources: unknown[];
+  confidenceLevel: string;
+  provider: string;
+}
+
+export function isDeepSeekConfigured(): boolean {
   return Boolean(getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
 }
 
-import { evaluatePolicyGate } from '../policyEnforcementService';
-
-export async function sendDeepSeekMessage(messages, { model = DEFAULT_MODEL, maxTokens = 2048, temperature = 0.7 } = {}) {
+export async function sendDeepSeekMessage(
+  messages: DeepSeekMessage[],
+  { model = DEFAULT_MODEL, maxTokens = 2048, temperature = 0.7 }: DeepSeekChatOptions = {}
+): Promise<DeepSeekChatResult> {
   const apiKey = getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY');
   if (!apiKey) throw new Error('DeepSeek API key not configured');
 
@@ -53,7 +80,7 @@ export async function sendDeepSeekMessage(messages, { model = DEFAULT_MODEL, max
   };
 }
 
-export async function searchWithDeepSeek(query, { maxTokens = 1024 } = {}) {
+export async function searchWithDeepSeek(query: string, { maxTokens = 1024 }: { maxTokens?: number } = {}): Promise<DeepSeekSearchResult> {
   const result = await sendDeepSeekMessage(
     [{ role: 'user', content: query }],
     { maxTokens, model: 'deepseek-chat' }

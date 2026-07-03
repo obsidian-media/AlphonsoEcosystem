@@ -1,13 +1,33 @@
-import { getConnectorCredential } from './connectorAuth.js';
+import { getConnectorCredential } from './connectorAuth';
 import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const PERPLEXITY_API_BASE = 'https://api.perplexity.ai';
 
-export function isPerplexityConfigured() {
+export interface PerplexitySearchOptions {
+  maxTokens?: number;
+}
+
+export interface PerplexitySource {
+  url: string;
+  title: string;
+  relevance: number;
+}
+
+export interface PerplexitySearchResult {
+  summary: string;
+  sources: PerplexitySource[];
+  confidenceLevel: string;
+  provider: string;
+}
+
+export function isPerplexityConfigured(): boolean {
   return Boolean(getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY'));
 }
 
-export async function searchPerplexity(query, { maxTokens = 512 } = {}) {
+export async function searchPerplexity(
+  query: string,
+  { maxTokens = 512 }: PerplexitySearchOptions = {}
+): Promise<PerplexitySearchResult> {
   const apiKey = getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY');
   if (!apiKey) throw new Error('Perplexity API key not configured');
 
@@ -48,7 +68,7 @@ export async function searchPerplexity(query, { maxTokens = 512 } = {}) {
 
   return {
     summary: content,
-    sources: citations.map((url, i) => ({ url, title: `Source ${i + 1}`, relevance: 0.8 })),
+    sources: citations.map((url: string, i: number) => ({ url, title: `Source ${i + 1}`, relevance: 0.8 })),
     confidenceLevel: 'high',
     provider: 'perplexity'
   };
