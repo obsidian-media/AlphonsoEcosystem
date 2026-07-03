@@ -644,6 +644,92 @@ into Sprint 2+ — not dropped.
   - Verification: 269/270 targeted tests passing (1 confirmed pre-existing
     exclusion), `npx tsc --noEmit` clean, ESLint clean.
   - Version bumped 2.5.7 → 2.5.8. All docs updated in the same pass.
+- **2026-07-02 (post-Sprint-5-batch-2 check-in, no code change)** — User
+  asked for an honest accounting before continuing: benefit of the TS
+  migration, cumulative value of all sprints so far, corners actually cut,
+  Sprint 6 prerequisites, and to make the migration state trackable for a
+  future session/agent. Answered directly rather than oversell:
+  - **Real finding surfaced by this check, not previously known**:
+    `eslint.config.js`'s `files` glob is `src/**/*.{js,jsx}` only — **no
+    `.ts`/`.tsx` file in this repo has ever been linted by ESLint**,
+    including all 114 pre-existing `.tsx` components and all 26 `.ts`
+    services (16 pre-existing + the 16 migrated across Sprint 5 batches
+    1-2 so far). Every "ESLint clean" claim logged in this document and
+    in `CLAUDE.md` across every prior sprint was true for the files ESLint
+    actually processed but did not cover `.ts`/`.tsx` at all. Not fixed
+    this pass (out of scope for a "check-in," not something to silently
+    patch mid-conversation) — logged as a real gap in `CLAUDE.md`.
+  - Confirmed honestly: the TS migration is internal debt-paydown with no
+    user-facing benefit; only Sprints 3 and 4 produced verifiable
+    user-facing value (a real crash fix and a real security fix,
+    respectively). Sprint 5 has so far migrated the easiest ~20% of the
+    remaining service files by size.
+
+## Sprint 5 migration tracker (update this section, not just the running log, on every batch)
+
+**Purpose:** so a future session or a different agent can see the current
+state at a glance without re-deriving it from the narrative log above.
+
+**`src/services/connectors/` subsystem — batch 1 (closed):**
+- Migrated: `connectorConstants.ts`, `tavilyConnector.ts`,
+  `perplexityConnector.ts`, `deepseekConnector.ts`, `n8nConnector.ts`,
+  `connectorAuth.ts` (+ pre-existing `discordConnector.ts`,
+  `slackConnector.ts`, `githubConnector.ts`)
+- Still `.js`, deferred (larger files): `connectorImageGenerators.js`
+  (375 lines), `connectorOutbound.js` (952 lines), `connectorPolling.js`
+  (452 lines), `connectorRegistry.js` (682 lines)
+
+**`src/services/*.js` root level — batch 2 (closed):**
+- Migrated this batch: `connectorRegistryService.ts`,
+  `workflowMemoryService.ts`, `workspaceArtifactService.ts`,
+  `agentAuditService.ts`, `connectorAuditLogService.ts`,
+  `agentPairingRegistryService.ts`, `miyaMemoryService.ts`,
+  `crashLogService.ts`, `metaPublishService.ts`, `memoryService.ts`
+- **Root-level count as of this commit: 105 `.js` / 26 `.ts` total**
+  (up from 115/16 before Sprint 5 started).
+- **Next-smallest 20 root-level `.js` files (candidates for batch 3, by
+  line count — re-verify with `wc -l src/services/*.js | sort -n` since
+  this list will drift as other work touches these files):**
+  `workspaceExportService.js` (30), `codingAgentService.js` (32),
+  `agentVisualService.js` (33), `agentActivityService.js` (35),
+  `autoRunService.js` (37), `creativeRoutingService.js` (38),
+  `sourceConfidenceService.js` (38), `runwayService.js` (43),
+  `notificationService.js` (44), `workspaceFileService.js` (44),
+  `whisperTranscriptionService.js` (45), `browserAutomationService.js`
+  (47), `miyaExportPacketService.js` (50), `coachSkillService.js` (52),
+  `workspaceRootService.js` (56), `projectDirectoryService.js` (59),
+  `miyaComfyWorkflowPresetService.js` (60), `recoveryService.js` (65),
+  `modelSelectionService.js` (67), `coachModeService.js` (68).
+- After that: everything else in `src/services/*.js` (root level),
+  roughly 85 files, increasing in size/complexity. Prioritize
+  state/contract-heavy services last (harder to type correctly) —
+  `agentContractService.ts` and `orchestrationQueueService.ts` are
+  already `.ts` and remain the best reference models.
+
+**Process to follow for each future batch** (established in batches 1-2,
+keep doing this — do not skip steps to go faster):
+1. Read the `.js` file fully before writing the `.ts` version.
+2. Write the `.ts` file with real types (interfaces for object shapes,
+   typed function params/returns) — avoid `any` except where the original
+   code is genuinely untyped external data (e.g. parsed JSON, fetch
+   responses).
+3. Delete the original `.js` file.
+4. Run `npx tsc --noEmit` — must be clean before moving on.
+5. Grep `src/test/` for every file that references the migrated module(s)
+   and run those tests specifically. If a batch is large, run in smaller
+   groups — a large single invocation can hit the documented vitest
+   worker-pool timeout (not a code defect, re-run affected files
+   individually/in smaller batches).
+6. If a test fails and you're not sure it's related to this session's
+   changes, verify with `git stash` → reproduce → `git stash pop` before
+   concluding either way. Do not assume.
+7. Run ESLint on touched files too, even though (see the finding above)
+   it currently doesn't cover `.ts` — still run it in case that gap gets
+   fixed later, and so the habit doesn't atrophy.
+8. Update this tracker section, the running log below, and all 5 docs
+   (`CLAUDE.md`, `README.md`, `docs/CHANGELOG.md`,
+   `docs/ALPHONSO_GROUND_TRUTH.md`, this file) in the same commit as the
+   code. Bump `package.json` version.
 
 ## Sprint status at a glance
 
