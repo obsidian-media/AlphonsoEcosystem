@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.7 (Sprint 5 batch 1: connectors subsystem migrated to TypeScript)
-**Verified by:** Claude Code session — targeted tests passed 100% (275/275 across `connectorAuth`, `connectors/n8nConnector`, `connectors/tavilyConnector`, `connectors/telegramCompanionService`, `ConnectorSetupPanel`, `deepseekConnector`, `genericWebhookService`, `marcusExecutionService`, `n8nConnector`, `chatgptService`, `claudeService`, `whatsappBrowserConnector`, `tavilyConnector`, `telegramAutoPollService`, `telegramCompanionService`), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
-**Version:** 2.5.7 (security hardened, 218 test files, 3,174+ tests, 165 services; `src/services/connectors/` now 9 `.ts` / 4 `.js`, up from 3 `.ts` / 10 `.js`; root-level `src/services/*.js` count of 115 unaffected — this batch targeted the connectors subdirectory specifically)
+**Last verified:** 2026-07-02 — v2.5.8 (Sprint 5 batch 2: 10 more root-level services migrated to TypeScript)
+**Verified by:** Claude Code session — targeted tests passed 100% functionally (269/270 across ~43 affected test files; the 1 failure, `telegramConnectorProof.test.js`, confirmed pre-existing via git stash reproduction, not caused by this session), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below, also hit mid-session on a ~27-file invocation and resolved by re-running affected files individually) — not re-attempted, root cause unchanged.
+**Version:** 2.5.8 (security hardened, 218 test files, 3,174+ tests, 165 services; root-level `src/services/*.js` count 115 → 105, `.ts` count 16 → 26)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -1225,6 +1225,29 @@ guidance, not the root-level count.
   regression tests (empty-allowlist refusal, wrong-chat-id refusal).
 - Verification: 275/275 targeted tests passing, `npx tsc --noEmit` clean,
   ESLint clean.
+
+## 11.12 ALPHONSOTOTHEMOON Sprint 5, batch 2: 10 more root-level services (2026-07-02, v2.5.8)
+
+Full context in `ALPHONSOTOTHEMOON.md`.
+
+- **Migrated the 10 smallest remaining root-level `.js` files**:
+  `connectorRegistryService.ts`, `workflowMemoryService.ts`,
+  `workspaceArtifactService.ts`, `agentAuditService.ts`,
+  `connectorAuditLogService.ts`, `agentPairingRegistryService.ts`,
+  `miyaMemoryService.ts`, `crashLogService.ts`, `metaPublishService.ts`,
+  `memoryService.ts`. Root-level `src/services/*.js` count: 115/16 →
+  105/26.
+- **Verification hit the documented vitest worker-pool timeout mid-run**:
+  a ~27-file test invocation across the affected surface partially failed
+  to start workers for 6 files (not test failures — worker-spawn
+  timeouts). Re-ran those 6 individually; all passed. A further ~17-file
+  batch surfaced one genuine test failure
+  (`telegramConnectorProof.test.js`) — verified this was pre-existing and
+  unrelated by running `git stash` (removing this session's changes
+  entirely), reproducing the identical failure, then `git stash pop` to
+  restore. Not caused by this migration.
+- Verification: 269/270 targeted tests passing (the 1 known pre-existing
+  failure excluded), `npx tsc --noEmit` clean, ESLint clean.
 
 ---
 

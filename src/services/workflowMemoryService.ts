@@ -1,4 +1,4 @@
-// workflowMemoryService.js — re-exports from unifiedMemoryService for backward compatibility
+// workflowMemoryService.ts — re-exports from unifiedMemoryService for backward compatibility
 // Alias: appendWorkflowMemory → pushWorkflowMemory (unified)
 export { pushWorkflowMemory as appendWorkflowMemory, listWorkflowMemory, pushMemory, listMemory, tickExpiry, getMemorySize, getAllMemorySizes, checkQuota, deduplicateMemory, deduplicateAllNamespaces, autoTagMemoryItem, exportMemoryItems, importMemoryItems, clearContentHashCache, MEMORY_CATEGORIES, MEMORY_NAMESPACES } from './unifiedMemoryService';
 

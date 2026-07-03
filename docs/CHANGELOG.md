@@ -6,6 +6,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.8] — 2026-07-02
+
+### Sprint 5 (batch 2): service-layer TypeScript migration — 10 more root-level services
+
+- Migrated the 10 smallest remaining root-level `src/services/*.js` files to
+  `.ts`: `connectorRegistryService.ts`, `workflowMemoryService.ts`,
+  `workspaceArtifactService.ts`, `agentAuditService.ts`,
+  `connectorAuditLogService.ts`, `agentPairingRegistryService.ts`,
+  `miyaMemoryService.ts`, `crashLogService.ts`, `metaPublishService.ts`,
+  `memoryService.ts`. Root-level count: 115 `.js`/16 `.ts` → 105 `.js`/26 `.ts`.
+- 269/270 targeted tests passing across ~43 affected test files (the one
+  failure, `telegramConnectorProof.test.js`, was confirmed pre-existing and
+  unrelated — reproduced identically with this session's changes stashed
+  out). `npx tsc --noEmit` clean, ESLint clean.
+- Hit the documented vitest worker-pool timeout when running ~27 test files
+  in one invocation — re-ran the affected files individually/in smaller
+  groups and all passed; this is the same pre-existing environment
+  constraint logged since Sprint 1, not a regression.
+
 ## [2.5.7] — 2026-07-02
 
 ### Sprint 5 (batch 1 of N): service-layer TypeScript migration — connectors subsystem

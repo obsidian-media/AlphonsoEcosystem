@@ -1,4 +1,4 @@
-// miyaMemoryService.js — re-exports from unifiedMemoryService for backward compatibility
+// miyaMemoryService.ts — re-exports from unifiedMemoryService for backward compatibility
 export {
   pushMiyaMemory,
   listMiyaMemory,

@@ -1,4 +1,4 @@
-// memoryService.js — re-exports from unifiedMemoryService for backward compatibility
+// memoryService.ts — re-exports from unifiedMemoryService for backward compatibility
 export {
   pushMemoryItem,
   listMemoryItems,

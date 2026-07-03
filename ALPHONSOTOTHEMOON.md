@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 1 of N, v2.5.7): connectors subsystem migrated to TypeScript.
+**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 2 of N, v2.5.8): 10 more root-level services migrated to TypeScript (105/26 .js/.ts, was 115/16).
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -616,6 +616,34 @@ into Sprint 2+ — not dropped.
   - Verification: 275/275 targeted tests passing across 15 test files,
     `npx tsc --noEmit` clean, ESLint clean.
   - Version bumped 2.5.6 → 2.5.7. All docs updated in the same pass.
+- **2026-07-02 (Sprint 5, batch 2, v2.5.8)** — User initially floated running
+  parallel agents (this session on Sprint 6, a separate tool on the rest of
+  Sprint 5), then reconsidered mid-question and asked to just continue
+  Sprint 5 sequentially instead — "that would create chaos... not fun."
+  Proceeded on Sprint 5 batch 2 alone.
+  - Sized the remaining 105 root-level `src/services/*.js` files by line
+    count first (`wc -l *.js | sort -n`) rather than picking arbitrarily,
+    continuing the "smallest first" pattern from batch 1. Picked the 10
+    smallest (5-30 lines).
+  - Migrated all 10, checking each file's actual imports/consumers before
+    or immediately after renaming rather than assuming the batch-1
+    `.js`-import-resolves-to-`.ts` pattern would hold universally — it did.
+  - Running the full ~27-file affected-test-file batch in one invocation
+    hit the documented vitest worker-pool timeout (6 files failed to spawn
+    a worker — not test failures). Re-ran those 6 individually; all
+    passed. This confirms the known environment constraint is about
+    concurrent worker count, not file count alone, since 6 isolated files
+    that failed as part of a larger batch passed cleanly alone.
+  - A separate ~17-file batch surfaced one real failure:
+    `telegramConnectorProof.test.js`. Rather than assuming this batch
+    caused it (or assuming it didn't), verified directly: `git stash`
+    (removing every change this session made), re-ran the single test,
+    got the identical failure, then `git stash pop` to restore all work.
+    Confirmed pre-existing, logged in `CLAUDE.md` Real Gaps as newly
+    documented (it wasn't previously tracked anywhere).
+  - Verification: 269/270 targeted tests passing (1 confirmed pre-existing
+    exclusion), `npx tsc --noEmit` clean, ESLint clean.
+  - Version bumped 2.5.7 → 2.5.8. All docs updated in the same pass.
 
 ## Sprint status at a glance
 
@@ -625,7 +653,7 @@ into Sprint 2+ — not dropped.
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
 | 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
 | 4 | Security hardening Batch 2 (attacker-resistance) | ✅ Closed 2026-07-02 (v2.5.6) — fixed Telegram owner-registration auth bypass + constant-time gateway token comparisons; audited Discord/webhook/CI-gating with no further fix needed; credential-storage upgrade documented as a Sprint 6 recommendation |
-| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 closed 2026-07-02 (v2.5.7): `connectors/` subsystem 3→9 `.ts` files. Root-level `src/services/*.js` (115 files) still open, tracked as future batches |
+| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. 105 root-level `.js` files still open for future batches |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🌱 Seeded, not started |
 
 Seeded now so scope survives even if priorities shift or a session diverges
@@ -859,7 +887,7 @@ route, fixed the known pre-existing `ConnectorSetupPanel.test.jsx` failure
 `hydrateConnectorCredentialsFromSqlite: vi.fn().mockResolvedValue()` to its
 `connectorAuth` mock factory, exactly as previously diagnosed.
 
-## Sprint 5 (batch 1 CLOSED 2026-07-02, v2.5.7): Service-layer TypeScript migration
+## Sprint 5 (batch 2 CLOSED 2026-07-02, v2.5.8; in progress overall): Service-layer TypeScript migration
 
 **Correction to a stale CLAUDE.md claim** (caught 2026-07-02): the
 component migration is actually **complete** — `src/components/` is 100%
@@ -896,13 +924,36 @@ files (root level). That's the actual migration target, not components.
 - Verification: 275/275 targeted tests passing, `npx tsc --noEmit` clean,
   ESLint clean.
 
+**Batch 2 (this pass): 10 smallest remaining root-level services.**
+- Migrated `connectorRegistryService.ts`, `workflowMemoryService.ts`,
+  `workspaceArtifactService.ts`, `agentAuditService.ts`,
+  `connectorAuditLogService.ts`, `agentPairingRegistryService.ts`,
+  `miyaMemoryService.ts`, `crashLogService.ts`, `metaPublishService.ts`,
+  `memoryService.ts` — picked by size (5-30 lines each), same "smallest
+  first within the subsystem" approach as batch 1.
+- Several of these (`workflowMemoryService`, `miyaMemoryService`,
+  `memoryService`) are thin backward-compat re-export barrels over
+  `unifiedMemoryService` — trivial to migrate, no logic to type.
+- Verification hit the documented vitest worker-pool timeout on a
+  ~27-file invocation (6 files failed to start a worker, not test
+  failures) — re-ran those 6 individually and all passed. A separate
+  ~17-file batch surfaced one real test failure
+  (`telegramConnectorProof.test.js`); confirmed pre-existing (not caused
+  by this batch) by `git stash`-ing this session's changes, reproducing
+  the identical failure, then `git stash pop` to restore — rather than
+  assuming it was unrelated.
+- Verification: 269/270 targeted tests passing (excluding the confirmed
+  pre-existing failure), `npx tsc --noEmit` clean, ESLint clean.
+
 **Remaining batches (not yet started, still tracked here):**
-- Root-level `src/services/*.js` — 115 files, unaffected by batch 1 since
-  it targeted a subdirectory, not root level. Needs its own batching
-  strategy (by subsystem/complexity) when picked up.
+- Root-level `src/services/*.js` — 105 files remain after batch 2. Needs
+  its own batching strategy (by subsystem/complexity) when picked up.
 - Prioritize services with complex state/contracts first — this sprint's
   own `agentContractService.ts` and `orchestrationQueueService.ts` are
   already `.ts` and remain good models to extend from.
+- `src/services/connectors/`'s 4 larger deferred files
+  (`connectorImageGenerators.js`, `connectorOutbound.js`,
+  `connectorPolling.js`, `connectorRegistry.js`) still open from batch 1.
 
 ## Sprint 6 (seeded): Runtime hardening carryover + remaining connectors
 

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 
-export function buildMetaPublishRequest(job = {}, options = {}) {
+export function buildMetaPublishRequest(job: Record<string, any> = {}, options: Record<string, any> = {}) {
   const platform = String(options.platform || job.request?.platform || 'instagram').trim().toLowerCase() || 'instagram';
   return {
     approved: Boolean(options.approved),
@@ -18,7 +18,7 @@ export function buildMetaPublishRequest(job = {}, options = {}) {
   };
 }
 
-export async function publishMetaContent(job = {}, options = {}) {
+export async function publishMetaContent(job: Record<string, any> = {}, options: Record<string, any> = {}) {
   const request = buildMetaPublishRequest(job, options);
   return invoke('meta_publish_content', { request });
 }
