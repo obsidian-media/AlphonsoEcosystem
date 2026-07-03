@@ -30,7 +30,7 @@ Set these in your shell before running the command:
 ```powershell
 $env:TAURI_SIGNING_PRIVATE_KEY="C:\path\to\alphonso.key"
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""
-$env:ALPHONSO_UPDATE_BASE_URL="https://github.com/obsidian-studios/Alphonso/releases/download/v0.1.0"
+$env:ALPHONSO_UPDATE_BASE_URL="https://github.com/obsidian-media/Alphonso/releases/download/v0.1.0"
 $env:GITHUB_TOKEN="ghp_..."
 $env:GITHUB_REPOSITORY="owner/repo"
 ```

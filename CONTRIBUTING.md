@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 
 1. **Clone the repository**
    ```bash
-    git clone https://github.com/obsidian-studios/AlphonsoEcosystem.git
+    git clone https://github.com/obsidian-media/AlphonsoEcosystem.git
     cd AlphonsoEcosystem
     ```
 

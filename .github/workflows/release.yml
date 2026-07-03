@@ -107,7 +107,7 @@ jobs:
           $installerName = "${{ steps.collect.outputs.installer_name }}"
           $sigContent = Get-Content "${{ steps.collect.outputs.sig_path }}" -Raw
           $sigContent = $sigContent.Trim()
-          $baseUrl = "https://github.com/obsidian-studios/AlphonsoEcosystem/releases/download/$tag"
+          $baseUrl = "https://github.com/obsidian-media/AlphonsoEcosystem/releases/download/$tag"
           $manifest = @{
             version = $version
             notes = "Alphonso $version release"
@@ -165,4 +165,4 @@ jobs:
           Write-Host "Release published: Alphonso ${{ steps.tag.outputs.version }}"
           Write-Host "Tag: ${{ steps.tag.outputs.tag }}"
           Write-Host "Installer: ${{ steps.collect.outputs.installer_name }}"
-          Write-Host "Updater endpoint: https://github.com/obsidian-studios/AlphonsoEcosystem/releases/latest/download/latest.json"
+          Write-Host "Updater endpoint: https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest/download/latest.json"
