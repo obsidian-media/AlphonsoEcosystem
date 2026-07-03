@@ -24,7 +24,7 @@ describe('workspaceRootService', () => {
       { exists: false, is_dir: false }
     ]);
 
-    const result = await validateWorkspaceRoot('C:/Users/Shaya/OneDrive/Desktop/ALPHONSO/FILES/local-agent-ui-v2');
+    const result = await validateWorkspaceRoot('/home/user/workspace/alphonso');
 
     expect(result.ok).toBe(false);
     expect(result.status).toBe('setup_required');

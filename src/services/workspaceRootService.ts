@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 
-export const CURRENT_WORKSPACE_ROOT = 'C:/Users/Shaya/OneDrive/Desktop/ALPHONSO/FILES/local-agent-ui-v2';
+// Default workspace root — configure via Settings or environment variable ALPHONSO_WORKSPACE_ROOT
+export const CURRENT_WORKSPACE_ROOT = process.env.ALPHONSO_WORKSPACE_ROOT || '';
 
 const REQUIRED_ENTRIES = [
   'package.json',

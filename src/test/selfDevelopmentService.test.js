@@ -84,8 +84,8 @@ describe('selfDevelopmentService', () => {
 
   it('stores a durable cycle and packet bundle', async () => {
     const cycle = await runSelfDevelopmentCycle({
-      root: 'C:/Users/Shaya/OneDrive/Desktop/ALPHONSO/FILES/local-agent-ui-v2',
-      settings: { workspaceRoot: 'C:/Users/Shaya/OneDrive/Desktop/ALPHONSO/FILES/local-agent-ui-v2' },
+      root: '/home/user/workspace/alphonso',
+      settings: { workspaceRoot: '/home/user/workspace/alphonso' },
       updateCheckState: { configured: false },
       verificationLogs: [],
       workspaceFoundation: {}

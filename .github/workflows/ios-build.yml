@@ -105,6 +105,8 @@ jobs:
 
       - name: Archive iOS app
         working-directory: ios/AlphonsoCompanion
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -e
           echo "Archiving with profile: '${{ env.PP_NAME }}'"
@@ -116,8 +118,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath build/AlphonsoCompanion.xcarchive \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="iPhone Distribution: Shayan Salimi (9Y6GYPM3K5)" \
-            DEVELOPMENT_TEAM="9Y6GYPM3K5" \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            DEVELOPMENT_TEAM="${{ env.APPLE_TEAM_ID }}" \
             PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_NAME }}" \
             PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion" \
             GENERATE_INFOPLIST_FILE=NO \
@@ -126,6 +128,8 @@ jobs:
 
       - name: Export IPA
         working-directory: ios/AlphonsoCompanion
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -e
           mkdir -p build/output
@@ -138,7 +142,7 @@ jobs:
             <key>method</key>
             <string>app-store</string>
             <key>teamID</key>
-            <string>9Y6GYPM3K5</string>
+            <string>${{ env.APPLE_TEAM_ID }}</string>
             <key>uploadBitcode</key>
             <false/>
             <key>uploadSymbols</key>
