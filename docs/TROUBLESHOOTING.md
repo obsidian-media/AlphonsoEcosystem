@@ -180,4 +180,4 @@ WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP
 1. Check the [Activity tab](./AGENT_GUIDE.md#viewing-agent-activity) for audit logs
 2. Export diagnostics from Operator Dashboard → Export Diagnostics
 3. Check `docs/ALPHONSO_GROUND_TRUTH.md` for verified system state
-4. Open an issue at https://github.com/Thatisshayan/AlphonsoEcosystem/issues
+4. Open an issue at https://github.com/ObsidianMedia/AlphonsoEcosystem/issues

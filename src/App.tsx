@@ -400,7 +400,7 @@ function AppShell() {
       try {
         const { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } = await import('./services/appUpdateService');
         const result = await checkAppUpdate({
-          endpoint: 'https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json',
+          endpoint: 'https://github.com/ObsidianMedia/AlphonsoEcosystem/releases/latest/download/latest.json',
           pubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJENzgyMEY4MkZGMTE3OUMKUldTY0YvRXYrQ0I0TGRlVWt2cmZhcGVaUVRtQ0lZcDZkZUl5YmxqcEZvbjFYTG01ZnJvWVgwMUgK'
         });
         if (result.available && result.latestVersion) {

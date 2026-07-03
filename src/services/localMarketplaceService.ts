@@ -4,7 +4,7 @@ const MARKET_KEY = 'alphonso_local_marketplace_registry_v1';
 const CATALOGUE_URL_KEY = 'alphonso_marketplace_catalogue_url_v1';
 
 export const DEFAULT_CATALOGUE_URL =
-  'https://raw.githubusercontent.com/Thatisshayan/AlphonsoEcosystem/main/gateway/marketplace/catalogue.json';
+  'https://raw.githubusercontent.com/ObsidianMedia/AlphonsoEcosystem/main/gateway/marketplace/catalogue.json';
 
 interface MarketplaceItem {
   id: string;

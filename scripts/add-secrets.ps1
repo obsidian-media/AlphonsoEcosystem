@@ -8,7 +8,7 @@ Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
 $certsDir = "$PSScriptRoot\certs"
-$repo = "Thatisshayan/AlphonsoEcosystem"
+$repo = "ObsidianMedia/AlphonsoEcosystem"
 
 # Check prerequisites
 $certBase64Path = "$certsDir\certificate_base64.txt"

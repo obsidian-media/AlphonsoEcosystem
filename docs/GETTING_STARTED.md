@@ -22,7 +22,7 @@ ollama pull llama3.2:3b
 ### 2. Clone and install
 
 ```bash
-git clone https://github.com/Thatisshayan/AlphonsoEcosystem.git
+git clone https://github.com/ObsidianMedia/AlphonsoEcosystem.git
 cd AlphonsoEcosystem
 npm install
 ```
