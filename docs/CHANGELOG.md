@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.17] — 2026-07-03
+
+### Sprint 5 batch 9: 6 more root-level services migrated to TypeScript
+
+- Migrated `selfDevelopmentService`, `sentinelSecurityService`,
+  `echoMemoryService`, `whatsappWebhookService`, `rc0EvidenceService`,
+  `toolConnectionService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 23 `.js` / 108 `.ts` → 17 `.js` / 114 `.ts`.
+- Fixed pre-existing type mismatches across `SelfDevelopmentPanel.tsx` (auditSummary `partialCount`), `toolNotificationDispatcher.ts` (ToolConnection index signature), and `approvalService.js` integration (`actionType` parameter).
+- Added `status`, `timestampMs`, `[key: string]: unknown` to `ToolConnection` interface; added `notificationReceiptId` and index signature to `SendToolConnectionOptions`.
+- Updated `DevCycle` interface: added `trust`, `readinessSummary`, `partialCount` to `auditSummary`.
+- 96/96 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean.
+
 ## [2.5.16] — 2026-07-03
 
 ### Sprint 5 batch 8: 15 more root-level services migrated to TypeScript

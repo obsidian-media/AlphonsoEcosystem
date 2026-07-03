@@ -10,7 +10,78 @@ const CONNECTION_AUDIT_KEY = 'alphonso_tool_connection_audit_v1';
 export const TOOL_CONNECTION_SCOPE = 'tool_connections_v1';
 export const TOOL_CONNECTION_AUDIT_SCOPE = 'tool_connection_audit_v1';
 
-const CONNECTION_TYPES = [
+export interface ToolConnectionType {
+  id: string;
+  label: string;
+  platform: string;
+  description: string;
+}
+
+export interface ToolConnection {
+  id: string;
+  type: string;
+  platform: string;
+  label: string;
+  webhookUrl: string;
+  messagePrefix: string;
+  payloadTemplate: string;
+  notifyOn: string[];
+  active: boolean;
+  note: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  lastTestAtMs: number | null;
+  lastTestStatus: string | null;
+  lastTestError: string | null;
+  trust: string;
+  status?: string;
+  timestampMs?: number;
+  [key: string]: unknown;
+}
+
+export interface ToolConnectionAuditEntry {
+  id: string;
+  action: string;
+  details: Record<string, unknown>;
+  timestampMs: number;
+  trust: string;
+}
+
+export interface ToolConnectionPatch {
+  id?: string;
+  type?: string;
+  label?: string;
+  webhookUrl?: string;
+  messagePrefix?: string;
+  payloadTemplate?: string;
+  notifyOn?: string | string[];
+  active?: boolean;
+  note?: string;
+  [key: string]: unknown;
+}
+
+export interface ToolConnectionResult {
+  ok: boolean;
+  error?: string;
+  connection?: ToolConnection | null;
+  blocked?: boolean;
+  trust?: string;
+}
+
+export interface SendToolConnectionOptions {
+  internalDispatch?: boolean;
+  approved?: boolean;
+  reason?: string;
+  requestedBy?: string;
+  workflowId?: string;
+  commandId?: string | null;
+  packetId?: string | null;
+  notificationPayload?: Record<string, unknown>;
+  notificationReceiptId?: string;
+  [key: string]: unknown;
+}
+
+const CONNECTION_TYPES: ToolConnectionType[] = [
   {
     id: 'slack_webhook',
     label: 'Slack Incoming Webhook',
@@ -31,7 +102,7 @@ const CONNECTION_TYPES = [
   }
 ];
 
-function readRows(key) {
+function readRows(key: string): ToolConnection[] | ToolConnectionAuditEntry[] {
   try {
     const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -41,7 +112,7 @@ function readRows(key) {
   }
 }
 
-function writeRows(key, rows) {
+function writeRows(key: string, rows: ToolConnection[] | ToolConnectionAuditEntry[]): void {
   const nextRows = rows.slice(-500);
   localStorage.setItem(key, JSON.stringify(nextRows));
   const scope = key === CONNECTION_KEY
@@ -50,20 +121,20 @@ function writeRows(key, rows) {
       ? TOOL_CONNECTION_AUDIT_SCOPE
       : null;
   if (scope) {
-    persistScopeRows(scope, nextRows, (row) => ({
+    persistScopeRows(scope, nextRows, (row: ToolConnection | ToolConnectionAuditEntry) => ({
       id: row.id,
       data: row,
-      status: row.status || row.action || 'recorded',
-      confidence: row.trust || TRUST_STATES.TEMPORARY,
-      verificationState: row.trust || TRUST_STATES.UNVERIFIED,
-      timestampMs: Number(row.updatedAtMs || row.timestampMs || timestampMs())
+      status: (row as ToolConnection).status || (row as ToolConnectionAuditEntry).action || 'recorded',
+      confidence: (row as ToolConnection).trust || (row as ToolConnectionAuditEntry).trust || TRUST_STATES.TEMPORARY,
+      verificationState: (row as ToolConnection).trust || (row as ToolConnectionAuditEntry).trust || TRUST_STATES.UNVERIFIED,
+      timestampMs: Number((row as ToolConnection).updatedAtMs || (row as ToolConnection).timestampMs || (row as ToolConnectionAuditEntry).timestampMs || timestampMs())
     }));
   }
 }
 
-function appendAudit(action, details = {}) {
-  const rows = readRows(CONNECTION_AUDIT_KEY);
-  const entry = {
+function appendAudit(action: string, details: Record<string, unknown> = {}): ToolConnectionAuditEntry {
+  const rows = readRows(CONNECTION_AUDIT_KEY) as ToolConnectionAuditEntry[];
+  const entry: ToolConnectionAuditEntry = {
     id: `tool-connection-audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     action,
     details,
@@ -75,19 +146,19 @@ function appendAudit(action, details = {}) {
   return entry;
 }
 
-function defaultLabelForType(type) {
+function defaultLabelForType(type: string): string {
   const descriptor = CONNECTION_TYPES.find((item) => item.id === type);
   return descriptor?.label || 'Webhook Connection';
 }
 
-function normalizeType(value) {
+function normalizeType(value: string): string {
   const clean = String(value || '').trim();
   if (!clean) return 'custom_webhook';
   if (CONNECTION_TYPES.some((item) => item.id === clean)) return clean;
   return 'custom_webhook';
 }
 
-function normalizeNotifyOn(value) {
+function normalizeNotifyOn(value: unknown): string[] {
   return String(value || '')
     .split(/\r?\n|,/)
     .map((item) => item.trim().toLowerCase())
@@ -95,11 +166,11 @@ function normalizeNotifyOn(value) {
     .slice(0, 20);
 }
 
-function platformForType(type) {
+function platformForType(type: string): string {
   return CONNECTION_TYPES.find((item) => item.id === type)?.platform || 'custom';
 }
 
-function safeHostFromUrl(webhookUrl) {
+function safeHostFromUrl(webhookUrl: string): string | null {
   try {
     return new URL(webhookUrl).host || null;
   } catch {
@@ -107,16 +178,16 @@ function safeHostFromUrl(webhookUrl) {
   }
 }
 
-function renderTemplate(template, context) {
-  return String(template || '').replace(/\{\{(message|connectionName|platform|title|host|timestampMs)\}\}/g, (_, token) => {
+function renderTemplate(template: string, context: Record<string, unknown>): string {
+  return String(template || '').replace(/\{\{(message|connectionName|platform|title|host|timestampMs)\}\}/g, (_: string, token: string) => {
     if (token === 'timestampMs') return String(context.timestampMs || '');
     return String(context[token] || '');
   });
 }
 
-function buildCustomPayload(connection, message, options = {}) {
+function buildCustomPayload(connection: ToolConnection, message: string, options: { title?: string } = {}): Record<string, unknown> {
   const host = safeHostFromUrl(connection.webhookUrl);
-  const context = {
+  const context: Record<string, unknown> = {
     message,
     title: options.title || connection.label,
     connectionName: connection.label,
@@ -145,22 +216,22 @@ function buildCustomPayload(connection, message, options = {}) {
   };
 }
 
-export function listToolConnectionTypes() {
+export function listToolConnectionTypes(): ToolConnectionType[] {
   return CONNECTION_TYPES.map((item) => ({ ...item }));
 }
 
-export function listToolConnections() {
-  return readRows(CONNECTION_KEY);
+export function listToolConnections(): ToolConnection[] {
+  return readRows(CONNECTION_KEY) as ToolConnection[];
 }
 
-export function listToolConnectionAudit() {
-  return readRows(CONNECTION_AUDIT_KEY);
+export function listToolConnectionAudit(): ToolConnectionAuditEntry[] {
+  return readRows(CONNECTION_AUDIT_KEY) as ToolConnectionAuditEntry[];
 }
 
-export function upsertToolConnection(patch = {}) {
+export function upsertToolConnection(patch: ToolConnectionPatch = {}): ToolConnectionResult {
   const id = String(patch.id || '').trim() || `tool-connection-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   const rows = listToolConnections();
-  const current = rows.find((row) => row.id === id) || {};
+  const current = rows.find((row) => row.id === id) || ({} as ToolConnection);
   const type = normalizeType(patch.type || current.type);
   const label = String(patch.label || current.label || defaultLabelForType(type)).trim() || defaultLabelForType(type);
   const webhookUrl = String(patch.webhookUrl ?? current.webhookUrl ?? '').trim();
@@ -173,7 +244,7 @@ export function upsertToolConnection(patch = {}) {
     };
   }
 
-  const next = {
+  const next: ToolConnection = {
     id,
     type,
     platform: platformForType(type),
@@ -215,7 +286,7 @@ export function upsertToolConnection(patch = {}) {
   };
 }
 
-export function removeToolConnection(connectionId) {
+export function removeToolConnection(connectionId: string): { ok: boolean; removed: boolean } {
   const rows = listToolConnections();
   const next = rows.filter((row) => row.id !== connectionId);
   writeRows(CONNECTION_KEY, next);
@@ -228,7 +299,7 @@ export function removeToolConnection(connectionId) {
   };
 }
 
-export function setToolConnectionStatus(connectionId, patch = {}) {
+export function setToolConnectionStatus(connectionId: string, patch: Partial<ToolConnection> = {}): ToolConnection | null {
   const rows = listToolConnections();
   const next = rows.map((row) => {
     if (row.id !== connectionId) return row;
@@ -248,7 +319,7 @@ export function setToolConnectionStatus(connectionId, patch = {}) {
   return next.find((row) => row.id === connectionId) || null;
 }
 
-export function buildToolConnectionPayload(connection, message, options = {}) {
+export function buildToolConnectionPayload(connection: ToolConnection | null, message: string, options: Record<string, unknown> = {}): Record<string, unknown> {
   const cleanMessage = String(message || '').trim();
   const prefixedMessage = connection?.messagePrefix
     ? `${String(connection.messagePrefix).trim()} ${cleanMessage}`.trim()
@@ -270,16 +341,16 @@ export function buildToolConnectionPayload(connection, message, options = {}) {
     };
   }
 
-  return buildCustomPayload(connection || {}, prefixedMessage, options);
+  return buildCustomPayload(connection || {} as ToolConnection, prefixedMessage, options);
 }
 
-async function postWebhook(connection, payload, options = {}) {
+async function postWebhook(connection: ToolConnection, payload: Record<string, unknown>, options: SendToolConnectionOptions = {}): Promise<Record<string, unknown>> {
   const proof = await invoke('tool_connection_post_webhook', {
     webhookUrl: connection.webhookUrl,
     payload,
     platform: connection.platform,
     connectionName: connection.label
-  });
+  }) as { ok?: boolean; error?: string; [key: string]: unknown };
 
   const updated = setToolConnectionStatus(connection.id, {
     lastTestAtMs: timestampMs(),
@@ -343,7 +414,7 @@ async function postWebhook(connection, payload, options = {}) {
   };
 }
 
-export async function sendToolConnectionMessage(connectionId, message, options = {}) {
+export async function sendToolConnectionMessage(connectionId: string, message: string, options: SendToolConnectionOptions = {}): Promise<Record<string, unknown>> {
   const connection = listToolConnections().find((row) => row.id === connectionId);
   if (!connection) {
     return {
@@ -385,7 +456,7 @@ export async function sendToolConnectionMessage(connectionId, message, options =
         platform: connection.platform,
         host: safeHostFromUrl(connection.webhookUrl)
       }
-    });
+    } as Record<string, unknown>);
     if (!approval.ok) {
       appendAudit('send_rejected', {
         connectionId: connection.id,
@@ -402,17 +473,17 @@ export async function sendToolConnectionMessage(connectionId, message, options =
     platform: connection.platform,
     host: safeHostFromUrl(connection.webhookUrl)
   });
-  return postWebhook(connection, payload, options);
+  return postWebhook(connection, payload as Record<string, unknown>, options);
 }
 
-export async function testToolConnection(connectionId, message = 'Alphonso connection test', options = {}) {
+export async function testToolConnection(connectionId: string, message = 'Alphonso connection test', options: SendToolConnectionOptions = {}): Promise<Record<string, unknown>> {
   return sendToolConnectionMessage(connectionId, message, {
     ...options,
     workflowId: options.workflowId || 'tool_connection_registry_test'
   });
 }
 
-export async function proveToolConnectionPath(connectionId, message = 'Alphonso webhook live proof', options = {}) {
+export async function proveToolConnectionPath(connectionId: string, message = 'Alphonso webhook live proof', options: SendToolConnectionOptions = {}): Promise<Record<string, unknown>> {
   const connection = listToolConnections().find((row) => row.id === connectionId);
   if (!connection) {
     return {

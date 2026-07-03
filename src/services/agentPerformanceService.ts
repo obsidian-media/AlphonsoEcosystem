@@ -225,5 +225,5 @@ export function recordAgentExecutionWithPerformance(data: Record<string, unknown
       snapshotAgentPerformance();
     }
   }
-  return entry;
+  return entry as unknown as Record<string, unknown>;
 }

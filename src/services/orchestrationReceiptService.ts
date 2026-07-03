@@ -125,6 +125,6 @@ export function appendOrchestrationReceipt({
   };
   rows.push(receipt);
   writeReceipts(rows);
-  void import('./toolNotificationDispatcher').then(({ dispatchReceiptNotifications }) => dispatchReceiptNotifications(receipt)).catch(() => null);
+  void import('./toolNotificationDispatcher').then(({ dispatchReceiptNotifications }) => dispatchReceiptNotifications(receipt as unknown as Record<string, unknown>)).catch(() => null);
   return receipt;
 }

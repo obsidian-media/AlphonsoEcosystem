@@ -32,8 +32,8 @@ export async function runCodingAgent(task: string, options: CodingOptions = {}):
       system: CODING_SYSTEM_PROMPT,
       ...options,
     });
-    if (response?.ok && response.content) {
-      return { ok: true, content: response.content };
+    if (response?.ok && response.text) {
+      return { ok: true, content: response.text };
     }
     return { ok: false, error: response?.error || 'No response from coding agent' };
   } catch (e) {

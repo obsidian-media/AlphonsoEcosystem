@@ -1,13 +1,74 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { generateOllamaResponse, PREFERRED_MODEL } from '../lib/ollama';
+import { generateOllamaResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { classifyMissionRoomRisk, redactMissionRoomSecrets } from './missionRoomService';
 
-// ── Threat patterns ───────────────────────────────────────────────────────────
+export interface ThreatPattern {
+  pattern: RegExp;
+  severity: string;
+  type: string;
+  weight: number;
+}
 
-const THREAT_PATTERNS = [
+export interface ThreatFinding {
+  severity: string;
+  type: string;
+  detail: string;
+  [key: string]: unknown;
+}
+
+export interface ScanResult {
+  riskScore: number;
+  severity: string;
+  findings: ThreatFinding[];
+  blocked: boolean;
+  redactedText: string;
+}
+
+export interface SentinelAlertSchema {
+  alertId: string;
+  scope: string;
+  severity: string;
+  summary: string;
+  findings: string[];
+  recommendedAction: string;
+  requiresApproval: boolean;
+  confidenceLevel: string;
+  verificationState: string;
+  detectedAtMs: number;
+}
+
+export interface SentinelAssignment {
+  commandId?: string | null;
+  packetId?: string | null;
+  actionType?: string;
+}
+
+export interface SentinelScanOptions {
+  priorOutputs?: Record<string, { summary?: string; resultState?: string }>;
+}
+
+export interface SentinelThreatAnalysis {
+  severity: string;
+  requiresApproval: boolean;
+  findings: string[];
+  recommendedAction: string;
+  summary: string;
+}
+
+export interface SentinelScanResult {
+  summary: string;
+  resultState: string;
+  resultUrl: null;
+  artifacts: Array<{ type: string; [key: string]: unknown }>;
+  sources: string[];
+  contractAction: string;
+  schema: SentinelAlertSchema;
+}
+
+const THREAT_PATTERNS: ThreatPattern[] = [
   { pattern: /\b(api[_\s-]?key|secret|token|password|credential|auth)\s*[:=]\s*\S+/i, severity: 'critical', type: 'credential_in_command', weight: 40 },
   { pattern: /\b(rm\s+-rf|format\s+[a-z]:|drop\s+table|truncate|del\s+\/[fqs])\b/i, severity: 'critical', type: 'destructive_command', weight: 35 },
   { pattern: /\b(eval|exec|execSync|child_process|spawn|shell_exec)\b/, severity: 'high', type: 'code_execution_risk', weight: 25 },
@@ -18,16 +79,14 @@ const THREAT_PATTERNS = [
   { pattern: /\b(install|npm\s+install|pip\s+install|cargo\s+add)\b/i, severity: 'low', type: 'dependency_install', weight: 4 }
 ];
 
-// ── Deterministic scanner ─────────────────────────────────────────────────────
-
-export function scanForThreats(commandText, priorOutputs) {
+export function scanForThreats(commandText: string, priorOutputs: Record<string, { summary?: string; resultState?: string }>): ScanResult {
   const allText = [
     String(commandText || ''),
     ...Object.values(priorOutputs || {}).map((o) => String(o?.summary || ''))
   ].join('\n');
 
   const redacted = redactMissionRoomSecrets(allText);
-  const findings = [];
+  const findings: ThreatFinding[] = [];
   let riskScore = 0;
 
   for (const { pattern, severity, type, weight } of THREAT_PATTERNS) {
@@ -37,7 +96,6 @@ export function scanForThreats(commandText, priorOutputs) {
     }
   }
 
-  // Prior agent failure signals
   const failedAgents = Object.entries(priorOutputs || {})
     .filter(([, o]) => o?.resultState === 'failed' || o?.resultState === 'rejected')
     .map(([agent]) => agent);
@@ -46,7 +104,6 @@ export function scanForThreats(commandText, priorOutputs) {
     findings.push({ severity: 'medium', type: 'prior_agent_failure', detail: `Failed agents: ${failedAgents.join(', ')}` });
   }
 
-  // Use missionRoomService classification for secret detection
   const missionClassification = classifyMissionRoomRisk(allText);
   if (missionClassification.secretDetected && !findings.some((f) => f.type === 'credential_in_command')) {
     riskScore += 30;
@@ -55,7 +112,7 @@ export function scanForThreats(commandText, priorOutputs) {
 
   riskScore = Math.min(100, Math.max(0, riskScore));
 
-  let severity;
+  let severity: string;
   if (riskScore >= 70) severity = 'critical';
   else if (riskScore >= 35) severity = 'high';
   else if (riskScore >= 20) severity = 'medium';
@@ -64,9 +121,7 @@ export function scanForThreats(commandText, priorOutputs) {
   return { riskScore, severity, findings, blocked: riskScore >= 70 || missionClassification.secretDetected, redactedText: redacted };
 }
 
-// ── Ollama prompt ─────────────────────────────────────────────────────────────
-
-export function buildSentinelThreatPrompt(commandText, priorOutputs, scanResult) {
+export function buildSentinelThreatPrompt(commandText: string, priorOutputs: Record<string, { summary?: string; resultState?: string }>, scanResult: ScanResult): string {
   const agentContext = Object.entries(priorOutputs || {})
     .map(([agent, o]) => `[${agent}] ${String(o?.summary || 'no output').slice(0, 200)}`)
     .join('\n');
@@ -92,7 +147,7 @@ export function buildSentinelThreatPrompt(commandText, priorOutputs, scanResult)
   ].join('\n');
 }
 
-export function parseSentinelThreatResponse(text) {
+export function parseSentinelThreatResponse(text: string): SentinelThreatAnalysis {
   try {
     const jsonMatch = String(text || '').match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('no json');
@@ -115,7 +170,7 @@ export function parseSentinelThreatResponse(text) {
   }
 }
 
-export function buildSentinelFallbackAlert(commandText, scanResult) {
+export function buildSentinelFallbackAlert(commandText: string, scanResult: ScanResult): SentinelThreatAnalysis {
   return {
     severity: scanResult.severity,
     requiresApproval: scanResult.blocked || scanResult.severity === 'high' || scanResult.severity === 'critical',
@@ -127,42 +182,35 @@ export function buildSentinelFallbackAlert(commandText, scanResult) {
   };
 }
 
-// ── Main runtime ──────────────────────────────────────────────────────────────
-
-export async function runSentinelSecurityScan(commandText, assignment, options = {}) {
+export async function runSentinelSecurityScan(commandText: string, assignment: SentinelAssignment, options: SentinelScanOptions = {}): Promise<SentinelScanResult> {
   const startMs = timestampMs();
   const priorOutputs = options.priorOutputs || {};
 
-  // 1. Deterministic threat scan (always runs — fast, no LLM)
   const scanResult = scanForThreats(commandText, priorOutputs);
 
-  // 2. Ollama deep analysis (if deterministic scan found anything OR scan is clear but command is complex)
-  let ollamaResult = null;
+  let ollamaResult: SentinelThreatAnalysis | null = null;
   const shouldRunOllama = scanResult.findings.length > 0 || String(commandText || '').length > 80;
   if (shouldRunOllama) {
     try {
       const prompt = buildSentinelThreatPrompt(commandText, priorOutputs, scanResult);
-      const response = await generateOllamaResponse({ model: PREFERRED_MODEL, prompt });
+      const response = await generateOllamaResponse({ endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt });
       ollamaResult = parseSentinelThreatResponse(response?.response || '');
     } catch {
       // Ollama unavailable — use deterministic fallback
     }
   }
 
-  // 3. Merge: Ollama result takes precedence for narrative, deterministic for blocking
   const fallback = buildSentinelFallbackAlert(commandText, scanResult);
   const merged = ollamaResult || fallback;
 
-  // Deterministic blocking overrides Ollama leniency
   const finalBlocked = scanResult.blocked || merged.severity === 'critical';
   const finalSeverity = finalBlocked && merged.severity !== 'critical'
     ? (scanResult.severity === 'critical' ? 'critical' : merged.severity)
     : merged.severity;
   const finalRequiresApproval = merged.requiresApproval || finalBlocked;
 
-  // 4. Build SENTINEL_ALERT_SCHEMA
   const alertId = `sentinel_${assignment?.commandId || ''}_${startMs}`;
-  const schema = {
+  const schema: SentinelAlertSchema = {
     alertId,
     scope: 'global',
     severity: finalSeverity,
@@ -178,7 +226,6 @@ export async function runSentinelSecurityScan(commandText, assignment, options =
     detectedAtMs: startMs
   };
 
-  // 5. Persist memory
   pushMemoryItem({
     title: `Sentinel scan: ${String(commandText || '').slice(0, 80)}`,
     category: 'runtime_memory',
@@ -243,7 +290,7 @@ export async function runSentinelSecurityScan(commandText, assignment, options =
   };
 }
 
-export function startScheduledScans(intervalMs, onResult) {
+export function startScheduledScans(intervalMs: number, onResult: (result: ScanResult) => void): () => void {
   const ms = intervalMs ?? 10 * 60 * 1000;
   const id = setInterval(() => {
     const result = scanForThreats('', {});

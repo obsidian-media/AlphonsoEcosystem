@@ -177,8 +177,8 @@ export function BoardroomView() {
     let mariaScore = 0;
     try {
       const { runMariaGovernanceAudit } = await import('../services/mariaAuditService.js');
-      const result = await runMariaGovernanceAudit(activeSession.topic, { messages: activeSession.messages });
-      mariaScore = result?.riskScore ?? result?.score ?? Math.floor(Math.random() * 40 + 20);
+      const result = await runMariaGovernanceAudit(activeSession.topic, { messages: activeSession.messages } as Parameters<typeof runMariaGovernanceAudit>[1]);
+      mariaScore = (result as unknown as { riskScore?: number; score?: number })?.riskScore ?? (result as unknown as { score?: number })?.score ?? Math.floor(Math.random() * 40 + 20);
     } catch {
       mariaScore = 25;
     }

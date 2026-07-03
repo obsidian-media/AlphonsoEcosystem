@@ -18,7 +18,7 @@ export interface DevPacketPatchSuggestion {
   file: string;
   lineNumber: number;
   suggestion: string;
-  excerpt: string;
+  excerpt?: string;
 }
 
 export interface DevPacket {
@@ -40,6 +40,7 @@ export interface DevPacket {
   sourceAuditId: string | null;
   generatedAtMs: number;
   trust: string;
+  [key: string]: unknown;
 }
 
 export interface DevPacketGroup {

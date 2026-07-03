@@ -4,13 +4,15 @@
 
 # Alphonso
 
-> **v2.5.16** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.17** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.16-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.17-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 
-[**Download v2.5.16**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.16) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.5.17**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.17) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-## What's New in v2.5.16
+## What's New in v2.5.17
+
+- **Sprint 5 batch 9: 6 more services migrated to TypeScript.** `selfDevelopmentService`, `sentinelSecurityService`, `echoMemoryService`, `whatsappWebhookService`, `rc0EvidenceService`, `toolConnectionService` — all root-level `.js` → `.ts`. Root-level count now 17 `.js` / 114 `.ts`. Fixed pre-existing type mismatches across `SelfDevelopmentPanel.tsx`, `toolNotificationDispatcher.ts`, and `approvalService.js` integration.
 
 - **Sprint 5 batch 8: 15 more services migrated to TypeScript.** `devPacketService`, `pluginRegistryService`, `pluginSigningService`, `packetExecutionService`, `verificationService`, `nativeSelfDevelopmentAutostartService`, `agentMetricsService`, `mariaAuditService`, `proactiveAgentService`, `agentBusService`, `telegramBrowserConnector`, `composioService`, `screenIntelligenceService`, `toolRegistryService`, `joseSchedulerService` — all root-level `.js` → `.ts`. Root-level count now 23 `.js` / 108 `.ts`.
 

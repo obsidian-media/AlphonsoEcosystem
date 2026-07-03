@@ -25,12 +25,12 @@ export function detectCreativeIntent(commandText: string): string | null {
 }
 
 export async function routeToCreativeTool(intent: string): Promise<RouteResult | null> {
-  let statuses: { status: string; name: string }[] | undefined;
+  let statuses: Array<{ name: string; status?: string; running?: boolean }> | undefined;
   try {
     const { getAllStatus } = await import('./runtimeManagerService');
     statuses = await getAllStatus();
   } catch { return null; }
-  const running = (statuses || []).filter(s => s.status === 'running').map(s => s.name);
+  const running = (statuses || []).filter(s => s.running || s.status === 'running').map(s => s.name);
   const preferred = TOOL_PRIORITY[intent] || [];
   const tool = preferred.find(t => running.includes(t));
   if (!tool) {

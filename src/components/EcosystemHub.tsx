@@ -70,7 +70,7 @@ interface Props {
 }
 
 export function EcosystemHub({ settings, setSettings, ollamaStatus, verificationLogs = [], voiceStatus, workspaceFoundation, updateCheckState, nativeSelfDevProof, setNativeSelfDevProof, nativeProofHooks }: Props) {
-  const [packets, setPackets] = useState<{ id: string; status: string; fromAgent: string; toAgent: string; [key: string]: unknown }[]>(() => listAgentPackets());
+  const [packets, setPackets] = useState<ReturnType<typeof listAgentPackets>>(() => listAgentPackets());
   const [skills, setSkills] = useState<{ id: string; name: string; version: string; enabled: boolean; type: string; [key: string]: unknown }[]>(() => listSkillPacks());
   const [skillAudit, setSkillAudit] = useState(() => listSkillPackAudit());
   const [workflows, setWorkflows] = useState<{ id: string; name: string; nodes: unknown[]; edges: unknown[]; [key: string]: unknown }[]>(() => listWorkflows());

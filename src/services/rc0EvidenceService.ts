@@ -1,14 +1,84 @@
 import { writeWorkspaceArtifact, writeHandoffArtifact } from './workspaceArtifactService';
 
-function isoDateTag(ms) {
+export interface Rc0PacketSummary {
+  id: string;
+  title: string;
+  priority: string;
+  riskLevel: string;
+  files: string[];
+  currentIssue: string;
+  recommendedChange: string;
+  testCommands: string[];
+  expectedProof: string;
+  needsSetupDependencies: string[];
+  rollbackNote: string;
+}
+
+export interface Rc0Cycle {
+  generatedAtMs?: number;
+  root?: string;
+  overallState?: string;
+  auditReport?: { filesScanned?: number } | null;
+  auditSummary?: { blockerCount?: number; partialCount?: number; needsSetupCount?: number } | null;
+  readinessSummary?: { partialCount?: number; needsSetupCount?: number } | null;
+  packets?: Rc0PacketSummary[];
+  exportError?: string;
+  rc0Error?: string;
+  [key: string]: unknown;
+}
+
+export interface Rc0ReadinessReport {
+  readinessRows?: Array<{ id: string; state: string; kind?: string; name?: string; configured?: string; envStatus?: string; allowlistStatus?: string; testAction?: string; testActionAvailable?: boolean; lastTestResult?: string; lastTestAtMs?: number | null; failureReason?: string | null; approvalRequired?: boolean; receiptStatus?: string; missingEnv?: string[]; zeroCostPolicy?: string }>;
+  durabilityRows?: Array<{ id: string; state: string }>;
+  workflowSummary?: { runs?: number; receipts?: number; orchestrationReceipts?: number } | null;
+  liveBlockers?: string[];
+  connectorSummary?: unknown;
+  releaseState?: { state?: string; missing?: unknown } | null;
+  releaseProof?: unknown;
+  signingEnv?: unknown;
+  updateCheckState?: unknown;
+  [key: string]: unknown;
+}
+
+export interface Rc0WorkspaceValidation {
+  ok: boolean;
+  error?: string;
+  status?: string;
+  root?: string;
+  [key: string]: unknown;
+}
+
+export interface Rc0VerificationResults {
+  testOk: boolean;
+  buildOk: boolean;
+  tauriOk: boolean;
+  releaseUpdaterOk: boolean;
+}
+
+export interface Rc0EvidencePackage {
+  runtime: string;
+  timestamp: string;
+  workspaceRoot: string;
+  workspaceRootValid: boolean;
+  scanStatus: string;
+  filesScanned: number;
+  p0Count: number;
+  p1Count: number;
+  p2Count: number;
+  topPackets: Rc0PacketSummary[];
+  exportPaths: string[];
+  outputs: unknown[];
+}
+
+function isoDateTag(ms?: number): string {
   return new Date(Number(ms || Date.now())).toISOString().slice(0, 10);
 }
 
-function jsonPretty(value) {
+function jsonPretty(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function packetSummary(packet) {
+function packetSummary(packet: Rc0PacketSummary): Rc0PacketSummary {
   return {
     id: packet.id,
     title: packet.title,
@@ -32,7 +102,15 @@ function buildProofMarkdown({
   proofState = 'partial',
   receiptsWritten = true,
   exportPaths = []
-}) {
+}: {
+  cycle: Rc0Cycle;
+  readinessReport: Rc0ReadinessReport | null;
+  workspaceValidation: Rc0WorkspaceValidation | null;
+  runtimeUsed?: string;
+  proofState?: string;
+  receiptsWritten?: boolean;
+  exportPaths?: string[];
+}): string {
   const packets = Array.isArray(cycle?.packets) ? cycle.packets : [];
   const topPackets = packets.slice(0, 10).map(packetSummary);
   const lines = [
@@ -76,7 +154,7 @@ function buildProofMarkdown({
   return `${lines.join('\n')}\n`;
 }
 
-function buildReadinessSnapshot(cycle, readinessReport, workspaceValidation, exportPaths = []) {
+function buildReadinessSnapshot(cycle: Rc0Cycle, readinessReport: Rc0ReadinessReport | null, workspaceValidation: Rc0WorkspaceValidation | null, exportPaths: string[] = []): Record<string, unknown> {
   return {
     runtime: 'native_tauri',
     timestamp: new Date(Number(cycle?.generatedAtMs || Date.now())).toISOString(),
@@ -106,8 +184,8 @@ function buildReadinessSnapshot(cycle, readinessReport, workspaceValidation, exp
   };
 }
 
-function buildConnectorReadinessSnapshot(readinessReport) {
-  const rows = Array.isArray(readinessReport?.readinessRows) ? readinessReport.readinessRows : [];
+function buildConnectorReadinessSnapshot(readinessReport: Rc0ReadinessReport | null): Record<string, unknown>[] {
+  const rows = Array.isArray(readinessReport?.readinessRows) ? readinessReport!.readinessRows : [];
   return rows.filter((row) => row.kind === 'connector' || row.kind === 'tool_connection').map((row) => ({
     id: row.id,
     name: row.name,
@@ -128,7 +206,7 @@ function buildConnectorReadinessSnapshot(readinessReport) {
   }));
 }
 
-function buildUpdaterReadinessSnapshot(readinessReport) {
+function buildUpdaterReadinessSnapshot(readinessReport: Rc0ReadinessReport | null): Record<string, unknown> {
   return {
     releaseState: readinessReport?.releaseState || null,
     releaseProof: readinessReport?.releaseProof || null,
@@ -138,7 +216,7 @@ function buildUpdaterReadinessSnapshot(readinessReport) {
   };
 }
 
-function buildWorkflowDurabilityMarkdown(readinessReport) {
+function buildWorkflowDurabilityMarkdown(readinessReport: Rc0ReadinessReport | null): string {
   const wf = readinessReport?.workflowSummary || {};
   const lines = [
     '# Workflow Durability Proof',
@@ -154,7 +232,7 @@ function buildWorkflowDurabilityMarkdown(readinessReport) {
   return `${lines.join('\n')}\n`;
 }
 
-function buildVerificationResultsMarkdown({ testOk, buildOk, tauriOk, releaseUpdaterOk }) {
+function buildVerificationResultsMarkdown({ testOk, buildOk, tauriOk, releaseUpdaterOk }: Rc0VerificationResults): string {
   return [
     '# Verification Results',
     '',
@@ -167,9 +245,9 @@ function buildVerificationResultsMarkdown({ testOk, buildOk, tauriOk, releaseUpd
   ].join('\n') + '\n';
 }
 
-function buildRemainingBlockersMarkdown(readinessReport, workspaceValidation) {
+function buildRemainingBlockersMarkdown(readinessReport: Rc0ReadinessReport | null, workspaceValidation: Rc0WorkspaceValidation | null): string {
   const blockers = [
-    ...(Array.isArray(readinessReport?.liveBlockers) ? readinessReport.liveBlockers : []),
+    ...(Array.isArray(readinessReport?.liveBlockers) ? readinessReport!.liveBlockers : []),
     ...(workspaceValidation?.ok ? [] : ['workspace_root_invalid']),
     ...(readinessReport?.releaseState?.state === 'ready' ? [] : ['updater_setup_required']),
     ...(readinessReport?.connectorSummary ? [] : [])
@@ -182,7 +260,7 @@ function buildRemainingBlockersMarkdown(readinessReport, workspaceValidation) {
   ].join('\n') + '\n';
 }
 
-function buildInstallAndRunMarkdown() {
+function buildInstallAndRunMarkdown(): string {
   return [
     '# Install and Run',
     '',
@@ -201,7 +279,13 @@ export async function writeRc0EvidencePackage({
   readinessReport,
   workspaceValidation,
   verificationResults = { testOk: false, buildOk: false, tauriOk: false, releaseUpdaterOk: false }
-}) {
+}: {
+  workspaceRoot: string;
+  cycle: Rc0Cycle;
+  readinessReport: Rc0ReadinessReport | null;
+  workspaceValidation: Rc0WorkspaceValidation | null;
+  verificationResults?: Rc0VerificationResults;
+}): Promise<Rc0EvidencePackage> {
   const dateTag = isoDateTag(cycle?.generatedAtMs || Date.now());
   const proofState = cycle?.overallState === 'failed'
     ? 'failed'
@@ -241,7 +325,7 @@ export async function writeRc0EvidencePackage({
   const blockersMarkdown = buildRemainingBlockersMarkdown(readinessReport, workspaceValidation);
   const installMarkdown = buildInstallAndRunMarkdown();
 
-  const outputs = [];
+  const outputs: unknown[] = [];
   const docsHandoff = [
     {
       relativePath: `docs/handoff/ALPHONSO_NATIVE_SELFDEV_PROOF_${dateTag}.md`,
@@ -289,7 +373,7 @@ export async function writeRc0EvidencePackage({
   ];
 
   for (const entry of docsHandoff) {
-    outputs.push(await writeHandoffArtifact({ workspaceRoot, fileName: entry.relativePath.split('/').pop(), content: entry.content }));
+    outputs.push(await writeHandoffArtifact({ workspaceRoot, fileName: entry.relativePath.split('/').pop()!, content: entry.content }));
   }
 
   for (const entry of rc0Files) {

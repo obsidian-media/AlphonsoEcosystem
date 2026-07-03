@@ -7,7 +7,62 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 const WEBHOOK_EVENTS_KEY = 'alphonso_whatsapp_webhook_events_v1';
 export const WHATSAPP_WEBHOOK_SCOPE = 'whatsapp_webhook_events_v1';
 
-function readEvents() {
+interface WebhookEvent {
+  id: string;
+  eventType: string;
+  details: Record<string, unknown>;
+  timestampMs: number;
+  trust: string;
+}
+
+interface CoercedBody {
+  rawBody: string;
+  payload: Record<string, unknown> | null;
+  error: string | null;
+}
+
+interface NormalizedMessage {
+  provider: string;
+  chatId: string;
+  fromId: string;
+  text: string;
+  messageId: string;
+  phoneNumber: string | null;
+  receivedAtMs: number;
+}
+
+interface WebhookVerifyProof {
+  ok?: boolean;
+  mode?: string;
+  trust?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
+interface WebhookProcessOptions {
+  commandId?: string | null;
+  packetId?: string | null;
+  allowUnsigned?: boolean;
+  signatureHeader?: string | null;
+  signature?: string | null;
+}
+
+interface WebhookProcessResult {
+  ok: boolean;
+  provider: string;
+  error?: string;
+  trust: string;
+  signatureProof?: unknown;
+  normalizationProof?: unknown;
+  count: number;
+  routedCount: number;
+  rejectedCount: number;
+  packets: unknown[];
+  routed: Array<NormalizedMessage & { packetId?: string }>;
+  rejected: Array<NormalizedMessage & { reason: string }>;
+}
+
+function readEvents(): WebhookEvent[] {
   try {
     const raw = localStorage.getItem(WEBHOOK_EVENTS_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -17,26 +72,26 @@ function readEvents() {
   }
 }
 
-function writeEvents(rows) {
+function writeEvents(rows: WebhookEvent[]): void {
   const next = rows.slice(-500);
   localStorage.setItem(WEBHOOK_EVENTS_KEY, JSON.stringify(next));
 }
 
-function recordEvent(eventType, details = {}) {
+function recordEvent(eventType: string, details: Record<string, unknown> = {}): WebhookEvent {
   const rows = readEvents();
-  const entry = {
+  const entry: WebhookEvent = {
     id: `whatsapp-webhook-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     eventType,
     details,
     timestampMs: timestampMs(),
-    trust: details?.trust || TRUST_STATES.TEMPORARY
+    trust: (details?.trust as string) || TRUST_STATES.TEMPORARY
   };
   rows.push(entry);
   writeEvents(rows);
   return entry;
 }
 
-function coerceBody(body) {
+function coerceBody(body: unknown): CoercedBody {
   if (typeof body === 'string') {
     try {
       return {
@@ -56,7 +111,7 @@ function coerceBody(body) {
   if (body && typeof body === 'object') {
     return {
       rawBody: JSON.stringify(body),
-      payload: body,
+      payload: body as Record<string, unknown>,
       error: null
     };
   }
@@ -68,7 +123,7 @@ function coerceBody(body) {
   };
 }
 
-function normalizeMessages(payload, rustProof) {
+function normalizeMessages(payload: Record<string, unknown> | null, rustProof: { ok?: boolean; messages?: NormalizedMessage[] } | null): NormalizedMessage[] {
   if (rustProof?.ok && Array.isArray(rustProof.messages)) {
     return rustProof.messages.map((message) => ({
       provider: 'whatsapp_cloud_api',
@@ -81,7 +136,7 @@ function normalizeMessages(payload, rustProof) {
     }));
   }
 
-  return normalizeWhatsAppCloudInboundPayload(payload || {});
+  return normalizeWhatsAppCloudInboundPayload((payload || {}) as Record<string, unknown>);
 }
 
 function buildReceiptDetails({
@@ -92,7 +147,15 @@ function buildReceiptDetails({
   count = 0,
   routedCount = 0,
   rejectedCount = 0
-}) {
+}: {
+  mode?: string;
+  challenge?: string | null;
+  trust?: string;
+  error?: string | null;
+  count?: number;
+  routedCount?: number;
+  rejectedCount?: number;
+}): Record<string, unknown> {
   return {
     mode,
     challengePresent: Boolean(challenge),
@@ -104,7 +167,7 @@ function buildReceiptDetails({
   };
 }
 
-export async function verifyWebhook(token, challenge, options = {}) {
+export async function verifyWebhook(token: string | null, challenge: string | null, options: { mode?: string; commandId?: string | null; packetId?: string | null } = {}): Promise<WebhookVerifyProof> {
   const mode = options.mode || 'subscribe';
   const proof = await invoke('verify_whatsapp_cloud_webhook_challenge', {
     mode,
@@ -119,7 +182,7 @@ export async function verifyWebhook(token, challenge, options = {}) {
     checkedAtMs: timestampMs(),
     trust: TRUST_STATES.FAILED,
     error: String(error)
-  }));
+  })) as WebhookVerifyProof;
 
   const trust = proof?.trust || (proof?.ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED);
   const receiptDetails = buildReceiptDetails({
@@ -155,7 +218,7 @@ export async function verifyWebhook(token, challenge, options = {}) {
   return proof;
 }
 
-export async function processInbound(body, options = {}) {
+export async function processInbound(body: unknown, options: WebhookProcessOptions = {}): Promise<WebhookProcessResult> {
   const { rawBody, payload, error: parseError } = coerceBody(body);
   if (parseError) {
     const details = {
@@ -197,7 +260,7 @@ export async function processInbound(body, options = {}) {
 
   const allowUnsigned = Boolean(options.allowUnsigned);
   const signatureHeader = options.signatureHeader || options.signature || null;
-  let signatureProof = null;
+  let signatureProof: WebhookVerifyProof | null = null;
   if (!allowUnsigned) {
     if (!signatureHeader) {
       const error = 'X-Hub-Signature-256 header is missing.';
@@ -247,7 +310,7 @@ export async function processInbound(body, options = {}) {
       checkedAtMs: timestampMs(),
       trust: TRUST_STATES.FAILED,
       error: String(error)
-    }));
+    })) as WebhookVerifyProof;
 
     if (!signatureProof?.ok) {
       const details = {
@@ -299,12 +362,12 @@ export async function processInbound(body, options = {}) {
     checkedAtMs: timestampMs(),
     trust: TRUST_STATES.FAILED,
     error: String(error)
-  }));
+  })) as { ok?: boolean; messages?: NormalizedMessage[]; trust?: string };
 
   const messages = normalizeMessages(payload, normalizedProof);
-  const routed = [];
-  const rejected = [];
-  const packets = [];
+  const routed: Array<NormalizedMessage & { packetId?: string }> = [];
+  const rejected: Array<NormalizedMessage & { reason: string }> = [];
+  const packets: unknown[] = [];
 
   for (const message of messages) {
     const senderId = message?.fromId || message?.chatId || '';
@@ -388,7 +451,7 @@ export async function processInbound(body, options = {}) {
   }
 
   const trust = signatureProof?.trust || normalizedProof?.trust || TRUST_STATES.VERIFIED;
-  const result = {
+  const result: WebhookProcessResult = {
     ok: true,
     provider: 'whatsapp_cloud_api',
     trust,

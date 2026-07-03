@@ -4,9 +4,62 @@ import { pushMemoryItem, listMemoryItems } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { addMemoryToChroma, semanticSearchMemory, isChromaHealthy } from './chromaDbService.js';
 
-// ── Retention policy classification ──────────────────────────────────────────
+export type RetentionPolicy = 'standard_180d' | 'permanent' | 'ephemeral_7d';
+export type MemoryCategory = 'project_memory' | 'timeline_memory' | 'preference_memory' | 'orchestration_memory';
+export type MemorySensitivity = 'internal' | 'public' | 'confidential';
 
-const RETENTION_RULES = [
+export interface EchoMemoryEntry {
+  title: string;
+  content: string;
+  category: MemoryCategory;
+  sensitivity: MemorySensitivity;
+  retentionPolicy: RetentionPolicy;
+  confidenceLevel?: string;
+}
+
+export interface EchoAssignment {
+  commandId?: string | null;
+  packetId?: string | null;
+  actionType?: string;
+}
+
+export interface EchoMemorySchema {
+  memoryId: string;
+  workflowId: string;
+  sourceAgent: string;
+  title: string;
+  content: string;
+  category: string;
+  confidenceLevel: string;
+  verificationState: string;
+  retentionPolicy: string;
+  sensitivity: string;
+  archivedAtMs: number;
+}
+
+export interface EchoPreservationResult {
+  summary: string;
+  resultState: string;
+  resultUrl: null;
+  artifacts: Array<{ type: string; [key: string]: unknown }>;
+  sources: string[];
+  contractAction: string;
+  schema: EchoMemorySchema;
+}
+
+export interface EchoOptions {
+  draftDisabled?: boolean;
+  endpoint?: string;
+  model?: string;
+}
+
+export interface NormalizedMemoryEntry {
+  confidence?: string;
+  confidenceLevel?: string;
+  [key: string]: unknown;
+}
+
+const RETENTION_RULES: Array<{ pattern: RegExp; policy: RetentionPolicy }> = [
   { pattern: /decision|approved|rejected|milestone|release|shipped/, policy: 'permanent' },
   { pattern: /preference|setting|config|style/, policy: 'permanent' },
   { pattern: /research|findings|report/, policy: 'standard_180d' },
@@ -15,7 +68,7 @@ const RETENTION_RULES = [
   { pattern: /error|failure|exception/, policy: 'ephemeral_7d' }
 ];
 
-export function classifyRetentionPolicy(category, content) {
+export function classifyRetentionPolicy(category: string, content: string): RetentionPolicy {
   const text = (String(category || '') + ' ' + String(content || '')).toLowerCase();
   for (const rule of RETENTION_RULES) {
     if (rule.pattern.test(text)) return rule.policy;
@@ -23,9 +76,7 @@ export function classifyRetentionPolicy(category, content) {
   return 'standard_180d';
 }
 
-// ── Category classifier ───────────────────────────────────────────────────────
-
-export function classifyMemoryCategory(commandText, priorOutputs) {
+export function classifyMemoryCategory(commandText: string, priorOutputs: Record<string, unknown>): MemoryCategory {
   const text = String(commandText || '').toLowerCase();
   const agents = Object.keys(priorOutputs || {});
 
@@ -35,9 +86,7 @@ export function classifyMemoryCategory(commandText, priorOutputs) {
   return 'project_memory';
 }
 
-// ── Prompt ────────────────────────────────────────────────────────────────────
-
-export function buildEchoSynthesisPrompt(commandText, priorOutputs) {
+export function buildEchoSynthesisPrompt(commandText: string, priorOutputs: Record<string, { summary?: string }>): string {
   const outputLines = Object.entries(priorOutputs || {})
     .map(([agent, output]) => `[${agent}] ${String(output?.summary || 'no summary').slice(0, 400)}`)
     .join('\n');
@@ -59,35 +108,31 @@ export function buildEchoSynthesisPrompt(commandText, priorOutputs) {
   ].filter(Boolean).join('\n');
 }
 
-// ── JSON parser with fallback ─────────────────────────────────────────────────
-
-export function parseEchoMemoryResponse(text) {
+export function parseEchoMemoryResponse(text: string): EchoMemoryEntry | null {
   try {
-  const raw = String(text || '').trim();
-  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonMatch = fenceMatch ? null : raw.match(/\{[\s\S]*\}/);
-  const cleaned = fenceMatch ? fenceMatch[1].trim() : jsonMatch ? jsonMatch[0] : raw;
-  const parsed = JSON.parse(cleaned);
+    const raw = String(text || '').trim();
+    const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const jsonMatch = fenceMatch ? null : raw.match(/\{[\s\S]*\}/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : jsonMatch ? jsonMatch[0] : raw;
+    const parsed = JSON.parse(cleaned);
 
-  const validCategories = ['project_memory', 'timeline_memory', 'preference_memory', 'orchestration_memory'];
-  const validSensitivity = ['internal', 'public', 'confidential'];
-  const validRetention = ['standard_180d', 'permanent', 'ephemeral_7d'];
+    const validCategories: MemoryCategory[] = ['project_memory', 'timeline_memory', 'preference_memory', 'orchestration_memory'];
+    const validSensitivity: MemorySensitivity[] = ['internal', 'public', 'confidential'];
+    const validRetention: RetentionPolicy[] = ['standard_180d', 'permanent', 'ephemeral_7d'];
 
-  return {
-    title: String(parsed.title || '').slice(0, 100) || 'Echo memory entry',
-    content: String(parsed.content || '').slice(0, 1000) || 'Workflow output preserved.',
-    category: validCategories.includes(parsed.category) ? parsed.category : 'project_memory',
-    sensitivity: validSensitivity.includes(parsed.sensitivity) ? parsed.sensitivity : 'internal',
-    retentionPolicy: validRetention.includes(parsed.retentionPolicy) ? parsed.retentionPolicy : 'standard_180d'
-  };
+    return {
+      title: String(parsed.title || '').slice(0, 100) || 'Echo memory entry',
+      content: String(parsed.content || '').slice(0, 1000) || 'Workflow output preserved.',
+      category: validCategories.includes(parsed.category) ? parsed.category : 'project_memory',
+      sensitivity: validSensitivity.includes(parsed.sensitivity) ? parsed.sensitivity : 'internal',
+      retentionPolicy: validRetention.includes(parsed.retentionPolicy) ? parsed.retentionPolicy : 'standard_180d'
+    };
   } catch {
     return { title: 'Echo memory entry', content: 'Workflow output preserved.', category: 'project_memory', sensitivity: 'internal', retentionPolicy: 'standard_180d' };
   }
 }
 
-// ── Deterministic fallback ────────────────────────────────────────────────────
-
-export function buildEchoFallbackEntry(commandText, priorOutputs) {
+export function buildEchoFallbackEntry(commandText: string, priorOutputs: Record<string, { summary?: string; resultState?: string }>): EchoMemoryEntry {
   const agents = Object.keys(priorOutputs || {});
   const summaries = Object.entries(priorOutputs || {})
     .map(([agent, output]) => `${agent}: ${String(output?.summary || 'no summary').slice(0, 200)}`)
@@ -109,12 +154,10 @@ export function buildEchoFallbackEntry(commandText, priorOutputs) {
   };
 }
 
-// ── Confidence normalization ──────────────────────────────────────────────────
-
-export function normalizeMemoryConfidence(entries) {
+export function normalizeMemoryConfidence(entries: NormalizedMemoryEntry[]): NormalizedMemoryEntry[] {
   if (!Array.isArray(entries) || entries.length === 0) return [];
 
-  const CONFIDENCE_RANK = {
+  const CONFIDENCE_RANK: Record<string, number> = {
     [TRUST_STATES.VERIFIED]: 4,
     [TRUST_STATES.INFERRED]: 3,
     [TRUST_STATES.TEMPORARY]: 2,
@@ -135,12 +178,10 @@ export function normalizeMemoryConfidence(entries) {
   });
 }
 
-// ── Main entry ────────────────────────────────────────────────────────────────
-
-export async function runEchoPreservation(commandText, assignment, priorOutputs, options = {}) {
+export async function runEchoPreservation(commandText: string, assignment: EchoAssignment, priorOutputs: Record<string, { summary?: string; resultState?: string }>, options: EchoOptions = {}): Promise<EchoPreservationResult> {
   const startMs = timestampMs();
 
-  let memoryEntry = null;
+  let memoryEntry: EchoMemoryEntry | null = null;
   let ollamaUsed = false;
 
   if (!options.draftDisabled) {
@@ -165,7 +206,7 @@ export async function runEchoPreservation(commandText, assignment, priorOutputs,
     memoryEntry = buildEchoFallbackEntry(commandText, priorOutputs);
   }
 
-  const schema = {
+  const schema: EchoMemorySchema = {
     memoryId: `echo-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     workflowId: assignment?.commandId || assignment?.packetId || '',
     sourceAgent: 'echo',
@@ -197,10 +238,8 @@ export async function runEchoPreservation(commandText, assignment, priorOutputs,
     verificationState: schema.verificationState
   });
 
-  // Mirror to ChromaDB for semantic search (fire-and-forget, non-blocking)
   addMemoryToChroma({ id: schema.memoryId, title: schema.title, content: schema.content, category: schema.category, sourceAgent: 'echo', timestampMs: startMs });
 
-  // Normalize confidence across recent memory entries (best-effort, non-blocking)
   try {
     const recent = listMemoryItems().slice(-50);
     normalizeMemoryConfidence(recent);
@@ -244,10 +283,7 @@ export async function runEchoPreservation(commandText, assignment, priorOutputs,
   };
 }
 
-// ── Session synthesis (end-of-session hook) ───────────────────────────────────
-// Takes the last N chat messages and synthesizes them into a memory entry.
-
-export async function synthesizeSession(recentMessages) {
+export async function synthesizeSession(recentMessages: Array<{ role?: string; content?: string }>): Promise<EchoPreservationResult | null> {
   const messages = Array.isArray(recentMessages) ? recentMessages.slice(-20) : [];
   if (messages.length === 0) return null;
 
@@ -255,7 +291,7 @@ export async function synthesizeSession(recentMessages) {
     .map((m) => `[${m.role || 'user'}] ${String(m.content || '').slice(0, 300)}`)
     .join('\n');
 
-  const priorOutputs = {};
+  const priorOutputs: Record<string, { summary: string; resultState: string }> = {};
   for (const msg of messages) {
     if (msg.role === 'assistant' && msg.content) {
       priorOutputs['session'] = { summary: String(msg.content).slice(0, 400), resultState: 'completed' };
@@ -270,22 +306,19 @@ export async function synthesizeSession(recentMessages) {
   }
 }
 
-// ── Semantic search via ChromaDB (falls back to keyword search if offline) ───
-
-export async function searchEchoMemorySemantic(query, limit = 10) {
+export async function searchEchoMemorySemantic(query: string, limit = 10): Promise<NormalizedMemoryEntry[]> {
   const semanticResults = await semanticSearchMemory(query, limit);
   if (semanticResults && semanticResults.length > 0) {
     const allMemories = listMemoryItems();
     return semanticResults
-      .map(r => allMemories.find(m => m.id === r.id || m.content?.memoryId === r.id))
-      .filter(Boolean);
+      .map((r: { id: string }) => allMemories.find((m: NormalizedMemoryEntry) => m.id === r.id || (m.content as Record<string, unknown>)?.memoryId === r.id))
+      .filter(Boolean) as NormalizedMemoryEntry[];
   }
-  // Keyword fallback
   const q = query.toLowerCase();
   return listMemoryItems()
-    .filter(m => {
+    .filter((m: NormalizedMemoryEntry) => {
       const text = `${m.title || ''} ${JSON.stringify(m.content || '')} ${m.category || ''}`.toLowerCase();
-      return q.split(' ').some(word => word.length > 2 && text.includes(word));
+      return q.split(' ').some((word) => word.length > 2 && text.includes(word));
     })
     .slice(-limit);
 }
