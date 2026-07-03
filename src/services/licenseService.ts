@@ -77,7 +77,7 @@ export function getLicenseInfo(): LicenseInfo {
         features: getFeaturesForTier(parsed.tier || 'free')
       };
     }
-  } catch {}
+  } catch { /* fall back to free tier below */ }
   return {
     tier: 'free',
     key: null,
@@ -120,7 +120,7 @@ export async function activateLicense(key: string): Promise<{ success: boolean; 
   localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
   try {
     await invoke('kv_set', { key: LICENSE_KEY, value: JSON.stringify(license) });
-  } catch {}
+  } catch { /* SQLite not available outside Tauri — localStorage write above already succeeded */ }
 
   return { success: true, tier };
 }
@@ -129,7 +129,7 @@ export async function deactivateLicense(): Promise<void> {
   localStorage.removeItem(LICENSE_KEY);
   try {
     await invoke('kv_set', { key: LICENSE_KEY, value: '' });
-  } catch {}
+  } catch { /* SQLite not available outside Tauri — localStorage removal above already succeeded */ }
 }
 
 function validateLicenseKey(key: string): LicenseTier | null {

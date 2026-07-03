@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 2 of N, v2.5.8): 10 more root-level services migrated to TypeScript (105/26 .js/.ts, was 115/16).
+**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 2 of N, v2.5.8): 10 more root-level services migrated to TypeScript. Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -664,6 +664,57 @@ into Sprint 2+ — not dropped.
     user-facing value (a real crash fix and a real security fix,
     respectively). Sprint 5 has so far migrated the easiest ~20% of the
     remaining service files by size.
+- **2026-07-02 (Sprint 6 started, v2.5.9)** — User asked to add the ESLint
+  `.ts`/`.tsx` gap to Sprint 6's backlog and start Sprint 6. Added it to
+  the Sprint 6 list, then picked it as the first item to actually tackle
+  (cheapest, most concrete, and unblocks honest verification for every
+  future TS-touching change — including future Sprint 5 batches).
+  - Checked `package.json` before installing anything — no
+    `@typescript-eslint/*` packages present. Installed `typescript-eslint`
+    (the modern flat-config meta-package, matching this project's
+    ESLint 9 flat-config setup) as a devDependency.
+  - Added a `src/**/*.{ts,tsx}` block to `eslint.config.js` mirroring the
+    existing `.js`/`.jsx` block's structure and leniency
+    (`no-unused-vars`/`no-explicit-any` off) rather than turning on every
+    strict rule immediately — the goal was closing the "never checked at
+    all" gap, not maximizing strictness in one pass.
+  - Ran it before assuming anything about what it would find: 37 real
+    problems surfaced immediately (25 errors, 12 warnings), confirming
+    the fix actually worked rather than silently doing nothing.
+  - Auto-fixed the 11 mechanical ones (`--fix`), then went through the
+    remaining 26 by hand rather than disabling rules to make them
+    disappear:
+    - 8 empty `catch {}` blocks — read each surrounding function to
+      confirm what was actually being silently swallowed before writing
+      the explanatory comment (all were legitimate "fall back to X"
+      patterns already, not masked bugs, but silent empty catches are
+      still worth documenting).
+    - 1 real bug-shaped pattern in `SmartVoiceButton.tsx`: a ternary used
+      purely for its side effect. Not a functional bug today (both
+      branches call something), but the exact kind of pattern
+      `no-unused-expressions` exists to catch before it silently becomes
+      one. Rewrote as `if`/`else`.
+    - 3 `require()` calls in `SettingsView.tsx` — checked
+      `echoFileWatcherService.js` and `memoryMonitorService.js` directly
+      to confirm `getWatcherConfig`/`saveWatcherConfig`/`getUsageStats`
+      are real, always-resolvable named exports (not something
+      conditionally available) before converting to static imports —
+      didn't assume the dynamic `require()` was safe to remove.
+    - 4 empty-interface declarations in `global.d.ts` converted to type
+      aliases — verified this is syntactically valid inside a
+      `declare global { namespace JSX {} }` block via `tsc` before
+      committing to it.
+  - Left the 9 `@ts-nocheck` files alone — deliberately. Stripping
+    `@ts-nocheck` from any of `App.tsx`, `SettingsView.tsx`,
+    `OnboardingWizard.tsx`, etc. would likely surface a large batch of
+    real type errors per file (they were written with type-checking
+    off), which is a fundamentally different, much larger scope of work
+    than an ESLint config fix. Added a narrow, exact-path override (not a
+    wildcard) rather than silently disabling the rule project-wide, with
+    a comment telling future contributors not to widen it.
+  - Verification: `npm run lint` exit code 0, `npx tsc --noEmit` clean,
+    133/133 targeted tests passing across every touched file.
+  - Version bumped 2.5.8 → 2.5.9. All docs updated in the same pass.
 
 ## Sprint 5 migration tracker (update this section, not just the running log, on every batch)
 
@@ -723,9 +774,9 @@ keep doing this — do not skip steps to go faster):
 6. If a test fails and you're not sure it's related to this session's
    changes, verify with `git stash` → reproduce → `git stash pop` before
    concluding either way. Do not assume.
-7. Run ESLint on touched files too, even though (see the finding above)
-   it currently doesn't cover `.ts` — still run it in case that gap gets
-   fixed later, and so the habit doesn't atrophy.
+7. Run ESLint on touched files — as of Sprint 6 (2026-07-02) it actually
+   covers `.ts`/`.tsx` now (previously it silently didn't; see Sprint 6
+   below), so this step is no longer a formality.
 8. Update this tracker section, the running log below, and all 5 docs
    (`CLAUDE.md`, `README.md`, `docs/CHANGELOG.md`,
    `docs/ALPHONSO_GROUND_TRUTH.md`, this file) in the same commit as the
@@ -740,7 +791,7 @@ keep doing this — do not skip steps to go faster):
 | 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
 | 4 | Security hardening Batch 2 (attacker-resistance) | ✅ Closed 2026-07-02 (v2.5.6) — fixed Telegram owner-registration auth bypass + constant-time gateway token comparisons; audited Discord/webhook/CI-gating with no further fix needed; credential-storage upgrade documented as a Sprint 6 recommendation |
 | 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. 105 root-level `.js` files still open for future batches |
-| 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🌱 Seeded, not started |
+| 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🔄 In progress — ESLint `.ts`/`.tsx` coverage gap closed 2026-07-02 (v2.5.9). Sandboxing/MCP/scheduler/email connector/module convergence/credential storage still open |
 
 Seeded now so scope survives even if priorities shift or a session diverges
 from this exact ordering — treat the numbering as intent, not a hard queue.
@@ -1041,10 +1092,37 @@ files (root level). That's the actual migration target, not components.
   (`connectorImageGenerators.js`, `connectorOutbound.js`,
   `connectorPolling.js`, `connectorRegistry.js`) still open from batch 1.
 
-## Sprint 6 (seeded): Runtime hardening carryover + remaining connectors
+## Sprint 6 (IN PROGRESS, started 2026-07-02): Runtime hardening carryover + remaining connectors
 
-Carried forward from Sprint 2's original backlog, still not started:
+Carried forward from Sprint 2's original backlog:
 
+- ~~**Fix ESLint `.ts`/`.tsx` coverage gap**~~ — **CLOSED 2026-07-02,
+  v2.5.9**. `eslint.config.js` only had a `files` block for
+  `src/**/*.{js,jsx}` — no `.ts`/`.tsx` file in the repo had ever actually
+  been linted. Installed `typescript-eslint`, added a matching
+  `src/**/*.{ts,tsx}` block (base: `tseslint.configs.recommended`, with
+  `no-unused-vars`/`no-explicit-any` off to match the existing `.js`/`.jsx`
+  leniency). Immediately surfaced 37 real findings — fixed all of them
+  except the 9 pre-existing `// @ts-nocheck` files, which got a targeted
+  exact-path override (not a wildcard) disabling only
+  `@typescript-eslint/ban-ts-comment`, with a comment against widening it.
+  Fixes made: 11 stale `eslint-disable` directives (auto-fixed); 8 empty
+  `catch {}` blocks given explanatory comments (`ModelSwitcher.tsx`,
+  `appUpdateService.ts`, `licenseService.ts`, `policyEnforcementService.ts`);
+  a real bug-shaped ternary-as-statement in `SmartVoiceButton.tsx`
+  rewritten as `if`/`else`; 3 `require()` calls in `SettingsView.tsx`
+  converted to static imports (confirmed the target exports are always
+  resolvable first); 4 empty-interface declarations in `global.d.ts`
+  converted to type aliases. `npm run lint` + `npx tsc --noEmit` clean,
+  133/133 targeted tests passing.
+  **Still open, tracked separately, NOT part of this fix**: the 9
+  `@ts-nocheck` files themselves (`App.tsx`, `ApprovalModal.tsx`,
+  `ChatView.tsx`, `ConnectorHealthPanel.tsx`, `OllamaOfflineBanner.tsx`,
+  `OnboardingWizard.tsx`, `SettingsView.tsx`, `Sidebar.tsx`,
+  `WorkflowBuilderView.tsx`) still bypass type-checking entirely.
+  Removing `@ts-nocheck` from each is a real, separately-scoped effort —
+  budget significant time per file, since each will likely surface a
+  batch of genuine type errors that need real fixes, not suppression.
 - Subprocess/sandboxed tool execution (§3.2)
 - MCP as a first-class runtime capability, not a side Express server (§3.4)
 - Scheduler heartbeat/liveness supervision (§3.5)
@@ -1053,9 +1131,11 @@ Carried forward from Sprint 2's original backlog, still not started:
   `skillPackService.js` packs (§4.3) — directly relevant to Sprint 3 above,
   should probably be resolved before or alongside Sprint 3, not after
 - EULA + trademark work, once external distribution is actually planned (§1)
-- Fix `ConnectorSetupPanel.test.jsx`'s `connectorAuth` mock gap (found in
-  Sprint 2, one-line fix: add `hydrateConnectorCredentialsFromSqlite:
-  vi.fn().mockResolvedValue()` to the mock factory)
+- ~~Fix `ConnectorSetupPanel.test.jsx`'s `connectorAuth` mock gap~~ —
+  **CLOSED Sprint 4** (see `ALPHONSOTOTHEMOON.md` Sprint 4 section)
 - Investigate the vitest worker-pool startup timeout that blocks a full
   218-file suite run on this dev machine past ~170 files (first logged
-  Sprint 1, still open)
+  Sprint 1, still open; re-confirmed present during Sprint 5 batch 2)
+- Credential storage: OS-level secret storage (e.g. Windows Credential
+  Manager via a Tauri plugin) vs. current localStorage/SQLite dual-write
+  — recommended in Sprint 4, not implemented, carried forward here

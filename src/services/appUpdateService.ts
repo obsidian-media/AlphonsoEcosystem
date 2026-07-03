@@ -40,7 +40,7 @@ export async function getLastUpdateNoticeAsync(): Promise<UpdateNotice | null> {
   try {
     const raw = await invoke<string | null>('kv_get', { key: UPDATE_NOTICE_KEY });
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch { /* fall back to localStorage below */ }
   return getLastUpdateNotice();
 }
 

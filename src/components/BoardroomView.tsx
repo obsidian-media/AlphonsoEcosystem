@@ -202,7 +202,6 @@ export function BoardroomView() {
     // Save to unified memory
     try {
       const { pushMemory } = await import('../services/unifiedMemoryService.js');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       pushMemory({ title: `Boardroom: ${activeSession.topic}`, content: { synthesis: conclusion, messages: activeSession.messages.length }, category: 'decision_memory', namespace: 'ecosystem', sourceAgent: 'alphonso' } as any);
     } catch { /* non-blocking */ }
 
@@ -250,7 +249,6 @@ export function BoardroomView() {
   async function handleSaveCreativeBrief() {
     try {
       const { pushMemory } = await import('../services/unifiedMemoryService.js');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       pushMemory({ title: `Creative Brief: ${activeSession?.topic || ''}`, content: { synthesis: creativeBrief }, category: 'creative_memory', namespace: 'miya', sourceAgent: 'miya' } as any);
       window.dispatchEvent(new CustomEvent('alphonso:toast', {
         detail: { type: 'success', message: 'Creative brief saved to Miya memory' }

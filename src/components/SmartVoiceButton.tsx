@@ -58,7 +58,8 @@ export function SmartVoiceButton({ voiceStatus: browserVoiceStatus, onToggle, on
 
   const handleClick = () => {
     if (isJarvisAvailable) {
-      jarvis.state === 'idle' || jarvis.state === 'error' ? jarvis.start() : jarvis.stop();
+      if (jarvis.state === 'idle' || jarvis.state === 'error') jarvis.start();
+      else jarvis.stop();
     } else if (onSmartToggle) {
       onSmartToggle();
     } else if (onToggle) {

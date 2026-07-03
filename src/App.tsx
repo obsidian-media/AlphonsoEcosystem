@@ -291,7 +291,6 @@ function AppShell() {
         }
       } catch { /* non-critical */ }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Wire background services: Sentinel scheduled scans + Maria weekly report
@@ -320,7 +319,6 @@ function AppShell() {
       try { scanStop?.(); } catch { /* ignore */ }
       try { weeklyStop?.(); } catch { /* ignore */ }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Jose scheduler background service
@@ -339,7 +337,6 @@ function AppShell() {
       } catch { /* non-critical */ }
     })();
     return () => { try { schedulerStop?.(); } catch { /* ignore */ } };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Echo file watcher background service
@@ -363,7 +360,6 @@ function AppShell() {
       } catch { /* non-critical */ }
     })();
     return () => { try { watcherStop?.(); } catch { /* ignore */ } };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Generic webhook gateway poller — drains gateway/generic-webhook/ if configured.
@@ -389,7 +385,6 @@ function AppShell() {
       } catch { /* non-critical */ }
     })();
     return () => { try { webhookPollStop?.(); } catch { /* ignore */ } };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // App update check (Tauri-only) — mirrors the endpoint/pubkey configured in
@@ -419,7 +414,6 @@ function AppShell() {
         }
       } catch { /* non-critical */ }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Voice OS watchdog — restarts voice server if it dies (Tauri-only)

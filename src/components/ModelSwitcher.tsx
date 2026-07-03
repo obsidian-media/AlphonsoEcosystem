@@ -117,7 +117,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
               if (data.total && data.completed) parts.push(`${Math.round((data.completed / data.total) * 100)}%`);
               setPullProgress(parts.join(' — '));
             }
-          } catch { }
+          } catch { /* ignore malformed progress line */ }
         }
       }
       setPullProgress('Download complete');
@@ -133,7 +133,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
             onModelChangeRef.current?.(modelName);
           }
         }
-      } catch { }
+      } catch { /* ignore tag refresh failure — model list stays as last successfully fetched */ }
       setTimeout(() => { setPullingModel(null); setPullProgress(''); }, 2000);
     } catch {
       setPullProgress('Could not reach Ollama');

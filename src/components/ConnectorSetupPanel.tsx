@@ -309,7 +309,6 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setDeepseekApiKey((prev) => prev || getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
     }).catch(() => { /* best-effort — in-memory cache stays as-is */ });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

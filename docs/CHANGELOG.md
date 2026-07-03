@@ -6,6 +6,49 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.9] — 2026-07-02
+
+### Sprint 6 (started): fixed the ESLint `.ts`/`.tsx` coverage gap found during a Sprint 5 check-in
+
+- `eslint.config.js` previously only had a `files` block for
+  `src/**/*.{js,jsx}` — no `.ts`/`.tsx` file (114 `.tsx` components, 26
+  `.ts` services) had ever actually been linted. Added
+  `typescript-eslint` (parser + plugin) and a matching `.ts`/`.tsx` rule
+  block.
+- Running it immediately surfaced 37 real findings across the codebase.
+  Fixed everything safely fixable:
+  - 11 stale `eslint-disable` directives (auto-fixed).
+  - 8 empty `catch {}` blocks across `ModelSwitcher.tsx`,
+    `appUpdateService.ts`, `licenseService.ts` (×3),
+    `policyEnforcementService.ts` (×2) — added explanatory comments for
+    each (all were legitimate "fall back to X" patterns, not bugs, but
+    silently-empty catch blocks are a real code-quality issue on their own).
+  - A real bug-shaped pattern in `SmartVoiceButton.tsx`: a ternary
+    expression used purely for its side effect (`cond ? a() : b();`) —
+    rewritten as an explicit `if`/`else`.
+  - 3 `require()` calls inside try/catch in `SettingsView.tsx` (for
+    `echoFileWatcherService` and `memoryMonitorService`) converted to
+    static top-level imports — confirmed both target functions are
+    always-resolvable named exports, so the dynamic `require()` was
+    unnecessary indirection, not real defensive lazy-loading.
+  - 4 empty `interface X extends Y {}` declarations in `global.d.ts`
+    converted to `type X = Y` aliases (functionally identical, avoids the
+    lint rule's "equivalent to its supertype" warning).
+- **Deliberately not fixed, and explicitly documented as such**: 9 files
+  use `// @ts-nocheck` (`App.tsx`, `ApprovalModal.tsx`, `ChatView.tsx`,
+  `ConnectorHealthPanel.tsx`, `OllamaOfflineBanner.tsx`,
+  `OnboardingWizard.tsx`, `SettingsView.tsx`, `Sidebar.tsx`,
+  `WorkflowBuilderView.tsx`). Removing `@ts-nocheck` from any of these
+  would likely surface a large batch of real type errors each, since they
+  were written without type-checking — that's a separate, much larger
+  scoped effort, not something to rush through inside this ESLint fix.
+  Added a targeted `eslint.config.js` override disabling
+  `@typescript-eslint/ban-ts-comment` for exactly these 9 files (by exact
+  path, not a wildcard), with a comment explaining why and instructing
+  not to add new files to the list.
+- `npm run lint` and `npx tsc --noEmit` both clean; 133/133 targeted
+  tests passing across the touched files.
+
 ## [2.5.8] — 2026-07-02
 
 ### Sprint 5 (batch 2): service-layer TypeScript migration — 10 more root-level services

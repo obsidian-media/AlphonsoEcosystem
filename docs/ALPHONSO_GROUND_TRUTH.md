@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.8 (Sprint 5 batch 2: 10 more root-level services migrated to TypeScript)
-**Verified by:** Claude Code session — targeted tests passed 100% functionally (269/270 across ~43 affected test files; the 1 failure, `telegramConnectorProof.test.js`, confirmed pre-existing via git stash reproduction, not caused by this session), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below, also hit mid-session on a ~27-file invocation and resolved by re-running affected files individually) — not re-attempted, root cause unchanged.
-**Version:** 2.5.8 (security hardened, 218 test files, 3,174+ tests, 165 services; root-level `src/services/*.js` count 115 → 105, `.ts` count 16 → 26)
+**Last verified:** 2026-07-02 — v2.5.9 (Sprint 6 started: fixed a real ESLint `.ts`/`.tsx` coverage gap, then fixed everything it surfaced)
+**Verified by:** Claude Code session — `npm run lint` and `npx tsc --noEmit` both clean, 133/133 targeted tests passing. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.9 (security hardened, 218 test files, 3,174+ tests, 165 services; ESLint now actually covers `.ts`/`.tsx` — previously it silently didn't, across every prior "ESLint clean" claim in this project's history)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -1248,6 +1248,55 @@ Full context in `ALPHONSOTOTHEMOON.md`.
   restore. Not caused by this migration.
 - Verification: 269/270 targeted tests passing (the 1 known pre-existing
   failure excluded), `npx tsc --noEmit` clean, ESLint clean.
+
+## 11.13 ALPHONSOTOTHEMOON Sprint 6 (started 2026-07-02, v2.5.9): fixed the ESLint `.ts`/`.tsx` coverage gap
+
+Full context in `ALPHONSOTOTHEMOON.md`. Note for anyone reading prior
+entries in this file: every "ESLint clean" claim logged before this entry
+was accurate for the files ESLint actually processed, but `.ts`/`.tsx`
+files were never among them — see below.
+
+- **Root cause**: `eslint.config.js`'s only `files` block was
+  `src/**/*.{js,jsx}`. No `.ts`/`.tsx` file in the repo (114 `.tsx`
+  components, 26 `.ts` services as of Sprint 5 batch 2) had ever been
+  linted.
+- **Fix**: installed `typescript-eslint` (parser + plugin), added a
+  matching `src/**/*.{ts,tsx}` rule block using `tseslint.configs.recommended`
+  as a base, with `no-unused-vars`/`@typescript-eslint/no-explicit-any`
+  turned off to match the existing leniency already established for
+  `.js`/`.jsx` (avoids an unmanageable wall of findings on day one).
+- **Immediately surfaced 37 real findings.** Fixed everything safely
+  fixable:
+  - 11 stale `eslint-disable` directives — auto-fixed.
+  - 8 empty `catch {}` blocks (`ModelSwitcher.tsx` ×2,
+    `appUpdateService.ts`, `licenseService.ts` ×3,
+    `policyEnforcementService.ts` ×2) — each given an explanatory comment
+    after confirming it was a legitimate fallback pattern, not a bug.
+  - A real bug-shaped pattern in `SmartVoiceButton.tsx`: `cond ? a() :
+    b();` as a bare statement (ternary used for side effects) — rewritten
+    as `if (cond) a(); else b();`.
+  - 3 `require()` calls inside try/catch in `SettingsView.tsx` — checked
+    that `getWatcherConfig`/`saveWatcherConfig`
+    (`echoFileWatcherService.js`) and `getUsageStats`
+    (`memoryMonitorService.js`) are always-resolvable named exports
+    before converting to static top-level imports (confirming the
+    dynamic `require()` wasn't defensive lazy-loading, just unnecessary
+    indirection).
+  - 4 empty `interface X extends Y {}` in `global.d.ts` converted to
+    `type X = Y` aliases (same semantics, satisfies the rule).
+- **Deliberately deferred, not silently patched over**: 9 files use
+  `// @ts-nocheck` (`App.tsx`, `ApprovalModal.tsx`, `ChatView.tsx`,
+  `ConnectorHealthPanel.tsx`, `OllamaOfflineBanner.tsx`,
+  `OnboardingWizard.tsx`, `SettingsView.tsx`, `Sidebar.tsx`,
+  `WorkflowBuilderView.tsx`). These were written before any type
+  checking existed for them; removing `@ts-nocheck` from any would
+  likely surface a large batch of real type errors per file — a
+  separate, much bigger scoped effort. Added a targeted `eslint.config.js`
+  override, listing these 9 exact file paths (not a wildcard), that
+  disables only `@typescript-eslint/ban-ts-comment` for them, with a
+  comment instructing future contributors not to widen the list.
+- Verification: `npm run lint` clean (exit 0), `npx tsc --noEmit` clean,
+  133/133 targeted tests passing across every file touched.
 
 ---
 

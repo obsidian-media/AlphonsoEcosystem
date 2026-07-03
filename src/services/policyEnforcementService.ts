@@ -108,7 +108,7 @@ export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySett
         previewMode: parsed.previewMode !== false
       };
     }
-  } catch {}
+  } catch { /* fall back to localStorage-backed sync read below */ }
   return getRuntimePolicySettings();
 }
 
@@ -118,7 +118,7 @@ export async function setRuntimePolicySettings(settings: Partial<RuntimePolicySe
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
   try {
     await invoke('kv_set', { key: SETTINGS_KEY, value: JSON.stringify(next) });
-  } catch {}
+  } catch { /* SQLite not available outside Tauri — localStorage write above already succeeded */ }
   policyCache.delete('policy:settings:sync');
   policyCache.keys().filter(k => k.startsWith('policy:gate:')).forEach(k => policyCache.delete(k));
 }

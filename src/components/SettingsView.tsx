@@ -19,6 +19,8 @@ import { CompanionPairingPanel } from './CompanionPairingPanel';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';
 import { SessionHistoryView } from './SessionHistoryView';
 import { FilesView } from './FilesView';
+import { getWatcherConfig, saveWatcherConfig } from '../services/echoFileWatcherService';
+import { getUsageStats } from '../services/memoryMonitorService';
 
 interface MemoryItem {
   id?: string;
@@ -1562,7 +1564,6 @@ function InboxFolderConfig() {
 
   useEffect(() => {
     try {
-      const { getWatcherConfig } = require('../services/echoFileWatcherService');
       const cfg = getWatcherConfig();
       if (cfg) {
         setInboxPath(cfg.inboxPath || '');
@@ -1574,7 +1575,6 @@ function InboxFolderConfig() {
 
   function handleSave() {
     try {
-      const { saveWatcherConfig } = require('../services/echoFileWatcherService');
       saveWatcherConfig({ inboxPath, enabled, pollIntervalSec: pollSec });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -1634,7 +1634,6 @@ function PerformanceDiagnosticsPanel() {
     const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
     const bootMs = nav ? Math.round(nav.domContentLoadedEventEnd) : null;
     try {
-      const { getUsageStats } = require('../services/memoryMonitorService');
       const s = getUsageStats();
       setStats({ bootMs, storageKB: s.usedKB, storagePercent: Math.round((s.usedKB / 10000) * 100), itemCount: s.itemCount });
     } catch {

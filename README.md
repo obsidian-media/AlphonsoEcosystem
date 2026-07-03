@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.5.8** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.9** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.8-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.9-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
@@ -22,6 +22,10 @@ It orchestrates 9 specialized agents, connects to 22 external services, and uses
 </div>
 
 ---
+
+## What's New in v2.5.9
+
+- Sprint 6: fixed a real ESLint gap — no `.ts`/`.tsx` file in the repo was ever linted. Fixed the config, then fixed the 30+ real findings it immediately surfaced (empty catch blocks, a real bug-shaped ternary, stale `require()` calls). 9 legacy `@ts-nocheck` files intentionally left for a dedicated future pass, documented as such.
 
 ## What's New in v2.5.8
 

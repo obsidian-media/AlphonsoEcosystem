@@ -165,13 +165,13 @@ export function RightPanel({
 
   useEffect(() => {
     if (!sentinelScan) runQuickScan();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (activeTab !== 'system') return;
     const id = setInterval(runQuickScan, 10 * 60 * 1000);
     return () => clearInterval(id);
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const diagnostics = useMemo(() => [
     {
