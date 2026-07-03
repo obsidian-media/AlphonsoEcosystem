@@ -336,14 +336,14 @@ interface AssignmentSummary {
   reportPacketId: string | null;
 }
 
-interface ShayanReport {
+interface UserReport {
   summary: string;
   resultUrl: string | null;
   assignmentSummaries: AssignmentSummary[];
 }
 
 interface PipelineCommand {
-  shayanReport?: ShayanReport | null;
+  userReport?: UserReport | null;
 }
 
 interface PipelineResult {
@@ -370,10 +370,10 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, outputFo
   const total = executedCount + pendingCount + failedCount;
   const receipts = result.executionReceipts || [];
   const command = result.command || {};
-  const shayanReport = command.shayanReport || null;
-  const summary = shayanReport?.summary || 'Pipeline completed.';
-  const url = shayanReport?.resultUrl || null;
-  const assignmentSummaries = shayanReport?.assignmentSummaries || [];
+  const userReport = command.userReport || null;
+  const summary = userReport?.summary || 'Pipeline completed.';
+  const url = userReport?.resultUrl || null;
+  const assignmentSummaries = userReport?.assignmentSummaries || [];
   const artifacts = assignmentSummaries.flatMap((a) => a.artifacts || []);
   const agentReports = assignmentSummaries.filter((a) => a.reportSummary);
 

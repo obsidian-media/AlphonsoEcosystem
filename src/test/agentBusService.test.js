@@ -139,8 +139,8 @@ describe('agentBusService', () => {
 
     it('records approvedBy', () => {
       const created = createAgentPacket({ fromAgent: 'a', toAgent: 'b', title: 'T', packetType: 'task', payload: {} });
-      const approved = approvePacket(created.id, 'shayan');
-      expect(approved.approvedBy).toBe('shayan');
+      const approved = approvePacket(created.id, 'user');
+      expect(approved.approvedBy).toBe('user');
     });
 
     it('defaults approvedBy to operator', () => {

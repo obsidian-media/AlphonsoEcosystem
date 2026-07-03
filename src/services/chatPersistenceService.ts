@@ -52,7 +52,7 @@ function messageToRecord(chatId: string, msg: ChatMessage): ChatMemoryRecord {
     title: msg.role === 'user' ? `User: ${String(msg.content).slice(0, 60)}` : `Assistant: ${String(msg.content).slice(0, 60)}`,
     content: { value: msg.content, __governance: { chatId, role: msg.role, isError: msg.isError || false, msgId: msg.id } },
     category: CHAT_CATEGORY,
-    sourceAgent: msg.role === 'user' ? 'shayan' : 'alphonso',
+    sourceAgent: msg.role === 'user' ? 'user' : 'alphonso',
     source: `chat:${chatId}`,
     timestampMs: Number(msg.id > 1e12 ? msg.id : timestampMs()),
     confidence: TRUST_STATES.TEMPORARY,

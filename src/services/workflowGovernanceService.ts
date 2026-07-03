@@ -122,8 +122,8 @@ export function getAgentWorkflowParticipation(workflow: WorkflowInput | null): A
   return sequence.map((agent, index) => ({
     agent,
     order: index + 1,
-    canExecute: !['shayan_approval', 'user_approval'].includes(agent),
-    requiresHumanApprovalStage: agent === 'shayan_approval' || agent === 'user_approval'
+    canExecute: !['user_approval', 'user_approval'].includes(agent),
+    requiresHumanApprovalStage: agent === 'user_approval' || agent === 'user_approval'
   }));
 }
 

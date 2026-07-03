@@ -490,7 +490,7 @@ function AppShell() {
             });
 
             if (!abortCtrl.signal.aborted) {
-              const summary = result?.command?.shayanReport?.summary || 'Command processed.';
+              const summary = result?.command?.userReport?.summary || 'Command processed.';
               await invoke('companion_broadcast', {
                 event: 'done',
                 payload: { commandId, summary }

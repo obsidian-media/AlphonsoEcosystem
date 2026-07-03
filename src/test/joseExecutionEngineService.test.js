@@ -146,7 +146,7 @@ describe('jose execution retries and dlq', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -232,7 +232,7 @@ describe('LLM-powered agent drafting', () => {
   it('uses LLM-generated package when Ollama is available', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: create a creative package about space exploration',
-      source: 'shayan',
+      source: 'user',
       endpoint: 'http://localhost:11434',
       zeroCostMode: true
     });
@@ -245,7 +245,7 @@ describe('LLM-powered agent drafting', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: create a creative package about space exploration',
-      source: 'shayan',
+      source: 'user',
       endpoint: 'http://localhost:11434',
       zeroCostMode: true
     });
@@ -349,7 +349,7 @@ describe('dependency-aware execution', () => {
   it('calls setAgentOutput after each successful agent execution', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -366,7 +366,7 @@ describe('dependency-aware execution', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: create a creative package about space exploration',
-      source: 'shayan',
+      source: 'user',
       endpoint: 'http://localhost:11434',
       zeroCostMode: true
     });
@@ -388,7 +388,7 @@ describe('dependency-aware execution', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -401,7 +401,7 @@ describe('dependency-aware execution', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: create a creative package about AI safety',
-      source: 'shayan',
+      source: 'user',
       endpoint: 'http://localhost:11434',
       zeroCostMode: true
     });
@@ -419,7 +419,7 @@ describe('dependency-aware execution', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime and preserve context',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -429,7 +429,7 @@ describe('dependency-aware execution', () => {
   it('returns executionReceipts with agent field', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -470,7 +470,7 @@ describe('sentinel gate integration', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: publish content to external platform',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -490,7 +490,7 @@ describe('sentinel gate integration', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -509,7 +509,7 @@ describe('sentinel gate integration', () => {
 
     await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -529,7 +529,7 @@ describe('sentinel gate integration', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: publish content to external platform',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -550,7 +550,7 @@ describe('sentinel gate integration', () => {
     const onProgress = vi.fn();
     await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: publish content to external platform',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true,
       onProgress
     });
@@ -577,7 +577,7 @@ describe('nova feedback integration', () => {
   it('calls storeNovaScore after Nova executes successfully', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: score opportunity for this task',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -588,7 +588,7 @@ describe('nova feedback integration', () => {
   it('includes novaFeedback in pipeline return value', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: score opportunity for this task',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -606,7 +606,7 @@ describe('nova feedback integration', () => {
 
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: create a creative package about AI',
-      source: 'shayan',
+      source: 'user',
       endpoint: 'http://localhost:11434',
       zeroCostMode: true
     });
@@ -619,7 +619,7 @@ describe('nova feedback integration', () => {
   it('calls getDecompositionHints with command id', async () => {
     await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -654,7 +654,7 @@ describe('executeApprovedPackets', () => {
     // Create a real packet via pipeline then extract its ID from pending approvals
     const pipeline = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: run sentinel scan',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
     expect(pipeline.ok).toBe(true);

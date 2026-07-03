@@ -251,7 +251,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
 
   const approveRun = () => {
     if (!selectedRun) return;
-    approveWorkflowRun(selectedRun.id, 'shayan');
+    approveWorkflowRun(selectedRun.id, 'user');
     refresh();
   };
 

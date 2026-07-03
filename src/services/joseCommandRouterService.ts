@@ -121,11 +121,11 @@ export interface JoseCommand {
   retryPolicy: { maxRetries: number; staleAfterMs: number };
   trust: string;
   confirmedAtMs?: number;
-  shayanReport?: ShayanReport | null;
+  userReport?: UserReport | null;
   parallelDispatch?: boolean;
 }
 
-export interface ShayanReport {
+export interface UserReport {
   id: string;
   commandId: string;
   createdAtMs: number;
@@ -552,7 +552,7 @@ async function decomposeViaBackend(parsed: ParsedJoseCommand): Promise<JoseComma
   }
 }
 
-export async function createJoseCommandRoute({ commandText, source = 'shayan', zeroCostMode = undefined }: CommandRouteOptions): Promise<JoseCommandRouteResult | null> {
+export async function createJoseCommandRoute({ commandText, source = 'user', zeroCostMode = undefined }: CommandRouteOptions): Promise<JoseCommandRouteResult | null> {
   const parsed = parseJoseCommand(commandText);
   if (!parsed.clean) return null;
 
@@ -885,7 +885,7 @@ function collectAgentReports(command: JoseCommand): any[] {
   ));
 }
 
-function buildShayanSummary(command: JoseCommand, reports: any[], resultUrl: string | null, pendingAssignments: JoseCommandAssignment[]): string {
+function buildUserSummary(command: JoseCommand, reports: any[], resultUrl: string | null, pendingAssignments: JoseCommandAssignment[]): string {
   if (!reports.length) {
     return `Jose distributed "${shorten(command.commandText)}" and is waiting for agent reports.`;
   }
@@ -912,7 +912,7 @@ function updateCommandOnConfirm(commandId: string, payload: Partial<JoseCommand>
   return rows.find((command) => command.id === commandId) || null;
 }
 
-export function createJoseReportToShayan(
+export function createJoseReportToUser(
   commandId: string,
   confirmation: string = 'Jose reviewed agent reports and confirmed the command state.'
 ): JoseCommand | null {
@@ -930,13 +930,13 @@ export function createJoseReportToShayan(
   });
   const hasContractFailure = assignments.some((assignment) => assignment.status === 'contract_invalid');
 
-  const shayanReport: ShayanReport = {
-    id: newId('jose-shayan-report'),
+  const userReport: UserReport = {
+    id: newId('jose-user-report'),
     commandId,
     createdAtMs: timestampMs(),
     fromAgent: AGENTS.JOSE,
-    to: 'shayan',
-    summary: buildShayanSummary(command, reports, resultUrl, pendingAssignments),
+    to: 'user',
+    summary: buildUserSummary(command, reports, resultUrl, pendingAssignments),
     confirmation,
     resultUrl,
     assignmentCount: assignments.length,
@@ -969,18 +969,18 @@ export function createJoseReportToShayan(
   };
 
   const updatedCommand = updateCommandOnConfirm(commandId, {
-    status: 'reported_to_shayan',
+    status: 'reported_to_user',
     joseConfirmation: confirmation,
-    shayanReport,
+    userReport,
     confirmedAtMs: timestampMs(),
-    trust: shayanReport.trust
+    trust: userReport.trust
   });
   appendOrchestrationReceipt({
     workflowId: 'jose_command_router',
     commandId,
     packetId: null,
     eventType: 'jose_merge_confirm_reported',
-    status: 'reported_to_shayan',
+    status: 'reported_to_user',
     agent: AGENTS.JOSE,
     actionType: 'orchestration_merge_confirm',
     riskLevel: pendingAssignments.length ? 'medium' : 'low',
@@ -988,29 +988,29 @@ export function createJoseReportToShayan(
     blocked: false,
     setupRequired: false,
     details: {
-      reportId: shayanReport.id,
+      reportId: userReport.id,
       assignmentCount: assignments.length,
       reportCount: reports.length,
       pendingCount: pendingAssignments.length,
       resultUrl
     },
-    confidence: shayanReport.trust,
-    verificationState: shayanReport.trust
+    confidence: userReport.trust,
+    verificationState: userReport.trust
   });
 
   appendSessionEvent({
     category: 'orchestration',
     title: 'Jose reported command result to Shayan',
-    details: { commandId, reportId: shayanReport.id, resultUrl, trust: shayanReport.trust },
+    details: { commandId, reportId: userReport.id, resultUrl, trust: userReport.trust },
     agent: AGENTS.JOSE,
-    confidence: shayanReport.trust,
-    verificationState: shayanReport.trust
+    confidence: userReport.trust,
+    verificationState: userReport.trust
   });
   return updatedCommand;
 }
 
 export function confirmJoseCommand(commandId: string, confirmation: string): JoseCommand | null {
-  return createJoseReportToShayan(commandId, confirmation);
+  return createJoseReportToUser(commandId, confirmation);
 }
 
 export function runJoseRetrySweep(): { touched: string[] } {
@@ -1172,7 +1172,7 @@ export function getJoseWorkflowObservability(): WorkflowObservability {
     commands: commands.length,
     distributed: commands.filter((command) => command.status === 'distributed').length,
     inProgress: commands.filter((command) => ['distributed', 'in_progress', 'retrying'].includes(command.status)).length,
-    reported: commands.filter((command) => command.status === 'reported_to_shayan').length,
+    reported: commands.filter((command) => command.status === 'reported_to_user').length,
     pendingApprovals: packets.filter((packet) => packet.status === 'pending_approval').length,
     failedPackets: packets.filter((packet) => packet.status === 'failed').length,
     deadLetters: listJoseDeadLetters().length

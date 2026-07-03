@@ -99,14 +99,14 @@ describe('jose execution pipeline e2e', () => {
   it('decomposes, executes safe assignments, and emits merge report receipts', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: create a launch script and verify local runtime package',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
     expect(result.ok).toBe(true);
     expect(result.commandId).toBeTruthy();
     expect(result.executedCount).toBeGreaterThan(0);
-    expect(result.command?.shayanReport?.summary).toContain('Jose merged');
+    expect(result.command?.userReport?.summary).toContain('Jose merged');
 
     const receipts = listOrchestrationReceipts({ commandId: result.commandId });
     const types = receipts.map((item) => item.eventType);
@@ -118,7 +118,7 @@ describe('jose execution pipeline e2e', () => {
   it('executes low-risk specialist agents without noisy approval or contract failures', async () => {
     const result = await runJoseCommandExecutionPipeline({
       commandText: 'ask jose: research launch positioning, create a campaign image prompt, audit approval policy, check security permissions, remember this decision, and score the opportunity priority',
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: true
     });
 
@@ -127,12 +127,12 @@ describe('jose execution pipeline e2e', () => {
     expect(result.pendingApprovalCount).toBe(0);
     expect(result.executedCount).toBeGreaterThanOrEqual(6);
 
-    const summaries = result.command?.shayanReport?.assignmentSummaries || [];
+    const summaries = result.command?.userReport?.assignmentSummaries || [];
     expect(summaries.map((item) => item.agent)).toEqual(expect.arrayContaining([
       'hector', 'miya', 'maria', 'sentinel', 'echo', 'nova'
     ]));
     expect(summaries.every((item) => item.reportStatus !== 'not_reported')).toBe(true);
-    expect(result.command?.shayanReport?.contractFailures || []).toHaveLength(0);
+    expect(result.command?.userReport?.contractFailures || []).toHaveLength(0);
   });
 });
 

@@ -23,7 +23,7 @@ describe('mission room service', () => {
   it('creates the default Shayan/Kite/Hermes room', () => {
     const rooms = listMissionRooms();
     expect(rooms).toHaveLength(1);
-    expect(rooms[0].selectedAgents).toEqual(['shayan', 'alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova', 'kairo']);
+    expect(rooms[0].selectedAgents).toEqual(['user', 'alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova', 'kairo']);
     expect(rooms[0].openParticipantSlots).toHaveLength(0);
     expect(getMissionRoom().name).toContain('Mission Room');
   });
@@ -69,7 +69,7 @@ describe('mission room service', () => {
       speaker: 'intruder',
       content: 'publish with NOTION_TOKEN=ntn_abcdefghijklmnop'
     });
-    expect(message.speaker).toBe('shayan');
+    expect(message.speaker).toBe('user');
     expect(message.content).toContain('[REDACTED_SECRET]');
     expect(message.approvalRequired).toBe(true);
 
