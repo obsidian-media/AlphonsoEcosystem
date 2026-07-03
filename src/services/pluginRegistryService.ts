@@ -7,7 +7,45 @@ const AUDIT_KEY = 'alphonso_plugin_audit_v1';
 export const PLUGINS_SCOPE = 'plugins_registry_v1';
 export const PLUGIN_AUDIT_SCOPE = 'plugin_audit_v1';
 
-const DEFAULT_PLUGINS = [
+export interface PluginEntry {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  author: string;
+  enabled: boolean;
+  permissions: string[];
+  panels: string[];
+  tools: string[];
+  workflows: string[];
+  memoryHandlers: string[];
+  status: string;
+  trust: string;
+  manifestVersion: string;
+  signature?: string;
+  signedBy?: string;
+  installedAt?: number;
+}
+
+export interface PluginAuditEntry {
+  id: string;
+  timestampMs: number;
+  pluginId: string;
+  action: string;
+  trust: string;
+  details: Record<string, unknown>;
+}
+
+export interface PluginAuditInput {
+  id?: string;
+  timestampMs?: number;
+  pluginId?: string;
+  action?: string;
+  trust?: string;
+  details?: Record<string, unknown>;
+}
+
+const DEFAULT_PLUGINS: PluginEntry[] = [
   {
     id: 'core.runtime-verifier',
     name: 'Runtime Verifier',
@@ -154,7 +192,7 @@ const DEFAULT_PLUGINS = [
   }
 ];
 
-export const PLUGIN_MANIFEST_FIELDS = [
+export const PLUGIN_MANIFEST_FIELDS: string[] = [
   'id',
   'name',
   'description',
@@ -168,7 +206,7 @@ export const PLUGIN_MANIFEST_FIELDS = [
   'status'
 ];
 
-function read(key, fallback) {
+function read(key: string, fallback: PluginEntry[]): PluginEntry[] {
   try {
     const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : fallback;
@@ -178,23 +216,23 @@ function read(key, fallback) {
   }
 }
 
-function write(key, value) {
+function write(key: string, value: PluginEntry[]): void {
   localStorage.setItem(key, JSON.stringify(value));
   if (key === PLUGINS_KEY || key === AUDIT_KEY) {
     const scope = key === PLUGINS_KEY ? PLUGINS_SCOPE : PLUGIN_AUDIT_SCOPE;
     const rows = Array.isArray(value) ? value : [];
-    persistScopeRows(scope, rows, (row) => ({
+    persistScopeRows(scope, rows, (row: PluginEntry) => ({
       id: row.id || `${scope}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
       data: row,
-      status: row.status || row.action || 'recorded',
+      status: row.status || (row as unknown as { action?: string }).action || 'recorded',
       confidence: row.trust || TRUST_STATES.TEMPORARY,
       verificationState: row.trust || TRUST_STATES.UNVERIFIED,
-      timestampMs: Number(row.timestampMs || Date.now())
+      timestampMs: Number((row as unknown as { timestampMs?: number }).timestampMs || Date.now())
     }));
   }
 }
 
-export function listPlugins() {
+export function listPlugins(): PluginEntry[] {
   const plugins = read(PLUGINS_KEY, []);
   if (plugins.length === 0) {
     write(PLUGINS_KEY, DEFAULT_PLUGINS);
@@ -209,13 +247,13 @@ export function listPlugins() {
   return plugins;
 }
 
-export function listPluginAudit() {
-  return read(AUDIT_KEY, []);
+export function listPluginAudit(): PluginAuditEntry[] {
+  return read(AUDIT_KEY, []) as unknown as PluginAuditEntry[];
 }
 
-export function appendPluginAuditEntry(entry = {}) {
-  const current = read(AUDIT_KEY, []);
-  const next = {
+export function appendPluginAuditEntry(entry: PluginAuditInput = {}): PluginAuditEntry {
+  const current = listPluginAudit();
+  const next: PluginAuditEntry = {
     id: entry.id || `audit-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: Number(entry.timestampMs || timestampMs()),
     pluginId: entry.pluginId || 'unknown',
@@ -224,11 +262,11 @@ export function appendPluginAuditEntry(entry = {}) {
     details: entry.details || {}
   };
   const updated = [...current, next].slice(-300);
-  write(AUDIT_KEY, updated);
+  write(AUDIT_KEY, updated as unknown as PluginEntry[]);
   return next;
 }
 
-export function togglePlugin(pluginId, enabled) {
+export function togglePlugin(pluginId: string, enabled: boolean): PluginEntry[] {
   const plugins = listPlugins().map((plugin) => (
     plugin.id === pluginId ? { ...plugin, enabled } : plugin
   ));
@@ -242,7 +280,7 @@ export function togglePlugin(pluginId, enabled) {
   return plugins;
 }
 
-export async function discoverDiskPluginManifests(workspaceRoot) {
+export async function discoverDiskPluginManifests(workspaceRoot?: string): Promise<unknown[]> {
   try {
     const manifests = await invoke('discover_plugins_from_disk', {
       workspaceRoot: workspaceRoot || null
@@ -259,7 +297,13 @@ export async function executePluginToolRun({
   toolId,
   extraArgs = [],
   workspaceRoot
-}) {
+}: {
+  manifestPath: string;
+  pluginId: string;
+  toolId: string;
+  extraArgs?: string[];
+  workspaceRoot?: string;
+}): Promise<unknown> {
   return invoke('execute_plugin_tool', {
     manifestPath,
     pluginId,
@@ -269,7 +313,7 @@ export async function executePluginToolRun({
   });
 }
 
-export async function validatePluginManifestDisk(manifestPath) {
+export async function validatePluginManifestDisk(manifestPath: string): Promise<unknown> {
   return invoke('validate_plugin_manifest_disk', {
     manifestPath
   });

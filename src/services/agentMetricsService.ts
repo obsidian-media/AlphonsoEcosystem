@@ -4,7 +4,111 @@ import { listMemory } from './unifiedMemoryService';
 const METRICS_KEY = 'alphonso_agent_metrics_v1';
 const MAX_METRICS_ENTRIES = 500;
 
-function readMetrics() {
+export interface AgentExecutionEntry {
+  id: string;
+  timestampMs: number;
+  agent: string;
+  command: string;
+  success: boolean;
+  confidence: number;
+  filesWritten: number;
+  validationPassed: boolean;
+  iterations: number;
+  durationMs: number;
+  error: string | null;
+}
+
+export interface AgentExecutionInput {
+  agent?: string;
+  command?: string;
+  success?: boolean;
+  confidence?: number;
+  filesWritten?: number;
+  validationPassed?: boolean;
+  iterations?: number;
+  durationMs?: number;
+  error?: unknown;
+}
+
+export interface AgentMetricsFilters {
+  agent?: string;
+  since?: number;
+  until?: number;
+}
+
+export interface TopCommand {
+  command: string;
+  count: number;
+}
+
+export interface ErrorPattern {
+  error: string;
+  count: number;
+}
+
+export interface AgentBreakdownEntry {
+  total: number;
+  success: number;
+  totalConfidence: number;
+  avgConfidence?: number;
+  successRate?: number;
+}
+
+export interface TrendEntry {
+  date: string;
+  executions: number;
+  success: number;
+  avgConfidence?: number;
+}
+
+export interface AgentMetricsResult {
+  totalExecutions: number;
+  successRate: number;
+  avgConfidence: number;
+  avgFilesPerExecution: number;
+  avgIterations: number;
+  avgDurationMs: number;
+  validationPassRate: number;
+  topCommands: TopCommand[];
+  errorPatterns: ErrorPattern[];
+  byAgent: Record<string, AgentBreakdownEntry>;
+  trend: TrendEntry[];
+}
+
+export interface SuccessRateResult {
+  ok: boolean;
+  error?: string;
+  agentName?: string;
+  days?: number;
+  successRate: number;
+  total: number;
+  successful: number;
+  failed?: number;
+}
+
+export interface LatencyResult {
+  ok: boolean;
+  error?: string;
+  agentName?: string;
+  avgDurationMs: number;
+  medianDurationMs: number;
+  minDurationMs?: number;
+  maxDurationMs?: number;
+  samples: number;
+}
+
+export interface ApprovalRateResult {
+  ok: boolean;
+  error?: string;
+  agentName?: string;
+  approvalRate: number;
+  approvalRequired: number;
+  approved: number;
+  pending?: number;
+  totalExecutions?: number;
+}
+
+function readMetrics(): AgentExecutionEntry[] {
   try {
     const raw = localStorage.getItem(METRICS_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -13,12 +117,12 @@ function readMetrics() {
   }
 }
 
-function writeMetrics(entries) {
+function writeMetrics(entries: AgentExecutionEntry[]): void {
   localStorage.setItem(METRICS_KEY, JSON.stringify(entries.slice(-MAX_METRICS_ENTRIES)));
 }
 
-export function recordAgentExecution({ agent, command, success, confidence, filesWritten, validationPassed, iterations, durationMs, error }) {
-  const entry = {
+export function recordAgentExecution({ agent, command, success, confidence, filesWritten, validationPassed, iterations, durationMs, error }: AgentExecutionInput = {}): AgentExecutionEntry {
+  const entry: AgentExecutionEntry = {
     id: `metric-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: timestampMs(),
     agent: agent || 'alphonso',
@@ -38,7 +142,7 @@ export function recordAgentExecution({ agent, command, success, confidence, file
   return entry;
 }
 
-export function getAgentMetrics(filters = {}) {
+export function getAgentMetrics(filters: AgentMetricsFilters = {}): AgentMetricsResult {
   const entries = readMetrics();
   const filtered = entries.filter((e) => {
     if (filters.agent && e.agent !== filters.agent) return false;
@@ -71,8 +175,7 @@ export function getAgentMetrics(filters = {}) {
   const totalIterations = filtered.reduce((sum, e) => sum + (e.iterations || 1), 0);
   const totalDuration = filtered.reduce((sum, e) => sum + (e.durationMs || 0), 0);
 
-  // Top commands (most common prefixes)
-  const commandPrefixes = {};
+  const commandPrefixes: Record<string, number> = {};
   for (const e of filtered) {
     const prefix = e.command.split(' ').slice(0, 3).join(' ').toLowerCase();
     commandPrefixes[prefix] = (commandPrefixes[prefix] || 0) + 1;
@@ -82,8 +185,7 @@ export function getAgentMetrics(filters = {}) {
     .slice(0, 10)
     .map(([cmd, count]) => ({ command: cmd, count }));
 
-  // Error patterns
-  const errorPatterns = {};
+  const errorPatterns: Record<string, number> = {};
   for (const e of filtered) {
     if (e.error) {
       const key = e.error.slice(0, 80).toLowerCase();
@@ -95,11 +197,10 @@ export function getAgentMetrics(filters = {}) {
     .slice(0, 5)
     .map(([err, count]) => ({ error: err, count }));
 
-  // By agent
-  const byAgent = {};
+  const byAgent: Record<string, AgentBreakdownEntry> = {};
   for (const e of filtered) {
     if (!byAgent[e.agent]) {
-      byAgent[e.agent] = { total: 0, success: 0, avgConfidence: 0, totalConfidence: 0 };
+      byAgent[e.agent] = { total: 0, success: 0, totalConfidence: 0 };
     }
     byAgent[e.agent].total++;
     if (e.success) byAgent[e.agent].success++;
@@ -110,10 +211,9 @@ export function getAgentMetrics(filters = {}) {
     byAgent[agent].avgConfidence = Math.round(data.totalConfidence / data.total);
   }
 
-  // Trend (last 7 days)
   const now = Date.now();
   const dayMs = 86_400_000;
-  const trend = [];
+  const trend: TrendEntry[] = [];
   for (let i = 6; i >= 0; i--) {
     const dayStart = now - (i + 1) * dayMs;
     const dayEnd = now - i * dayMs;
@@ -141,15 +241,15 @@ export function getAgentMetrics(filters = {}) {
   };
 }
 
-export function clearAgentMetrics() {
+export function clearAgentMetrics(): void {
   localStorage.removeItem(METRICS_KEY);
 }
 
-export function exportAgentMetrics() {
+export function exportAgentMetrics(): AgentExecutionEntry[] {
   return readMetrics();
 }
 
-export function getAgentSuccessRate(agentName, days = 7) {
+export function getAgentSuccessRate(agentName: string, days = 7): SuccessRateResult {
   if (!agentName || typeof agentName !== 'string') {
     return { ok: false, error: 'Agent name is required.', successRate: 0, total: 0, successful: 0 };
   }
@@ -175,7 +275,7 @@ export function getAgentSuccessRate(agentName, days = 7) {
   };
 }
 
-export function getAgentLatency(agentName) {
+export function getAgentLatency(agentName: string): LatencyResult {
   if (!agentName || typeof agentName !== 'string') {
     return { ok: false, error: 'Agent name is required.', avgDurationMs: 0, medianDurationMs: 0, samples: 0 };
   }
@@ -201,7 +301,7 @@ export function getAgentLatency(agentName) {
   };
 }
 
-export function getAgentApprovalRate(agentName) {
+export function getAgentApprovalRate(agentName: string): ApprovalRateResult {
   if (!agentName || typeof agentName !== 'string') {
     return { ok: false, error: 'Agent name is required.', approvalRate: 0, approvalRequired: 0, approved: 0 };
   }
@@ -225,21 +325,21 @@ export function getAgentApprovalRate(agentName) {
   };
 }
 
-export function getPerAgentBreakdown() {
+export function getPerAgentBreakdown(): Record<string, AgentBreakdownEntry> {
   const metrics = getAgentMetrics();
   return metrics.byAgent;
 }
 
-export function getTopCommands(limit = 10) {
+export function getTopCommands(limit = 10): TopCommand[] {
   const metrics = getAgentMetrics();
   return metrics.topCommands.slice(0, limit);
 }
 
-export function getSevenDayTrend() {
+export function getSevenDayTrend(): TrendEntry[] {
   const now = Date.now();
   const dayMs = 86_400_000;
   const entries = readMetrics();
-  const trend = [];
+  const trend: TrendEntry[] = [];
   for (let i = 6; i >= 0; i--) {
     const dayStart = now - (i + 1) * dayMs;
     const dayEnd = now - i * dayMs;

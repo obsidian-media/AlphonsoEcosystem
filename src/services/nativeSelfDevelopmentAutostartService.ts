@@ -9,9 +9,38 @@ import { timestampMs } from './trustModel';
 
 const SETTINGS_KEY = 'alphonso_settings';
 const PROOF_STATE_KEY = 'alphonso_native_selfdev_proof';
-const AUTOSTART_FLAG_KEY = 'alphonso_native_selfdev_autostart_running';
+const AUTOSTART_FLAG_KEY = 'alphonso_native_selfdev_autorun_running';
 
-function readStoredJson(key, fallback) {
+interface ProofState {
+  runtime: string;
+  proofMode: string;
+  autorun: boolean;
+  state: string;
+  workspaceRoot: string;
+  workspaceRootValid: boolean | null;
+  filesScanned: number;
+  p0Count: number;
+  p1Count: number;
+  p2Count: number;
+  topPackets?: Array<{ id: string; title: string; priority: string; riskLevel: string }>;
+  exportPath: string | null;
+  proofReceiptsWritten: boolean;
+  rc0Proof?: unknown;
+  proofAuthority?: string;
+  timestampMs: number;
+  note?: string;
+  error?: string;
+}
+
+interface AutostartResult {
+  started: boolean;
+  state?: string;
+  reason?: string;
+  error?: string;
+  cycle?: unknown;
+}
+
+function readStoredJson(key: string, fallback: Record<string, unknown>): Record<string, unknown> {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
@@ -20,21 +49,21 @@ function readStoredJson(key, fallback) {
   }
 }
 
-async function readRuntimeEnvValue(name) {
+async function readRuntimeEnvValue(name: string): Promise<string> {
   try {
-    const proof = await invoke('read_runtime_env_value', { name });
+    const proof = await invoke('read_runtime_env_value', { name }) as { value?: string };
     return String(proof?.value || '').trim();
   } catch {
     return '';
   }
 }
 
-async function emitProofStage(stageFileName, payload = {}) {
+async function emitProofStage(stageFileName: string, payload: Record<string, unknown> = {}): Promise<Record<string, unknown> | null> {
   const workspaceRoot = String(payload.workspaceRoot || payload.workspace_root || getDefaultWorkspaceRoot() || '').trim();
   if (!workspaceRoot) return null;
 
   const stage = String(stageFileName || '').replace(/\.json$/i, '');
-  const content = {
+  const content: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
     stage,
     status: payload.status || 'recorded',
@@ -66,7 +95,7 @@ async function emitProofStage(stageFileName, payload = {}) {
   }
 }
 
-function markProofState(value) {
+function markProofState(value: ProofState): void {
   try {
     localStorage.setItem(PROOF_STATE_KEY, JSON.stringify(value));
   } catch {
@@ -74,24 +103,24 @@ function markProofState(value) {
   }
 }
 
-function markAutostartFlag(value) {
+function markAutostartFlag(value: boolean): void {
   try {
     localStorage.setItem(AUTOSTART_FLAG_KEY, value ? '1' : '0');
   } catch {
     // ignore localStorage failures in native proof bootstrap
   }
-  window.__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__ = Boolean(value);
+  (window as unknown as Record<string, unknown>).__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__ = Boolean(value);
 }
 
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__?.invoke);
+function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && Boolean((window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ && (window as unknown as Record<string, { invoke?: unknown }>).__TAURI_INTERNALS__?.invoke);
 }
 
-export function isNativeSelfDevelopmentAutostartRunning() {
-  return Boolean(window.__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__);
+export function isNativeSelfDevelopmentAutostartRunning(): boolean {
+  return Boolean((window as unknown as Record<string, unknown>).__ALPHONSO_NATIVE_SELFDEV_AUTORUN_RUNNING__);
 }
 
-export async function startNativeSelfDevelopmentAutostart() {
+export async function startNativeSelfDevelopmentAutostart(): Promise<AutostartResult> {
   if (typeof window === 'undefined') return { started: false, reason: 'window_unavailable' };
   if (!isTauriRuntime()) return { started: false, reason: 'tauri_runtime_unavailable' };
   if (isNativeSelfDevelopmentAutostartRunning()) return { started: false, reason: 'already_running' };
@@ -142,7 +171,7 @@ export async function startNativeSelfDevelopmentAutostart() {
   });
 
   if (autorunValue !== '1') {
-    const skipped = {
+    const skipped: ProofState = {
       runtime: 'native_tauri',
       proofMode: 'automated_native',
       autorun: false,
@@ -184,31 +213,37 @@ export async function startNativeSelfDevelopmentAutostart() {
       proofHooks: {
         writeStage: emitProofStage
       }
-    });
+    } as unknown as Parameters<typeof runSelfDevelopmentCycle>[0]) as Record<string, unknown>;
 
-    const proof = {
+    const validation = cycle?.validation as { ok?: boolean } | undefined;
+    const auditSummary = cycle?.auditSummary as { filesScanned?: number; blockerCount?: number } | undefined;
+    const readinessSummary = cycle?.readinessSummary as { partialCount?: number; needsSetupCount?: number } | undefined;
+    const packets = cycle?.packets as Array<{ id: string; title: string; priority: string; riskLevel: string }> | undefined;
+    const exportProof = cycle?.exportProof as { file_path?: string; filePath?: string } | undefined;
+
+    const proof: ProofState = {
       runtime: 'native_tauri',
       proofAuthority: PROOF_AUTHORITY.JS_BRIDGE,
       proofMode: 'automated_native',
       autorun: true,
       state: 'partial',
-      workspaceRoot: cycle?.root || proofWorkspaceRoot,
-      workspaceRootValid: Boolean(cycle?.validation?.ok),
-      filesScanned: Number(cycle?.auditSummary?.filesScanned || 0),
-      p0Count: Number(cycle?.auditSummary?.blockerCount || 0),
-      p1Count: Number(cycle?.readinessSummary?.partialCount || 0),
-      p2Count: Number(cycle?.readinessSummary?.needsSetupCount || 0),
-      topPackets: Array.isArray(cycle?.packets) ? cycle.packets.slice(0, 10).map((packet) => ({
+      workspaceRoot: (cycle?.root as string) || proofWorkspaceRoot,
+      workspaceRootValid: Boolean(validation?.ok),
+      filesScanned: Number(auditSummary?.filesScanned || 0),
+      p0Count: Number(auditSummary?.blockerCount || 0),
+      p1Count: Number(readinessSummary?.partialCount || 0),
+      p2Count: Number(readinessSummary?.needsSetupCount || 0),
+      topPackets: Array.isArray(packets) ? packets.slice(0, 10).map((packet) => ({
         id: packet.id,
         title: packet.title,
         priority: packet.priority,
         riskLevel: packet.riskLevel
       })) : [],
-      exportPath: cycle?.exportProof?.file_path || cycle?.exportProof?.filePath || null,
+      exportPath: exportProof?.file_path || exportProof?.filePath || null,
       proofReceiptsWritten: false,
       rc0Proof: cycle?.rc0Proof || null,
-      timestampMs: cycle?.generatedAtMs || timestampMs(),
-      note: cycle?.rc0Error
+      timestampMs: (cycle?.generatedAtMs as number) || timestampMs(),
+      note: (cycle?.rc0Error as string)
         ? `JS bridge RC0 export error: ${cycle.rc0Error}`
         : 'JS bridge scan recorded. Rust RC0 engine and release/rc0/proof/*.json remain proof authority.'
     };
@@ -227,7 +262,7 @@ export async function startNativeSelfDevelopmentAutostart() {
 
     return { started: true, state: proof.state, cycle };
   } catch (error) {
-    const failed = {
+    const failed: ProofState = {
       runtime: 'native_tauri',
       proofMode: 'automated_native',
       autorun: true,
@@ -241,6 +276,7 @@ export async function startNativeSelfDevelopmentAutostart() {
       exportPath: null,
       proofReceiptsWritten: false,
       timestampMs: timestampMs(),
+      note: String(error),
       error: String(error)
     };
     markProofState(failed);

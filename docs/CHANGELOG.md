@@ -6,6 +6,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.16] — 2026-07-03
+
+### Sprint 5 batch 8: 15 more root-level services migrated to TypeScript
+
+- Migrated `devPacketService`, `pluginRegistryService`,
+  `pluginSigningService`, `packetExecutionService`, `verificationService`,
+  `nativeSelfDevelopmentAutostartService`, `agentMetricsService`,
+  `mariaAuditService`, `proactiveAgentService`, `agentBusService`,
+  `telegramBrowserConnector`, `composioService`,
+  `screenIntelligenceService`, `toolRegistryService`,
+  `joseSchedulerService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 38 `.js` / 93 `.ts` → 23 `.js` / 108 `.ts`.
+- Type-safety additions: `AgentPacket`, `DevPacket`, `PluginEntry`,
+  `JoseSchedulerTask`, `ComposioConfig`, `ToolDefinition` and many
+  more custom interfaces. Fixed 3 pre-existing type errors in
+  `autoRunService.ts`, `joseCommandRouterService.ts`,
+  `orchestrationQueueService.ts`.
+- Verification: 272/272 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
 ## [2.5.15] — 2026-07-03
 
 ### Sprint 5 batch 7: 15 more root-level services migrated to TypeScript

@@ -3,7 +3,58 @@ import { timestampMs } from './trustModel';
 const TELEGRAM_POLL_KEY = 'alphonso_telegram_poll_cursor_v1';
 const TELEGRAM_POLL_AUDIT_KEY = 'alphonso_telegram_poll_audit_v1';
 
-export function getTelegramPollCursor() {
+export interface TelegramMessage {
+  update_id: number;
+  chat_id: string;
+  chat_type: string;
+  from_id: string;
+  from_username: string | null;
+  text: string;
+  date_unix: number;
+  received_at_ms: number;
+}
+
+export interface TelegramPollResult {
+  ok: boolean;
+  count: number;
+  routed?: number;
+  messages: TelegramMessage[];
+  cursor: number | null;
+  error?: string;
+}
+
+export interface TelegramSendResult {
+  ok: boolean;
+  connector_id?: string;
+  target?: string;
+  external_id?: string | null;
+  sent_at_ms?: number;
+  trust?: string;
+  error: string | null;
+}
+
+export interface TelegramBotVerifyResult {
+  ok: boolean;
+  botUsername: string | null;
+  trust: string;
+  error: string | null;
+}
+
+export interface TelegramAuditEntry {
+  at: number;
+  kind: string;
+  reason?: string;
+  body?: string;
+  chatId?: string;
+  count?: number;
+  lastUpdateId?: number | null;
+  cursorAfter?: number | null;
+  messageId?: number | null;
+  preview?: string;
+  id?: string;
+}
+
+export function getTelegramPollCursor(): number | null {
   try {
     const raw = localStorage.getItem(TELEGRAM_POLL_KEY);
     if (!raw) return null;
@@ -14,7 +65,7 @@ export function getTelegramPollCursor() {
   }
 }
 
-export function setTelegramPollCursor(cursor) {
+export function setTelegramPollCursor(cursor: number): void {
   try {
     localStorage.setItem(
       TELEGRAM_POLL_KEY,
@@ -25,7 +76,7 @@ export function setTelegramPollCursor(cursor) {
   }
 }
 
-function getAuditRows() {
+function getAuditRows(): TelegramAuditEntry[] {
   try {
     const raw = localStorage.getItem(TELEGRAM_POLL_AUDIT_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -34,7 +85,7 @@ function getAuditRows() {
   }
 }
 
-function appendAudit(entry) {
+function appendAudit(entry: TelegramAuditEntry): void {
   const next = [...getAuditRows(), { ...entry, id: `telegram_browser_${Date.now()}_${Math.random().toString(16).slice(2, 8)}` }].slice(-200);
   try {
     localStorage.setItem(TELEGRAM_POLL_AUDIT_KEY, JSON.stringify(next));
@@ -43,11 +94,11 @@ function appendAudit(entry) {
   }
 }
 
-export async function browserPollTelegram({ botToken, limit = 50 } = {}) {
+export async function browserPollTelegram({ botToken, limit = 50 }: { botToken?: string; limit?: number } = {}): Promise<TelegramPollResult> {
   const token = (botToken || '').trim();
   if (!token) {
     appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: 'missing_bot_token' });
-    return { ok: false, count: 0, messages: [], error: 'bot_token_missing' };
+    return { ok: false, count: 0, messages: [], error: 'bot_token_missing', cursor: null };
   }
 
   const offset = getTelegramPollCursor();
@@ -56,35 +107,35 @@ export async function browserPollTelegram({ botToken, limit = 50 } = {}) {
     endpoint += `&offset=${offset + 1}`;
   }
 
-  let response;
+  let response: Response;
   try {
     response = await fetch(endpoint);
   } catch (error) {
     appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: String(error) });
-    return { ok: false, count: 0, messages: [], error: String(error) };
+    return { ok: false, count: 0, messages: [], error: String(error), cursor: null };
   }
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');
     appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: `http_${response.status}`, body: text });
-    return { ok: false, count: 0, messages: [], error: `telegram_http_${response.status}` };
+    return { ok: false, count: 0, messages: [], error: `telegram_http_${response.status}`, cursor: null };
   }
 
   const body = await response.json();
   if (!body?.ok) {
     const description = body?.description || 'telegram_get_updates_failed';
     appendAudit({ at: timestampMs(), kind: 'poll_failed', reason: description });
-    return { ok: false, count: 0, messages: [], error: description };
+    return { ok: false, count: 0, messages: [], error: description, cursor: null };
   }
 
   const result = Array.isArray(body.result) ? body.result : [];
   const lastUpdate = result.length ? result[result.length - 1] : null;
-  const lastId = lastUpdate?.update_id ?? offset ?? null;
+  const lastId: number | null = lastUpdate?.update_id ?? offset ?? null;
   if (typeof lastId === 'number') {
     setTelegramPollCursor(lastId);
   }
 
-  const messages = [];
+  const messages: TelegramMessage[] = [];
   for (const update of result) {
     const messageValue = update.message || update.edited_message;
     if (!messageValue) continue;
@@ -123,7 +174,7 @@ export async function browserPollTelegram({ botToken, limit = 50 } = {}) {
   };
 }
 
-export async function browserSendTelegram({ botToken, chatId, text }) {
+export async function browserSendTelegram({ botToken, chatId, text }: { botToken?: string; chatId?: string; text?: string }): Promise<TelegramSendResult> {
   const target = String(chatId || '').trim();
   const body = String(text || '').trim();
   if (!target) return { ok: false, error: 'chat_id_required' };
@@ -135,8 +186,8 @@ export async function browserSendTelegram({ botToken, chatId, text }) {
   const endpoint = `https://api.telegram.org/bot${token}/sendMessage`;
   const NON_RETRYABLE = new Set([400, 401, 403]);
   const MAX_ATTEMPTS = 3;
-  let response;
-  let data = {};
+  let response: Response;
+  let data: Record<string, unknown> = {};
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       response = await fetch(endpoint, {
@@ -157,7 +208,7 @@ export async function browserSendTelegram({ botToken, chatId, text }) {
 
     if (NON_RETRYABLE.has(response.status)) {
       data = await response.json().catch(() => ({}));
-      const description = data?.description || `http_${response.status}`;
+      const description = (data?.description as string) || `http_${response.status}`;
       appendAudit({ at: timestampMs(), kind: 'send_failed', reason: description, chatId: target });
       return { ok: false, error: description };
     }
@@ -172,18 +223,18 @@ export async function browserSendTelegram({ botToken, chatId, text }) {
     }
   }
 
-  if (!response.ok || !data?.ok) {
-    const description = data?.description || `http_${response.status}`;
+  if (!response!.ok || !data?.ok) {
+    const description = (data?.description as string) || `http_${response!.status}`;
     appendAudit({ at: timestampMs(), kind: 'send_failed', reason: description, chatId: target });
     return { ok: false, error: description };
   }
 
-  const messageId = data?.result?.message_id ?? null;
+  const messageId = (data?.result as { message_id?: number })?.message_id ?? null;
   appendAudit({
     at: timestampMs(),
     kind: 'send_success',
     chatId: target,
-    messageId,
+    messageId: messageId as number | null,
     preview: body.slice(0, 80)
   });
 
@@ -198,7 +249,7 @@ export async function browserSendTelegram({ botToken, chatId, text }) {
   };
 }
 
-export function parseTelegramCommand(text) {
+export function parseTelegramCommand(text: string): { cmd: string; args: string } | null {
   const trimmed = (text || '').trim();
   if (!trimmed.startsWith('/')) return null;
   const parts = trimmed.slice(1).split(/\s+/);
@@ -207,8 +258,8 @@ export function parseTelegramCommand(text) {
   return { cmd, args };
 }
 
-export async function handleTelegramBotCommand({ text, chatId, botToken }) {
-  const parsed = parseTelegramCommand(text);
+export async function handleTelegramBotCommand({ text, chatId, botToken }: { text?: string; chatId?: string; botToken?: string }): Promise<{ ok: boolean; error?: string; reply?: string }> {
+  const parsed = parseTelegramCommand(text || '');
   if (!parsed) return { ok: false, error: 'not_a_command' };
 
   let reply = '';
@@ -236,7 +287,7 @@ export async function handleTelegramBotCommand({ text, chatId, botToken }) {
   return { ok: true, reply };
 }
 
-export async function verifyTelegramBotEnvironment({ botToken } = {}) {
+export async function verifyTelegramBotEnvironment({ botToken }: { botToken?: string } = {}): Promise<TelegramBotVerifyResult> {
   const token = (botToken || '').trim();
   if (!token) {
     return {
@@ -247,7 +298,7 @@ export async function verifyTelegramBotEnvironment({ botToken } = {}) {
     };
   }
 
-  let response;
+  let response: Response;
   try {
     response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
   } catch (error) {

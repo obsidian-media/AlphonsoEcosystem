@@ -4,9 +4,44 @@ import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { generateRiskScore } from './audit/marcusAuditService';
 
+export interface MariaAuditResult {
+  riskLevel: string;
+  approvalRequired: boolean;
+  policyFindings: string[];
+  complianceNotes: string[];
+  summary: string;
+  confidenceLevel?: string;
+}
+
+export interface MariaAuditAssignment {
+  commandId?: string;
+  packetId?: string;
+  actionType?: string;
+  commandText?: string;
+}
+
+export interface MariaAuditOptions {
+  priorOutputs?: Record<string, { summary?: string; trust?: string; verificationState?: string; resultState?: string; blocked?: boolean }>;
+  draftDisabled?: boolean;
+  endpoint?: string;
+  model?: string;
+}
+
+export interface MariaAuditResponse {
+  summary: string;
+  resultState: string;
+  resultUrl: string | null;
+  artifacts: Array<Record<string, unknown>>;
+  sources: unknown[];
+  contractAction: string;
+  trust: string;
+  verificationState: string;
+  schema: MariaAuditResult;
+}
+
 // ── Prompt ────────────────────────────────────────────────────────────────────
 
-export function buildMariaAuditPrompt(commandText, priorOutputs) {
+export function buildMariaAuditPrompt(commandText: string, priorOutputs: Record<string, { summary?: string }> = {}): string {
   const agentSummary = Object.entries(priorOutputs || {})
     .map(([agent, output]) => `[${agent}] ${String(output?.summary || 'no output').slice(0, 300)}`)
     .join('\n');
@@ -30,7 +65,7 @@ export function buildMariaAuditPrompt(commandText, priorOutputs) {
 
 // ── JSON parser with fallback ─────────────────────────────────────────────────
 
-export function parseMariaAuditResponse(text) {
+export function parseMariaAuditResponse(text: string | undefined): MariaAuditResult {
   try {
     const raw = String(text || '').trim();
     const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -59,12 +94,12 @@ export function parseMariaAuditResponse(text) {
 
 // ── Deterministic fallback ────────────────────────────────────────────────────
 
-export function buildMariaFallbackAudit(commandText, assignment, priorOutputs) {
+export function buildMariaFallbackAudit(commandText: string, assignment: MariaAuditAssignment, priorOutputs: Record<string, { trust?: string; verificationState?: string; resultState?: string; blocked?: boolean }> = {}): MariaAuditResult & { confidenceLevel: string } {
   const actionType = String(assignment?.actionType || '').toLowerCase();
   const text = String(commandText || '').toLowerCase();
 
-  const policyFindings = [];
-  const complianceNotes = [];
+  const policyFindings: string[] = [];
+  const complianceNotes: string[] = [];
   let approvalRequired = false;
 
   if (/delete|remove|drop|destroy|wipe/.test(actionType + ' ' + text)) {
@@ -103,7 +138,7 @@ export function buildMariaFallbackAudit(commandText, assignment, priorOutputs) {
   const scoreResult = generateRiskScore(inputForScore);
   const derivedLevel = policyFindings.length >= 3 ? 'high'
     : policyFindings.length >= 1 ? 'medium'
-    : scoreResult.level;
+    : (scoreResult as { level?: string }).level || 'medium';
 
   if (complianceNotes.length === 0) {
     complianceNotes.push('No explicit compliance violations found. Standard review guidelines apply.');
@@ -128,11 +163,11 @@ export function buildMariaFallbackAudit(commandText, assignment, priorOutputs) {
 
 // ── Main entry ────────────────────────────────────────────────────────────────
 
-export async function runMariaGovernanceAudit(commandText, assignment, options = {}) {
+export async function runMariaGovernanceAudit(commandText: string, assignment: MariaAuditAssignment, options: MariaAuditOptions = {}): Promise<MariaAuditResponse> {
   const priorOutputs = options.priorOutputs || {};
   const startMs = timestampMs();
 
-  let auditResult = null;
+  let auditResult: (MariaAuditResult & { confidenceLevel?: string }) | null = null;
   let ollamaUsed = false;
 
   if (!options.draftDisabled) {
@@ -157,9 +192,9 @@ export async function runMariaGovernanceAudit(commandText, assignment, options =
     auditResult = buildMariaFallbackAudit(commandText, assignment, priorOutputs);
   }
 
-  const schema = {
-    workflowId: assignment?.commandId || assignment?.packetId || '',
-    packetId: assignment?.packetId || '',
+  const schema: MariaAuditResult = {
+    workflowId: (assignment?.commandId || assignment?.packetId || '') as unknown as string,
+    packetId: (assignment?.packetId || '') as unknown as string,
     summary: auditResult.summary,
     riskLevel: auditResult.riskLevel,
     approvalRequired: auditResult.approvalRequired,
@@ -168,7 +203,7 @@ export async function runMariaGovernanceAudit(commandText, assignment, options =
     confidenceLevel: ollamaUsed ? TRUST_STATES.INFERRED : TRUST_STATES.TEMPORARY,
     verificationState: TRUST_STATES.UNVERIFIED,
     auditedAtMs: startMs
-  };
+  } as unknown as MariaAuditResult;
 
   pushMemoryItem({
     title: `Maria audit: ${String(commandText || '').slice(0, 80)}`,
@@ -177,7 +212,7 @@ export async function runMariaGovernanceAudit(commandText, assignment, options =
     source: 'maria-audit-service',
     sourceAgent: 'maria',
     confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
+    verificationState: (schema as unknown as { verificationState: string }).verificationState
   });
 
   appendSessionEvent({
@@ -191,7 +226,7 @@ export async function runMariaGovernanceAudit(commandText, assignment, options =
     },
     agent: 'maria',
     confidence: schema.confidenceLevel,
-    verificationState: schema.verificationState
+    verificationState: (schema as unknown as { verificationState: string }).verificationState
   });
 
   const approved = !schema.approvalRequired && schema.riskLevel !== 'high' && schema.riskLevel !== 'critical';

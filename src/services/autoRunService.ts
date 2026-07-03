@@ -26,11 +26,11 @@ export async function autoRunDevServer(projectDir: string): Promise<AutoRunResul
   if (!projectDir || !getAutoRunEnabled()) return null;
   try {
     const result = await verifyCommandExecution('npm', ['run', 'dev'], projectDir);
-    const payload = result?.payload || {};
+    const payload = (result?.payload || {}) as Record<string, unknown>;
     return {
-      success: payload.success || payload.exitCode === 0,
-      output: payload.stdout || payload.stderr || '',
-      url: extractDevUrl(payload.stdout || '')
+      success: Boolean(payload.success) || payload.exitCode === 0,
+      output: String(payload.stdout || payload.stderr || ''),
+      url: extractDevUrl(String(payload.stdout || ''))
     };
   } catch {
     return null;

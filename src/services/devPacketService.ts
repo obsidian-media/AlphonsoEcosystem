@@ -4,7 +4,69 @@ import { persistScopeRows } from './runtimeLedgerService';
 const DEV_PACKET_KEY = 'alphonso_dev_packets_v1';
 export const DEV_PACKET_SCOPE = 'dev_packets_v1';
 
-function readRows() {
+export interface DevPacketFinding {
+  kind: string;
+  path: string;
+  lineNumber: number;
+  message?: string;
+  surface?: string;
+  excerpt?: string;
+  priority?: string;
+}
+
+export interface DevPacketPatchSuggestion {
+  file: string;
+  lineNumber: number;
+  suggestion: string;
+  excerpt: string;
+}
+
+export interface DevPacket {
+  id: string;
+  title: string;
+  priority: string;
+  surface: string;
+  riskLevel: string;
+  status?: string;
+  files: string[];
+  currentIssue: string;
+  recommendedChange: string;
+  patchSuggestions: DevPacketPatchSuggestion[];
+  testCommands: string[];
+  expectedProof: string;
+  needsSetupDependencies: string[];
+  rollbackNote: string;
+  sourceFindingCount: number;
+  sourceAuditId: string | null;
+  generatedAtMs: number;
+  trust: string;
+}
+
+export interface DevPacketGroup {
+  key: string;
+  priority: string;
+  surface: string;
+  findings: DevPacketFinding[];
+}
+
+export interface DevPacketSummary {
+  count: number;
+  p0: number;
+  p1: number;
+  p2: number;
+}
+
+export interface AuditReport {
+  id?: string;
+  findings?: DevPacketFinding[];
+}
+
+export interface ReadinessReport {
+  releaseState?: { state?: string };
+  repoAuditSummary?: { issueCount?: number };
+}
+
+function readRows(): DevPacket[] {
   try {
     const raw = localStorage.getItem(DEV_PACKET_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -14,10 +76,10 @@ function readRows() {
   }
 }
 
-function writeRows(rows) {
+function writeRows(rows: DevPacket[]): void {
   const next = rows.slice(-80);
   localStorage.setItem(DEV_PACKET_KEY, JSON.stringify(next));
-  persistScopeRows(DEV_PACKET_SCOPE, next, (row) => ({
+  persistScopeRows(DEV_PACKET_SCOPE, next, (row: DevPacket) => ({
     id: row.id,
     data: row,
     status: row.priority || row.status || 'recorded',
@@ -27,35 +89,35 @@ function writeRows(rows) {
   }));
 }
 
-function normalizePriority(priority) {
+function normalizePriority(priority: string | undefined): string {
   const clean = String(priority || 'P2').trim().toUpperCase();
   if (['P0', 'P1', 'P2'].includes(clean)) return clean;
   return 'P2';
 }
 
-function riskLevelFromPriority(priority) {
+function riskLevelFromPriority(priority: string): string {
   if (priority === 'P0') return 'critical';
   if (priority === 'P1') return 'high';
   return 'medium';
 }
 
-function leadIssueLine(findings = []) {
+function leadIssueLine(findings: DevPacketFinding[] = []): string {
   const first = Array.isArray(findings) ? findings[0] : null;
   if (!first) return 'No issue line available.';
   return `${first.kind} in ${first.path}:${first.lineNumber}`;
 }
 
-function topFiles(findings = [], limit = 5) {
-  const files = [];
+function topFiles(findings: DevPacketFinding[] = [], limit = 5): string[] {
+  const files: string[] = [];
   findings.forEach((finding) => {
     if (!files.includes(finding.path)) files.push(finding.path);
   });
   return files.slice(0, limit);
 }
 
-function buildTestCommands(priority, findings = [], readinessReport = null) {
-  const surfaces = new Set((Array.isArray(findings) ? findings : []).map((finding) => String(finding.surface || 'other')));
-  const commands = [];
+function buildTestCommands(priority: string, findings: DevPacketFinding[] = [], readinessReport: ReadinessReport | null = null): string[] {
+  const surfaces = new Set<string>((Array.isArray(findings) ? findings : []).map((finding) => String(finding.surface || 'other')));
+  const commands: string[] = [];
 
   if (priority === 'P0') {
     commands.push('npm.cmd run test');
@@ -83,7 +145,7 @@ function buildTestCommands(priority, findings = [], readinessReport = null) {
   return [...new Set(commands)];
 }
 
-function buildExpectedProof(priority, readinessReport = null) {
+function buildExpectedProof(priority: string, readinessReport: ReadinessReport | null = null): string {
   const repoSummary = readinessReport?.repoAuditSummary || {};
   if (priority === 'P0') {
     return 'No placeholder or fake path remains for the targeted surface, and the matching test/build command passes.';
@@ -91,14 +153,14 @@ function buildExpectedProof(priority, readinessReport = null) {
   if (priority === 'P1') {
     return 'The placeholder surface is either implemented or explicitly setup-required, and receipts/state reload correctly.';
   }
-  if (repoSummary.issueCount > 0) {
+  if ((repoSummary as { issueCount?: number }).issueCount !== undefined && (repoSummary as { issueCount: number }).issueCount > 0) {
     return 'The audit count for truth issues should drop after the patch and the remaining surface should be labeled truthfully.';
   }
   return 'The surface is documented, tested, and no longer flagged by the repo audit.';
 }
 
-function buildSetupRequirements(findings = [], readinessReport = null) {
-  const requirements = new Set();
+function buildSetupRequirements(findings: DevPacketFinding[] = [], readinessReport: ReadinessReport | null = null): string[] {
+  const requirements = new Set<string>();
   findings.forEach((finding) => {
     if (finding.kind === 'setup_required') {
       requirements.add('External setup or local runtime wiring must exist before declaring this ready.');
@@ -116,14 +178,14 @@ function buildSetupRequirements(findings = [], readinessReport = null) {
   return [...requirements];
 }
 
-function buildRollbackNote(priority) {
+function buildRollbackNote(priority: string): string {
   if (priority === 'P0') return 'Rollback by restoring the previous stable implementation and disabling the new surface behind setup-required state.';
   if (priority === 'P1') return 'Rollback by returning the panel or service to the previous placeholder-safe state and removing the new wiring.';
   return 'Rollback by reverting the packet-specific changes and preserving the durable receipt trail.';
 }
 
-function groupFindings(findings = []) {
-  const groups = new Map();
+function groupFindings(findings: DevPacketFinding[] = []): DevPacketGroup[] {
+  const groups = new Map<string, DevPacketFinding[]>();
   (Array.isArray(findings) ? findings : []).forEach((finding) => {
     const key = `${normalizePriority(finding.priority)}::${String(finding.surface || 'other')}`;
     const bucket = groups.get(key) || [];
@@ -139,16 +201,16 @@ function groupFindings(findings = []) {
       findings: groupFindings.sort((a, b) => a.path.localeCompare(b.path) || a.lineNumber - b.lineNumber)
     };
   }).sort((a, b) => {
-    const order = { P0: 0, P1: 1, P2: 2 };
+    const order: Record<string, number> = { P0: 0, P1: 1, P2: 2 };
     return (order[a.priority] ?? 3) - (order[b.priority] ?? 3) || a.surface.localeCompare(b.surface);
   });
 }
 
-export function listDevPackets() {
+export function listDevPackets(): DevPacket[] {
   return readRows();
 }
 
-export function getLastDevPacket() {
+export function getLastDevPacket(): DevPacket | null {
   return readRows()[0] || null;
 }
 
@@ -156,14 +218,18 @@ export function buildDevPackets({
   auditReport,
   readinessReport = null,
   maxPackets = 8
-} = {}) {
-  const findings = Array.isArray(auditReport?.findings) ? auditReport.findings : [];
+}: {
+  auditReport?: AuditReport;
+  readinessReport?: ReadinessReport | null;
+  maxPackets?: number;
+} = {}): DevPacket[] {
+  const findings = Array.isArray(auditReport?.findings) ? auditReport!.findings! : [];
   const groups = groupFindings(findings).slice(0, maxPackets);
   const generatedAtMs = timestampMs();
   return groups.map((group, index) => {
     const priority = normalizePriority(group.priority);
     const files = topFiles(group.findings);
-    const packet = {
+    const packet: DevPacket = {
       id: `dev-packet-${generatedAtMs}-${index + 1}`,
       title: `Codex Packet: ${priority} ${group.surface.replace(/_/g, ' ')} hardening`,
       priority,
@@ -191,14 +257,14 @@ export function buildDevPackets({
   });
 }
 
-export function saveDevPackets(packets = []) {
+export function saveDevPackets(packets: DevPacket[] = []): DevPacket[] {
   const current = readRows().filter((row) => !packets.some((packet) => packet.id === row.id));
   const next = [...packets, ...current];
   writeRows(next);
   return packets;
 }
 
-export function summarizeDevPackets(packets = []) {
+export function summarizeDevPackets(packets: DevPacket[] = []): DevPacketSummary {
   return {
     count: packets.length,
     p0: packets.filter((packet) => packet.priority === 'P0').length,

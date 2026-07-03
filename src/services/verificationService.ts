@@ -5,7 +5,41 @@ import { persistScopeRows } from './runtimeLedgerService';
 const LOG_KEY = 'alphonso_verification_logs_v1';
 export const VERIFICATION_SCOPE = 'verification_logs_v1';
 
-function readLogs() {
+export interface VerificationLogEntry {
+  id: string;
+  timestampMs: number;
+  type: string;
+  source?: string;
+  trust: string;
+  startedAt?: number;
+  finishedAt?: number;
+  payload?: unknown;
+}
+
+export interface VerificationLogInput {
+  type: string;
+  source?: string;
+  trust?: string;
+  startedAt?: number;
+  finishedAt?: number;
+  payload?: unknown;
+  [key: string]: unknown;
+}
+
+export interface OllamaStartupGuide {
+  title: string;
+  summary: string;
+  status: string;
+  command: string | null;
+  steps: string[];
+}
+
+interface OllamaModel {
+  name: string;
+  [key: string]: unknown;
+}
+
+function readLogs(): VerificationLogEntry[] {
   try {
     const raw = localStorage.getItem(LOG_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -15,10 +49,10 @@ function readLogs() {
   }
 }
 
-function writeLogs(logs) {
+function writeLogs(logs: VerificationLogEntry[]): void {
   const rows = logs.slice(-250);
   localStorage.setItem(LOG_KEY, JSON.stringify(rows));
-  persistScopeRows(VERIFICATION_SCOPE, rows, (row) => ({
+  persistScopeRows(VERIFICATION_SCOPE, rows, (row: VerificationLogEntry) => ({
     id: row.id,
     data: row,
     status: row.type || 'verification_log',
@@ -28,17 +62,18 @@ function writeLogs(logs) {
   }));
 }
 
-export function getVerificationLogs() {
+export function getVerificationLogs(): VerificationLogEntry[] {
   return readLogs();
 }
 
-export function appendVerificationLog(entry) {
+export function appendVerificationLog(entry: VerificationLogInput): VerificationLogEntry {
   const logs = readLogs();
-  const payload = {
+  const payload: VerificationLogEntry = {
     id: `proof-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: timestampMs(),
+    type: entry.type,
     ...entry
-  };
+  } as VerificationLogEntry;
   logs.push(payload);
   writeLogs(logs);
   invoke('append_audit_log', {
@@ -50,7 +85,7 @@ export function appendVerificationLog(entry) {
   return payload;
 }
 
-export async function readDurableAuditLog(limit = 200) {
+export async function readDurableAuditLog(limit = 200): Promise<unknown[]> {
   try {
     return await invoke('read_audit_log', { limit });
   } catch {
@@ -58,14 +93,14 @@ export async function readDurableAuditLog(limit = 200) {
   }
 }
 
-export async function verifyDurableAuditChain() {
+export async function verifyDurableAuditChain(): Promise<VerificationLogEntry> {
   const startedAt = timestampMs();
   try {
     const payload = await invoke('verify_audit_chain');
     return appendVerificationLog({
       type: 'audit_chain_verification',
       source: 'tauri-command',
-      trust: payload?.trust || TRUST_STATES.UNVERIFIED,
+      trust: (payload as { trust?: string })?.trust || TRUST_STATES.UNVERIFIED,
       startedAt,
       finishedAt: timestampMs(),
       payload
@@ -84,13 +119,13 @@ export async function verifyDurableAuditChain() {
   }
 }
 
-export async function verifyOllamaRuntimeProof(endpoint) {
+export async function verifyOllamaRuntimeProof(endpoint: string): Promise<VerificationLogEntry> {
   const startedAt = timestampMs();
 
   try {
     const proof = await invoke('check_ollama_runtime', {
       endpoint
-    });
+    }) as { reachable?: boolean };
 
     return appendVerificationLog({
       type: 'runtime_proof',
@@ -114,13 +149,13 @@ export async function verifyOllamaRuntimeProof(endpoint) {
   }
 }
 
-export async function listOllamaModels(endpoint) {
+export async function listOllamaModels(endpoint: string): Promise<VerificationLogEntry> {
   const startedAt = timestampMs();
 
   try {
     const proof = await invoke('ollama_list_models', {
       endpoint
-    });
+    }) as { models?: OllamaModel[] };
 
     return appendVerificationLog({
       type: 'runtime_models',
@@ -148,9 +183,13 @@ export function buildOllamaStartupGuide({
   ollamaStatus,
   models = [],
   selectedModel = ''
-}) {
-  const modelNames = Array.isArray(models)
-    ? models.map((model) => (typeof model === 'string' ? model : model?.name)).filter(Boolean)
+}: {
+  ollamaStatus?: { state?: string };
+  models?: (string | OllamaModel)[];
+  selectedModel?: string;
+}): OllamaStartupGuide {
+  const modelNames: string[] = Array.isArray(models)
+    ? models.map((model) => (typeof model === 'string' ? model : (model as OllamaModel)?.name)).filter(Boolean) as string[]
     : [];
   const selected = String(selectedModel || '').trim();
   const connected = ollamaStatus?.state === 'connected';
@@ -212,7 +251,7 @@ export function buildOllamaStartupGuide({
   };
 }
 
-export async function verifyProcessProof(names) {
+export async function verifyProcessProof(names: string[]): Promise<VerificationLogEntry> {
   const startedAt = timestampMs();
 
   try {
@@ -242,7 +281,7 @@ export async function verifyProcessProof(names) {
   }
 }
 
-export async function verifyPathProof(paths) {
+export async function verifyPathProof(paths: string[]): Promise<VerificationLogEntry> {
   const startedAt = timestampMs();
 
   try {
@@ -272,7 +311,7 @@ export async function verifyPathProof(paths) {
   }
 }
 
-export async function verifyCommandExecution(program, args, cwd = null) {
+export async function verifyCommandExecution(program: string, args: string[], cwd: string | null = null): Promise<VerificationLogEntry> {
   const startedAt = timestampMs();
 
   try {
@@ -280,7 +319,7 @@ export async function verifyCommandExecution(program, args, cwd = null) {
       program,
       args,
       cwd
-    });
+    }) as { success?: boolean };
     return appendVerificationLog({
       type: 'command_execution',
       source: 'tauri-command',

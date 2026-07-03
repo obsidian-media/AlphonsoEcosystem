@@ -3,11 +3,37 @@ import { listMemory } from './unifiedMemoryService';
 import { getAgentMetrics } from './agentMetricsService';
 
 const PROACTIVE_STATE_KEY = 'alphonso_proactive_state_v1';
-const CHECK_INTERVAL_MS = 60_000; // Check every 60 seconds
-const SUGGESTION_COOLDOWN_MS = 300_000; // Don't repeat suggestions for 5 minutes
+const CHECK_INTERVAL_MS = 60_000;
+const SUGGESTION_COOLDOWN_MS = 300_000;
 const MAX_SUGGESTION_HISTORY = 50;
 
-function readState() {
+interface SuggestionHistory {
+  type: string;
+  message: string;
+  timestampMs: number;
+}
+
+interface ProactiveState {
+  lastCheckMs: number;
+  suggestionHistory: SuggestionHistory[];
+  enabled: boolean;
+}
+
+export interface SuggestionAction {
+  label: string;
+  command: string | null;
+  action?: string;
+}
+
+export interface ProactiveSuggestion {
+  type: string;
+  priority: string;
+  title: string;
+  message: string;
+  actions: SuggestionAction[];
+}
+
+function readState(): ProactiveState {
   try {
     const raw = localStorage.getItem(PROACTIVE_STATE_KEY);
     return raw ? JSON.parse(raw) : { lastCheckMs: 0, suggestionHistory: [], enabled: true };
@@ -16,17 +42,17 @@ function readState() {
   }
 }
 
-function writeState(state) {
+function writeState(state: ProactiveState): void {
   localStorage.setItem(PROACTIVE_STATE_KEY, JSON.stringify(state));
 }
 
-function hasRecentSuggestion(type) {
+function hasRecentSuggestion(type: string): boolean {
   const state = readState();
   const recent = state.suggestionHistory.filter((s) => s.type === type && timestampMs() - s.timestampMs < SUGGESTION_COOLDOWN_MS);
   return recent.length > 0;
 }
 
-function recordSuggestion(type, message) {
+function recordSuggestion(type: string, message: string): void {
   const state = readState();
   state.suggestionHistory.push({ type, message, timestampMs: timestampMs() });
   state.suggestionHistory = state.suggestionHistory.slice(-MAX_SUGGESTION_HISTORY);
@@ -35,7 +61,7 @@ function recordSuggestion(type, message) {
 
 // ── Proactive Checks ────────────────────────────────────────────────────────
 
-function checkIdleTime() {
+function checkIdleTime(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('idle')) return null;
   const lastActivity = Math.max(
     ...listMemory().map((m) => m.timestampMs || 0),
@@ -61,9 +87,9 @@ function checkIdleTime() {
   return null;
 }
 
-function checkFailedBuilds() {
+function checkFailedBuilds(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('failed_build')) return null;
-  const metrics = getAgentMetrics({ since: timestampMs() - 3600_000 }); // Last hour
+  const metrics = getAgentMetrics({ since: timestampMs() - 3600_000 });
   const recentFailures = metrics.errorPatterns.filter((e) =>
     e.error.includes('build') || e.error.includes('compil') || e.error.includes('syntax')
   );
@@ -85,7 +111,7 @@ function checkFailedBuilds() {
   return null;
 }
 
-function checkHighIterationTasks() {
+function checkHighIterationTasks(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('high_iterations')) return null;
   const metrics = getAgentMetrics({ since: timestampMs() - 3600_000 });
 
@@ -105,7 +131,7 @@ function checkHighIterationTasks() {
   return null;
 }
 
-function checkLowConfidence() {
+function checkLowConfidence(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('low_confidence')) return null;
   const metrics = getAgentMetrics({ since: timestampMs() - 3600_000 });
 
@@ -125,7 +151,7 @@ function checkLowConfidence() {
   return null;
 }
 
-function checkValidationFailures() {
+function checkValidationFailures(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('validation_failure')) return null;
   const metrics = getAgentMetrics({ since: timestampMs() - 3600_000 });
 
@@ -146,10 +172,10 @@ function checkValidationFailures() {
   return null;
 }
 
-function checkUnusedMemory() {
+function checkUnusedMemory(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('unused_memory')) return null;
   const memoryItems = listMemory();
-  const oldItems = memoryItems.filter((m) => timestampMs() - m.timestampMs > 7 * 86_400_000); // Older than 7 days
+  const oldItems = memoryItems.filter((m) => timestampMs() - m.timestampMs > 7 * 86_400_000);
 
   if (oldItems.length > 20) {
     recordSuggestion('unused_memory', `${oldItems.length} old memory items`);
@@ -167,7 +193,7 @@ function checkUnusedMemory() {
   return null;
 }
 
-function checkProjectStaleness() {
+function checkProjectStaleness(): ProactiveSuggestion | null {
   if (hasRecentSuggestion('project_stale')) return null;
   const memoryItems = listMemory({ category: 'code_generation' });
   const lastBuild = memoryItems.reduce((max, m) => Math.max(max, m.timestampMs || 0), 0);
@@ -192,15 +218,14 @@ function checkProjectStaleness() {
 
 // ── Main Proactive Engine ───────────────────────────────────────────────────
 
-export function runProactiveCheck() {
+export function runProactiveCheck(): ProactiveSuggestion | null {
   const state = readState();
   if (!state.enabled) return null;
 
   state.lastCheckMs = timestampMs();
   writeState(state);
 
-  // Run all checks in priority order
-  const checks = [
+  const checks: Array<() => ProactiveSuggestion | null> = [
     checkFailedBuilds,
     checkValidationFailures,
     checkHighIterationTasks,
@@ -218,34 +243,33 @@ export function runProactiveCheck() {
   return null;
 }
 
-export function getProactiveState() {
+export function getProactiveState(): ProactiveState {
   return readState();
 }
 
-export function setProactiveEnabled(enabled) {
+export function setProactiveEnabled(enabled: boolean): void {
   const state = readState();
   state.enabled = enabled;
   writeState(state);
 }
 
-export function clearProactiveHistory() {
+export function clearProactiveHistory(): void {
   const state = readState();
   state.suggestionHistory = [];
   writeState(state);
 }
 
-export function startProactiveWatcher(onSuggestion) {
+export function startProactiveWatcher(onSuggestion: (suggestion: ProactiveSuggestion) => void): () => void {
   const interval = setInterval(() => {
     const suggestion = runProactiveCheck();
     if (suggestion) {
-      onSuggestion?.(suggestion);
+      onSuggestion(suggestion);
     }
   }, CHECK_INTERVAL_MS);
 
-  // Run initial check after 30 seconds
   const initialTimeout = setTimeout(() => {
     const suggestion = runProactiveCheck();
-    if (suggestion) onSuggestion?.(suggestion);
+    if (suggestion) onSuggestion(suggestion);
   }, 30_000);
 
   return () => {

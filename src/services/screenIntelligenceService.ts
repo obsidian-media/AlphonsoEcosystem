@@ -3,7 +3,33 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 const STATE_KEY = 'alphonso_screen_observer_state_v1';
 const LOG_KEY = 'alphonso_screen_observer_logs_v1';
 
-const DEFAULT_STATE = {
+export interface ScreenObserverState {
+  enabled: boolean;
+  status: string;
+  permission: string;
+  sampleEveryMs: number;
+  notificationsEnabled: boolean;
+  audioAlertEnabled: boolean;
+  currentSummary: string;
+  lastSampleAtMs: number | null;
+  lastAlertAtMs: number | null;
+  alertsCount: number;
+  trust: string;
+  updatedAtMs: number | null;
+}
+
+export interface ScreenEvent {
+  id: string;
+  timestampMs: number;
+  status: string;
+  summary: string;
+  changeLevel: number;
+  patternBucket: string;
+  repeatedPattern: boolean;
+  signaturePreview: string;
+}
+
+const DEFAULT_STATE: ScreenObserverState = {
   enabled: false,
   status: 'idle',
   permission: 'unknown',
@@ -18,9 +44,9 @@ const DEFAULT_STATE = {
   updatedAtMs: null
 };
 
-let liveRun = null;
+let liveRun: { stop: (reason?: string) => void } | null = null;
 
-function readJson(key, fallback) {
+function readJson(key: string, fallback: ScreenObserverState): ScreenObserverState {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
@@ -31,11 +57,11 @@ function readJson(key, fallback) {
   }
 }
 
-function writeJson(key, value) {
+function writeJson(key: string, value: ScreenObserverState): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-function readLogs() {
+function readLogs(): ScreenEvent[] {
   try {
     const raw = localStorage.getItem(LOG_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -45,17 +71,17 @@ function readLogs() {
   }
 }
 
-function writeLogs(logs) {
+function writeLogs(logs: ScreenEvent[]): void {
   localStorage.setItem(LOG_KEY, JSON.stringify(logs.slice(-500)));
 }
 
-function signatureFromImageData(imageData) {
+function signatureFromImageData(imageData: ImageData): string {
   const { data, width, height } = imageData;
   const blocksX = 8;
   const blocksY = 6;
   const blockW = Math.max(1, Math.floor(width / blocksX));
   const blockH = Math.max(1, Math.floor(height / blocksY));
-  const values = [];
+  const values: number[] = [];
 
   for (let by = 0; by < blocksY; by += 1) {
     for (let bx = 0; bx < blocksX; bx += 1) {
@@ -81,7 +107,7 @@ function signatureFromImageData(imageData) {
   return values.map((value) => value.toString(16).padStart(2, '0')).join('');
 }
 
-function similarityScore(signatureA, signatureB) {
+function similarityScore(signatureA: string | null, signatureB: string): number {
   if (!signatureA || !signatureB || signatureA.length !== signatureB.length) return 0;
   let same = 0;
   for (let i = 0; i < signatureA.length; i += 2) {
@@ -93,9 +119,9 @@ function similarityScore(signatureA, signatureB) {
   return same / (signatureA.length / 2);
 }
 
-function beepAlert() {
+function beepAlert(): void {
   try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const oscillator = ctx.createOscillator();
@@ -114,7 +140,7 @@ function beepAlert() {
   }
 }
 
-function notifyUser(title, body) {
+function notifyUser(title: string, body: string): void {
   try {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'granted') {
@@ -125,7 +151,7 @@ function notifyUser(title, body) {
   }
 }
 
-export function getScreenObserverState() {
+export function getScreenObserverState(): ScreenObserverState {
   const state = readJson(STATE_KEY, DEFAULT_STATE);
   if (!state.updatedAtMs) {
     const hydrated = { ...DEFAULT_STATE, ...state, updatedAtMs: timestampMs() };
@@ -135,13 +161,13 @@ export function getScreenObserverState() {
   return state;
 }
 
-export function getScreenObserverLogs() {
+export function getScreenObserverLogs(): ScreenEvent[] {
   return readLogs();
 }
 
-export function updateScreenObserverState(patch) {
+export function updateScreenObserverState(patch: Partial<ScreenObserverState>): ScreenObserverState {
   const current = getScreenObserverState();
-  const next = {
+  const next: ScreenObserverState = {
     ...current,
     ...patch,
     updatedAtMs: timestampMs()
@@ -150,7 +176,7 @@ export function updateScreenObserverState(patch) {
   return next;
 }
 
-export async function requestScreenNotificationPermission() {
+export async function requestScreenNotificationPermission(): Promise<NotificationPermission | 'unsupported'> {
   if (!('Notification' in window)) return 'unsupported';
   if (Notification.permission === 'granted') return 'granted';
   try {
@@ -166,7 +192,12 @@ export async function startScreenObserver({
   notificationsEnabled = true,
   audioAlertEnabled = false,
   onUpdate
-} = {}) {
+}: {
+  sampleEveryMs?: number;
+  notificationsEnabled?: boolean;
+  audioAlertEnabled?: boolean;
+  onUpdate?: (state: ScreenObserverState, event: ScreenEvent | null) => void;
+} = {}): Promise<{ ok: boolean; reason?: string; error?: string }> {
   if (!navigator?.mediaDevices?.getDisplayMedia) {
     const state = updateScreenObserverState({
       status: 'unsupported',
@@ -190,7 +221,7 @@ export async function startScreenObserver({
     currentSummary: 'Requesting screen permission...'
   });
 
-  let stream;
+  let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
@@ -222,10 +253,10 @@ export async function startScreenObserver({
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  let lastSignature = null;
-  let timer = null;
+  let lastSignature: string | null = null;
+  let timer: ReturnType<typeof setInterval> | null = null;
   let stopped = false;
-  let patternCounts = {};
+  let patternCounts: Record<string, number> = {};
 
   const stop = (reason = 'stopped') => {
     if (stopped) return;
@@ -279,7 +310,7 @@ export async function startScreenObserver({
         ? 'Recurring visual pattern detected.'
         : 'Screen appears stable.';
 
-    const event = {
+    const event: ScreenEvent = {
       id: `screen-event-${timestamp}-${Math.random().toString(16).slice(2, 8)}`,
       timestampMs: timestamp,
       status,
@@ -342,7 +373,7 @@ export async function startScreenObserver({
   return { ok: true };
 }
 
-export function stopScreenObserver() {
+export function stopScreenObserver(): ScreenObserverState {
   if (liveRun?.stop) {
     liveRun.stop('stopped');
     return updateScreenObserverState({

@@ -6,16 +6,35 @@ import { appendOrchestrationReceipt } from './orchestrationReceiptService';
 import { requireApproval } from './approval/approvalService';
 import { executeMarcusPublish } from './marcusPublishService';
 
-function buildExecutionResult(packet, payload = {}) {
+interface ExecutionPayload {
+  packetId: string;
+  packetType: string;
+  actionType: string;
+  [key: string]: unknown;
+}
+
+interface Packet {
+  id: string;
+  status: string;
+  packetType: string;
+  actionType: string;
+  title: string;
+  riskLevel?: string;
+  fromAgent?: string;
+  toAgent?: string;
+  payload?: Record<string, unknown>;
+}
+
+function buildExecutionResult(packet: Packet, payload: Record<string, unknown> = {}): ExecutionPayload {
   return {
     packetId: packet.id,
     packetType: packet.packetType,
     actionType: packet.actionType,
     ...payload
-  };
+  } as ExecutionPayload;
 }
 
-export async function executeApprovedPacket(packet) {
+export async function executeApprovedPacket(packet: Packet): Promise<{ ok: boolean; error?: string; executionResult?: ExecutionPayload; result?: unknown; approval?: unknown; setupRequired?: boolean; status?: string }> {
   if (!packet) {
     return { ok: false, error: 'Packet not found.' };
   }
@@ -32,22 +51,22 @@ export async function executeApprovedPacket(packet) {
 
   try {
     if (packet.packetType === 'youtube_publish_handoff') {
-      const request = packet?.payload?.uploadRequest || {};
+      const request = (packet?.payload?.uploadRequest || {}) as Record<string, unknown>;
       const approval = await requireApproval({
         actionType: 'external_publish',
         approved: true,
         force: true,
-        summary: request.title || 'YouTube upload request',
+        summary: (request.title as string) || 'YouTube upload request',
         riskLevel: packet.riskLevel || 'high',
         requestedBy: AGENTS.JOSE,
         workflowId: 'packet_execution',
-        commandId: packet?.payload?.joseCommandId || null,
+        commandId: (packet?.payload?.joseCommandId as string) || null,
         packetId: packet.id,
         metadata: {
           connectorId: 'youtube',
-          filePath: request.filePath || ''
+          filePath: (request.filePath as string) || ''
         }
-      });
+      } as Parameters<typeof requireApproval>[0]);
       if (!approval.ok) {
         return {
           ok: false,
@@ -56,16 +75,16 @@ export async function executeApprovedPacket(packet) {
         };
       }
       const result = await uploadYouTubeConnectorVideo({
-        filePath: request.filePath || '',
-        title: request.title || 'Untitled upload',
-        description: request.description || '',
-        tags: Array.isArray(request.tags) ? request.tags : [],
-        privacyStatus: request.privacyStatus || 'private'
+        filePath: (request.filePath as string) || '',
+        title: (request.title as string) || 'Untitled upload',
+        description: (request.description as string) || '',
+        tags: Array.isArray(request.tags) ? request.tags as string[] : [],
+        privacyStatus: (request.privacyStatus as string) || 'private'
       }, {
         approved: true,
-        commandId: packet?.payload?.joseCommandId || null,
+        commandId: (packet?.payload?.joseCommandId as string) || null,
         packetId: packet.id
-      });
+      }) as { ok?: boolean; error?: string; videoId?: string; url?: string; privacyStatus?: string; blocked?: boolean } | null;
       if (!result?.ok) {
         updatePacketStatus(packet.id, 'failed', {
           failureReason: result?.error || 'YouTube upload failed.',
@@ -85,7 +104,7 @@ export async function executeApprovedPacket(packet) {
         });
         appendOrchestrationReceipt({
           workflowId: 'packet_execution',
-          commandId: packet?.payload?.joseCommandId || null,
+          commandId: (packet?.payload?.joseCommandId as string) || null,
           packetId: packet.id,
           eventType: 'youtube_publish_failed',
           status: 'failed',
@@ -107,9 +126,9 @@ export async function executeApprovedPacket(packet) {
 
       const executionResult = buildExecutionResult(packet, {
         connectorId: 'youtube',
-        videoId: result.videoId || null,
-        url: result.url || null,
-        privacyStatus: result.privacyStatus || request.privacyStatus || 'private'
+        videoId: result?.videoId || null,
+        url: result?.url || null,
+        privacyStatus: result?.privacyStatus || (request.privacyStatus as string) || 'private'
       });
       markPacketExecuted(packet.id, executionResult, TRUST_STATES.VERIFIED);
       appendSessionEvent({
@@ -117,8 +136,8 @@ export async function executeApprovedPacket(packet) {
         title: 'YouTube publish handoff executed',
         details: {
           packetId: packet.id,
-          videoId: result.videoId || null,
-          url: result.url || null
+          videoId: result?.videoId || null,
+          url: result?.url || null
         },
         agent: AGENTS.JOSE,
         confidence: TRUST_STATES.VERIFIED,
@@ -126,7 +145,7 @@ export async function executeApprovedPacket(packet) {
       });
       appendOrchestrationReceipt({
         workflowId: 'packet_execution',
-        commandId: packet?.payload?.joseCommandId || null,
+        commandId: (packet?.payload?.joseCommandId as string) || null,
         packetId: packet.id,
         eventType: 'youtube_publish_completed',
         status: 'executed',
@@ -138,8 +157,8 @@ export async function executeApprovedPacket(packet) {
         blocked: false,
         setupRequired: false,
         details: {
-          videoId: result.videoId || null,
-          url: result.url || null
+          videoId: result?.videoId || null,
+          url: result?.url || null
         },
         confidence: TRUST_STATES.VERIFIED,
         verificationState: TRUST_STATES.VERIFIED
@@ -148,15 +167,15 @@ export async function executeApprovedPacket(packet) {
     }
 
     if (packet.packetType === 'marcus_publish_handoff') {
-      const platform = packet?.payload?.platform || '';
+      const platform = (packet?.payload?.platform as string) || '';
       const result = await executeMarcusPublish({
         platform,
-        payload: packet?.payload || {},
+        payload: (packet?.payload || {}) as Record<string, unknown>,
         packetId: packet.id,
-        commandId: packet?.payload?.commandId || null,
-        workflowId: packet?.payload?.workflowId || 'packet_execution',
+        commandId: (packet?.payload?.commandId as string) || null,
+        workflowId: (packet?.payload?.workflowId as string) || 'packet_execution',
         preApproved: true,
-      });
+      }) as { ok: boolean; error?: string; result?: { externalId?: string; videoId?: string; url?: string } };
       if (!result.ok) {
         return { ok: false, error: result.error || 'Marcus publish failed.', result };
       }
@@ -190,7 +209,7 @@ export async function executeApprovedPacket(packet) {
     });
     appendOrchestrationReceipt({
       workflowId: 'packet_execution',
-      commandId: packet?.payload?.joseCommandId || packet?.payload?.commandId || null,
+      commandId: (packet?.payload?.joseCommandId as string) || (packet?.payload?.commandId as string) || null,
       packetId: packet.id,
       eventType: 'packet_acknowledged',
       status: 'executed',
