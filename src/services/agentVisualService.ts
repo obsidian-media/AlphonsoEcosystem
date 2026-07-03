@@ -6,7 +6,7 @@ import mariaMascot from '../assets/agents/maria/maria-mascot-main.webp';
 import marcusMascot from '../assets/agents/marcus/marcus-mascot-main.webp';
 import { getCustomAvatarDataUrl } from './agentAvatarService';
 
-const AGENT_MASCOT_MAP = {
+const AGENT_MASCOT_MAP: Record<string, string> = {
   jose: joseMascot,
   alphonso: alphonsoMascot,
   miya: miyaMascot,
@@ -15,14 +15,14 @@ const AGENT_MASCOT_MAP = {
   marcus: marcusMascot
 };
 
-export function getAgentMascotPath(agentId) {
+export function getAgentMascotPath(agentId: string): string | null {
   const id = String(agentId || '').toLowerCase();
   const custom = getCustomAvatarDataUrl(id);
   if (custom) return custom;
   return AGENT_MASCOT_MAP[id] || null;
 }
 
-export function getAgentInitials(nameOrId) {
+export function getAgentInitials(nameOrId: string): string {
   const safe = String(nameOrId || '').trim();
   if (!safe) return '?';
   const words = safe.split(/\s+/).filter(Boolean);

@@ -2,9 +2,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { generateOllamaResponse } from '../lib/ollama.js';
 import { pushMemoryItem } from './memoryService.js';
 
-export async function transcribeAndIngest(audioFilePath, filename, onProgress) {
+export async function transcribeAndIngest(
+  audioFilePath: string,
+  filename: string,
+  onProgress?: (phase: string) => void
+): Promise<{ transcript: string; summary: string }> {
   onProgress?.('transcribing');
-  const transcript = await invoke('transcribe_audio_file', {
+  const transcript: string = await invoke('transcribe_audio_file', {
     audioPath: audioFilePath,
     model: 'base',
   });
@@ -23,7 +27,7 @@ ${transcript.slice(0, 6000)}
 
 Format as short bullet points only.`;
 
-  const summary = await generateOllamaResponse({ prompt }).catch(() => null);
+  const summary = await (generateOllamaResponse as (opts: { prompt: string }) => Promise<{ response: string; done: boolean }>)({ prompt }).catch(() => null);
   const summaryText = summary?.response?.trim() || transcript.slice(0, 800);
 
   onProgress?.('saving');

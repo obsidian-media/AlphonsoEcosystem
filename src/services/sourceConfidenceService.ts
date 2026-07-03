@@ -1,6 +1,17 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 
-const EXPIRY_DAYS_BY_TYPE = {
+interface Source {
+  url?: string;
+  official?: boolean;
+  [key: string]: unknown;
+}
+
+interface ConfidenceResult {
+  confidence: string;
+  reason: string;
+}
+
+const EXPIRY_DAYS_BY_TYPE: Record<string, number> = {
   vendor_pricing: 7,
   news_current: 3,
   official_docs: 30,
@@ -9,12 +20,12 @@ const EXPIRY_DAYS_BY_TYPE = {
   evergreen_reference: 180
 };
 
-export function sourceExpiryForType(sourceType) {
+export function sourceExpiryForType(sourceType: string): number {
   const days = EXPIRY_DAYS_BY_TYPE[sourceType] || 30;
   return timestampMs() + days * 24 * 60 * 60 * 1000;
 }
 
-export function scoreSourceConfidence(source) {
+export function scoreSourceConfidence(source: Source): ConfidenceResult {
   if (!source?.url) {
     return {
       confidence: TRUST_STATES.UNVERIFIED,

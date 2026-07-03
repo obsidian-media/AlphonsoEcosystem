@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.11] — 2026-07-03
+
+### Sprint 5 batch 3: 10 more root-level services migrated to TypeScript
+
+- Migrated `codingAgentService`, `workspaceExportService`,
+  `agentActivityService`, `agentVisualService`, `autoRunService`,
+  `creativeRoutingService`, `sourceConfidenceService`,
+  `workspaceFileService`, `whisperTranscriptionService`,
+  `notificationService` — all 27–38 lines each, picked by smallest-first.
+- One type error caught during migration: `whisperTranscriptionService`'s
+  call to `generateOllamaResponse` (typed `.ts` signature required
+  `endpoint` and `model`; JS call convention passed only `{ prompt }`).
+- Verification: 315/315 targeted tests passing across 18 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+- Root-level `src/services/*.js` count: 90 `.js` / 36 `.ts` (down from
+  105/26).
+
 ## [2.5.10] — 2026-07-02
 
 ### Fixed: version-drift bug found by the release process itself

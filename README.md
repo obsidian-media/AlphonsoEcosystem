@@ -4,28 +4,15 @@
 
 # Alphonso
 
-> **v2.5.10** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.11** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.10-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
-[![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
+[![Version](https://img.shields.io/badge/version-2.5.11-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 
-**Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
-It orchestrates 9 specialized agents, connects to 22 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
+[**Download v2.5.11**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.11) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 22 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
+## What's New in v2.5.11
 
-[**Download v2.5.10**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.10) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
-
-</div>
-
----
-
-## What's New in v2.5.10
-
-- **First real installer release since v2.4.4.** Cut a tag + CI release + Windows installer. Found and fixed a real bug the release process itself surfaced: `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`'s version fields had been stuck at `2.4.4` through 9 prior version bumps (never kept in sync with `package.json`), so the first published installer (`v2.5.9`) was mislabeled. Fixed and re-released as `v2.5.10` — all version fields now in sync.
+- **Sprint 5 batch 3: 10 more services migrated to TypeScript.** `codingAgentService`, `workspaceExportService`, `agentActivityService`, `agentVisualService`, `autoRunService`, `creativeRoutingService`, `sourceConfidenceService`, `workspaceFileService`, `whisperTranscriptionService`, `notificationService` — all root-level `.js` → `.ts`. Root-level count now 90 `.js` / 36 `.ts`.
 
 ## What's New in v2.5.9
 
