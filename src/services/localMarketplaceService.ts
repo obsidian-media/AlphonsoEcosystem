@@ -6,7 +6,17 @@ const CATALOGUE_URL_KEY = 'alphonso_marketplace_catalogue_url_v1';
 export const DEFAULT_CATALOGUE_URL =
   'https://raw.githubusercontent.com/Thatisshayan/AlphonsoEcosystem/main/gateway/marketplace/catalogue.json';
 
-const DEFAULT_ITEMS = [
+interface MarketplaceItem {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  trust?: string;
+  updatedAtMs?: number;
+  [key: string]: unknown;
+}
+
+const DEFAULT_ITEMS: MarketplaceItem[] = [
   { id: 'item.agent.jose', name: 'Jose Orchestrator Agent', type: 'agent', status: 'installed' },
   { id: 'item.agent.miya', name: 'Miya Creative Agent', type: 'agent', status: 'installed' },
   { id: 'item.agent.alphonso', name: 'Alphonso Operator Agent', type: 'agent', status: 'installed' },
@@ -18,7 +28,7 @@ const DEFAULT_ITEMS = [
   { id: 'item.theme.cinematic_dark', name: 'Cinematic Dark Theme', type: 'theme', status: 'available' }
 ];
 
-function readItems() {
+function readItems(): MarketplaceItem[] {
   try {
     const raw = localStorage.getItem(MARKET_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -28,11 +38,11 @@ function readItems() {
   }
 }
 
-function writeItems(items) {
+function writeItems(items: MarketplaceItem[]) {
   localStorage.setItem(MARKET_KEY, JSON.stringify(items.slice(-300)));
 }
 
-export function listMarketplaceItems() {
+export function listMarketplaceItems(): MarketplaceItem[] {
   const items = readItems();
   if (items.length === 0) {
     const seeded = DEFAULT_ITEMS.map((item) => ({
@@ -58,7 +68,7 @@ export function listMarketplaceItems() {
   return items;
 }
 
-export function setMarketplaceItemStatus(itemId, status) {
+export function setMarketplaceItemStatus(itemId: string, status: string): MarketplaceItem[] {
   const items = listMarketplaceItems().map((item) => (
     item.id === itemId
       ? { ...item, status, updatedAtMs: timestampMs(), trust: TRUST_STATES.TEMPORARY }
@@ -68,7 +78,7 @@ export function setMarketplaceItemStatus(itemId, status) {
   return items;
 }
 
-export function getRemoteCatalogueUrl() {
+export function getRemoteCatalogueUrl(): string {
   try {
     return localStorage.getItem(CATALOGUE_URL_KEY) || DEFAULT_CATALOGUE_URL;
   } catch {
@@ -76,12 +86,12 @@ export function getRemoteCatalogueUrl() {
   }
 }
 
-export function setRemoteCatalogueUrl(url) {
+export function setRemoteCatalogueUrl(url: string) {
   if (!url || typeof url !== 'string') throw new Error('Invalid catalogue URL');
   localStorage.setItem(CATALOGUE_URL_KEY, url);
 }
 
-export async function fetchRemoteCatalogue(url) {
+export async function fetchRemoteCatalogue(url?: string): Promise<MarketplaceItem[]> {
   const endpoint = url || getRemoteCatalogueUrl();
   const res = await fetch(endpoint, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`Catalogue fetch failed: ${res.status}`);

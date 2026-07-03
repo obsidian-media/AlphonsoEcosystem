@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 4 of N, v2.5.12): 12 more root-level services migrated to TypeScript. Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
+**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 5 of N, v2.5.13): 15 more root-level services migrated to TypeScript. Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-03
@@ -845,18 +845,24 @@ state at a glance without re-deriving it from the narrative log above.
   `npx tsc --noEmit` clean, ESLint clean.
 - **Root-level count as of this commit: 83 `.js` / 48 `.ts` total**
   (down from 90/36 before this batch).
-- **Next-smallest root-level `.js` files (candidates for batch 5, by
-  line count — re-verify before starting since this list drifts):**
-  `orchestrationGovernanceService.js` (71), `resourceCostService.js`
-  (73), `gitService.js` (76), `pluginSandboxService.js` (80),
-  `hectorBookmarkService.js` (83), `workflowTelemetryService.js` (84),
-  `serviceScopes.js` (84), `searchService.js` (85),
-  `durableMemoryService.js` (86), `connectorCircuitBreakerService.js`
-  (88), `workflowReceiptService.js` (89),
-  `sessionIntelligenceService.js` (89), `chromaDbService.js` (90).
-- After that: everything else in `src/services/*.js` (root level),
-  roughly 70 files, increasing in size/complexity. Prioritize
-  state/contract-heavy services last (harder to type correctly) —
+
+- **2026-07-03 (Sprint 5, batch 5, v2.5.13)** — Continued from batch 4,
+  migrated the next 15 smallest remaining root-level `.js` services
+  (71–90 lines each): `orchestrationGovernanceService`,
+  `resourceCostService`, `gitService`, `pluginSandboxService`,
+  `hectorBookmarkService`, `serviceScopes`, `workflowTelemetryService`,
+  `searchService`, `durableMemoryService`, `connectorCircuitBreakerService`,
+  `workflowReceiptService`, `sessionIntelligenceService`,
+  `chromaDbService`, `localMarketplaceService`, `genericWebhookService`.
+  Type-safety fixes: `SearchResult` fields made required to match
+  `MemorySearch.tsx` consumer; `MarketplaceItem` and `WorkspaceValidation`
+  index signatures added for component consumers; non-standard
+  `navigator.deviceMemory` and `performance.memory` guarded;
+  `logError` calls cast to `Record<string, unknown>`. Root-level count:
+  68 `.js` / 63 `.ts` (down from 83/48 before this batch). Verification:
+  227/227 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean. Version bumped 2.5.12 → 2.5.13.
+  All 5 docs updated in the same pass.
   `agentContractService.ts` and `orchestrationQueueService.ts` are
   already `.ts` and remain the best reference models.
 
@@ -893,7 +899,7 @@ keep doing this — do not skip steps to go faster):
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
 | 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
 | 4 | Security hardening Batch 2 (attacker-resistance) | ✅ Closed 2026-07-02 (v2.5.6) — fixed Telegram owner-registration auth bypass + constant-time gateway token comparisons; audited Discord/webhook/CI-gating with no further fix needed; credential-storage upgrade documented as a Sprint 6 recommendation |
-| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. Batch 3 (v2.5.11): 10 more root-level services, 100/26 → 90/36 `.js`/`.ts`. Batch 4 (v2.5.12): 12 more root-level services, 90/36 → 83/48 `.js`/`.ts`. 83 root-level `.js` files still open for future batches |
+| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. Batch 3 (v2.5.11): 10 more root-level services, 100/26 → 90/36 `.js`/`.ts`. Batch 4 (v2.5.12): 12 more root-level services, 90/36 → 83/48 `.js`/`.ts`. Batch 5 (v2.5.13): 15 more root-level services, 83/48 → 68/63 `.js`/`.ts`. 68 root-level `.js` files still open for future batches |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🔄 In progress — ESLint `.ts`/`.tsx` coverage gap closed 2026-07-02 (v2.5.9). Sandboxing/MCP/scheduler/email connector/module convergence/credential storage still open |
 
 Seeded now so scope survives even if priorities shift or a session diverges

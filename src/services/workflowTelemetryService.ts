@@ -4,7 +4,45 @@ import { persistScopeRows } from './runtimeLedgerService';
 const WORKFLOW_TELEMETRY_KEY = 'alphonso_workflow_telemetry_v1';
 export const WORKFLOW_TELEMETRY_SCOPE = 'workflow_telemetry_v1';
 
-function readRows() {
+interface TelemetryRow {
+  id: string;
+  workflowId: string;
+  workflowRunId: string | null;
+  eventType: string;
+  status: string;
+  riskLevel: string;
+  metrics: Record<string, unknown>;
+  confidence: string;
+  verificationState: string;
+  timestampMs: number;
+}
+
+interface TelemetryEventInput {
+  workflowId: string;
+  workflowRunId?: string | null;
+  eventType?: string;
+  status?: string;
+  riskLevel?: string;
+  metrics?: Record<string, unknown>;
+  confidence?: string;
+  verificationState?: string;
+}
+
+interface TelemetryFilters {
+  workflowId?: string;
+  workflowRunId?: string;
+  eventType?: string;
+}
+
+interface TelemetrySummary {
+  totalEvents: number;
+  totalRuns: number;
+  statusCounts: Record<string, number>;
+  riskCounts: Record<string, number>;
+  lastEventAtMs: number | null;
+}
+
+function readRows(): TelemetryRow[] {
   try {
     const raw = localStorage.getItem(WORKFLOW_TELEMETRY_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -14,10 +52,10 @@ function readRows() {
   }
 }
 
-function writeRows(rows) {
+function writeRows(rows: TelemetryRow[]) {
   const next = rows.slice(-5000);
   localStorage.setItem(WORKFLOW_TELEMETRY_KEY, JSON.stringify(next));
-  persistScopeRows(WORKFLOW_TELEMETRY_SCOPE, next, (row) => ({
+  persistScopeRows(WORKFLOW_TELEMETRY_SCOPE, next, (row: TelemetryRow) => ({
     id: row.id,
     data: row,
     status: row.eventType || 'telemetry_event',
@@ -36,9 +74,9 @@ export function appendWorkflowTelemetryEvent({
   metrics = {},
   confidence = TRUST_STATES.TEMPORARY,
   verificationState = TRUST_STATES.UNVERIFIED
-}) {
+}: TelemetryEventInput): TelemetryRow {
   const rows = readRows();
-  const row = {
+  const row: TelemetryRow = {
     id: `wft-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     workflowId,
     workflowRunId,
@@ -55,7 +93,7 @@ export function appendWorkflowTelemetryEvent({
   return row;
 }
 
-export function listWorkflowTelemetry(filters = {}) {
+export function listWorkflowTelemetry(filters: TelemetryFilters = {}): TelemetryRow[] {
   return readRows()
     .slice()
     .reverse()
@@ -67,9 +105,9 @@ export function listWorkflowTelemetry(filters = {}) {
     });
 }
 
-export function summarizeWorkflowTelemetry(workflowId = null) {
+export function summarizeWorkflowTelemetry(workflowId: string | null = null): TelemetrySummary {
   const rows = listWorkflowTelemetry(workflowId ? { workflowId } : {});
-  const summary = {
+  const summary: TelemetrySummary = {
     totalEvents: rows.length,
     totalRuns: new Set(rows.map((row) => row.workflowRunId).filter(Boolean)).size,
     statusCounts: {},

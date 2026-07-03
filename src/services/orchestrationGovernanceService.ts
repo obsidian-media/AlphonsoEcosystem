@@ -4,7 +4,41 @@ import { persistScopeRows } from './runtimeLedgerService';
 const DECISION_KEY = 'alphonso_jose_governance_decisions_v1';
 export const GOVERNANCE_SCOPE = 'jose_governance_decisions_v1';
 
-function readDecisions() {
+interface GovernanceDecision {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  confidence: string;
+  verificationState: string;
+  references: string[];
+  timestampMs: number;
+}
+
+interface GovernanceDecisionInput {
+  title?: string;
+  summary?: string;
+  source?: string;
+  confidence?: string;
+  verificationState?: string;
+  references?: string[];
+}
+
+interface AgentWorkload {
+  agent: string;
+  inbound: number;
+  outbound: number;
+  pending: number;
+  completed: number;
+}
+
+interface Packet {
+  toAgent: string;
+  fromAgent: string;
+  status: string;
+}
+
+function readDecisions(): GovernanceDecision[] {
   try {
     const raw = localStorage.getItem(DECISION_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -14,10 +48,10 @@ function readDecisions() {
   }
 }
 
-function writeDecisions(rows) {
+function writeDecisions(rows: GovernanceDecision[]) {
   const nextRows = rows.slice(-500);
   localStorage.setItem(DECISION_KEY, JSON.stringify(nextRows));
-  persistScopeRows(GOVERNANCE_SCOPE, nextRows, (row) => ({
+  persistScopeRows(GOVERNANCE_SCOPE, nextRows, (row: GovernanceDecision) => ({
     id: row.id,
     data: row,
     status: row.source || 'governance_decision',
@@ -27,7 +61,7 @@ function writeDecisions(rows) {
   }));
 }
 
-export function listGovernanceDecisions() {
+export function listGovernanceDecisions(): GovernanceDecision[] {
   return readDecisions();
 }
 
@@ -38,9 +72,9 @@ export function recordGovernanceDecision({
   confidence = TRUST_STATES.TEMPORARY,
   verificationState = TRUST_STATES.UNVERIFIED,
   references = []
-}) {
+}: GovernanceDecisionInput = {}): GovernanceDecision {
   const rows = readDecisions();
-  const decision = {
+  const decision: GovernanceDecision = {
     id: `jose-decision-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     title: title || 'Untitled governance decision',
     summary: summary || '',
@@ -55,7 +89,7 @@ export function recordGovernanceDecision({
   return decision;
 }
 
-export function summarizeAgentWorkload(packets = []) {
+export function summarizeAgentWorkload(packets: Packet[] = []): AgentWorkload[] {
   const agents = ['jose', 'alphonso', 'miya', 'hector', 'maria', 'marcus', 'echo', 'sentinel', 'nova'];
   return agents.map((agent) => {
     const inbound = packets.filter((packet) => packet.toAgent === agent);

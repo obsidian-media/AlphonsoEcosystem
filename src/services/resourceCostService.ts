@@ -2,7 +2,30 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 
 const RESOURCE_KEY = 'alphonso_resource_snapshots_v1';
 
-function readSnapshots() {
+interface ResourceSnapshot {
+  id: string;
+  timestampMs: number;
+  cpuCores: number | null;
+  deviceMemoryGb: number | undefined;
+  jsHeapLimit: number | undefined;
+  jsHeapUsed: number | undefined;
+  ollamaConnected: boolean;
+  modelName: string;
+  tokenEstimate: number;
+  cloudUsage: number;
+  trust: string;
+}
+
+interface ResourceSummary {
+  hours: number;
+  points: number;
+  avgTokenEstimate: number;
+  maxJsHeapUsed: number;
+  disconnectedCount?: number;
+  recommendations: string[];
+}
+
+function readSnapshots(): ResourceSnapshot[] {
   try {
     const raw = localStorage.getItem(RESOURCE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -12,23 +35,23 @@ function readSnapshots() {
   }
 }
 
-function writeSnapshots(items) {
+function writeSnapshots(items: ResourceSnapshot[]) {
   localStorage.setItem(RESOURCE_KEY, JSON.stringify(items.slice(-400)));
 }
 
-export function collectResourceSnapshot({ ollamaConnected, modelName, tokenEstimate = 0 }) {
-  const snapshot = {
+export function collectResourceSnapshot({ ollamaConnected, modelName, tokenEstimate = 0 }: { ollamaConnected: boolean; modelName?: unknown; tokenEstimate?: number }): ResourceSnapshot {
+  const snapshot: ResourceSnapshot = {
     id: `rs-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: timestampMs(),
     cpuCores: navigator.hardwareConcurrency || null,
-    deviceMemoryGb: navigator.deviceMemory || null,
-    jsHeapLimit: performance?.memory?.jsHeapSizeLimit || null,
-    jsHeapUsed: performance?.memory?.usedJSHeapSize || null,
+    deviceMemoryGb: (navigator as unknown as Record<string, unknown>).deviceMemory as number || undefined,
+    jsHeapLimit: (performance as unknown as Record<string, unknown>).memory ? ((performance as unknown as Record<string, unknown>).memory as Record<string, unknown>).jsHeapSizeLimit as number : undefined,
+    jsHeapUsed: (performance as unknown as Record<string, unknown>).memory ? ((performance as unknown as Record<string, unknown>).memory as Record<string, unknown>).usedJSHeapSize as number : undefined,
     ollamaConnected: Boolean(ollamaConnected),
-    modelName: modelName || null,
+    modelName: String(modelName || ''),
     tokenEstimate,
     cloudUsage: 0,
-    trust: TRUST_STATES.TEMPORARY
+    trust: String(TRUST_STATES.TEMPORARY)
   };
 
   const rows = readSnapshots();
@@ -37,11 +60,11 @@ export function collectResourceSnapshot({ ollamaConnected, modelName, tokenEstim
   return snapshot;
 }
 
-export function listResourceSnapshots() {
+export function listResourceSnapshots(): ResourceSnapshot[] {
   return readSnapshots();
 }
 
-export function summarizeResourceUsage(hours = 24) {
+export function summarizeResourceUsage(hours = 24): ResourceSummary {
   const now = timestampMs();
   const start = now - (hours * 60 * 60 * 1000);
   const rows = readSnapshots().filter((item) => item.timestampMs >= start);

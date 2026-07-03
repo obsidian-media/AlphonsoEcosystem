@@ -1,4 +1,4 @@
-// durableMemoryService.js — re-exports from unifiedMemoryService for backward compatibility
+// durableMemoryService — re-exports from unifiedMemoryService for backward compatibility
 export {
   normalizeMemoryRecord,
   listDurableMemoryRecords,
@@ -29,7 +29,22 @@ const SHARED_MEMORY_KEY = 'alphonso_memory_items_v1';
 const MIYA_MEMORY_KEY = 'alphonso_miya_memory_v1';
 const MIGRATION_KEY = 'alphonso_memory_sqlite_migration_v1';
 
-function readLocalRows(key) {
+interface MigrationCandidate {
+  id: string;
+  [key: string]: unknown;
+}
+
+interface MigrationResult {
+  migratedAtMs: number;
+  requested: number;
+  written: number;
+  storage: string;
+  path?: string;
+  trust: string;
+  note?: string;
+}
+
+function readLocalRows(key: string): unknown[] {
   try {
     const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -39,25 +54,25 @@ function readLocalRows(key) {
   }
 }
 
-export function getLocalMemoryMigrationCandidates() {
+export function getLocalMemoryMigrationCandidates(): MigrationCandidate[] {
   const shared = readLocalRows(SHARED_MEMORY_KEY).map((item) => normalizeRecord(item, {
-    source: item.source || 'shared-localStorage',
-    sourceAgent: item.sourceAgent || item.agent || 'alphonso'
+    source: (item as Record<string, unknown>).source || 'shared-localStorage',
+    sourceAgent: (item as Record<string, unknown>).sourceAgent || (item as Record<string, unknown>).agent || 'alphonso'
   }));
   const miya = readLocalRows(MIYA_MEMORY_KEY).map((item) => normalizeRecord(item, {
-    source: item.source || 'miya-localStorage',
+    source: (item as Record<string, unknown>).source || 'miya-localStorage',
     sourceAgent: 'miya',
-    category: item.category || 'creative_memory'
+    category: (item as Record<string, unknown>).category || 'creative_memory'
   }));
-  const byId = new Map();
-  [...shared, ...miya].forEach((item) => byId.set(item.id, item));
+  const byId = new Map<string, MigrationCandidate>();
+  [...shared, ...miya].forEach((item: MigrationCandidate) => byId.set(item.id, item));
   return [...byId.values()];
 }
 
-export async function migrateLocalStorageMemoryToSqlite() {
+export async function migrateLocalStorageMemoryToSqlite(): Promise<MigrationResult> {
   const records = getLocalMemoryMigrationCandidates();
   if (records.length === 0) {
-    const empty = {
+    const empty: MigrationResult = {
       migratedAtMs: timestampMs(), requested: 0, written: 0,
       storage: 'sqlite', trust: TRUST_STATES.VERIFIED,
       note: 'No localStorage memory records found to migrate.'
@@ -67,16 +82,18 @@ export async function migrateLocalStorageMemoryToSqlite() {
   }
 
   const proof = await upsertRecords(records);
-  const migration = {
+  const migration: MigrationResult = {
     migratedAtMs: timestampMs(), requested: records.length,
-    written: proof?.written || 0, storage: proof?.storage || 'sqlite',
-    path: proof?.path || '', trust: proof?.trust || TRUST_STATES.UNVERIFIED
+    written: (proof as { written?: number })?.written || 0,
+    storage: (proof as { storage?: string })?.storage || 'sqlite',
+    path: (proof as { path?: string })?.path || '',
+    trust: (proof as { trust?: string })?.trust || TRUST_STATES.UNVERIFIED
   };
   localStorage.setItem(MIGRATION_KEY, JSON.stringify(migration));
   return migration;
 }
 
-export function getLastMemoryMigration() {
+export function getLastMemoryMigration(): MigrationResult | null {
   try {
     const raw = localStorage.getItem(MIGRATION_KEY);
     return raw ? JSON.parse(raw) : null;

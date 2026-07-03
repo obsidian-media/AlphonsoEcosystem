@@ -14,9 +14,50 @@ export const WORKFLOW_RECEIPT_STATUSES = [
   'partial',
   'failed',
   'queued'
-];
+] as const;
 
-function readRows() {
+interface WorkflowReceipt {
+  id: string;
+  workflowId: string | null;
+  workflowRunId: string | null;
+  stageId: string | null;
+  agent: string;
+  actionType: string;
+  status: string;
+  riskLevel: string;
+  approved: boolean;
+  blocked: boolean;
+  setupRequired: boolean;
+  confidence: string;
+  verificationState: string;
+  details: Record<string, unknown>;
+  timestampMs: number;
+}
+
+interface WorkflowReceiptInput {
+  workflowId?: string | null;
+  workflowRunId?: string | null;
+  stageId?: string | null;
+  agent?: string;
+  actionType?: string;
+  status?: string;
+  riskLevel?: string;
+  approved?: boolean;
+  blocked?: boolean;
+  setupRequired?: boolean;
+  confidence?: string;
+  verificationState?: string;
+  details?: Record<string, unknown>;
+}
+
+interface WorkflowReceiptFilters {
+  workflowId?: string;
+  workflowRunId?: string;
+  agent?: string;
+  status?: string;
+}
+
+function readRows(): WorkflowReceipt[] {
   try {
     const raw = localStorage.getItem(WORKFLOW_RECEIPT_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -26,10 +67,10 @@ function readRows() {
   }
 }
 
-function writeRows(rows) {
+function writeRows(rows: WorkflowReceipt[]) {
   const next = rows.slice(-6000);
   localStorage.setItem(WORKFLOW_RECEIPT_KEY, JSON.stringify(next));
-  persistScopeRows(WORKFLOW_RECEIPT_SCOPE, next, (row) => ({
+  persistScopeRows(WORKFLOW_RECEIPT_SCOPE, next, (row: WorkflowReceipt) => ({
     id: row.id,
     data: row,
     status: row.status || 'queued',
@@ -53,16 +94,16 @@ export function appendWorkflowReceipt({
   confidence = TRUST_STATES.TEMPORARY,
   verificationState = TRUST_STATES.UNVERIFIED,
   details = {}
-}) {
+}: WorkflowReceiptInput = {}): WorkflowReceipt {
   const rows = readRows();
-  const receipt = {
+  const receipt: WorkflowReceipt = {
     id: `wfr-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     workflowId: workflowId || null,
     workflowRunId,
     stageId,
     agent,
     actionType,
-    status: WORKFLOW_RECEIPT_STATUSES.includes(status) ? status : 'queued',
+    status: (WORKFLOW_RECEIPT_STATUSES as readonly string[]).includes(status) ? status : 'queued',
     riskLevel,
     approved: Boolean(approved),
     blocked: Boolean(blocked),
@@ -77,7 +118,7 @@ export function appendWorkflowReceipt({
   return receipt;
 }
 
-export function listWorkflowReceipts(filters = {}) {
+export function listWorkflowReceipts(filters: WorkflowReceiptFilters = {}): WorkflowReceipt[] {
   const rows = readRows().slice().reverse();
   return rows.filter((row) => {
     if (filters.workflowId && row.workflowId !== filters.workflowId) return false;

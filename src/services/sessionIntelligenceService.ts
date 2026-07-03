@@ -5,7 +5,37 @@ import { persistScopeRows } from './runtimeLedgerService';
 const EVENT_KEY = 'alphonso_session_events_v1';
 export const SESSION_EVENT_SCOPE = 'session_events_v1';
 
-function readEvents() {
+interface SessionEvent {
+  id: string;
+  timestampMs: number;
+  category: string;
+  title: string;
+  details?: unknown;
+  agent: string;
+  confidence: string;
+  verificationState: string;
+}
+
+interface SessionEventInput {
+  category: string;
+  title: string;
+  details?: unknown;
+  agent?: string;
+  confidence?: string;
+  verificationState?: string;
+}
+
+interface SessionSummary {
+  generatedAtMs: number;
+  hours: number;
+  totalEvents: number;
+  byCategory: Record<string, number>;
+  warnings: SessionEvent[];
+  unresolved: SessionEvent[];
+  recommendations: string[];
+}
+
+function readEvents(): SessionEvent[] {
   try {
     const raw = localStorage.getItem(EVENT_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -15,7 +45,7 @@ function readEvents() {
   }
 }
 
-function writeEvents(events) {
+function writeEvents(events: SessionEvent[]) {
   const rows = events.slice(-1500);
   try {
     invoke('kv_set', { key: EVENT_KEY, value: JSON.stringify(rows) }).catch(() => {});
@@ -23,7 +53,7 @@ function writeEvents(events) {
     // SQLite not available in browser
   }
   localStorage.setItem(EVENT_KEY, JSON.stringify(rows));
-  persistScopeRows(SESSION_EVENT_SCOPE, rows, (row) => ({
+  persistScopeRows(SESSION_EVENT_SCOPE, rows, (row: SessionEvent) => ({
     id: row.id,
     data: row,
     status: row.category || 'session_event',
@@ -40,9 +70,9 @@ export function appendSessionEvent({
   agent = 'alphonso',
   confidence = TRUST_STATES.TEMPORARY,
   verificationState = TRUST_STATES.UNVERIFIED
-}) {
+}: SessionEventInput): SessionEvent {
   const events = readEvents();
-  const event = {
+  const event: SessionEvent = {
     id: `evt-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: timestampMs(),
     category,
@@ -57,22 +87,22 @@ export function appendSessionEvent({
   return event;
 }
 
-export function listSessionEvents() {
+export function listSessionEvents(): SessionEvent[] {
   return readEvents();
 }
 
-export function summarizeSession(hours = 24) {
+export function summarizeSession(hours = 24): SessionSummary {
   const now = timestampMs();
   const windowStart = now - (hours * 60 * 60 * 1000);
   const rows = readEvents().filter((event) => event.timestampMs >= windowStart);
 
-  const counts = rows.reduce((acc, row) => {
+  const counts = rows.reduce<Record<string, number>>((acc, row) => {
     acc[row.category] = (acc[row.category] || 0) + 1;
     return acc;
   }, {});
 
   const warnings = rows.filter((row) => row.verificationState === TRUST_STATES.FAILED);
-  const unresolved = rows.filter((row) => row.category === 'task' && row.details?.status !== 'resolved');
+  const unresolved = rows.filter((row) => row.category === 'task' && (row.details as Record<string, unknown>)?.status !== 'resolved');
 
   return {
     generatedAtMs: now,

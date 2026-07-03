@@ -4,15 +4,15 @@
 
 # Alphonso
 
-> **v2.5.12** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.13** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.12-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.5.13-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 
-[**Download v2.5.12**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.12) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.5.13**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.13) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-## What's New in v2.5.12
+## What's New in v2.5.13
 
-- **Sprint 5 batch 4: 12 more services migrated to TypeScript.** `runwayService`, `browserAutomationService`, `miyaExportPacketService`, `coachSkillService`, `workspaceRootService`, `projectDirectoryService`, `miyaComfyWorkflowPresetService`, `recoveryService`, `modelSelectionService`, `coachModeService`, `agentAvatarService`, `voiceOsService` — all root-level `.js` → `.ts`. Root-level count now 83 `.js` / 48 `.ts`.
+- **Sprint 5 batch 5: 15 more services migrated to TypeScript.** `orchestrationGovernanceService`, `resourceCostService`, `gitService`, `pluginSandboxService`, `hectorBookmarkService`, `serviceScopes`, `workflowTelemetryService`, `searchService`, `durableMemoryService`, `connectorCircuitBreakerService`, `workflowReceiptService`, `sessionIntelligenceService`, `chromaDbService`, `localMarketplaceService`, `genericWebhookService` — all root-level `.js` → `.ts`. Root-level count now 68 `.js` / 63 `.ts`.
 
 ## What's New in v2.5.9
 

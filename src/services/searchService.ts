@@ -1,14 +1,51 @@
 import { listMemory } from './unifiedMemoryService';
 
-export function searchMemory(query, options = {}) {
+interface MemoryItem {
+  id?: string;
+  category?: string;
+  sourceAgent?: string;
+  timestampMs: number;
+  title?: string;
+  content?: string | unknown;
+  [key: string]: unknown;
+}
+
+interface SearchResult {
+  id: string;
+  category: string;
+  sourceAgent: string;
+  timestampMs: number;
+  title: string;
+  content: string | Record<string, unknown>;
+  score: number;
+  [key: string]: unknown;
+}
+
+interface SearchOptions {
+  limit?: number;
+  categories?: string[];
+  sourceAgents?: string[];
+  dateFrom?: number;
+  dateTo?: number;
+}
+
+interface Project {
+  name?: string;
+  description?: string;
+  directory?: string;
+  updatedAtMs?: number;
+  [key: string]: unknown;
+}
+
+export function searchMemory(query: string, options: SearchOptions = {}): SearchResult[] {
   const { limit = 50, categories = [], sourceAgents = [], dateFrom, dateTo } = options;
   const lowerQuery = query.toLowerCase();
 
-  const results = listMemory({ search: lowerQuery });
+  const results = listMemory({ search: lowerQuery }) as MemoryItem[];
 
   const filtered = results.filter((item) => {
-    if (categories.length > 0 && !categories.includes(item.category)) return false;
-    if (sourceAgents.length > 0 && !sourceAgents.includes(item.sourceAgent)) return false;
+    if (categories.length > 0 && !categories.includes(item.category || '')) return false;
+    if (sourceAgents.length > 0 && !sourceAgents.includes(item.sourceAgent || '')) return false;
     if (dateFrom && item.timestampMs < dateFrom) return false;
     if (dateTo && item.timestampMs > dateTo) return false;
     return true;
@@ -34,7 +71,7 @@ export function searchMemory(query, options = {}) {
     const ageDays = (Date.now() - item.timestampMs) / 86_400_000;
     score += Math.max(0, 5 - ageDays);
 
-    return { ...item, score };
+    return { ...item, id: (item.id as string) || `mem-${Date.now()}`, category: item.category || '', sourceAgent: item.sourceAgent || '', title: item.title || '', content: (typeof item.content === 'string' ? item.content : item.content) || '', score } as SearchResult;
   });
 
   return scored
@@ -42,7 +79,7 @@ export function searchMemory(query, options = {}) {
     .slice(0, limit);
 }
 
-export function searchProjects(query, projects) {
+export function searchProjects(query: string, projects?: Project[]): Project[] {
   const lowerQuery = query.toLowerCase();
   return (projects || [])
     .filter((p) => {
@@ -60,15 +97,15 @@ export function searchProjects(query, projects) {
     });
 }
 
-export function getSearchSuggestions(query) {
+export function getSearchSuggestions(query: string): string[] {
   const lowerQuery = query.toLowerCase();
-  const suggestions = new Set();
+  const suggestions = new Set<string>();
 
   // Search categories
-  const memoryItems = listMemory();
+  const memoryItems = listMemory() as MemoryItem[];
   for (const item of memoryItems) {
     if ((item.title || '').toLowerCase().includes(lowerQuery)) {
-      suggestions.add(item.category);
+      suggestions.add(item.category || '');
     }
     if (typeof item.content === 'string' && item.content.toLowerCase().includes(lowerQuery)) {
       // Extract potential keywords

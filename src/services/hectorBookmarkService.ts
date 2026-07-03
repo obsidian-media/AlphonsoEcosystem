@@ -1,25 +1,55 @@
 const STORAGE_KEY = 'alphonso_hector_bookmarks_v1';
 const MAX_BOOKMARKS = 200;
 
+interface HectorBookmark {
+  id: string;
+  title: string;
+  url: string;
+  summary: string;
+  tags: string[];
+  sourceAgent: string;
+  savedAt: number;
+}
+
+interface SaveBookmarkInput {
+  title?: string;
+  url?: string;
+  summary?: string;
+  tags?: string[];
+  sourceAgent?: string;
+}
+
+interface GetBookmarksOptions {
+  tag?: string;
+  search?: string;
+  limit?: number;
+}
+
+interface BookmarkStats {
+  total: number;
+  byTag: Record<string, number>;
+  recentCount: number;
+}
+
 // ── Storage helpers ────────────────────────────────────────────────────────────
 
-function loadBookmarks() {
+function loadBookmarks(): HectorBookmark[] {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); } catch { return []; }
 }
 
-function saveBookmarks(bookmarks) {
+function saveBookmarks(bookmarks: HectorBookmark[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks)); } catch { /* localStorage unavailable */ }
 }
 
-function makeId() {
+function makeId(): string {
   return `bm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
-export function saveBookmark({ title, url, summary = '', tags = [], sourceAgent = 'hector' } = {}) {
+export function saveBookmark({ title, url, summary = '', tags = [], sourceAgent = 'hector' }: SaveBookmarkInput = {}): HectorBookmark {
   const bookmarks = loadBookmarks();
-  const bookmark = {
+  const bookmark: HectorBookmark = {
     id: makeId(),
     title: String(title || '').slice(0, 300),
     url: String(url || '').slice(0, 2000),
@@ -34,7 +64,7 @@ export function saveBookmark({ title, url, summary = '', tags = [], sourceAgent 
   return bookmark;
 }
 
-export function getBookmarks({ tag, search, limit } = {}) {
+export function getBookmarks({ tag, search, limit }: GetBookmarksOptions = {}): HectorBookmark[] {
   let bookmarks = loadBookmarks();
 
   if (tag) {
@@ -60,18 +90,18 @@ export function getBookmarks({ tag, search, limit } = {}) {
   return bookmarks;
 }
 
-export function deleteBookmark(id) {
+export function deleteBookmark(id: string) {
   const bookmarks = loadBookmarks().filter((b) => b.id !== id);
   saveBookmarks(bookmarks);
 }
 
-export function exportBookmarks() {
+export function exportBookmarks(): string {
   return JSON.stringify(loadBookmarks(), null, 2);
 }
 
-export function getStats() {
+export function getStats(): BookmarkStats {
   const bookmarks = loadBookmarks();
-  const byTag = {};
+  const byTag: Record<string, number> = {};
   for (const b of bookmarks) {
     for (const tag of b.tags) {
       byTag[tag] = (byTag[tag] ?? 0) + 1;

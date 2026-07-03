@@ -78,7 +78,7 @@ export const AGENT_OUTPUT_SCOPE        = 'agent_outputs_v1';
 export const NOVA_SCORE_SCOPE          = 'nova_scores_v1';
 
 /** Proof authority identifiers — discriminate whether a proof was produced by the Rust engine or the JS bridge. */
-export const PROOF_AUTHORITY = {
+export const PROOF_AUTHORITY: Record<string, string> = {
   RUST_ENGINE: 'rust_engine',
   JS_BRIDGE:   'js_bridge'
 };

@@ -6,6 +6,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.13] — 2026-07-03
+
+### Sprint 5 batch 5: 15 more root-level services migrated to TypeScript
+
+- Migrated `orchestrationGovernanceService`, `resourceCostService`,
+  `gitService`, `pluginSandboxService`, `hectorBookmarkService`,
+  `serviceScopes`, `workflowTelemetryService`, `searchService`,
+  `durableMemoryService`, `connectorCircuitBreakerService`,
+  `workflowReceiptService`, `sessionIntelligenceService`,
+  `chromaDbService`, `localMarketplaceService`, `genericWebhookService`
+  — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 83 `.js` / 48 `.ts` → 68 `.js` / 63 `.ts`.
+- Type-safety fixes: `SearchResult` fields made required to match
+  `MemorySearch.tsx` consumer; `MarketplaceItem` and `WorkspaceValidation`
+  index signatures added for component consumers; non-standard
+  `navigator.deviceMemory` and `performance.memory` guarded; `logError`
+  calls cast to `Record<string, unknown>`.
+- Verification: 227/227 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
 ## [2.5.12] — 2026-07-03
 
 ### Sprint 5 batch 4: 12 more root-level services migrated to TypeScript

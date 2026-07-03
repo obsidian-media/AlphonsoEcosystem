@@ -2,7 +2,31 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 
 const POLICY_KEY = 'alphonso_plugin_sandbox_policies_v1';
 
-const DEFAULT_POLICY = {
+interface PluginSandboxPolicy {
+  maxExtraArgs: number;
+  maxArgLength: number;
+  blockedTokens: string[];
+  requireManifestValidation: boolean;
+  trust: string;
+  updatedAtMs?: number;
+}
+
+interface PluginExecutionInput {
+  manifestPath?: string;
+  pluginId?: string;
+  toolId?: string;
+  extraArgs?: string[];
+}
+
+interface PluginExecutionResult {
+  allowed: boolean;
+  violations: string[];
+  policy: PluginSandboxPolicy;
+  checkedAtMs: number;
+  trust: string;
+}
+
+const DEFAULT_POLICY: PluginSandboxPolicy = {
   maxExtraArgs: 8,
   maxArgLength: 120,
   blockedTokens: ['&&', '||', ';', '|', '>', '<', '$(', '`'],
@@ -10,7 +34,7 @@ const DEFAULT_POLICY = {
   trust: TRUST_STATES.TEMPORARY
 };
 
-function readPolicies() {
+function readPolicies(): PluginSandboxPolicy {
   try {
     const raw = localStorage.getItem(POLICY_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
@@ -22,18 +46,18 @@ function readPolicies() {
   return DEFAULT_POLICY;
 }
 
-function writePolicies(policy) {
+function writePolicies(policy: PluginSandboxPolicy) {
   localStorage.setItem(POLICY_KEY, JSON.stringify({
     ...policy,
     updatedAtMs: timestampMs()
   }));
 }
 
-export function getPluginSandboxPolicy() {
+export function getPluginSandboxPolicy(): PluginSandboxPolicy {
   return readPolicies();
 }
 
-export function updatePluginSandboxPolicy(next) {
+export function updatePluginSandboxPolicy(next: Partial<PluginSandboxPolicy>): PluginSandboxPolicy {
   const merged = {
     ...readPolicies(),
     ...next
@@ -47,9 +71,9 @@ export function evaluatePluginExecutionPolicy({
   pluginId,
   toolId,
   extraArgs = []
-}) {
+}: PluginExecutionInput = {}): PluginExecutionResult {
   const policy = readPolicies();
-  const violations = [];
+  const violations: string[] = [];
 
   if (!manifestPath || !pluginId || !toolId) {
     violations.push('Manifest path, plugin id, and tool id are required.');
