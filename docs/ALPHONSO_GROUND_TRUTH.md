@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.9 (Sprint 6 started: fixed a real ESLint `.ts`/`.tsx` coverage gap, then fixed everything it surfaced)
-**Verified by:** Claude Code session — `npm run lint` and `npx tsc --noEmit` both clean, 133/133 targeted tests passing. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
-**Version:** 2.5.9 (security hardened, 218 test files, 3,174+ tests, 165 services; ESLint now actually covers `.ts`/`.tsx` — previously it silently didn't, across every prior "ESLint clean" claim in this project's history)
+**Last verified:** 2026-07-02 — v2.5.10 (first real release since v2.4.4 — found and fixed a version-drift bug the release process itself surfaced)
+**Verified by:** Claude Code session — `npm run lint` and `npx tsc --noEmit` both clean, `cargo check` clean after the version-field fix, 133/133 targeted tests passing. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.10 (security hardened, 218 test files, 3,174+ tests, 165 services; `v2.5.9` was tagged and released via CI first, but the published installer was mislabeled `Alphonso_2.4.4_x64-setup.exe` — traced to `src-tauri/tauri.conf.json`/`Cargo.toml` never being bumped alongside `package.json` across 9 prior version bumps. Fixed both files + `Cargo.lock`'s `app` entry, bumped to 2.5.10, cut a corrected release rather than force-moving the already-public v2.5.9 tag)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -1297,6 +1297,37 @@ files were never among them — see below.
   comment instructing future contributors not to widen the list.
 - Verification: `npm run lint` clean (exit 0), `npx tsc --noEmit` clean,
   133/133 targeted tests passing across every file touched.
+
+## 11.14 First release since v2.4.4 — found and fixed a real version-drift bug (2026-07-02, v2.5.10)
+
+User requested a tag + CI release + installer. Tagged and pushed `v2.5.9`;
+`.github/workflows/release.yml` built and published successfully on
+GitHub Actions (Windows runner, 19m47s: `npm run verify:app`, `cargo
+test`/`clippy`, signed `tauri build`, GitHub Release with installer +
+`.sig` + `latest.json`).
+
+- **The published release was checked, not assumed correct.**
+  `gh release view v2.5.9` showed the installer asset as
+  `Alphonso_2.4.4_x64-setup.exe` — not `2.5.9`.
+- **Root cause**: `package.json`'s version has been bumped every sprint
+  since v2.4.4 (through 2.5.0–2.5.9), but `src-tauri/tauri.conf.json`
+  and `src-tauri/Cargo.toml` — the actual Tauri application version,
+  which drives the NSIS installer filename, the in-app About/version
+  display, and the updater's version-comparison logic — were never
+  touched. They still read `2.4.4`. Every "version bumped X → Y" claim
+  in this project's history through Sprint 6 only ever updated the
+  JS-side version; the shipped Tauri binary's version string was stuck.
+  This went undetected for 9 version bumps because no release had been
+  cut since v2.4.4 until this one.
+- **Fix**: bumped `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`,
+  and `src-tauri/Cargo.lock`'s `app` package entry to `2.5.10`, matched
+  `package.json` to it, verified with `cargo check`, and cut a new
+  release under `v2.5.10` rather than force-moving the already-public
+  `v2.5.9` tag (it was live; someone could already be looking at it).
+- **Process fix going forward**: any future "bump package.json version"
+  step must also bump the three Tauri-side version locations in the same
+  commit. Documented in `ALPHONSOTOTHEMOON.md`'s running log and Sprint 5
+  tracker.
 
 ---
 

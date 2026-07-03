@@ -715,6 +715,42 @@ into Sprint 2+ — not dropped.
   - Verification: `npm run lint` exit code 0, `npx tsc --noEmit` clean,
     133/133 targeted tests passing across every touched file.
   - Version bumped 2.5.8 → 2.5.9. All docs updated in the same pass.
+- **2026-07-02 (release v2.5.9 → real bug found → v2.5.10)** — User asked
+  to tag, cut a release, and produce an installer. Tagged and pushed
+  `v2.5.9`; GitHub Actions' `release.yml` built and published successfully
+  in 19m47s (Windows CI: `npm run verify:app`, `cargo test`/`clippy`,
+  signed `tauri build`, GitHub Release with installer + `.sig` +
+  `latest.json`).
+  - **Checked the published release rather than assuming success meant
+    correctness**: `gh release view v2.5.9` showed the installer asset was
+    named `Alphonso_2.4.4_x64-setup.exe`, not `2.5.9` as the release notes
+    templated. Traced this to a real, previously-undetected drift:
+    `package.json`'s version has been bumped every sprint since (2.5.0
+    through 2.5.9), but `src-tauri/tauri.conf.json` and
+    `src-tauri/Cargo.toml` — the actual Tauri app version, which controls
+    the installer filename, in-app About/version display, and the
+    updater's version-comparison logic — were **never bumped alongside
+    it**, still reading `2.4.4`. Every prior sprint's "version bumped X →
+    Y" claim only ever updated the JS-side `package.json` (and README
+    badge/CHANGELOG entries derived from it) — the actual shipped Tauri
+    binary's version string has been stuck at 2.4.4 this entire time.
+  - Did not silently hand over the mislabeled installer, and did not
+    force-move the already-published `v2.5.9` tag (it's live, someone
+    could already be looking at it). Fixed `tauri.conf.json`,
+    `Cargo.toml`, and the `Cargo.lock` `app` package entry to `2.5.10`,
+    bumped `package.json` to match, and cut a new release under that
+    version instead — treating this as what it is, a real bug found
+    post-release, not something to patch over quietly.
+  - Verified `cargo check` still passes after the version bump before
+    re-tagging.
+  - **Lesson for future sprints**: from now on, "bump `package.json`
+    version" in every process checklist in this document (Sprint 5
+    tracker step 8, and any future one) must also bump
+    `src-tauri/tauri.conf.json` + `src-tauri/Cargo.toml` +
+    `src-tauri/Cargo.lock`'s `app` entry in the same commit — they are
+    two separate version fields that must move together, and nothing
+    caught this drift for 9 versions (2.5.0 through 2.5.9) because no
+    release was cut in between until now.
 
 ## Sprint 5 migration tracker (update this section, not just the running log, on every batch)
 

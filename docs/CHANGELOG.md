@@ -6,6 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.10] — 2026-07-02
+
+### Fixed: version-drift bug found by the release process itself
+
+- User requested a tag + CI release + installer. Tagged and pushed
+  `v2.5.9`; `.github/workflows/release.yml` built and published
+  successfully on GitHub Actions (19m47s).
+- Checked the published release before handing it over: the installer
+  asset was named `Alphonso_2.4.4_x64-setup.exe`, not `2.5.9`.
+- **Root cause**: `package.json`'s version has been bumped every sprint
+  since v2.4.4 (through 2.5.0–2.5.9), but `src-tauri/tauri.conf.json` and
+  `src-tauri/Cargo.toml` — the actual Tauri app version, which drives the
+  installer filename, in-app About/version display, and the updater's
+  version-comparison logic — were never bumped alongside it. They stayed
+  at `2.4.4` through 9 version bumps, undetected because no release had
+  been cut since v2.4.4 until now.
+- **Fix**: bumped `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and
+  `src-tauri/Cargo.lock`'s `app` entry to `2.5.10`, matched `package.json`,
+  verified with `cargo check`, and cut a corrected release under
+  `v2.5.10` rather than force-moving the already-public `v2.5.9` tag.
+- Added a rule to `CLAUDE.md`'s "Before Making Changes" checklist: bump
+  all 4 version locations together going forward.
+
 ## [2.5.9] — 2026-07-02
 
 ### Sprint 6 (started): fixed the ESLint `.ts`/`.tsx` coverage gap found during a Sprint 5 check-in
