@@ -1,5 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { generateOllamaResponse, PREFERRED_MODEL } from '../lib/ollama';
+import { generateOllamaResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
@@ -7,9 +7,92 @@ import { storeNovaScore, getDecompositionHints } from './novaFeedbackService';
 import { durableGet, durableSet } from '../lib/durableStore';
 import { appendNotification } from './notificationService';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface SignalPattern {
+  pattern: RegExp;
+  score: number;
+  signal: string;
+}
+
+interface PriorAgentOutput {
+  resultState?: string;
+  summary?: string;
+  [key: string]: unknown;
+}
+
+interface PriorOutputs {
+  [agent: string]: PriorAgentOutput | undefined;
+}
+
+interface ScoreResult {
+  opportunityScore: number;
+  riskScore: number;
+  timingScore: number;
+  effortScore: number;
+  valueScore: number;
+  opportunitySignals: string[];
+  riskSignals: string[];
+}
+
+export type PriorityTier = 'critical' | 'high' | 'medium' | 'watchlist';
+
+interface NovaAnalysisResult {
+  valueScore: number;
+  riskScore: number;
+  timingScore: number;
+  effortScore: number;
+  priorityTier: PriorityTier;
+  recommendation: string;
+  summary: string;
+}
+
+interface NovaOpportunitySchema {
+  opportunityId: string;
+  title: string;
+  summary: string;
+  valueScore: number;
+  riskScore: number;
+  timingScore: number;
+  effortScore: number;
+  priorityTier: PriorityTier;
+  recommendation: string;
+  confidenceLevel: string;
+  verificationState: string;
+  analyzedAtMs: number;
+}
+
+interface Assignment {
+  commandId?: string;
+  packetId?: string;
+  actionType?: string;
+  [key: string]: unknown;
+}
+
+interface NovaResult {
+  summary: string;
+  resultState: string;
+  resultUrl: null;
+  artifacts: Array<Record<string, unknown>>;
+  sources: never[];
+  contractAction: string;
+  schema: NovaOpportunitySchema;
+}
+
+interface DecompositionHint {
+  message: string;
+  [key: string]: unknown;
+}
+
+interface OpportunityHistoryEntry {
+  score: number;
+  recommendation: string;
+  timestamp: number;
+}
+
 // ── Opportunity scoring (deterministic) ───────────────────────────────────────
 
-const OPPORTUNITY_SIGNALS = [
+const OPPORTUNITY_SIGNALS: SignalPattern[] = [
   { pattern: /\b(build|create|launch|ship|deploy)\b/i, score: 15, signal: 'execution_intent' },
   { pattern: /\b(design|creative|content|visual|story|script)\b/i, score: 12, signal: 'creative_potential' },
   { pattern: /\b(research|analyze|study|investigate|discover)\b/i, score: 10, signal: 'research_potential' },
@@ -20,7 +103,7 @@ const OPPORTUNITY_SIGNALS = [
   { pattern: /\b(ai|machine.learning|llm|model|intelligence)\b/i, score: 8, signal: 'ai_leverage' }
 ];
 
-const RISK_SIGNALS = [
+const RISK_SIGNALS: SignalPattern[] = [
   { pattern: /\b(delete|remove|drop|destroy|wipe)\b/i, score: 20, signal: 'destructive_action' },
   { pattern: /\b(publish|post|deploy|push|send|email|dm)\b/i, score: 15, signal: 'external_action' },
   { pattern: /\b(pay|buy|purchase|subscribe|stripe|payment)\b/i, score: 18, signal: 'financial_action' },
@@ -30,11 +113,11 @@ const RISK_SIGNALS = [
   { pattern: /\b(install|npm|pip|cargo)\b/i, score: 5, signal: 'dependency_risk' }
 ];
 
-export function computeOpportunityScores(commandText, priorOutputs) {
+export function computeOpportunityScores(commandText: string, priorOutputs: PriorOutputs | null): ScoreResult {
   const lower = String(commandText || '').toLowerCase();
 
   let opportunityScore = 0;
-  const opportunityMatched = [];
+  const opportunityMatched: string[] = [];
   for (const { pattern, score, signal } of OPPORTUNITY_SIGNALS) {
     if (pattern.test(lower)) {
       opportunityScore += score;
@@ -47,7 +130,7 @@ export function computeOpportunityScores(commandText, priorOutputs) {
   if (priorOutputs?.hector?.resultState === 'completed') { opportunityScore += 8; opportunityMatched.push('hector_research_ready'); }
 
   let riskScore = 0;
-  const riskMatched = [];
+  const riskMatched: string[] = [];
   for (const { pattern, score, signal } of RISK_SIGNALS) {
     if (pattern.test(lower)) {
       riskScore += score;
@@ -80,7 +163,7 @@ export function computeOpportunityScores(commandText, priorOutputs) {
   return { opportunityScore, riskScore, timingScore, effortScore, valueScore, opportunitySignals: opportunityMatched, riskSignals: riskMatched };
 }
 
-export function classifyPriorityTier(valueScore) {
+export function classifyPriorityTier(valueScore: number): PriorityTier {
   if (valueScore >= 75) return 'critical';
   if (valueScore >= 55) return 'high';
   if (valueScore >= 35) return 'medium';
@@ -89,7 +172,7 @@ export function classifyPriorityTier(valueScore) {
 
 // ── Ollama prompt ─────────────────────────────────────────────────────────────
 
-export function buildNovaAnalysisPrompt(commandText, priorOutputs, scores) {
+export function buildNovaAnalysisPrompt(commandText: string, priorOutputs: PriorOutputs | null, scores: ScoreResult): string {
   const agentContext = Object.entries(priorOutputs || {})
     .map(([agent, o]) => `[${agent}] ${String(o?.summary || 'no output').slice(0, 200)}`)
     .join('\n');
@@ -118,18 +201,18 @@ export function buildNovaAnalysisPrompt(commandText, priorOutputs, scores) {
   ].join('\n');
 }
 
-export function parseNovaAnalysisResponse(text) {
+export function parseNovaAnalysisResponse(text: string): NovaAnalysisResult | null {
   try {
     const jsonMatch = String(text || '').match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('no json');
-    const parsed = JSON.parse(jsonMatch[0]);
-    const clamp = (v, fallback) => Math.min(100, Math.max(0, Number(v) || fallback));
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+    const clamp = (v: unknown, fallback: number): number => Math.min(100, Math.max(0, Number(v) || fallback));
     return {
       valueScore: clamp(parsed.valueScore, 50),
       riskScore: clamp(parsed.riskScore, 20),
       timingScore: clamp(parsed.timingScore, 50),
       effortScore: clamp(parsed.effortScore, 50),
-      priorityTier: ['watchlist', 'medium', 'high', 'critical'].includes(parsed.priorityTier) ? parsed.priorityTier : 'medium',
+      priorityTier: (['watchlist', 'medium', 'high', 'critical'] as string[]).includes(parsed.priorityTier as string) ? (parsed.priorityTier as PriorityTier) : 'medium',
       recommendation: String(parsed.recommendation || 'Proceed with standard agent delegation.').slice(0, 400),
       summary: String(parsed.summary || 'Nova analysis complete.').slice(0, 300)
     };
@@ -138,7 +221,7 @@ export function parseNovaAnalysisResponse(text) {
   }
 }
 
-export function buildNovaFallbackAnalysis(scores) {
+export function buildNovaFallbackAnalysis(scores: ScoreResult): NovaAnalysisResult {
   const priorityTier = classifyPriorityTier(scores.valueScore);
   return {
     valueScore: scores.valueScore,
@@ -157,17 +240,17 @@ export function buildNovaFallbackAnalysis(scores) {
 
 // ── Main runtime ──────────────────────────────────────────────────────────────
 
-export async function runNovaAnalysis(commandText, assignment, priorOutputs, options = {}) {
+export async function runNovaAnalysis(commandText: string, assignment: Assignment | null, priorOutputs: PriorOutputs | null, options: Record<string, unknown> = {}): Promise<NovaResult> {
   const startMs = timestampMs();
 
   // 1. Deterministic scoring (always runs)
   const scores = computeOpportunityScores(commandText, priorOutputs);
 
   // 2. Ollama strategic analysis
-  let ollamaResult = null;
+  let ollamaResult: NovaAnalysisResult | null = null;
   try {
     const prompt = buildNovaAnalysisPrompt(commandText, priorOutputs, scores);
-    const response = await generateOllamaResponse({ model: PREFERRED_MODEL, prompt });
+    const response = await generateOllamaResponse({ endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt }) as { response?: string } | null;
     ollamaResult = parseNovaAnalysisResponse(response?.response || '');
   } catch {
     // Ollama unavailable — use deterministic fallback
@@ -179,14 +262,13 @@ export async function runNovaAnalysis(commandText, assignment, priorOutputs, opt
   const commandId = assignment?.commandId || `nova_${startMs}`;
   storeNovaScore(commandId, {
     opportunityScore: scores.opportunityScore,
-    riskScore: analysis.riskScore,
-    score: analysis.valueScore
+    riskScore: analysis.riskScore
   });
-  const { hints } = getDecompositionHints(commandId);
+  const { hints } = getDecompositionHints(commandId) as unknown as { hints: DecompositionHint[] };
 
   // 4. Build NOVA_OPPORTUNITY_SCHEMA
   const opportunityId = `nova_${commandId}_${startMs}`;
-  const schema = {
+  const schema: NovaOpportunitySchema = {
     opportunityId,
     title: String(commandText || '').slice(0, 120),
     summary: analysis.summary,
@@ -275,13 +357,13 @@ const NOVA_THRESHOLD_KEY = 'alphonso_nova_threshold_v1';
 const MAX_HISTORY = 30;
 const DEFAULT_ALERT_THRESHOLD = 75;
 
-export function setAlertThreshold(n) {
+export function setAlertThreshold(n: number): void {
   const parsed = Number(n);
   const value = isNaN(parsed) ? DEFAULT_ALERT_THRESHOLD : Math.min(100, Math.max(0, parsed));
   try { localStorage.setItem(NOVA_THRESHOLD_KEY, String(value)); } catch { /* storage */ }
 }
 
-export function getAlertThreshold() {
+export function getAlertThreshold(): number {
   try {
     const raw = localStorage.getItem(NOVA_THRESHOLD_KEY);
     if (raw !== null) {
@@ -292,7 +374,7 @@ export function getAlertThreshold() {
   return DEFAULT_ALERT_THRESHOLD;
 }
 
-export function saveOpportunityScore(score, recommendation) {
+export function saveOpportunityScore(score: number, recommendation: string): void {
   const history = getOpportunityHistory();
   history.push({ score, recommendation, timestamp: Date.now() });
   if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
@@ -311,6 +393,6 @@ export function saveOpportunityScore(score, recommendation) {
   }
 }
 
-export function getOpportunityHistory() {
-  try { return JSON.parse(durableGet(NOVA_HISTORY_KEY) ?? '[]'); } catch { return []; }
+export function getOpportunityHistory(): OpportunityHistoryEntry[] {
+  try { return JSON.parse(durableGet(NOVA_HISTORY_KEY) ?? '[]') as OpportunityHistoryEntry[]; } catch { return []; }
 }

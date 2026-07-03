@@ -20,7 +20,67 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendConnectorAudit } from './connectorRegistryService';
 import { executeWorkflowStep } from './workflowExecutionService';
 
-export const WORKFLOWS = {
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface WorkflowDefinition {
+  id: string;
+  name: string;
+  purpose: string;
+  chain: string[];
+  tasks: string[];
+  outputs: string[];
+}
+
+interface WorkflowContext {
+  prompt?: string;
+  command?: string;
+  source?: string;
+  zeroCostMode?: boolean;
+  [key: string]: unknown;
+}
+
+interface JoseRoute {
+  id: string;
+  assignments?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+interface WorkflowRunResult {
+  ok: boolean;
+  workflowId?: string;
+  workflow?: string;
+  commandId?: string;
+  assignments?: Array<Record<string, unknown>>;
+  chain?: string[];
+  outputTarget?: string;
+  error?: string;
+}
+
+interface WorkflowChainResult extends WorkflowRunResult {
+  chain?: string[];
+  steps?: Array<{
+    agent: string;
+    packetId: string;
+    execution: unknown;
+  }>;
+  stepCount?: number;
+}
+
+interface WorkflowTaskResult {
+  ok: boolean;
+  workflowId?: string;
+  workflow?: string;
+  results?: Array<{
+    task: string;
+    execution: unknown;
+  }>;
+  outputCount?: number;
+  error?: string;
+}
+
+// ── Workflows ─────────────────────────────────────────────────────────────────
+
+export const WORKFLOWS: Record<string, WorkflowDefinition> = {
   WF_AI_SELF_DEV: {
     id: 'WF_AI_SELF_DEV',
     name: 'AI Self-Development',
@@ -411,32 +471,32 @@ export const WORKFLOWS = {
   }
 };
 
-export function listWorkflows() {
+export function listWorkflows(): WorkflowDefinition[] {
   return Object.values(WORKFLOWS);
 }
 
-export function getWorkflow(workflowId) {
+export function getWorkflow(workflowId: string): WorkflowDefinition | null {
   return WORKFLOWS[workflowId] || null;
 }
 
-function lastInChain(chain) {
+function lastInChain(chain: string[]): string {
   return chain[chain.length - 1];
 }
 
-export async function runWorkflow(workflowId, context = {}) {
+export async function runWorkflow(workflowId: string, context: WorkflowContext = {}): Promise<WorkflowRunResult> {
   if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'Invalid workflowId.' };
   const workflow = getWorkflow(workflowId);
   if (!workflow) return { ok: false, error: 'Unknown workflow.' };
 
   const commandText = String(context.prompt || context.command || `Run workflow: ${workflow.name}`).trim();
-  let route;
+  let route: JoseRoute;
   try {
-    route = await createJoseCommandRoute({
+    route = (await createJoseCommandRoute({
       commandText,
       source: context.source || 'workflow_engine',
       zeroCostMode: context.zeroCostMode
-    });
-  } catch (error) {
+    })) as unknown as JoseRoute;
+  } catch (error: unknown) {
     appendConnectorAudit('workflow', 'jose_route_failed', {
       workflowId,
       error: String(error)
@@ -479,7 +539,7 @@ export async function runWorkflow(workflowId, context = {}) {
   };
 }
 
-export async function runWorkflowChain(workflowId, context = {}) {
+export async function runWorkflowChain(workflowId: string, context: WorkflowContext = {}): Promise<WorkflowChainResult> {
   if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'Invalid workflowId.' };
   const workflow = getWorkflow(workflowId);
   if (!workflow) return { ok: false, error: 'Unknown workflow.' };
@@ -487,7 +547,7 @@ export async function runWorkflowChain(workflowId, context = {}) {
   const result = await runWorkflow(workflowId, context);
   if (!result.ok) return result;
 
-  const steps = [];
+  const steps: Array<{ agent: string; packetId: string; execution: unknown }> = [];
   const chain = workflow.chain || [AGENTS.JOSE];
   for (const agent of chain) {
     const packet = createAgentPacket({
@@ -533,12 +593,12 @@ export async function runWorkflowChain(workflowId, context = {}) {
   };
 }
 
-export async function executeWorkflowTasks(workflowId, context = {}) {
+export async function executeWorkflowTasks(workflowId: string, context: WorkflowContext = {}): Promise<WorkflowTaskResult> {
   if (!workflowId || typeof workflowId !== 'string') return { ok: false, error: 'Invalid workflowId.' };
   const workflow = getWorkflow(workflowId);
   if (!workflow) return { ok: false, error: 'Unknown workflow.' };
 
-  const results = [];
+  const results: Array<{ task: string; execution: unknown }> = [];
   for (const task of workflow.tasks || []) {
     const execution = await executeWorkflowStep({
       id: `${workflowId}-${task}`,

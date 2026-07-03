@@ -18,10 +18,47 @@ import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { persistScopeRows } from './runtimeLedgerService';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface WorkflowOperation {
+  id: string;
+  name: string;
+  purpose: string;
+  triggerTypes: string[];
+  agentSequence: string[];
+  requiredApprovals: string[];
+  riskLevel: string;
+  allowedActions: string[];
+  blockedActions: string[];
+  memoryBehavior: string[];
+  receiptsGenerated: string[];
+  connectorRequirements: string[];
+  setupRequired: string[];
+  finalReportFormat: string;
+  status?: string;
+  trust?: string;
+  verificationState?: string;
+  createdAtMs?: number;
+  updatedAtMs?: number;
+  [key: string]: unknown;
+}
+
+interface LedgerRow {
+  id: string;
+  data: WorkflowOperation;
+  status: string;
+  confidence: string;
+  verificationState: string;
+  timestampMs: number;
+  [key: string]: unknown;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const WORKFLOW_OPS_KEY = 'alphonso_workflow_operations_registry_v1';
 export const WORKFLOW_OPS_SCOPE = 'workflow_operations_registry_v1';
 
-const DEFAULT_WORKFLOW_OPERATIONS = [
+const DEFAULT_WORKFLOW_OPERATIONS: WorkflowOperation[] = [
   {
     id: 'wf-marketing-operations',
     name: 'Marketing Operations',
@@ -280,7 +317,7 @@ const DEFAULT_WORKFLOW_OPERATIONS = [
   }
 ];
 
-function readRows() {
+function readRows(): WorkflowOperation[] {
   try {
     const raw = localStorage.getItem(WORKFLOW_OPS_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -290,7 +327,7 @@ function readRows() {
   }
 }
 
-function writeRows(rows) {
+function writeRows(rows: WorkflowOperation[]): void {
   const next = rows.slice(-120);
   try {
     invoke('kv_set', { key: WORKFLOW_OPS_KEY, value: JSON.stringify(next) }).catch(() => {});
@@ -298,7 +335,7 @@ function writeRows(rows) {
     // SQLite not available in browser
   }
   localStorage.setItem(WORKFLOW_OPS_KEY, JSON.stringify(next));
-  persistScopeRows(WORKFLOW_OPS_SCOPE, next, (row) => ({
+  persistScopeRows(WORKFLOW_OPS_SCOPE, next, (row: WorkflowOperation): LedgerRow => ({
     id: row.id,
     data: row,
     status: row.status || 'active',
@@ -308,7 +345,7 @@ function writeRows(rows) {
   }));
 }
 
-function seedDefaults() {
+function seedDefaults(): WorkflowOperation[] {
   const existing = readRows();
   const byId = new Map(existing.map((item) => [item.id, item]));
   DEFAULT_WORKFLOW_OPERATIONS.forEach((workflow) => {
@@ -342,11 +379,11 @@ function seedDefaults() {
   return next;
 }
 
-export function listWorkflowOperations() {
+export function listWorkflowOperations(): WorkflowOperation[] {
   return seedDefaults();
 }
 
-export function updateWorkflowOperationStatus(workflowId, status, patch = {}) {
+export function updateWorkflowOperationStatus(workflowId: string, status: string, patch: Partial<WorkflowOperation> = {}): WorkflowOperation | null {
   if (!workflowId || !status) return null;
   if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) patch = {};
   const rows = listWorkflowOperations().map((item) => (
@@ -363,6 +400,6 @@ export function updateWorkflowOperationStatus(workflowId, status, patch = {}) {
   return rows.find((item) => item.id === workflowId) || null;
 }
 
-export function getWorkflowOperation(workflowId) {
+export function getWorkflowOperation(workflowId: string): WorkflowOperation | null {
   return listWorkflowOperations().find((item) => item.id === workflowId) || null;
 }

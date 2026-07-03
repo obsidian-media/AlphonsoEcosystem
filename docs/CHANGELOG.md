@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.18] — 2026-07-03
+
+### Sprint 5 batch 10: 6 more root-level services migrated to TypeScript
+
+- Migrated `novaAnalysisService`, `missionRoomService`, `eventsService`,
+  `workflowRegistryService`, `marcusExecutionService`,
+  `workflowOperationsRegistryService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 17 `.js` / 114 `.ts` → 11 `.js` / 120 `.ts`.
+- Fixed `novaAnalysisService`: added `DEFAULT_OLLAMA_ENDPOINT` to required `generateOllamaResponse` call; removed invalid `score` field from `storeNovaScore` call (only `opportunityScore`/`riskScore` accepted).
+- Fixed `marcusExecutionService`: `github.createRelease`/`createIssue` use positional params, not objects; removed `htmlUrl` references (not in `GitHubRelease`/`GitHubIssue` types).
+- Fixed `workflowOperationsRegistryService`: added `[key: string]: unknown` to `LedgerRow` interface.
+- Fixed `workflowRegistryService`: `JoseCommandRouteResult` cast via `unknown` (interface lacks index signature).
+- 152/152 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean.
+
 ## [2.5.17] — 2026-07-03
 
 ### Sprint 5 batch 9: 6 more root-level services migrated to TypeScript

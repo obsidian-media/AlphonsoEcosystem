@@ -1,43 +1,175 @@
 import { timestampMs } from './trustModel';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface AgentInfo {
+  key: string;
+  name: string;
+  role: string;
+  lane: string;
+  accent: string;
+}
+
+type MissionTaskStatus = 'todo' | 'doing' | 'review' | 'approved' | 'blocked';
+
+type AgentKey = 'shayan' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
+
+interface MissionRoom {
+  id: string;
+  name: string;
+  description: string;
+  context: string;
+  selectedAgents: string[];
+  openParticipantSlots: string[];
+  mode: string;
+  createdAt: string;
+  createdAtMs: number;
+  updatedAt: string;
+  updatedAtMs: number;
+  [key: string]: unknown;
+}
+
+interface MissionMessage {
+  id: string;
+  roomId: string;
+  speaker: string;
+  role: string;
+  content: string;
+  originalHash: string;
+  kind: string;
+  status: string;
+  riskLevel: string;
+  approvalRequired: boolean;
+  securityFlags: string[];
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  createdAtMs: number;
+}
+
+interface MissionTask {
+  id: string;
+  roomId: string;
+  title: string;
+  owner: string;
+  status: MissionTaskStatus;
+  priority: string;
+  acceptance: string;
+  proof: string;
+  riskLevel: string;
+  approvalRequired: boolean;
+  securityFlags: string[];
+  sourceMessageId: string | null;
+  createdAt: string;
+  createdAtMs: number;
+  updatedAt: string;
+  updatedAtMs: number;
+  [key: string]: unknown;
+}
+
+interface SecurityEvent {
+  id: string;
+  roomId: string;
+  type: string;
+  actor: string;
+  riskLevel: string;
+  summary: string;
+  summaryHash: string;
+  metadata: Record<string, unknown>;
+  previousHash: string | null;
+  eventHash?: string;
+  createdAt: string;
+  createdAtMs: number;
+}
+
+interface RiskClassification {
+  riskLevel: 'high' | 'medium' | 'low';
+  approvalRequired: boolean;
+  secretDetected: boolean;
+  flags: string[];
+}
+
+interface AddMessageParams {
+  roomId?: string;
+  speaker?: string;
+  content?: string;
+  status?: string;
+  kind?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface AddTaskParams {
+  roomId?: string;
+  title?: string;
+  owner?: string;
+  status?: MissionTaskStatus;
+  priority?: string;
+  acceptance?: string;
+  proof?: string;
+  sourceMessageId?: string | null;
+}
+
+interface TaskPatch {
+  owner?: string;
+  status?: MissionTaskStatus;
+  [key: string]: unknown;
+}
+
+interface SecurityEventParams {
+  roomId?: string;
+  type?: string;
+  actor?: string;
+  riskLevel?: string;
+  summary?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface HermesHandoffParams {
+  objective?: string;
+  project?: string;
+  constraints?: string;
+  acceptance?: string;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const ROOMS_KEY = 'alphonso_mission_room_rooms_v1';
 const MESSAGES_KEY = 'alphonso_mission_room_messages_v1';
 const TASKS_KEY = 'alphonso_mission_room_tasks_v1';
 const SECURITY_EVENTS_KEY = 'alphonso_mission_room_security_events_v1';
 
-function nowIso() {
+function nowIso(): string {
   return new Date().toISOString();
 }
 
-function safeStorage() {
+function safeStorage(): Storage | null {
   return typeof localStorage === 'undefined' ? null : localStorage;
 }
 
-function readJson(key, fallback) {
+function readJson<T>(key: string, fallback: T): T {
   const storage = safeStorage();
   if (!storage) return fallback;
   try {
     const raw = storage.getItem(key);
     if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as T;
     return parsed == null ? fallback : parsed;
   } catch {
     return fallback;
   }
 }
 
-function writeJson(key, value) {
+function writeJson<T>(key: string, value: T): T {
   const storage = safeStorage();
   if (!storage) return value;
   storage.setItem(key, JSON.stringify(value));
   return value;
 }
 
-function makeId(prefix) {
+function makeId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
 }
 
-function hashText(text = '') {
+function hashText(text: string = ''): string {
   let hash = 2166136261;
   const input = String(text || '');
   for (let i = 0; i < input.length; i += 1) {
@@ -47,14 +179,14 @@ function hashText(text = '') {
   return `fnv1a_${(hash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
-const SECRET_PATTERNS = [
+const SECRET_PATTERNS: RegExp[] = [
   /\bsk-[A-Za-z0-9_-]{12,}\b/g,
   /\bntn_[A-Za-z0-9_-]{12,}\b/g,
   /\b[A-Za-z0-9_]*(?:API|TOKEN|SECRET|PASSWORD|KEY)[A-Za-z0-9_]*\s*[:=]\s*[^\s,;]+/gi,
   /Bearer\s+[A-Za-z0-9._-]{12,}/gi
 ];
 
-const HIGH_RISK_PATTERNS = [
+const HIGH_RISK_PATTERNS: RegExp[] = [
   /\bpublish\b/i,
   /\bpush\b/i,
   /\bdeploy\b/i,
@@ -71,7 +203,7 @@ const HIGH_RISK_PATTERNS = [
   /\bpassword\b/i
 ];
 
-const MEDIUM_RISK_PATTERNS = [
+const MEDIUM_RISK_PATTERNS: RegExp[] = [
   /\bmodify\b/i,
   /\bedit\b/i,
   /\bwrite\b/i,
@@ -81,7 +213,9 @@ const MEDIUM_RISK_PATTERNS = [
   /\bwebhook\b/i
 ];
 
-export const MISSION_ROOM_AGENTS = {
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
   shayan: {
     key: 'shayan',
     name: 'Shayan',
@@ -161,7 +295,7 @@ export const MISSION_ROOM_AGENTS = {
   }
 };
 
-export const MISSION_TASK_STATUSES = ['todo', 'doing', 'review', 'approved', 'blocked'];
+export const MISSION_TASK_STATUSES: MissionTaskStatus[] = ['todo', 'doing', 'review', 'approved', 'blocked'];
 
 export const MISSION_ROOM_SECURITY_MODEL = {
   scope: 'local_browser_guardrail',
@@ -177,15 +311,15 @@ export const MISSION_ROOM_SECURITY_MODEL = {
   ]
 };
 
-function sanitizeAgentKey(key, fallback = 'alphonso') {
+function sanitizeAgentKey(key: string, fallback: string = 'alphonso'): string {
   return Object.prototype.hasOwnProperty.call(MISSION_ROOM_AGENTS, key) ? key : fallback;
 }
 
-function sanitizeTaskStatus(status) {
-  return MISSION_TASK_STATUSES.includes(status) ? status : 'todo';
+function sanitizeTaskStatus(status: string): MissionTaskStatus {
+  return (MISSION_TASK_STATUSES as string[]).includes(status) ? (status as MissionTaskStatus) : 'todo';
 }
 
-export function redactMissionRoomSecrets(content = '') {
+export function redactMissionRoomSecrets(content: string = ''): string {
   let redacted = String(content || '');
   for (const pattern of SECRET_PATTERNS) {
     redacted = redacted.replace(pattern, '[REDACTED_SECRET]');
@@ -193,7 +327,7 @@ export function redactMissionRoomSecrets(content = '') {
   return redacted;
 }
 
-export function classifyMissionRoomRisk(content = '') {
+export function classifyMissionRoomRisk(content: string = ''): RiskClassification {
   const text = String(content || '');
   const secretDetected = SECRET_PATTERNS.some((pattern) => {
     pattern.lastIndex = 0;
@@ -201,7 +335,7 @@ export function classifyMissionRoomRisk(content = '') {
   });
   const highMatches = HIGH_RISK_PATTERNS.filter((pattern) => pattern.test(text));
   const mediumMatches = MEDIUM_RISK_PATTERNS.filter((pattern) => pattern.test(text));
-  const riskLevel = secretDetected || highMatches.length ? 'high' : mediumMatches.length ? 'medium' : 'low';
+  const riskLevel: RiskClassification['riskLevel'] = secretDetected || highMatches.length ? 'high' : mediumMatches.length ? 'medium' : 'low';
   return {
     riskLevel,
     approvalRequired: riskLevel === 'high',
@@ -214,9 +348,9 @@ export function classifyMissionRoomRisk(content = '') {
   };
 }
 
-export function appendMissionSecurityEvent({ roomId = 'mission_room_main', type = 'event', actor = 'alphonso', riskLevel = 'low', summary = '', metadata = {} } = {}) {
-  const rows = readJson(SECURITY_EVENTS_KEY, []);
-  const event = {
+export function appendMissionSecurityEvent({ roomId = 'mission_room_main', type = 'event', actor = 'alphonso', riskLevel = 'low', summary = '', metadata = {} }: SecurityEventParams = {}): SecurityEvent {
+  const rows = readJson<SecurityEvent[]>(SECURITY_EVENTS_KEY, []);
+  const event: SecurityEvent = {
     id: makeId('mission_security'),
     roomId,
     type,
@@ -234,14 +368,14 @@ export function appendMissionSecurityEvent({ roomId = 'mission_room_main', type 
   return event;
 }
 
-export function listMissionSecurityEvents(roomId = 'mission_room_main') {
-  const rows = readJson(SECURITY_EVENTS_KEY, []);
+export function listMissionSecurityEvents(roomId: string = 'mission_room_main'): SecurityEvent[] {
+  const rows = readJson<SecurityEvent[]>(SECURITY_EVENTS_KEY, []);
   return rows
     .filter((row) => row.roomId === roomId)
     .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
 }
 
-export function createDefaultMissionRoom() {
+export function createDefaultMissionRoom(): MissionRoom {
   return {
     id: 'mission_room_main',
     name: 'ALPHONSO Mission Room',
@@ -257,15 +391,15 @@ export function createDefaultMissionRoom() {
   };
 }
 
-export function listMissionRooms() {
-  const rooms = readJson(ROOMS_KEY, []);
+export function listMissionRooms(): MissionRoom[] {
+  const rooms = readJson<MissionRoom[]>(ROOMS_KEY, []);
   if (Array.isArray(rooms) && rooms.length) return rooms;
   const room = createDefaultMissionRoom();
   writeJson(ROOMS_KEY, [room]);
   return [room];
 }
 
-export function getMissionRoom(roomId = 'mission_room_main') {
+export function getMissionRoom(roomId: string = 'mission_room_main'): MissionRoom {
   const room = listMissionRooms().find((row) => row.id === roomId) || createDefaultMissionRoom();
   const validAgents = Object.keys(MISSION_ROOM_AGENTS);
   const selectedAgents = Array.isArray(room.selectedAgents)
@@ -280,7 +414,7 @@ export function getMissionRoom(roomId = 'mission_room_main') {
   return { ...room, selectedAgents };
 }
 
-export function saveMissionRoom(room) {
+export function saveMissionRoom(room: MissionRoom): MissionRoom {
   const allowedAgents = Array.isArray(room.selectedAgents)
     ? room.selectedAgents.filter((agentKey) => Object.prototype.hasOwnProperty.call(MISSION_ROOM_AGENTS, agentKey))
     : ['shayan', 'alphonso', 'jose'];
@@ -295,20 +429,20 @@ export function saveMissionRoom(room) {
   return next;
 }
 
-export function listMissionMessages(roomId = 'mission_room_main') {
-  const rows = readJson(MESSAGES_KEY, []);
+export function listMissionMessages(roomId: string = 'mission_room_main'): MissionMessage[] {
+  const rows = readJson<MissionMessage[]>(MESSAGES_KEY, []);
   return rows
     .filter((row) => row.roomId === roomId)
     .sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
 }
 
-export function addMissionMessage({ roomId = 'mission_room_main', speaker = 'shayan', content = '', status = 'success', kind = 'message', metadata = {} } = {}) {
+export function addMissionMessage({ roomId = 'mission_room_main', speaker = 'shayan', content = '', status = 'success', kind = 'message', metadata = {} }: AddMessageParams = {}): MissionMessage | null {
   const originalText = String(content || '').trim();
   const text = redactMissionRoomSecrets(originalText).trim();
   if (!text) return null;
   const safeSpeaker = sanitizeAgentKey(speaker, 'shayan');
   const risk = classifyMissionRoomRisk(originalText);
-  const message = {
+  const message: MissionMessage = {
     id: makeId('mission_msg'),
     roomId,
     speaker: safeSpeaker,
@@ -324,7 +458,7 @@ export function addMissionMessage({ roomId = 'mission_room_main', speaker = 'sha
     createdAt: nowIso(),
     createdAtMs: timestampMs()
   };
-  const rows = readJson(MESSAGES_KEY, []);
+  const rows = readJson<MissionMessage[]>(MESSAGES_KEY, []);
   writeJson(MESSAGES_KEY, [...rows, message].slice(-500));
   appendMissionSecurityEvent({
     roomId,
@@ -337,8 +471,8 @@ export function addMissionMessage({ roomId = 'mission_room_main', speaker = 'sha
   return message;
 }
 
-export function clearMissionMessages(roomId = 'mission_room_main') {
-  const rows = readJson(MESSAGES_KEY, []);
+export function clearMissionMessages(roomId: string = 'mission_room_main'): void {
+  const rows = readJson<MissionMessage[]>(MESSAGES_KEY, []);
   writeJson(MESSAGES_KEY, rows.filter((row) => row.roomId !== roomId));
   appendMissionSecurityEvent({
     roomId,
@@ -349,21 +483,21 @@ export function clearMissionMessages(roomId = 'mission_room_main') {
   });
 }
 
-export function listMissionTasks(roomId = 'mission_room_main') {
-  const rows = readJson(TASKS_KEY, []);
+export function listMissionTasks(roomId: string = 'mission_room_main'): MissionTask[] {
+  const rows = readJson<MissionTask[]>(TASKS_KEY, []);
   return rows
     .filter((row) => row.roomId === roomId)
     .sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
 }
 
-export function addMissionTask({ roomId = 'mission_room_main', title = '', owner = 'hermes', status = 'todo', priority = 'P1', acceptance = '', proof = '', sourceMessageId = null } = {}) {
+export function addMissionTask({ roomId = 'mission_room_main', title = '', owner = 'hermes', status = 'todo', priority = 'P1', acceptance = '', proof = '', sourceMessageId = null }: AddTaskParams = {}): MissionTask | null {
   const original = `${title}\n${acceptance}\n${proof}`;
   const cleanTitle = redactMissionRoomSecrets(String(title || '')).trim();
   if (!cleanTitle) return null;
   const safeStatus = sanitizeTaskStatus(status);
   const safeOwner = sanitizeAgentKey(owner, 'hermes');
   const risk = classifyMissionRoomRisk(original);
-  const task = {
+  const task: MissionTask = {
     id: makeId('mission_task'),
     roomId,
     title: cleanTitle,
@@ -381,7 +515,7 @@ export function addMissionTask({ roomId = 'mission_room_main', title = '', owner
     updatedAt: nowIso(),
     updatedAtMs: timestampMs()
   };
-  const rows = readJson(TASKS_KEY, []);
+  const rows = readJson<MissionTask[]>(TASKS_KEY, []);
   writeJson(TASKS_KEY, [task, ...rows].slice(0, 250));
   appendMissionSecurityEvent({
     roomId,
@@ -394,9 +528,9 @@ export function addMissionTask({ roomId = 'mission_room_main', title = '', owner
   return task;
 }
 
-export function updateMissionTask(taskId, patch = {}) {
-  const rows = readJson(TASKS_KEY, []);
-  let updated = null;
+export function updateMissionTask(taskId: string, patch: TaskPatch = {}): MissionTask | null {
+  const rows = readJson<MissionTask[]>(TASKS_KEY, []);
+  let updated: MissionTask | null = null;
   const nextRows = rows.map((task) => {
     if (task.id !== taskId) return task;
     updated = {
@@ -426,7 +560,7 @@ export function updateMissionTask(taskId, patch = {}) {
   return updated;
 }
 
-export function createHermesHandoff({ objective = '', project = '', constraints = '', acceptance = '' } = {}) {
+export function createHermesHandoff({ objective = '', project = '', constraints = '', acceptance = '' }: HermesHandoffParams = {}): string {
   const text = [
     'Role: Hermes, external executor worker.',
     `Project: ${redactMissionRoomSecrets(project || 'UNSPECIFIED')}`,

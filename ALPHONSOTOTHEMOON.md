@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 9 of N, v2.5.17): 6 more root-level services migrated to TypeScript (selfDevelopmentService, sentinelSecurityService, echoMemoryService, whatsappWebhookService, rc0EvidenceService, toolConnectionService). Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
+**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 10 of N, v2.5.18): 6 more root-level services migrated to TypeScript (novaAnalysisService, missionRoomService, eventsService, workflowRegistryService, marcusExecutionService, workflowOperationsRegistryService). Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-03
@@ -927,7 +927,23 @@ state at a glance without re-deriving it from the narrative log above.
   `DevCycle`. Root-level count: 17 `.js` / 114 `.ts` (down from 23/108
   before this batch). Verification: 96/96 targeted tests passing across
   8 test files, `npx tsc --noEmit` clean, ESLint clean. Version bumped
-  2.5.16 → 2.5.17. All 5 docs updated in the same pass.
+  2.5.16 → 2.5.17.   All 5 docs updated in the same pass.
+
+- **2026-07-03 (Sprint 5, batch 10, v2.5.18)** — Continued from batch 9,
+  migrated the next 6 smallest remaining root-level `.js` services:
+  `novaAnalysisService`, `missionRoomService`, `eventsService`,
+  `workflowRegistryService`, `marcusExecutionService`,
+  `workflowOperationsRegistryService`. Fixed type errors: added
+  `DEFAULT_OLLAMA_ENDPOINT` to required `generateOllamaResponse` call in
+  `novaAnalysisService`; removed invalid `score` field from
+  `storeNovaScore` (only `opportunityScore`/`riskScore` accepted);
+  restructured `github.createRelease`/`createIssue` calls to use
+  positional params matching the actual connector signature; added
+  `[key: string]: unknown` to `LedgerRow`; cast `JoseCommandRouteResult`
+  via `unknown`. Root-level count: 11 `.js` / 120 `.ts` (down from
+  17/114 before this batch). Verification: 152/152 targeted tests passing
+  across 5 test files, `npx tsc --noEmit` clean, ESLint clean. Version
+  bumped 2.5.17 → 2.5.18. All 5 docs updated in the same pass.
 
 **Process to follow for each future batch** (established in batches 1-2,
 keep doing this — do not skip steps to go faster):

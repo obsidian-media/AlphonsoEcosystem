@@ -32,6 +32,146 @@
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type EventOutcome = 'success' | 'failure' | 'blocked' | 'pending' | 'skipped';
+
+export type EventTrustState = 'verified' | 'inferred' | 'pending' | 'failed' | 'stale';
+
+export type EventSource = 'alphonso' | 'alphonso/operator' | 'alphonso/onboarding' | 'alphonso/notion_sync' | 'system' | 'ollama';
+
+export interface EventRecord {
+  id: string;
+  eventType: string;
+  source: string;
+  subjectKind: string | null;
+  subjectId: string | null;
+  outcome: string;
+  payload: unknown;
+  dedupKey: string;
+  occurredAtMs: number;
+  recordedAtMs?: number;
+  correlationId: string | null;
+  trust: string;
+  [key: string]: unknown;
+}
+
+export interface RawEventRow {
+  id?: string;
+  eventType?: string;
+  event_type?: string;
+  source?: string;
+  subjectKind?: string | null;
+  subject_kind?: string | null;
+  subjectId?: string | null;
+  subject_id?: string | null;
+  outcome?: string;
+  payload?: unknown;
+  dedupKey?: string;
+  dedup_key?: string;
+  occurredAtMs?: number;
+  occurred_at_ms?: number;
+  recordedAtMs?: number;
+  recorded_at_ms?: number;
+  correlationId?: string | null;
+  correlation_id?: string | null;
+  trust?: string;
+  [key: string]: unknown;
+}
+
+export interface BuildEventParams {
+  eventType?: string;
+  source?: string;
+  subjectKind?: string | null;
+  subjectId?: string | null;
+  outcome?: string;
+  payload?: unknown;
+  dedupKey?: string;
+  occurredAtMs?: number | null;
+  correlationId?: string | null;
+  trust?: string;
+}
+
+interface AvailabilityState {
+  checked: boolean;
+  available: boolean;
+  nextCheckAtMs: number;
+}
+
+interface DedupEntry {
+  first: EventRecord;
+  count: number;
+  last: EventRecord;
+}
+
+interface DedupResult {
+  firstEvent: EventRecord;
+  lastEvent: EventRecord;
+  occurrenceCount: number;
+}
+
+interface TypeAggregate {
+  total: number;
+  byOutcome: Record<string, number>;
+  lastAtMs: number;
+}
+
+export interface WeeklyReportParams {
+  records?: RawEventRow[];
+  generatedAtMs?: number | null;
+  lookbackMs?: number | null;
+}
+
+interface WeeklyReportResult {
+  markdown: string;
+  counts: {
+    total: number;
+    byOutcome: Record<string, number>;
+    byType: Record<string, TypeAggregate>;
+  };
+  generatedAtMs: number;
+  windowStartMs: number;
+  windowEndMs: number;
+}
+
+interface EventStoreStatus {
+  available?: boolean;
+  error?: string;
+}
+
+export interface UnifiedWeeklyReportParams {
+  eventsRecords?: RawEventRow[];
+  notionSyncRecords?: Array<Record<string, unknown>>;
+  orchestrationReceipts?: Array<Record<string, unknown>>;
+  memoryItems?: Array<Record<string, unknown>>;
+  generatedAtMs?: number | null;
+  lookbackMs?: number | null;
+}
+
+interface UnifiedWeeklyReportResult {
+  markdown: string;
+  counts: {
+    receipts: number;
+    receiptByStatus: Record<string, number>;
+    receiptByAgent: Record<string, number>;
+    events: {
+      total: number;
+      byOutcome: Record<string, number>;
+      byType: Record<string, TypeAggregate>;
+    };
+    memoryItems: number;
+    memoryByCategory: Record<string, number>;
+    notionRecords: number;
+    notionConflicts: number;
+    notionPending: number;
+  };
+  generatedAtMs: number;
+  windowStartMs: number;
+  windowEndMs: number;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 export const EVENT_OUTCOMES = Object.freeze({
   SUCCESS: 'success',
   FAILURE: 'failure',
@@ -57,27 +197,27 @@ export const EVENT_SOURCES = Object.freeze({
   OLLAMA: 'ollama'
 });
 
-const availability = {
+const availability: AvailabilityState = {
   checked: false,
   available: false,
   nextCheckAtMs: 0
 };
 
-export function resetEventsAvailability() {
+export function resetEventsAvailability(): void {
   availability.checked = false;
   availability.available = false;
   availability.nextCheckAtMs = 0;
 }
 
-export function buildEventId(dedupKey, occurredAtMs) {
+export function buildEventId(dedupKey: string, occurredAtMs: number): string {
   const k = String(dedupKey || '').trim() || 'event';
   const ts = Math.max(0, Number(occurredAtMs || timestampMs()));
   return `evt:${k}:${ts}`;
 }
 
-export function normalizeEventRecord(row = {}) {
+export function normalizeEventRecord(row: RawEventRow = {}): EventRecord {
   return {
-    id: row.id || buildEventId(row.dedupKey || row.dedup_key, row.occurredAtMs || row.occurred_at_ms),
+    id: row.id || buildEventId(row.dedupKey || row.dedup_key || '', row.occurredAtMs || row.occurred_at_ms || timestampMs()),
     eventType: row.eventType || row.event_type || 'unknown',
     source: row.source || EVENT_SOURCES.SYSTEM,
     subjectKind: row.subjectKind ?? row.subject_kind ?? null,
@@ -103,7 +243,7 @@ export function buildEvent({
   occurredAtMs = null,
   correlationId = null,
   trust = TRUST_STATES.VERIFIED
-} = {}) {
+}: BuildEventParams = {}): EventRecord {
   const ts = Number(occurredAtMs || timestampMs());
   const finalDedup = String(dedupKey || `${eventType}:${subjectKind || 'global'}:${subjectId || ts}`);
   return {
@@ -121,7 +261,7 @@ export function buildEvent({
   };
 }
 
-export function buildOllamaPreflightEvent({ endpoint, model, ok, error = null, correlationId = null } = {}) {
+export function buildOllamaPreflightEvent({ endpoint, model, ok, error = null, correlationId = null }: { endpoint?: string; model?: string; ok?: boolean; error?: string | null; correlationId?: string | null } = {}): EventRecord {
   const outcome = ok ? EVENT_OUTCOMES.SUCCESS : EVENT_OUTCOMES.FAILURE;
   const trust = ok ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED;
   return buildEvent({
@@ -137,7 +277,7 @@ export function buildOllamaPreflightEvent({ endpoint, model, ok, error = null, c
   });
 }
 
-export function buildNotionSyncEvent({ direction, notionPageId, projectId, taskId, workflowId, outcome, sourceAgent = 'alphonso', reason = null } = {}) {
+export function buildNotionSyncEvent({ direction, notionPageId, projectId, taskId, workflowId, outcome, sourceAgent = 'alphonso', reason = null }: { direction?: string; notionPageId?: string; projectId?: string; taskId?: string; workflowId?: string; outcome?: string; sourceAgent?: string; reason?: string | null } = {}): EventRecord {
   const dir = String(direction || 'pull');
   const finalOutcome = outcome || EVENT_OUTCOMES.SUCCESS;
   return buildEvent({
@@ -152,8 +292,8 @@ export function buildNotionSyncEvent({ direction, notionPageId, projectId, taskI
   });
 }
 
-export function dedupeEvents(records = []) {
-  const byKey = new Map();
+export function dedupeEvents(records: RawEventRow[] = []): DedupResult[] {
+  const byKey = new Map<string, DedupEntry>();
   for (const raw of records) {
     const ev = normalizeEventRecord(raw);
     if (!ev.dedupKey) continue;
@@ -173,8 +313,8 @@ export function dedupeEvents(records = []) {
   }));
 }
 
-export function aggregateEventsByType(records = []) {
-  const byType = {};
+export function aggregateEventsByType(records: RawEventRow[] = []): Record<string, TypeAggregate> {
+  const byType: Record<string, TypeAggregate> = {};
   for (const raw of records) {
     const ev = normalizeEventRecord(raw);
     if (!byType[ev.eventType]) {
@@ -188,7 +328,7 @@ export function aggregateEventsByType(records = []) {
   return byType;
 }
 
-export function aggregateEventsWeekly({ records = [], generatedAtMs = null, lookbackMs = null } = {}) {
+export function aggregateEventsWeekly({ records = [], generatedAtMs = null, lookbackMs = null }: WeeklyReportParams = {}): WeeklyReportResult {
   const now = Number(generatedAtMs || timestampMs());
   const lookback = Number(lookbackMs || 7 * 24 * 60 * 60 * 1000);
   const cutoff = now - lookback;
@@ -196,11 +336,11 @@ export function aggregateEventsWeekly({ records = [], generatedAtMs = null, look
     .map((r) => normalizeEventRecord(r))
     .filter((r) => r.occurredAtMs >= cutoff);
   const byType = aggregateEventsByType(recent);
-  const outcomeCounts = { success: 0, failure: 0, blocked: 0, pending: 0, skipped: 0 };
+  const outcomeCounts: Record<string, number> = { success: 0, failure: 0, blocked: 0, pending: 0, skipped: 0 };
   for (const r of recent) {
     outcomeCounts[r.outcome] = (outcomeCounts[r.outcome] || 0) + 1;
   }
-  const lines = [];
+  const lines: string[] = [];
   lines.push('# Events — Weekly Summary');
   lines.push('');
   lines.push(`- Window: last ${Math.round(lookback / (24 * 60 * 60 * 1000))} days`);
@@ -234,13 +374,13 @@ export function aggregateEventsWeekly({ records = [], generatedAtMs = null, look
   };
 }
 
-export async function isEventsTableAvailable(force = false) {
+export async function isEventsTableAvailable(force: boolean = false): Promise<boolean> {
   const now = timestampMs();
   if (!force && availability.checked && availability.nextCheckAtMs > now) {
     return availability.available;
   }
   try {
-    const status = await invoke('get_event_store_status');
+    const status = await invoke('get_event_store_status') as EventStoreStatus;
     availability.checked = true;
     availability.available = Boolean(status?.available);
     availability.nextCheckAtMs = now + (availability.available ? 60_000 : 20_000);
@@ -253,43 +393,43 @@ export async function isEventsTableAvailable(force = false) {
   }
 }
 
-export async function getEventStoreStatus() {
+export async function getEventStoreStatus(): Promise<EventStoreStatus> {
   try {
-    return await invoke('get_event_store_status');
-  } catch (err) {
-    return { available: false, error: err?.message || String(err) };
+    return await invoke('get_event_store_status') as EventStoreStatus;
+  } catch (err: unknown) {
+    return { available: false, error: (err as Error)?.message || String(err) };
   }
 }
 
-export async function recordEvent(event) {
+export async function recordEvent(event: RawEventRow | EventRecord): Promise<{ ok: boolean; blocked?: boolean; reason?: string; proof?: unknown; event?: EventRecord }> {
   const available = await isEventsTableAvailable();
   if (!available) return { ok: false, blocked: true, reason: 'events_table_unavailable' };
-  const enriched = event.dedupKey ? event : buildEvent(event);
-  const normalized = normalizeEventRecord(enriched);
+  const enriched = (event as EventRecord).dedupKey ? event as EventRecord : buildEvent(event as BuildEventParams);
+  const normalized = normalizeEventRecord(enriched as RawEventRow);
   try {
     const proof = await invoke('record_event', { event: normalized });
     return { ok: true, proof, event: normalized };
-  } catch (err) {
-    return { ok: false, blocked: false, reason: err?.message || String(err) };
+  } catch (err: unknown) {
+    return { ok: false, blocked: false, reason: (err as Error)?.message || String(err) };
   }
 }
 
-export async function listEvents(filters = {}) {
+export async function listEvents(filters: Record<string, unknown> = {}): Promise<EventRecord[]> {
   const available = await isEventsTableAvailable();
   if (!available) return [];
   try {
-    const rows = await invoke('list_events_command', { filters });
-    return Array.isArray(rows) ? rows.map((r) => normalizeEventRecord(r)) : [];
+    const rows = await invoke('list_events_command', { filters }) as unknown[];
+    return Array.isArray(rows) ? rows.map((r) => normalizeEventRecord(r as RawEventRow)) : [];
   } catch {
     return [];
   }
 }
 
-export async function listEventDedup(limit = 200) {
+export async function listEventDedup(limit: number = 200): Promise<unknown[]> {
   const available = await isEventsTableAvailable();
   if (!available) return [];
   try {
-    const rows = await invoke('list_event_dedup_command', { limit });
+    const rows = await invoke('list_event_dedup_command', { limit }) as unknown[];
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];
@@ -303,7 +443,7 @@ export function unifiedWeeklyReport({
   memoryItems = [],
   generatedAtMs = null,
   lookbackMs = null
-} = {}) {
+}: UnifiedWeeklyReportParams = {}): UnifiedWeeklyReportResult {
   const now = Number(generatedAtMs || timestampMs());
   const lookback = Number(lookbackMs || 7 * 24 * 60 * 60 * 1000);
   const cutoff = now - lookback;
@@ -311,25 +451,25 @@ export function unifiedWeeklyReport({
   const eventsReport = aggregateEventsWeekly({ records: eventsRecords, generatedAtMs: now, lookbackMs: lookback });
 
   const recentReceipts = orchestrationReceipts.filter((r) => Number(r.timestampMs || 0) >= cutoff);
-  const receiptByStatus = {};
+  const receiptByStatus: Record<string, number> = {};
   for (const r of recentReceipts) {
-    const s = r.status || 'unknown';
+    const s = (r.status as string) || 'unknown';
     receiptByStatus[s] = (receiptByStatus[s] || 0) + 1;
   }
-  const receiptByAgent = {};
+  const receiptByAgent: Record<string, number> = {};
   for (const r of recentReceipts) {
-    const a = r.agent || 'unknown';
+    const a = (r.agent as string) || 'unknown';
     receiptByAgent[a] = (receiptByAgent[a] || 0) + 1;
   }
 
   const recentMemory = memoryItems.filter((m) => Number(m.timestampMs || 0) >= cutoff);
-  const memoryByCategory = {};
+  const memoryByCategory: Record<string, number> = {};
   for (const m of recentMemory) {
-    const c = m.category || 'unknown';
+    const c = (m.category as string) || 'unknown';
     memoryByCategory[c] = (memoryByCategory[c] || 0) + 1;
   }
 
-  const lines = [];
+  const lines: string[] = [];
   lines.push('# Alphonso — Unified Weekly Report');
   lines.push('');
   lines.push(`- Window: last ${Math.round(lookback / (24 * 60 * 60 * 1000))} days`);
@@ -385,8 +525,8 @@ export function unifiedWeeklyReport({
   lines.push('');
 
   lines.push('## Notion Sync');
-  const notionConflicts = notionSyncRecords.filter((r) => r?.sync?.conflict_status && r.sync.conflict_status !== 'clean');
-  const notionPending = notionSyncRecords.filter((r) => r?.sync?.approval_status === 'pending');
+  const notionConflicts = notionSyncRecords.filter((r) => (r as Record<string, unknown>)?.sync && ((r as Record<string, unknown>).sync as Record<string, unknown>)?.conflict_status && ((r as Record<string, unknown>).sync as Record<string, unknown>).conflict_status !== 'clean');
+  const notionPending = notionSyncRecords.filter((r) => (r as Record<string, unknown>)?.sync && ((r as Record<string, unknown>).sync as Record<string, unknown>)?.approval_status === 'pending');
   lines.push(`- Total sync records: ${notionSyncRecords.length}`);
   lines.push(`- Conflicts: ${notionConflicts.length}`);
   lines.push(`- Pending approvals: ${notionPending.length}`);
