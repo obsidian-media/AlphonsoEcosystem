@@ -68,7 +68,8 @@ vi.mock('../services/telegramBrowserConnector', () => ({
 // ── connectorAuth (direct import path used by panel) ─────────────────────────
 vi.mock('../services/connectors/connectorAuth', () => ({
   saveConnectorCredential: vi.fn(),
-  getConnectorCredential: vi.fn().mockReturnValue('')
+  getConnectorCredential: vi.fn().mockReturnValue(''),
+  hydrateConnectorCredentialsFromSqlite: vi.fn().mockResolvedValue()
 }));
 
 // ── ToolConnectionsPanel (child component) ────────────────────────────────────

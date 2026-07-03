@@ -1,5 +1,17 @@
+import { timingSafeEqual } from 'node:crypto';
+
 const rateWindowMs = Number(process.env.WEBHOOK_RATE_WINDOW_MS || 60_000);
 const rateMaxRequests = Number(process.env.WEBHOOK_RATE_MAX_REQUESTS || 60);
+
+// Constant-time token comparison — plain `===` on secrets leaks timing
+// information proportional to the matching-prefix length, letting a remote
+// attacker recover a shared secret byte-by-byte over many requests.
+export function constantTimeEqual(a, b) {
+  const bufA = Buffer.from(String(a || ''), 'utf8');
+  const bufB = Buffer.from(String(b || ''), 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 export function createRateLimiter({ windowMs = rateWindowMs, maxRequests = rateMaxRequests } = {}) {
   const buckets = new Map();

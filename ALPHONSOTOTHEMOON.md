@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprint 1 and Sprint 2 closed; Sprint 3 closed in full (skill-library depth v2.5.4 + discoverability audit v2.5.5)
+**Status:** Sprints 1-4 closed. Sprint 4 (v2.5.6) fixed a real Telegram owner-registration auth bypass + constant-time token comparisons on both gateways.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-02
@@ -510,6 +510,77 @@ into Sprint 2+ — not dropped.
     (note: the broad `pkill -f vite` used to stop it may also have
     stopped the unrelated third-party "MINT" dev server sharing this
     machine — flagged to the user in the session summary, not hidden).
+- **2026-07-02 (Sprint 4, security hardening Batch 2, v2.5.6)** — Confirmed
+  with the user that Sprint 3 (both halves) was actually committed and
+  pushed before starting (checked `git log`/`git status` against
+  `origin/main` rather than assuming from memory). Then started Sprint 4.
+  - Tried the `security-review` skill first, per the sprint doc's own
+    suggestion. It's scoped to reviewing a git diff/PR — there was no
+    pending diff (Sprint 4 targets already-merged Sprint 2 code), so it
+    produced nothing useful. Switched to a direct codebase audit instead
+    of forcing a diff-shaped tool onto a non-diff task.
+  - Read `discordConnector.ts` end-to-end and grepped for callers of
+    `getChannelHistory` — confirmed it's outbound-only with no automatic
+    ingestion pipeline, so the "Discord message content reaching agent
+    prompts" threat from the sprint doc doesn't currently exist. Did the
+    same trace for `genericWebhookService.js` and
+    `whatsappBrowserConnector.js` — neither forwards raw payload content
+    into `createJoseCommandRoute`.
+  - That last check is what surfaced the real finding: grepping for
+    `createJoseCommandRoute(` across the codebase showed
+    `telegramCompanionService.js` *does* forward raw text (both `/ask`
+    and plain messages) to Jose, gated on an "owner chat ID" check. Read
+    that gate closely and found it was first-come-first-served: whichever
+    chat sent `/start` first (with no owner yet registered) became
+    permanent owner, no secret required. Confirmed Telegram bot usernames
+    are publicly searchable (unlike tokens) before treating this as a real
+    finding, not a theoretical one.
+  - Asked the user before fixing (per standing instruction) since this
+    needed real feature work, not a one-liner: proposed generating a new
+    pairing-code secret shown in Settings. User approved. While
+    implementing, grepped `ConnectorSetupPanel.tsx` for existing Telegram
+    fields first (per the project's "check what exists before building"
+    rule) and found `TELEGRAM_ALLOWED_CHAT_IDS` already existed in the UI
+    but was never read anywhere in `telegramCompanionService.js` — a dead
+    field. Reused it instead of building a new pairing-code mechanism:
+    same security guarantee (pre-shared-secret gates first-claim), less
+    new surface, and it activates UI that silently did nothing before.
+    Documented this pivot transparently rather than silently substituting
+    it for what was approved.
+  - Updated the existing `/start command - owner registration` test block
+    in `telegramCompanionService.test.js` (which would otherwise have
+    broken, since its generic `getConnectorCredential` mock now also
+    answers the new allowlist lookup) and added 3 new tests for the fix
+    itself.
+  - Also asked the user about credential storage (localStorage/SQLite vs.
+    OS-level secret storage) before doing anything, since it's a bigger
+    architecture change — user chose to have it documented as a
+    recommendation only, not implemented this sprint.
+  - Read `.github/workflows/ci.yml` directly rather than assuming CI
+    gating was correct — confirmed both `npm audit --audit-level=high`
+    and `cargo audit --deny warnings` actually fail the build on findings
+    (no `continue-on-error` on either), so no fix was needed there.
+  - Found the WhatsApp gateway's real HMAC signature check
+    (`verify.js`'s `verifySignature`) already used
+    `crypto.timingSafeEqual` correctly — only the simpler bearer/query
+    token checks in both gateways' `server.js` had drifted to plain
+    `===`. Added one shared `constantTimeEqual()` helper per gateway
+    (kept them gateway-local rather than a new shared package, matching
+    how `security.js` is already duplicated per-gateway) and wired it
+    into every token comparison in both files, including
+    `verifyChallenge`.
+  - While running the full targeted suite, hit the already-documented
+    `ConnectorSetupPanel.test.jsx` failure (open since Sprint 2, exact
+    one-line fix already diagnosed in `CLAUDE.md` Real Gaps) — since this
+    session was already touching that exact test file for the Telegram UI
+    copy update, applied the documented fix rather than leaving it open
+    for a third sprint to rediscover.
+  - Verification: 48/48 targeted tests passing across
+    `telegramCompanionService` (22, up from 19), `ConnectorSetupPanel` (7,
+    now passing for the first time since Sprint 2), `whatsappCloudGateway`,
+    `whatsappGatewaySecurity`, `genericWebhookService`. `npx tsc --noEmit`
+    clean. ESLint clean.
+  - Version bumped 2.5.5 → 2.5.6. All docs updated in the same pass.
 
 ## Sprint status at a glance
 
@@ -518,7 +589,7 @@ into Sprint 2+ — not dropped.
 | 1 | Licensing (SHALAUDE) + skill-pack↔contract validation + pipeline loop-guard | ✅ Closed 2026-07-02 |
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
 | 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
-| 4 | Security hardening Batch 2 (attacker-resistance) | 🌱 Seeded, not started |
+| 4 | Security hardening Batch 2 (attacker-resistance) | ✅ Closed 2026-07-02 (v2.5.6) — fixed Telegram owner-registration auth bypass + constant-time gateway token comparisons; audited Discord/webhook/CI-gating with no further fix needed; credential-storage upgrade documented as a Sprint 6 recommendation |
 | 5 | Service-layer TypeScript migration | 🌱 Seeded, not started |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🌱 Seeded, not started |
 
@@ -654,35 +725,104 @@ creative pack handling everything shallowly.
   for the 2-3 highest-traffic agents (Miya, Hector, Jose) as a v1, not a
   big-bang rebuild.
 
-## Sprint 4 (seeded): Security hardening Batch 2 — attacker resistance
+## Sprint 4 (CLOSED 2026-07-02, v2.5.6): Security hardening Batch 2 — attacker resistance
 
-**Context:** `CLAUDE.md` currently documents "Security (Batch 1 complete)"
-— SSRF blocking, PKCE OAuth, native clipboard/dialog/open_url APIs, CSP
-narrowing, per-program arg allowlist. That's app-integrity hardening
-(don't let the app do something wrong). Batch 2 should be the adversarial
-pass: can an external attacker (malicious webhook payload, malicious skill
-pack, malicious MCP tool, compromised connector credential) actually cause
-harm.
+**Context:** `CLAUDE.md` documented "Security (Batch 1 complete)" — SSRF
+blocking, PKCE OAuth, native clipboard/dialog/open_url APIs, CSP narrowing,
+per-program arg allowlist. That's app-integrity hardening (don't let the
+app do something wrong). Batch 2 was the adversarial pass: can an external
+attacker (malicious webhook payload, compromised bot username, weak token
+comparison) actually cause harm — audited directly against the codebase
+rather than via the diff-scoped `security-review` skill, since this sprint
+targets already-merged Sprint 2 code, not a pending PR.
 
-- Threat-model the two new Sprint 2 inbound surfaces specifically: the
-  generic webhook gateway (unauthenticated-until-token-checked JSON from
-  the internet) and Discord (bot token scope creep, message content from
-  untrusted users reaching agent prompts).
-- Prompt-injection resistance audit: what happens when webhook payload
-  content, Discord message content, or Telegram/WhatsApp inbound text
-  contains an injection attempt aimed at Jose's routing or an agent's
-  system prompt.
-- Credential storage audit: connector credentials currently live in
-  localStorage + SQLite dual-write (`durableStore.js`) — evaluate whether
-  that's sufficient or whether OS-level secret storage (Windows Credential
-  Manager via a Tauri plugin) is warranted for a security-conscious release.
-- Rate-limiting audit across all inbound surfaces (webhook gateway already
-  has one; check Telegram/WhatsApp/Discord polling paths).
-- Dependency/supply-chain pass: `npm audit` + `cargo audit` are already in
-  CI per `ci.yml` — verify they're actually gating merges, not just running.
-- This is the sprint to actually engage a real security-focused review
-  pass (e.g. `/code-review security` or a dedicated pentest-style pass)
-  rather than self-assessed hardening.
+**What was found and fixed:**
+
+1. **Telegram companion bot: first-come-first-served owner registration —
+   real authentication-bypass finding, fixed.** In
+   `telegramCompanionService.js`, whichever chat sent `/start` *first* (when
+   no owner was yet registered) became the **permanent** owner with full
+   command authority to route arbitrary text to Jose via `/ask` or plain
+   messages. Telegram bot *usernames* are publicly searchable (unlike the
+   bot token), so an attacker who finds the bot before the legitimate owner
+   sends `/start` could win this race and take control. **Fix:** gated
+   first-time registration on `TELEGRAM_ALLOWED_CHAT_IDS` — an allowlist
+   credential field that already existed in `ConnectorSetupPanel.tsx` but
+   was never actually read or enforced by the companion service before this
+   fix (found via grep, not assumed). Registration now refuses outright if
+   the allowlist is empty, and refuses any chat ID not on it. Updated the
+   Settings UI copy from "(optional)" to "(required to pair)" with an
+   explanation of why. Added 3 new regression tests (allowlist enforced,
+   empty-allowlist refusal, comma-separated list support) to the existing
+   `/start command - owner registration` test block — 22/22 passing.
+   **Design note:** the plan discussed with the user before implementing
+   was a newly-generated pairing code shown in Settings; during
+   implementation, discovered the allowlist field already existed
+   (unused/dead) and reused it instead — same security guarantee
+   (pre-shared-secret required before first-claim), less net-new surface,
+   and it activates a UI field that was previously silently non-functional.
+2. **Constant-time token comparison for both inbound gateways.** Both
+   `gateway/generic-webhook/src/server.js` and
+   `gateway/whatsapp-cloud/src/server.js` compared shared secrets
+   (`WEBHOOK_SHARED_SECRET`, `ALPHONSO_DRAIN_TOKEN`, `WHATSAPP_VERIFY_TOKEN`)
+   with plain `===`, which leaks timing information proportional to the
+   matching-prefix length. The WhatsApp gateway's actual HMAC payload
+   signature check (`verify.js`'s `verifySignature`) already correctly used
+   `crypto.timingSafeEqual` — only the simpler bearer/query-token checks had
+   drifted from that pattern. Added a shared `constantTimeEqual()` helper
+   (length-check + `crypto.timingSafeEqual`) to both gateways' `security.js`
+   and to `verify.js`'s `verifyChallenge`; wired into every token comparison
+   in both gateway servers.
+3. **Discord threat-model: no fix needed, confirmed by tracing the code.**
+   `discordConnector.ts` is outbound-only — nothing wires
+   `getChannelHistory()` (or any other Discord read) into an automatic
+   ingestion pipeline that reaches Jose's routing or an agent prompt.
+   Discord message content only reaches Alphonso when an agent explicitly
+   calls the connector; there is no standing inbound listener. Not a gap
+   this sprint — logged so this doesn't get re-audited from scratch later.
+4. **Generic webhook + WhatsApp inbound content: traced, not currently a
+   prompt-injection vector.** `genericWebhookService.js`'s drained events
+   only produce an `orchestrationReceipt` (audit log) and a UI notification
+   count — the raw payload is never passed to `createJoseCommandRoute`.
+   `whatsappBrowserConnector.js` likewise never calls it. The one channel
+   that *does* forward raw text to Jose is Telegram's `/ask` and
+   plain-message path — which is exactly why item 1 above (who's allowed to
+   use that path) was the real finding, not the content itself.
+5. **`npm audit` / `cargo audit` CI gating — confirmed already correct, no
+   fix needed.** Read `.github/workflows/ci.yml` directly: `npm audit
+   --audit-level=high` (line 28-29) has no `continue-on-error`, so it fails
+   the job on high-severity findings; `cargo audit --deny warnings` (line
+   75-77) has `continue-on-error: false` explicitly. The `continue-on-error:
+   true` steps elsewhere in the file are for coverage reporting and
+   non-security health checks, not audits.
+6. **Credential storage (localStorage + SQLite dual-write vs. OS-level
+   secret storage): documented as a recommendation, not implemented.** User
+   explicitly chose to scope this as a documented follow-up rather than a
+   Tauri-plugin architecture change in this sprint. **Recommendation:**
+   Windows Credential Manager via a `tauri-plugin-keyring`-style crate would
+   be the natural next step for a security-conscious release — connector
+   credentials (bot tokens, webhook secrets, API keys) currently live in
+   `localStorage` with a fire-and-forget SQLite dual-write
+   (`durableStore.js`), which is acceptable for a local-first single-user
+   desktop app but doesn't protect against another local process/user
+   reading the SQLite file or browser storage directly. Not urgent while
+   Alphonso remains single-user desktop-only; becomes a real priority if/when
+   multi-user or shared-machine use is ever supported. Tracked as a Sprint 6
+   carryover item, not silently dropped.
+
+**Explicitly out of scope this pass** (per the user's own scoping choice):
+implementing OS-level credential storage; a dedicated external
+pentest-style engagement (the doc's original suggestion of `/code-review
+security` didn't apply directly since that skill reviews a git diff, and
+Sprint 4's targets are already-merged code — audited directly instead).
+
+Verification: 48/48 targeted tests passing (`telegramCompanionService` 22,
+`ConnectorSetupPanel` 7, `whatsappCloudGateway`, `whatsappGatewaySecurity`,
+`genericWebhookService`), `npx tsc --noEmit` clean, ESLint clean. Bonus: en
+route, fixed the known pre-existing `ConnectorSetupPanel.test.jsx` failure
+(logged in `CLAUDE.md` Real Gaps since Sprint 2) — one-line addition of
+`hydrateConnectorCredentialsFromSqlite: vi.fn().mockResolvedValue()` to its
+`connectorAuth` mock factory, exactly as previously diagnosed.
 
 ## Sprint 5 (seeded): Service-layer TypeScript migration
 

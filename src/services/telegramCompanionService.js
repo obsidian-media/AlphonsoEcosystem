@@ -42,6 +42,19 @@ function isNotificationsPaused() {
   return getStorage(NOTIFICATIONS_PAUSED_KEY, false);
 }
 
+// The chat that first sends /start with no owner yet registered would
+// otherwise become the permanent owner with full command authority over
+// Jose — a race an attacker can win if they find the bot's (publicly
+// discoverable) username before the real owner sends /start. Gate first-time
+// registration on TELEGRAM_ALLOWED_CHAT_IDS, an allowlist credential field
+// that already existed in ConnectorSetupPanel.tsx but was never read/enforced
+// here. Requires the user to look up their own numeric chat ID (e.g. via
+// @userinfobot) and set it in Settings before the first /start.
+function getAllowedChatIds() {
+  const raw = getConnectorCredential('telegram', 'TELEGRAM_ALLOWED_CHAT_IDS') || '';
+  return raw.split(/[,\n]/).map((value) => value.trim()).filter(Boolean);
+}
+
 export function setNotificationsPaused(paused) {
   setStorage(NOTIFICATIONS_PAUSED_KEY, paused);
 }
@@ -529,6 +542,21 @@ export async function processInboundCommands(token, updates) {
     const ownerChatId = getOwnerChatId();
 
     if (!ownerChatId) {
+      const allowedChatIds = getAllowedChatIds();
+      if (allowedChatIds.length === 0) {
+        return sendTelegramMessageInternal({
+          token,
+          chatId,
+          text: 'Pairing blocked: set TELEGRAM_ALLOWED_CHAT_IDS (your Telegram chat ID) in Alphonso Settings → Connectors → Telegram before sending /start.'
+        });
+      }
+      if (!allowedChatIds.includes(chatId)) {
+        return sendTelegramMessageInternal({
+          token,
+          chatId,
+          text: 'Unauthorized. This chat is not in the configured Telegram allowlist.'
+        });
+      }
       if (text === '/start') {
         setOwnerChatId(chatId);
         return sendTelegramMessageInternal({

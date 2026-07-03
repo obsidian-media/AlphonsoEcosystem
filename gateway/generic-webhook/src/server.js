@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { createRateLimiter, readBodyWithLimit, redactGatewayDetails } from './security.js';
+import { constantTimeEqual, createRateLimiter, readBodyWithLimit, redactGatewayDetails } from './security.js';
 
 const PORT = Number(process.env.PORT || 8081);
 // Shared secret every inbound POST /webhook/:sourceId must present.
@@ -34,7 +34,7 @@ function isRequestAuthorized(request, url, expectedToken) {
   const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
   const headerToken = String(request.headers['x-webhook-token'] || '');
   const query = url.searchParams.get('token') || '';
-  return bearer === expectedToken || headerToken === expectedToken || query === expectedToken;
+  return constantTimeEqual(bearer, expectedToken) || constantTimeEqual(headerToken, expectedToken) || constantTimeEqual(query, expectedToken);
 }
 
 function safeLog(message, details = {}) {

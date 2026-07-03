@@ -117,10 +117,74 @@ describe('telegramCompanionService', () => {
   });
 
   describe('/start command - owner registration', () => {
-    it('registers owner chatId when no owner exists', async () => {
-      mockAuth.getConnectorCredential.mockReturnValue('test-token');
+    // Regression coverage for the Sprint 4 security-hardening fix
+    // (2026-07-02): first-come-first-served /start registration let anyone
+    // who messaged the (publicly discoverable) bot username first become
+    // the permanent owner with full command authority over Jose. Owner
+    // registration is now gated on TELEGRAM_ALLOWED_CHAT_IDS, an allowlist
+    // credential that already existed in ConnectorSetupPanel.tsx but was
+    // never enforced here before this fix.
+    function mockCredential(chatIdsValue) {
+      mockAuth.getConnectorCredential.mockImplementation((_connector, key) =>
+        key === 'TELEGRAM_ALLOWED_CHAT_IDS' ? chatIdsValue : 'test-token'
+      );
+    }
+
+    it('registers owner chatId when the chat is in the configured allowlist', async () => {
+      mockCredential('chat-123');
       mockAppStorage.getStorage.mockReturnValue(null);
-      
+
+      const processFn = service.processInboundCommands;
+      await processFn('test-token', {
+        ok: true,
+        messages: [{
+          chat: { id: 'chat-123' },
+          message: { text: '/start' },
+          update_id: 1
+        }]
+      });
+
+      expect(mockAppStorage.setStorage).toHaveBeenCalled();
+    });
+
+    it('refuses to register an owner when no allowlist is configured', async () => {
+      mockCredential('');
+      mockAppStorage.getStorage.mockReturnValue(null);
+
+      const processFn = service.processInboundCommands;
+      await processFn('test-token', {
+        ok: true,
+        messages: [{
+          chat: { id: 'chat-123' },
+          message: { text: '/start' },
+          update_id: 1
+        }]
+      });
+
+      expect(mockAppStorage.setStorage).not.toHaveBeenCalled();
+    });
+
+    it('refuses to register an owner from a chat not in the allowlist', async () => {
+      mockCredential('some-other-chat-id');
+      mockAppStorage.getStorage.mockReturnValue(null);
+
+      const processFn = service.processInboundCommands;
+      await processFn('test-token', {
+        ok: true,
+        messages: [{
+          chat: { id: 'attacker-chat' },
+          message: { text: '/start' },
+          update_id: 1
+        }]
+      });
+
+      expect(mockAppStorage.setStorage).not.toHaveBeenCalled();
+    });
+
+    it('supports a comma-separated allowlist', async () => {
+      mockCredential('chat-111, chat-123, chat-999');
+      mockAppStorage.getStorage.mockReturnValue(null);
+
       const processFn = service.processInboundCommands;
       await processFn('test-token', {
         ok: true,

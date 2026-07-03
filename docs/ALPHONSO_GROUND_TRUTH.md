@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-02 — v2.5.5 (Sprint 3 discoverability audit: found + fixed a live app-crashing bug in Boardroom Sessions)
-**Verified by:** Claude Code session — drove the actual running app with Playwright (headless Chromium against `npm run dev`), not source-reading alone. Targeted tests passed 100% (46/46 across `boardroomView`, `appLazyImports`, `ecosystemHub`, `agentPairingView`, `selfDevelopmentService`), `npx tsc --noEmit` clean (0 errors). Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
-**Version:** 2.5.5 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 22 unchanged; skill-pack count 23 unchanged this sprint — this sprint closed the discoverability-audit half of Sprint 3 and fixed a critical crash bug found during it)
+**Last verified:** 2026-07-02 — v2.5.6 (Sprint 4 security hardening: fixed a real Telegram owner-registration auth bypass + constant-time gateway token comparisons)
+**Verified by:** Claude Code session — audited already-merged Sprint 2 code directly (grep + read, not a diff review — the `security-review` skill is diff-scoped and didn't apply). Targeted tests passed 100% (48/48 across `telegramCompanionService`, `ConnectorSetupPanel`, `whatsappCloudGateway`, `whatsappGatewaySecurity`, `genericWebhookService`), `npx tsc --noEmit` clean (0 errors), ESLint clean. Full 218-file suite still cannot complete in one run on this dev machine (same pre-existing worker-pool timeout noted below) — not re-attempted, root cause unchanged.
+**Version:** 2.5.6 (security hardened, 218 test files, 3,174+ tests, 165 services; connector count 22 unchanged; also closed the `ConnectorSetupPanel.test.jsx` mock gap open since Sprint 2 as a bonus fix)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -1125,6 +1125,62 @@ skill for running this app existed yet.
   `http://127.0.0.1:5173` rather than `http://localhost:5173` to reach the
   right server. Not an Alphonso bug — logged here only so a future session
   doesn't waste time rediscovering it.
+
+## 11.10 ALPHONSOTOTHEMOON Sprint 4: security hardening Batch 2 (2026-07-02, v2.5.6)
+
+Full context in `ALPHONSOTOTHEMOON.md`. Audited already-merged Sprint 2 code
+directly (grep + read), not via the diff-scoped `security-review` skill,
+since there was no pending PR to review.
+
+- **Real authentication-bypass bug found and fixed**: `telegramCompanionService.js`'s
+  `/start` owner registration was first-come-first-served — whichever chat
+  messaged the bot first (while no owner was yet registered) became the
+  *permanent* owner with full command authority to route arbitrary text to
+  Jose. Telegram bot usernames are publicly searchable (unlike bot tokens),
+  so an attacker who found the bot before its legitimate owner could win
+  this race. Fixed by gating first-time registration on
+  `TELEGRAM_ALLOWED_CHAT_IDS` — a credential field that already existed in
+  `ConnectorSetupPanel.tsx` (labeled "optional") but was never read or
+  enforced anywhere in `telegramCompanionService.js` before this fix.
+  Registration now refuses if the allowlist is empty or the chat ID isn't
+  on it. UI label changed to "(required to pair)" with an explanation.
+  3 new regression tests added to the existing owner-registration test
+  block (22/22 passing total for that file, up from 19).
+- **Design note**: the plan discussed with the user before implementing was
+  a newly-generated pairing code shown in Settings. While implementing,
+  found the allowlist field already existed and was dead code — reused it
+  instead (same security guarantee, less new surface, activates a
+  previously-inert UI field). Documented as a transparent pivot, not a
+  silent substitution.
+- **Constant-time token comparison** added to both
+  `gateway/generic-webhook/src/server.js` and
+  `gateway/whatsapp-cloud/src/server.js` — both compared shared secrets
+  with plain `===`. The WhatsApp gateway's actual HMAC payload-signature
+  check (`verify.js`'s `verifySignature`) already correctly used
+  `crypto.timingSafeEqual`; only the simpler bearer/query-token checks had
+  drifted from that pattern. Added a shared `constantTimeEqual()` helper
+  to both gateways' `security.js` and to `verify.js`'s `verifyChallenge`.
+- **Audited, no fix needed**: `discordConnector.ts` is outbound-only, no
+  automatic ingestion pipeline exists for its `getChannelHistory()` or any
+  other read into agent prompts. `genericWebhookService.js`'s drained
+  events only produce an audit receipt + UI notification count, never
+  reach `createJoseCommandRoute`. Same for `whatsappBrowserConnector.js`.
+  `.github/workflows/ci.yml` confirmed: `npm audit --audit-level=high` and
+  `cargo audit --deny warnings` both already fail the build on findings
+  (no `continue-on-error` on either).
+- **Documented, not implemented** (user's explicit choice): OS-level
+  credential storage (e.g. Windows Credential Manager via a Tauri plugin)
+  vs. the current localStorage + SQLite dual-write. Recommended for a
+  future sprint if/when multi-user or shared-machine use is ever
+  supported; not urgent for a single-user local-first desktop app.
+  Tracked as a Sprint 6 carryover item.
+- **Bonus fix**: closed the `ConnectorSetupPanel.test.jsx` failure open
+  since Sprint 2 (documented one-line fix: added
+  `hydrateConnectorCredentialsFromSqlite: vi.fn().mockResolvedValue()` to
+  its `connectorAuth` mock factory) — found while already touching that
+  file for the Telegram UI copy change.
+- Verification: 48/48 targeted tests passing, `npx tsc --noEmit` clean,
+  ESLint clean.
 
 ---
 

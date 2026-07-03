@@ -662,14 +662,14 @@ export function ConnectorSetupPanel(): React.JSX.Element {
                   placeholder="Paste your bot token from @BotFather" autoComplete="off" />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Allowed Chat IDs <span className="text-zinc-600 font-normal">(optional)</span></label>
+                <label className="mb-1.5 block text-[11px] font-medium text-zinc-400">Allowed Chat IDs <span className="text-amber-500 font-normal">(required to pair)</span></label>
                 <input type="text" value={telegramChatIds} onChange={(e) => setTelegramChatIds(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-white/20 focus:outline-none"
                   placeholder="e.g. 123456789, 987654321" />
               </div>
             </div>
             <p className="mt-3 text-[11px] text-zinc-500">
-              Create a bot with <span className="text-zinc-400">@BotFather</span> on Telegram to get your bot token. Allowed Chat IDs restrict who can send commands to Alphonso.
+              Create a bot with <span className="text-zinc-400">@BotFather</span> on Telegram to get your bot token, then message <span className="text-zinc-400">@userinfobot</span> to get your own numeric chat ID. Set it here <span className="text-zinc-400">before</span> sending <span className="text-zinc-400">/start</span> to your bot — Alphonso will only let a chat ID on this list claim ownership, closing the window where anyone who finds your bot first could take control.
             </p>
             {telegramBotVerified !== null && (
               <div className={`mt-3 flex items-center gap-1.5 text-[12px] font-medium ${telegramBotVerified.ok ? 'text-emerald-400' : 'text-red-400'}`}>

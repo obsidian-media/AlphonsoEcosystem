@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { normalizeInboundPayload } from './normalize.js';
 import { forwardNormalizedPacket } from './forward.js';
-import { createRateLimiter, readBodyWithLimit, redactGatewayDetails } from './security.js';
+import { constantTimeEqual, createRateLimiter, readBodyWithLimit, redactGatewayDetails } from './security.js';
 import { verifyChallenge, verifySignature } from './verify.js';
 
 const PORT = Number(process.env.PORT || 8080);
@@ -46,7 +46,7 @@ function isQueueAuthorized(request, url) {
   const auth = String(request.headers['authorization'] || '');
   const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
   const query = url.searchParams.get('token') || '';
-  return bearer === expectedToken || query === expectedToken;
+  return constantTimeEqual(bearer, expectedToken) || constantTimeEqual(query, expectedToken);
 }
 
 function safeLog(message, details = {}) {

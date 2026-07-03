@@ -6,6 +6,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.6] — 2026-07-02
+
+### Sprint 4: security hardening Batch 2 — attacker resistance
+
+- **Fixed a real authentication-bypass finding**: Telegram companion bot
+  pairing was first-come-first-served — whichever chat sent `/start` first
+  (when no owner was yet registered) became the *permanent* owner with full
+  command authority over Jose. Telegram bot usernames are publicly
+  searchable (the token isn't, but the username is), so an attacker who
+  found the bot before its real owner could win this race. Fixed by gating
+  first-time registration on `TELEGRAM_ALLOWED_CHAT_IDS` — a credential
+  field that already existed in Settings → Connectors → Telegram but was
+  never enforced. Set your own numeric chat ID there (get it from
+  `@userinfobot`) *before* sending `/start` to your bot. 3 new regression
+  tests added.
+- **Constant-time token comparison** on both inbound gateways
+  (`gateway/generic-webhook`, `gateway/whatsapp-cloud`) — the simpler
+  bearer/query-token checks used plain `===`, which leaks timing
+  information; the more critical HMAC payload-signature check already used
+  `crypto.timingSafeEqual` correctly. Both now use a shared
+  `constantTimeEqual()` helper.
+- **Audited and confirmed no fix needed**: Discord connector is
+  outbound-only (no automatic ingestion of message content into agent
+  prompts); generic webhook and WhatsApp inbound payloads don't reach
+  Jose's routing automatically either; `npm audit`/`cargo audit` in CI
+  already fail the build on findings, not just run informationally.
+- **Documented, not implemented this sprint** (user's explicit choice):
+  moving connector credentials from localStorage/SQLite to OS-level secret
+  storage (e.g. Windows Credential Manager) — recommended for a future
+  sprint if/when multi-user or shared-machine use is ever supported.
+- **Bonus fix**: closed the `ConnectorSetupPanel.test.jsx` failure that's
+  been open and documented since Sprint 2 (missing
+  `hydrateConnectorCredentialsFromSqlite` in a test mock factory) — found
+  while touching that file's Telegram UI copy, fixed with the exact
+  one-line change already diagnosed.
+- 48/48 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean.
+
 ## [2.5.5] — 2026-07-02
 
 ### Critical fix: Boardroom Sessions crashed the entire app (found via Sprint 3 discoverability audit)
