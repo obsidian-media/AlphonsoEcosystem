@@ -2,7 +2,23 @@ import { invoke } from '@tauri-apps/api/core';
 
 const SOUND_CUE_STORAGE_KEY = 'alphonso_coach_sound_cues_v1';
 
-const DEFAULT_SETTINGS = {
+interface CoachSoundCueSettings {
+  enabled: boolean;
+  quiet: boolean;
+  firm: boolean;
+  hard: boolean;
+  volume: number;
+}
+
+export type { CoachSoundCueSettings };
+
+interface SoundCue {
+  frequency: number;
+  durationMs: number;
+  gapMs?: number;
+}
+
+const DEFAULT_SETTINGS: CoachSoundCueSettings = {
   enabled: true,
   quiet: false,
   firm: true,
@@ -10,7 +26,7 @@ const DEFAULT_SETTINGS = {
   volume: 0.22
 };
 
-const CUE_PATTERNS = {
+const CUE_PATTERNS: Record<string, SoundCue[]> = {
   quiet: [{ frequency: 523, durationMs: 90 }],
   firm: [
     { frequency: 660, durationMs: 90 },
@@ -23,7 +39,7 @@ const CUE_PATTERNS = {
   ]
 };
 
-export function getCoachSoundCueSettings() {
+export function getCoachSoundCueSettings(): CoachSoundCueSettings {
   try {
     const raw = localStorage.getItem(SOUND_CUE_STORAGE_KEY);
     return { ...DEFAULT_SETTINGS, ...(raw ? JSON.parse(raw) : {}) };
@@ -32,7 +48,7 @@ export function getCoachSoundCueSettings() {
   }
 }
 
-export function updateCoachSoundCueSettings(patch = {}) {
+export function updateCoachSoundCueSettings(patch: Partial<CoachSoundCueSettings> = {}): CoachSoundCueSettings {
   const next = { ...getCoachSoundCueSettings(), ...patch };
   try {
     invoke('kv_set', { key: SOUND_CUE_STORAGE_KEY, value: JSON.stringify(next) }).catch(() => {});
@@ -47,7 +63,7 @@ export function updateCoachSoundCueSettings(patch = {}) {
   return next;
 }
 
-export function shouldPlayCoachSoundCue(level, settings = getCoachSoundCueSettings()) {
+export function shouldPlayCoachSoundCue(level: string, settings: CoachSoundCueSettings = getCoachSoundCueSettings()): boolean {
   const cleanLevel = String(level || 'quiet').toLowerCase();
   if (!settings.enabled) return false;
   if (cleanLevel === 'hard') return settings.hard !== false;
@@ -55,17 +71,20 @@ export function shouldPlayCoachSoundCue(level, settings = getCoachSoundCueSettin
   return settings.quiet === true;
 }
 
-export function getCoachSoundCuePattern(level) {
+export function getCoachSoundCuePattern(level: string): SoundCue[] {
   return CUE_PATTERNS[String(level || 'quiet').toLowerCase()] || CUE_PATTERNS.quiet;
 }
 
-export async function playCoachSoundCue(level, options = {}) {
+export async function playCoachSoundCue(level: string, options: {
+  settings?: Partial<CoachSoundCueSettings>;
+  audioContext?: AudioContext;
+} = {}): Promise<{ ok: boolean; skipped?: boolean; reason?: string; level?: string; cues?: number; error?: string }> {
   const settings = { ...getCoachSoundCueSettings(), ...options.settings };
   if (!shouldPlayCoachSoundCue(level, settings)) {
     return { ok: false, skipped: true, reason: 'disabled' };
   }
 
-  const AudioContextCtor = globalThis.AudioContext || globalThis.webkitAudioContext;
+  const AudioContextCtor = globalThis.AudioContext || (globalThis as Record<string, unknown>)['webkitAudioContext'] as (new () => AudioContext) | undefined;
   if (!AudioContextCtor) {
     return { ok: false, skipped: true, reason: 'audio_context_unavailable' };
   }

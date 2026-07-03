@@ -10,8 +10,47 @@ export const VOICE_STATES = {
   ERROR: 'error'
 };
 
+export type VoiceState = string;
+
+interface SpeechRecognitionResult {
+  [index: number]: { transcript: string };
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResultEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: Event) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: Event) => void) | null;
+  start(): void;
+  stop(): void;
+}
+
+interface WindowWithSpeechRecognition {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+}
+
 export const TRANSCRIPTION_PIPELINE_STATUS = (() => {
-  const hasSpeechRecognition = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const win = window as unknown as WindowWithSpeechRecognition;
+  const hasSpeechRecognition = typeof window !== 'undefined' && Boolean(win.SpeechRecognition || win.webkitSpeechRecognition);
   return {
     available: hasSpeechRecognition,
     engine: hasSpeechRecognition ? 'WebSpeechAPI' : null,
@@ -22,13 +61,13 @@ export const TRANSCRIPTION_PIPELINE_STATUS = (() => {
   };
 })();
 
-export function supportsMicrophoneCapture() {
+export function supportsMicrophoneCapture(): boolean {
   return Boolean(navigator.mediaDevices?.getUserMedia);
 }
 
-export async function requestAudioStream() {
+export async function requestAudioStream(): Promise<MediaStream> {
   if (!supportsMicrophoneCapture()) {
-    const error = new Error('This WebView or browser does not support microphone capture.');
+    const error = new Error('This WebView or browser does not support microphone capture.') as Error & { voiceState: VoiceState };
     error.voiceState = VOICE_STATES.UNSUPPORTED;
     throw error;
   }
@@ -36,12 +75,17 @@ export async function requestAudioStream() {
   return navigator.mediaDevices.getUserMedia({ audio: true });
 }
 
-export function stopAudioStream(stream) {
+export function stopAudioStream(stream: MediaStream | null): void {
   if (!stream) return;
   stream.getTracks().forEach((track) => track.stop());
 }
 
-export function classifyVoiceError(error) {
+export interface VoiceErrorClassification {
+  state: VoiceState;
+  message: string;
+}
+
+export function classifyVoiceError(error: (Error & { voiceState?: VoiceState; name?: string }) | null): VoiceErrorClassification {
   if (error?.voiceState) {
     return {
       state: error.voiceState,
@@ -76,7 +120,7 @@ export function classifyVoiceError(error) {
   };
 }
 
-export function getVoicePrivacyLabel(state) {
+export function getVoicePrivacyLabel(state: VoiceState): string {
   switch (state) {
     case VOICE_STATES.REQUESTING_PERMISSION:
       return 'Requesting Mic';
@@ -99,22 +143,27 @@ export function getVoicePrivacyLabel(state) {
   }
 }
 
-// SpeechRecognition detection
 const SpeechRecognitionClass = (typeof window !== 'undefined')
-  ? (window.SpeechRecognition || window.webkitSpeechRecognition || null)
+  ? ((window as unknown as WindowWithSpeechRecognition).SpeechRecognition
+    || (window as unknown as WindowWithSpeechRecognition).webkitSpeechRecognition
+    || null)
   : null;
 
-export function supportsSpeechRecognition() {
+export function supportsSpeechRecognition(): boolean {
   return Boolean(SpeechRecognitionClass);
 }
 
-// Start speech recognition. Returns a stop function.
-// onTranscript(text, isFinal) called on each result
-// onEnd() called when recognition ends
-// onError(errorEvent) called on error
-export function startSpeechRecognition({ onTranscript, onEnd, onError, lang = 'en-US', continuous = true }) {
+export interface SpeechRecognitionOptions {
+  onTranscript?: (text: string, isFinal: boolean) => void;
+  onEnd?: () => void;
+  onError?: (error: SpeechRecognitionErrorEvent) => void;
+  lang?: string;
+  continuous?: boolean;
+}
+
+export function startSpeechRecognition({ onTranscript, onEnd, onError, lang = 'en-US', continuous = true }: SpeechRecognitionOptions): () => void {
   if (!SpeechRecognitionClass) {
-    onError?.({ error: 'not-supported', message: 'Speech recognition not supported' });
+    onError?.({ error: 'not-supported', message: 'Speech recognition not supported' } as unknown as SpeechRecognitionErrorEvent);
     return () => {};
   }
   const rec = new SpeechRecognitionClass();
@@ -122,14 +171,15 @@ export function startSpeechRecognition({ onTranscript, onEnd, onError, lang = 'e
   rec.continuous = continuous;
   rec.interimResults = true;
   rec.maxAlternatives = 1;
-  rec.onresult = (event) => {
-    const result = event.results[event.results.length - 1];
+  rec.onresult = (event: Event) => {
+    const e = event as SpeechRecognitionResultEvent;
+    const result = e.results[e.results.length - 1];
     const transcript = result[0].transcript;
     const isFinal = result.isFinal;
     onTranscript?.(transcript, isFinal);
   };
   rec.onend = () => onEnd?.();
-  rec.onerror = (e) => onError?.(e);
+  rec.onerror = (e) => onError?.(e as unknown as SpeechRecognitionErrorEvent);
   rec.start();
   return () => { try { rec.stop(); } catch { /* ignore */ } };
 }

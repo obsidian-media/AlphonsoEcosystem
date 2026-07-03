@@ -4,29 +4,45 @@ const STORAGE_KEY = 'alphonso_maria_weekly_v1';
 const MAX_REPORTS = 52;
 const WEEK_MS = 604_800_000;
 
-// ── Storage helpers ────────────────────────────────────────────────────────────
+interface WeeklyReport {
+  period: { start: number; end: number };
+  generatedAt: number;
+  totalActions: number;
+  approvedCount: number;
+  rejectedCount: number;
+  riskBreakdown: { low: number; medium: number; high: number };
+  topAgents: Array<{ agent: string; count: number }>;
+  auditEventCount: number;
+  recommendations: string[];
+  savedAt?: number;
+}
 
-function loadReports() {
+interface OrchestrationReceipt {
+  timestampMs: number;
+  approved: boolean;
+  blocked: boolean;
+  riskLevel?: string;
+  agent?: string;
+}
+
+function loadReports(): WeeklyReport[] {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); } catch { return []; }
 }
 
-function storeReports(reports) {
+function storeReports(reports: WeeklyReport[]): void {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reports)); } catch { /* localStorage unavailable */ }
 }
 
-function loadReceipts() {
+function loadReceipts(): OrchestrationReceipt[] {
   try {
     return JSON.parse(localStorage.getItem('alphonso_orchestration_receipts_v1') ?? '[]');
   } catch { return []; }
 }
 
-// ── Report generation ──────────────────────────────────────────────────────────
-
-export function generateWeeklyReport() {
+export function generateWeeklyReport(): WeeklyReport {
   const now = Date.now();
   const weekStart = now - WEEK_MS;
 
-  // Audit log entries within the past week
   const auditLog = getAuditLog().filter((e) => e.timestamp >= weekStart);
   const receipts = loadReceipts().filter((r) => r.timestampMs >= weekStart);
 
@@ -34,15 +50,13 @@ export function generateWeeklyReport() {
   const approvedCount = receipts.filter((r) => r.approved && !r.blocked).length;
   const rejectedCount = receipts.filter((r) => r.blocked).length;
 
-  // Risk breakdown from receipts
-  const riskBreakdown = { low: 0, medium: 0, high: 0 };
+  const riskBreakdown: { low: number; medium: number; high: number } = { low: 0, medium: 0, high: 0 };
   for (const r of receipts) {
-    const level = r.riskLevel ?? 'low';
+    const level = (r.riskLevel ?? 'low') as keyof typeof riskBreakdown;
     if (level in riskBreakdown) riskBreakdown[level]++;
   }
 
-  // Top agents by action count
-  const agentCounts = {};
+  const agentCounts: Record<string, number> = {};
   for (const r of receipts) {
     const agent = r.agent ?? 'unknown';
     agentCounts[agent] = (agentCounts[agent] ?? 0) + 1;
@@ -52,8 +66,7 @@ export function generateWeeklyReport() {
     .slice(0, 5)
     .map(([agent, count]) => ({ agent, count }));
 
-  // Simple recommendations based on rejection rate and risk distribution
-  const recommendations = [];
+  const recommendations: string[] = [];
   if (totalActions > 0) {
     const rejectionRate = rejectedCount / totalActions;
     if (rejectionRate > 0.2) {
@@ -82,24 +95,24 @@ export function generateWeeklyReport() {
   };
 }
 
-export function saveReport(report) {
+export function saveReport(report: WeeklyReport): void {
   const reports = loadReports();
   reports.push({ ...report, savedAt: Date.now() });
   if (reports.length > MAX_REPORTS) reports.splice(0, reports.length - MAX_REPORTS);
   storeReports(reports);
 }
 
-export function getReports(limit = 10) {
+export function getReports(limit = 10): WeeklyReport[] {
   const reports = loadReports();
   return reports.slice().reverse().slice(0, limit);
 }
 
-export function getLatestReport() {
+export function getLatestReport(): WeeklyReport | null {
   const reports = loadReports();
   return reports.length > 0 ? reports[reports.length - 1] : null;
 }
 
-export function scheduleWeeklyGeneration(callback) {
+export function scheduleWeeklyGeneration(callback?: (report: WeeklyReport) => void): () => void {
   const id = setInterval(() => {
     try {
       const report = generateWeeklyReport();

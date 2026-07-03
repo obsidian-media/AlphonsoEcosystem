@@ -3,7 +3,48 @@ import { invoke } from '@tauri-apps/api/core';
 
 const KEY = 'alphonso_workspace_intelligence_v1';
 
-const DEFAULT_FOUNDATION = {
+interface CapabilityState {
+  visibleOnly: boolean;
+  permissionRequired: boolean;
+  localOnly: boolean;
+  enabled: boolean;
+  verificationState: string;
+}
+
+interface WorkspaceFoundation {
+  ocr: CapabilityState;
+  screenCapture: CapabilityState;
+  screenshotProof: {
+    enabled: boolean;
+    ocrReady: boolean;
+    visualVerificationReady: boolean;
+    verificationState: string;
+  };
+  astIndexing: {
+    enabled: boolean;
+    verificationState: string;
+  };
+  editorAwareness: {
+    enabled: boolean;
+    verificationState: string;
+  };
+  workspaceProof: {
+    lastRunAt: number | null;
+    trust: string;
+  };
+  ocrCapability: {
+    available: boolean;
+    engine: string;
+    message: string;
+    checkedAtMs: number | null;
+    verificationState: string;
+  };
+  updatedAt: number;
+}
+
+export type { WorkspaceFoundation };
+
+const DEFAULT_FOUNDATION: WorkspaceFoundation = {
   ocr: {
     visibleOnly: true,
     permissionRequired: true,
@@ -46,7 +87,7 @@ const DEFAULT_FOUNDATION = {
   updatedAt: timestampMs()
 };
 
-export function getWorkspaceFoundation() {
+export function getWorkspaceFoundation(): WorkspaceFoundation {
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? JSON.parse(raw) : null;
@@ -58,7 +99,7 @@ export function getWorkspaceFoundation() {
   return DEFAULT_FOUNDATION;
 }
 
-export function updateWorkspaceFoundation(next) {
+export function updateWorkspaceFoundation(next: Partial<WorkspaceFoundation>): WorkspaceFoundation {
   const current = getWorkspaceFoundation();
   const merged = {
     ...current,
@@ -69,14 +110,14 @@ export function updateWorkspaceFoundation(next) {
   return merged;
 }
 
-export async function collectWorkspaceProof(root, maxFiles = 1200) {
+export async function collectWorkspaceProof(root: string, maxFiles = 1200) {
   return invoke('collect_workspace_proof', {
     root,
     maxFiles
   });
 }
 
-export async function checkOcrCapability(enginePath) {
+export async function checkOcrCapability(enginePath?: string) {
   return invoke('check_ocr_capability', {
     enginePath: enginePath || null
   });
@@ -87,6 +128,11 @@ export async function runOcrAdapter({
   enginePath,
   imagePath = null,
   extraArgs = []
+}: {
+  adapter?: string;
+  enginePath?: string;
+  imagePath?: string | null;
+  extraArgs?: string[];
 }) {
   return invoke('run_ocr_adapter', {
     adapter,
@@ -96,7 +142,7 @@ export async function runOcrAdapter({
   });
 }
 
-export async function buildWorkspaceSymbolIndex(root, maxFiles = 500) {
+export async function buildWorkspaceSymbolIndex(root: string, maxFiles = 500) {
   return invoke('build_workspace_symbol_index', {
     root,
     maxFiles

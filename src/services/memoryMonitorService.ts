@@ -2,22 +2,45 @@
 
 const WARNING_BYTES = 5 * 1024 * 1024;  // 5 MB
 const CRITICAL_BYTES = 8 * 1024 * 1024; // 8 MB
-// Browsers typically cap localStorage at 5–10 MB; use 10 MB as the assumed max for percent calcs.
 const ASSUMED_MAX_BYTES = 10 * 1024 * 1024;
 
-const subscribers = [];
+export interface KeySize {
+  key: string;
+  sizeKB: number;
+}
+
+export interface UsageStats {
+  usedBytes: number;
+  usedKB: number;
+  itemCount: number;
+  largestKeys: KeySize[];
+}
+
+export interface ThresholdResult {
+  warning: boolean;
+  critical: boolean;
+  usedPercent: number;
+}
+
+export interface WarningEvent {
+  usedBytes: number;
+  usedPercent: number;
+  warning: boolean;
+  critical: boolean;
+}
+
+type Subscriber = (event: WarningEvent) => void;
+
+const subscribers: Subscriber[] = [];
 let lastWarningState = false;
 
-function byteSize(str) {
-  // Each JS string char is 2 bytes in localStorage (UTF-16)
+function byteSize(str: string): number {
   return str.length * 2;
 }
 
-// ── Core stats ─────────────────────────────────────────────────────────────────
-
-export function getUsageStats() {
+export function getUsageStats(): UsageStats {
   let usedBytes = 0;
-  const keySizes = [];
+  const keySizes: KeySize[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -40,8 +63,8 @@ export function getUsageStats() {
   };
 }
 
-export function getAlphonsoKeys() {
-  const result = [];
+export function getAlphonsoKeys(): KeySize[] {
+  const result: KeySize[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -55,16 +78,15 @@ export function getAlphonsoKeys() {
   return result;
 }
 
-export function checkThresholds() {
+export function checkThresholds(): ThresholdResult {
   const { usedBytes } = getUsageStats();
   const usedPercent = parseFloat(((usedBytes / ASSUMED_MAX_BYTES) * 100).toFixed(1));
   const warning = usedBytes >= WARNING_BYTES;
   const critical = usedBytes >= CRITICAL_BYTES;
 
-  // Notify subscribers when crossing warning threshold
   if (warning && !lastWarningState) {
     lastWarningState = true;
-    const stats = { usedBytes, usedPercent, warning, critical };
+    const stats: WarningEvent = { usedBytes, usedPercent, warning, critical };
     for (const cb of subscribers) {
       try { cb(stats); } catch { /* subscriber error ignored */ }
     }
@@ -75,26 +97,20 @@ export function checkThresholds() {
   return { warning, critical, usedPercent };
 }
 
-// ── Ring-buffer pruner ─────────────────────────────────────────────────────────
-
-export function pruneOldest(targetKey, keepCount = 50) {
+export function pruneOldest(targetKey: string, keepCount = 50): void {
   try {
     const raw = localStorage.getItem(targetKey);
     if (!raw) return;
     const entries = JSON.parse(raw);
     if (!Array.isArray(entries)) return;
     if (entries.length <= keepCount) return;
-    // Assume entries are ordered oldest-first (push-appended rings)
     entries.splice(0, entries.length - keepCount);
     localStorage.setItem(targetKey, JSON.stringify(entries));
   } catch { /* localStorage unavailable */ }
 }
 
-// ── Subscription ───────────────────────────────────────────────────────────────
-
-export function subscribe(callback) {
+export function subscribe(callback: Subscriber): () => void {
   subscribers.push(callback);
-  // Return unsubscribe fn
   return () => {
     const idx = subscribers.indexOf(callback);
     if (idx !== -1) subscribers.splice(idx, 1);

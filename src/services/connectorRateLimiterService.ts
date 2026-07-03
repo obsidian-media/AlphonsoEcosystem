@@ -4,17 +4,40 @@
 const DEFAULT_MAX_TOKENS = 60;
 const DEFAULT_REFILL_RATE = 60; // tokens per minute
 
-// buckets: Map<connectorId, { tokens, maxTokens, refillRate, lastRefillMs }>
-const buckets = new Map();
+interface RateBucket {
+  tokens: number;
+  maxTokens: number;
+  refillRate: number;
+  lastRefillMs: number;
+}
 
-// configs: Map<connectorId, { maxTokens, refillRate }>
-const configs = new Map();
+interface RateConfig {
+  maxTokens: number;
+  refillRate: number;
+}
 
-function getConfig(connectorId) {
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+}
+
+export interface ConnectorStatus {
+  connectorId: string;
+  tokens: number;
+  maxTokens: number;
+  refillRate: number;
+  resetAt: number;
+}
+
+const buckets = new Map<string, RateBucket>();
+const configs = new Map<string, RateConfig>();
+
+function getConfig(connectorId: string): RateConfig {
   return configs.get(connectorId) ?? { maxTokens: DEFAULT_MAX_TOKENS, refillRate: DEFAULT_REFILL_RATE };
 }
 
-function refill(bucket, config) {
+function refill(bucket: RateBucket, config: RateConfig): RateBucket {
   const now = Date.now();
   const elapsedMs = now - bucket.lastRefillMs;
   const tokensToAdd = (elapsedMs / 60_000) * config.refillRate;
@@ -23,7 +46,7 @@ function refill(bucket, config) {
   return bucket;
 }
 
-function getBucket(connectorId) {
+function getBucket(connectorId: string): RateBucket {
   const config = getConfig(connectorId);
   if (!buckets.has(connectorId)) {
     buckets.set(connectorId, {
@@ -33,23 +56,21 @@ function getBucket(connectorId) {
       lastRefillMs: Date.now()
     });
   }
-  const bucket = buckets.get(connectorId);
+  const bucket = buckets.get(connectorId)!;
   // Sync config changes
   bucket.maxTokens = config.maxTokens;
   bucket.refillRate = config.refillRate;
   return refill(bucket, config);
 }
 
-function resetAtMs(bucket, config) {
+function resetAtMs(bucket: RateBucket, config: RateConfig): number {
   if (bucket.tokens >= 1) return Date.now();
   const tokensNeeded = 1 - bucket.tokens;
   const msNeeded = (tokensNeeded / config.refillRate) * 60_000;
   return Math.ceil(Date.now() + msNeeded);
 }
 
-// ── Public API ─────────────────────────────────────────────────────────────────
-
-export function checkLimit(connectorId) {
+export function checkLimit(connectorId: string): RateLimitResult {
   const config = getConfig(connectorId);
   const bucket = getBucket(connectorId);
   const allowed = bucket.tokens >= 1;
@@ -60,7 +81,7 @@ export function checkLimit(connectorId) {
   };
 }
 
-export function consume(connectorId) {
+export function consume(connectorId: string): number {
   const bucket = getBucket(connectorId);
   if (bucket.tokens >= 1) {
     bucket.tokens -= 1;
@@ -68,7 +89,7 @@ export function consume(connectorId) {
   return Math.floor(bucket.tokens);
 }
 
-export function getStatus(connectorId) {
+export function getStatus(connectorId: string): ConnectorStatus {
   const config = getConfig(connectorId);
   const bucket = getBucket(connectorId);
   return {
@@ -80,7 +101,7 @@ export function getStatus(connectorId) {
   };
 }
 
-export function configure(connectorId, { maxTokens, refillRate } = {}) {
+export function configure(connectorId: string, { maxTokens, refillRate }: Partial<RateConfig> = {}): void {
   const current = getConfig(connectorId);
   configs.set(connectorId, {
     maxTokens: maxTokens ?? current.maxTokens,
@@ -90,7 +111,7 @@ export function configure(connectorId, { maxTokens, refillRate } = {}) {
   buckets.delete(connectorId);
 }
 
-export function resetAll() {
+export function resetAll(): void {
   buckets.clear();
   configs.clear();
 }

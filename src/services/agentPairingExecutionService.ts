@@ -10,10 +10,18 @@ import {
 } from './agentBusService';
 import { resolveAgentPairingRoute } from './agentPairingRegistryService';
 
-function logPairingEvent(pairingId, status, payload = {}) {
+interface PairingEvent {
+  id: string;
+  pairingId: string;
+  status: string;
+  payload: Record<string, unknown>;
+  createdAtMs: number;
+}
+
+function logPairingEvent(pairingId: string, status: string, payload: Record<string, unknown> = {}): void {
   try {
     const raw = localStorage.getItem('alphonso_pairing_events_v1');
-    const events = raw ? JSON.parse(raw) : [];
+    const events: PairingEvent[] = raw ? JSON.parse(raw) : [];
     events.push({
       id: `pe-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
       pairingId,
@@ -27,8 +35,25 @@ function logPairingEvent(pairingId, status, payload = {}) {
   }
 }
 
-export function executeAgentPairing(pairingId, context = {}) {
-  const route = resolveAgentPairingRoute(pairingId);
+interface PairingRoute {
+  from: string;
+  to: string;
+  type: string;
+  approvalMode: string;
+  riskLevel: string;
+}
+
+interface PairingExecutionResult {
+  ok: boolean;
+  pairingId: string;
+  packetId?: string;
+  route?: PairingRoute;
+  status?: string;
+  error?: string;
+}
+
+export function executeAgentPairing(pairingId: string, context: Record<string, unknown> = {}): PairingExecutionResult {
+  const route = resolveAgentPairingRoute(pairingId) as PairingRoute | null;
   if (!route) {
     return { ok: false, pairingId, error: 'Unknown pairing.' };
   }
@@ -58,7 +83,7 @@ export function executeAgentPairing(pairingId, context = {}) {
   logPairingEvent(pairingId, 'packet_created', { packetId: packet.id });
 
   if (route.approvalMode === 'auto') {
-    const approved = approvePacket(packet.id, 'pairing_system');
+    approvePacket(packet.id, 'pairing_system');
     logPairingEvent(pairingId, 'auto_approved', { packetId: packet.id });
   }
 
@@ -82,11 +107,18 @@ export function executeAgentPairing(pairingId, context = {}) {
   };
 }
 
-export function rejectAgentPairing(pairingId, reason = 'Denied by operator') {
-  const queue = [];
+interface RejectResult {
+  ok: boolean;
+  pairingId?: string;
+  packetId?: string;
+  packet?: unknown;
+  error?: string;
+}
+
+export function rejectAgentPairing(pairingId: string, reason = 'Denied by operator'): RejectResult {
   try {
     const raw = localStorage.getItem('alphonso_agent_bus_packets_v1');
-    const packets = raw ? JSON.parse(raw) : [];
+    const packets: Array<{ id: string; payload?: { pairingId?: string }; status: string }> = raw ? JSON.parse(raw) : [];
     const match = packets.find((item) => item.payload?.pairingId === pairingId && item.status === 'pending_approval');
     if (!match) return { ok: false, error: 'No pending pairing packet found.' };
     const updated = rejectPacket(match.id, reason);
@@ -97,10 +129,10 @@ export function rejectAgentPairing(pairingId, reason = 'Denied by operator') {
   }
 }
 
-export function listPairingEvents(limit = 50) {
+export function listPairingEvents(limit = 50): PairingEvent[] {
   try {
     const raw = localStorage.getItem('alphonso_pairing_events_v1');
-    const events = raw ? JSON.parse(raw) : [];
+    const events: PairingEvent[] = raw ? JSON.parse(raw) : [];
     return events.slice(-limit);
   } catch {
     return [];

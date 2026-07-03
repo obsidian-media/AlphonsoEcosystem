@@ -2,11 +2,27 @@ const DB_NAME = 'alphonso-offline';
 const DB_VERSION = 1;
 const STORE_NAME = 'chat-messages';
 
-function openDb() {
+interface OfflineMessage {
+  id: string;
+  conversationId: string;
+  role: string;
+  content: string;
+  timestamp: number;
+  synced: boolean;
+}
+
+export interface OfflineMessageInput {
+  id?: string;
+  conversationId?: string;
+  role?: string;
+  content?: string;
+}
+
+function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
+    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+      const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('conversationId', 'conversationId', { unique: false });
@@ -18,7 +34,7 @@ function openDb() {
   });
 }
 
-export async function saveMessageOffline(message) {
+export async function saveMessageOffline(message: OfflineMessageInput): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -35,15 +51,15 @@ export async function saveMessageOffline(message) {
   });
 }
 
-export async function getOfflineMessages(conversationId) {
+export async function getOfflineMessages(conversationId?: string): Promise<OfflineMessage[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const index = tx.objectStore(STORE_NAME).index('conversationId');
     const range = IDBKeyRange.only(conversationId || 'default');
-    const messages = [];
-    index.openCursor(range).onsuccess = (event) => {
-      const cursor = event.target.result;
+    const messages: OfflineMessage[] = [];
+    index.openCursor(range).onsuccess = (event: Event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
       if (cursor) {
         messages.push(cursor.value);
         cursor.continue();
@@ -55,14 +71,14 @@ export async function getOfflineMessages(conversationId) {
   });
 }
 
-export async function markSynced(messageId) {
+export async function markSynced(messageId: string): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
     const getReq = store.get(messageId);
     getReq.onsuccess = () => {
-      const msg = getReq.result;
+      const msg = getReq.result as OfflineMessage | undefined;
       if (msg) {
         msg.synced = true;
         store.put(msg);
@@ -73,13 +89,13 @@ export async function markSynced(messageId) {
   });
 }
 
-export async function getPendingSyncMessages() {
+export async function getPendingSyncMessages(): Promise<OfflineMessage[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
-    const messages = [];
-    tx.objectStore(STORE_NAME).openCursor().onsuccess = (event) => {
-      const cursor = event.target.result;
+    const messages: OfflineMessage[] = [];
+    tx.objectStore(STORE_NAME).openCursor().onsuccess = (event: Event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
       if (cursor) {
         if (!cursor.value.synced) messages.push(cursor.value);
         cursor.continue();
@@ -91,15 +107,15 @@ export async function getPendingSyncMessages() {
   });
 }
 
-export async function clearOfflineMessages(conversationId) {
+export async function clearOfflineMessages(conversationId?: string): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
     const index = store.index('conversationId');
     const range = IDBKeyRange.only(conversationId || 'default');
-    index.openCursor(range).onsuccess = (event) => {
-      const cursor = event.target.result;
+    index.openCursor(range).onsuccess = (event: Event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
       if (cursor) {
         store.delete(cursor.primaryKey);
         cursor.continue();

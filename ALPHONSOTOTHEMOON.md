@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 5 of N, v2.5.13): 15 more root-level services migrated to TypeScript. Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
+**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 6 of N, v2.5.14): 15 more root-level services migrated to TypeScript. Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-03
@@ -863,8 +863,22 @@ state at a glance without re-deriving it from the narrative log above.
   227/227 targeted tests passing across 14 test files,
   `npx tsc --noEmit` clean, ESLint clean. Version bumped 2.5.12 → 2.5.13.
   All 5 docs updated in the same pass.
-  `agentContractService.ts` and `orchestrationQueueService.ts` are
-  already `.ts` and remain the best reference models.
+
+- **2026-07-03 (Sprint 5, batch 6, v2.5.14)** — Continued from batch 5,
+  migrated the next 15 smallest remaining root-level `.js` services
+  (41–91 lines each): `workspaceIntelligenceService`,
+  `connectorRateLimiterService`, `agentPairingExecutionService`,
+  `coachSoundCueService`, `runtimeLedgerService`, `offlineChatService`,
+  `memoryMonitorService`, `runtimeManagerService`,
+  `mariaWeeklyReportService`, `workflowGovernanceService`, `voiceService`,
+  `connectorHealthCheckService`, `whatsappBrowserConnector`,
+  `streamingService`, `workflowBuilderService`. Type-safety additions:
+  `WorkspaceFoundation`, `CapabilityState`, `RateBucket`, `PairingEvent`,
+  `LedgerRecord`, `VoiceState`, `StreamState`, `WorkflowNode` and many
+  more custom interfaces. Root-level count: 53 `.js` / 78 `.ts` (down from
+  68/63 before this batch). Verification: 166/166 targeted tests passing
+  across 15 test files, `npx tsc --noEmit` clean, ESLint clean.
+  Version bumped 2.5.13 → 2.5.14. All 5 docs updated in the same pass.
 
 **Process to follow for each future batch** (established in batches 1-2,
 keep doing this — do not skip steps to go faster):
@@ -899,7 +913,7 @@ keep doing this — do not skip steps to go faster):
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
 | 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
 | 4 | Security hardening Batch 2 (attacker-resistance) | ✅ Closed 2026-07-02 (v2.5.6) — fixed Telegram owner-registration auth bypass + constant-time gateway token comparisons; audited Discord/webhook/CI-gating with no further fix needed; credential-storage upgrade documented as a Sprint 6 recommendation |
-| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. Batch 3 (v2.5.11): 10 more root-level services, 100/26 → 90/36 `.js`/`.ts`. Batch 4 (v2.5.12): 12 more root-level services, 90/36 → 83/48 `.js`/`.ts`. Batch 5 (v2.5.13): 15 more root-level services, 83/48 → 68/63 `.js`/`.ts`. 68 root-level `.js` files still open for future batches |
+| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. Batch 3 (v2.5.11): 10 more root-level services, 100/26 → 90/36 `.js`/`.ts`. Batch 4 (v2.5.12): 12 more root-level services, 90/36 → 83/48 `.js`/`.ts`. Batch 5 (v2.5.13): 15 more root-level services, 83/48 → 68/63 `.js`/`.ts`. Batch 6 (v2.5.14): 15 more root-level services, 68/63 → 53/78 `.js`/`.ts`. 53 root-level `.js` files still open for future batches |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🔄 In progress — ESLint `.ts`/`.tsx` coverage gap closed 2026-07-02 (v2.5.9). Sandboxing/MCP/scheduler/email connector/module convergence/credential storage still open |
 
 Seeded now so scope survives even if priorities shift or a session diverges

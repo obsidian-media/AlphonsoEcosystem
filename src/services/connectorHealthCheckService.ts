@@ -1,7 +1,28 @@
 import { isConnectorAuthenticated } from './connectorRegistryService';
 import { timestampMs } from './trustModel';
 
-function getConnectorApiKey(connectorId) {
+interface HealthCheckResult {
+  ok: boolean;
+  message: string;
+  latency: number;
+  details: Record<string, unknown>;
+}
+
+interface TelegramApiData {
+  ok?: boolean;
+  description?: string;
+  result?: { username?: string; id?: number };
+}
+
+interface GatewayHealthData {
+  status?: string;
+  forwardConfigured?: boolean;
+  verifyTokenConfigured?: boolean;
+  appSecretConfigured?: boolean;
+  allowlistCount?: number;
+}
+
+function getConnectorApiKey(connectorId: string): string {
   try {
     const raw = localStorage.getItem('alphonso_connector_auth_profiles_v1');
     const profiles = raw ? JSON.parse(raw) : {};
@@ -11,11 +32,11 @@ function getConnectorApiKey(connectorId) {
   }
 }
 
-function measureLatency(startTime) {
+function measureLatency(startTime: number): number {
   return timestampMs() - startTime;
 }
 
-export async function checkTelegramConnection(options = {}) {
+export async function checkTelegramConnection(options: { botToken?: string } = {}): Promise<HealthCheckResult> {
   const startTime = timestampMs();
   const botToken = options.botToken || getConnectorApiKey('telegram');
 
@@ -30,7 +51,7 @@ export async function checkTelegramConnection(options = {}) {
 
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
-    const data = await response.json().catch(() => ({}));
+    const data: TelegramApiData = await response.json().catch(() => ({}));
     const latency = measureLatency(startTime);
 
     if (!response.ok || !data?.ok) {
@@ -51,14 +72,14 @@ export async function checkTelegramConnection(options = {}) {
   } catch (error) {
     return {
       ok: false,
-      message: `Could not reach Telegram API: ${String(error?.message || error)}`,
+      message: `Could not reach Telegram API: ${String((error as Error)?.message || error)}`,
       latency: measureLatency(startTime),
       details: { reason: 'network_error' }
     };
   }
 }
 
-export async function checkWhatsAppConnection(options = {}) {
+export async function checkWhatsAppConnection(options: { gatewayUrl?: string } = {}): Promise<HealthCheckResult> {
   const startTime = timestampMs();
   const gatewayUrl = options.gatewayUrl || 'http://localhost:8080';
 
@@ -83,7 +104,7 @@ export async function checkWhatsAppConnection(options = {}) {
     });
     window.clearTimeout(timeoutId);
 
-    const data = await response.json().catch(() => ({}));
+    const data: GatewayHealthData = await response.json().catch(() => ({}));
     const latency = measureLatency(startTime);
 
     if (!response.ok) {
@@ -115,14 +136,14 @@ export async function checkWhatsAppConnection(options = {}) {
   } catch (error) {
     return {
       ok: false,
-      message: `Could not reach gateway at ${gatewayUrl}: ${String(error?.message || error)}`,
+      message: `Could not reach gateway at ${gatewayUrl}: ${String((error as Error)?.message || error)}`,
       latency: measureLatency(startTime),
       details: { reason: 'network_error', gatewayUrl }
     };
   }
 }
 
-export async function checkConnectorHealth(connectorId, options = {}) {
+export async function checkConnectorHealth(connectorId: string, options: { botToken?: string; gatewayUrl?: string } = {}): Promise<HealthCheckResult> {
   switch (connectorId) {
     case 'telegram':
       return checkTelegramConnection(options);

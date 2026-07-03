@@ -1,19 +1,42 @@
-import { getConnectorCredential } from './connectors/connectorAuth.js';
+import { getConnectorCredential } from './connectors/connectorAuth';
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v17.0';
 
-function normalizePhone(phone) {
+function normalizePhone(phone: string): string {
   return String(phone || '').replace(/^\+/, '').replace(/\D/g, '');
 }
 
-/**
- * Send a WhatsApp message via the Meta Graph API.
- * @param {object} params
- * @param {string} params.to - Recipient phone number (with or without leading +)
- * @param {string} params.text - Message body
- * @param {string} [params.replyToId] - Optional WhatsApp message ID to reply to (adds threading context)
- */
-export async function browserSendWhatsApp({ to, text, replyToId }) {
+interface WhatsAppSendResult {
+  ok: boolean;
+  connectorId: string;
+  externalId: string | null;
+  httpStatus: number;
+  error: string | null;
+  trust: string;
+}
+
+interface GraphApiResponse {
+  messages?: Array<{ id: string }>;
+  error?: { message: string };
+}
+
+interface GatewayMessage {
+  from?: string;
+  chatId?: string;
+  fromId?: string;
+  text?: string;
+  messageId?: string;
+  id?: string;
+  to?: string;
+  queuedAtMs?: number;
+  receivedAtMs?: number;
+}
+
+export async function browserSendWhatsApp({ to, text, replyToId }: {
+  to: string;
+  text: string;
+  replyToId?: string;
+}): Promise<WhatsAppSendResult> {
   const accessToken = getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN');
   const phoneNumberId = getConnectorCredential('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID');
 
@@ -24,8 +47,8 @@ export async function browserSendWhatsApp({ to, text, replyToId }) {
   const toNorm = normalizePhone(to);
   const NON_RETRYABLE = new Set([400, 401, 403]);
   const MAX_ATTEMPTS = 3;
-  let response;
-  let data = {};
+  let response: Response;
+  let data: GraphApiResponse = {};
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       response = await fetch(`${GRAPH_API_BASE}/${phoneNumberId}/messages`, {
@@ -73,16 +96,31 @@ export async function browserSendWhatsApp({ to, text, replyToId }) {
   }
 
   return {
-    ok: response.ok,
+    ok: response!.ok,
     connectorId: 'whatsapp',
     externalId: data?.messages?.[0]?.id || null,
-    httpStatus: response.status,
-    error: response.ok ? null : (data?.error?.message || `HTTP ${response.status}`),
-    trust: response.ok ? 'verified' : 'failed'
+    httpStatus: response!.status,
+    error: response!.ok ? null : (data?.error?.message || `HTTP ${response!.status}`),
+    trust: response!.ok ? 'verified' : 'failed'
   };
 }
 
-export async function browserPollWhatsAppGateway({ limit = 12 } = {}) {
+interface PollResult {
+  ok: boolean;
+  messages: Array<{
+    provider: string;
+    chatId: string;
+    fromId: string;
+    text: string;
+    messageId: string;
+    phoneNumber: string | null;
+    receivedAtMs: number;
+  }>;
+  cursor: null;
+  trust: string;
+}
+
+export async function browserPollWhatsAppGateway({ limit = 12 } = {}): Promise<PollResult> {
   const drainUrl = getConnectorCredential('whatsapp', 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL');
   const token = getConnectorCredential('whatsapp', 'WHATSAPP_VERIFY_TOKEN');
 
@@ -93,7 +131,7 @@ export async function browserPollWhatsAppGateway({ limit = 12 } = {}) {
   const url = new URL(drainUrl);
   url.searchParams.set('limit', String(limit));
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const response = await fetch(url.toString(), { method: 'GET', headers });
@@ -102,7 +140,7 @@ export async function browserPollWhatsAppGateway({ limit = 12 } = {}) {
   }
 
   const data = await response.json().catch(() => ({}));
-  const messages = Array.isArray(data?.messages)
+  const messages: GatewayMessage[] = Array.isArray(data?.messages)
     ? data.messages
     : Array.isArray(data)
       ? data
