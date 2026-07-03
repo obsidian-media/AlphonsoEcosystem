@@ -1,4 +1,12 @@
-export const COACH_SKILLS = [
+interface CoachSkill {
+  id: string;
+  label: string;
+  purpose: string;
+  prompt: string;
+  riskLevel: string;
+}
+
+export const COACH_SKILLS: CoachSkill[] = [
   {
     id: 'observe',
     label: 'Observe',
@@ -43,10 +51,10 @@ export const COACH_SKILLS = [
   }
 ];
 
-export function listCoachSkills() {
+export function listCoachSkills(): CoachSkill[] {
   return COACH_SKILLS.slice();
 }
 
-export function getCoachSkill(skillId) {
+export function getCoachSkill(skillId: string): CoachSkill | null {
   return COACH_SKILLS.find((skill) => skill.id === skillId) || null;
 }

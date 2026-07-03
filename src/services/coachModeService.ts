@@ -3,7 +3,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const COACH_LABEL = 'coach';
 
-function coachUrl() {
+function coachUrl(): string {
   const url = new URL(window.location.href);
   url.searchParams.set('coach', '1');
   const stored = localStorage.getItem('alphonso_settings');
@@ -20,7 +20,7 @@ function coachUrl() {
   return url.toString();
 }
 
-export async function openCoachWindow(alwaysOnTop, coachAgent = 'alphonso') {
+export async function openCoachWindow(alwaysOnTop?: boolean, coachAgent = 'alphonso') {
   try {
     const stored = localStorage.getItem('alphonso_settings');
     const parsed = stored ? JSON.parse(stored) : {};

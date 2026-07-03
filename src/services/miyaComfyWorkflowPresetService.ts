@@ -1,4 +1,15 @@
-export const MIYA_COMFY_WORKFLOW_PRESETS = [
+interface MiyaComfyWorkflowPreset {
+  id: string;
+  name: string;
+  mediaType: string;
+  status: string;
+  localOnly: boolean;
+  description: string;
+  promptTemplate: string;
+  recommendedUse: string;
+}
+
+export const MIYA_COMFY_WORKFLOW_PRESETS: MiyaComfyWorkflowPreset[] = [
   {
     id: 'alphonso-brand-poster',
     name: 'ALPHONSO Brand Poster',
@@ -51,10 +62,10 @@ export const MIYA_COMFY_WORKFLOW_PRESETS = [
   }
 ];
 
-export function listMiyaComfyWorkflowPresets({ mediaType } = {}) {
+export function listMiyaComfyWorkflowPresets({ mediaType } : { mediaType?: string } = {}): MiyaComfyWorkflowPreset[] {
   return MIYA_COMFY_WORKFLOW_PRESETS.filter((preset) => !mediaType || preset.mediaType === mediaType);
 }
 
-export function getMiyaComfyWorkflowPreset(presetId) {
+export function getMiyaComfyWorkflowPreset(presetId: string): MiyaComfyWorkflowPreset | null {
   return MIYA_COMFY_WORKFLOW_PRESETS.find((preset) => preset.id === presetId) || null;
 }

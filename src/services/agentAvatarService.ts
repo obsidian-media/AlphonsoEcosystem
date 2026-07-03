@@ -2,11 +2,11 @@ const STORAGE_PREFIX = 'alphonso_custom_avatar_v1_';
 const MAX_DIMENSION = 256;
 const JPEG_QUALITY = 0.82;
 
-function storageKey(agentId) {
+function storageKey(agentId: string): string {
   return STORAGE_PREFIX + String(agentId || '').toLowerCase();
 }
 
-export function getCustomAvatarDataUrl(agentId) {
+export function getCustomAvatarDataUrl(agentId: string): string | null {
   try {
     return localStorage.getItem(storageKey(agentId)) || null;
   } catch {
@@ -14,7 +14,7 @@ export function getCustomAvatarDataUrl(agentId) {
   }
 }
 
-export function removeCustomAvatar(agentId) {
+export function removeCustomAvatar(agentId: string) {
   try {
     localStorage.removeItem(storageKey(agentId));
   } catch {
@@ -22,7 +22,7 @@ export function removeCustomAvatar(agentId) {
   }
 }
 
-export function listCustomAvatarAgentIds() {
+export function listCustomAvatarAgentIds(): string[] {
   try {
     return Object.keys(localStorage)
       .filter((k) => k.startsWith(STORAGE_PREFIX))
@@ -33,7 +33,7 @@ export function listCustomAvatarAgentIds() {
 }
 
 // Reads a File, resizes to ≤ MAX_DIMENSION × MAX_DIMENSION, returns a JPEG data URL.
-export function processAvatarFile(file) {
+export function processAvatarFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith('image/')) {
       reject(new Error('File must be an image.'));
@@ -47,24 +47,24 @@ export function processAvatarFile(file) {
         const scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d')!;
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/jpeg', JPEG_QUALITY));
       };
       img.onerror = () => reject(new Error('Could not load image.'));
-      img.src = event.target.result;
+      img.src = event.target!.result as string;
     };
     reader.onerror = () => reject(new Error('Could not read file.'));
     reader.readAsDataURL(file);
   });
 }
 
-export async function setCustomAvatar(agentId, file) {
+export async function setCustomAvatar(agentId: string, file: File): Promise<string> {
   const dataUrl = await processAvatarFile(file);
   try {
     localStorage.setItem(storageKey(agentId), dataUrl);
-  } catch (err) {
-    throw new Error(`Failed to save avatar: ${err.message}`);
+  } catch (err: unknown) {
+    throw new Error(`Failed to save avatar: ${(err as Error).message}`);
   }
   return dataUrl;
 }

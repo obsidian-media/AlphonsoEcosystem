@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.12] — 2026-07-03
+
+### Sprint 5 batch 4: 12 more root-level services migrated to TypeScript
+
+- Migrated `runwayService`, `browserAutomationService`,
+  `miyaExportPacketService`, `coachSkillService`, `workspaceRootService`,
+  `projectDirectoryService`, `miyaComfyWorkflowPresetService`,
+  `recoveryService`, `modelSelectionService`, `coachModeService`,
+  `agentAvatarService`, `voiceOsService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 90 `.js` / 36 `.ts` → 83 `.js` / 48 `.ts`.
+- Real types caught real compatibility issues: `recoveryService.ts`
+  `RecoverySnapshot.payload` widened to match `EcosystemHub.tsx` consumer;
+  `runwayService.ts` exported `RunwayResult` interface matching Rust
+  `RunwayVideoProof` struct; `workspaceRootService.ts` added index
+  signature to match `SelfDevelopmentPanel.tsx` local type.
+- Verification: 202/202 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
 ## [2.5.11] — 2026-07-03
 
 ### Sprint 5 batch 3: 10 more root-level services migrated to TypeScript

@@ -19,7 +19,7 @@ export async function getVoiceServerStatus() {
   return invoke('voice_status');
 }
 
-export function getVoiceWebSocketUrl() {
+export function getVoiceWebSocketUrl(): string {
   try {
     const saved = localStorage.getItem('alphonso_voice_ws_url');
     if (saved && saved.startsWith('ws://')) return saved;
@@ -27,7 +27,7 @@ export function getVoiceWebSocketUrl() {
   return DEFAULT_WS_URL;
 }
 
-let _watchdogInterval = null;
+let _watchdogInterval: ReturnType<typeof setInterval> | null = null;
 let _watchdogFailures = 0;
 const WATCHDOG_MAX_FAILURES = 5;
 

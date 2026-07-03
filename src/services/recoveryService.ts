@@ -3,7 +3,22 @@ import { TRUST_STATES, timestampMs } from './trustModel';
 
 const SNAPSHOT_KEY = 'alphonso_recovery_snapshots_v1';
 
-function readSnapshots() {
+interface RecoverySnapshot {
+  id: string;
+  timestampMs: number;
+  trust: string;
+  payload?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface MemoryBackup {
+  id: string;
+  timestampMs: number;
+  trust: string;
+  items: unknown[];
+}
+
+function readSnapshots(): RecoverySnapshot[] {
   try {
     const raw = localStorage.getItem(SNAPSHOT_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -13,22 +28,22 @@ function readSnapshots() {
   }
 }
 
-function writeSnapshots(snapshots) {
+function writeSnapshots(snapshots: RecoverySnapshot[]) {
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshots.slice(-40)));
 }
 
-export function listSnapshots() {
+export function listSnapshots(): RecoverySnapshot[] {
   return readSnapshots();
 }
 
-export function restoreSnapshotById(snapshotId) {
+export function restoreSnapshotById(snapshotId: string): unknown | null {
   const snapshot = readSnapshots().find((item) => item.id === snapshotId);
   if (!snapshot) return null;
   return snapshot.payload || null;
 }
 
-export function backupMemoryLedger(memoryItems) {
-  const backup = {
+export function backupMemoryLedger(memoryItems: unknown[]): MemoryBackup {
+  const backup: MemoryBackup = {
     id: `mem-backup-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: timestampMs(),
     trust: TRUST_STATES.TEMPORARY,
@@ -38,8 +53,8 @@ export function backupMemoryLedger(memoryItems) {
   return backup;
 }
 
-export async function createSnapshot(payload) {
-  const snapshot = {
+export async function createSnapshot(payload: Record<string, unknown>): Promise<RecoverySnapshot> {
+  const snapshot: RecoverySnapshot = {
     id: `snap-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: timestampMs(),
     trust: TRUST_STATES.TEMPORARY,

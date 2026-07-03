@@ -9,11 +9,38 @@ const REQUIRED_ENTRIES = [
   'docs'
 ];
 
-export function getDefaultWorkspaceRoot() {
+interface PathProof {
+  exists: boolean;
+  is_dir: boolean;
+  is_file: boolean;
+}
+
+interface WorkspaceEntry {
+  path: string;
+  exists: boolean;
+  isFile?: boolean;
+  isDir?: boolean;
+  [key: string]: unknown;
+}
+
+interface WorkspaceValidation {
+  ok: boolean;
+  status: string;
+  root: string;
+  exists: boolean;
+  isDir?: boolean;
+  requiredEntries: WorkspaceEntry[];
+  missingEntries: string[];
+  trust: string;
+  error: string | null;
+  [key: string]: unknown;
+}
+
+export function getDefaultWorkspaceRoot(): string {
   return CURRENT_WORKSPACE_ROOT;
 }
 
-export async function validateWorkspaceRoot(root) {
+export async function validateWorkspaceRoot(root: string | null | undefined): Promise<WorkspaceValidation> {
   const cleanRoot = String(root || '').trim();
   if (!cleanRoot) {
     return {
@@ -21,7 +48,7 @@ export async function validateWorkspaceRoot(root) {
       status: 'setup_required',
       root: '',
       exists: false,
-      requiredEntries: REQUIRED_ENTRIES.map((entry) => ({ path: entry, exists: false })),
+      requiredEntries: REQUIRED_ENTRIES.map((entry) => ({ path: entry, exists: false, isFile: false, isDir: false })),
       missingEntries: REQUIRED_ENTRIES.slice(),
       trust: 'unverified',
       error: 'Workspace root is not configured.'
@@ -29,7 +56,7 @@ export async function validateWorkspaceRoot(root) {
   }
 
   const paths = [cleanRoot, ...REQUIRED_ENTRIES.map((entry) => `${cleanRoot}/${entry}`)];
-  const proofs = await invoke('verify_paths', { paths });
+  const proofs = await invoke('verify_paths', { paths }) as PathProof[];
   const rootProof = Array.isArray(proofs) ? proofs[0] : null;
   const entryProofs = Array.isArray(proofs) ? proofs.slice(1) : [];
   const missingEntries = REQUIRED_ENTRIES.filter((_, index) => !entryProofs[index]?.exists);
@@ -53,4 +80,3 @@ export async function validateWorkspaceRoot(root) {
     error: ok ? null : missingEntries.length > 0 ? `Missing expected workspace entries: ${missingEntries.join(', ')}` : 'Workspace root path does not exist or is not a directory.'
   };
 }
-

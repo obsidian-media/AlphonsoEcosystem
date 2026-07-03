@@ -1,6 +1,6 @@
 # ALPHONSOTOTHEMOON
 
-**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 3 of N, v2.5.11): 10 more root-level services migrated to TypeScript. Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
+**Status:** Sprints 1-4 closed. Sprint 5 in progress (batch 4 of N, v2.5.12): 12 more root-level services migrated to TypeScript. Sprint 6 started (v2.5.9): fixed a real ESLint `.ts`/`.tsx` coverage gap — every `.ts`/`.tsx` file in the repo had never actually been linted until now.
 **Owner:** Shayan
 **License:** SHALAUDE v1.0 (all-rights-reserved, source-visible) — see `LICENSE`
 **Last updated:** 2026-07-03
@@ -765,6 +765,24 @@ into Sprint 2+ — not dropped.
   this batch). Verification: 315/315 targeted tests passing across
   18 test files, `npx tsc --noEmit` clean, ESLint clean.
   Version bumped 2.5.10 → 2.5.11. All 5 docs updated in the same pass.
+- **2026-07-03 (Sprint 5, batch 4, v2.5.12)** — Continued from batch 3,
+  migrated the next 12 smallest remaining root-level `.js` services
+  (43–83 lines each): `runwayService`, `browserAutomationService`,
+  `miyaExportPacketService`, `coachSkillService`, `workspaceRootService`,
+  `projectDirectoryService`, `miyaComfyWorkflowPresetService`,
+  `recoveryService`, `modelSelectionService`, `coachModeService`,
+  `agentAvatarService`, `voiceOsService`. Real types caught real
+  compatibility issues: `recoveryService.ts`'s `RecoverySnapshot.payload`
+  widened from `unknown` to `Record<string, unknown>` to match
+  `EcosystemHub.tsx`'s consumer expectations; `runwayService.ts` exported
+  `RunwayResult` interface matching the Rust `RunwayVideoProof` struct to
+  resolve `MiyaStudio.tsx`'s typed assignment; `workspaceRootService.ts`
+  added index signature to `WorkspaceValidation` to match
+  `SelfDevelopmentPanel.tsx`'s local type. Root-level count: 83 `.js` /
+  48 `.ts` (down from 90/36 before this batch). Verification: 202/202
+  targeted tests passing across 14 test files, `npx tsc --noEmit` clean,
+  ESLint clean. Version bumped 2.5.11 → 2.5.12. All 5 docs updated in
+  the same pass.
 
 ## Sprint 5 migration tracker (update this section, not just the running log, on every batch)
 
@@ -803,20 +821,41 @@ state at a glance without re-deriving it from the narrative log above.
   files (confirmed pattern from batches 1-2).
 - **Root-level count as of this commit: 90 `.js` / 36 `.ts` total**
   (down from 105/26 before this batch, up from 115/16 before Sprint 5 started).
-- **Next-smallest 20 root-level `.js` files (candidates for batch 4, by
+
+**`src/services/*.js` root level — batch 4 (closed, 2026-07-03):**
+- Migrated this batch: `runwayService.ts`, `browserAutomationService.ts`,
+  `miyaExportPacketService.ts`, `coachSkillService.ts`,
+  `workspaceRootService.ts`, `projectDirectoryService.ts`,
+  `miyaComfyWorkflowPresetService.ts`, `recoveryService.ts`,
+  `modelSelectionService.ts`, `coachModeService.ts`,
+  `agentAvatarService.ts`, `voiceOsService.ts`
+- Picked the next 12 smallest remaining root-level `.js` files by line
+  count (43–83 lines each, confirmed at batch time).
+- Real types caught real compatibility issues:
+  - `recoveryService.ts`: `RecoverySnapshot.payload` widened from
+    `unknown` to `Record<string, unknown>` to match `EcosystemHub.tsx`'s
+    consumer expectations.
+  - `runwayService.ts`: exported `RunwayResult` interface matching the
+    Rust `RunwayVideoProof` struct to resolve `MiyaStudio.tsx`'s typed
+    assignment.
+  - `workspaceRootService.ts`: added index signature to
+    `WorkspaceValidation` to match `SelfDevelopmentPanel.tsx`'s local
+    type.
+- Verification: 202/202 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+- **Root-level count as of this commit: 83 `.js` / 48 `.ts` total**
+  (down from 90/36 before this batch).
+- **Next-smallest root-level `.js` files (candidates for batch 5, by
   line count — re-verify before starting since this list drifts):**
-  `runwayService.js` (39), `browserAutomationService.js` (40),
-  `miyaExportPacketService.js` (48), `coachSkillService.js` (50),
-  `workspaceRootService.js` (49), `projectDirectoryService.js` (50),
-  `recoveryService.js` (55), `modelSelectionService.js` (67),
-  `coachModeService.js` (68), `echoFileWatcherService.js` (70),
-  `telegramCompanionService.js` (72), `toolNotificationDispatcher.js` (72),
-  `selfDevelopmentService.js` (73), `workflowRegistryService.js` (74),
-  `proactiveAgentService.js` (75), `toolConnectionService.js` (77),
-  `screenIntelligenceService.js` (78), `memoryMonitorService.js` (79),
-  `batchOrchestratorService.js` (82), `voiceOsService.js` (83).
+  `orchestrationGovernanceService.js` (71), `resourceCostService.js`
+  (73), `gitService.js` (76), `pluginSandboxService.js` (80),
+  `hectorBookmarkService.js` (83), `workflowTelemetryService.js` (84),
+  `serviceScopes.js` (84), `searchService.js` (85),
+  `durableMemoryService.js` (86), `connectorCircuitBreakerService.js`
+  (88), `workflowReceiptService.js` (89),
+  `sessionIntelligenceService.js` (89), `chromaDbService.js` (90).
 - After that: everything else in `src/services/*.js` (root level),
-  roughly 85 files, increasing in size/complexity. Prioritize
+  roughly 70 files, increasing in size/complexity. Prioritize
   state/contract-heavy services last (harder to type correctly) —
   `agentContractService.ts` and `orchestrationQueueService.ts` are
   already `.ts` and remain the best reference models.
@@ -854,7 +893,7 @@ keep doing this — do not skip steps to go faster):
 | 2 | Crash-recovery checkpoint + Discord connector + generic webhook connector | ✅ Closed 2026-07-02 |
 | 3 | Agent specialization depth + feature discoverability audit | ✅ Closed 2026-07-02 — skill-library depth (v2.5.4) + discoverability audit (v2.5.5, found + fixed a critical Boardroom Sessions crash) |
 | 4 | Security hardening Batch 2 (attacker-resistance) | ✅ Closed 2026-07-02 (v2.5.6) — fixed Telegram owner-registration auth bypass + constant-time gateway token comparisons; audited Discord/webhook/CI-gating with no further fix needed; credential-storage upgrade documented as a Sprint 6 recommendation |
-| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. Batch 3 (v2.5.11): 10 more root-level services, 100/26 → 90/36 `.js`/`.ts`. 90 root-level `.js` files still open for future batches |
+| 5 | Service-layer TypeScript migration | 🔄 In progress — batch 1 (v2.5.7): `connectors/` subsystem 3→9 `.ts`. Batch 2 (v2.5.8): 10 more root-level services, 115/16 → 105/26 `.js`/`.ts`. Batch 3 (v2.5.11): 10 more root-level services, 100/26 → 90/36 `.js`/`.ts`. Batch 4 (v2.5.12): 12 more root-level services, 90/36 → 83/48 `.js`/`.ts`. 83 root-level `.js` files still open for future batches |
 | 6 | Runtime hardening carryover (sandboxing, MCP, scheduler) + connectors | 🔄 In progress — ESLint `.ts`/`.tsx` coverage gap closed 2026-07-02 (v2.5.9). Sandboxing/MCP/scheduler/email connector/module convergence/credential storage still open |
 
 Seeded now so scope survives even if priorities shift or a session diverges
