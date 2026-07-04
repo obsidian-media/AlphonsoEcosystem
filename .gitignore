@@ -60,3 +60,9 @@ release/rc0/
 *.pfx
 certs/
 scripts/certs/
+
+# Local planning doc — not a durable project record
+ALPHONSOFORMACOSANDLINUXSPRINT.md
+
+# Windows folder-view metadata
+desktop.ini
