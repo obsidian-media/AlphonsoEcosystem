@@ -69,7 +69,10 @@ export async function generateSdWebUiImage({
     error: result?.error || null,
     message: result?.message || null
   });
-  return result;
+  return result || {
+    ok: false, connectorId: 'sd_webui', blocked: false,
+    error: 'SD WebUI returned no result.', trust: TRUST_STATES.FAILED
+  };
 }
 
 const DEFAULT_COMFYUI_ENDPOINT = 'http://127.0.0.1:8188';
@@ -318,7 +321,10 @@ export async function queueComfyUiWorkflow({
     jobId: result?.jobId || null,
     error: result?.error || null
   });
-  return result;
+  return result || {
+    ok: false, connectorId: 'comfyui_video', blocked: false,
+    error: `ComfyUI ${mediaType} queue returned no result.`, trust: TRUST_STATES.FAILED
+  };
 }
 
 export async function queueComfyUiVideo({
@@ -371,5 +377,8 @@ export async function getComfyUiVideoHistory(promptId) {
     error: result?.error || null,
     outputCount: Array.isArray(result?.outputPaths) ? result.outputPaths.length : 0
   });
-  return result;
+  return result || {
+    ok: false, connectorId: 'comfyui_video', blocked: false,
+    jobId: promptId, error: 'ComfyUI history returned no result.', trust: TRUST_STATES.FAILED
+  };
 }
