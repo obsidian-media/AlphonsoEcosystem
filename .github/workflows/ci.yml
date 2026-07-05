@@ -141,6 +141,100 @@ jobs:
           path: src-tauri/target/release/bundle/nsis/Alphonso_*_x64-setup.exe
           retention-days: 14
 
+  desktop-macos:
+    name: Tauri Desktop Build (macOS)
+    needs: [test, rust-quality]
+    runs-on: macos-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: npm run tauri build -- --target aarch64-apple-darwin
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Alphonso-${{ github.sha }}-macos-arm64
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          retention-days: 14
+
+  desktop-linux:
+    name: Tauri Desktop Build (Linux)
+    needs: [test, rust-quality]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: npm run tauri build
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Alphonso-${{ github.sha }}-linux-appimage
+          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          retention-days: 14
+
+      - name: Upload deb artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Alphonso-${{ github.sha }}-linux-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
+          retention-days: 14
+
   secrets-scan:
     name: Secrets Scan (TruffleHog)
     runs-on: ubuntu-latest
