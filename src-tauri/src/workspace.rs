@@ -1,5 +1,5 @@
-use crate::{now_ms, write_native_proof_stage, NativeProofStageProof};
 use crate::runtime_manager::runtimes_dir;
+use crate::{now_ms, write_native_proof_stage, NativeProofStageProof};
 use serde::Serialize;
 use serde_json::Value;
 use std::fs;
@@ -1914,9 +1914,12 @@ pub(crate) async fn transcribe_audio_file(
   let output = tokio::process::Command::new(&whisper_exe)
     .arg(&audio_path_abs)
     .args([
-      "--model", model_name,
-      "--output_format", "txt",
-      "--output_dir", out_dir.to_str().unwrap_or("."),
+      "--model",
+      model_name,
+      "--output_format",
+      "txt",
+      "--output_dir",
+      out_dir.to_str().unwrap_or("."),
     ])
     .output()
     .await
@@ -1934,8 +1937,12 @@ pub(crate) async fn transcribe_audio_file(
     .to_string_lossy()
     .to_string();
   let txt_path = out_dir.join(format!("{audio_stem}.txt"));
-  std::fs::read_to_string(&txt_path)
-    .map_err(|e| format!("Could not read whisper output at {}: {e}", txt_path.display()))
+  std::fs::read_to_string(&txt_path).map_err(|e| {
+    format!(
+      "Could not read whisper output at {}: {e}",
+      txt_path.display()
+    )
+  })
 }
 
 // ── Inbox file watcher commands ───────────────────────────────────────────────
@@ -1978,14 +1985,23 @@ pub(crate) fn watch_inbox_poll(
 
   for entry in entries.flatten() {
     let path = entry.path();
-    if !path.is_file() { continue; }
+    if !path.is_file() {
+      continue;
+    }
 
-    let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+    let filename = path
+      .file_name()
+      .unwrap_or_default()
+      .to_string_lossy()
+      .to_string();
 
     // Skip already-processed files
-    if filename.ends_with(".processed") { continue; }
+    if filename.ends_with(".processed") {
+      continue;
+    }
 
-    let meta = fs::metadata(&path).map_err(|e| format!("Failed to stat {}: {e}", path.display()))?;
+    let meta =
+      fs::metadata(&path).map_err(|e| format!("Failed to stat {}: {e}", path.display()))?;
     let modified_at_ms = meta
       .modified()
       .ok()
@@ -2034,7 +2050,10 @@ pub(crate) fn mark_inbox_file_processed(
     return Err(format!("File not found: {}", source.display()));
   }
 
-  let new_name = format!("{}.processed", source.file_name().unwrap_or_default().to_string_lossy());
+  let new_name = format!(
+    "{}.processed",
+    source.file_name().unwrap_or_default().to_string_lossy()
+  );
   let dest = source.with_file_name(new_name);
 
   fs::rename(&source, &dest).map_err(|e| format!("Failed to rename {}: {e}", source.display()))?;
@@ -2042,7 +2061,11 @@ pub(crate) fn mark_inbox_file_processed(
   let now = now_ms();
   Ok(WorkspaceWriteProof {
     file_path: dest.to_string_lossy().to_string(),
-    relative_path: dest.strip_prefix(&root).unwrap_or(&dest).to_string_lossy().to_string(),
+    relative_path: dest
+      .strip_prefix(&root)
+      .unwrap_or(&dest)
+      .to_string_lossy()
+      .to_string(),
     written: true,
     written_at_ms: now,
     bytes: 0,

@@ -40,7 +40,10 @@ impl CompanionServer {
     let _ = self.event_tx.send(event_json);
   }
 
-  pub async fn run(&self, app_handle: AppHandle) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+  pub async fn run(
+    &self,
+    app_handle: AppHandle,
+  ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = format!("0.0.0.0:{}", self.config.port);
     let listener = TcpListener::bind(&addr).await?;
     log::info!("Companion server listening on {}", addr);

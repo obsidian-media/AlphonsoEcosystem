@@ -47,11 +47,16 @@ async fn handle_send_command(params: Value, app: AppHandle) -> Result<Value, Jso
   let command_id = uuid::Uuid::new_v4().to_string();
 
   // Emit a Tauri event that the React frontend listens to for Jose routing
-  app.emit("companion://command", json!({
-      "commandId": command_id,
-      "text": text,
-      "source": "ios_companion"
-  })).ok();
+  app
+    .emit(
+      "companion://command",
+      json!({
+          "commandId": command_id,
+          "text": text,
+          "source": "ios_companion"
+      }),
+    )
+    .ok();
 
   Ok(json!({ "commandId": command_id, "status": "queued", "text": text }))
 }
@@ -62,7 +67,9 @@ async fn handle_abort_command(params: Value, app: AppHandle) -> Result<Value, Js
     message: "Missing 'commandId' param".into(),
   })?;
   // Tell the frontend to cancel this pipeline via companion://abort event
-  app.emit("companion://abort", json!({ "commandId": command_id })).ok();
+  app
+    .emit("companion://abort", json!({ "commandId": command_id }))
+    .ok();
   Ok(json!({ "ok": true, "commandId": command_id }))
 }
 
@@ -73,15 +80,17 @@ async fn handle_approve_task(params: Value, app: AppHandle) -> Result<Value, Jso
   })?;
 
   // Emit Tauri event that ApprovalModal listens to
-  app.emit("companion://approve", json!({ "taskId": task_id })).ok();
+  app
+    .emit("companion://approve", json!({ "taskId": task_id }))
+    .ok();
 
   Ok(json!({ "ok": true }))
 }
 
 async fn handle_get_projects(app: AppHandle) -> Result<Value, JsonRpcError> {
   // Read orchestration receipts from KV; derive unique project names from receipt agentId/summary
-  let raw = crate::kv_store::kv_get(app, "alphonso_orchestration_receipts_v1".to_string())
-    .unwrap_or(None);
+  let raw =
+    crate::kv_store::kv_get(app, "alphonso_orchestration_receipts_v1".to_string()).unwrap_or(None);
   let receipts: Vec<Value> = raw
     .and_then(|r| serde_json::from_str(&r).ok())
     .unwrap_or_default();
@@ -90,7 +99,8 @@ async fn handle_get_projects(app: AppHandle) -> Result<Value, JsonRpcError> {
   use std::collections::HashMap;
   let mut projects: HashMap<String, Value> = HashMap::new();
   for r in &receipts {
-    let name = r["agentId"].as_str()
+    let name = r["agentId"]
+      .as_str()
       .or_else(|| r["agent"].as_str())
       .unwrap_or("alphonso")
       .to_string();
@@ -109,7 +119,9 @@ async fn handle_get_projects(app: AppHandle) -> Result<Value, JsonRpcError> {
 
   let mut list: Vec<Value> = projects.into_values().collect();
   list.sort_by(|a, b| {
-    b["lastActivityMs"].as_u64().unwrap_or(0)
+    b["lastActivityMs"]
+      .as_u64()
+      .unwrap_or(0)
       .cmp(&a["lastActivityMs"].as_u64().unwrap_or(0))
   });
   Ok(json!({ "projects": list }))
@@ -117,8 +129,8 @@ async fn handle_get_projects(app: AppHandle) -> Result<Value, JsonRpcError> {
 
 async fn handle_get_boardroom(app: AppHandle) -> Result<Value, JsonRpcError> {
   // Read from KV store: alphonso_boardroom_sessions_v1
-  let raw = crate::kv_store::kv_get(app, "alphonso_boardroom_sessions_v1".to_string())
-    .unwrap_or(None);
+  let raw =
+    crate::kv_store::kv_get(app, "alphonso_boardroom_sessions_v1".to_string()).unwrap_or(None);
   let sessions: Value = raw
     .and_then(|r| serde_json::from_str(&r).ok())
     .unwrap_or(json!([]));
