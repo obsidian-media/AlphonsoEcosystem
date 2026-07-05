@@ -28,6 +28,8 @@ pub(crate) fn allowed_program(program: &str) -> bool {
     | "docker" | "docker.exe" | "docker-compose" | "docker-compose.exe"
     // Windows utilities
     | "explorer" | "explorer.exe" | "start" | "msedge" | "msedge.exe" | "chrome" | "chrome.exe"
+    // macOS / Linux file & URL openers
+    | "open" | "xdg-open"
   )
 }
 

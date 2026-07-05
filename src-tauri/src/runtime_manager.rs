@@ -367,6 +367,39 @@ pub fn find_python() -> Option<String> {
         return Some(p.clone());
       }
     }
+  } else if cfg!(target_os = "macos") {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mac_paths = [
+      "/opt/homebrew/bin/python3".to_string(),
+      "/opt/homebrew/opt/python3/bin/python3".to_string(),
+      "/usr/local/bin/python3".to_string(),
+      "/usr/bin/python3".to_string(),
+      format!("{}/Library/Frameworks/Python.framework/Versions/3.12/bin/python3", home),
+      format!("{}/Library/Frameworks/Python.framework/Versions/3.11/bin/python3", home),
+      "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3".to_string(),
+      "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3".to_string(),
+    ];
+    for p in &mac_paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    // Linux
+    let home = std::env::var("HOME").unwrap_or_default();
+    let linux_paths = [
+      "/usr/bin/python3".to_string(),
+      "/usr/local/bin/python3".to_string(),
+      "/snap/bin/python3".to_string(),
+      format!("{}/.local/bin/python3", home),
+      format!("{}/.linuxbrew/bin/python3", home),
+      "/home/linuxbrew/.linuxbrew/bin/python3".to_string(),
+    ];
+    for p in &linux_paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
   }
   None
 }
@@ -413,6 +446,25 @@ pub fn find_git() -> Option<String> {
         return Some((*p).to_string());
       }
     }
+  } else if cfg!(target_os = "macos") {
+    let paths = [
+      "/opt/homebrew/bin/git",
+      "/usr/local/bin/git",
+      "/usr/bin/git",
+      "/Library/Developer/CommandLineTools/usr/bin/git",
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some((*p).to_string());
+      }
+    }
+  } else {
+    let paths = ["/usr/bin/git", "/usr/local/bin/git", "/snap/bin/git"];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some((*p).to_string());
+      }
+    }
   }
   None
 }
@@ -445,6 +497,29 @@ pub fn find_ollama() -> Option<String> {
         return Some(p.clone());
       }
     }
+  } else if cfg!(target_os = "macos") {
+    let paths = [
+      "/opt/homebrew/bin/ollama".to_string(),
+      "/usr/local/bin/ollama".to_string(),
+      "/Applications/Ollama.app/Contents/Resources/ollama".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let paths = [
+      "/usr/local/bin/ollama".to_string(),
+      "/usr/bin/ollama".to_string(),
+      format!("{}/.local/bin/ollama", home),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
   }
   None
 }
@@ -468,6 +543,28 @@ pub fn find_docker() -> Option<String> {
         return Some(p.clone());
       }
     }
+  } else if cfg!(target_os = "macos") {
+    let paths = [
+      "/Applications/Docker.app/Contents/Resources/bin/docker".to_string(),
+      "/usr/local/bin/docker".to_string(),
+      "/opt/homebrew/bin/docker".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    let paths = [
+      "/usr/bin/docker".to_string(),
+      "/usr/local/bin/docker".to_string(),
+      "/snap/bin/docker".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
   }
   None
 }
@@ -483,6 +580,31 @@ pub fn find_node() -> Option<String> {
       format!(r"{}\Programs\node\node.exe", local),
       r"C:\Program Files\nodejs\node.exe".to_string(),
       r"C:\Program Files (x86)\nodejs\node.exe".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else if cfg!(target_os = "macos") {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let paths = [
+      "/opt/homebrew/bin/node".to_string(),
+      "/usr/local/bin/node".to_string(),
+      format!("{}/.nvm/current/bin/node", home),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let paths = [
+      "/usr/bin/node".to_string(),
+      "/usr/local/bin/node".to_string(),
+      format!("{}/.nvm/current/bin/node", home),
+      format!("{}/.local/bin/node", home),
     ];
     for p in &paths {
       if Path::new(p).exists() {
@@ -850,10 +972,10 @@ pub async fn runtime_install_prerequisite(
   name: String,
   app: AppHandle,
 ) -> Result<RuntimeActionResult, String> {
-  let (winget_id, brew_pkg) = match name.as_str() {
-    "python" => ("Python.Python.3.11", "python@3.11"),
-    "git" => ("Git.Git", "git"),
-    "ollama" => ("Ollama.Ollama", "ollama"),
+  let (winget_id, brew_pkg, apt_pkg) = match name.as_str() {
+    "python" => ("Python.Python.3.11", "python@3.11", "python3"),
+    "git" => ("Git.Git", "git", "git"),
+    "ollama" => ("Ollama.Ollama", "ollama", "ollama"),
     _ => return Err(format!("Unknown prerequisite: {}", name)),
   };
 
@@ -873,8 +995,21 @@ pub async fn runtime_install_prerequisite(
     run_streaming(&app, &name, "brew", &["install", brew_pkg], None)
       .await
       .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+  } else if which_exe("apt-get") || which_exe("apt") {
+    let apt_cmd = if which_exe("apt-get") { "apt-get" } else { "apt" };
+    run_streaming(
+      &app,
+      &name,
+      "sudo",
+      &[apt_cmd, "install", "-y", apt_pkg],
+      None,
+    )
+    .await
+    .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
   } else {
-    return Err("Automatic install not supported on this OS. Install manually.".to_string());
+    let msg = "Automatic install is only supported on Debian/Ubuntu-based Linux (apt) in this build. Your distro's package manager (e.g. dnf, pacman, zypper) was not detected — please install this prerequisite manually.".to_string();
+    emit_progress(&app, &name, "error", &msg, 0);
+    return Err(msg);
   }
 
   emit_progress(&app, &name, "done", &format!("{} installed.", name), 100);

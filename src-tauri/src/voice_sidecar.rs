@@ -19,11 +19,17 @@ pub async fn voice_start(app: tauri::AppHandle, state: State<'_, VoiceSidecar>) 
         .join("voice")
         .join("backend");
     // Prefer the voice backend's own venv Python; fall back to system python
-    let venv_python = backend_path.join("venv").join("Scripts").join("python.exe");
+    let venv_python = if cfg!(target_os = "windows") {
+        backend_path.join("venv").join("Scripts").join("python.exe")
+    } else {
+        backend_path.join("venv").join("bin").join("python3")
+    };
     let python_bin = if venv_python.exists() {
         venv_python
-    } else {
+    } else if cfg!(target_os = "windows") {
         std::path::PathBuf::from("python")
+    } else {
+        std::path::PathBuf::from("python3")
     };
     let mut child = Command::new(&python_bin)
         .args([
