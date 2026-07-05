@@ -200,7 +200,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 
 ## Known Technical Debt
 
-- `src-tauri/src/lib.rs` is ~1,975 lines (25 modules in src/: `audit_log.rs`, `companion.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself)
+- `src-tauri/src/lib.rs` is ~2,024 lines (25 modules in src/: `audit_log.rs`, `companion.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself)
 - All frontend files are `.jsx` not `.tsx` — partial TypeScript migration (9 services migrated: policyEnforcement, agentContract, orchestrationQueue, license, cache, parallelExecution, memory, ollama, chatUtils)
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
