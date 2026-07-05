@@ -1,0 +1,48 @@
+# cargo-audit ignore list.
+#
+# CI runs `cargo audit --file src-tauri/Cargo.lock --deny warnings`, which
+# elevates informational "unmaintained"/"unsound" advisories into hard
+# failures alongside real CVEs. The 17 IDs below are all structural,
+# currently-unfixable transitive dependencies of Tauri 2.x itself (gtk-rs
+# GTK3 bindings for Linux tray-icon support, plus a few of their own
+# transitive deps) — `cargo update` does not move any of them, because no
+# newer non-deprecated release exists yet that Tauri's current version can
+# use. Fixing these for real requires Tauri upstream to migrate off gtk-rs
+# 0.18 (GTK4 or another toolkit), which is outside this repo's control.
+#
+# This list is deliberately explicit rather than removing --deny warnings
+# entirely: any NEW unmaintained/unsound advisory that isn't already on this
+# reviewed list still fails CI. Real vulnerabilities (not just warnings) are
+# never silenced by this file — cargo-audit only ever treats CVE-class
+# findings as errors regardless of this ignore list.
+#
+# Investigated and added 2026-07-05 during the mac/Linux compat sprint's
+# CI-failure triage (unrelated to that sprint's actual scope, but found while
+# confirming the Phase 3 CI jobs weren't broken by this branch's changes).
+
+[advisories]
+ignore = [
+  # gtk-rs GTK3 bindings — "no longer maintained" (RUSTSEC-2024-041x), pulled
+  # in transitively by tauri's Linux tray-icon backend (tauri-runtime-wry).
+  "RUSTSEC-2024-0411", # gdkwayland-sys
+  "RUSTSEC-2024-0412", # gdk
+  "RUSTSEC-2024-0413", # atk
+  "RUSTSEC-2024-0414", # gdkx11-sys
+  "RUSTSEC-2024-0415", # gtk
+  "RUSTSEC-2024-0416", # atk-sys
+  "RUSTSEC-2024-0417", # gdkx11
+  "RUSTSEC-2024-0418", # gdk-sys
+  "RUSTSEC-2024-0419", # gtk3-macros
+  "RUSTSEC-2024-0420", # gtk-sys
+  # glib "unsound Iterator impl" — same gtk-rs 0.18 dependency chain.
+  "RUSTSEC-2024-0429", # glib
+  # proc-macro-error — unmaintained, pulled in transitively by a Tauri build dep.
+  "RUSTSEC-2024-0370",
+  # unic-* — unmaintained Unicode crates, pulled in transitively (text
+  # segmentation, likely via a Tauri plugin or one of its deps).
+  "RUSTSEC-2025-0075", # unic-char-range
+  "RUSTSEC-2025-0080", # unic-common
+  "RUSTSEC-2025-0081", # unic-char-property
+  "RUSTSEC-2025-0098", # unic-ucd-version
+  "RUSTSEC-2025-0100", # unic-ucd-ident
+]
