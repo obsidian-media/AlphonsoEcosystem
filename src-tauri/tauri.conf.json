@@ -40,8 +40,14 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "targets": [
-      "nsis"
+      "nsis",
+      "dmg",
+      "app",
+      "appimage",
+      "deb"
     ],
+    "category": "Productivity",
+    "shortDescription": "Local-first multi-agent AI companion",
     "resources": {
       "../voice/backend": "voice/backend"
     },
@@ -57,7 +63,15 @@
       "exceptionDomain": "",
       "signingIdentity": null,
       "providerShortName": null,
-      "entitlements": null
+      "entitlements": "entitlements.plist"
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "depends": []
+      }
     },
     "windows": {
       "certificateThumbprint": null,
