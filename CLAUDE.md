@@ -81,9 +81,9 @@ Before writing any new service, component, or feature, check this list:
 | Zero-cost mode logic | `policyEnforcementService.js` + Jose routing |
 | Agent contract boundaries | `src/services/agentContractService.ts` |
 | 10 workflow operations | `src/services/workflowOperationsRegistryService.js` |
-| AI runtime manager (7 tools) | `src-tauri/src/runtime_manager.rs` + `src/services/runtimeManagerService.js` + `src/components/RuntimeManagerView.jsx` |
+| AI runtime manager (13 tools) | `src-tauri/src/runtime_manager.rs` + `src/services/runtimeManagerService.ts` + `src/components/RuntimeManagerView.tsx` |
 | Prereq detection (Python/Git/Ollama) | `runtime_manager::find_python()` / `find_git()` / `find_ollama()` + `runtime_check_prerequisites` Tauri command |
-| Prereq auto-install (winget/brew) | `runtime_install_prerequisite` Tauri command — do not add a separate install flow |
+| Prereq auto-install (winget/brew/apt) | `runtime_install_prerequisite` Tauri command — do not add a separate install flow |
 | Boot status banner | `src/components/BootStatusBanner.jsx` — listens to `runtime://boot_status` events |
 | Ollama offline global banner | `src/components/OllamaOfflineBanner.jsx` — shown in App.tsx shell; Start/Retry/Open Runtime Hub; uses `startTool('ollama')` |
 | Onboarding wizard | `src/components/OnboardingWizard.tsx` — 6 steps: Ollama check (auto-start via Runtime Hub), model picker, **approval mode decision**, connect (Telegram/WhatsApp/Composio guides inline), **advanced/optional services check (ChromaDB + Voice OS)**, ready |
