@@ -62,22 +62,27 @@ function base64UrlDecode(str: string): ArrayBuffer {
 }
 
 async function getKeyPair(): Promise<KeyPairResult | null> {
+  const raw = await _kvGetSafe(KEYPAIR_KEY);
+  if (!raw) return null;
   try {
-    const raw = await _kvGetSafe(KEYPAIR_KEY);
-    if (raw) {
-      const stored: StoredKeyPair = JSON.parse(raw);
-      const privateKey = await crypto.subtle.importKey(
-        'pkcs8', base64UrlDecode(stored.privateKey),
-        SIGNATURE_ALGO, false, ['sign']
-      );
-      const publicKey = await crypto.subtle.importKey(
-        'spki', base64UrlDecode(stored.publicKey),
-        SIGNATURE_ALGO, true, ['verify']
-      );
-      return { privateKey, publicKey, publicKeyJwk: stored.publicKeyJwk };
-    }
-  } catch { /* key parse failed — generate new */ }
-  return null;
+    const stored: StoredKeyPair = JSON.parse(raw);
+    const privateKey = await crypto.subtle.importKey(
+      'pkcs8', base64UrlDecode(stored.privateKey),
+      SIGNATURE_ALGO, false, ['sign']
+    );
+    const publicKey = await crypto.subtle.importKey(
+      'spki', base64UrlDecode(stored.publicKey),
+      SIGNATURE_ALGO, true, ['verify']
+    );
+    return { privateKey, publicKey, publicKeyJwk: stored.publicKeyJwk };
+  } catch (err) {
+    // A stored key exists but failed to parse/import — this is a real error, not the
+    // "no key yet" case, and silently discarding it would rotate the signer identity
+    // without any signal. Surface it so a corrupted/incompatible stored key is visible
+    // rather than masked by generating a fresh keypair on every call.
+    console.warn('[pluginSigningService] stored signer keypair failed to import, regenerating:', err);
+    return null;
+  }
 }
 
 async function generateAndStoreKeyPair(): Promise<KeyPairResult> {
