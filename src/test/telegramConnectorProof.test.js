@@ -25,11 +25,18 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
-import { proveTelegramConnectorPath, updateConnectorAuthProfile } from '../services/connectorRegistryService';
+import { proveTelegramConnectorPath, updateConnectorAuthProfile, resetConnectorCircuitState } from '../services/connectorRegistryService';
 import { hydrateConnectorCredentialsFromSqlite } from '../services/connectors/connectorAuth';
 
 describe('telegram live connector proof path', () => {
   beforeEach(async () => {
+    // The connector circuit breaker (connectorRegistry.js) is a bare in-memory
+    // module-level object, not reset by localStorage.clear() or between test
+    // files in the same vitest worker. If any other test file in the suite
+    // records 5+ failed telegram external_send attempts, the circuit stays
+    // open for 300s and this test fails only when run as part of the full
+    // suite (not in isolation). Reset explicitly to make this test order-independent.
+    resetConnectorCircuitState('telegram', 'external_send');
     localStorage.clear();
     localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
       telegram: { TELEGRAM_BOT_TOKEN: 'mock-bot-token', TELEGRAM_ALLOWED_CHAT_IDS: 'chat-1' }
