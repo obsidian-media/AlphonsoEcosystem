@@ -12,7 +12,9 @@ import {
   listMissionMessages,
   listMissionSecurityEvents,
   listMissionTasks,
-  updateMissionTask
+  updateMissionTask,
+  type SecurityEvent,
+  type MissionTaskStatus
 } from '../services/missionRoomService';
 
 function cx(...classes: (string | boolean | undefined)[]) {
@@ -56,11 +58,11 @@ function speakerIcon(speaker: string) {
   return Bot;
 }
 
-const lookupAgent = (key: string) => MISSION_ROOM_AGENTS[key] || MISSION_ROOM_AGENTS.alphonso || MISSION_ROOM_AGENTS.jose || Object.values(MISSION_ROOM_AGENTS)[0] || { name: 'Unknown', role: 'unknown', accent: 'zinc' };
+const lookupAgent = (key: string) => MISSION_ROOM_AGENTS[key] || MISSION_ROOM_AGENTS.alphonso || MISSION_ROOM_AGENTS.jose || Object.values(MISSION_ROOM_AGENTS)[0] || { key: 'unknown', name: 'Unknown', role: 'unknown', lane: '', accent: 'zinc' };
 
 interface AgentCardProps {
   agentKey: string;
-  reservedSlot?: { id: string };
+  reservedSlot?: string;
 }
 
 function AgentCard({ agentKey, reservedSlot }: AgentCardProps) {
@@ -108,7 +110,7 @@ interface Message {
   riskLevel?: string;
   approvalRequired?: boolean;
   metadata?: { secretRedacted?: boolean };
-  createdAt?: number;
+  createdAt?: string;
 }
 
 function MessageBubble({ message }: { message: Message }) {
@@ -153,7 +155,7 @@ function MessageBubble({ message }: { message: Message }) {
 interface Task {
   id: string;
   title: string;
-  status: string;
+  status: MissionTaskStatus;
   priority: string;
   owner: string;
   riskLevel?: string;
@@ -173,7 +175,7 @@ function TaskCard({ task, onUpdate }: { task: Task; onUpdate: (taskId: string, p
         </div>
         <select
           value={task.status}
-          onChange={(event) => onUpdate(task.id, { status: event.target.value })}
+          onChange={(event) => onUpdate(task.id, { status: event.target.value as MissionTaskStatus })}
           className={cx('rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-widest outline-none', statusTone(task.status))}
         >
           {MISSION_TASK_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
@@ -197,7 +199,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
   const [room] = useState(() => getMissionRoom());
   const [messages, setMessages] = useState<Message[]>(() => listMissionMessages(room.id));
   const [tasks, setTasks] = useState<Task[]>(() => listMissionTasks(room.id));
-  const [securityEvents, setSecurityEvents] = useState<Array<{ id: string; type: string; riskLevel: string; summary: string; eventHash: string }>>(() => listMissionSecurityEvents(room.id));
+  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>(() => listMissionSecurityEvents(room.id));
   const [input, setInput] = useState<string>('');
   const [speaker, setSpeaker] = useState<string>('shayan');
   const [taskTitle, setTaskTitle] = useState<string>('');
@@ -330,7 +332,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
 
       <section className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-5">
         {room.selectedAgents.map((agentKey: string) => <AgentCard key={agentKey} agentKey={agentKey} />)}
-        {(room.openParticipantSlots || []).map((slot: { id: string }) => <AgentCard key={slot.id} agentKey={slot.id || 'reserved'} reservedSlot={slot} />)}
+        {(room.openParticipantSlots || []).map((slot, index) => <AgentCard key={slot || index} agentKey={slot || 'reserved'} reservedSlot={slot} />)}
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">

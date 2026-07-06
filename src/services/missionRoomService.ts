@@ -10,7 +10,7 @@ interface AgentInfo {
   accent: string;
 }
 
-type MissionTaskStatus = 'todo' | 'doing' | 'review' | 'approved' | 'blocked';
+export type MissionTaskStatus = 'todo' | 'doing' | 'review' | 'approved' | 'blocked';
 
 type AgentKey = 'shayan' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
 
@@ -66,7 +66,7 @@ interface MissionTask {
   [key: string]: unknown;
 }
 
-interface SecurityEvent {
+export interface SecurityEvent {
   id: string;
   roomId: string;
   type: string;
