@@ -219,7 +219,7 @@ export function BoardroomView() {
       await runMarcusDistribution(
         activeSession.conclusion || `Boardroom summary: ${activeSession.topic}`,
         { agentId: 'marcus', commandText: activeSession.topic },
-        []
+        null
       );
       window.dispatchEvent(new CustomEvent('alphonso:toast', {
         detail: { type: 'success', message: 'Boardroom summary sent via Marcus' }

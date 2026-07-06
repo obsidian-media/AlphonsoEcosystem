@@ -20,7 +20,7 @@ import { persistScopeRows } from './runtimeLedgerService';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface WorkflowOperation {
+export interface WorkflowOperation {
   id: string;
   name: string;
   purpose: string;
