@@ -141,11 +141,11 @@ const TOOLS: &[ToolDef] = &[
     repo_url: Some("https://github.com/facebookresearch/audiocraft"),
     pip_packages: &[],
     requirements_file: Some("requirements.txt"),
-    port: Some(8765),
+    port: Some(7866),
     health_path: Some("/"),
     exe: "python",
     // Gap 6 fix: correct entry point — file path, not module syntax
-    args: &["demos/musicgen_app.py", "--server_name", "127.0.0.1", "--server_port", "8765"],
+    args: &["demos/musicgen_app.py", "--server_name", "127.0.0.1", "--server_port", "7866"],
   },
   ToolDef {
     name: "openwebui",
@@ -154,10 +154,10 @@ const TOOLS: &[ToolDef] = &[
     repo_url: Some("https://github.com/open-webui/open-webui"),
     pip_packages: &["open-webui"],
     requirements_file: None,
-    port: Some(3000),
+    port: Some(3001),
     health_path: Some("/health"),
     exe: "open-webui",
-    args: &["serve", "--host", "127.0.0.1", "--port", "3000"],
+    args: &["serve", "--host", "127.0.0.1", "--port", "3001"],
   },
   ToolDef {
     name: "voice-os",
