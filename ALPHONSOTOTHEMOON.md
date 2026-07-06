@@ -1318,14 +1318,64 @@ Carried forward from Sprint 2's original backlog:
   resolvable first); 4 empty-interface declarations in `global.d.ts`
   converted to type aliases. `npm run lint` + `npx tsc --noEmit` clean,
   133/133 targeted tests passing.
-  **Still open, tracked separately, NOT part of this fix**: the 9
-  `@ts-nocheck` files themselves (`App.tsx`, `ApprovalModal.tsx`,
-  `ChatView.tsx`, `ConnectorHealthPanel.tsx`, `OllamaOfflineBanner.tsx`,
+  ~~**Still open, tracked separately, NOT part of this fix**: the 9
+  `@ts-nocheck` files~~ — **CLOSED 2026-07-06**. Removed `@ts-nocheck` from
+  all 9 (`App.tsx`, `ApprovalModal.tsx`, `ChatView.tsx`,
+  `ConnectorHealthPanel.tsx`, `OllamaOfflineBanner.tsx`,
   `OnboardingWizard.tsx`, `SettingsView.tsx`, `Sidebar.tsx`,
-  `WorkflowBuilderView.tsx`) still bypass type-checking entirely.
-  Removing `@ts-nocheck` from each is a real, separately-scoped effort —
-  budget significant time per file, since each will likely surface a
-  batch of genuine type errors that need real fixes, not suppression.
+  `WorkflowBuilderView.tsx`) one file at a time, fixing every real type
+  error that surfaced rather than suppressing. `npx tsc --noEmit` is now
+  fully clean across the entire `src/` tree (this also required fixing 10
+  pre-existing errors in other already-typed files that these 9 touched
+  transitively: `MissionRoom.tsx` ×6, `EcosystemMaturityPanels.tsx`,
+  `BoardroomView.tsx`, `OperatorDashboard.tsx`, `eventsService.ts`).
+  Removed the now-dead `eslint.config.js` override block that had disabled
+  `@typescript-eslint/ban-ts-comment` for these 9 files.
+
+  This surfaced 8 real, previously-invisible bugs, now fixed:
+  - Nova insight card in `ChatView.tsx` always read `.score`/`.recommendation`
+    off the wrong object shape — always showed "Score undefined/100" and no
+    recommendation. Now reads `novaResult.schema.valueScore`/`.recommendation`.
+  - The Hector-sources lookup for the citation/briefing card read from
+    `result.executionReceipts` (whose entries never carry `payload`/`details`)
+    instead of the `receipts` array just fetched from
+    `listOrchestrationReceipts()`, which does have `details`. Always empty.
+  - "Model not found" error message in `ChatView.tsx` always interpolated
+    `undefined` for each installed model name (mapped `.name` off entries
+    that, per its own type at the time, were plain strings — actually the
+    reverse bug: fixed the *type* to match the real `{name:string}[]` shape
+    the app always passed).
+  - Two `ViewLoadingState` call sites in `App.tsx` passed `label="Chat"` /
+    `label="Workflows"` to a component whose only prop is `activeTab` — the
+    loading text was always blank.
+  - `PrereqStatus` (`runtimeManagerService.ts`) was missing `ollamaFound`/
+    `dockerFound`/`nodeFound`/etc. even though the Rust backend
+    (`PrereqStatus` in `runtime_manager.rs`) always sends them — the
+    onboarding wizard's "Ollama not installed" branch was effectively dead.
+  - Echo file-watcher's poll-interval setting in `SettingsView.tsx` saved a
+    `pollIntervalSec` value that `WatcherConfig`/`saveWatcherConfig` silently
+    discarded every time — the slider never did anything. Wired end-to-end:
+    `WatcherConfig` now persists it and `startFileWatcher` uses it.
+  - Same watcher's `workspaceRoot` was wiped to empty on every save from
+    `InboxFolderConfig` (that component never read/wrote it) — would have
+    kept the watcher permanently inert regardless of the enabled toggle.
+    Now preserves the existing value on save.
+  - `MissionRoom.tsx`'s `room.openParticipantSlots` (real type `string[]`)
+    was rendered as `{id: string}[]` — `slot.id` was always `undefined`, so
+    every reserved-slot card's key/label silently fell back to `'reserved'`.
+
+  Also fixed as part of closing the last pre-existing TS errors, unrelated
+  to the 9-file cleanup itself but discovered en route: `pluginSigningService.ts`
+  had an uncommitted fix (present before this session) for a WebCrypto
+  `ArrayBuffer` identity rejection under CI's Node 20 runner — verified and
+  committed. `telegramConnectorProof.test.js` passed in isolation but failed
+  in the full suite because `sendTelegramConnectorMessage` records circuit-
+  breaker failures into a bare in-memory module object
+  (`circuitBreakerState` in `connectorRegistry.js`) with no reset between
+  test files in the same vitest worker — any test exercising 5+ failed
+  telegram sends elsewhere in the suite left the circuit open for the rest
+  of the run. Fixed by resetting the circuit explicitly in this test's
+  `beforeEach`, making it order-independent.
 - Subprocess/sandboxed tool execution (§3.2)
 - MCP as a first-class runtime capability, not a side Express server (§3.4)
 - Scheduler heartbeat/liveness supervision (§3.5)
