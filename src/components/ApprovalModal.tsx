@@ -1,8 +1,9 @@
-// @ts-nocheck
 import React, { useEffect } from 'react';
 import { AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
 
-const RISK_BADGE = {
+type RiskLevel = 'high' | 'medium' | 'low';
+
+const RISK_BADGE: Record<RiskLevel, { classes: string; dot: string; label: string }> = {
   high: {
     classes: 'border-red-500/40 bg-red-500/10 text-red-300',
     dot: 'bg-red-400',
@@ -20,7 +21,7 @@ const RISK_BADGE = {
   }
 };
 
-function inferRiskLevel(label) {
+function inferRiskLevel(label?: string | null): RiskLevel {
   if (!label) return 'medium';
   const lower = String(label).toLowerCase();
   if (
@@ -48,7 +49,7 @@ function inferRiskLevel(label) {
   return 'medium';
 }
 
-function isDestructiveAction(label) {
+function isDestructiveAction(label?: string | null): boolean {
   if (!label) return false;
   const lower = String(label).toLowerCase();
   return (
@@ -62,7 +63,7 @@ function isDestructiveAction(label) {
   );
 }
 
-function inferConnector(label) {
+function inferConnector(label?: string | null): string | null {
   if (!label) return null;
   const lower = String(label).toLowerCase();
   if (lower.includes('telegram')) return 'Telegram';
@@ -82,13 +83,13 @@ function inferConnector(label) {
   return null;
 }
 
-function riskToScore(level) {
+function riskToScore(level: RiskLevel): number {
   if (level === 'high') return 85;
   if (level === 'low') return 20;
   return 55; // medium
 }
 
-function ScoreRing({ score }) {
+function ScoreRing({ score }: { score: number }) {
   const radius = 18;
   const circumference = 2 * Math.PI * radius;
   const filled = circumference - (score / 100) * circumference;
@@ -122,6 +123,16 @@ function ScoreRing({ score }) {
  *   onConfirm  — function: called when user clicks Approve
  *   onCancel   — function: called when user clicks Deny / presses Escape
  */
+interface ApprovalModalProps {
+  label?: string;
+  action?: string;
+  connector?: string;
+  riskLevel?: RiskLevel;
+  mariaScore?: number | null;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+}
+
 export function ApprovalModal({
   label,
   action,
@@ -130,7 +141,7 @@ export function ApprovalModal({
   mariaScore,
   onConfirm,
   onCancel
-}) {
+}: ApprovalModalProps) {
   const actionText = action || label || 'Unknown action';
   const resolvedConnector = connector || inferConnector(actionText);
   const resolvedRisk = riskLevel || inferRiskLevel(actionText);
@@ -141,7 +152,7 @@ export function ApprovalModal({
   const RiskIcon = resolvedRisk === 'high' ? ShieldAlert : Shield;
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel?.();
     };
     window.addEventListener('keydown', handleKeyDown);

@@ -1,14 +1,23 @@
-// @ts-nocheck
 import React, { useState } from 'react';
 import { AlertTriangle, ExternalLink, Loader2, RefreshCw, Zap } from 'lucide-react';
+
+interface OllamaStatus {
+  state: string;
+}
+
+interface OllamaOfflineBannerProps {
+  ollamaStatus: OllamaStatus | null | undefined;
+  onRetry?: () => void;
+  onOpenRuntimes?: () => void;
+}
 
 /**
  * Global banner shown in the main app shell whenever Ollama is not connected.
  * Integrates with RuntimeManager to auto-start Ollama without leaving the app.
  */
-export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }) {
+export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }: OllamaOfflineBannerProps) {
   const [starting, setStarting] = useState(false);
-  const [startMsg, setStartMsg] = useState(null);
+  const [startMsg, setStartMsg] = useState<string | null>(null);
 
   if (!ollamaStatus || ollamaStatus.state === 'connected' || ollamaStatus.state === 'connecting') return null;
 

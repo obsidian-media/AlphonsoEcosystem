@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -16,7 +15,7 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
-import { checkOllama, fetchOllamaModels, normalizeEndpoint, pullOllamaModel } from '../lib/ollama';
+import { checkOllama, fetchOllamaModels, pullOllamaModel, type OllamaModel, type ModelProgress } from '../lib/ollama';
 import { setStorage } from '../lib/appStorage';
 import { buildOllamaPreflightEvent, recordEvent as recordOllamaPreflightEvent } from '../services/eventsService';
 import { invoke } from '@tauri-apps/api/core';
@@ -24,8 +23,9 @@ import { setComposioConfig } from '../services/composioService';
 import { setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { isChromaHealthy } from '../services/chromaDbService';
 import { getVoiceServerStatus } from '../services/voiceOsService';
+import type { PrereqStatus } from '../services/runtimeManagerService';
 
-function openExternal(url) {
+function openExternal(url: string) {
   invoke('open_url', { url }).catch(() => { window.open(url, '_blank'); });
 }
 
@@ -34,7 +34,7 @@ const PREFERRED_PRESELECT = 'llama3.2:3b';
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
-function StepIndicator({ currentStep }) {
+function StepIndicator({ currentStep }: { currentStep: number }) {
   const steps = ['Check Ollama', 'Pick a model', 'Approval', 'Connect', 'Advanced', "You're ready"];
   return (
     <div className="flex items-center gap-2 mb-8">
@@ -62,13 +62,15 @@ function StepIndicator({ currentStep }) {
 
 // ─── Step 1: Check Ollama (enhanced with Runtime Hub auto-start) ──────────────
 
-function CheckOllamaStep({ onNext }) {
-  const [status, setStatus] = useState('checking'); // checking | connected | not_installed | not_running | no_models | error
+type OllamaCheckStatus = 'checking' | 'connected' | 'not_installed' | 'not_running' | 'no_models' | 'error';
+
+function CheckOllamaStep({ onNext }: { onNext: () => void }) {
+  const [status, setStatus] = useState<OllamaCheckStatus>('checking');
   const [message, setMessage] = useState('Checking Ollama...');
   const [isRetrying, setIsRetrying] = useState(false);
-  const [prereqs, setPrereqs] = useState(null);
+  const [prereqs, setPrereqs] = useState<PrereqStatus | null>(null);
   const [starting, setStarting] = useState(false);
-  const [startMsg, setStartMsg] = useState(null);
+  const [startMsg, setStartMsg] = useState<string | null>(null);
   const hasMountedRef = useRef(false);
 
   const runCheck = async () => {
@@ -173,7 +175,7 @@ function CheckOllamaStep({ onNext }) {
 
   const canProceed = status === 'connected' || status === 'no_models';
 
-  const statusConfig = {
+  const statusConfig: Record<OllamaCheckStatus, { dot: string; text: string; border: string }> = {
     checking:     { dot: 'bg-[var(--text-4)] animate-pulse', text: 'text-[var(--text-3)]',    border: 'border-white/[0.06] bg-[var(--surface-1)/0.4]' },
     connected:    { dot: 'bg-emerald-400',             text: 'text-emerald-300', border: 'border-emerald-500/30 bg-emerald-500/10' },
     no_models:    { dot: 'bg-amber-400',               text: 'text-amber-300',   border: 'border-amber-500/30 bg-amber-500/10' },
@@ -269,15 +271,15 @@ function CheckOllamaStep({ onNext }) {
 
 // ─── Step 2: Pick a model ─────────────────────────────────────────────────────
 
-function PickModelStep({ onNext }) {
-  const [models, setModels] = useState([]);
+function PickModelStep({ onNext }: { onNext: (model: string) => void }) {
+  const [models, setModels] = useState<OllamaModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState('');
   const [pulling, setPulling] = useState(false);
-  const [pullProgress, setPullProgress] = useState(null);
+  const [pullProgress, setPullProgress] = useState<ModelProgress | null>(null);
   const [pullComplete, setPullComplete] = useState(false);
-  const [pullError, setPullError] = useState(null);
+  const [pullError, setPullError] = useState<string | null>(null);
 
   const refreshModels = useCallback(() => {
     setLoading(true);
@@ -290,7 +292,7 @@ function PickModelStep({ onNext }) {
         setLoading(false);
       })
       .catch((err) => {
-        setError(String(err?.message || err));
+        setError(err instanceof Error ? err.message : String(err));
         setLoading(false);
       });
   }, []);
@@ -311,7 +313,7 @@ function PickModelStep({ onNext }) {
       setPullComplete(true);
       refreshModels();
     } catch (err) {
-      setPullError(String(err?.message || err));
+      setPullError(err instanceof Error ? err.message : String(err));
     } finally {
       setPulling(false);
     }
@@ -417,7 +419,7 @@ function PickModelStep({ onNext }) {
 
 // ─── Step 3: Approval mode decision ───────────────────────────────────────────
 
-function ApprovalModeStep({ onNext }) {
+function ApprovalModeStep({ onNext }: { onNext: () => void }) {
   const [approvalMode, setApprovalMode] = useState(true); // default ON during onboarding
   const [saving, setSaving] = useState(false);
 
@@ -535,9 +537,9 @@ const CHANNEL_OPTIONS = [
 // WhatsApp Railway deploy guide (inline, collapsible)
 function WhatsAppDeployGuide() {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const copy = (text, key) => {
+  const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text).catch(() => {});
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
@@ -636,7 +638,7 @@ function TelegramSetupGuide() {
 }
 
 // Composio setup guide (inline)
-function ComposioSetupGuide() {
+function ComposioSetupGuide(): React.ReactElement {
   const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -681,8 +683,8 @@ function ComposioSetupGuide() {
   );
 }
 
-function ConnectChannelStep({ onNext }) {
-  const [selected, setSelected] = useState(null);
+function ConnectChannelStep({ onNext }: { onNext: () => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
 
   const handleContinue = () => {
     const value = selected ?? 'none';
@@ -744,7 +746,16 @@ function ConnectChannelStep({ onNext }) {
 
 // ─── Step 5: Advanced / optional services ─────────────────────────────────────
 
-function AdvancedServiceRow({ label, description, checking, ok, hint, onCheck }) {
+interface AdvancedServiceRowProps {
+  label: string;
+  description: string;
+  checking: boolean;
+  ok: boolean | null;
+  hint: string;
+  onCheck: () => void;
+}
+
+function AdvancedServiceRow({ label, description, checking, ok, hint, onCheck }: AdvancedServiceRowProps) {
   return (
     <div className="rounded-xl border border-white/[0.06] bg-[var(--surface-1)/0.6] px-4 py-3">
       <div className="flex items-start justify-between gap-3">
@@ -771,10 +782,15 @@ function AdvancedServiceRow({ label, description, checking, ok, hint, onCheck })
   );
 }
 
-function AdvancedServicesStep({ onNext }) {
-  const [chroma, setChroma] = useState({ checking: false, ok: null });
-  const [voice, setVoice] = useState({ checking: false, ok: null });
-  const [pythonChecked, setPythonChecked] = useState(null);
+interface ServiceCheckState {
+  checking: boolean;
+  ok: boolean | null;
+}
+
+function AdvancedServicesStep({ onNext }: { onNext: () => void }) {
+  const [chroma, setChroma] = useState<ServiceCheckState>({ checking: false, ok: null });
+  const [voice, setVoice] = useState<ServiceCheckState>({ checking: false, ok: null });
+  const [pythonChecked, setPythonChecked] = useState<boolean | null>(null);
 
   const checkChroma = async () => {
     setChroma({ checking: true, ok: null });
@@ -851,7 +867,7 @@ function AdvancedServicesStep({ onNext }) {
 
 // ─── Step 4: You're ready ─────────────────────────────────────────────────────
 
-function ReadyStep({ selectedModel, onFinish }) {
+function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinish: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
       <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6">
@@ -881,7 +897,7 @@ function ReadyStep({ selectedModel, onFinish }) {
 
 // ─── Root wizard ──────────────────────────────────────────────────────────────
 
-export function OnboardingWizard({ onComplete }) {
+export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: string) => void }) {
   const [step, setStep] = useState(0);
   const [selectedModel, setSelectedModel] = useState('');
 

@@ -53,13 +53,13 @@ describe('saveWatcherConfig', () => {
   it('saves config to localStorage', () => {
     saveWatcherConfig({ enabled: true, workspaceRoot: '/ws', inboxPath: '/inbox' });
     const stored = JSON.parse(localStorage.getItem('alphonso_echo_watcher_config_v1'));
-    expect(stored).toEqual({ enabled: true, workspaceRoot: '/ws', inboxPath: '/inbox' });
+    expect(stored).toEqual({ enabled: true, workspaceRoot: '/ws', inboxPath: '/inbox', pollIntervalSec: 30 });
   });
 
   it('coerces undefined fields to empty strings', () => {
     saveWatcherConfig({});
     const stored = JSON.parse(localStorage.getItem('alphonso_echo_watcher_config_v1'));
-    expect(stored).toEqual({ enabled: false, workspaceRoot: '', inboxPath: '' });
+    expect(stored).toEqual({ enabled: false, workspaceRoot: '', inboxPath: '', pollIntervalSec: 30 });
   });
 });
 

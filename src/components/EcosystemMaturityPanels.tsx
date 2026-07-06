@@ -35,7 +35,7 @@ import { listMiyaMemory } from '../services/miyaMemoryService';
 import { listSessionEvents, summarizeSession } from '../services/sessionIntelligenceService';
 import { listWorkflows } from '../services/workflowBuilderService';
 import { trustColor, TRUST_STATES } from '../services/trustModel';
-import { listWorkflowOperations, updateWorkflowOperationStatus } from '../services/workflowOperationsRegistryService';
+import { listWorkflowOperations, updateWorkflowOperationStatus, type WorkflowOperation } from '../services/workflowOperationsRegistryService';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { AgentAvatar } from './AgentAvatar';
 
@@ -408,7 +408,7 @@ export function SessionIntelligencePanel() {
 }
 
 export function WorkflowOperationsPanel() {
-  const [rows, setRows] = useState(() => listWorkflowOperations() as { id: string; name: string; status: string; riskLevel?: string; verificationState?: string; purpose?: string; agentSequence?: string[]; requiredApprovals?: string[]; connectorRequirements?: string[]; setupRequired?: string[] }[]);
+  const [rows, setRows] = useState<WorkflowOperation[]>(() => listWorkflowOperations());
   const [statusFilter, setStatusFilter] = useState('all');
   const filtered = rows.filter((row) => statusFilter === 'all' ? true : row.status === statusFilter);
 

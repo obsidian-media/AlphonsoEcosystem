@@ -785,7 +785,7 @@ export function createAgentReportToJose({
 }: AgentReportInput): { reportPacket: any; command: JoseCommand | null; contractValidation: ContractValidation } | null {
   const packet = getPacketById(packetId);
   if (!packet) return null;
-  const commandId = packet.payload?.joseCommandId;
+  const commandId = String(packet.payload?.joseCommandId || '');
   if (!commandId) return null;
   const command = readCommands().find((item) => item.id === commandId);
   if (!command) return null;
@@ -881,7 +881,7 @@ export function createAgentReportToJose({
 function collectAgentReports(command: JoseCommand): any[] {
   const packetIds = new Set((command.assignments || []).map((assignment) => assignment.packetId));
   return listAgentPackets().filter((packet) => (
-    packet.packetType === 'agent_report_to_jose' && packetIds.has(packet.payload?.originalPacketId)
+    packet.packetType === 'agent_report_to_jose' && packetIds.has(String(packet.payload?.originalPacketId || ''))
   ));
 }
 

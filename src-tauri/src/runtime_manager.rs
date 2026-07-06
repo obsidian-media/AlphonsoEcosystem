@@ -141,11 +141,11 @@ const TOOLS: &[ToolDef] = &[
     repo_url: Some("https://github.com/facebookresearch/audiocraft"),
     pip_packages: &[],
     requirements_file: Some("requirements.txt"),
-    port: Some(8765),
+    port: Some(7866),
     health_path: Some("/"),
     exe: "python",
     // Gap 6 fix: correct entry point — file path, not module syntax
-    args: &["demos/musicgen_app.py", "--server_name", "127.0.0.1", "--server_port", "8765"],
+    args: &["demos/musicgen_app.py", "--server_name", "127.0.0.1", "--server_port", "7866"],
   },
   ToolDef {
     name: "openwebui",
@@ -154,10 +154,10 @@ const TOOLS: &[ToolDef] = &[
     repo_url: Some("https://github.com/open-webui/open-webui"),
     pip_packages: &["open-webui"],
     requirements_file: None,
-    port: Some(3000),
+    port: Some(3001),
     health_path: Some("/health"),
     exe: "open-webui",
-    args: &["serve", "--host", "127.0.0.1", "--port", "3000"],
+    args: &["serve", "--host", "127.0.0.1", "--port", "3001"],
   },
   ToolDef {
     name: "voice-os",
@@ -284,8 +284,16 @@ fn prefs_path() -> PathBuf {
 // ─────────────────────────────────────────────────────────
 
 fn load_autostart_prefs() -> HashMap<String, bool> {
-  let path = prefs_path();
-  if let Ok(content) = std::fs::read_to_string(&path) {
+  load_autostart_prefs_from(&prefs_path())
+}
+
+// Path-parameterized so tests can point at an isolated temp file instead of
+// the real %APPDATA%\Alphonso\runtimes\autostart_prefs.json — reading the
+// real file made the "defaults" test fail on any machine that had actually
+// run the app (a real prefs file with non-default values always wins over
+// the hardcoded defaults below).
+fn load_autostart_prefs_from(path: &std::path::Path) -> HashMap<String, bool> {
+  if let Ok(content) = std::fs::read_to_string(path) {
     if let Ok(map) = serde_json::from_str::<HashMap<String, bool>>(&content) {
       return map;
     }
@@ -332,14 +340,27 @@ pub struct PrereqStatus {
 /// Gap 1: find Python across PATH + common Windows install locations
 pub fn find_python() -> Option<String> {
   let candidates: &[&str] = if cfg!(target_os = "windows") {
-    &["python", "python3", "python3.12", "python3.11", "python3.10"]
+    &[
+      "python",
+      "python3",
+      "python3.12",
+      "python3.11",
+      "python3.10",
+    ]
   } else {
-    &["python3", "python3.12", "python3.11", "python3.10", "python"]
+    &[
+      "python3",
+      "python3.12",
+      "python3.11",
+      "python3.10",
+      "python",
+    ]
   };
 
   for name in candidates {
     let mut cmd = Command::new(name);
-    cmd.arg("--version")
+    cmd
+      .arg("--version")
       .stdout(std::process::Stdio::null())
       .stderr(std::process::Stdio::null());
     no_window(&mut cmd);
@@ -359,10 +380,55 @@ pub fn find_python() -> Option<String> {
       r"C:\Python312\python.exe".to_string(),
       r"C:\Python311\python.exe".to_string(),
       r"C:\Python310\python.exe".to_string(),
-      format!(r"{}\AppData\Local\Programs\Python\Python312\python.exe", user),
-      format!(r"{}\AppData\Local\Programs\Python\Python311\python.exe", user),
+      format!(
+        r"{}\AppData\Local\Programs\Python\Python312\python.exe",
+        user
+      ),
+      format!(
+        r"{}\AppData\Local\Programs\Python\Python311\python.exe",
+        user
+      ),
     ];
     for p in &win_paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else if cfg!(target_os = "macos") {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mac_paths = [
+      "/opt/homebrew/bin/python3".to_string(),
+      "/opt/homebrew/opt/python3/bin/python3".to_string(),
+      "/usr/local/bin/python3".to_string(),
+      "/usr/bin/python3".to_string(),
+      format!(
+        "{}/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+        home
+      ),
+      format!(
+        "{}/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+        home
+      ),
+      "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3".to_string(),
+      "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3".to_string(),
+    ];
+    for p in &mac_paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    // Linux
+    let home = std::env::var("HOME").unwrap_or_default();
+    let linux_paths = [
+      "/usr/bin/python3".to_string(),
+      "/usr/local/bin/python3".to_string(),
+      "/snap/bin/python3".to_string(),
+      format!("{}/.local/bin/python3", home),
+      format!("{}/.linuxbrew/bin/python3", home),
+      "/home/linuxbrew/.linuxbrew/bin/python3".to_string(),
+    ];
+    for p in &linux_paths {
       if Path::new(p).exists() {
         return Some(p.clone());
       }
@@ -375,7 +441,8 @@ fn python_version(exe: &str) -> Option<String> {
   let mut cmd = Command::new(exe);
   cmd.arg("--version");
   no_window(&mut cmd);
-  cmd.output()
+  cmd
+    .output()
     .ok()
     .map(|o| {
       String::from_utf8_lossy(&o.stdout)
@@ -413,6 +480,25 @@ pub fn find_git() -> Option<String> {
         return Some((*p).to_string());
       }
     }
+  } else if cfg!(target_os = "macos") {
+    let paths = [
+      "/opt/homebrew/bin/git",
+      "/usr/local/bin/git",
+      "/usr/bin/git",
+      "/Library/Developer/CommandLineTools/usr/bin/git",
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some((*p).to_string());
+      }
+    }
+  } else {
+    let paths = ["/usr/bin/git", "/usr/local/bin/git", "/snap/bin/git"];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some((*p).to_string());
+      }
+    }
   }
   None
 }
@@ -421,7 +507,8 @@ fn git_version(exe: &str) -> Option<String> {
   let mut cmd = Command::new(exe);
   cmd.arg("--version");
   no_window(&mut cmd);
-  cmd.output()
+  cmd
+    .output()
     .ok()
     .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
     .filter(|s| !s.is_empty())
@@ -439,6 +526,29 @@ pub fn find_ollama() -> Option<String> {
       format!(r"{}\Programs\Ollama\ollama.exe", local),
       format!(r"{}\AppData\Local\Programs\Ollama\ollama.exe", user),
       r"C:\Program Files\Ollama\ollama.exe".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else if cfg!(target_os = "macos") {
+    let paths = [
+      "/opt/homebrew/bin/ollama".to_string(),
+      "/usr/local/bin/ollama".to_string(),
+      "/Applications/Ollama.app/Contents/Resources/ollama".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let paths = [
+      "/usr/local/bin/ollama".to_string(),
+      "/usr/bin/ollama".to_string(),
+      format!("{}/.local/bin/ollama", home),
     ];
     for p in &paths {
       if Path::new(p).exists() {
@@ -468,6 +578,28 @@ pub fn find_docker() -> Option<String> {
         return Some(p.clone());
       }
     }
+  } else if cfg!(target_os = "macos") {
+    let paths = [
+      "/Applications/Docker.app/Contents/Resources/bin/docker".to_string(),
+      "/usr/local/bin/docker".to_string(),
+      "/opt/homebrew/bin/docker".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    let paths = [
+      "/usr/bin/docker".to_string(),
+      "/usr/local/bin/docker".to_string(),
+      "/snap/bin/docker".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
   }
   None
 }
@@ -483,6 +615,31 @@ pub fn find_node() -> Option<String> {
       format!(r"{}\Programs\node\node.exe", local),
       r"C:\Program Files\nodejs\node.exe".to_string(),
       r"C:\Program Files (x86)\nodejs\node.exe".to_string(),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else if cfg!(target_os = "macos") {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let paths = [
+      "/opt/homebrew/bin/node".to_string(),
+      "/usr/local/bin/node".to_string(),
+      format!("{}/.nvm/current/bin/node", home),
+    ];
+    for p in &paths {
+      if Path::new(p).exists() {
+        return Some(p.clone());
+      }
+    }
+  } else {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let paths = [
+      "/usr/bin/node".to_string(),
+      "/usr/local/bin/node".to_string(),
+      format!("{}/.nvm/current/bin/node", home),
+      format!("{}/.local/bin/node", home),
     ];
     for p in &paths {
       if Path::new(p).exists() {
@@ -595,9 +752,7 @@ fn is_running_sync(port: u16) -> bool {
   use std::net::TcpStream;
   use std::time::Duration;
   TcpStream::connect_timeout(
-    &format!("127.0.0.1:{}", port)
-      .parse()
-      .expect("valid addr"),
+    &format!("127.0.0.1:{}", port).parse().expect("valid addr"),
     Duration::from_millis(400),
   )
   .is_ok()
@@ -649,10 +804,10 @@ async fn run_streaming(
   args: &[&str],
   cwd: Option<&Path>,
 ) -> Result<(), String> {
-  use tokio::process::Command as TokioCommand;
   #[cfg(target_os = "windows")]
   #[allow(unused_imports)]
   use std::os::windows::process::CommandExt as TokioCommandExt;
+  use tokio::process::Command as TokioCommand;
 
   let mut cmd = TokioCommand::new(program);
   cmd.args(args);
@@ -769,7 +924,13 @@ async fn ensure_venv(app: &AppHandle, tool: &str, py: &str, dir: &Path) -> Resul
   if venv_dir.exists() {
     return Ok(());
   }
-  emit_progress(app, tool, "venv", "Creating isolated Python environment…", 45);
+  emit_progress(
+    app,
+    tool,
+    "venv",
+    "Creating isolated Python environment…",
+    45,
+  );
   run_streaming(app, tool, py, &["-m", "venv", "venv"], Some(dir))
     .await
     .map_err(|e| format!("venv creation failed: {}", e))
@@ -782,9 +943,7 @@ async fn ensure_venv(app: &AppHandle, tool: &str, py: &str, dir: &Path) -> Resul
 #[tauri::command]
 pub fn runtime_check_prerequisites() -> PrereqStatus {
   let python_path = find_python();
-  let python_version = python_path
-    .as_deref()
-    .and_then(python_version);
+  let python_version = python_path.as_deref().and_then(python_version);
 
   let git_path = find_git();
   let git_version = git_path.as_deref().and_then(git_version);
@@ -850,21 +1009,34 @@ pub async fn runtime_install_prerequisite(
   name: String,
   app: AppHandle,
 ) -> Result<RuntimeActionResult, String> {
-  let (winget_id, brew_pkg) = match name.as_str() {
-    "python" => ("Python.Python.3.11", "python@3.11"),
-    "git" => ("Git.Git", "git"),
-    "ollama" => ("Ollama.Ollama", "ollama"),
+  let (winget_id, brew_pkg, apt_pkg) = match name.as_str() {
+    "python" => ("Python.Python.3.11", "python@3.11", "python3"),
+    "git" => ("Git.Git", "git", "git"),
+    "ollama" => ("Ollama.Ollama", "ollama", "ollama"),
     _ => return Err(format!("Unknown prerequisite: {}", name)),
   };
 
-  emit_progress(&app, &name, "installing", &format!("Installing {}…", name), 10);
+  emit_progress(
+    &app,
+    &name,
+    "installing",
+    &format!("Installing {}…", name),
+    10,
+  );
 
   if cfg!(target_os = "windows") {
     run_streaming(
       &app,
       &name,
       "winget",
-      &["install", "--id", winget_id, "--silent", "--accept-package-agreements", "--accept-source-agreements"],
+      &[
+        "install",
+        "--id",
+        winget_id,
+        "--silent",
+        "--accept-package-agreements",
+        "--accept-source-agreements",
+      ],
       None,
     )
     .await
@@ -873,8 +1045,25 @@ pub async fn runtime_install_prerequisite(
     run_streaming(&app, &name, "brew", &["install", brew_pkg], None)
       .await
       .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+  } else if which_exe("apt-get") || which_exe("apt") {
+    let apt_cmd = if which_exe("apt-get") {
+      "apt-get"
+    } else {
+      "apt"
+    };
+    run_streaming(
+      &app,
+      &name,
+      "sudo",
+      &[apt_cmd, "install", "-y", apt_pkg],
+      None,
+    )
+    .await
+    .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
   } else {
-    return Err("Automatic install not supported on this OS. Install manually.".to_string());
+    let msg = "Automatic install is only supported on Debian/Ubuntu-based Linux (apt) in this build. Your distro's package manager (e.g. dnf, pacman, zypper) was not detected — please install this prerequisite manually.".to_string();
+    emit_progress(&app, &name, "error", &msg, 0);
+    return Err(msg);
   }
 
   emit_progress(&app, &name, "done", &format!("{} installed.", name), 100);
@@ -901,7 +1090,10 @@ pub async fn runtime_get_all_status(
       (None, exe) => {
         // Check venv bin first, then PATH
         let venv_bin = if cfg!(target_os = "windows") {
-          dir.join("venv").join("Scripts").join(format!("{}.exe", exe))
+          dir
+            .join("venv")
+            .join("Scripts")
+            .join(format!("{}.exe", exe))
         } else {
           dir.join("venv").join("bin").join(exe)
         };
@@ -911,7 +1103,11 @@ pub async fn runtime_get_all_status(
 
     let (running, pid) = if let Some(port) = def.port {
       let up = is_running_sync(port);
-      let pid = if up { state.spawned_pid(def.name) } else { None };
+      let pid = if up {
+        state.spawned_pid(def.name)
+      } else {
+        None
+      };
       (up, pid)
     } else {
       let pid = state.spawned_pid(def.name);
@@ -950,9 +1146,8 @@ pub async fn runtime_install_tool(
   let py_path = find_python().ok_or_else(|| {
     "Python not found. Install Python 3.10+ first (use the Prerequisites panel).".to_string()
   });
-  let git_path = find_git().ok_or_else(|| {
-    "Git not found. Install Git first (use the Prerequisites panel).".to_string()
-  });
+  let git_path = find_git()
+    .ok_or_else(|| "Git not found. Install Git first (use the Prerequisites panel).".to_string());
 
   // Only fail on missing python/git if we actually need them
   if def.exe == "python" || def.requirements_file.is_some() || !def.pip_packages.is_empty() {
@@ -974,9 +1169,15 @@ pub async fn runtime_install_tool(
   if let Some(url) = def.repo_url {
     if !dir.join(".git").exists() {
       emit_progress(&app, &name, "cloning", &format!("Cloning {} …", url), 10);
-      run_streaming(&app, &name, &git, &["clone", "--depth", "1", url, "."], Some(&dir))
-        .await
-        .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+      run_streaming(
+        &app,
+        &name,
+        &git,
+        &["clone", "--depth", "1", url, "."],
+        Some(&dir),
+      )
+      .await
+      .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
       emit_progress(&app, &name, "cloned", "Repository cloned.", 40);
     } else {
       emit_progress(&app, &name, "cloned", "Repository already cloned.", 40);
@@ -1001,7 +1202,13 @@ pub async fn runtime_install_tool(
   // ── Step 3: pip install deps ──────────────────────────────
   if let Some(req) = def.requirements_file {
     if dir.join(req).exists() {
-      emit_progress(&app, &name, "installing_deps", "Installing Python dependencies…", 55);
+      emit_progress(
+        &app,
+        &name,
+        "installing_deps",
+        "Installing Python dependencies…",
+        55,
+      );
       run_streaming(
         &app,
         &name,
@@ -1080,10 +1287,7 @@ pub async fn runtime_start_tool(
       return Ok(RuntimeActionResult {
         tool: name,
         ok: true,
-        message: format!(
-          "{} is already running on port {}.",
-          def.display_name, port
-        ),
+        message: format!("{} is already running on port {}.", def.display_name, port),
       });
     }
   }
@@ -1093,17 +1297,28 @@ pub async fn runtime_start_tool(
 
   // voice-os: resolve script path relative to app resource directory
   if name == "voice-os" {
-    let resource_dir = app.path().resource_dir().map_err(|e| format!("Resource dir: {e}"))?;
+    let resource_dir = app
+      .path()
+      .resource_dir()
+      .map_err(|e| format!("Resource dir: {e}"))?;
     let backend_dir = resource_dir.join("voice").join("backend");
     let vpy = venv_python(&dir);
-    let py = if vpy.exists() { vpy.to_string_lossy().to_string() } else { "python".to_string() };
+    let py = if vpy.exists() {
+      vpy.to_string_lossy().to_string()
+    } else {
+      "python".to_string()
+    };
     let script = backend_dir.join("main.py");
     let mut cmd = Command::new(&py);
-    cmd.arg(&script).args(["--host", "127.0.0.1", "--port", "8765"]);
+    cmd
+      .arg(&script)
+      .args(["--host", "127.0.0.1", "--port", "8765"]);
     cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::null());
     no_window(&mut cmd);
-    let child = cmd.spawn().map_err(|e| format!("Failed to start Voice OS: {e}"))?;
+    let child = cmd
+      .spawn()
+      .map_err(|e| format!("Failed to start Voice OS: {e}"))?;
     let pid = child.id();
     state.record_pid(&name, pid);
     // S-10: post-spawn health check — emit failure event if process dies within 3 s
@@ -1137,9 +1352,9 @@ pub async fn runtime_start_tool(
   cmd.stderr(std::process::Stdio::null());
   no_window(&mut cmd);
 
-  let child = cmd.spawn().map_err(|e| {
-    format!("Failed to start {} ('{}'):\n{}", def.display_name, exe, e)
-  })?;
+  let child = cmd
+    .spawn()
+    .map_err(|e| format!("Failed to start {} ('{}'):\n{}", def.display_name, exe, e))?;
 
   let pid = child.id();
   state.record_pid(&name, pid);
@@ -1251,7 +1466,10 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
         (None, "ollama") => find_ollama().is_some(),
         (None, exe) => {
           let venv_bin = if cfg!(target_os = "windows") {
-            dir.join("venv").join("Scripts").join(format!("{}.exe", exe))
+            dir
+              .join("venv")
+              .join("Scripts")
+              .join(format!("{}.exe", exe))
           } else {
             dir.join("venv").join("bin").join(exe)
           };
@@ -1323,7 +1541,11 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
               message: format!("Started (PID {}).", pid),
             },
           );
-          log::info!("runtime_manager: auto-started {} PID={}", def.display_name, pid);
+          log::info!(
+            "runtime_manager: auto-started {} PID={}",
+            def.display_name,
+            pid
+          );
         }
         Err(e) => {
           let _ = app.emit(
@@ -1335,7 +1557,11 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
               message: format!("Failed to start: {}", e),
             },
           );
-          log::error!("runtime_manager: failed to start {}: {}", def.display_name, e);
+          log::error!(
+            "runtime_manager: failed to start {}: {}",
+            def.display_name,
+            e
+          );
         }
       }
     }
@@ -1347,8 +1573,13 @@ pub fn autostart_all(state: Arc<RuntimeManager>, app: AppHandle) {
 // ─────────────────────────────────────────────────────────
 
 fn which_exe(name: &str) -> bool {
-  let mut cmd = Command::new(if cfg!(target_os = "windows") { "where" } else { "which" });
-  cmd.arg(name)
+  let mut cmd = Command::new(if cfg!(target_os = "windows") {
+    "where"
+  } else {
+    "which"
+  });
+  cmd
+    .arg(name)
     .stdout(std::process::Stdio::null())
     .stderr(std::process::Stdio::null());
   no_window(&mut cmd);
@@ -1444,7 +1675,15 @@ mod tests {
 
   #[test]
   fn autostart_prefs_defaults_ollama_only() {
-    let prefs = load_autostart_prefs();
+    // Use an isolated, definitely-nonexistent path instead of the real
+    // %APPDATA% prefs file — reading the real file (if the app has ever
+    // actually run on this machine) made this test's "defaults" assumption
+    // fail nondeterministically depending on the runner's disk state.
+    let path = std::env::temp_dir().join(format!(
+      "alphonso_test_autostart_prefs_{}.json",
+      std::process::id()
+    ));
+    let prefs = load_autostart_prefs_from(&path);
     // Ollama defaults to true; others default to false
     assert_eq!(prefs.get("ollama").copied(), Some(true));
     assert_eq!(prefs.get("comfyui").copied(), Some(false));
@@ -1455,8 +1694,14 @@ mod tests {
   fn audiocraft_args_use_file_not_module() {
     let def = tool_def("audiocraft").unwrap();
     // Gap 6: must be file path, not -m module syntax
-    assert!(!def.args.contains(&"-m"), "audiocraft must not use -m module syntax");
-    assert!(def.args[0].ends_with(".py"), "audiocraft first arg must be a .py file");
+    assert!(
+      !def.args.contains(&"-m"),
+      "audiocraft must not use -m module syntax"
+    );
+    assert!(
+      def.args[0].ends_with(".py"),
+      "audiocraft first arg must be a .py file"
+    );
   }
 
   #[test]

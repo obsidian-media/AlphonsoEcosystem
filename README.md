@@ -4,28 +4,19 @@
 
 # Alphonso
 
-> **v2.5.10** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.5.18** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.10-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/Thatisshayan/AlphonsoEcosystem)
-[![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/LICENSE)
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
-[![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
+[![Version](https://img.shields.io/badge/version-2.5.18-blue)](https://github.com/Thatisshayan/AlphonsoEcosystem/releases)
 
-**Alphonso is a privacy-first desktop AI companion that runs entirely on your machine.**  
-It orchestrates 9 specialized agents, connects to 22 external services, and uses Ollama for local LLM inference — keeping your data off the cloud, always.
+[**Download v2.5.18**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.18) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
-**Why Alphonso?** — The only desktop AI with role-specialized agents (not just a single chat model), fail-closed security gates on every action, and 22 policy-enforced connectors — all local-first. See [Comparison](docs/COMPARISON.md).
+## What's New in v2.5.18
 
-[**Download v2.5.10**](https://github.com/Thatisshayan/AlphonsoEcosystem/releases/tag/v2.5.10) · [Docs](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/Thatisshayan/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+- **Sprint 5 batch 10: 6 more services migrated to TypeScript.** `novaAnalysisService`, `missionRoomService`, `eventsService`, `workflowRegistryService`, `marcusExecutionService`, `workflowOperationsRegistryService` — all root-level `.js` → `.ts`. Root-level count now 11 `.js` / 120 `.ts`. Added `DEFAULT_OLLAMA_ENDPOINT` to required `generateOllamaResponse` call, fixed `GitHubRelease`/`GitHubIssue` htmlUrl references, added `[key: string]: unknown` to `LedgerRow` interface.
 
-</div>
+- **Sprint 5 batch 9: 6 more services migrated to TypeScript.** `selfDevelopmentService`, `sentinelSecurityService`, `echoMemoryService`, `whatsappWebhookService`, `rc0EvidenceService`, `toolConnectionService` — all root-level `.js` → `.ts`. Root-level count now 17 `.js` / 114 `.ts`. Fixed pre-existing type mismatches across `SelfDevelopmentPanel.tsx`, `toolNotificationDispatcher.ts`, and `approvalService.js` integration.
 
----
-
-## What's New in v2.5.10
-
-- **First real installer release since v2.4.4.** Cut a tag + CI release + Windows installer. Found and fixed a real bug the release process itself surfaced: `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`'s version fields had been stuck at `2.4.4` through 9 prior version bumps (never kept in sync with `package.json`), so the first published installer (`v2.5.9`) was mislabeled. Fixed and re-released as `v2.5.10` — all version fields now in sync.
+- **Sprint 5 batch 8: 15 more services migrated to TypeScript.** `devPacketService`, `pluginRegistryService`, `pluginSigningService`, `packetExecutionService`, `verificationService`, `nativeSelfDevelopmentAutostartService`, `agentMetricsService`, `mariaAuditService`, `proactiveAgentService`, `agentBusService`, `telegramBrowserConnector`, `composioService`, `screenIntelligenceService`, `toolRegistryService`, `joseSchedulerService` — all root-level `.js` → `.ts`. Root-level count now 23 `.js` / 108 `.ts`.
 
 ## What's New in v2.5.9
 
@@ -78,8 +69,8 @@ It orchestrates 9 specialized agents, connects to 22 external services, and uses
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **69 Rust unit tests across 25 modules** — 104 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
-- **2,151 tests across 159 test files** — all passing. 0 TypeScript errors. 0 ESLint warnings. Cargo clippy clean.
+- **98 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **3,255 tests across 222 test files** — all passing. 0 TypeScript errors. 0 ESLint warnings. Cargo clippy clean.
 
 ## What's New in v2.4.2
 
@@ -260,7 +251,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~1,975 lines · 104 Tauri commands · 25 modules   │    │
+│  │  lib.rs ~2,052 lines · 105 Tauri commands · 25 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -356,7 +347,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 2,151 tests across 159 files
+npm run test           # 3,255 tests across 222 files
 npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -368,7 +359,7 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 69 Rust unit tests across 25 modules
+cargo test                     # 98 Rust unit tests across 25 modules
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 
@@ -424,7 +415,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 162 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 165 services already exist.
 
 ## Security
 

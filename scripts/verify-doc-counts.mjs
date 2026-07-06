@@ -18,6 +18,20 @@ import { getAllCounts } from './shared/counters.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const PROJECT_ROOT = resolve(dirname(__filename), '..');
 
+// Read the real current version from package.json rather than a hardcoded
+// string — a hardcoded version constant here goes stale on every release and
+// silently starts flagging correct docs as wrong (see CLAUDE.md's "Last
+// verified" entry for the 2.4.4/2.5.9 version-drift incident this is meant
+// to prevent from recurring).
+const CURRENT_VERSION = JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8')).version;
+
+// Total test count (files + individual tests) is not reliably derivable via
+// static analysis (dynamic test generation, describe.each, etc. make grep-based
+// counting inaccurate) — same reasoning getAllCounts() already applies to test
+// file counts. This must be updated by hand when the suite's test count changes
+// materially; verified against the actual `npm test` output as of 2026-07-05.
+const CURRENT_TOTAL_TESTS = '3,255';
+
 // Each entry defines a claim to verify:
 //   file        — relative path from project root
 //   label       — human-readable description
@@ -30,19 +44,17 @@ const CLAIMS = [
     file: 'README.md',
     label: 'version badge',
     pattern: /version-([\d.]+)-blue/,
-    actualFn: () => '2.4.4'
+    actualFn: () => CURRENT_VERSION
   },
-  {
-    file: 'README.md',
-    label: 'test badge',
-    pattern: /tests-(\d+)%20passing/,
-    actualFn: () => '2151'
-  },
+  // NOTE: the "tests-N%20passing" shields.io badge was removed from README.md's
+  // badge row in the Sprint 5 batch 3 commit (v2.5.11) — this claim intentionally
+  // has no entry anymore since checking for a doc element that was deliberately
+  // removed is validation for a scenario that can no longer occur.
   {
     file: 'README.md',
     label: 'subtitle version',
     pattern: /> \*\*v([\d.]+)\*\*/,
-    actualFn: () => '2.4.4'
+    actualFn: () => CURRENT_VERSION
   },
   {
     file: 'README.md',
@@ -66,7 +78,7 @@ const CLAIMS = [
     file: 'README.md',
     label: 'dev test command count',
     pattern: /# ([\d,]+) tests across/,
-    actualFn: () => '2,151'
+    actualFn: () => CURRENT_TOTAL_TESTS
   },
   {
     file: 'README.md',
@@ -115,7 +127,7 @@ const CLAIMS = [
     file: 'AGENTS.md',
     label: 'version',
     pattern: /Version\*\*: ([\d.]+)/,
-    actualFn: () => '2.4.4'
+    actualFn: () => CURRENT_VERSION
   },
   {
     file: 'AGENTS.md',
@@ -133,7 +145,7 @@ const CLAIMS = [
     file: 'AGENTS.md',
     label: 'directory structure tests count',
     pattern: /test files, ([\d,]+) tests/,
-    actualFn: () => '2,151'
+    actualFn: () => CURRENT_TOTAL_TESTS
   },
   {
     file: 'AGENTS.md',
@@ -157,7 +169,7 @@ const CLAIMS = [
     file: 'AGENTS.md',
     label: 'build commands test count',
     pattern: /# ([\d,]+) tests \(/,
-    actualFn: () => '2,151'
+    actualFn: () => CURRENT_TOTAL_TESTS
   },
   {
     file: 'AGENTS.md',

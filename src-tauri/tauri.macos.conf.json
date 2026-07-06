@@ -1,0 +1,11 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "app": {
+    "trayIcon": {
+      "iconPath": "icons/128x128.png",
+      "tooltip": "Alphonso Local Companion",
+      "id": "main",
+      "showMenuOnLeftClick": false
+    }
+  }
+}

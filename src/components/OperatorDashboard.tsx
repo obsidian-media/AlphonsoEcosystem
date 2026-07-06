@@ -154,7 +154,7 @@ interface ScreenObserverLog {
   id: string;
   summary: string;
   status: string;
-  changeLevel: string;
+  changeLevel: number;
   timestampMs: number;
 }
 

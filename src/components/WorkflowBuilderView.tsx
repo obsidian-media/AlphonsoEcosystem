@@ -1,17 +1,19 @@
-// @ts-nocheck
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, ChevronRight, ChevronUp, Plus, Trash2, Save, GitBranch, Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Save, GitBranch, Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import {
   WORKFLOW_NODE_LIBRARY,
   listWorkflows,
   createWorkflow,
   updateWorkflow,
   addWorkflowNode,
+  type Workflow,
 } from '../services/workflowBuilderService';
 import { runVisualWorkflow } from '../services/workflowExecutionService';
 
+type RunState = null | 'running' | 'done' | 'error';
+
 // Node type → color + icon letter
-const NODE_STYLE = {
+const NODE_STYLE: Record<string, { bg: string; border: string; text: string; badge: string }> = {
   trigger:      { bg: 'bg-emerald-500/10', border: 'border-emerald-400/20', text: 'text-emerald-300', badge: '▶' },
   ocr:          { bg: 'bg-sky-500/10',     border: 'border-sky-400/20',     text: 'text-sky-300',     badge: '👁' },
   memory:       { bg: 'bg-violet-500/10',  border: 'border-violet-400/20',  text: 'text-violet-300',  badge: '🧠' },
@@ -24,12 +26,12 @@ const NODE_STYLE = {
 };
 
 export function WorkflowBuilderView() {
-  const [workflows, setWorkflows] = useState(() => listWorkflows());
-  const [selectedId, setSelectedId] = useState(null);
+  const [workflows, setWorkflows] = useState<Workflow[]>(() => listWorkflows());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [showAddNode, setShowAddNode] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
-  const [runState, setRunState] = useState(null); // null | 'running' | 'done' | 'error'
+  const [runState, setRunState] = useState<RunState>(null);
   const [runMessage, setRunMessage] = useState('');
 
   const selected = workflows.find(w => w.id === selectedId) || null;
@@ -42,15 +44,15 @@ export function WorkflowBuilderView() {
     if (wf) { refresh(); setSelectedId(wf.id); setNewName(''); }
   };
 
-  const handleAddNode = (type) => {
+  const handleAddNode = (type: string) => {
     if (!selectedId) return;
     addWorkflowNode(selectedId, type, { x: 0, y: selected?.nodes?.length || 0 });
     refresh();
     setShowAddNode(false);
   };
 
-  const moveNode = (index, direction) => {
-    if (!selected) return;
+  const moveNode = (index: number, direction: number) => {
+    if (!selected || !selectedId) return;
     const nodes = [...selected.nodes];
     const target = index + direction;
     if (target < 0 || target >= nodes.length) return;
@@ -59,10 +61,10 @@ export function WorkflowBuilderView() {
     refresh();
   };
 
-  const removeNode = (nodeId) => {
-    if (!selected) return;
+  const removeNode = (nodeId: string) => {
+    if (!selected || !selectedId) return;
     const nodes = selected.nodes.filter(n => n.id !== nodeId);
-    const edges = (selected.edges || []).filter(e => e.from !== nodeId && e.to !== nodeId);
+    const edges = (selected.edges || []).filter(e => e.fromNode !== nodeId && e.toNode !== nodeId);
     updateWorkflow(selectedId, { nodes, edges });
     refresh();
   };
@@ -84,7 +86,7 @@ export function WorkflowBuilderView() {
       setRunMessage(result?.runId ? `Run started (${result.runId.slice(-6)})` : 'Workflow queued');
     } catch (err) {
       setRunState('error');
-      setRunMessage(err?.message || 'Run failed');
+      setRunMessage(err instanceof Error ? err.message : 'Run failed');
     } finally {
       setTimeout(() => { setRunState(null); setRunMessage(''); }, 4000);
     }
@@ -222,7 +224,7 @@ export function WorkflowBuilderView() {
                       {/* Stage card */}
                       <div className="shrink-0 w-40 bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--border-strong)] rounded-[var(--radius-lg)] p-3 cursor-pointer transition-colors">
                         <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1">{node.type}</div>
-                        <div className="text-xs text-[var(--text-1)] font-medium truncate">{node.label || node.name || node.phase || node.id}</div>
+                        <div className="text-xs text-[var(--text-1)] font-medium truncate">{(node.config?.label as string) || (node.config?.name as string) || (node.config?.phase as string) || node.id}</div>
                       </div>
                       {/* Connector arrow */}
                       {i < selected.nodes.length - 1 && (
@@ -243,7 +245,7 @@ export function WorkflowBuilderView() {
               {selected.nodes?.length > 0 && (
                 <div className="border-t border-[var(--border)] px-8 py-4 bg-[var(--surface-1)]">
                   <p className="text-xs text-[var(--text-3)] mb-1">Node config</p>
-                  <p className="text-sm text-[var(--text-1)]">{selected.nodes[selected.nodes.length - 1].description || 'No description'}</p>
+                  <p className="text-sm text-[var(--text-1)]">{(selected.nodes[selected.nodes.length - 1].config?.description as string) || 'No description'}</p>
                 </div>
               )}
             </div>

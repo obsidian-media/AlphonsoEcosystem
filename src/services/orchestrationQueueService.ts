@@ -166,7 +166,7 @@ export function replayPacketFromDeadLetter(packetId: string, reason: string = 'M
     return { ok: false, reason: 'Retry request could not be created.' };
   }
   const transition = recordOrchestrationQueueTransition({
-    commandId: packet?.payload?.joseCommandId || null,
+    commandId: String(packet?.payload?.joseCommandId || ''),
     packetId,
     agent: 'jose',
     fromStatus: 'dead_letter',
@@ -184,7 +184,7 @@ export function forceDeadLetterPacket(packetId: string, reason: string = 'Manual
   if (!packet) return { ok: false, reason: 'Packet not found.' };
   const dead = sendPacketToDeadLetter(packetId, reason);
   const transition = recordOrchestrationQueueTransition({
-    commandId: packet?.payload?.joseCommandId || null,
+    commandId: String(packet?.payload?.joseCommandId || ''),
     packetId,
     agent: 'jose',
     fromStatus: packet.status || 'unknown',
@@ -255,7 +255,7 @@ export function markPacketInterrupted(packetId: string, reason: string = 'Pipeli
     confidence: TRUST_STATES.FAILED
   });
   const transition = recordOrchestrationQueueTransition({
-    commandId: packet?.payload?.joseCommandId || null,
+    commandId: String(packet?.payload?.joseCommandId || ''),
     packetId,
     agent: 'jose',
     fromStatus: packet.status || 'unknown',

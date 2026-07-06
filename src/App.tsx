@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useVoiceInput } from './hooks/useVoiceInput';
 import { getVerificationLogs } from './services/verificationService';
@@ -636,7 +635,7 @@ function AppShell() {
           onToggleNotifications={() => setNotificationsOpen((v) => !v)}
         />
         <Suspense fallback={null}>
-          <CommandRib activeTab={activeTab} setActiveTab={switchTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} operatorMode={operatorMode} />
+          <CommandRib activeTab={activeTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} />
         </Suspense>
         <OllamaOfflineBanner
           ollamaStatus={ollamaStatus}
@@ -656,7 +655,7 @@ function AppShell() {
                   <MissionRoomBoardroomTabs onCreateApprovalRequest={() => setApprovalRequiredNotice(true)} />
                 )}
                 {activeTab === 'chat' && (
-                  <Suspense fallback={<ViewLoadingState label="Chat" />}>
+                  <Suspense fallback={<ViewLoadingState activeTab="Chat" />}>
                     <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
                   </Suspense>
                 )}
@@ -672,7 +671,7 @@ function AppShell() {
                 {activeTab === 'automation' && <AutomationView />}
                 {activeTab === 'files' && <FilesView memoryItems={memoryItems} />}
                 {activeTab === 'ecosystem' && (
-                  <EcosystemHub settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} memoryItems={memoryItems} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
+                  <EcosystemHub settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} verificationLogs={verificationLogs} voiceStatus={voice.voiceStatus} workspaceFoundation={workspaceFoundation} updateCheckState={updateCheckState} nativeSelfDevProof={nativeSelfDevProof} setNativeSelfDevProof={setNativeSelfDevProof} nativeProofHooks={nativeProofHooks} />
                 )}
                 {activeTab === 'project_execution' && <ProjectExecutionMode />}
                 {activeTab === 'orchestrator' && (
@@ -715,7 +714,7 @@ function AppShell() {
         <BootStatusBanner />
       </Suspense>
       {showWorkflowPanel && (
-        <Suspense fallback={<ViewLoadingState label="Workflows" />}>
+        <Suspense fallback={<ViewLoadingState activeTab="Workflows" />}>
           <WorkflowPanel onClose={() => setShowWorkflowPanel(false)} onRunWorkflow={(_workflowId: string) => switchTab('activity')} />
         </Suspense>
       )}

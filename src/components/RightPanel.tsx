@@ -74,7 +74,7 @@ interface RightPanelProps {
   operatorMode?: boolean;
   updateCheckState?: UpdateCheckState;
   // Additional props passed from App but not destructured in original
-  voiceStatus?: string;
+  voiceStatus?: Record<string, unknown>;
   lastCheckedAt?: number;
   onCopyTroubleshootingCommand?: () => void;
   copyState?: string;

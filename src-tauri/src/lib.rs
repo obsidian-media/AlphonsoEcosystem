@@ -13,7 +13,6 @@ use tauri_plugin_updater::UpdaterExt;
 
 mod audit_log;
 mod companion_auth;
-mod runtime_manager;
 mod companion_discovery;
 mod companion_router;
 mod companion_server;
@@ -26,6 +25,7 @@ mod native_proof;
 mod ollama;
 mod plugin_runtime;
 mod policy_gate;
+mod runtime_manager;
 mod runway;
 mod search;
 mod telegram;
@@ -50,9 +50,7 @@ impl RateLimiter {
   fn check_and_record(&self, command: &str) -> Result<(), String> {
     let mut calls = self.calls.lock().map_err(|e| e.to_string())?;
     let now = std::time::Instant::now();
-    let entry = calls
-      .entry(command.to_string())
-      .or_insert((0, now));
+    let entry = calls.entry(command.to_string()).or_insert((0, now));
     if now.duration_since(entry.1).as_secs() >= 60 {
       *entry = (1, now);
       return Ok(());
@@ -444,7 +442,10 @@ fn execute_command_verified(
     return Err("Program is not allowed by Alphonso supervised command policy.".to_string());
   }
   if !allowed_args(&program, &args) {
-    return Err(format!("Arguments are not permitted for program '{}' by Alphonso policy.", program));
+    return Err(format!(
+      "Arguments are not permitted for program '{}' by Alphonso policy.",
+      program
+    ));
   }
 
   let mut command = Command::new(&program);
@@ -463,33 +464,44 @@ fn execute_command_verified(
   let sanitize = |raw: String| -> String {
     // Redact secret-looking values using a line-by-line scan (no regex dep).
     // Patterns: KEY=value, "key": "value", Bearer <token>
-    raw.lines().map(|line| {
-      let lower = line.to_ascii_lowercase();
-      let is_sensitive = lower.contains("api_key") || lower.contains("api_secret")
-        || lower.contains("access_token") || lower.contains("refresh_token")
-        || lower.contains("client_secret") || lower.contains("password")
-        || lower.contains("authorization: bearer") || lower.contains("bearer ");
-      if is_sensitive {
-        // Replace token-like values: anything after = or ": that is >8 chars
-        let mut redacted = line.to_string();
-        // Redact KEY=VALUE patterns
-        if let Some(eq) = redacted.find('=') {
-          let val = redacted[eq + 1..].trim();
-          if val.len() > 8 {
-            redacted = format!("{}=***REDACTED***", &redacted[..eq]);
+    raw
+      .lines()
+      .map(|line| {
+        let lower = line.to_ascii_lowercase();
+        let is_sensitive = lower.contains("api_key")
+          || lower.contains("api_secret")
+          || lower.contains("access_token")
+          || lower.contains("refresh_token")
+          || lower.contains("client_secret")
+          || lower.contains("password")
+          || lower.contains("authorization: bearer")
+          || lower.contains("bearer ");
+        if is_sensitive {
+          // Replace token-like values: anything after = or ": that is >8 chars
+          let mut redacted = line.to_string();
+          // Redact KEY=VALUE patterns
+          if let Some(eq) = redacted.find('=') {
+            let val = redacted[eq + 1..].trim();
+            if val.len() > 8 {
+              redacted = format!("{}=***REDACTED***", &redacted[..eq]);
+            }
+          // Redact JSON "key": "value" patterns
+          } else if let Some(colon) = redacted.rfind(": ") {
+            let val = redacted[colon + 2..]
+              .trim()
+              .trim_matches('"')
+              .trim_matches(',');
+            if val.len() > 8 {
+              redacted = format!("{}***REDACTED***", &redacted[..colon + 2]);
+            }
           }
-        // Redact JSON "key": "value" patterns
-        } else if let Some(colon) = redacted.rfind(": ") {
-          let val = redacted[colon + 2..].trim().trim_matches('"').trim_matches(',');
-          if val.len() > 8 {
-            redacted = format!("{}***REDACTED***", &redacted[..colon + 2]);
-          }
+          redacted
+        } else {
+          line.to_string()
         }
-        redacted
-      } else {
-        line.to_string()
-      }
-    }).collect::<Vec<_>>().join("\n")
+      })
+      .collect::<Vec<_>>()
+      .join("\n")
   };
 
   let success = output.status.success();
@@ -1233,7 +1245,10 @@ fn open_url(app: tauri::AppHandle, url: String) -> Result<UrlOpenProof, String> 
     return Err("URL must start with http:// or https://".to_string());
   }
   use tauri_plugin_opener::OpenerExt;
-  app.opener().open_url(&url, None::<&str>).map_err(|e| e.to_string())?;
+  app
+    .opener()
+    .open_url(&url, None::<&str>)
+    .map_err(|e| e.to_string())?;
   Ok(UrlOpenProof {
     url,
     opened: true,
@@ -1349,7 +1364,11 @@ fn write_temp_audio_file(filename: String, bytes: Vec<u8>) -> Result<String, Str
     .unwrap_or_default()
     .to_string_lossy()
     .to_lowercase();
-  let safe_ext = if ["mp3","wav","m4a","mp4","ogg","webm","flac"].contains(&ext.as_str()) { ext } else { "wav".into() };
+  let safe_ext = if ["mp3", "wav", "m4a", "mp4", "ogg", "webm", "flac"].contains(&ext.as_str()) {
+    ext
+  } else {
+    "wav".into()
+  };
   let dest = std::env::temp_dir().join(format!("alphonso_audio_{}.{}", now_ms(), safe_ext));
   std::fs::write(&dest, &bytes).map_err(|e| e.to_string())?;
   Ok(dest.to_string_lossy().to_string())
@@ -1364,7 +1383,10 @@ async fn pick_file(app: tauri::AppHandle, filters: Option<Vec<String>>) -> Resul
   let path = app
     .dialog()
     .file()
-    .add_filter("Audio files", &["mp3", "wav", "m4a", "mp4", "ogg", "webm", "flac"])
+    .add_filter(
+      "Audio files",
+      &["mp3", "wav", "m4a", "mp4", "ogg", "webm", "flac"],
+    )
     .add_filter("All files", &["*"])
     .blocking_pick_file();
   match path {
@@ -1376,10 +1398,7 @@ async fn pick_file(app: tauri::AppHandle, filters: Option<Vec<String>>) -> Resul
 #[tauri::command]
 async fn pick_folder(app: tauri::AppHandle) -> Result<FolderPickProof, String> {
   use tauri_plugin_dialog::DialogExt;
-  let path = app
-    .dialog()
-    .file()
-    .blocking_pick_folder();
+  let path = app.dialog().file().blocking_pick_folder();
   let picked = path.is_some();
   Ok(FolderPickProof {
     path: path.map(|p| p.to_string()).unwrap_or_default(),
@@ -1508,10 +1527,16 @@ fn save_image_to_folder(
   }
 
   // Path traversal protection: reject any path component that is ParentDir
-  if std::path::Path::new(&folder).components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+  if std::path::Path::new(&folder)
+    .components()
+    .any(|c| matches!(c, std::path::Component::ParentDir))
+  {
     return Err("Unsafe folder path rejected".to_string());
   }
-  if std::path::Path::new(&filename).components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+  if std::path::Path::new(&filename)
+    .components()
+    .any(|c| matches!(c, std::path::Component::ParentDir))
+  {
     return Err("Unsafe filename rejected".to_string());
   }
 
@@ -1596,7 +1621,7 @@ mod tests {
     let temp_dir = std::env::temp_dir();
     let temp_path = temp_dir.join("test_save");
     std::fs::create_dir_all(&temp_path).unwrap();
-    
+
     let result = save_image_to_folder(
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8=".to_string(),
       "test.png".to_string(),
@@ -1991,16 +2016,20 @@ pub fn run() {
       });
       let app_handle_hs = app.handle().clone();
       // Ignore "already registered" — happens when a previous dev run crashed without cleanup.
-      if let Err(e) = app.handle().global_shortcut().on_shortcut(shortcut, move |_, _, event| {
-        if event.state == ShortcutState::Pressed {
-          if let Some(win) = app_handle_hs.get_webview_window("main") {
-            let _ = win.unminimize();
-            let _ = win.show();
-            let _ = win.set_focus();
+      if let Err(e) = app
+        .handle()
+        .global_shortcut()
+        .on_shortcut(shortcut, move |_, _, event| {
+          if event.state == ShortcutState::Pressed {
+            if let Some(win) = app_handle_hs.get_webview_window("main") {
+              let _ = win.unminimize();
+              let _ = win.show();
+              let _ = win.set_focus();
+            }
+            let _ = app_handle_hs.emit("alphonso://voice_start", "hotkey");
           }
-          let _ = app_handle_hs.emit("alphonso://voice_start", "hotkey");
-        }
-      }) {
+        })
+      {
         log::warn!("Global shortcut Ctrl+Shift+Space could not be registered: {e}");
       }
 

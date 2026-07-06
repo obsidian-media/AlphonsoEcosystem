@@ -27,7 +27,8 @@ import {
   listAgentPackets,
   listApprovalQueue,
   rejectPacket,
-  updatePacketStatus
+  updatePacketStatus,
+  type AgentPacket
 } from '../services/agentBusService';
 import { listMemoryItems } from '../services/memoryService';
 import { listMiyaMemory } from '../services/miyaMemoryService';
@@ -63,7 +64,7 @@ interface Packet {
   toAgent: string;
   title: string;
   packetType: string;
-  payload?: unknown;
+  payload?: Record<string, unknown>;
   source?: string;
   confidence?: string;
   verificationState?: string;
@@ -497,7 +498,7 @@ export function OrchestratorView({
 
   const queueForExecution = (packetId: string): void => {
     const packet = packets.find((item) => item.id === packetId);
-    const gate = canExecutePacket(packet);
+    const gate = canExecutePacket(packet as AgentPacket);
     if (!gate.ok) {
       appendSessionEvent({
         category: 'approval',
@@ -577,7 +578,7 @@ export function OrchestratorView({
     }
     setExecutingPacketIds((prev) => new Set(prev).add(packetId));
     const startedAt = Date.now();
-    const result = await executeApprovedPacket(packet);
+    const result = await executeApprovedPacket(packet as AgentPacket);
     setExecutingPacketIds((prev) => { const next = new Set(prev); next.delete(packetId); return next; });
     appendSessionEvent({
       category: 'task',

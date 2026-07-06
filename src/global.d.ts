@@ -11,4 +11,8 @@ declare global {
     type ElementAttributesProperty = React.JSX.ElementAttributesProperty;
     type ElementChildrenAttribute = React.JSX.ElementChildrenAttribute;
   }
+
+  interface Window {
+    __TAURI_INTERNALS__?: unknown;
+  }
 }

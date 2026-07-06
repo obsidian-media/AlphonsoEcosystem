@@ -15,19 +15,37 @@ vi.mock('@tauri-apps/api/core', () => ({
         externalId: 'telegram-proof-1',
       };
     }
+    // kv_get must return null (not the generic {ok:true} below) so
+    // hydrateConnectorCredentialsFromSqlite() falls through to its localStorage
+    // fallback path instead of trying to JSON.parse a non-string truthy value.
+    if (command === 'kv_get') return null;
+    if (command === 'kv_set') return null;
     return { ok: true };
   }),
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
-import { proveTelegramConnectorPath, updateConnectorAuthProfile } from '../services/connectorRegistryService';
+import { proveTelegramConnectorPath, updateConnectorAuthProfile, resetConnectorCircuitState } from '../services/connectorRegistryService';
+import { hydrateConnectorCredentialsFromSqlite } from '../services/connectors/connectorAuth';
 
 describe('telegram live connector proof path', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // The connector circuit breaker (connectorRegistry.js) is a bare in-memory
+    // module-level object, not reset by localStorage.clear() or between test
+    // files in the same vitest worker. If any other test file in the suite
+    // records 5+ failed telegram external_send attempts, the circuit stays
+    // open for 300s and this test fails only when run as part of the full
+    // suite (not in isolation). Reset explicitly to make this test order-independent.
+    resetConnectorCircuitState('telegram', 'external_send');
     localStorage.clear();
     localStorage.setItem('alphonso_connector_credentials_v1', JSON.stringify({
       telegram: { TELEGRAM_BOT_TOKEN: 'mock-bot-token', TELEGRAM_ALLOWED_CHAT_IDS: 'chat-1' }
     }));
+    // The real app hydrates the in-memory credential cache from the durable store
+    // at boot (see useDataHydration.js) before any connector action can run.
+    // getConnectorCredential() never reads localStorage directly — it only reads
+    // this cache — so tests must reproduce that same boot-time hydration step.
+    await hydrateConnectorCredentialsFromSqlite(true);
     updateConnectorAuthProfile('telegram', {
       enabled: true,
       allowlist: ['chat-1']

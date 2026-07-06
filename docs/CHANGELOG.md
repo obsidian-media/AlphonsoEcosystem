@@ -6,6 +6,155 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.18] — 2026-07-03
+
+### Sprint 5 batch 10: 6 more root-level services migrated to TypeScript
+
+- Migrated `novaAnalysisService`, `missionRoomService`, `eventsService`,
+  `workflowRegistryService`, `marcusExecutionService`,
+  `workflowOperationsRegistryService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 17 `.js` / 114 `.ts` → 11 `.js` / 120 `.ts`.
+- Fixed `novaAnalysisService`: added `DEFAULT_OLLAMA_ENDPOINT` to required `generateOllamaResponse` call; removed invalid `score` field from `storeNovaScore` call (only `opportunityScore`/`riskScore` accepted).
+- Fixed `marcusExecutionService`: `github.createRelease`/`createIssue` use positional params, not objects; removed `htmlUrl` references (not in `GitHubRelease`/`GitHubIssue` types).
+- Fixed `workflowOperationsRegistryService`: added `[key: string]: unknown` to `LedgerRow` interface.
+- Fixed `workflowRegistryService`: `JoseCommandRouteResult` cast via `unknown` (interface lacks index signature).
+- 152/152 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean.
+
+## [2.5.17] — 2026-07-03
+
+### Sprint 5 batch 9: 6 more root-level services migrated to TypeScript
+
+- Migrated `selfDevelopmentService`, `sentinelSecurityService`,
+  `echoMemoryService`, `whatsappWebhookService`, `rc0EvidenceService`,
+  `toolConnectionService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 23 `.js` / 108 `.ts` → 17 `.js` / 114 `.ts`.
+- Fixed pre-existing type mismatches across `SelfDevelopmentPanel.tsx` (auditSummary `partialCount`), `toolNotificationDispatcher.ts` (ToolConnection index signature), and `approvalService.js` integration (`actionType` parameter).
+- Added `status`, `timestampMs`, `[key: string]: unknown` to `ToolConnection` interface; added `notificationReceiptId` and index signature to `SendToolConnectionOptions`.
+- Updated `DevCycle` interface: added `trust`, `readinessSummary`, `partialCount` to `auditSummary`.
+- 96/96 targeted tests passing, `npx tsc --noEmit` clean, ESLint clean.
+
+## [2.5.16] — 2026-07-03
+
+### Sprint 5 batch 8: 15 more root-level services migrated to TypeScript
+
+- Migrated `devPacketService`, `pluginRegistryService`,
+  `pluginSigningService`, `packetExecutionService`, `verificationService`,
+  `nativeSelfDevelopmentAutostartService`, `agentMetricsService`,
+  `mariaAuditService`, `proactiveAgentService`, `agentBusService`,
+  `telegramBrowserConnector`, `composioService`,
+  `screenIntelligenceService`, `toolRegistryService`,
+  `joseSchedulerService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 38 `.js` / 93 `.ts` → 23 `.js` / 108 `.ts`.
+- Type-safety additions: `AgentPacket`, `DevPacket`, `PluginEntry`,
+  `JoseSchedulerTask`, `ComposioConfig`, `ToolDefinition` and many
+  more custom interfaces. Fixed 3 pre-existing type errors in
+  `autoRunService.ts`, `joseCommandRouterService.ts`,
+  `orchestrationQueueService.ts`.
+- Verification: 272/272 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
+## [2.5.15] — 2026-07-03
+
+### Sprint 5 batch 7: 15 more root-level services migrated to TypeScript
+
+- Migrated `agentOutputStoreService`, `nativeRc0ProofService`,
+  `novaFeedbackService`, `echoFileWatcherService`,
+  `agentPerformanceService`, `repoAuditService`, `backupService`,
+  `telegramAutoPollService`, `miyaWorkflowTemplates`,
+  `toolNotificationDispatcher`, `sentinelGateService`, `chatgptService`,
+  `claudeService`, `coachInterventionService`, `marcusPublishService`
+  — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 53 `.js` / 78 `.ts` → 38 `.js` / 93 `.ts`.
+- Type-safety additions: `AllOutputs`, `AgentOutput`, `NovaScoreEntry`,
+  `WatcherConfig`, `PerformanceSnapshot`, `RepoAuditReport`, `BackupData`,
+  `ChatGPTMessage`, `ClaudeMessage`, `SentinelAlert` and many more
+  custom interfaces.
+- Verification: 265/265 targeted tests passing across 16 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
+## [2.5.14] — 2026-07-03
+
+### Sprint 5 batch 6: 15 more root-level services migrated to TypeScript
+
+- Migrated `workspaceIntelligenceService`, `connectorRateLimiterService`,
+  `agentPairingExecutionService`, `coachSoundCueService`,
+  `runtimeLedgerService`, `offlineChatService`, `memoryMonitorService`,
+  `runtimeManagerService`, `mariaWeeklyReportService`,
+  `workflowGovernanceService`, `voiceService`, `connectorHealthCheckService`,
+  `whatsappBrowserConnector`, `streamingService`, `workflowBuilderService`
+  — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 68 `.js` / 63 `.ts` → 53 `.js` / 78 `.ts`.
+- Type-safety additions: `WorkspaceFoundation`, `CapabilityState`,
+  `RateBucket`, `PairingEvent`, `LedgerRecord`, `VoiceState`,
+  `StreamState`, `WorkflowNode` and many more custom interfaces.
+- Verification: 166/166 targeted tests passing across 15 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
+## [2.5.13] — 2026-07-03
+
+### Sprint 5 batch 5: 15 more root-level services migrated to TypeScript
+
+- Migrated `orchestrationGovernanceService`, `resourceCostService`,
+  `gitService`, `pluginSandboxService`, `hectorBookmarkService`,
+  `serviceScopes`, `workflowTelemetryService`, `searchService`,
+  `durableMemoryService`, `connectorCircuitBreakerService`,
+  `workflowReceiptService`, `sessionIntelligenceService`,
+  `chromaDbService`, `localMarketplaceService`, `genericWebhookService`
+  — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 83 `.js` / 48 `.ts` → 68 `.js` / 63 `.ts`.
+- Type-safety fixes: `SearchResult` fields made required to match
+  `MemorySearch.tsx` consumer; `MarketplaceItem` and `WorkspaceValidation`
+  index signatures added for component consumers; non-standard
+  `navigator.deviceMemory` and `performance.memory` guarded; `logError`
+  calls cast to `Record<string, unknown>`.
+- Verification: 227/227 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
+## [2.5.12] — 2026-07-03
+
+### Sprint 5 batch 4: 12 more root-level services migrated to TypeScript
+
+- Migrated `runwayService`, `browserAutomationService`,
+  `miyaExportPacketService`, `coachSkillService`, `workspaceRootService`,
+  `projectDirectoryService`, `miyaComfyWorkflowPresetService`,
+  `recoveryService`, `modelSelectionService`, `coachModeService`,
+  `agentAvatarService`, `voiceOsService` — all root-level `.js` → `.ts`.
+- Root-level `src/services/*.js` count: 90 `.js` / 36 `.ts` → 83 `.js` / 48 `.ts`.
+- Real types caught real compatibility issues: `recoveryService.ts`
+  `RecoverySnapshot.payload` widened to match `EcosystemHub.tsx` consumer;
+  `runwayService.ts` exported `RunwayResult` interface matching Rust
+  `RunwayVideoProof` struct; `workspaceRootService.ts` added index
+  signature to match `SelfDevelopmentPanel.tsx` local type.
+- Verification: 202/202 targeted tests passing across 14 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+
+---
+
+## [2.5.11] — 2026-07-03
+
+### Sprint 5 batch 3: 10 more root-level services migrated to TypeScript
+
+- Migrated `codingAgentService`, `workspaceExportService`,
+  `agentActivityService`, `agentVisualService`, `autoRunService`,
+  `creativeRoutingService`, `sourceConfidenceService`,
+  `workspaceFileService`, `whisperTranscriptionService`,
+  `notificationService` — all 27–38 lines each, picked by smallest-first.
+- One type error caught during migration: `whisperTranscriptionService`'s
+  call to `generateOllamaResponse` (typed `.ts` signature required
+  `endpoint` and `model`; JS call convention passed only `{ prompt }`).
+- Verification: 315/315 targeted tests passing across 18 test files,
+  `npx tsc --noEmit` clean, ESLint clean.
+- Root-level `src/services/*.js` count: 90 `.js` / 36 `.ts` (down from
+  105/26).
+
 ## [2.5.10] — 2026-07-02
 
 ### Fixed: version-drift bug found by the release process itself
