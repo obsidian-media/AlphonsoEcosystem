@@ -31,6 +31,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { TRUST_STATES, timestampMs } from './trustModel';
+import type { OrchestrationReceipt } from './orchestrationReceiptService';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ interface EventStoreStatus {
 export interface UnifiedWeeklyReportParams {
   eventsRecords?: RawEventRow[];
   notionSyncRecords?: Array<Record<string, unknown>>;
-  orchestrationReceipts?: Array<Record<string, unknown>>;
+  orchestrationReceipts?: OrchestrationReceipt[];
   memoryItems?: Array<Record<string, unknown>>;
   generatedAtMs?: number | null;
   lookbackMs?: number | null;
