@@ -255,7 +255,7 @@ describe('orchestrationQueueService', () => {
       seedJoseCommand('distributed');
       seedJoseCommand('in_progress');
       seedJoseCommand('retrying');
-      seedJoseCommand('reported_to_shayan');
+      seedJoseCommand('reported_to_user');
 
       const snapshot = getOrchestrationQueueSnapshot();
       expect(snapshot.commandsInProgress).toBe(3);

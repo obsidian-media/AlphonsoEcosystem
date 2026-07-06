@@ -309,8 +309,14 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     steps:
       - name: Check Gateway health endpoint
+        env:
+          GATEWAY_HEALTH_URL: ${{ secrets.GATEWAY_HEALTH_URL }}
         run: |
-          curl -s -o /dev/null -w "%{http_code}" https://alphonsoecosystem-production-3ad1.up.railway.app/health || echo "Gateway health endpoint not reachable"
+          if [ -z "$GATEWAY_HEALTH_URL" ]; then
+            echo "::info::Gateway health check skipped (no GATEWAY_HEALTH_URL configured)"
+            exit 0
+          fi
+          curl -s -o /dev/null -w "%{http_code}" "$GATEWAY_HEALTH_URL" || echo "Gateway health endpoint not reachable"
         continue-on-error: true
 
   ios-build:

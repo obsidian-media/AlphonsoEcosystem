@@ -1161,7 +1161,7 @@ async function checkOllamaAvailable(endpoint) {
 
 export async function runJoseCommandExecutionPipeline({
   commandText,
-  source = 'shayan',
+  source = 'user',
   endpoint,
   zeroCostMode,
   previewMode = true,

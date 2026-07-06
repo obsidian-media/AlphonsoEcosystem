@@ -14,7 +14,7 @@ describe('workContractService', () => {
     expect(draft.id).toContain('contract-');
     expect(draft.objective).toBe('Build feature X');
     expect(draft.state).toBe('drafted');
-    expect(draft.signedByShayan).toBe(false);
+    expect(draft.signedByUser).toBe(false);
   });
 
   it('createWorkContractDraft uses defaults', () => {
@@ -28,7 +28,7 @@ describe('workContractService', () => {
     const draft = createWorkContractDraft({ objective: 'Test' });
     const updated = updateWorkContract(draft.id, { objective: 'Updated' });
     expect(updated.objective).toBe('Updated');
-    expect(updated.editedByShayan).toBe(true);
+    expect(updated.editedByUser).toBe(true);
     expect(updated.updatedAt).toBeTruthy();
   });
 
@@ -41,7 +41,7 @@ describe('workContractService', () => {
     const draft = createWorkContractDraft({ objective: 'Test' });
     const signed = signWorkContract(draft.id);
     expect(signed.state).toBe('signed');
-    expect(signed.signedByShayan).toBe(true);
+    expect(signed.signedByUser).toBe(true);
   });
 
   it('archiveWorkContract sets state to archived', () => {

@@ -728,12 +728,12 @@ export async function runPushWatcher(token) {
   const commands = listJoseCommands();
   
   for (const command of commands) {
-    if (command.status === 'reported_to_shayan' && !pushedCommandIds.has(command.id)) {
+    if (command.status === 'reported_to_user' && !pushedCommandIds.has(command.id)) {
       pushedCommandIds.add(command.id);
       
       const input = command.commandText || '';
-      const summary = command.joseConfirmation || command.shayanReport?.summary || '';
-      const assignmentsCompleted = command.shayanReport?.reportCount || 0;
+      const summary = command.joseConfirmation || command.userReport?.summary || '';
+      const assignmentsCompleted = command.userReport?.reportCount || 0;
 
       const text = `✅ Jose completed a task
 

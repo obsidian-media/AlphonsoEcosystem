@@ -12,7 +12,7 @@ interface AgentInfo {
 
 export type MissionTaskStatus = 'todo' | 'doing' | 'review' | 'approved' | 'blocked';
 
-type AgentKey = 'shayan' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
+type AgentKey = 'user' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
 
 interface MissionRoom {
   id: string;
@@ -216,8 +216,8 @@ const MEDIUM_RISK_PATTERNS: RegExp[] = [
 // ── Agents ────────────────────────────────────────────────────────────────────
 
 export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
-  shayan: {
-    key: 'shayan',
+  user: {
+    key: 'user',
     name: 'Shayan',
     role: 'Founder / final approval',
     lane: 'human',
@@ -417,10 +417,10 @@ export function getMissionRoom(roomId: string = 'mission_room_main'): MissionRoo
 export function saveMissionRoom(room: MissionRoom): MissionRoom {
   const allowedAgents = Array.isArray(room.selectedAgents)
     ? room.selectedAgents.filter((agentKey) => Object.prototype.hasOwnProperty.call(MISSION_ROOM_AGENTS, agentKey))
-    : ['shayan', 'alphonso', 'jose'];
+    : ['user', 'alphonso', 'jose'];
   const next = {
     ...room,
-    selectedAgents: allowedAgents.length ? allowedAgents : ['shayan', 'alphonso', 'jose'],
+    selectedAgents: allowedAgents.length ? allowedAgents : ['user', 'alphonso', 'jose'],
     updatedAt: nowIso(),
     updatedAtMs: timestampMs()
   };
@@ -436,17 +436,17 @@ export function listMissionMessages(roomId: string = 'mission_room_main'): Missi
     .sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
 }
 
-export function addMissionMessage({ roomId = 'mission_room_main', speaker = 'shayan', content = '', status = 'success', kind = 'message', metadata = {} }: AddMessageParams = {}): MissionMessage | null {
+export function addMissionMessage({ roomId = 'mission_room_main', speaker = 'user', content = '', status = 'success', kind = 'message', metadata = {} }: AddMessageParams = {}): MissionMessage | null {
   const originalText = String(content || '').trim();
   const text = redactMissionRoomSecrets(originalText).trim();
   if (!text) return null;
-  const safeSpeaker = sanitizeAgentKey(speaker, 'shayan');
+  const safeSpeaker = sanitizeAgentKey(speaker, 'user');
   const risk = classifyMissionRoomRisk(originalText);
   const message: MissionMessage = {
     id: makeId('mission_msg'),
     roomId,
     speaker: safeSpeaker,
-    role: safeSpeaker === 'shayan' ? 'human' : 'agent',
+    role: safeSpeaker === 'user' ? 'human' : 'agent',
     content: text,
     originalHash: hashText(originalText),
     kind,
@@ -477,7 +477,7 @@ export function clearMissionMessages(roomId: string = 'mission_room_main'): void
   appendMissionSecurityEvent({
     roomId,
     type: 'messages_cleared',
-    actor: 'shayan',
+    actor: 'user',
     riskLevel: 'medium',
     summary: 'Local Mission Room messages cleared.'
   });

@@ -131,7 +131,7 @@ export function runProjectWorkshop(projectInput) {
   appendTraceEvent({
     traceId,
     stage: 'message',
-    generatedBy: 'shayan',
+    generatedBy: 'user',
     reason: 'Project brief intake',
     inputSnapshot: projectInput,
     approvalState: 'pending',

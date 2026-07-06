@@ -44,7 +44,7 @@ function riskTone(riskLevel: string) {
 }
 
 function speakerIcon(speaker: string) {
-  if (speaker === 'shayan') return User;
+  if (speaker === 'user') return User;
   if (speaker === 'alphonso') return Bot;
   if (speaker === 'jose') return Crown;
   if (speaker === 'hector') return ClipboardList;
@@ -201,7 +201,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
   const [tasks, setTasks] = useState<Task[]>(() => listMissionTasks(room.id));
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>(() => listMissionSecurityEvents(room.id));
   const [input, setInput] = useState<string>('');
-  const [speaker, setSpeaker] = useState<string>('shayan');
+  const [speaker, setSpeaker] = useState<string>('user');
   const [taskTitle, setTaskTitle] = useState<string>('');
   const [taskAcceptance, setTaskAcceptance] = useState<string>('');
   const [handoffProject, setHandoffProject] = useState<string>('TapCash');

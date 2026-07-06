@@ -124,7 +124,7 @@ interface JoseCommand {
   deadLetters?: unknown[];
   retryPolicy?: { maxRetries: number; staleAfterMs: number };
   confirmedAtMs?: number;
-  shayanReport?: { summary: string; [key: string]: unknown } | null;
+  userReport?: { summary: string; [key: string]: unknown } | null;
   parallelDispatch?: boolean;
   createdAtMs?: number;
   updatedAtMs?: number;
@@ -526,10 +526,10 @@ export function OrchestratorView({
     refreshAll();
   };
 
-  const distributeShayanCommand = async (): Promise<void> => {
+  const distributeUserCommand = async (): Promise<void> => {
     const command = await createJoseCommandRoute({
       commandText: joseCommandText,
-      source: 'shayan',
+      source: 'user',
       zeroCostMode: settings?.zeroCostMode
     });
     if (command) {
@@ -695,7 +695,7 @@ export function OrchestratorView({
                   placeholder="Describe what you want Jose to coordinate…"
                 />
                 <button
-                  onClick={distributeShayanCommand}
+                  onClick={distributeUserCommand}
                   className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 hover:bg-amber-500/15 transition-colors"
                 >
                   Send to Jose
@@ -889,9 +889,9 @@ export function OrchestratorView({
                     <div className="mt-2 flex gap-1.5">
                       <NeutralBtn onClick={() => confirmCommand(command.id)}>Confirm &amp; Report</NeutralBtn>
                     </div>
-                    {command.shayanReport && (
+                    {command.userReport && (
                       <div className="mt-2 rounded-lg border border-emerald-400/15 bg-emerald-500/5 p-2.5 text-[11px] text-emerald-200/80">
-                        {command.shayanReport.summary}
+                        {command.userReport.summary}
                       </div>
                     )}
                   </div>

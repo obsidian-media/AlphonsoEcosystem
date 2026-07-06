@@ -73,7 +73,7 @@ describe('workflowGovernanceService', () => {
       const result = evaluateWorkflowGovernance({
         id: 'w1',
         connectorRequirements: [],
-        requiredApprovals: ['shayan_approval']
+        requiredApprovals: ['user_approval']
       });
       expect(result.requiresApproval).toBe(true);
     });
@@ -170,8 +170,8 @@ describe('workflowGovernanceService', () => {
       expect(result[1].order).toBe(2);
     });
 
-    it('marks shayan_approval as requiring human approval', () => {
-      const result = getAgentWorkflowParticipation({ agentSequence: ['jose', 'shayan_approval', 'marcus'] });
+    it('marks user_approval as requiring human approval', () => {
+      const result = getAgentWorkflowParticipation({ agentSequence: ['jose', 'user_approval', 'marcus'] });
       expect(result[1].requiresHumanApprovalStage).toBe(true);
       expect(result[1].canExecute).toBe(false);
     });

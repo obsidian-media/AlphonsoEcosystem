@@ -151,7 +151,7 @@ export function getOrchestrationQueueSnapshot(): QueueSnapshot {
     deadLetter: packets.filter((packet) => packet.status === 'dead_letter').length,
     reportedToJose: packets.filter((packet) => packet.status === 'reported_to_jose').length,
     commandsInProgress: commands.filter((item) => ['distributed', 'in_progress', 'retrying'].includes(item.status)).length,
-    commandsReported: commands.filter((item) => item.status === 'reported_to_shayan').length,
+    commandsReported: commands.filter((item) => item.status === 'reported_to_user').length,
     timestampMs: timestampMs()
   };
 }

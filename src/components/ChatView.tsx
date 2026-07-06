@@ -497,7 +497,7 @@ export function ChatView({
         streamControllerRef.current = new AbortController();
         const result = await runJoseCommandExecutionPipeline({
           commandText: cleanInput,
-          source: 'shayan',
+          source: 'user',
           endpoint: settings.endpoint,
           zeroCostMode: settings.zeroCostMode,
           previewMode,
@@ -536,8 +536,8 @@ export function ChatView({
         setLiveProgress(null);
 
         const command = result?.command || {};
-        const shayanReport = command?.shayanReport || null;
-        const baseSummary = shayanReport?.summary || 'Jose processed the command.';
+        const userReport = command?.userReport || null;
+        const baseSummary = userReport?.summary || 'Jose processed the command.';
         const hintLine = (result?.pendingApprovalCount || 0) > 0
           ? '\nApprove the pending tasks below to continue.'
           : '';

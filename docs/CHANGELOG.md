@@ -698,7 +698,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 - **Keychain search list preserved** — `security list-keychains` now captures and re-adds existing keychains alongside the temp keychain, so Xcode codesign can find Apple root certs.
 - **`set-key-partition-list` added** — private key is partition-listed for `apple-tool:,apple:,codesign:` so codesign never prompts for UI access on the runner.
 - **`GENERATE_INFOPLIST_FILE` conflict resolved** — set to `NO` in both CI command and `project.pbxproj` Release config (was `YES`, conflicting with explicit `INFOPLIST_FILE` path).
-- **`project.pbxproj` Release config hardened** — `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "iPhone Distribution"`, `DEVELOPMENT_TEAM = 9Y6GYPM3K5`, `PROVISIONING_PROFILE_SPECIFIER = "Alphonso iOS"` set directly in build settings.
+- **`project.pbxproj` Release config hardened** — `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "iPhone Distribution"`, `DEVELOPMENT_TEAM` (configured via GitHub Secrets), `PROVISIONING_PROFILE_SPECIFIER = "Alphonso iOS"` set directly in build settings.
 - **altool API key path fixed** — key file copied to `~/.appstoreconnect/private_keys/` (altool's hardcoded search path) instead of relying on `--apiKeyPath` flag which altool ignores.
 - **Workflow trigger updated** — fires on `main` branch pushes to `ios/**` or the workflow file itself; `workflow_dispatch` retained for manual runs.
 - **IOSCOMPANION branch merged to main and deleted.**
@@ -1017,7 +1017,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 ### Fixed
 - **Railway build** (`gateway/whatsapp-cloud/Dockerfile`): Switched from multi-stage to single-stage build — eliminates stale cache bug where `COPY --from=deps /app/node_modules` failed with `/app/node_modules: not found`.
 - **Railway builder** (`gateway/whatsapp-cloud/railway.json`): Changed builder from `RAILPACK` to `DOCKERFILE` — RAILPACK was ignoring the Dockerfile.
-- **CI Railway URL** (`.github/workflows/ci.yml`): Replaced placeholder `your-railway-url.railway.app` with real `alphonsoecosystem-production-3ad1.up.railway.app`.
+- **CI Railway URL** (`.github/workflows/ci.yml`): Gateway health check moved to GitHub Secrets for sensitive infrastructure URLs.
 - **All pre-existing test failures** (8 files fixed): `connectorOutbound` boolean-vs-credential bug; `notionSyncService` missing awaits + snake_case correlation + conflict shape; `josePipelineE2E` creative routing false-positive; `Button` CSS var assertions; `RightPanel` aria-label; `VoiceInputButton` labels; `echoMemoryServiceExtra` return type shape; `workflowDurabilityHydration` contradictory status assertion. All 144 files / 1930+ tests passing.
 - **pluginSigningService syntax** (`src/services/pluginSigningService.js`): Fixed truncated `signPluginManifest` function body that caused ESLint parse error.
 

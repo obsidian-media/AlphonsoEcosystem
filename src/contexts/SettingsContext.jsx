@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS = {
   autoScroll: true,
   coachAgent: 'alphonso',
   autoUpdateEnabled: true,
-  updaterEndpoint: 'https://github.com/Thatisshayan/AlphonsoEcosystem/releases/latest/download/latest.json',
+  updaterEndpoint: 'https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest/download/latest.json',
   updaterPubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJENzgyMEY4MkZGMTE3OUMKUldTY0YvRXYrQ0I0TGRlVWt2cmZhcGVaUVRtQ0lZcDZkZUl5YmxqcEZvbjFYTG01ZnJvWVgwMUgK',
   updaterTarget: '',
   idleTimeoutMinutes: 15,

@@ -39,8 +39,8 @@ export function createWorkContractDraft({
     validationRequirements,
     rollbackExpectations,
     state: 'drafted',
-    editedByShayan: false,
-    signedByShayan: false,
+    editedByUser: false,
+    signedByUser: false,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: null
@@ -55,7 +55,7 @@ export function updateWorkContract(contractId, patch = {}) {
   const rows = readRows();
   const next = rows.map((row) => (
     row.id === contractId
-      ? { ...row, ...patch, editedByShayan: true, updatedAt: new Date().toISOString() }
+      ? { ...row, ...patch, editedByUser: true, updatedAt: new Date().toISOString() }
       : row
   ));
   writeRows(next);
@@ -63,7 +63,7 @@ export function updateWorkContract(contractId, patch = {}) {
 }
 
 export function signWorkContract(contractId) {
-  return updateWorkContract(contractId, { state: 'signed', signedByShayan: true });
+  return updateWorkContract(contractId, { state: 'signed', signedByUser: true });
 }
 
 export function archiveWorkContract(contractId) {

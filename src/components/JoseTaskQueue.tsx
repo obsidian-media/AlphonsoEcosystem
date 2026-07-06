@@ -208,7 +208,7 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
           {commands.slice(-5).reverse().map((cmd: { id: string; commandText?: string; status: string }) => (
             <div key={cmd.id} className="flex items-center justify-between gap-2 rounded-lg bg-zinc-900/40 px-2 py-1">
               <span className="text-[10px] text-zinc-400 truncate flex-1">{cmd.commandText?.slice(0, 80) || cmd.id}</span>
-              <span className={`text-[9px] font-bold uppercase shrink-0 ${cmd.status === 'reported_to_shayan' ? 'text-emerald-400' : cmd.status === 'failed' ? 'text-red-400' : 'text-zinc-500'}`}>{cmd.status}</span>
+              <span className={`text-[9px] font-bold uppercase shrink-0 ${cmd.status === 'reported_to_user' ? 'text-emerald-400' : cmd.status === 'failed' ? 'text-red-400' : 'text-zinc-500'}`}>{cmd.status}</span>
             </div>
           ))}
         </div>
