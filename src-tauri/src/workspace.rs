@@ -2092,7 +2092,15 @@ mod tests {
 
   #[test]
   fn absolute_path_detected() {
-    let path = Path::new("/etc/passwd");
+    // A bare POSIX-style path like "/etc/passwd" is not absolute on Windows
+    // (it lacks a drive letter/prefix, so Path::is_absolute() returns
+    // false there) — use a platform-appropriate absolute path so this test
+    // is meaningful on Windows, macOS, and Linux alike.
+    let path = if cfg!(windows) {
+      Path::new(r"C:\Windows\System32")
+    } else {
+      Path::new("/etc/passwd")
+    };
     assert!(path.is_absolute());
   }
 

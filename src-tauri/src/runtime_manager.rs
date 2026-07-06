@@ -284,8 +284,16 @@ fn prefs_path() -> PathBuf {
 // ─────────────────────────────────────────────────────────
 
 fn load_autostart_prefs() -> HashMap<String, bool> {
-  let path = prefs_path();
-  if let Ok(content) = std::fs::read_to_string(&path) {
+  load_autostart_prefs_from(&prefs_path())
+}
+
+// Path-parameterized so tests can point at an isolated temp file instead of
+// the real %APPDATA%\Alphonso\runtimes\autostart_prefs.json — reading the
+// real file made the "defaults" test fail on any machine that had actually
+// run the app (a real prefs file with non-default values always wins over
+// the hardcoded defaults below).
+fn load_autostart_prefs_from(path: &std::path::Path) -> HashMap<String, bool> {
+  if let Ok(content) = std::fs::read_to_string(path) {
     if let Ok(map) = serde_json::from_str::<HashMap<String, bool>>(&content) {
       return map;
     }
@@ -1667,7 +1675,15 @@ mod tests {
 
   #[test]
   fn autostart_prefs_defaults_ollama_only() {
-    let prefs = load_autostart_prefs();
+    // Use an isolated, definitely-nonexistent path instead of the real
+    // %APPDATA% prefs file — reading the real file (if the app has ever
+    // actually run on this machine) made this test's "defaults" assumption
+    // fail nondeterministically depending on the runner's disk state.
+    let path = std::env::temp_dir().join(format!(
+      "alphonso_test_autostart_prefs_{}.json",
+      std::process::id()
+    ));
+    let prefs = load_autostart_prefs_from(&path);
     // Ollama defaults to true; others default to false
     assert_eq!(prefs.get("ollama").copied(), Some(true));
     assert_eq!(prefs.get("comfyui").copied(), Some(false));
