@@ -55,19 +55,19 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function base64UrlDecode(str: string): ArrayBuffer {
+function base64UrlDecode(str: string): Uint8Array<ArrayBuffer> {
   const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
   const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-  const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
-  // Copy into a fresh, definitely-this-realm ArrayBuffer immediately before
-  // handing it to crypto.subtle.importKey — some WebCrypto implementations
-  // (observed under CI's Node 20 test runner, not reproducible on newer Node
-  // locally) reject a Uint8Array's .buffer with "not instance of ArrayBuffer"
-  // despite it structurally being one, which points at a cross-realm/stale
-  // buffer identity check rather than a data problem.
-  const fresh = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(fresh).set(bytes);
-  return fresh;
+  // Return the TypedArray itself, not its .buffer. Node's native WebCrypto
+  // importKey/verify type-check BufferSource arguments via a WebIDL
+  // converter that validates ArrayBuffer instances against the realm's own
+  // ArrayBuffer constructor. Under Vitest (which executes test/source
+  // modules inside a vm context), an ArrayBuffer constructed in that
+  // context fails that identity check even though it is structurally
+  // correct — "not instance of ArrayBuffer" — while a TypedArray view is
+  // accepted via a separate, realm-safe ArrayBuffer.isView() branch (per
+  // the WebIDL BufferSource union: ArrayBuffer | ArrayBufferView).
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
 }
 
 async function getKeyPair(): Promise<KeyPairResult | null> {
