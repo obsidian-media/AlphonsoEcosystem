@@ -12,7 +12,7 @@ interface AgentInfo {
 
 export type MissionTaskStatus = 'todo' | 'doing' | 'review' | 'approved' | 'blocked';
 
-type AgentKey = 'shayan' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
+type AgentKey = 'user' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
 
 interface MissionRoom {
   id: string;
@@ -216,7 +216,7 @@ const MEDIUM_RISK_PATTERNS: RegExp[] = [
 // ── Agents ────────────────────────────────────────────────────────────────────
 
 export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
-  shayan: {
+  user: {
     key: 'user',
     name: 'Shayan',
     role: 'Founder / final approval',

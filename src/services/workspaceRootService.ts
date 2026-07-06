@@ -1,7 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 
-// Default workspace root — configure via Settings or environment variable ALPHONSO_WORKSPACE_ROOT
-export const CURRENT_WORKSPACE_ROOT = process.env.ALPHONSO_WORKSPACE_ROOT || '';
+// Default workspace root — no hardcoded machine-specific path; configure via Settings.
+// This runs in the Tauri webview (browser context), so Node's process.env isn't
+// available here — the real per-user value lives in Settings, not a build-time default.
+export const CURRENT_WORKSPACE_ROOT = '';
 
 const REQUIRED_ENTRIES = [
   'package.json',
