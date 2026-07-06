@@ -47,7 +47,7 @@ interface NovaAnalysisResult {
   summary: string;
 }
 
-interface NovaOpportunitySchema {
+export interface NovaOpportunitySchema {
   opportunityId: string;
   title: string;
   summary: string;

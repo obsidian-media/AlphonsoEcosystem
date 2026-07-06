@@ -170,7 +170,7 @@ export async function importBackupFromFile(file: File): Promise<BackupData> {
   });
 }
 
-interface BackupSizeEstimate {
+export interface BackupSizeEstimate {
   bytes: number;
   kb: number;
   mb: string;

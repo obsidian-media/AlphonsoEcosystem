@@ -83,30 +83,6 @@ export default [
     }
   },
   {
-    // Pre-existing `// @ts-nocheck` files, carried over from before ESLint
-    // covered .ts/.tsx at all (Sprint 6, 2026-07-02). These were written
-    // without type-checking; removing @ts-nocheck would likely surface a
-    // large batch of real type errors in each, which is a separate, scoped
-    // effort (tracked in ALPHONSOTOTHEMOON.md's Sprint 5/6 notes) — not
-    // something to silently paper over by disabling the rule everywhere.
-    // Do not add new files to this list; fix @ts-nocheck at the source
-    // instead for anything new.
-    files: [
-      'src/App.tsx',
-      'src/components/ApprovalModal.tsx',
-      'src/components/ChatView.tsx',
-      'src/components/ConnectorHealthPanel.tsx',
-      'src/components/OllamaOfflineBanner.tsx',
-      'src/components/OnboardingWizard.tsx',
-      'src/components/SettingsView.tsx',
-      'src/components/Sidebar.tsx',
-      'src/components/WorkflowBuilderView.tsx'
-    ],
-    rules: {
-      '@typescript-eslint/ban-ts-comment': 'off'
-    }
-  },
-  {
     files: ['src/test/**/*.{js,jsx}'],
     languageOptions: {
       parserOptions: {

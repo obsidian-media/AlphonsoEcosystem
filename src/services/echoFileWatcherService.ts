@@ -10,6 +10,7 @@ export interface WatcherConfig {
   enabled: boolean;
   workspaceRoot: string;
   inboxPath: string;
+  pollIntervalSec?: number;
 }
 
 function _getProcessedCache(): Set<string> {
@@ -46,6 +47,7 @@ export function saveWatcherConfig(config: WatcherConfig): void {
       enabled: !!config.enabled,
       workspaceRoot: String(config.workspaceRoot || ''),
       inboxPath: String(config.inboxPath || ''),
+      pollIntervalSec: Number(config.pollIntervalSec) || 30,
     }));
   } catch { /* ignore */ }
 }
@@ -98,6 +100,8 @@ let _watcherInterval: ReturnType<typeof setInterval> | null = null;
 export function startFileWatcher(callback: (result: { ingested: number; files: string[] }) => void): () => void {
   stopFileWatcher();
 
+  const intervalMs = (Number(getWatcherConfig().pollIntervalSec) || 30) * 1000 || POLL_INTERVAL_MS;
+
   _watcherInterval = setInterval(async () => {
     const config = getWatcherConfig();
     if (!config.enabled || !config.workspaceRoot || !config.inboxPath) return;
@@ -136,7 +140,7 @@ export function startFileWatcher(callback: (result: { ingested: number; files: s
         callback({ ingested, files: processedFiles });
       }
     } catch { /* non-critical */ }
-  }, POLL_INTERVAL_MS);
+  }, intervalMs);
 
   return stopFileWatcher;
 }

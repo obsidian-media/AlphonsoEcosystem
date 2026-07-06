@@ -48,6 +48,12 @@ export interface PrereqStatus {
   gitFound?: boolean;
   gitVersion?: string;
   gitPath?: string;
+  ollamaFound?: boolean;
+  ollamaPath?: string;
+  dockerFound?: boolean;
+  dockerPath?: string;
+  nodeFound?: boolean;
+  nodePath?: string;
 }
 
 export async function getAllStatus(): Promise<ToolStatus[]> {

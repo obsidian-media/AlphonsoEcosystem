@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';
@@ -25,8 +24,27 @@ import {
 } from '../services/connectorRegistryService';
 import { checkConnectorHealth } from '../services/connectorHealthCheckService';
 
+interface Connector {
+  id: string;
+  name?: string;
+  status?: string;
+  requiredEnv?: string[];
+  envPresence?: Record<string, boolean>;
+  transport?: string;
+  lastTestStatus?: string;
+  lastTestAtMs?: number;
+  disabledReason?: string;
+}
+
+interface TestResult {
+  ok: boolean;
+  message?: string;
+}
+
+type TestState = 'idle' | 'loading' | 'ok' | 'fail';
+
 // Icons per connector id
-const CONNECTOR_ICONS = {
+const CONNECTOR_ICONS: Record<string, React.ElementType> = {
   telegram: MessageCircle,
   whatsapp: MessageCircle,
   youtube: Video,
@@ -42,7 +60,7 @@ const CONNECTOR_ICONS = {
 };
 
 // Human-friendly label map
-const CONNECTOR_LABELS = {
+const CONNECTOR_LABELS: Record<string, string> = {
   telegram: 'Telegram',
   whatsapp: 'WhatsApp',
   youtube: 'YouTube',
@@ -67,7 +85,7 @@ const CONNECTOR_LABELS = {
  *   'placeholder'    — visible but intentionally inactive placeholder connector
  *   'disabled'       — everything else (not_configured, unknown, etc.)
  */
-function deriveStatus(connector) {
+function deriveStatus(connector: Connector | null | undefined): string {
   if (!connector) return 'disabled';
   const status = String(connector.status || '').toLowerCase();
   const requiredEnv = Array.isArray(connector.requiredEnv) ? connector.requiredEnv : [];
@@ -96,7 +114,7 @@ function deriveStatus(connector) {
   return 'disabled';
 }
 
-const STATUS_BADGE = {
+const STATUS_BADGE: Record<string, { dot: string; badge: string; label: string }> = {
   live: {
     dot: 'bg-emerald-400',
     badge: 'border-[var(--success-dim)] bg-[var(--success-dim)] text-[var(--success)]',
@@ -125,7 +143,7 @@ const STATUS_BADGE = {
 };
 
 // VITE_ env key map per connector id used by testConnector
-const CONNECTOR_VITE_ENV_KEYS = {
+const CONNECTOR_VITE_ENV_KEYS: Record<string, string> = {
   telegram: 'VITE_TELEGRAM_BOT_TOKEN',
   whatsapp: 'VITE_WHATSAPP_ACCESS_TOKEN',
   youtube: 'VITE_YOUTUBE_CLIENT_ID',
@@ -137,7 +155,7 @@ const CONNECTOR_VITE_ENV_KEYS = {
   runway: 'VITE_RUNWAYML_API_SECRET'
 };
 
-async function testConnector(connectorId) {
+async function testConnector(connectorId: string): Promise<TestResult> {
   if (connectorId === 'ollama') {
     try {
       const controller = new AbortController();
@@ -190,7 +208,7 @@ async function testConnector(connectorId) {
 
   const envKey = CONNECTOR_VITE_ENV_KEYS[connectorId];
   if (envKey) {
-    const present = Boolean(import.meta.env[envKey]);
+    const present = Boolean((import.meta as unknown as { env: Record<string, unknown> }).env[envKey]);
     return present
       ? { ok: true, message: 'OK key present' }
       : { ok: false, message: 'FAIL no key' };
@@ -199,13 +217,13 @@ async function testConnector(connectorId) {
   return { ok: false, message: 'Unknown connector' };
 }
 
-async function validateConnectorCredentials(connectorId) {
+async function validateConnectorCredentials(connectorId: string): Promise<TestResult> {
   if (['sd_webui', 'comfyui_video', 'mobile_bridge', 'ollama'].includes(connectorId)) {
     return { ok: true, message: 'Local connector — no cloud credentials required' };
   }
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const requiredEnv = [];
+    const requiredEnv: string[] = [];
     if (connectorId === 'telegram') requiredEnv.push('TELEGRAM_BOT_TOKEN');
     if (connectorId === 'whatsapp') requiredEnv.push('WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID');
     if (connectorId === 'youtube') requiredEnv.push('YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET');
@@ -218,7 +236,7 @@ async function validateConnectorCredentials(connectorId) {
     if (requiredEnv.length === 0) {
       return { ok: true, message: 'No credential validation required' };
     }
-    const presence = await invoke('check_env_vars_presence', { names: requiredEnv });
+    const presence = await invoke<Record<string, boolean>>('check_env_vars_presence', { names: requiredEnv });
     const missing = requiredEnv.filter((k) => !presence[k]);
     if (missing.length === 0) {
       return { ok: true, message: `All ${requiredEnv.length} credential(s) present` };
@@ -229,11 +247,11 @@ async function validateConnectorCredentials(connectorId) {
   }
 }
 
-function ConnectorCard({ connector, zeroCostMode }) {
-  const [testState, setTestState] = useState('idle');
+function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zeroCostMode: boolean }) {
+  const [testState, setTestState] = useState<TestState>('idle');
   const [testMessage, setTestMessage] = useState('');
-  const [validateState, setValidateState] = useState('idle');
-  const [validateResult, setValidateResult] = useState(null);
+  const [validateState, setValidateState] = useState<'idle' | 'loading'>('idle');
+  const [validateResult, setValidateResult] = useState<TestResult | null>(null);
 
   const handleTest = async () => {
     if (testState === 'loading') return;
@@ -401,8 +419,8 @@ function ConnectorCard({ connector, zeroCostMode }) {
   );
 }
 
-function StatusSummaryBar({ connectors, zeroCostMode }) {
-  const counts = connectors.reduce(
+function StatusSummaryBar({ connectors, zeroCostMode }: { connectors: Connector[]; zeroCostMode: boolean }) {
+  const counts = connectors.reduce<Record<string, number>>(
     (acc, c) => {
       const s = deriveStatus(c);
       acc[s] = (acc[s] || 0) + 1;
@@ -439,8 +457,8 @@ function StatusSummaryBar({ connectors, zeroCostMode }) {
   );
 }
 
-export function ConnectorHealthPanel({ zeroCostMode = false }) {
-  const [connectors, setConnectors] = useState(() => listConnectors());
+export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: boolean }) {
+  const [connectors, setConnectors] = useState<Connector[]>(() => listConnectors());
   const [probing, setProbing] = useState(false);
 
   // Default to Setup tab when no credentials have been saved yet

@@ -1,14 +1,21 @@
-// @ts-nocheck
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
+
+const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent'> = {
+  green: 'success',
+  blue: 'info',
+  amber: 'warning',
+  red: 'error',
+  zinc: 'default',
+};
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
 import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
 import { listPlugins, togglePlugin } from '../services/pluginRegistryService';
-import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate } from '../services/backupService';
+import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate, type BackupSizeEstimate } from '../services/backupService';
 import { getAccBridgeConfig, updateAccBridgeConfig } from '../services/agentWorkshop/accBridgeService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
@@ -359,11 +366,6 @@ interface BackupResult {
   message: string;
 }
 
-interface BackupSizeEstimate {
-  kb: number;
-  [key: string]: unknown;
-}
-
 interface ComposioHealth {
   status: string;
   message: string;
@@ -673,7 +675,7 @@ export function SettingsView({
               <div className="flex items-center gap-2">
                 <StatusDot state={ollamaStatus.state} />
                 <span className="text-sm font-semibold text-white">{ollamaStatus.label}</span>
-                <Badge color={(statusColors as any)[ollamaStatus.state]}>{ollamaStatus.state}</Badge>
+                <Badge variant={LEGACY_COLOR_TO_VARIANT[statusColors[ollamaStatus.state as keyof typeof statusColors]] || 'default'}>{ollamaStatus.state}</Badge>
               </div>
               <span className="text-[11px] text-zinc-500">{resolvedNormalizeEndpoint(settings.endpoint || '')}/api/tags</span>
             </div>
@@ -791,9 +793,9 @@ export function SettingsView({
               >
                 {updateCheckState?.checking ? 'Checking...' : 'Check Updates Now'}
               </button>
-              {updateCheckState?.available && <Badge color="green">update available</Badge>}
-              {updateCheckState?.configured && !updateCheckState?.available && <Badge color="blue">up to date / no update</Badge>}
-              {!updateCheckState?.configured && <Badge color="amber">not configured</Badge>}
+              {updateCheckState?.available && <Badge variant="success">update available</Badge>}
+              {updateCheckState?.configured && !updateCheckState?.available && <Badge variant="info">up to date / no update</Badge>}
+              {!updateCheckState?.configured && <Badge variant="warning">not configured</Badge>}
             </div>
             <div className="rounded-xl border border-white/10 bg-zinc-900/45 p-3 text-[11px] text-zinc-300">
               <div>Current: {updateCheckState?.currentVersion || 'n/a'} | Latest: {updateCheckState?.latestVersion || 'none'}</div>
@@ -1575,7 +1577,8 @@ function InboxFolderConfig() {
 
   function handleSave() {
     try {
-      saveWatcherConfig({ inboxPath, enabled, pollIntervalSec: pollSec });
+      const workspaceRoot = getWatcherConfig().workspaceRoot;
+      saveWatcherConfig({ workspaceRoot, inboxPath, enabled, pollIntervalSec: pollSec });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch { /* ignore */ }

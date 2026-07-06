@@ -1,19 +1,20 @@
-// @ts-nocheck
 import React from 'react';
 import { openExternalUrl } from '../services/browserAutomationService';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { messageIn } from '../lib/motion';
 
+const IMPORT_META_ENV = (import.meta as unknown as { env: Record<string, unknown> }).env;
+
 // T10: dev-only profiler wrapper — logs ChatMessageList renders > 16ms (one frame)
-const onProfilerRender = import.meta.env.DEV
-  ? (_id, phase, actualDuration, _, __, msgCount) =>
+const onProfilerRender = IMPORT_META_ENV.DEV
+  ? (_id: string, phase: string, actualDuration: number, _base?: unknown, __commit?: unknown, msgCount?: number) =>
       actualDuration > 16 && console.debug(`[Profiler] ChatMessageList ${phase}: ${actualDuration.toFixed(1)}ms`)
   : undefined;
-function MessageListProfiler({ children, msgCount }) {
-  if (!import.meta.env.DEV) return children;
+function MessageListProfiler({ children, msgCount }: { children: React.ReactNode; msgCount: number }) {
+  if (!IMPORT_META_ENV.DEV) return <>{children}</>;
   return (
-    <React.Profiler id="ChatMessageList" onRender={(id, phase, actual) => onProfilerRender(id, phase, actual, null, null, msgCount)}>
+    <React.Profiler id="ChatMessageList" onRender={(id, phase, actual) => onProfilerRender?.(id, phase, actual, null, null, msgCount)}>
       {children}
     </React.Profiler>
   );
@@ -40,7 +41,7 @@ import { listOrchestrationReceipts } from '../services/orchestrationReceiptServi
 import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
 import { startProactiveWatcher } from '../services/proactiveAgentService';
 import { MemorySearch } from './MemorySearch';
-import { runNovaAnalysis, computeOpportunityScores } from '../services/novaAnalysisService';
+import { runNovaAnalysis, computeOpportunityScores, type NovaOpportunitySchema } from '../services/novaAnalysisService';
 import { saveMessageOffline } from '../services/offlineChatService';
 import { useJarvisVoice } from '../hooks/useJarvisVoice';
 
@@ -129,7 +130,7 @@ function buildProjectSummary(result, commandText, baseSummary, screenContext = [
 
   if (allFiles.length > 0) {
     lines.push('**Files created:**');
-    const grouped = {};
+    const grouped: Record<string, string[]> = {};
     for (const f of allFiles) {
       const parts = f.split('/');
       const dir = parts.length > 1 ? parts.slice(0, -1).join('/') : '.';
@@ -201,11 +202,15 @@ function buildProjectSummary(result, commandText, baseSummary, screenContext = [
 interface ChatViewProps {
   activeChatId: string;
   settings: Record<string, unknown>;
-  setConversations: (fn: (prev: unknown[]) => unknown[]) => void;
-  ollamaStatus: { state: string; label?: string };
-  installedModels: string[];
+  setConversations: React.Dispatch<React.SetStateAction<any[]>>;
+  ollamaStatus: { state: string; label: string; message: string };
+  installedModels: { name: string }[];
   selectedModelMissing?: boolean;
-  voice: { voiceStatus: string; toggleListening: () => void; liveTranscript?: string };
+  voice: {
+    voiceStatus: { state: string; message: string; privacyLabel: string; transcription?: unknown };
+    toggleListening: () => void;
+    liveTranscript?: string;
+  };
   onGenerationChange?: (generating: boolean) => void;
   onTaskComplete: () => void;
   onRetryOllama: () => void;
@@ -259,7 +264,7 @@ export function ChatView({
   const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
   const [showMemorySearch, setShowMemorySearch] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-  const [novaInsight, setNovaInsight] = useState(null);
+  const [novaInsight, setNovaInsight] = useState<NovaOpportunitySchema | null>(null);
   const jarvis = useJarvisVoice();
   const [ollamaBannerDismissed, setOllamaBannerDismissed] = useState(false);
   const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
@@ -413,7 +418,7 @@ export function ChatView({
         setMessages(durable);
       } else {
         try {
-          const sqliteData = await invoke('kv_get', { key: `alphonso_messages_${activeChatId}` });
+          const sqliteData = await invoke<string | null>('kv_get', { key: `alphonso_messages_${activeChatId}` });
           if (sqliteData) {
             const parsed = JSON.parse(sqliteData);
             if (Array.isArray(parsed)) {
@@ -542,7 +547,7 @@ export function ChatView({
         const displaySummary = needsRuntimeHub ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
 
         const newMsgId = nextMsgId();
-        setNewMessageIds((prev) => new Set(prev).add(newMsgId));
+        setNewMessageIds((prev) => new Set(prev).add(String(newMsgId)));
         setMessages((current) => [...current, {
           id: newMsgId,
           role: 'assistant',
@@ -586,9 +591,9 @@ export function ChatView({
         if (result?.commandId) {
           const receipts = listOrchestrationReceipts({ commandId: result.commandId });
           setExecutionReceipts(receipts);
-          const hectorReceipt = result?.executionReceipts?.find((r) => r.agent === 'hector');
-          if (hectorReceipt?.payload?.sources?.length || hectorReceipt?.details?.sources?.length) {
-            setHectorBriefing({ sources: hectorReceipt?.payload?.sources || hectorReceipt?.details?.sources || [] });
+          const hectorReceipt = receipts.find((r) => r.agent === 'hector');
+          if (hectorReceipt?.details?.sources?.length) {
+            setHectorBriefing({ sources: hectorReceipt.details.sources });
           }
         }
 
@@ -607,7 +612,7 @@ export function ChatView({
             let novaThreshold = 65;
             try { novaThreshold = Number(localStorage.getItem('alphonso_nova_threshold') || '65') || 65; } catch { /* ignore */ }
             runNovaAnalysis(cleanInput, null, {}, { skipOllama: true }).then(novaResult => {
-              if (novaResult?.score > novaThreshold) setNovaInsight(novaResult);
+              if (novaResult?.schema?.valueScore > novaThreshold) setNovaInsight(novaResult.schema);
             }).catch(() => {});
           }
         } catch { /* non-critical */ }
@@ -664,8 +669,8 @@ export function ChatView({
     abortRef.current = new AbortController();
     try {
       await generateOllamaChatStream({
-        endpoint: settings.endpoint,
-        model: settings.selectedModel,
+        endpoint: settings.endpoint as string,
+        model: settings.selectedModel as string,
         messages: chatMessages,
         signal: abortRef.current.signal,
         onToken: (_tok, full) => {
@@ -687,7 +692,7 @@ export function ChatView({
           : msg
       ));
       // Persist the user message offline so it can be retried when Ollama comes back
-      saveMessageOffline({ role: 'user', content: cleanInput, timestamp: Date.now() }).catch(() => {});
+      saveMessageOffline({ role: 'user', content: cleanInput }).catch(() => {});
     } finally {
       setIsGenerating(false);
       onGenerationChange(false);
@@ -1118,7 +1123,7 @@ export function ChatView({
                     onJoseExecutionState?.('thinking', 'Running approved tasks...');
                     try {
                       const execResult = await executeApprovedPackets(approvedIds, {
-                        endpoint: settings?.endpoint,
+                        endpoint: settings?.endpoint as string,
                         conversationHistory: messages.slice(-20).filter((m) => !m.isError && m.role && m.content).map((m) => ({ role: m.role, content: m.content })),
                         onProgress: (progress) => { setLiveProgress(progress); },
                         onToken: (tokenData) => {
@@ -1153,7 +1158,7 @@ export function ChatView({
                   <div className="flex items-center gap-2">
                     <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
                     <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-widest">Nova Insight</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.score as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' : (novaInsight.score as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]' : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'}`}>Score {novaInsight.score as number}/100</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.valueScore as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' : (novaInsight.valueScore as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]' : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'}`}>Score {novaInsight.valueScore as number}/100</span>
                   </div>
                   <button onClick={() => setNovaInsight(null)} className="text-[var(--text-4)] hover:text-[var(--text-2)] rounded"><X className="w-3.5 h-3.5" /></button>
                 </div>
@@ -1282,7 +1287,7 @@ export function ChatView({
               </button>
             )}
             <button
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={isGenerating || !inputValue.trim()}
               className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
                 isGenerating || !inputValue.trim()
