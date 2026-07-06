@@ -58,7 +58,16 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
 function base64UrlDecode(str: string): ArrayBuffer {
   const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
   const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)).buffer;
+  const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+  // Copy into a fresh, definitely-this-realm ArrayBuffer immediately before
+  // handing it to crypto.subtle.importKey — some WebCrypto implementations
+  // (observed under CI's Node 20 test runner, not reproducible on newer Node
+  // locally) reject a Uint8Array's .buffer with "not instance of ArrayBuffer"
+  // despite it structurally being one, which points at a cross-realm/stale
+  // buffer identity check rather than a data problem.
+  const fresh = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(fresh).set(bytes);
+  return fresh;
 }
 
 async function getKeyPair(): Promise<KeyPairResult | null> {
