@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Bot, CheckCircle2, ChevronDown, ChevronUp, Clock, Copy, Download, ExternalLink, Eye, FileText, AlertTriangle, RefreshCw, XCircle } from 'lucide-react';
 
+// Agent-generated resultUrl strings must never be rendered as an href unchecked —
+// a malicious/hallucinated "javascript:" or "data:" scheme would execute in-app,
+// and other schemes could be used for open-redirect-style phishing.
+function safeHttpUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 const AGENT_ICONS: Record<string, string> = {
   hector: '🔬',
   miya: '🎨',
@@ -372,7 +385,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, outputFo
   const command = result.command || {};
   const userReport = command.userReport || null;
   const summary = userReport?.summary || 'Pipeline completed.';
-  const url = userReport?.resultUrl || null;
+  const url = safeHttpUrl(userReport?.resultUrl);
   const assignmentSummaries = userReport?.assignmentSummaries || [];
   const artifacts = assignmentSummaries.flatMap((a) => a.artifacts || []);
   const agentReports = assignmentSummaries.filter((a) => a.reportSummary);

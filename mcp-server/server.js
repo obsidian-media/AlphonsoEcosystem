@@ -114,12 +114,21 @@ app.get('/', (req, res) => {
 
 // ── Tool call handler ─────────────────────────────────────────────────────────
 
+const KNOWN_TOOL_NAMES = new Set(TOOLS.map((t) => t.name));
+
 app.post('/call', async (req, res) => {
   const { tool, input } = req.body || {};
   if (!tool) return res.status(400).json({ error: 'Missing tool name' });
+  // `tool` comes straight from the calling MCP client — never interpolate it into a
+  // request URL unchecked. Require it to be one of our own declared tool names so an
+  // attacker can't redirect this server's outbound request via path traversal or a
+  // crafted value (e.g. "../" segments or an encoded absolute URL).
+  if (!KNOWN_TOOL_NAMES.has(tool)) {
+    return res.status(400).json({ error: `Unknown tool: ${tool}` });
+  }
 
   try {
-    const r = await fetch(`${BRIDGE_URL}/tool/${tool}`, {
+    const r = await fetch(`${BRIDGE_URL}/tool/${encodeURIComponent(tool)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input || {})

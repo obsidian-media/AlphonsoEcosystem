@@ -16,6 +16,20 @@ const MAX_PATTERNS = 200;
 const MAX_ITERATIONS = 3;
 const MAX_FILES_PER_STEP = 3;
 
+// A single-pass replace of '../' can be defeated by overlapping sequences
+// (e.g. "....//" collapses to "../" after one pass). Loop until no further
+// traversal markers are stripped, and drop leading separators each pass too
+// (".. /../foo" style splits that reintroduce a leading slash).
+function sanitizeRelativePath(rawPath) {
+  let prev;
+  let safePath = String(rawPath);
+  do {
+    prev = safePath;
+    safePath = safePath.replace(/^[/\\]+/, '').replace(/\.\.[/\\]/g, '').replace(/^[/\\]+/, '');
+  } while (safePath !== prev);
+  return safePath;
+}
+
 // ─── Brain 1: Context Reader ────────────────────────────────────────────────
 
 async function readProjectContext(projectDir) {
@@ -675,7 +689,7 @@ export async function executeWithBrain(commandText, options = {}) {
         const stepFiles = parsed.files.slice(0, MAX_FILES_PER_STEP);
         for (const file of stepFiles) {
           if (file.path && file.content) {
-            const safePath = String(file.path).replace(/^[/\\]+/, '').replace(/\.\.[/\\]/g, '');
+            const safePath = sanitizeRelativePath(file.path);
             try {
               await writeWorkspaceArtifact({
                 workspaceRoot: projectDirectory || '',
@@ -764,7 +778,7 @@ export async function executeWithBrain(commandText, options = {}) {
         if (fixParsed && Array.isArray(fixParsed.files)) {
           for (const file of fixParsed.files.slice(0, 2)) {
             if (file.path && file.content) {
-              const safePath = String(file.path).replace(/^[/\\]+/, '').replace(/\.\.[/\\]/g, '');
+              const safePath = sanitizeRelativePath(file.path);
               await writeWorkspaceArtifact({
                 workspaceRoot: projectDirectory || '',
                 relativePath: safePath,

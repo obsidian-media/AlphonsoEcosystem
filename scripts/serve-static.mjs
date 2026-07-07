@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { readFile } from 'fs/promises';
-import { join, extname } from 'path';
+import { join, extname, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -30,7 +30,12 @@ createServer(async (req, res) => {
     return;
   }
 
-  const filePath = join(DIST, urlPath === '/' ? 'index.html' : urlPath);
+  const filePath = resolve(DIST, '.' + (urlPath === '/' ? '/index.html' : urlPath));
+  if (filePath !== DIST && !filePath.startsWith(DIST + sep)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
 
   try {
     const content = await readFile(filePath);
