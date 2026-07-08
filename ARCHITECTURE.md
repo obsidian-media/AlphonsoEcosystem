@@ -2,7 +2,7 @@
 
 ## Overview
 
-Alphonso is a local-first AI companion desktop application built with Tauri v2 (Rust backend + React frontend). It runs entirely on the user's machine with no cloud dependency for core operation. A 9-agent multi-agent system handles intake, orchestration, research, creative generation, governance, distribution, memory, security, and analysis — all coordinated through a durable Jose orchestration pipeline and a centralized policy enforcement layer that fails closed on any unauthorized or ambiguous action.
+Alphonso is a local-first AI companion desktop application built with Tauri v2 (Rust backend + React frontend). It runs entirely on the user's machine with no cloud dependency for core operation. A 9-agent multi-agent system handles intake, orchestration, research, creative generation, governance, distribution, memory, security, and analysis — all coordinated through a durable Jose orchestration pipeline and a centralized policy enforcement layer. The JS `policyEnforcementService.ts` is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors); note the connector **DSL layer (`policyDslService.ts`) still has a documented default-allow gap for certain connector action types** — see `docs/AUDIT_REPORT_2026-07-08.md` (Direction B/G risks).
 
 ---
 
@@ -10,7 +10,7 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite 5, Tailwind CSS 3, Lucide React, Framer Motion — `.jsx` (most) + `.tsx` (10 key components) |
+| Frontend | React 18, Vite 5, Tailwind CSS 3, Lucide React, Framer Motion — **114 components, 100% `.tsx`** (0 `.jsx` remaining; migration completed in ALPHONSOTOTHEMOON Sprint 3) |
 | Animation | Framer Motion (`src/lib/motion.ts` — `spring`, `tween`, `fadeUp`, `messageIn`, `panelIn` etc.) |
 | Design Tokens | OKLCH CSS custom properties (`src/styles/tokens.css`) — all colors in perceptually-uniform `oklch()` syntax |
 | Backend | Rust 1.77, Tauri 2.11, tokio async runtime, reqwest HTTP client |
@@ -110,7 +110,7 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 ### Policy & Approval (fail-closed)
 - `policyEnforcementService.ts` — centralized policy gate: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks, license tier validation
 - `licenseService.ts` — license tier system (Free/Pro/Enterprise) with premium connector gates
-- `connectorRegistryService.js` — all 13 connector send paths run through policy gate before any external call
+- `connectorRegistryService.js` — all **22 connector** send paths run through policy gate before any external call
 
 ### Performance & Execution
 - `parallelExecutionService.ts` — parallel task execution with concurrency control, retry logic, and task queues
@@ -200,12 +200,12 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 
 ## Known Technical Debt
 
-- `src-tauri/src/lib.rs` is ~2,052 lines (25 modules in src/: `audit_log.rs`, `companion.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself)
-- All frontend files are `.jsx` not `.tsx` — partial TypeScript migration (9 services migrated: policyEnforcement, agentContract, orchestrationQueue, license, cache, parallelExecution, memory, ollama, chatUtils)
+- `src-tauri/src/lib.rs` is **~2,197 lines** with **105 `#[tauri::command]` functions** across **25 modules** in `src-tauri/src/` (incl. `companion_server.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_types.rs`, `voice_sidecar.rs`, and the modules listed below). Module list: `audit_log.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_server.rs`, `companion_types.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself.
+- Frontend is **100% `.tsx`** (114 components, 0 `.jsx`). The service layer is **165 services** (36 `.js` + 129 `.ts`); 11 root-level `.js` services remain to be migrated to `.ts` (tracked Sprint 5 backlog).
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
 - Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`)
-- Component test coverage improved to ~28%+ (18 new service test files added in Direction 3 + Test Expansion sprint)
-- Overall coverage ~38%+ (threshold 38%), 218 test files, 3,167+ tests
+- Component test coverage ~38%+ (threshold 38% via `npm run test:coverage`); 222 test files, 3,255 tests, all passing (verified 2026-07-08)
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
-- `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI
+- `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI; `cargo clippy -- -D warnings` clean (verified 2026-07-08)
+- **Last audited:** 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`. AGENTS.md regenerated from ground truth; do not trust older counts.
