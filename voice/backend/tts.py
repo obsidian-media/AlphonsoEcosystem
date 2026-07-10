@@ -10,15 +10,28 @@ _executor = ThreadPoolExecutor(max_workers=2)
 @lru_cache(maxsize=1)
 def _load_piper():
     from piper import PiperVoice
-    import os
     from pathlib import Path
+    import logging
+
     model_path = Path(__file__).parent / "en_US-lessac-medium.onnx"
     if not model_path.exists():
-        import logging
-        logging.warning(
-            "Piper voice model not found. Run: python -c \"import piper; piper.download_model('en_US-lessac-medium')\""
-        )
+        try:
+            import piper
+            logging.warning("Piper voice model not found — downloading en_US-lessac-medium (first run only)...")
+            piper.download_model("en_US-lessac-medium", download_dir=str(Path(__file__).parent))
+        except Exception as error:
+            logging.error(
+                "Failed to auto-download Piper voice model: %s. "
+                "Voice replies will be silent (STT/routing still work). "
+                "Run manually: python -c \"import piper; piper.download_model('en_US-lessac-medium')\"",
+                error,
+            )
+            return None
+
+    if not model_path.exists():
+        logging.error("Piper voice model still missing after download attempt — voice replies will be silent.")
         return None
+
     return PiperVoice.load("en_US-lessac-medium")
 
 

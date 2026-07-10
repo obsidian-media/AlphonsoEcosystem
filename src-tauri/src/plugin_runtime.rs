@@ -553,6 +553,7 @@ pub(crate) fn execute_plugin_tool(
   if let Some(dir) = &cwd {
     command.current_dir(dir);
   }
+  crate::utils::no_window(&mut command);
 
   let output = command.output().map_err(|error| error.to_string())?;
   let finished = now_ms();

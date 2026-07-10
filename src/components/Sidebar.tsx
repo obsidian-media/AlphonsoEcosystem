@@ -129,7 +129,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
 
       {/* Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="py-3 px-2 flex flex-col gap-0.5 shrink-0">
+        <div className={`py-3 px-2 flex flex-col gap-0.5 overflow-y-auto min-h-0 ${isOpen ? 'max-h-[45%]' : 'flex-1'}`}>
           {NAV_SECTIONS.map((section, sIdx) => (
             <React.Fragment key={sIdx}>
               {isOpen && section.label && (

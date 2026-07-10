@@ -450,6 +450,7 @@ fn execute_command_verified(
 
   let mut command = Command::new(&program);
   command.args(&args);
+  utils::no_window(&mut command);
 
   if let Some(path) = &cwd {
     command.current_dir(path);
@@ -673,10 +674,10 @@ async fn alphonso_bridge_send_packet(
 fn check_processes(names: Vec<String>) -> Result<Vec<ProcessProof>, String> {
   #[cfg(target_os = "windows")]
   let tasklist_output = {
-    let output = Command::new("tasklist")
-      .args(["/FO", "CSV", "/NH"])
-      .output()
-      .map_err(|error| error.to_string())?;
+    let mut cmd = Command::new("tasklist");
+    cmd.args(["/FO", "CSV", "/NH"]);
+    utils::no_window(&mut cmd);
+    let output = cmd.output().map_err(|error| error.to_string())?;
 
     String::from_utf8_lossy(&output.stdout).to_string()
   };
@@ -869,10 +870,10 @@ fn run_ocr_adapter(
     args.extend(extra);
   }
 
-  let output = Command::new(&engine_path)
-    .args(&args)
-    .output()
-    .map_err(|error| error.to_string())?;
+  let mut ocr_cmd = Command::new(&engine_path);
+  ocr_cmd.args(&args);
+  utils::no_window(&mut ocr_cmd);
+  let output = ocr_cmd.output().map_err(|error| error.to_string())?;
   let finished = now_ms();
   let success = output.status.success();
 
@@ -1429,8 +1430,10 @@ async fn launch_ollama() -> Result<ServiceLaunchProof, String> {
   }
   use std::process::Command;
   if cfg!(target_os = "windows") {
-    Command::new("cmd")
-      .args(["/C", "start", "/B", "ollama", "serve"])
+    let mut cmd = Command::new("cmd");
+    cmd.args(["/C", "start", "/B", "ollama", "serve"]);
+    utils::no_window(&mut cmd);
+    cmd
       .spawn()
       .map_err(|e| format!("Failed to launch Ollama: {}", e))?;
   } else {
@@ -1489,9 +1492,10 @@ async fn launch_comfyui(
     ));
   }
   use std::process::Command;
-  Command::new(&py)
-    .arg("main.py")
-    .current_dir(&dir)
+  let mut comfy_cmd = Command::new(&py);
+  comfy_cmd.arg("main.py").current_dir(&dir);
+  utils::no_window(&mut comfy_cmd);
+  comfy_cmd
     .spawn()
     .map_err(|e| {
       format!(

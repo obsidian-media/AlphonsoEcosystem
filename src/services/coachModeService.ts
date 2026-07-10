@@ -57,6 +57,17 @@ export async function openCoachWindow(alwaysOnTop?: boolean, coachAgent = 'alpho
     skipTaskbar: false
   });
 
+  // new WebviewWindow() never throws synchronously — creation failures
+  // (e.g. missing capability grant for this window label) only surface via
+  // the async 'tauri://error' event. Without this, callers believe the
+  // window opened even when it silently failed.
+  await new Promise((resolve, reject) => {
+    coach.once('tauri://created', () => resolve(coach));
+    coach.once('tauri://error', (event) => reject(new Error(
+      `Coach window failed to create: ${JSON.stringify(event?.payload ?? event)}`
+    )));
+  });
+
   return coach;
 }
 

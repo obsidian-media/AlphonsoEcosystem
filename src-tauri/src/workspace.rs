@@ -1911,16 +1911,18 @@ pub(crate) async fn transcribe_audio_file(
   // Optionally, enforce that the audio file resides within the system temp directory or a known safe dir
   let out_dir = std::env::temp_dir();
 
-  let output = tokio::process::Command::new(&whisper_exe)
-    .arg(&audio_path_abs)
-    .args([
-      "--model",
-      model_name,
-      "--output_format",
-      "txt",
-      "--output_dir",
-      out_dir.to_str().unwrap_or("."),
-    ])
+  let mut whisper_cmd = tokio::process::Command::new(&whisper_exe);
+  whisper_cmd.arg(&audio_path_abs).args([
+    "--model",
+    model_name,
+    "--output_format",
+    "txt",
+    "--output_dir",
+    out_dir.to_str().unwrap_or("."),
+  ]);
+  #[cfg(target_os = "windows")]
+  whisper_cmd.creation_flags(0x0800_0000);
+  let output = whisper_cmd
     .output()
     .await
     .map_err(|e| format!("Failed to run whisper: {e}. Install it via Runtime Hub."))?;

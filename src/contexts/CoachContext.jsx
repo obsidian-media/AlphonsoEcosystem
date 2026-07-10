@@ -32,8 +32,17 @@ export function CoachProvider({ children }) {
     try {
       await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
       setCoachMode(true);
-    } catch {
-      // Coach window requires the Tauri desktop runtime — toggle state anyway so UI reflects intent
+    } catch (error) {
+      const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+      if (isTauriDesktop) {
+        // Real failure inside the desktop runtime (e.g. missing window capability
+        // grant) — do not claim success, surface the actual error to the user.
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { message: `Coach mode failed to open: ${error?.message || error}`, type: 'error' }
+        }));
+        return;
+      }
+      // Expected no-op outside the Tauri desktop runtime (e.g. `npm run dev` in a browser).
       setCoachMode(true);
       window.dispatchEvent(new CustomEvent('alphonso:toast', {
         detail: { message: 'Coach mode active (desktop window requires Tauri runtime)', type: 'info' }
@@ -45,7 +54,14 @@ export function CoachProvider({ children }) {
     const next = !coachAlwaysOnTop;
     setCoachAlwaysOnTop(next);
     if (coachMode) {
-      await openCoachWindow(next, settings.coachAgent || 'alphonso').catch(() => {});
+      await openCoachWindow(next, settings.coachAgent || 'alphonso').catch((error) => {
+        const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+        if (isTauriDesktop) {
+          window.dispatchEvent(new CustomEvent('alphonso:toast', {
+            detail: { message: `Coach mode failed to update: ${error?.message || error}`, type: 'error' }
+          }));
+        }
+      });
     }
   }, [coachAlwaysOnTop, coachMode, settings.coachAgent]);
 
@@ -68,8 +84,13 @@ export function CoachProvider({ children }) {
       await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
       setCoachMode(true);
       await getCurrentWindow().minimize();
-    } catch {
-      // Ignore when not in Tauri runtime.
+    } catch (error) {
+      // This path only ever runs inside the Tauri desktop runtime (it imports
+      // @tauri-apps/api/window directly, unlike the other toggles which guard
+      // for web/dev mode) — any failure here is real and should be surfaced.
+      window.dispatchEvent(new CustomEvent('alphonso:toast', {
+        detail: { message: `Coach mode failed to open: ${error?.message || error}`, type: 'error' }
+      }));
     }
   }, [coachAlwaysOnTop, settings.coachAgent]);
 
@@ -77,8 +98,13 @@ export function CoachProvider({ children }) {
     try {
       await openCoachWindow(coachAlwaysOnTop, 'alphonso');
       setCoachMode(true);
-    } catch {
-      // Ignore when not in Tauri runtime.
+    } catch (error) {
+      const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+      if (isTauriDesktop) {
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { message: `Coach mode failed to open: ${error?.message || error}`, type: 'error' }
+        }));
+      }
     }
   }, [coachAlwaysOnTop]);
 

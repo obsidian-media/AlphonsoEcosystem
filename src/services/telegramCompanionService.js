@@ -62,7 +62,8 @@ export function setNotificationsPaused(paused) {
 async function telegramInvoke(command, payload) {
   try {
     return await invoke(command, payload);
-  } catch {
+  } catch (error) {
+    console.error(`[telegram] invoke("${command}") failed:`, error);
     return null;
   }
 }
@@ -82,7 +83,7 @@ async function sendTelegramMessageInternal({ token, chatId, text }) {
     : [text];
 
   for (const chunk of chunks) {
-    await telegramInvoke('telegram_send_message', {
+    await telegramInvoke('connector_send_telegram', {
       token,
       chatId,
       text: chunk
@@ -94,15 +95,17 @@ async function sendTelegramMessageInternal({ token, chatId, text }) {
 
 async function pollTelegramUpdates(token) {
   if (!token) return { ok: false, messages: [] };
-  
-  const cursor = lastUpdateId;
-  const result = await telegramInvoke('telegram_get_updates', {
+
+  const result = await telegramInvoke('connector_poll_telegram', {
     token,
-    update_id: cursor,
-    message: {}
+    limit: 10
   });
 
-  return result || { ok: false, messages: [] };
+  if (!result) return { ok: false, messages: [] };
+  if (!result.ok) {
+    console.error('[telegram] poll failed:', result.error);
+  }
+  return result;
 }
 
 function formatShortId(fullId) {
@@ -531,9 +534,9 @@ export async function processInboundCommands(token, updates) {
   const messages = Array.isArray(updates.messages) ? updates.messages : [];
   
   for (const update of messages) {
-    const chatId = String(update?.chat?.id || update?.message?.chat?.id || '');
-    const text = (update?.message?.text || update?.text || '').trim();
-    const updateId = update?.update_id || update?.message?.update_id;
+    const chatId = String(update?.chatId || '');
+    const text = (update?.text || '').trim();
+    const updateId = update?.updateId;
 
     if (updateId && (!lastUpdateId || updateId > lastUpdateId)) {
       lastUpdateId = updateId;

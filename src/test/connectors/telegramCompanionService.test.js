@@ -131,7 +131,7 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'chat-123' }, message: { text: '/start' }, update_id: 1 }]
+        messages: [{ chatId: 'chat-123', text: '/start', updateId: 1 }]
       });
 
       expect(mockAppStorage.setStorage).toHaveBeenCalledWith('alphonso_telegram_owner_chat_id', 'chat-123');
@@ -145,10 +145,10 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'chat-123' }, message: { text: '/status' }, update_id: 1 }]
+        messages: [{ chatId: 'chat-123', text: '/status', updateId: 1 }]
       });
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       const startPrompt = calls.find(c => c[1].text.includes('/start to register'));
       expect(startPrompt).toBeTruthy();
     });
@@ -161,7 +161,7 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'chat-123' }, message: { text: '/start' }, update_id: 1 }]
+        messages: [{ chatId: 'chat-123', text: '/start', updateId: 1 }]
       });
 
       expect(mockAppStorage.setStorage).not.toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'attacker-chat' }, message: { text: '/start' }, update_id: 1 }]
+        messages: [{ chatId: 'attacker-chat', text: '/start', updateId: 1 }]
       });
 
       expect(mockAppStorage.setStorage).not.toHaveBeenCalled();
@@ -189,10 +189,10 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'existing-owner' }, message: { text: '/start' }, update_id: 1 }]
+        messages: [{ chatId: 'existing-owner', text: '/start', updateId: 1 }]
       });
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       const alreadyRegistered = calls.find(c => c[1].text.includes('already registered'));
       expect(alreadyRegistered).toBeTruthy();
     });
@@ -205,10 +205,10 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'other-chat' }, message: { text: '/status' }, update_id: 1 }]
+        messages: [{ chatId: 'other-chat', text: '/status', updateId: 1 }]
       });
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       const unauthorized = calls.find(c => c[1].text === 'Unauthorized.');
       expect(unauthorized).toBeTruthy();
     });
@@ -232,7 +232,7 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'owner-chat' }, message: { text: '/status' }, update_id: 1 }]
+        messages: [{ chatId: 'owner-chat', text: '/status', updateId: 1 }]
       });
 
       expect(mockBus.listApprovalQueue).toHaveBeenCalled();
@@ -241,7 +241,7 @@ describe('telegramCompanionService', () => {
     it('routes /queue to handleQueueCommand', async () => {
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'owner-chat' }, message: { text: '/queue' }, update_id: 1 }]
+        messages: [{ chatId: 'owner-chat', text: '/queue', updateId: 1 }]
       });
 
       expect(mockBus.listApprovalQueue).toHaveBeenCalled();
@@ -250,27 +250,27 @@ describe('telegramCompanionService', () => {
     it('routes /help to handleHelpCommand', async () => {
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'owner-chat' }, message: { text: '/help' }, update_id: 1 }]
+        messages: [{ chatId: 'owner-chat', text: '/help', updateId: 1 }]
       });
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls[0][1].text).toContain('/ask');
     });
 
     it('routes /ping to handlePingCommand', async () => {
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'owner-chat' }, message: { text: '/ping' }, update_id: 1 }]
+        messages: [{ chatId: 'owner-chat', text: '/ping', updateId: 1 }]
       });
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls[0][1].text).toContain('Pong');
     });
 
     it('routes /ask with argument to jose command router', async () => {
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'owner-chat' }, message: { text: '/ask what is the status' }, update_id: 1 }]
+        messages: [{ chatId: 'owner-chat', text: '/ask what is the status', updateId: 1 }]
       });
 
       expect(mockJose.createJoseCommandRoute).toHaveBeenCalled();
@@ -279,7 +279,7 @@ describe('telegramCompanionService', () => {
     it('routes plain text to jose command router', async () => {
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'owner-chat' }, message: { text: 'hello there' }, update_id: 1 }]
+        messages: [{ chatId: 'owner-chat', text: 'hello there', updateId: 1 }]
       });
 
       expect(mockJose.createJoseCommandRoute).toHaveBeenCalled();
@@ -364,7 +364,7 @@ describe('telegramCompanionService', () => {
 
       await service.sendTelegramMessage('x'.repeat(5000));
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls.length).toBe(2);
       expect(calls[0][1].text.length).toBe(4000);
       expect(calls[1][1].text.length).toBe(1000);
@@ -378,7 +378,7 @@ describe('telegramCompanionService', () => {
 
       await service.sendTelegramMessage('Short');
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls.length).toBe(1);
       expect(calls[0][1].text).toBe('Short');
     });
@@ -425,7 +425,7 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'chat-123' }, message: { text: '' }, update_id: 1 }]
+        messages: [{ chatId: 'chat-123', text: '', updateId: 1 }]
       });
 
       expect(mockJose.createJoseCommandRoute).not.toHaveBeenCalled();
@@ -444,7 +444,7 @@ describe('telegramCompanionService', () => {
 
       await service.handleAgentsCommand('test-token', 'chat-123');
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls[0][1].text).toContain('Alphonso');
       expect(calls[0][1].text).toContain('Jose');
     });
@@ -457,7 +457,7 @@ describe('telegramCompanionService', () => {
 
       await service.handleScanCommand('test-token', 'chat-123');
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       const scanMsg = calls.find(c => c[1].text.includes('Sentinel Scan'));
       expect(scanMsg).toBeTruthy();
       expect(scanMsg[1].text).toContain('clear');
@@ -467,7 +467,7 @@ describe('telegramCompanionService', () => {
   describe('handleFilesCommand', () => {
     it('returns desktop-only message when Tauri unavailable', async () => {
       await service.handleFilesCommand('test-token', 'chat-123');
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls[0][1].text).toContain('desktop');
     });
   });
@@ -479,7 +479,7 @@ describe('telegramCompanionService', () => {
 
       await service.handleNovaCommand('test-token', 'chat-123');
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls[0][1].text).toContain('No Nova analysis');
     });
   });
@@ -495,7 +495,7 @@ describe('telegramCompanionService', () => {
 
       await service.handleReportCommand('test-token', 'chat-123');
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls[0][1].text).toContain('Alphonso Report');
       expect(calls[0][1].text).toContain('Queue');
       expect(calls[0][1].text).toContain('Activity');
@@ -514,7 +514,7 @@ describe('telegramCompanionService', () => {
 
       await service.processInboundCommands('test-token', {
         ok: true,
-        messages: [{ chat: { id: 'owner-chat' }, message: { text: '/receipts' }, update_id: 1 }]
+        messages: [{ chatId: 'owner-chat', text: '/receipts', updateId: 1 }]
       });
 
       expect(listOrchestrationReceipts).toHaveBeenCalled();

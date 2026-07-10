@@ -1,6 +1,21 @@
 #![expect(dead_code)]
 
+use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// Apply CREATE_NO_WINDOW on Windows so child processes don't flash a
+/// visible console window. No-op on other platforms.
+#[allow(unused_variables)]
+pub(crate) fn no_window(cmd: &mut Command) -> &mut Command {
+  #[cfg(target_os = "windows")]
+  cmd.creation_flags(CREATE_NO_WINDOW);
+  cmd
+}
 
 pub(crate) fn now_ms() -> u64 {
   SystemTime::now()

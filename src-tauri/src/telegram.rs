@@ -51,10 +51,14 @@ fn write_connector_cursor(
 pub(crate) async fn connector_poll_telegram(
   http_client: tauri::State<'_, reqwest::Client>,
   app: tauri::AppHandle,
+  token: Option<String>,
   limit: Option<u8>,
 ) -> Result<ConnectorPollProof, String> {
   let checked_at_ms = now_ms();
-  let token = std::env::var("TELEGRAM_BOT_TOKEN")
+  let token = token
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty())
+    .or_else(|| std::env::var("TELEGRAM_BOT_TOKEN").ok())
     .map(|value| value.trim().to_string())
     .unwrap_or_default();
   if token.is_empty() {
@@ -203,12 +207,16 @@ pub(crate) async fn connector_poll_telegram(
 pub(crate) async fn connector_send_telegram(
   http_client: tauri::State<'_, reqwest::Client>,
   rate_limiter: tauri::State<'_, crate::RateLimiter>,
+  token: Option<String>,
   chat_id: String,
   text: String,
 ) -> Result<ConnectorSendProof, String> {
   rate_limiter.check_and_record("connector_send_telegram")?;
   let sent_at_ms = now_ms();
-  let token = std::env::var("TELEGRAM_BOT_TOKEN")
+  let token = token
+    .map(|value| value.trim().to_string())
+    .filter(|value| !value.is_empty())
+    .or_else(|| std::env::var("TELEGRAM_BOT_TOKEN").ok())
     .map(|value| value.trim().to_string())
     .unwrap_or_default();
   if token.is_empty() {

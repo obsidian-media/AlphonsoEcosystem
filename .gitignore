@@ -1,6 +1,8 @@
 node_modules/
 dist/
 voice/backend/venv/
+__pycache__/
+.pytest_cache/
 coverage/
 src-tauri/target/
 release/

@@ -16,7 +16,7 @@ export function UpdaterNotification({ version, onUpdate, onDismiss }: UpdaterNot
         onClick={onUpdate}
         className="bg-amber-500 text-black text-xs font-bold px-3 py-1 rounded hover:bg-amber-400 transition-colors"
       >
-        Update &amp; Restart
+        Download Update
       </button>
       <button
         onClick={onDismiss}

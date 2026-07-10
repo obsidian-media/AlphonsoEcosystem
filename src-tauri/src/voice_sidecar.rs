@@ -34,7 +34,8 @@ pub async fn voice_start(
   } else {
     std::path::PathBuf::from("python3")
   };
-  let mut child = Command::new(&python_bin)
+  let mut cmd = Command::new(&python_bin);
+  cmd
     .args([
       "-m",
       "uvicorn",
@@ -47,7 +48,9 @@ pub async fn voice_start(
     ])
     .arg(&backend_path)
     .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
+    .stderr(Stdio::piped());
+  crate::utils::no_window(&mut cmd);
+  let mut child = cmd
     .spawn()
     .map_err(|e| format!("Failed to start voice server: {e}"))?;
   if let Some(stdout) = child.stdout.take() {

@@ -138,9 +138,9 @@ describe('telegramCompanionService', () => {
       await processFn('test-token', {
         ok: true,
         messages: [{
-          chat: { id: 'chat-123' },
-          message: { text: '/start' },
-          update_id: 1
+          chatId: 'chat-123',
+          text: '/start',
+          updateId: 1
         }]
       });
 
@@ -155,9 +155,9 @@ describe('telegramCompanionService', () => {
       await processFn('test-token', {
         ok: true,
         messages: [{
-          chat: { id: 'chat-123' },
-          message: { text: '/start' },
-          update_id: 1
+          chatId: 'chat-123',
+          text: '/start',
+          updateId: 1
         }]
       });
 
@@ -172,9 +172,9 @@ describe('telegramCompanionService', () => {
       await processFn('test-token', {
         ok: true,
         messages: [{
-          chat: { id: 'attacker-chat' },
-          message: { text: '/start' },
-          update_id: 1
+          chatId: 'attacker-chat',
+          text: '/start',
+          updateId: 1
         }]
       });
 
@@ -189,9 +189,9 @@ describe('telegramCompanionService', () => {
       await processFn('test-token', {
         ok: true,
         messages: [{
-          chat: { id: 'chat-123' },
-          message: { text: '/start' },
-          update_id: 1
+          chatId: 'chat-123',
+          text: '/start',
+          updateId: 1
         }]
       });
 
@@ -328,9 +328,9 @@ describe('telegramCompanionService', () => {
       await processFn('test-token', {
         ok: true,
         messages: [{
-          chat: { id: 'chat-123' },
-          message: { text: 'what is the weather' },
-          update_id: 1
+          chatId: 'chat-123',
+          text: 'what is the weather',
+          updateId: 1
         }]
       });
 
@@ -368,7 +368,7 @@ describe('telegramCompanionService', () => {
       
       await service.sendTelegramMessage(longText);
       
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       expect(calls.length).toBe(2);
       expect(calls[0][1].text.length).toBe(4000);
       expect(calls[1][1].text.length).toBe(1000);
@@ -389,13 +389,13 @@ describe('telegramCompanionService', () => {
       await processFn('test-token', {
         ok: true,
         messages: [{
-          chat: { id: 'different-chat-123' },
-          message: { text: '/status' },
-          update_id: 1
+          chatId: 'different-chat-123',
+          text: '/status',
+          updateId: 1
         }]
       });
 
-      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'telegram_send_message');
+      const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       const unauthorizedCall = calls.find(c => c[1].text === 'Unauthorized.');
       expect(unauthorizedCall).toBeTruthy();
     });

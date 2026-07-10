@@ -5,3 +5,4 @@ numpy==2.1.0
 piper-tts==1.0.0
 faster-whisper==1.1.0
 webrtcvad==2.0.10
+httpx==0.28.1

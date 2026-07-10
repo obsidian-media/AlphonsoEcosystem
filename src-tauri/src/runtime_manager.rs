@@ -1588,11 +1588,13 @@ fn which_exe(name: &str) -> bool {
 
 fn kill_pid(pid: u32) {
   if cfg!(target_os = "windows") {
-    let _ = Command::new("taskkill")
+    let mut cmd = Command::new("taskkill");
+    cmd
       .args(["/PID", &pid.to_string(), "/T", "/F"])
       .stdout(std::process::Stdio::null())
-      .stderr(std::process::Stdio::null())
-      .output();
+      .stderr(std::process::Stdio::null());
+    no_window(&mut cmd);
+    let _ = cmd.output();
   } else {
     let _ = Command::new("kill")
       .args(["-TERM", &pid.to_string()])
@@ -1603,11 +1605,13 @@ fn kill_pid(pid: u32) {
 /// Check if a process with the given PID is still alive.
 fn is_pid_alive(pid: u32) -> bool {
   if cfg!(target_os = "windows") {
-    let output = Command::new("tasklist")
+    let mut cmd = Command::new("tasklist");
+    cmd
       .args(["/FI", &format!("PID eq {}", pid), "/NH"])
       .stdout(std::process::Stdio::piped())
-      .stderr(std::process::Stdio::null())
-      .output();
+      .stderr(std::process::Stdio::null());
+    no_window(&mut cmd);
+    let output = cmd.output();
     match output {
       Ok(o) => {
         let out = String::from_utf8_lossy(&o.stdout);
