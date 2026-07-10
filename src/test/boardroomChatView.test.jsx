@@ -10,12 +10,14 @@ vi.mock('../agents/agentRegistry', () => ({
 }));
 
 vi.mock('../services/boardroomFacilitatorService', () => ({
-  generateAlphonsoResponse: vi.fn().mockResolvedValue({ ok: true, text: 'default alphonso reply' })
+  generateAlphonsoResponse: vi.fn().mockResolvedValue({ ok: true, text: 'default alphonso reply' }),
+  generateAgentResponse: vi.fn().mockResolvedValue({ ok: true, text: 'default agent reply' })
 }));
 
 describe('BoardroomChatView', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.clearAllMocks();
   });
 
   it('shows the empty state with no threads', async () => {
@@ -95,7 +97,7 @@ describe('BoardroomChatView', () => {
 
   it('triggers Alphonso auto-response when a message has no @mention', async () => {
     const facilitator = await import('../services/boardroomFacilitatorService');
-    facilitator.generateAlphonsoResponse.mockResolvedValue({ ok: true, text: 'Got it — pulling in Hector.' });
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'Got it — pulling in Hector.' });
 
     const { BoardroomChatView } = await import('../components/BoardroomChatView');
     render(<BoardroomChatView />);
@@ -108,12 +110,13 @@ describe('BoardroomChatView', () => {
     fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
 
     expect(await screen.findByText('Got it — pulling in Hector.')).toBeInTheDocument();
-    expect(facilitator.generateAlphonsoResponse).toHaveBeenCalled();
+    expect(facilitator.generateAgentResponse).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'alphonso' }));
   });
 
   it('does not trigger Alphonso auto-response when the message contains an @mention', async () => {
     const facilitator = await import('../services/boardroomFacilitatorService');
-    facilitator.generateAlphonsoResponse.mockClear();
+    facilitator.generateAgentResponse.mockClear();
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'hector reply' });
 
     const { BoardroomChatView } = await import('../components/BoardroomChatView');
     render(<BoardroomChatView />);
@@ -126,12 +129,12 @@ describe('BoardroomChatView', () => {
     fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
 
     await screen.findByText('@Hector look into this');
-    expect(facilitator.generateAlphonsoResponse).not.toHaveBeenCalled();
+    expect(facilitator.generateAgentResponse).not.toHaveBeenCalledWith(expect.objectContaining({ agentId: 'alphonso' }));
   });
 
   it('shows a visible error message when Alphonso auto-response fails, not a silent swallow', async () => {
     const facilitator = await import('../services/boardroomFacilitatorService');
-    facilitator.generateAlphonsoResponse.mockResolvedValue({ ok: false, text: '', error: 'Ollama is not running' });
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: false, text: '', error: 'Ollama is not running' });
 
     const { BoardroomChatView } = await import('../components/BoardroomChatView');
     render(<BoardroomChatView />);
@@ -144,5 +147,53 @@ describe('BoardroomChatView', () => {
     fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
 
     expect(await screen.findByText(/ollama is not running/i)).toBeInTheDocument();
+  });
+
+  it('triggers each mentioned agent to generate a reply, not just Alphonso', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockImplementation(({ agentId }) =>
+      Promise.resolve({ ok: true, text: `${agentId} reply text` })
+    );
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Routing Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Routing Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector look into this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    expect(await screen.findByText('hector reply text')).toBeInTheDocument();
+    expect(facilitator.generateAgentResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'hector' })
+    );
+    expect(facilitator.generateAgentResponse).not.toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'alphonso' })
+    );
+  });
+
+  it('triggers each of multiple mentioned agents once, in order', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    const calls = [];
+    facilitator.generateAgentResponse.mockImplementation(({ agentId }) => {
+      calls.push(agentId);
+      return Promise.resolve({ ok: true, text: `${agentId} says hi` });
+    });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Multi Routing Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Multi Routing Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector and @Jose please weigh in' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText('hector says hi');
+    await screen.findByText('jose says hi');
+    expect(calls).toEqual(['hector', 'jose']);
   });
 });

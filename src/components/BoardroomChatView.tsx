@@ -11,7 +11,7 @@ import {
   type BoardroomThread,
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
-import { generateAlphonsoResponse } from '../services/boardroomFacilitatorService';
+import { generateAgentResponse } from '../services/boardroomFacilitatorService';
 
 const AGENT_PROFILES = listAgentProfiles();
 
@@ -95,22 +95,29 @@ export function BoardroomChatView() {
     setComposerText('');
 
     const mentions = parseMentions(text, AGENT_PROFILES.map((p: { id: string }) => p.id));
-    if (mentions.length === 0 && composerSpeaker !== 'alphonso') {
-      setFacilitatorPending(true);
+    const respondingAgents = mentions.length > 0
+      ? mentions.filter((agentId) => agentId !== composerSpeaker)
+      : (composerSpeaker !== 'alphonso' ? ['alphonso'] : []);
+
+    if (respondingAgents.length === 0) return;
+
+    setFacilitatorPending(true);
+    for (const agentId of respondingAgents) {
       const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
-      const result = await generateAlphonsoResponse({
+      const result = await generateAgentResponse({
+        agentId,
         topic: activeThread.topic,
         priorMessages,
         newMessageText: text
       });
       addThreadMessage({
         threadId: activeThreadId,
-        speaker: 'alphonso',
-        content: result.ok ? result.text : `Alphonso couldn't respond: ${result.error}`
+        speaker: agentId,
+        content: result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`
       });
       setMessages(listThreadMessages(activeThreadId));
-      setFacilitatorPending(false);
     }
+    setFacilitatorPending(false);
   }
 
   function handleComposerChange(value: string) {
