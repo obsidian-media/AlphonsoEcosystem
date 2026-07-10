@@ -40,6 +40,7 @@ const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod)
 const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
 const ConnectorHealthPanel = lazy(() => import('./components/ConnectorHealthPanel').then((mod) => ({ default: mod.ConnectorHealthPanel })));
 const RuntimeManagerView = lazy(() => import('./components/RuntimeManagerView'));
+const VoiceView = lazy(() => import('./components/VoiceView').then((mod) => ({ default: mod.VoiceView })));
 const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then((mod) => ({ default: mod.BootStatusBanner })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
@@ -686,6 +687,11 @@ function AppShell() {
                 {activeTab === 'runtimes' && (
                   <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading runtimes…</div>}>
                     <RuntimeManagerView />
+                  </React.Suspense>
+                )}
+                {activeTab === 'voice' && (
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading voice…</div>}>
+                    <VoiceView />
                   </React.Suspense>
                 )}
                 {activeTab === 'activity' && (
