@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Send } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import {
@@ -78,6 +78,7 @@ export function BoardroomChatView() {
   const [composerSpeaker, setComposerSpeaker] = useState('user');
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [facilitatorPending, setFacilitatorPending] = useState(false);
+  const stopRequestedRef = useRef(false);
 
   const activeThread = useMemo(
     () => threads.find((t) => t.id === activeThreadId) ?? null,
@@ -121,10 +122,22 @@ export function BoardroomChatView() {
     if (respondingAgents.length === 0) return;
 
     setFacilitatorPending(true);
+    stopRequestedRef.current = false;
     let hopsUsed = 0;
 
     while (respondingAgents.length > 0) {
       const agentId = respondingAgents.shift() as string;
+
+      if (stopRequestedRef.current) {
+        addThreadMessage({
+          threadId: activeThreadId,
+          speaker: 'alphonso',
+          content: 'Generation stopped by user.',
+          kind: 'system'
+        });
+        setMessages(listThreadMessages(activeThreadId));
+        break;
+      }
 
       if (hopsUsed >= MAX_CHAIN_DEPTH) {
         addThreadMessage({
@@ -167,6 +180,10 @@ export function BoardroomChatView() {
       }
     }
     setFacilitatorPending(false);
+  }
+
+  function handleStop() {
+    stopRequestedRef.current = true;
   }
 
   function handleComposerChange(value: string) {
@@ -237,7 +254,15 @@ export function BoardroomChatView() {
               ))}
             </div>
             {facilitatorPending && (
-              <div className="px-4 pb-1 text-xs text-[var(--text-3)]">Alphonso is thinking…</div>
+              <div className="flex items-center justify-between px-4 pb-1 text-xs text-[var(--text-3)]">
+                <span>Alphonso is thinking…</span>
+                <button
+                  onClick={handleStop}
+                  className="rounded-md border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-2)]"
+                >
+                  Stop
+                </button>
+              </div>
             )}
             <div className="flex items-center gap-2 border-t border-[var(--border)] p-3">
               <select

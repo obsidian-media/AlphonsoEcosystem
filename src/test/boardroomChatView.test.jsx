@@ -320,4 +320,41 @@ describe('BoardroomChatView', () => {
     await screen.findByText('The figure is $49/mo.');
     expect(screen.queryByText(/flagged low confidence/i)).not.toBeInTheDocument();
   });
+
+  it('shows a Stop button while generation is in progress and stops further hops when clicked', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    let resolveFirstHop;
+    const firstHopPromise = new Promise((resolve) => { resolveFirstHop = resolve; });
+    facilitator.generateAgentResponse.mockImplementation(({ agentId }) => {
+      if (agentId === 'hector') return firstHopPromise;
+      return Promise.resolve({ ok: true, text: 'jose should not be called' });
+    });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Stop Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Stop Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector look into this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    const stopButton = await screen.findByRole('button', { name: /^stop$/i });
+    fireEvent.click(stopButton);
+
+    resolveFirstHop({ ok: true, text: '@Jose keep going' });
+
+    await screen.findByText('@Jose keep going');
+    await screen.findByText(/generation stopped/i);
+    expect(facilitator.generateAgentResponse).not.toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'jose' })
+    );
+  });
+
+  it('does not show a Stop button when nothing is generating', async () => {
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+    expect(screen.queryByRole('button', { name: /^stop$/i })).not.toBeInTheDocument();
+  });
 });
