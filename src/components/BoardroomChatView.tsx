@@ -12,7 +12,7 @@ import {
   type BoardroomThread,
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
-import { generateAgentResponse } from '../services/boardroomFacilitatorService';
+import { generateAgentResponse, detectLowConfidence } from '../services/boardroomFacilitatorService';
 
 const AGENT_PROFILES = listAgentProfiles();
 
@@ -153,6 +153,15 @@ export function BoardroomChatView() {
       setMessages(listThreadMessages(activeThreadId));
 
       if (result.ok) {
+        if (detectLowConfidence(replyText)) {
+          addThreadMessage({
+            threadId: activeThreadId,
+            speaker: 'alphonso',
+            content: `${agentLabel(agentId)} flagged low confidence in that reply — needs your decision.`,
+            kind: 'escalation'
+          });
+          setMessages(listThreadMessages(activeThreadId));
+        }
         const chainedMentions = parseMentions(replyText, agentIds).filter((id) => id !== agentId);
         respondingAgents.push(...chainedMentions);
       }

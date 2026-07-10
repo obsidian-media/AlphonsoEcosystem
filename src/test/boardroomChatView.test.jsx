@@ -11,7 +11,8 @@ vi.mock('../agents/agentRegistry', () => ({
 
 vi.mock('../services/boardroomFacilitatorService', () => ({
   generateAlphonsoResponse: vi.fn().mockResolvedValue({ ok: true, text: 'default alphonso reply' }),
-  generateAgentResponse: vi.fn().mockResolvedValue({ ok: true, text: 'default agent reply' })
+  generateAgentResponse: vi.fn().mockResolvedValue({ ok: true, text: 'default agent reply' }),
+  detectLowConfidence: vi.fn().mockReturnValue(false)
 }));
 
 describe('BoardroomChatView', () => {
@@ -279,5 +280,44 @@ describe('BoardroomChatView', () => {
         ])
       })
     );
+  });
+
+  it('auto-escalates when a generated reply is flagged as low confidence', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: "I'm not sure about the exact figure." });
+    facilitator.detectLowConfidence.mockReturnValue(true);
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Confidence Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Confidence Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector what is the exact figure?' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText("I'm not sure about the exact figure.");
+    const escalation = await screen.findByText(/hector flagged low confidence/i);
+    expect(escalation.closest('[data-message-kind="escalation"]')).toBeInTheDocument();
+  });
+
+  it('does not escalate when the reply is confident', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'The figure is $49/mo.' });
+    facilitator.detectLowConfidence.mockReturnValue(false);
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Confident Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Confident Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector what is the figure?' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText('The figure is $49/mo.');
+    expect(screen.queryByText(/flagged low confidence/i)).not.toBeInTheDocument();
   });
 });
