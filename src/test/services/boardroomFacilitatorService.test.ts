@@ -129,6 +129,41 @@ describe('boardroomFacilitatorService', () => {
       expect(result.ok).toBe(false);
       expect(result.error).toContain('Ollama is not running');
     });
+
+    it('returns the model used and a measured latencyMs on success', async () => {
+      const ollama = await import('../../lib/ollama');
+      (ollama.generateOllamaResponse as any).mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ response: 'ok', done: true }), 5))
+      );
+
+      const { generateAgentResponse } = await import('../../services/boardroomFacilitatorService');
+      const result = await generateAgentResponse({
+        agentId: 'hector',
+        topic: 'Test',
+        priorMessages: [],
+        newMessageText: 'hi',
+        model: 'llama3.2:3b'
+      });
+
+      expect(result.model).toBe('llama3.2:3b');
+      expect(result.latencyMs).toBeGreaterThanOrEqual(5);
+    });
+
+    it('does not return model/latencyMs on failure', async () => {
+      const ollama = await import('../../lib/ollama');
+      (ollama.generateOllamaResponse as any).mockRejectedValue(new Error('Ollama is not running'));
+
+      const { generateAgentResponse } = await import('../../services/boardroomFacilitatorService');
+      const result = await generateAgentResponse({
+        agentId: 'hector',
+        topic: 'Test',
+        priorMessages: [],
+        newMessageText: 'hi'
+      });
+
+      expect(result.model).toBeUndefined();
+      expect(result.latencyMs).toBeUndefined();
+    });
   });
 
   describe('cross-thread context in prompts', () => {

@@ -35,6 +35,8 @@ export interface FacilitatorResult {
   ok: boolean;
   text: string;
   error?: string;
+  model?: string;
+  latencyMs?: number;
 }
 
 interface AgentProfileLike {
@@ -113,9 +115,10 @@ export async function generateAgentResponse({
   model?: string;
 }): Promise<FacilitatorResult> {
   const prompt = buildFacilitatorPrompt({ topic, priorMessages, newMessageText, agentId, crossThreadContext });
+  const startedAt = Date.now();
   try {
     const result = await generateOllamaResponse({ endpoint, model, prompt });
-    return { ok: true, text: (result?.response || '').trim() };
+    return { ok: true, text: (result?.response || '').trim(), model, latencyMs: Date.now() - startedAt };
   } catch (error) {
     return { ok: false, text: '', error: (error as Error)?.message || String(error) };
   }
