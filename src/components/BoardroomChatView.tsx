@@ -15,6 +15,13 @@ import { generateAgentResponse } from '../services/boardroomFacilitatorService';
 
 const AGENT_PROFILES = listAgentProfiles();
 
+// Spec 1.10.2: a hard cap on chained AI-generated hops per message, so an
+// unbroken chain of agents @mentioning each other can't run forever. This
+// is deliberately a simple global depth cap per cascade, not full
+// per-topic round tracking (which needs real disagreement detection) —
+// see the phase 5 plan doc for the honest scope statement.
+const MAX_CHAIN_DEPTH = 3;
+
 function agentLabel(speakerId: string): string {
   if (speakerId === 'user') return 'You';
   const profile = AGENT_PROFILES.find((p: { id: string }) => p.id === speakerId);
@@ -22,17 +29,27 @@ function agentLabel(speakerId: string): string {
 }
 
 function MessageBubble({ message }: { message: BoardroomThreadMessage }) {
+  const isEscalation = message.kind === 'escalation';
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-xs">
+    <div
+      data-message-kind={message.kind}
+      className={
+        isEscalation
+          ? 'rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5 text-xs'
+          : 'rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-xs'
+      }
+    >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold text-[var(--text-1)]">{agentLabel(message.speaker)}</span>
+        <span className={`font-semibold ${isEscalation ? 'text-amber-300' : 'text-[var(--text-1)]'}`}>
+          {isEscalation ? 'Needs your decision' : agentLabel(message.speaker)}
+        </span>
         {message.approvalRequired && (
           <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">
             approval required
           </span>
         )}
       </div>
-      <div className="mt-1 whitespace-pre-wrap text-[var(--text-2)]">{message.content}</div>
+      <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
       {message.mentionedAgents.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {message.mentionedAgents.map((agentId) => (
@@ -94,7 +111,8 @@ export function BoardroomChatView() {
     setMessages(listThreadMessages(activeThreadId));
     setComposerText('');
 
-    const mentions = parseMentions(text, AGENT_PROFILES.map((p: { id: string }) => p.id));
+    const agentIds = AGENT_PROFILES.map((p: { id: string }) => p.id);
+    const mentions = parseMentions(text, agentIds);
     const respondingAgents = mentions.length > 0
       ? mentions.filter((agentId) => agentId !== composerSpeaker)
       : (composerSpeaker !== 'alphonso' ? ['alphonso'] : []);
@@ -102,7 +120,24 @@ export function BoardroomChatView() {
     if (respondingAgents.length === 0) return;
 
     setFacilitatorPending(true);
-    for (const agentId of respondingAgents) {
+    let hopsUsed = 0;
+
+    while (respondingAgents.length > 0) {
+      const agentId = respondingAgents.shift() as string;
+
+      if (hopsUsed >= MAX_CHAIN_DEPTH) {
+        addThreadMessage({
+          threadId: activeThreadId,
+          speaker: 'alphonso',
+          content: `The conversation reached ${MAX_CHAIN_DEPTH} chained replies without stopping — further @mentions won't auto-trigger. Reply directly to keep it going, or make a call on where this should land.`,
+          kind: 'escalation'
+        });
+        setMessages(listThreadMessages(activeThreadId));
+        break;
+      }
+
+      hopsUsed += 1;
+
       const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
       const result = await generateAgentResponse({
         agentId,
@@ -110,12 +145,14 @@ export function BoardroomChatView() {
         priorMessages,
         newMessageText: text
       });
-      addThreadMessage({
-        threadId: activeThreadId,
-        speaker: agentId,
-        content: result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`
-      });
+      const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
+      addThreadMessage({ threadId: activeThreadId, speaker: agentId, content: replyText });
       setMessages(listThreadMessages(activeThreadId));
+
+      if (result.ok) {
+        const chainedMentions = parseMentions(replyText, agentIds).filter((id) => id !== agentId);
+        respondingAgents.push(...chainedMentions);
+      }
     }
     setFacilitatorPending(false);
   }

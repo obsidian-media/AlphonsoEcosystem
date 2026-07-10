@@ -20,7 +20,7 @@ export interface BoardroomThreadMessage {
   threadId: string;
   speaker: string;
   content: string;
-  kind: 'message' | 'briefing' | 'conclusion' | 'system' | 'response';
+  kind: 'message' | 'briefing' | 'conclusion' | 'system' | 'response' | 'escalation';
   riskLevel: 'high' | 'medium' | 'low';
   approvalRequired: boolean;
   secretRedacted: boolean;

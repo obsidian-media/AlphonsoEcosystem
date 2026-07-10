@@ -196,4 +196,60 @@ describe('BoardroomChatView', () => {
     await screen.findByText('jose says hi');
     expect(calls).toEqual(['hector', 'jose']);
   });
+
+  it('renders an escalation message with distinct amber styling, not a normal bubble', async () => {
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    const { createThread, addThreadMessage } = await import('../services/boardroomThreadService');
+
+    const thread = createThread({ topic: 'Escalation Render Test', participants: ['jose', 'hector'] });
+    addThreadMessage({ threadId: thread.id, speaker: 'alphonso', content: 'Round cap reached — please weigh in.', kind: 'escalation' });
+
+    render(<BoardroomChatView />);
+
+    const banner = await screen.findByText('Round cap reached — please weigh in.');
+    expect(banner.closest('[data-message-kind="escalation"]')).toBeInTheDocument();
+  });
+
+  it('chains a mentioned agent whose reply itself @mentions another agent, within the round cap', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockImplementation(({ agentId }) => {
+      if (agentId === 'hector') return Promise.resolve({ ok: true, text: '@Jose can you route this further?' });
+      return Promise.resolve({ ok: true, text: `${agentId} final reply` });
+    });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Chain Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Chain Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector look into this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    expect(await screen.findByText('@Jose can you route this further?')).toBeInTheDocument();
+    expect(await screen.findByText('jose final reply')).toBeInTheDocument();
+  });
+
+  it('stops chaining and posts an escalation message once the round cap is hit', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockImplementation(({ agentId }) => {
+      const next = agentId === 'hector' ? 'jose' : 'hector';
+      return Promise.resolve({ ok: true, text: `@${next[0].toUpperCase()}${next.slice(1)} keep going` });
+    });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Cap Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Cap Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector start the chain' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    const escalation = await screen.findByText(/needs your decision/i);
+    expect(escalation).toBeInTheDocument();
+    expect(facilitator.generateAgentResponse.mock.calls.length).toBeLessThanOrEqual(3);
+  });
 });
