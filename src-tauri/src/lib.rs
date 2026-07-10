@@ -1495,14 +1495,12 @@ async fn launch_comfyui(
   let mut comfy_cmd = Command::new(&py);
   comfy_cmd.arg("main.py").current_dir(&dir);
   utils::no_window(&mut comfy_cmd);
-  comfy_cmd
-    .spawn()
-    .map_err(|e| {
-      format!(
-        "Failed to launch ComfyUI from '{}' using '{}': {}",
-        dir, py, e
-      )
-    })?;
+  comfy_cmd.spawn().map_err(|e| {
+    format!(
+      "Failed to launch ComfyUI from '{}' using '{}': {}",
+      dir, py, e
+    )
+  })?;
   Ok(ServiceLaunchProof {
     service: "comfyui".to_string(),
     launched: true,
