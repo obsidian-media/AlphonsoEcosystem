@@ -92,8 +92,8 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **98 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
-- **3,255 tests across 226 test files** — all passing. 0 TypeScript errors. 0 ESLint warnings. Cargo clippy clean.
+- **101 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **3,255 tests across 229 test files** — all passing. 0 TypeScript errors. 0 ESLint warnings. Cargo clippy clean.
 
 ## What's New in v2.4.2
 
@@ -370,7 +370,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 3,255 tests across 226 files
+npm run test           # 3,255 tests across 229 files
 npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -382,7 +382,7 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 98 Rust unit tests across 25 modules
+cargo test                     # 101 Rust unit tests across 25 modules
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 
