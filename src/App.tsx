@@ -130,7 +130,6 @@ function AppShell() {
   const voice = useVoiceInput();
   const toast = useToast();
   const [updaterVersion, setUpdaterVersion] = useState<string | null>(null);
-  const [updaterDownloadUrl, setUpdaterDownloadUrl] = useState<string | null>(null);
 
   // Notification center state
   type NotificationType = 'success' | 'warning' | 'error' | 'info';
@@ -407,7 +406,6 @@ function AppShell() {
           const lastNotice = getLastUpdateNotice();
           if (lastNotice?.latestVersion !== result.latestVersion) {
             setUpdaterVersion(result.latestVersion);
-            setUpdaterDownloadUrl(result.downloadUrl);
             setLastUpdateNotice({ latestVersion: result.latestVersion, noticedAtMs: Date.now() });
           }
         }
@@ -565,13 +563,6 @@ function AppShell() {
     <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-cyan-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-[var(--surface-0)] text-[var(--text-1)]'} ${themeClassFromSettings(settings)}`}>
       <UpdaterNotification
         version={updaterVersion}
-        onUpdate={() => {
-          if (updaterDownloadUrl) {
-            invoke('open_url', { url: updaterDownloadUrl }).catch(() => {
-              window.open(updaterDownloadUrl, '_blank', 'noopener,noreferrer');
-            });
-          }
-        }}
         onDismiss={() => setUpdaterVersion(null)}
       />
       {notificationsOpen && (
