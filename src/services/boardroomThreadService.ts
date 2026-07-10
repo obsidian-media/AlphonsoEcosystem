@@ -28,6 +28,8 @@ export interface BoardroomThreadMessage {
   retryContext?: string;
   acknowledged: boolean;
   confirmed: boolean;
+  model?: string;
+  latencyMs?: number;
   createdAt: string;
   createdAtMs: number;
   seq: number;
@@ -180,13 +182,17 @@ export function addThreadMessage({
   speaker,
   content,
   kind = 'message',
-  retryContext
+  retryContext,
+  model,
+  latencyMs
 }: {
   threadId: string;
   speaker: string;
   content: string;
   kind?: BoardroomThreadMessage['kind'];
   retryContext?: string;
+  model?: string;
+  latencyMs?: number;
 }): BoardroomThreadMessage | null {
   const originalText = String(content || '').trim();
   if (!originalText) return null;
@@ -204,6 +210,8 @@ export function addThreadMessage({
     secretRedacted: risk.secretDetected,
     mentionedAgents,
     retryContext,
+    model,
+    latencyMs,
     acknowledged: false,
     confirmed: false,
     createdAt: nowIso(),

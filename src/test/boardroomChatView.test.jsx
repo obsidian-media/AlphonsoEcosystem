@@ -464,4 +464,22 @@ describe('BoardroomChatView', () => {
     expect(await screen.findByText('Just a normal update.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /confirm to reveal/i })).not.toBeInTheDocument();
   });
+
+  it('shows a model + latency label under a successful agent reply', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'On it.', model: 'llama3.2:3b', latencyMs: 2345 });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Latency Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Latency Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector status?' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText('On it.');
+    expect(await screen.findByText(/llama3\.2:3b · 2\.3s/i)).toBeInTheDocument();
+  });
 });

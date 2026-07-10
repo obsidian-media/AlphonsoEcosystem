@@ -152,6 +152,20 @@ describe('boardroomThreadService', () => {
       expect(msg?.approvalRequired).toBe(false);
       expect(msg?.confirmed).toBe(false);
     });
+
+    it('stores optional model and latencyMs fields when provided', async () => {
+      const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['hector'] });
+      const msg = addThreadMessage({
+        threadId: thread.id,
+        speaker: 'hector',
+        content: 'On it.',
+        model: 'llama3.2:3b',
+        latencyMs: 2345
+      });
+      expect(msg?.model).toBe('llama3.2:3b');
+      expect(msg?.latencyMs).toBe(2345);
+    });
   });
 
   describe('migrateLegacySessions', () => {

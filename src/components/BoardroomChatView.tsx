@@ -31,6 +31,10 @@ function agentLabel(speakerId: string): string {
   return profile?.name || speakerId;
 }
 
+function formatLatency(ms: number): string {
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 function MessageBubble({
   message,
   onRetry,
@@ -74,6 +78,11 @@ function MessageBubble({
         </div>
       ) : (
         <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : isFailure ? 'text-rose-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
+      )}
+      {!isEscalation && !isFailure && message.model && (
+        <div className="mt-1 text-[9px] text-[var(--text-3)]">
+          {message.model} · {formatLatency(message.latencyMs || 0)}
+        </div>
       )}
       {isFailure && message.retryContext && (
         <button
@@ -211,7 +220,9 @@ export function BoardroomChatView() {
         speaker: agentId,
         content: replyText,
         kind: result.ok ? 'message' : 'failure',
-        retryContext: result.ok ? undefined : text
+        retryContext: result.ok ? undefined : text,
+        model: result.ok ? result.model : undefined,
+        latencyMs: result.ok ? result.latencyMs : undefined
       });
       setMessages(listThreadMessages(activeThreadId));
 
@@ -254,7 +265,9 @@ export function BoardroomChatView() {
       speaker: agentId,
       content: replyText,
       kind: result.ok ? 'message' : 'failure',
-      retryContext: result.ok ? undefined : message.retryContext
+      retryContext: result.ok ? undefined : message.retryContext,
+      model: result.ok ? result.model : undefined,
+      latencyMs: result.ok ? result.latencyMs : undefined
     });
     setMessages(listThreadMessages(activeThreadId));
   }
