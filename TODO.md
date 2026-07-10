@@ -95,6 +95,62 @@ re-derive them from 12 separate plan docs:
   mismatch) and isn't gating merges. Worth fixing so E2E coverage isn't
   silently broken.
 
+## Dead code — written but never wired in (found 2026-07-10)
+
+Real, substantial implementations (not stubs), confirmed via a full
+unimported-symbol scan of `src/services/` and `src/components/`. Each
+needs a decision: wire it in, or delete it — "written but disconnected"
+is worse than either extreme.
+
+- [ ] `src/components/BoardroomView.tsx` (452 lines) — the pre-rebuild
+  Boardroom component, confirmed fully superseded by
+  `BoardroomChatView.tsx` (this session's rebuild). Safe to delete.
+- [ ] `src/services/whatsappWebhookService.ts` (476 lines) — the largest
+  orphan. Looks like a complete webhook-ingestion feature (routing,
+  audit, orchestration receipts) that was built but never connected to
+  anything.
+- [ ] `src/services/pluginSigningService.ts` (277 lines) — ECDSA plugin
+  signing/verification, a real security feature sitting unused. Worth
+  checking whether `pluginRegistryService.js` should be calling into it.
+- [ ] `src/components/AgentPerformanceView.tsx` (138 lines) — dead-letter
+  queue stats/retry UI, real implementation, no nav entry anywhere.
+- [ ] `src/components/CompanionWidget.tsx`,
+  `HectorCompanionWidget.tsx`, `JoseCompanionWidget.tsx`,
+  `MiyaCompanionWidget.tsx` — a matched set of per-agent companion avatar
+  widgets, none wired in anywhere. Looks like an older companion-UI
+  concept superseded by the current agent dock.
+- [ ] `src/components/ErrorBoundary.tsx` (104 lines) — `App.tsx` uses
+  `ViewErrorBoundary.tsx` instead; this one is dead.
+- [ ] Other orphaned services worth a look: `agentPerformanceService.ts`,
+  `agentPairingExecutionService.ts`, `a2aProtocolService.ts`,
+  `connectorCircuitBreakerService.ts`, `connectorRateLimiterService.ts`,
+  `hectorBookmarkService.ts`, `runtimeApiService.ts`,
+  `streamingService.ts`, `whisperTranscriptionService.ts`.
+
+## UI/UX — surfaced during a 2026-07-10 codebase review
+
+- [ ] **Simple/Advanced mode split.** Sidebar has 11 top-level
+  destinations across 4 groups, plus Coach Mode, Operator Dashboard,
+  Agent Pairing, Ecosystem Maturity, Self-Development, Plugin
+  Marketplace only reachable via Settings or a quick-launch card. A
+  default lean view (Chat, Boardroom, Connectors, Settings) with an
+  explicit Advanced toggle for everything else would match how OBS
+  (Basic/Advanced output) and VS Code (basic/full settings) handle the
+  same problem — no capability removed, just not required on day one.
+- [ ] **Unified home/digest view.** Status is fragmented across
+  Notification Center, Agent Activity Log, Nova opportunity history,
+  Sentinel scan results, and (as of this session) Boardroom escalations
+  — none surface proactively in one place. A single "what happened since
+  you last looked" view would tie these together, including surfacing
+  unacknowledged Boardroom escalations outside their own thread.
+- [ ] **Orchestration page duplication** (already known, left alone per
+  explicit prior instruction) — the Packets tab embeds
+  `OrchestratorQueueView` while the Monitor tab separately re-implements
+  the same dead-letter/queue data on a different refresh cadence.
+- [ ] **No first-launch guided tour** beyond the onboarding wizard's
+  connector step — Coach Mode, Boardroom, and Runtime Hub have zero
+  in-app explanation of what they're for or when to use them.
+
 ---
 
 _Last updated: 2026-07-10, alongside the Boardroom rebuild + PR #98 merge.
