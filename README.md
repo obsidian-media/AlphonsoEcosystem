@@ -4,15 +4,15 @@
 
 # Alphonso
 
-> **v2.5.18** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.6.0** — Local-first AI desktop companion with 9 agents, 22 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.5.18-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.6.0-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3167%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%20v2-24C8D8)](https://tauri.app)
 
-[**Download v2.5.18**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/tag/v2.5.18) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
+[**Download v2.6.0**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/tag/v2.6.0) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
 ## Bug-fix pass — 2026-07-10 (no version bump)
 
@@ -27,6 +27,11 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 - **Fixed the #1 reported issue: Mobile Companion pairing never worked.** Root cause: the Companion server and Voice OS were both trying to use the same network port, so one silently failed to start every time.
 - **Added real WhatsApp bot commands** (`/status`, `/queue`, `/approve`, `/reject`, `/agents`, `/report`, `/ping`, `/help`, `/ask`) — WhatsApp previously had zero command handling, and inbound polling was never automatic. Also fixed a missing settings field that made WhatsApp inbound impossible to configure at all.
 - **Handed off** full in-app auto-update (download+install+relaunch) as a scoped follow-up — `docs/AUTO_UPDATE_HANDOFF.md`, PR #98.
+
+## What's New in v2.6.0
+
+- **Boardroom rebuilt as a real-time multi-agent group chat.** Replaces the old session-summary model with `@mention`-driven conversation across all 9 agents, real per-agent Ollama generation with persona-specific prompts, bounded `@mention` chaining (capped, auto-escalates instead of running forever), cross-thread context recall, low-confidence auto-escalation, a Stop button, failure handling with Retry, escalation acknowledgment, a content-exposure confirmation gate on high-risk messages, and a model+latency indicator on every reply. Full narrative: `docs/ALPHONSO_GROUND_TRUTH.md` §11.16.
+- **Full in-app auto-update merged** (PR #98) — `check()` → `downloadAndInstall()` → `relaunch()` via `@tauri-apps/plugin-updater`/`plugin-process`. Real dependency-declaration bug fixed along the way (packages were installed but never declared in `package.json`, which would have broken a clean `npm ci`).
 
 ## What's New in v2.5.18
 
