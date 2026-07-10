@@ -79,6 +79,28 @@ describe('boardroomThreadService', () => {
       const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'No mentions here.' });
       expect(msg?.mentionedAgents).toEqual([]);
     });
+
+    it('stores an optional retryContext on a message for later retry reconstruction', async () => {
+      const { createThread, addThreadMessage, listThreadMessages } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['jose'] });
+      addThreadMessage({
+        threadId: thread.id,
+        speaker: 'jose',
+        content: "jose couldn't respond: Ollama is not running",
+        kind: 'failure',
+        retryContext: 'What is the current status?'
+      });
+      const messages = listThreadMessages(thread.id);
+      expect(messages[0].kind).toBe('failure');
+      expect(messages[0].retryContext).toBe('What is the current status?');
+    });
+
+    it('defaults retryContext to undefined when not provided', async () => {
+      const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['jose'] });
+      const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'hi' });
+      expect(msg?.retryContext).toBeUndefined();
+    });
   });
 
   describe('migrateLegacySessions', () => {

@@ -20,11 +20,12 @@ export interface BoardroomThreadMessage {
   threadId: string;
   speaker: string;
   content: string;
-  kind: 'message' | 'briefing' | 'conclusion' | 'system' | 'response' | 'escalation';
+  kind: 'message' | 'briefing' | 'conclusion' | 'system' | 'response' | 'escalation' | 'failure';
   riskLevel: 'high' | 'medium' | 'low';
   approvalRequired: boolean;
   secretRedacted: boolean;
   mentionedAgents: string[];
+  retryContext?: string;
   createdAt: string;
   createdAtMs: number;
   seq: number;
@@ -176,12 +177,14 @@ export function addThreadMessage({
   threadId,
   speaker,
   content,
-  kind = 'message'
+  kind = 'message',
+  retryContext
 }: {
   threadId: string;
   speaker: string;
   content: string;
   kind?: BoardroomThreadMessage['kind'];
+  retryContext?: string;
 }): BoardroomThreadMessage | null {
   const originalText = String(content || '').trim();
   if (!originalText) return null;
@@ -198,6 +201,7 @@ export function addThreadMessage({
     approvalRequired: risk.approvalRequired,
     secretRedacted: risk.secretDetected,
     mentionedAgents,
+    retryContext,
     createdAt: nowIso(),
     createdAtMs: nowMs(),
     seq: nextSeq()
