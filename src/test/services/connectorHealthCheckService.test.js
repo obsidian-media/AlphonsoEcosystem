@@ -10,6 +10,10 @@ const localStorageMock = {
 };
 vi.stubGlobal('localStorage', localStorageMock);
 
+vi.mock('../../services/connectors/connectorAuth', () => ({
+  getConnectorCredential: vi.fn(() => '')
+}));
+
 describe('connectorHealthCheckService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,6 +31,20 @@ describe('connectorHealthCheckService', () => {
       const result = await checkTelegramConnection();
       expect(result.ok).toBe(false);
       expect(result.message).toContain('No Telegram bot token');
+    });
+
+    it('falls back to the real saved credential store (connectorAuth), not the unrelated auth-profiles localStorage key', async () => {
+      const { getConnectorCredential } = await import('../../services/connectors/connectorAuth');
+      getConnectorCredential.mockReturnValue('saved-real-token');
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ok: true, result: { username: 'realbot' } })
+      });
+      const { checkTelegramConnection } = await import('../../services/connectorHealthCheckService');
+      const result = await checkTelegramConnection();
+      expect(getConnectorCredential).toHaveBeenCalledWith('telegram', 'TELEGRAM_BOT_TOKEN');
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('saved-real-token'));
+      expect(result.ok).toBe(true);
     });
 
     it('uses custom bot token when provided', async () => {

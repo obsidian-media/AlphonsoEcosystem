@@ -1,5 +1,6 @@
 import { isConnectorAuthenticated } from './connectorRegistryService';
 import { timestampMs } from './trustModel';
+import { getConnectorCredential } from './connectors/connectorAuth';
 
 interface HealthCheckResult {
   ok: boolean;
@@ -22,23 +23,13 @@ interface GatewayHealthData {
   allowlistCount?: number;
 }
 
-function getConnectorApiKey(connectorId: string): string {
-  try {
-    const raw = localStorage.getItem('alphonso_connector_auth_profiles_v1');
-    const profiles = raw ? JSON.parse(raw) : {};
-    return profiles?.[connectorId]?.apiKey || '';
-  } catch {
-    return '';
-  }
-}
-
 function measureLatency(startTime: number): number {
   return timestampMs() - startTime;
 }
 
 export async function checkTelegramConnection(options: { botToken?: string } = {}): Promise<HealthCheckResult> {
   const startTime = timestampMs();
-  const botToken = options.botToken || getConnectorApiKey('telegram');
+  const botToken = options.botToken || getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
 
   if (!botToken) {
     return {
