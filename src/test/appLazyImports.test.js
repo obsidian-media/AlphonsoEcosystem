@@ -27,7 +27,7 @@ describe('App.tsx lazy() imports resolve a real default export', () => {
 
   it('finds at least the known lazy-loaded components (sanity check the regex itself matches)', () => {
     expect(calls.length).toBeGreaterThan(10);
-    expect(calls.some((c) => c.importPath.includes('BoardroomView'))).toBe(true);
+    expect(calls.some((c) => c.importPath.includes('BoardroomChatView'))).toBe(true);
   });
 
   it.each(calls)('$importPath resolves the export shape lazy() expects (named: $namedExport)', async ({ importPath, namedExport }) => {

@@ -24,10 +24,13 @@ export interface BoardroomThreadMessage {
   riskLevel: 'high' | 'medium' | 'low';
   approvalRequired: boolean;
   secretRedacted: boolean;
+  mentionedAgents: string[];
   createdAt: string;
   createdAtMs: number;
   seq: number;
 }
+
+const KNOWN_AGENT_IDS = ['alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova'];
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -128,6 +131,7 @@ export function addThreadMessage({
   if (!originalText) return null;
   const text = redactMissionRoomSecrets(originalText).trim();
   const risk = classifyMissionRoomRisk(originalText);
+  const mentionedAgents = parseMentions(originalText, KNOWN_AGENT_IDS);
   const message: BoardroomThreadMessage = {
     id: makeId('boardroom_msg'),
     threadId,
@@ -137,6 +141,7 @@ export function addThreadMessage({
     riskLevel: risk.riskLevel,
     approvalRequired: risk.approvalRequired,
     secretRedacted: risk.secretDetected,
+    mentionedAgents,
     createdAt: nowIso(),
     createdAtMs: nowMs(),
     seq: nextSeq()
@@ -207,6 +212,7 @@ export function migrateLegacySessions(): void {
       riskLevel: 'low',
       approvalRequired: false,
       secretRedacted: false,
+      mentionedAgents: [],
       createdAt: m.timestamp,
       createdAtMs: new Date(m.timestamp).getTime() || createdAtMs + index,
       seq: nextSeq()
@@ -221,6 +227,7 @@ export function migrateLegacySessions(): void {
       riskLevel: 'low',
       approvalRequired: false,
       secretRedacted: false,
+      mentionedAgents: [],
       createdAt: session.createdAt,
       createdAtMs: createdAtMs - 1,
       seq: 0
@@ -235,4 +242,26 @@ export function migrateLegacySessions(): void {
   }
 
   localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
+}
+
+// Matches an "@" that starts a word (preceded by start-of-string or
+// whitespace) followed by word characters — this is what prevents
+// "foo@hector.com" from matching: the "@" there is preceded by "o", not
+// whitespace/start.
+const MENTION_PATTERN = /(?:^|\s)@(\w+)/g;
+
+export function parseMentions(text: string, knownAgentIds: string[]): string[] {
+  const knownSet = new Set(knownAgentIds.map((id) => id.toLowerCase()));
+  const found: string[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  MENTION_PATTERN.lastIndex = 0;
+  while ((match = MENTION_PATTERN.exec(text)) !== null) {
+    const candidate = match[1].toLowerCase();
+    if (knownSet.has(candidate) && !seen.has(candidate)) {
+      seen.add(candidate);
+      found.push(candidate);
+    }
+  }
+  return found;
 }

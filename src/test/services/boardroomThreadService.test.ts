@@ -65,5 +65,107 @@ describe('boardroomThreadService', () => {
       const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: '   ' });
       expect(msg).toBeNull();
     });
+
+    it('extracts and stores mentionedAgents from message content', async () => {
+      const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['jose', 'hector', 'maria'] });
+      const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: '@Hector can you research this? @Maria please review after.' });
+      expect(msg?.mentionedAgents).toEqual(['hector', 'maria']);
+    });
+
+    it('mentionedAgents is empty when no @mentions are present', async () => {
+      const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['jose'] });
+      const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'No mentions here.' });
+      expect(msg?.mentionedAgents).toEqual([]);
+    });
+  });
+
+  describe('migrateLegacySessions', () => {
+    const LEGACY_KEY = 'alphonso_boardroom_sessions_v1';
+
+    it('converts each legacy session into a thread with its messages replayed', async () => {
+      const legacySession = {
+        sessionId: 'boardroom_123',
+        topic: 'Legacy Topic',
+        participants: ['jose', 'hector'],
+        status: 'concluded',
+        mariaScore: 42,
+        conclusion: 'Concluded with 2 agents. Maria risk score: 42.',
+        createdAt: '2026-06-01T00:00:00.000Z',
+        messages: [
+          { agentId: 'hector', agentName: 'Hector', content: 'Research briefing:\n• source', timestamp: '2026-06-01T00:01:00.000Z', type: 'briefing' },
+          { agentId: 'jose', agentName: 'Jose', content: 'Task delegated.', timestamp: '2026-06-01T00:02:00.000Z', type: 'response' }
+        ]
+      };
+      localStorage.setItem(LEGACY_KEY, JSON.stringify([legacySession]));
+
+      const { migrateLegacySessions, listThreads, listThreadMessages } = await import('../../services/boardroomThreadService');
+      migrateLegacySessions();
+
+      const threads = listThreads();
+      expect(threads).toHaveLength(1);
+      expect(threads[0].topic).toBe('Legacy Topic');
+      expect(threads[0].status).toBe('concluded');
+
+      const messages = listThreadMessages(threads[0].id);
+      expect(messages).toHaveLength(3);
+      expect(messages.some((m) => m.content.includes('Research briefing'))).toBe(true);
+      expect(messages.some((m) => m.content.includes('Task delegated'))).toBe(true);
+    });
+
+    it('is idempotent — running twice does not duplicate threads', async () => {
+      localStorage.setItem(LEGACY_KEY, JSON.stringify([{
+        sessionId: 'boardroom_456',
+        topic: 'Once Only',
+        participants: ['jose'],
+        status: 'active',
+        createdAt: '2026-06-01T00:00:00.000Z',
+        messages: []
+      }]));
+
+      const { migrateLegacySessions, listThreads } = await import('../../services/boardroomThreadService');
+      migrateLegacySessions();
+      migrateLegacySessions();
+
+      expect(listThreads()).toHaveLength(1);
+    });
+
+    it('does nothing when there are no legacy sessions', async () => {
+      const { migrateLegacySessions, listThreads } = await import('../../services/boardroomThreadService');
+      migrateLegacySessions();
+      expect(listThreads()).toHaveLength(0);
+    });
+  });
+});
+
+describe('parseMentions', () => {
+  const KNOWN_AGENT_IDS = ['jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova', 'alphonso'];
+
+  it('returns an empty array for text with no mentions', async () => {
+    const { parseMentions } = await import('../../services/boardroomThreadService');
+    expect(parseMentions('just a plain message', KNOWN_AGENT_IDS)).toEqual([]);
+  });
+
+  it('extracts a single mention (case-insensitive) matched against known agent ids', async () => {
+    const { parseMentions } = await import('../../services/boardroomThreadService');
+    expect(parseMentions('@Hector can you look into this?', KNOWN_AGENT_IDS)).toEqual(['hector']);
+    expect(parseMentions('@HECTOR can you look into this?', KNOWN_AGENT_IDS)).toEqual(['hector']);
+  });
+
+  it('extracts multiple distinct mentions, deduplicated, in first-seen order', async () => {
+    const { parseMentions } = await import('../../services/boardroomThreadService');
+    expect(parseMentions('@Hector and @Maria please review, @Hector especially the sourcing', KNOWN_AGENT_IDS))
+      .toEqual(['hector', 'maria']);
+  });
+
+  it('ignores @-tokens that do not match a known agent id', async () => {
+    const { parseMentions } = await import('../../services/boardroomThreadService');
+    expect(parseMentions('email me @ myaddress@example.com about @nobody', KNOWN_AGENT_IDS)).toEqual([]);
+  });
+
+  it('does not match a mention embedded inside another word', async () => {
+    const { parseMentions } = await import('../../services/boardroomThreadService');
+    expect(parseMentions('the email is foo@hector.com', KNOWN_AGENT_IDS)).toEqual([]);
   });
 });
