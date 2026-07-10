@@ -101,6 +101,30 @@ describe('boardroomThreadService', () => {
       const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'hi' });
       expect(msg?.retryContext).toBeUndefined();
     });
+
+    it('acknowledgeThreadMessage marks a message as acknowledged and persists it', async () => {
+      const { createThread, addThreadMessage, acknowledgeThreadMessage, listThreadMessages } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['jose'] });
+      const msg = addThreadMessage({ threadId: thread.id, speaker: 'alphonso', content: 'Needs your decision.', kind: 'escalation' });
+
+      const updated = acknowledgeThreadMessage(msg!.id);
+      expect(updated?.acknowledged).toBe(true);
+
+      const messages = listThreadMessages(thread.id);
+      expect(messages[0].acknowledged).toBe(true);
+    });
+
+    it('acknowledgeThreadMessage returns null for an unknown message id', async () => {
+      const { acknowledgeThreadMessage } = await import('../../services/boardroomThreadService');
+      expect(acknowledgeThreadMessage('nonexistent_id')).toBeNull();
+    });
+
+    it('a freshly created message defaults to unacknowledged', async () => {
+      const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['jose'] });
+      const msg = addThreadMessage({ threadId: thread.id, speaker: 'alphonso', content: 'hi' });
+      expect(msg?.acknowledged).toBe(false);
+    });
   });
 
   describe('migrateLegacySessions', () => {

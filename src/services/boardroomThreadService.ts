@@ -26,6 +26,7 @@ export interface BoardroomThreadMessage {
   secretRedacted: boolean;
   mentionedAgents: string[];
   retryContext?: string;
+  acknowledged: boolean;
   createdAt: string;
   createdAtMs: number;
   seq: number;
@@ -202,6 +203,7 @@ export function addThreadMessage({
     secretRedacted: risk.secretDetected,
     mentionedAgents,
     retryContext,
+    acknowledged: false,
     createdAt: nowIso(),
     createdAtMs: nowMs(),
     seq: nextSeq()
@@ -216,6 +218,17 @@ export function addThreadMessage({
   );
 
   return message;
+}
+
+export function acknowledgeThreadMessage(messageId: string): BoardroomThreadMessage | null {
+  const rows = readJson<BoardroomThreadMessage[]>(MESSAGES_KEY, []);
+  const index = rows.findIndex((row) => row.id === messageId);
+  if (index === -1) return null;
+  const updated = { ...rows[index], acknowledged: true };
+  const next = [...rows];
+  next[index] = updated;
+  writeJson(MESSAGES_KEY, next);
+  return updated;
 }
 
 const LEGACY_SESSIONS_KEY = 'alphonso_boardroom_sessions_v1';
@@ -273,6 +286,7 @@ export function migrateLegacySessions(): void {
       approvalRequired: false,
       secretRedacted: false,
       mentionedAgents: [],
+      acknowledged: false,
       createdAt: m.timestamp,
       createdAtMs: new Date(m.timestamp).getTime() || createdAtMs + index,
       seq: nextSeq()
@@ -288,6 +302,7 @@ export function migrateLegacySessions(): void {
       approvalRequired: false,
       secretRedacted: false,
       mentionedAgents: [],
+      acknowledged: false,
       createdAt: session.createdAt,
       createdAtMs: createdAtMs - 1,
       seq: 0
