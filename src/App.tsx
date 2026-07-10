@@ -435,8 +435,7 @@ function AppShell() {
       try {
         const { listen } = await import('@tauri-apps/api/event');
         const { invoke } = await import('@tauri-apps/api/core');
-        const { isJoseIntakeCommand, runJoseCommandExecutionPipeline } = await import('./services/joseExecutionEngineService');
-        const { shouldRouteThroughJose } = await import('./lib/chatUtils');
+        const { runJoseCommandExecutionPipeline } = await import('./services/joseExecutionEngineService');
 
         // Track active pipeline AbortControllers by commandId for abort_command
         const activeAborts = new Map<string, AbortController>();
@@ -446,15 +445,16 @@ function AppShell() {
           const abortCtrl = new AbortController();
           activeAborts.set(commandId, abortCtrl);
           try {
-            const joseCommand = isJoseIntakeCommand(text) || shouldRouteThroughJose(text);
-            if (!joseCommand) {
-              await invoke('companion_broadcast', {
-                event: 'done',
-                payload: { commandId, error: 'Command not recognized as a Jose command.' }
-              });
-              return;
-            }
-
+            // isJoseIntakeCommand/shouldRouteThroughJose decide, within ChatView,
+            // between "run the Jose multi-agent pipeline" vs. "answer directly via
+            // Ollama" — they return false for plenty of ordinary messages (a
+            // greeting, a statement, anything not phrased as an explicit command
+            // or creative request). This companion channel has no plain-chat
+            // fallback, so treating a false result as an outright rejection meant
+            // nearly everything typed from the phone bounced with "Command not
+            // recognized as a Jose command." instead of getting a real response.
+            // Every companion command should route through Jose, per this
+            // effect's own stated purpose.
             const result = await runJoseCommandExecutionPipeline({
               commandText: text,
               source: 'ios_companion',
