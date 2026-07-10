@@ -57,7 +57,7 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 
 ---
 
-## 3. Service Layer — ~131 Services in `src/services/`
+## 3. Service Layer — ~168 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
@@ -170,7 +170,7 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 218 Files in `src/test/` (not zero)
+## 4. Test Suite — 226 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
@@ -1583,6 +1583,143 @@ not a release cut.
 Commits: `cab7b78`, `abe8ee5`, `2bb524b` on `main` (all pushed to
 `origin/main`); `be11bd5` on `feat/in-app-auto-update` (PR #98, awaiting
 implementation).
+
+---
+
+## 11.16 Boardroom rebuild (12 phases, real-time group chat) + PR #98 merge (2026-07-10, later same day)
+
+Later the same day as 11.15, the user provided the previously-withheld
+`ALPHONSO BOARDROOM HANDOFF.pdf` (a bloome.im-style multi-agent group chat
+spec) and, after a Step 0/1 design review following the `brainstorming` and
+`writing-plans` skills, explicitly authorized proceeding — overriding the
+11.15 "don't touch Boardroom yet" hold. Built inline (not via subagents, per
+explicit user policy) across 12 independently-planned, independently
+TDD-verified, independently committed-and-pushed phases. Every phase's plan
+doc (`docs/superpowers/plans/2026-07-10-boardroom-*-phase{1..12}.md`) states
+its own scope limitations up front — the goal throughout was to build real,
+bounded functionality and say plainly what it doesn't do, not to overclaim.
+
+`BoardroomView.tsx` (the old session-summary model documented in §9/§11.9
+above) is **replaced** as the mounted Boardroom component by
+`BoardroomChatView.tsx`. `BoardroomView.tsx`'s file may still exist on disk
+but is no longer wired in `App.tsx`'s lazy imports — do not describe it as
+current.
+
+**New services:**
+- `src/services/boardroomThreadService.ts` — thread/message persistence
+  (localStorage), `parseMentions()` (case-insensitive, dedup, ignores
+  embedded matches like `foo@hector.com`), `findCrossThreadContext()`
+  (keyword-overlap recall across other threads — plain overlap scoring, not
+  semantic/embedding search), `acknowledgeThreadMessage()` /
+  `confirmThreadMessage()` (one-way state flags), `migrateLegacySessions()`
+  (auto-converts old `alphonso_boardroom_sessions_v1` sessions).
+- `src/services/boardroomFacilitatorService.ts` — `generateAgentResponse()`
+  calls real Ollama per-agent with a persona-specific system prompt sourced
+  from `agentRegistry.js` (not hardcoded to Alphonso), returns measured
+  `model`/`latencyMs` on success (real `Date.now()` timing, not an
+  estimate). `detectLowConfidence()` — a fixed hedge-phrase list scan
+  ("I'm not sure", "unclear", etc.); explicitly not real model
+  confidence/logprob scoring, since Ollama exposes no such signal.
+
+**Key safety/UX behaviors in `BoardroomChatView.tsx`:**
+- `@mention`s chain across agents (a reply mentioning someone else triggers
+  them too) — bounded by a hard `MAX_CHAIN_DEPTH = 3` cap per message
+  cascade. Hitting the cap posts an amber "Needs your decision"
+  (`kind: 'escalation'`) message instead of continuing. This was explicitly
+  flagged as the highest-risk phase (uncontrolled generation loop) before
+  being built, and scoped to a simple global depth counter rather than
+  per-topic/per-pair round tracking.
+- A **Stop** button (visible while `facilitatorPending`) halts further
+  chained hops. Does **not** abort an in-flight fetch — `generateOllamaResponse`
+  in `src/lib/ollama.js` has no `AbortController` wiring, and that's shared
+  by every other caller in the app, so real cancellation was explicitly
+  out of scope for this phase.
+- Failed replies (`kind: 'failure'`) render distinct (rose styling) with a
+  **Retry** button that reconstructs the original call from a stored
+  `retryContext` field. Retry deliberately does **not** re-trigger the
+  chaining a successful original reply would have.
+- Escalation messages get a one-way **Acknowledge** control. Explicitly
+  **not** a multi-human "seen by" roster — Boardroom has one human user
+  (Shayan), so this is single-user acknowledgment, not presence tracking.
+- Any message flagged `approvalRequired: true` (via the same real
+  `classifyMissionRoomRisk()` `missionRoomService.ts` uses elsewhere)
+  renders masked behind a **"Confirm to reveal"** gate until explicitly
+  confirmed once. Before building this, grepped the entire Boardroom code
+  path (`BoardroomChatView.tsx`, `boardroomThreadService.ts`,
+  `boardroomFacilitatorService.ts`) for any connector/execution call —
+  zero exist. This gates content *exposure*, not action *execution* — an
+  honest distinction, since there is no live action-execution path in
+  Boardroom's chat to gate.
+- A small muted "model · Xs" label renders under real successful agent
+  replies only (not escalation/failure/system messages).
+
+**Live-verification finding (Phase 4):** ran a real, unmocked Ollama call
+mid-phase and found a genuine bug mocked tests could never catch —
+`generateOllamaResponse`'s hardcoded 30s timeout failed reproducibly
+against a real multi-model Ollama instance (a cold model swap alone took
+47.3s, total round-trip 73.1s). Fixed by bumping the timeout to 120s in
+`src/lib/ollama.js`.
+
+**Architectural decision (Phase 4):** Boardroom's chat does **not** route
+through `agentBusService.ts` or `a2aProtocolService.ts` — both solve
+governed packet execution / async task delegation, not "post a generated
+chat message." `boardroomThreadService.ts` stays the sole source of truth
+for Boardroom messaging.
+
+**Deliberately deferred**, not forgotten (see each phase's own "Explicitly
+NOT in this phase" section for exact scope): cards (spec 1.5),
+regenerate/diff view (1.10.3/1.10.4), resource contention handling
+(1.10.14), voice input (1.10.6), mobile parity (1.10.8).
+
+**PR #98 (`feat/in-app-auto-update`) resolved in the same pass:** merged
+`main` into the branch (25 commits, zero conflicts — Rust-side plugin
+wiring for `@tauri-apps/plugin-updater`/`plugin-process` in `Cargo.toml`,
+`lib.rs`'s `tauri_plugin_updater::Builder`, `capabilities/default.json`'s
+`updater:default` permission, and `tauri.conf.json`'s updater block was
+already correct on `main` — contrary to an earlier same-session assumption
+that it was missing too, corrected by checking directly rather than
+re-assuming). The actual reason the PR was unmergeable: `package.json`/
+`package-lock.json` never declared the two npm packages despite
+`node_modules` physically having them installed and
+`UpdaterNotification.tsx` importing them — a fresh `npm ci` (what CI
+actually runs) would have failed the build with module-not-found. Fixed by
+adding both to `package.json` and running `npm install` to regenerate the
+lockfile with proper entries. Also found and fixed, surfaced by the
+branch's CI run: `Doc Count Freshness` was failing on 9 stale numeric doc
+claims (lib.rs non-empty line count 2,197 vs. actual 2,056; services 165
+vs. actual 168; test files 222 vs. actual 226) across README.md/
+ARCHITECTURE.md/AGENTS.md — fixed against `scripts/shared/counters.mjs`'s
+real computed values (`node scripts/verify-doc-counts.mjs` now passes
+clean), not guessed. Merged into `main`.
+
+**Auto-update status after merge:** `UpdaterNotification.tsx` now does a
+real `check()` → `downloadAndInstall()` → `relaunch()` flow via the two
+plugins. Code-complete but **not yet live-verified against a real signed
+release** — that needs an actual version bump + tag, which this pass
+deliberately did not cut (feature-build + branch-reconciliation, not a
+release).
+
+**Verification:** 95 tests passing across `boardroomThreadService.test.ts`
+(27), `boardroomFacilitatorService.test.ts` (15), `boardroomChatView.test.jsx`
+(25+), `appLazyImports.test.js` (intermediate per-phase counts also captured
+in individual commits). `npx tsc --noEmit` clean throughout. `npm run lint`
+clean except the same one pre-existing `ChatView.tsx` console warning noted
+in 11.15, not touched this session either. `package.json` version:
+unchanged at 2.5.18.
+
+Commits (`main`): `a632711`, `8a4cbfc` (Phase 4) · `4ff93d2` (Phase 5) ·
+`78ef11e`, `cdca50c`, `bceb431` (Phase 6) · `359d836`, `3ca8a34` (Phase 7) ·
+`73a6d86` (Phase 8) · `357e6ff`, `f5bea52` (Phase 9) · `7cc62b9`, `50d30a3`
+(Phase 10) · `8af1b18`, `03610f4` (Phase 11) · `6906af1`, `204b2a6`
+(Phase 12) · `71036a7` (merge main → feat/in-app-auto-update) · `55fff06`
+(dependency fix) · `cf069d5` (doc count fix) — the last three on
+`feat/in-app-auto-update`, merged into `main` via PR #98.
+
+Still genuinely open: the merged auto-updater is unverified against a real
+release; `companionIntegration.test.js`'s fabricated Tauri command name
+assertions (noted in 11.15, still not fixed — pre-existing test-quality
+issue, not a production bug); all deliberately-deferred Boardroom spec
+items listed above.
 
 ---
 
