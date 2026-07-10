@@ -547,40 +547,45 @@ export async function processInboundCommands(token, updates) {
     if (!ownerChatId) {
       const allowedChatIds = getAllowedChatIds();
       if (allowedChatIds.length === 0) {
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: 'Pairing blocked: set TELEGRAM_ALLOWED_CHAT_IDS (your Telegram chat ID) in Alphonso Settings → Connectors → Telegram before sending /start.'
         });
+        continue;
       }
       if (!allowedChatIds.includes(chatId)) {
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: 'Unauthorized. This chat is not in the configured Telegram allowlist.'
         });
+        continue;
       }
       if (text === '/start') {
         setOwnerChatId(chatId);
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: formatCommandList()
         });
+        continue;
       }
-      return sendTelegramMessageInternal({
+      await sendTelegramMessageInternal({
         token,
         chatId,
         text: 'Send /start to register this chat as the Alphonso owner.'
       });
+      continue;
     }
 
     if (chatId !== ownerChatId) {
-      return sendTelegramMessageInternal({
+      await sendTelegramMessageInternal({
         token,
         chatId,
         text: 'Unauthorized.'
       });
+      continue;
     }
 
     if (!text) continue;
@@ -590,134 +595,162 @@ export async function processInboundCommands(token, updates) {
       const argument = args.join(' ');
 
       if (cmd === 'start') {
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: 'Owner already registered. Send /resetowner to change ownership.'
         });
+        continue;
       }
 
       if (cmd === 'resetowner') {
         if (chatId === ownerChatId) {
           setOwnerChatId(chatId);
-          return sendTelegramMessageInternal({
+          await sendTelegramMessageInternal({
             token,
             chatId,
             text: '✅ This chat is now the Alphonso companion owner.'
           });
+          continue;
         }
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: 'Unauthorized.'
         });
+        continue;
       }
 
       if (cmd === 'status') {
-        return handleStatusCommand(token, chatId);
+        await handleStatusCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'queue') {
-        return handleQueueCommand(token, chatId);
+        await handleQueueCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'approve' && argument) {
-        return handleApproveCommand(token, chatId, argument);
+        await handleApproveCommand(token, chatId, argument);
+        continue;
       }
 
       if (cmd === 'reject' && argument) {
-        return handleRejectCommand(token, chatId, argument);
+        await handleRejectCommand(token, chatId, argument);
+        continue;
       }
 
       if (cmd === 'activity') {
-        return handleActivityCommand(token, chatId);
+        await handleActivityCommand(token, chatId);
+        continue;
       }
 
+      // Bare "/memory" lists recent items; "/memory <query>" searches —
+      // these used to be two separate branches with the same "memory" cmd
+      // check, so the search variant (defined later in the file) was dead
+      // code that could never run.
       if (cmd === 'memory') {
-        return handleMemoryCommand(token, chatId);
+        if (argument) {
+          await handleMemorySearchCommand(token, chatId, argument);
+        } else {
+          await handleMemoryCommand(token, chatId);
+        }
+        continue;
       }
 
       if (cmd === 'help') {
-        return handleHelpCommand(token, chatId);
+        await handleHelpCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'ping') {
-        return handlePingCommand(token, chatId);
+        await handlePingCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'agents') {
-        return handleAgentsCommand(token, chatId);
+        await handleAgentsCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'nova') {
-        return handleNovaCommand(token, chatId);
+        await handleNovaCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'scan') {
-        return handleScanCommand(token, chatId);
+        await handleScanCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'report') {
-        return handleReportCommand(token, chatId);
+        await handleReportCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'files') {
-        return handleFilesCommand(token, chatId);
+        await handleFilesCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'research') {
-        return handleResearchCommand(token, chatId, argument);
-      }
-
-      if (cmd === 'memory') {
-        return handleMemorySearchCommand(token, chatId, argument || '');
+        await handleResearchCommand(token, chatId, argument);
+        continue;
       }
 
       if (cmd === 'receipts') {
-        return handleReceiptsCommand(token, chatId);
+        await handleReceiptsCommand(token, chatId);
+        continue;
       }
 
       if (cmd === 'read') {
-        return handleReadFileCommand(token, chatId, argument);
+        await handleReadFileCommand(token, chatId, argument);
+        continue;
       }
 
       if (cmd === 'stop') {
         setNotificationsPaused(true);
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: '🔇 Push notifications paused. Commands still work. /resume to re-enable.'
         });
+        continue;
       }
 
       if (cmd === 'resume') {
         setNotificationsPaused(false);
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: '🔔 Push notifications resumed.'
         });
+        continue;
       }
 
       if (cmd === 'boardroom' && argument) {
-        return handleBoardroomCommand(token, chatId, argument);
+        await handleBoardroomCommand(token, chatId, argument);
+        continue;
       }
 
       if (cmd === 'ask' && argument) {
         await createJoseCommandRoute({ commandText: argument, source: 'telegram' });
-        return sendTelegramMessageInternal({
+        await sendTelegramMessageInternal({
           token,
           chatId,
           text: "📋 Sent to Jose. I'll message you when it's done."
         });
+        continue;
       }
     } else {
       await createJoseCommandRoute({ commandText: text, source: 'telegram' });
-      return sendTelegramMessageInternal({
+      await sendTelegramMessageInternal({
         token,
         chatId,
         text: "📋 Sent to Jose. I'll message you when it's done."
       });
+      continue;
     }
   }
 }

@@ -284,6 +284,51 @@ describe('telegramCompanionService', () => {
 
       expect(mockJose.createJoseCommandRoute).toHaveBeenCalled();
     });
+
+    it('processes every message in a batch, not just the first (regression)', async () => {
+      // processInboundCommands used to `return` on the first message's
+      // command handler instead of `continue`-ing the loop, silently
+      // dropping every other message in the same poll batch.
+      await service.processInboundCommands('test-token', {
+        ok: true,
+        messages: [
+          { chatId: 'owner-chat', text: '/ping', updateId: 1 },
+          { chatId: 'owner-chat', text: '/queue', updateId: 2 },
+          { chatId: 'owner-chat', text: 'route this to jose', updateId: 3 }
+        ]
+      });
+
+      expect(mockBus.listApprovalQueue).toHaveBeenCalled();
+      expect(mockJose.createJoseCommandRoute).toHaveBeenCalledWith(
+        expect.objectContaining({ commandText: 'route this to jose' })
+      );
+      const pingReply = mockInvoke.mock.calls.find(
+        c => c[0] === 'connector_send_telegram' && String(c[1]?.text || '').includes('Pong')
+      );
+      expect(pingReply).toBeTruthy();
+    });
+
+    it('/memory with a query searches instead of listing recent items (regression: dead second branch)', async () => {
+      const { listMemoryItems } = await import('../../services/memoryService');
+      listMemoryItems.mockReturnValue([
+        { title: 'Alpha project notes', category: 'project', timestampMs: Date.now() },
+        { title: 'Unrelated grocery list', category: 'personal', timestampMs: Date.now() }
+      ]);
+
+      await service.processInboundCommands('test-token', {
+        ok: true,
+        messages: [{ chatId: 'owner-chat', text: '/memory alpha', updateId: 1 }]
+      });
+
+      const reply = mockInvoke.mock.calls.find(
+        c => c[0] === 'connector_send_telegram' && String(c[1]?.text || '').includes('Alpha project notes')
+      );
+      expect(reply).toBeTruthy();
+      const groceryReply = mockInvoke.mock.calls.find(
+        c => c[0] === 'connector_send_telegram' && String(c[1]?.text || '').includes('Unrelated grocery list')
+      );
+      expect(groceryReply).toBeFalsy();
+    });
   });
 
   describe('approve/reject commands', () => {

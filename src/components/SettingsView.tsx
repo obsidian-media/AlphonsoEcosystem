@@ -721,16 +721,16 @@ export function SettingsView({
           <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
             <div>
               <div className="text-sm font-semibold text-white">Voice OS WebSocket Port</div>
-              <div className="text-xs text-zinc-500 mt-0.5">WebSocket URL for Voice OS (STT+TTS) pipeline. Default: ws://127.0.0.1:8765/ws</div>
+              <div className="text-xs text-zinc-500 mt-0.5">WebSocket URL for Voice OS (STT+TTS) pipeline. Default: ws://127.0.0.1:8766/ws</div>
             </div>
             <input
               type="text"
-              defaultValue={(() => { try { return localStorage.getItem('alphonso_voice_ws_url') || 'ws://127.0.0.1:8765/ws'; } catch { return 'ws://127.0.0.1:8765/ws'; } })()}
+              defaultValue={(() => { try { return localStorage.getItem('alphonso_voice_ws_url') || 'ws://127.0.0.1:8766/ws'; } catch { return 'ws://127.0.0.1:8766/ws'; } })()}
               onBlur={(e) => {
                 const val = e.target.value.trim();
-                try { localStorage.setItem('alphonso_voice_ws_url', val || 'ws://127.0.0.1:8765/ws'); } catch { /* ignore */ }
+                try { localStorage.setItem('alphonso_voice_ws_url', val || 'ws://127.0.0.1:8766/ws'); } catch { /* ignore */ }
               }}
-              placeholder="ws://127.0.0.1:8765/ws"
+              placeholder="ws://127.0.0.1:8766/ws"
               className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
             />
           </div>

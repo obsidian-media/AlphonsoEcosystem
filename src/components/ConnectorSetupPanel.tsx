@@ -261,6 +261,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [whatsappAccessToken, setWhatsappAccessToken] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN'));
   const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID'));
   const [whatsappVerifyToken, setWhatsappVerifyToken] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_VERIFY_TOKEN'));
+  const [whatsappGatewayDrainUrl, setWhatsappGatewayDrainUrl] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL'));
+  const [whatsappAllowedNumbers, setWhatsappAllowedNumbers] = useState(() => getConnectorCredential('whatsapp', 'WHATSAPP_ALLOWED_NUMBERS'));
   const [youtubeClientId, setYoutubeClientId] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CLIENT_ID'));
   const [youtubeClientSecret, setYoutubeClientSecret] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_CLIENT_SECRET'));
   const [youtubeRefreshToken, setYoutubeRefreshToken] = useState(() => getConnectorCredential('youtube', 'YOUTUBE_REFRESH_TOKEN'));
@@ -298,6 +300,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setWhatsappAccessToken((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN'));
       setWhatsappPhoneNumberId((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_PHONE_NUMBER_ID'));
       setWhatsappVerifyToken((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_VERIFY_TOKEN'));
+      setWhatsappGatewayDrainUrl((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL'));
+      setWhatsappAllowedNumbers((prev) => prev || getConnectorCredential('whatsapp', 'WHATSAPP_ALLOWED_NUMBERS'));
       setYoutubeClientId((prev) => prev || getConnectorCredential('youtube', 'YOUTUBE_CLIENT_ID'));
       setYoutubeClientSecret((prev) => prev || getConnectorCredential('youtube', 'YOUTUBE_CLIENT_SECRET'));
       setYoutubeRefreshToken((prev) => prev || getConnectorCredential('youtube', 'YOUTUBE_REFRESH_TOKEN'));
@@ -749,10 +753,12 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             fields={[
               { label: 'Access Token', placeholder: 'EAA...', value: whatsappAccessToken, onChange: setWhatsappAccessToken, key: 'WHATSAPP_ACCESS_TOKEN' },
               { label: 'Phone Number ID', placeholder: 'From Meta Business dashboard', value: whatsappPhoneNumberId, onChange: setWhatsappPhoneNumberId, key: 'WHATSAPP_PHONE_NUMBER_ID', secret: false },
-              { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false }
+              { label: 'Webhook Verify Token', placeholder: 'Your custom verify string', value: whatsappVerifyToken, onChange: setWhatsappVerifyToken, key: 'WHATSAPP_VERIFY_TOKEN', secret: false },
+              { label: 'Cloud Gateway Drain URL', placeholder: 'https://your-gateway.up.railway.app/queue/drain', value: whatsappGatewayDrainUrl, onChange: setWhatsappGatewayDrainUrl, key: 'WHATSAPP_CLOUD_GATEWAY_DRAIN_URL', secret: false },
+              { label: 'Allowed Numbers (owner pairing)', placeholder: 'e.g. 15551234567 (digits only, no +)', value: whatsappAllowedNumbers, onChange: setWhatsappAllowedNumbers, key: 'WHATSAPP_ALLOWED_NUMBERS', secret: false }
             ]}
-            onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken })}
-            hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook."
+            onSave={() => saveConnectorApiKey('whatsapp', { WHATSAPP_ACCESS_TOKEN: whatsappAccessToken, WHATSAPP_PHONE_NUMBER_ID: whatsappPhoneNumberId, WHATSAPP_VERIFY_TOKEN: whatsappVerifyToken, WHATSAPP_CLOUD_GATEWAY_DRAIN_URL: whatsappGatewayDrainUrl, WHATSAPP_ALLOWED_NUMBERS: whatsappAllowedNumbers })}
+            hint="Get credentials from Meta Business Suite → WhatsApp → API Setup. The Verify Token is a string you choose when setting up your webhook. Cloud Gateway Drain URL is required for inbound messages/commands to work — deploy gateway/whatsapp-cloud/ and paste its drain endpoint here. Allowed Numbers gates who can pair as the companion owner via /start (same protection as Telegram's allowlist)."
             savedLabel="WhatsApp credentials saved" />
 
           <CredentialSection title="YouTube" icon={Video} borderColor="border-red-300/20" bgColor="bg-red-500/8" accentColor="text-red-400"

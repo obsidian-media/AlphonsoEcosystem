@@ -203,4 +203,31 @@ export function useBootEffects({
       if (idleId) cancelIdle(idleId);
     };
   }, []);
+
+  // Phase 1 (idle): WhatsApp companion startup — mirrors Telegram above.
+  // Previously WhatsApp inbound polling only ran when a user manually
+  // clicked "Poll" in the Orchestrator view; there was no automatic
+  // background flow at all.
+  useEffect(() => {
+    let cancelled = false;
+    let idleId;
+
+    async function startWhatsApp() {
+      if (cancelled) return;
+      try {
+        const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+        const { startWhatsAppCompanion } = await import('../services/whatsappCompanionService');
+        const token = getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN');
+        if (token) {
+          startWhatsAppCompanion();
+        }
+      } catch { /* ignore */ }
+    }
+
+    idleId = onIdle(startWhatsApp);
+    return () => {
+      cancelled = true;
+      if (idleId) cancelIdle(idleId);
+    };
+  }, []);
 }

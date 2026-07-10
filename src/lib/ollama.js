@@ -466,7 +466,13 @@ export async function generateOllamaResponse({ endpoint, model, prompt }) {
         prompt,
         stream: false
       })
-    }, 30000);
+      // 120s, not 30s: verified live against a real multi-model Ollama
+      // instance that a cold model swap (unloading one model, loading
+      // another into memory) alone can take 45-50s before generation even
+      // starts — total_duration was 73s for a trivial prompt with
+      // load_duration accounting for 47s of that. A 30s cap made this
+      // reliably fail whenever the requested model wasn't already resident.
+    }, 120000);
 
     if (!response.ok) {
       let message = `Ollama /api/generate returned HTTP ${response.status}`;

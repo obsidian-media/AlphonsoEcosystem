@@ -14,6 +14,20 @@
 
 [**Download v2.5.18**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/tag/v2.5.18) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
+## Bug-fix pass — 2026-07-10 (no version bump)
+
+User-reported issue triage, fixed against real code rather than assumptions —
+full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
+
+- **Fixed Telegram** — the bot never responded because `telegramCompanionService.js` called Tauri commands that don't exist. Also fixed a bug where only the first message of any poll batch was ever processed, and a dead `/memory <query>` search branch.
+- **Fixed CMD windows flashing open/closed** — several process spawns on Windows never applied the flag that suppresses a visible console window.
+- **Fixed sidebar navigation getting clipped** on short windows with no way to scroll to hidden items.
+- **Fixed Coach Mode being completely non-functional** — its window had zero permissions granted by the Tauri capability system.
+- **Fixed Voice OS being completely non-functional** — the backend pipeline called a broken/nonexistent LLM function on every request and never awaited its own text-to-speech call. Fully rewritten.
+- **Fixed the #1 reported issue: Mobile Companion pairing never worked.** Root cause: the Companion server and Voice OS were both trying to use the same network port, so one silently failed to start every time.
+- **Added real WhatsApp bot commands** (`/status`, `/queue`, `/approve`, `/reject`, `/agents`, `/report`, `/ping`, `/help`, `/ask`) — WhatsApp previously had zero command handling, and inbound polling was never automatic. Also fixed a missing settings field that made WhatsApp inbound impossible to configure at all.
+- **Handed off** full in-app auto-update (download+install+relaunch) as a scoped follow-up — `docs/AUTO_UPDATE_HANDOFF.md`, PR #98.
+
 ## What's New in v2.5.18
 
 - **Sprint 5 batch 10: 6 more services migrated to TypeScript.** `novaAnalysisService`, `missionRoomService`, `eventsService`, `workflowRegistryService`, `marcusExecutionService`, `workflowOperationsRegistryService` — all root-level `.js` → `.ts`. Root-level count now 11 `.js` / 120 `.ts`. Added `DEFAULT_OLLAMA_ENDPOINT` to required `generateOllamaResponse` call, fixed `GitHubRelease`/`GitHubIssue` htmlUrl references, added `[key: string]: unknown` to `LedgerRow` interface.
@@ -192,7 +206,7 @@
 1. Run the installer (per-user, no admin required)
 1. Launch Alphonso — it auto-detects Ollama if running
 
-**Auto-Update:** If you have a previous version installed, Alphonso will prompt you to update automatically via the Tauri updater (ed25519-signed manifests).
+**Auto-Update:** Alphonso checks for new versions on launch and shows a banner when one is available (ed25519-signed release manifests). Clicking "Download Update" currently opens the release page in your browser — full in-app one-click download+install+relaunch is scoped but not yet built (`docs/AUTO_UPDATE_HANDOFF.md`).
 
 ### Prerequisites
 

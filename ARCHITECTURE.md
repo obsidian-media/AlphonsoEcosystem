@@ -14,7 +14,7 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 | Animation | Framer Motion (`src/lib/motion.ts` — `spring`, `tween`, `fadeUp`, `messageIn`, `panelIn` etc.) |
 | Design Tokens | OKLCH CSS custom properties (`src/styles/tokens.css`) — all colors in perceptually-uniform `oklch()` syntax |
 | Backend | Rust 1.77, Tauri 2.11, tokio async runtime, reqwest HTTP client |
-| Voice OS | Python FastAPI (`voice/backend/`) — faster-whisper STT, piper TTS, webrtcvad VAD, Ollama LLM. Launched as a Tauri-managed sidecar process. WebSocket on port 8765. |
+| Voice OS | Python FastAPI (`voice/backend/`) — faster-whisper STT, piper TTS, webrtcvad VAD, Ollama LLM. Launched as a Tauri-managed sidecar process. WebSocket on port 8766 (moved from 8765 on 2026-07-10 — collided with the Mobile Companion WebSocket server, which also defaults to 8765). |
 | AI (local) | Ollama (`llama3.2:3b` default), runs on-device |
 | AI (cloud, optional) | Claude API (Anthropic), OpenAI API — policy-gated, approval-required |
 | Storage | SQLite via rusqlite (bundled), localStorage (session/UI state, migration ongoing) |
@@ -75,10 +75,16 @@ Dead-letter path: failed packets move to `dead_letter` state with replay capabil
 
 ## Voice OS Flow
 
+This diagram describes the intended pipeline; `voice/backend/pipeline.py` did not
+actually implement it correctly until 2026-07-10 (it called a nonexistent LLM
+function with the wrong signature, never awaited the async TTS call, and had no
+VAD gate — see `docs/ALPHONSO_GROUND_TRUTH.md` §11.15). The flow below is now
+accurate to the real code.
+
 ```
 Microphone (browser MediaStream API)
   → AudioWorklet (pcm-processor.worklet.ts — float32→int16 PCM at 16kHz)
-  → WebSocket (ws://127.0.0.1:8765/ws — binary frames)
+  → WebSocket (ws://127.0.0.1:8766/ws — binary frames)
   → FastAPI voice server (voice/backend/main.py)
   → VAD gate (webrtcvad — discards silent frames)
   → STT (faster-whisper, tiny.en model, CPU int8)
@@ -181,7 +187,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - **licenseService.ts** — license tier validation (Free/Pro/Enterprise) gates premium connectors
 - **Zero-cost mode** — blocks paid connectors (Claude API, OpenAI, YouTube, etc.) by default unless explicitly overridden
 - **Approval gates** — risky actions (external sends, uploads, publishes) require explicit user confirmation in the `ApprovalModal` UI before execution proceeds
-- **Connector allowlists** — `TELEGRAM_ALLOWED_CHAT_IDS` and `WHATSAPP_ALLOWED_NUMBERS` block unauthorized senders at the Rust command layer
+- **Connector allowlists** — `TELEGRAM_ALLOWED_CHAT_IDS` (`telegramCompanionService.js`) and `WHATSAPP_ALLOWED_NUMBERS` (`whatsappCompanionService.ts`, added 2026-07-10) gate first-time owner pairing before any command executes. Enforced in the JS companion service layer, not the Rust command layer — corrected 2026-07-10, this line previously overstated where the check lives
 - **Secrets** — all credentials in `.env` only (never committed); `.gitignore` excludes `.env`, `.env.*`, `.tauri-updater-key`, `.tauri-updater-key.pub`
 - **Plugin sandbox** — `pluginSandboxService.js` enforces token-based plugin isolation
 

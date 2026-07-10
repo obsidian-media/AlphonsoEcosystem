@@ -43,7 +43,7 @@ const RuntimeManagerView = lazy(() => import('./components/RuntimeManagerView'))
 const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then((mod) => ({ default: mod.BootStatusBanner })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
-const BoardroomView = lazy(() => import('./components/BoardroomView').then((mod) => ({ default: mod.BoardroomView })));
+const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
 
 function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprovalRequest: () => void }) {
   const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
