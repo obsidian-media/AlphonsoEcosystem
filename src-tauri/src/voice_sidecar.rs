@@ -5,6 +5,49 @@ use tauri::{Manager, State};
 
 pub struct VoiceSidecar(pub Mutex<Option<Child>>);
 
+/// Resolve which Python interpreter to launch Voice OS with.
+///
+/// Runtime Hub's "voice-os" ToolDef (runtime_manager.rs) is the only thing
+/// that ever `pip install`s Voice OS's dependencies (faster-whisper, piper-tts,
+/// fastapi, uvicorn, etc.) — and it installs them into a venv under
+/// `runtimes_dir()/voice-os/venv`, NOT under the bundled app resource
+/// directory. Before this fix, voice_start only ever checked for a venv
+/// under the resource directory (which nothing ever creates), so even a
+/// successful Runtime Hub install was invisible to the actual launch path —
+/// voice_start would silently fall through to the bare system `python`,
+/// which crashes on the first missing import unless the user happened to
+/// have every dependency installed globally.
+fn resolve_voice_python(
+  backend_path: &std::path::Path,
+  runtime_hub_runtimes_dir: &std::path::Path,
+) -> std::path::PathBuf {
+  let runtime_hub_venv = runtime_hub_runtimes_dir.join("voice-os").join("venv");
+  let runtime_hub_python = if cfg!(target_os = "windows") {
+    runtime_hub_venv.join("Scripts").join("python.exe")
+  } else {
+    runtime_hub_venv.join("bin").join("python3")
+  };
+  if runtime_hub_python.exists() {
+    return runtime_hub_python;
+  }
+
+  let bundled_venv = backend_path.join("venv");
+  let bundled_python = if cfg!(target_os = "windows") {
+    bundled_venv.join("Scripts").join("python.exe")
+  } else {
+    bundled_venv.join("bin").join("python3")
+  };
+  if bundled_python.exists() {
+    return bundled_python;
+  }
+
+  if cfg!(target_os = "windows") {
+    std::path::PathBuf::from("python")
+  } else {
+    std::path::PathBuf::from("python3")
+  }
+}
+
 #[tauri::command]
 pub async fn voice_start(
   app: tauri::AppHandle,
@@ -21,19 +64,7 @@ pub async fn voice_start(
     .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
     .join("voice")
     .join("backend");
-  // Prefer the voice backend's own venv Python; fall back to system python
-  let venv_python = if cfg!(target_os = "windows") {
-    backend_path.join("venv").join("Scripts").join("python.exe")
-  } else {
-    backend_path.join("venv").join("bin").join("python3")
-  };
-  let python_bin = if venv_python.exists() {
-    venv_python
-  } else if cfg!(target_os = "windows") {
-    std::path::PathBuf::from("python")
-  } else {
-    std::path::PathBuf::from("python3")
-  };
+  let python_bin = resolve_voice_python(&backend_path, &crate::runtime_manager::runtimes_dir());
   let mut cmd = Command::new(&python_bin);
   cmd
     .args([
@@ -93,5 +124,77 @@ pub async fn voice_status(state: State<'_, VoiceSidecar>) -> Result<String, Stri
     }
   } else {
     Ok("stopped".into())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::fs;
+
+  fn make_venv_python(venv_dir: &std::path::Path) -> std::path::PathBuf {
+    let py = if cfg!(target_os = "windows") {
+      venv_dir.join("Scripts").join("python.exe")
+    } else {
+      venv_dir.join("bin").join("python3")
+    };
+    fs::create_dir_all(py.parent().unwrap()).unwrap();
+    fs::write(&py, b"").unwrap();
+    py
+  }
+
+  #[test]
+  fn prefers_the_runtime_hub_managed_venv_over_the_bundled_resource_dir_venv() {
+    let tmp = std::env::temp_dir().join(format!("alphonso_voice_test_{}_a", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp);
+    let runtime_hub_venv = tmp.join("runtime_hub").join("voice-os").join("venv");
+    let bundled_venv = tmp
+      .join("resource")
+      .join("voice")
+      .join("backend")
+      .join("venv");
+    let expected = make_venv_python(&runtime_hub_venv);
+    make_venv_python(&bundled_venv);
+
+    let backend_path = tmp.join("resource").join("voice").join("backend");
+    let resolved = resolve_voice_python(&backend_path, &tmp.join("runtime_hub"));
+
+    assert_eq!(resolved, expected);
+    let _ = fs::remove_dir_all(&tmp);
+  }
+
+  #[test]
+  fn falls_back_to_the_bundled_resource_dir_venv_when_no_runtime_hub_venv_exists() {
+    let tmp = std::env::temp_dir().join(format!("alphonso_voice_test_{}_b", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp);
+    let bundled_venv = tmp
+      .join("resource")
+      .join("voice")
+      .join("backend")
+      .join("venv");
+    let expected = make_venv_python(&bundled_venv);
+
+    let backend_path = tmp.join("resource").join("voice").join("backend");
+    let resolved = resolve_voice_python(&backend_path, &tmp.join("runtime_hub"));
+
+    assert_eq!(resolved, expected);
+    let _ = fs::remove_dir_all(&tmp);
+  }
+
+  #[test]
+  fn falls_back_to_bare_system_python_when_no_venv_exists_anywhere() {
+    let tmp = std::env::temp_dir().join(format!("alphonso_voice_test_{}_c", std::process::id()));
+    let _ = fs::remove_dir_all(&tmp);
+    let backend_path = tmp.join("resource").join("voice").join("backend");
+
+    let resolved = resolve_voice_python(&backend_path, &tmp.join("runtime_hub"));
+
+    let expected_name = if cfg!(target_os = "windows") {
+      "python"
+    } else {
+      "python3"
+    };
+    assert_eq!(resolved, std::path::PathBuf::from(expected_name));
+    let _ = fs::remove_dir_all(&tmp);
   }
 }
