@@ -33,7 +33,7 @@ export function CoachProvider({ children }) {
       await openCoachWindow(coachAlwaysOnTop, settings.coachAgent || 'alphonso');
       setCoachMode(true);
     } catch (error) {
-      const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+      const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
       if (isTauriDesktop) {
         // Real failure inside the desktop runtime (e.g. missing window capability
         // grant) — do not claim success, surface the actual error to the user.
@@ -55,7 +55,7 @@ export function CoachProvider({ children }) {
     setCoachAlwaysOnTop(next);
     if (coachMode) {
       await openCoachWindow(next, settings.coachAgent || 'alphonso').catch((error) => {
-        const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+        const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
         if (isTauriDesktop) {
           window.dispatchEvent(new CustomEvent('alphonso:toast', {
             detail: { message: `Coach mode failed to update: ${error?.message || error}`, type: 'error' }
@@ -99,7 +99,7 @@ export function CoachProvider({ children }) {
       await openCoachWindow(coachAlwaysOnTop, 'alphonso');
       setCoachMode(true);
     } catch (error) {
-      const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+      const isTauriDesktop = typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
       if (isTauriDesktop) {
         window.dispatchEvent(new CustomEvent('alphonso:toast', {
           detail: { message: `Coach mode failed to open: ${error?.message || error}`, type: 'error' }

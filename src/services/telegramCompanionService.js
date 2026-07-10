@@ -27,7 +27,7 @@ const OWNER_CHAT_KEY = 'alphonso_telegram_owner_chat_id';
 const NOTIFICATIONS_PAUSED_KEY = 'alphonso_telegram_notifications_paused';
 
 function isTauriAvailable() {
-  return typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+  return typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
 }
 
 function getOwnerChatId() {

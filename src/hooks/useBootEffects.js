@@ -188,8 +188,14 @@ export function useBootEffects({
     async function startTelegram() {
       if (cancelled) return;
       try {
-        const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+        const { getConnectorCredential, hydrateConnectorCredentialsFromSqlite } = await import('../services/connectors/connectorAuth');
         const { startTelegramCompanion } = await import('../services/telegramCompanionService');
+        // The credential cache starts empty and is only populated by this hydrate
+        // call — reading getConnectorCredential before it resolves permanently
+        // locks the cache to empty for CRED_CACHE_TTL_MS, silently skipping
+        // startup even when a token was saved (see connectorAuth.ts).
+        await hydrateConnectorCredentialsFromSqlite();
+        if (cancelled) return;
         const token = getConnectorCredential('telegram', 'TELEGRAM_BOT_TOKEN');
         if (token) {
           startTelegramCompanion();
@@ -215,8 +221,12 @@ export function useBootEffects({
     async function startWhatsApp() {
       if (cancelled) return;
       try {
-        const { getConnectorCredential } = await import('../services/connectors/connectorAuth');
+        const { getConnectorCredential, hydrateConnectorCredentialsFromSqlite } = await import('../services/connectors/connectorAuth');
         const { startWhatsAppCompanion } = await import('../services/whatsappCompanionService');
+        // See the matching comment in startTelegram above — same cache-poisoning
+        // race applies here.
+        await hydrateConnectorCredentialsFromSqlite();
+        if (cancelled) return;
         const token = getConnectorCredential('whatsapp', 'WHATSAPP_ACCESS_TOKEN');
         if (token) {
           startWhatsAppCompanion();
