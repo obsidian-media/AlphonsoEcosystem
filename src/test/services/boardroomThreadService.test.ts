@@ -125,6 +125,33 @@ describe('boardroomThreadService', () => {
       const msg = addThreadMessage({ threadId: thread.id, speaker: 'alphonso', content: 'hi' });
       expect(msg?.acknowledged).toBe(false);
     });
+
+    it('confirmThreadMessage marks a message as confirmed and persists it', async () => {
+      const { createThread, addThreadMessage, confirmThreadMessage, listThreadMessages } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['marcus'] });
+      const msg = addThreadMessage({ threadId: thread.id, speaker: 'marcus', content: 'Ready to publish this to production.' });
+      expect(msg?.approvalRequired).toBe(true);
+      expect(msg?.confirmed).toBe(false);
+
+      const updated = confirmThreadMessage(msg!.id);
+      expect(updated?.confirmed).toBe(true);
+
+      const messages = listThreadMessages(thread.id);
+      expect(messages[0].confirmed).toBe(true);
+    });
+
+    it('confirmThreadMessage returns null for an unknown message id', async () => {
+      const { confirmThreadMessage } = await import('../../services/boardroomThreadService');
+      expect(confirmThreadMessage('nonexistent_id')).toBeNull();
+    });
+
+    it('a low-risk message defaults confirmed to false but is not gated (no approvalRequired)', async () => {
+      const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Test', participants: ['jose'] });
+      const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'Just a normal update.' });
+      expect(msg?.approvalRequired).toBe(false);
+      expect(msg?.confirmed).toBe(false);
+    });
   });
 
   describe('migrateLegacySessions', () => {

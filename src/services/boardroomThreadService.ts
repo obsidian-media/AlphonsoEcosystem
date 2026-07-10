@@ -27,6 +27,7 @@ export interface BoardroomThreadMessage {
   mentionedAgents: string[];
   retryContext?: string;
   acknowledged: boolean;
+  confirmed: boolean;
   createdAt: string;
   createdAtMs: number;
   seq: number;
@@ -204,6 +205,7 @@ export function addThreadMessage({
     mentionedAgents,
     retryContext,
     acknowledged: false,
+    confirmed: false,
     createdAt: nowIso(),
     createdAtMs: nowMs(),
     seq: nextSeq()
@@ -225,6 +227,17 @@ export function acknowledgeThreadMessage(messageId: string): BoardroomThreadMess
   const index = rows.findIndex((row) => row.id === messageId);
   if (index === -1) return null;
   const updated = { ...rows[index], acknowledged: true };
+  const next = [...rows];
+  next[index] = updated;
+  writeJson(MESSAGES_KEY, next);
+  return updated;
+}
+
+export function confirmThreadMessage(messageId: string): BoardroomThreadMessage | null {
+  const rows = readJson<BoardroomThreadMessage[]>(MESSAGES_KEY, []);
+  const index = rows.findIndex((row) => row.id === messageId);
+  if (index === -1) return null;
+  const updated = { ...rows[index], confirmed: true };
   const next = [...rows];
   next[index] = updated;
   writeJson(MESSAGES_KEY, next);
@@ -287,6 +300,7 @@ export function migrateLegacySessions(): void {
       secretRedacted: false,
       mentionedAgents: [],
       acknowledged: false,
+      confirmed: false,
       createdAt: m.timestamp,
       createdAtMs: new Date(m.timestamp).getTime() || createdAtMs + index,
       seq: nextSeq()
@@ -303,6 +317,7 @@ export function migrateLegacySessions(): void {
       secretRedacted: false,
       mentionedAgents: [],
       acknowledged: false,
+      confirmed: false,
       createdAt: session.createdAt,
       createdAtMs: createdAtMs - 1,
       seq: 0
