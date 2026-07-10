@@ -6,6 +6,7 @@ import {
   listThreads,
   listThreadMessages,
   addThreadMessage,
+  acknowledgeThreadMessage,
   migrateLegacySessions,
   parseMentions,
   findCrossThreadContext,
@@ -29,7 +30,15 @@ function agentLabel(speakerId: string): string {
   return profile?.name || speakerId;
 }
 
-function MessageBubble({ message, onRetry }: { message: BoardroomThreadMessage; onRetry: (message: BoardroomThreadMessage) => void }) {
+function MessageBubble({
+  message,
+  onRetry,
+  onAcknowledge
+}: {
+  message: BoardroomThreadMessage;
+  onRetry: (message: BoardroomThreadMessage) => void;
+  onAcknowledge: (message: BoardroomThreadMessage) => void;
+}) {
   const isEscalation = message.kind === 'escalation';
   const isFailure = message.kind === 'failure';
   const toneClass = isEscalation
@@ -57,6 +66,18 @@ function MessageBubble({ message, onRetry }: { message: BoardroomThreadMessage; 
         >
           Retry
         </button>
+      )}
+      {isEscalation && (
+        message.acknowledged ? (
+          <span className="mt-1.5 inline-block text-[10px] font-semibold text-amber-400/70">✓ Acknowledged</span>
+        ) : (
+          <button
+            onClick={() => onAcknowledge(message)}
+            className="mt-1.5 rounded-md border border-amber-400/30 px-2 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/10"
+          >
+            Acknowledge
+          </button>
+        )
       )}
       {message.mentionedAgents.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
@@ -222,6 +243,12 @@ export function BoardroomChatView() {
     setMessages(listThreadMessages(activeThreadId));
   }
 
+  function handleAcknowledge(message: BoardroomThreadMessage) {
+    if (!activeThreadId) return;
+    acknowledgeThreadMessage(message.id);
+    setMessages(listThreadMessages(activeThreadId));
+  }
+
   function handleComposerChange(value: string) {
     setComposerText(value);
     const atIndex = value.lastIndexOf('@');
@@ -286,7 +313,7 @@ export function BoardroomChatView() {
           <>
             <div className="flex-1 overflow-y-auto space-y-2 p-4">
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} onRetry={handleRetry} />
+                <MessageBubble key={m.id} message={m} onRetry={handleRetry} onAcknowledge={handleAcknowledge} />
               ))}
             </div>
             {facilitatorPending && (

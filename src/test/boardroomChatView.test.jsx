@@ -402,4 +402,35 @@ describe('BoardroomChatView', () => {
       expect.objectContaining({ agentId: 'hector', newMessageText: '@Hector status check' })
     );
   });
+
+  it('shows an Acknowledge button on an unacknowledged escalation message, which becomes a static badge once clicked', async () => {
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    const { createThread, addThreadMessage } = await import('../services/boardroomThreadService');
+
+    const thread = createThread({ topic: 'Ack Test', participants: ['jose', 'hector'] });
+    addThreadMessage({ threadId: thread.id, speaker: 'alphonso', content: 'Round cap reached — please weigh in.', kind: 'escalation' });
+
+    render(<BoardroomChatView />);
+    await screen.findByText('Round cap reached — please weigh in.');
+
+    const ackButton = screen.getByRole('button', { name: /^acknowledge$/i });
+    fireEvent.click(ackButton);
+
+    expect(await screen.findByText(/✓ acknowledged/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^acknowledge$/i })).not.toBeInTheDocument();
+  });
+
+  it('does not show an Acknowledge control on a normal (non-escalation) message', async () => {
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    const { createThread, addThreadMessage } = await import('../services/boardroomThreadService');
+
+    const thread = createThread({ topic: 'Normal Test', participants: ['jose'] });
+    addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'Just a normal update.' });
+
+    render(<BoardroomChatView />);
+    await screen.findByText('Just a normal update.');
+
+    expect(screen.queryByRole('button', { name: /^acknowledge$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/✓ acknowledged/i)).not.toBeInTheDocument();
+  });
 });
