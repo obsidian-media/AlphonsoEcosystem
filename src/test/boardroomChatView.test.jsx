@@ -433,4 +433,35 @@ describe('BoardroomChatView', () => {
     expect(screen.queryByRole('button', { name: /^acknowledge$/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/✓ acknowledged/i)).not.toBeInTheDocument();
   });
+
+  it('masks a high-risk (approvalRequired) message behind a Confirm gate until confirmed', async () => {
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    const { createThread, addThreadMessage } = await import('../services/boardroomThreadService');
+
+    const thread = createThread({ topic: 'Risk Test', participants: ['marcus'] });
+    addThreadMessage({ threadId: thread.id, speaker: 'marcus', content: 'Ready to publish this to production.' });
+
+    render(<BoardroomChatView />);
+
+    expect(screen.queryByText('Ready to publish this to production.')).not.toBeInTheDocument();
+    expect(await screen.findByText(/proposes a high-risk action/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm to reveal/i }));
+
+    expect(await screen.findByText('Ready to publish this to production.')).toBeInTheDocument();
+    expect(screen.getByText(/^confirmed$/i)).toBeInTheDocument();
+  });
+
+  it('does not mask a normal (non-approval-required) message', async () => {
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    const { createThread, addThreadMessage } = await import('../services/boardroomThreadService');
+
+    const thread = createThread({ topic: 'Normal Risk Test', participants: ['jose'] });
+    addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'Just a normal update.' });
+
+    render(<BoardroomChatView />);
+
+    expect(await screen.findByText('Just a normal update.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /confirm to reveal/i })).not.toBeInTheDocument();
+  });
 });

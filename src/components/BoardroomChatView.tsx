@@ -7,6 +7,7 @@ import {
   listThreadMessages,
   addThreadMessage,
   acknowledgeThreadMessage,
+  confirmThreadMessage,
   migrateLegacySessions,
   parseMentions,
   findCrossThreadContext,
@@ -33,14 +34,17 @@ function agentLabel(speakerId: string): string {
 function MessageBubble({
   message,
   onRetry,
-  onAcknowledge
+  onAcknowledge,
+  onConfirm
 }: {
   message: BoardroomThreadMessage;
   onRetry: (message: BoardroomThreadMessage) => void;
   onAcknowledge: (message: BoardroomThreadMessage) => void;
+  onConfirm: (message: BoardroomThreadMessage) => void;
 }) {
   const isEscalation = message.kind === 'escalation';
   const isFailure = message.kind === 'failure';
+  const isGated = message.approvalRequired && !message.confirmed;
   const toneClass = isEscalation
     ? 'border-amber-400/40 bg-amber-500/10'
     : isFailure
@@ -54,11 +58,23 @@ function MessageBubble({
         </span>
         {message.approvalRequired && (
           <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">
-            approval required
+            {message.confirmed ? 'confirmed' : 'approval required'}
           </span>
         )}
       </div>
-      <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : isFailure ? 'text-rose-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
+      {isGated ? (
+        <div className="mt-1.5 rounded-md border border-amber-400/30 bg-amber-500/5 p-2">
+          <p className="text-amber-300">This message proposes a high-risk action — content hidden until confirmed.</p>
+          <button
+            onClick={() => onConfirm(message)}
+            className="mt-1.5 rounded-md border border-amber-400/40 px-2 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/10"
+          >
+            Confirm to reveal
+          </button>
+        </div>
+      ) : (
+        <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : isFailure ? 'text-rose-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
+      )}
       {isFailure && message.retryContext && (
         <button
           onClick={() => onRetry(message)}
@@ -249,6 +265,12 @@ export function BoardroomChatView() {
     setMessages(listThreadMessages(activeThreadId));
   }
 
+  function handleConfirm(message: BoardroomThreadMessage) {
+    if (!activeThreadId) return;
+    confirmThreadMessage(message.id);
+    setMessages(listThreadMessages(activeThreadId));
+  }
+
   function handleComposerChange(value: string) {
     setComposerText(value);
     const atIndex = value.lastIndexOf('@');
@@ -313,7 +335,7 @@ export function BoardroomChatView() {
           <>
             <div className="flex-1 overflow-y-auto space-y-2 p-4">
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} onRetry={handleRetry} onAcknowledge={handleAcknowledge} />
+                <MessageBubble key={m.id} message={m} onRetry={handleRetry} onAcknowledge={handleAcknowledge} onConfirm={handleConfirm} />
               ))}
             </div>
             {facilitatorPending && (
