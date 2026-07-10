@@ -6,6 +6,66 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-10
+
+### User bug-report pass — 15 issues fixed, root causes verified against real code
+
+Not a version bump — a live bug-fix pass responding to 15 issues the user hit in the
+running app. Full narrative and rationale: `docs/ALPHONSO_GROUND_TRUTH.md` §11.15.
+
+**Fixed:**
+
+- **Telegram bot never responded** — `telegramCompanionService.js` was calling
+  nonexistent Tauri commands (`telegram_get_updates`/`telegram_send_message`)
+  instead of the real registered ones (`connector_poll_telegram`/
+  `connector_send_telegram`), silently swallowed by a bare `catch{}`. Also fixed:
+  `processInboundCommands` used `return` instead of `continue` per message,
+  dropping every message after the first in a poll batch; a dead second
+  `/memory` branch meant `/memory <query>` never searched.
+- **CMD windows flashing open/closed** — `CREATE_NO_WINDOW` was missing at
+  multiple Windows `Command::new()` spawn sites across `lib.rs`,
+  `plugin_runtime.rs`, `voice_sidecar.rs`, `workspace.rs`, and
+  `runtime_manager.rs`'s polled `kill_pid`/`is_pid_alive` health checks. Added a
+  shared `no_window()` helper in `utils.rs`, applied everywhere.
+- **Sidebar navigation items unreachable on short windows** — nav list was
+  `shrink-0` inside an `overflow-hidden` parent with no scroll of its own.
+- **Coach Mode non-functional** — the Coach webview window had zero Tauri
+  capability grants (`capabilities/default.json` only listed `"main"`); also
+  fixed a silent-failure bug where `openCoachWindow()` never confirmed real
+  creation success, across 4 call sites in `CoachContext.jsx`.
+- **Voice OS completely non-functional** — `voice/backend/pipeline.py` called a
+  nonexistent LLM function with the wrong signature (crashed every request after
+  transcription), never `await`ed the async TTS call, had no VAD gate. Fully
+  rewritten against the pre-existing `tests/test_pipeline.py` contract with a
+  real streaming Ollama `/api/chat` call. Piper TTS voice model now
+  auto-downloads on first use instead of silently producing empty audio.
+- **Mobile Companion pairing P0** — port 8765 was double-booked between the
+  Companion WebSocket server and Voice OS (with a second independent Voice OS
+  launch path in `runtime_manager.rs` also on 8765). Voice OS moved to port 8766
+  across 6 files; Companion kept at 8765 since iOS hardcodes it in Swift.
+- **WhatsApp had no command handling and no auto-start** — new
+  `whatsappCompanionService.ts` (9 real commands mirroring Telegram's pattern);
+  wired auto-start at boot. Found and fixed a second bug while building this:
+  `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL`, required for inbound polling to function,
+  had no UI field anywhere in `ConnectorSetupPanel.tsx`.
+- **`voice/backend/router.py` keyword-routing bugs** — hector's broad keywords
+  stole matches meant for nova/sentinel; miya was missing write/blog/draft
+  keywords entirely. 31/31 pytest passing (was 28/31).
+- `UpdaterNotification.tsx` button relabeled "Update & Restart" → "Download
+  Update" (it never restarted anything).
+- `BOARDROOM_ROLES.md`/`BOARDROOM_MODEL_REGISTRY.md` corrected with banners —
+  both described an early 11-seat design (incl. nonexistent "Hermes"/"Kairo"
+  agents) never actually built.
+
+**Handed off:** full in-app auto-update (download+install+relaunch) —
+`docs/AUTO_UPDATE_HANDOFF.md` (new) + PR #98 on `feat/in-app-auto-update`.
+
+**Verification:** 93 JS/TS tests passing (15 new WhatsApp, 2 new Telegram
+regression, 1 new Coach Mode regression), 31/31 voice backend pytest, `cargo
+check`/`cargo clippy -D warnings` clean, `tsc --noEmit` clean, ESLint clean.
+
+Commits: `cab7b78`, `abe8ee5`, `2bb524b` (main); `be11bd5` (`feat/in-app-auto-update`, PR #98).
+
 ## [2.5.18] — 2026-07-03
 
 ### Sprint 5 batch 10: 6 more root-level services migrated to TypeScript
