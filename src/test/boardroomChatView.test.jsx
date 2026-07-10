@@ -357,4 +357,49 @@ describe('BoardroomChatView', () => {
     render(<BoardroomChatView />);
     expect(screen.queryByRole('button', { name: /^stop$/i })).not.toBeInTheDocument();
   });
+
+  it('posts a failure-kind message with retryContext when an agent errors, rendered distinctly with a Retry button', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: false, text: '', error: 'Ollama is not running' });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Failure Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Failure Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector status check' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    const failureText = await screen.findByText(/ollama is not running/i);
+    expect(failureText.closest('[data-message-kind="failure"]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^retry$/i })).toBeInTheDocument();
+  });
+
+  it('re-runs generation for that agent when Retry is clicked, posting a new message on success', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse
+      .mockResolvedValueOnce({ ok: false, text: '', error: 'Ollama is not running' })
+      .mockResolvedValueOnce({ ok: true, text: 'All systems normal now.' });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Retry Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Retry Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector status check' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText(/ollama is not running/i);
+    fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
+
+    expect(await screen.findByText('All systems normal now.')).toBeInTheDocument();
+    expect(facilitator.generateAgentResponse).toHaveBeenCalledTimes(2);
+    expect(facilitator.generateAgentResponse.mock.calls[1][0]).toEqual(
+      expect.objectContaining({ agentId: 'hector', newMessageText: '@Hector status check' })
+    );
+  });
 });

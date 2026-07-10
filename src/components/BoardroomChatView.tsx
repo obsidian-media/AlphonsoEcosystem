@@ -29,20 +29,19 @@ function agentLabel(speakerId: string): string {
   return profile?.name || speakerId;
 }
 
-function MessageBubble({ message }: { message: BoardroomThreadMessage }) {
+function MessageBubble({ message, onRetry }: { message: BoardroomThreadMessage; onRetry: (message: BoardroomThreadMessage) => void }) {
   const isEscalation = message.kind === 'escalation';
+  const isFailure = message.kind === 'failure';
+  const toneClass = isEscalation
+    ? 'border-amber-400/40 bg-amber-500/10'
+    : isFailure
+      ? 'border-rose-400/40 bg-rose-500/10'
+      : 'border-[var(--border)] bg-[var(--surface-2)]';
   return (
-    <div
-      data-message-kind={message.kind}
-      className={
-        isEscalation
-          ? 'rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5 text-xs'
-          : 'rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-xs'
-      }
-    >
+    <div data-message-kind={message.kind} className={`rounded-lg border p-2.5 text-xs ${toneClass}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className={`font-semibold ${isEscalation ? 'text-amber-300' : 'text-[var(--text-1)]'}`}>
-          {isEscalation ? 'Needs your decision' : agentLabel(message.speaker)}
+        <span className={`font-semibold ${isEscalation ? 'text-amber-300' : isFailure ? 'text-rose-300' : 'text-[var(--text-1)]'}`}>
+          {isEscalation ? 'Needs your decision' : isFailure ? `${agentLabel(message.speaker)} — failed` : agentLabel(message.speaker)}
         </span>
         {message.approvalRequired && (
           <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">
@@ -50,7 +49,15 @@ function MessageBubble({ message }: { message: BoardroomThreadMessage }) {
           </span>
         )}
       </div>
-      <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
+      <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : isFailure ? 'text-rose-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
+      {isFailure && message.retryContext && (
+        <button
+          onClick={() => onRetry(message)}
+          className="mt-1.5 rounded-md border border-rose-400/30 px-2 py-0.5 text-[10px] font-semibold text-rose-300 hover:bg-rose-500/10"
+        >
+          Retry
+        </button>
+      )}
       {message.mentionedAgents.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {message.mentionedAgents.map((agentId) => (
@@ -162,7 +169,13 @@ export function BoardroomChatView() {
         crossThreadContext
       });
       const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
-      addThreadMessage({ threadId: activeThreadId, speaker: agentId, content: replyText });
+      addThreadMessage({
+        threadId: activeThreadId,
+        speaker: agentId,
+        content: replyText,
+        kind: result.ok ? 'message' : 'failure',
+        retryContext: result.ok ? undefined : text
+      });
       setMessages(listThreadMessages(activeThreadId));
 
       if (result.ok) {
@@ -184,6 +197,29 @@ export function BoardroomChatView() {
 
   function handleStop() {
     stopRequestedRef.current = true;
+  }
+
+  async function handleRetry(message: BoardroomThreadMessage) {
+    if (!activeThreadId || !activeThread || !message.retryContext) return;
+    const agentId = message.speaker;
+    const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
+    const crossThreadContext = findCrossThreadContext({ excludeThreadId: activeThreadId, queryText: message.retryContext });
+    const result = await generateAgentResponse({
+      agentId,
+      topic: activeThread.topic,
+      priorMessages,
+      newMessageText: message.retryContext,
+      crossThreadContext
+    });
+    const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
+    addThreadMessage({
+      threadId: activeThreadId,
+      speaker: agentId,
+      content: replyText,
+      kind: result.ok ? 'message' : 'failure',
+      retryContext: result.ok ? undefined : message.retryContext
+    });
+    setMessages(listThreadMessages(activeThreadId));
   }
 
   function handleComposerChange(value: string) {
@@ -250,7 +286,7 @@ export function BoardroomChatView() {
           <>
             <div className="flex-1 overflow-y-auto space-y-2 p-4">
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} />
+                <MessageBubble key={m.id} message={m} onRetry={handleRetry} />
               ))}
             </div>
             {facilitatorPending && (
