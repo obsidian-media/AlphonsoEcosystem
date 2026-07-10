@@ -1,15 +1,18 @@
 import re
 
-# Routing patterns for each of the 9 agents
+# Routing patterns for each of the 9 agents.
+#
+# Dict order is check order — detect_agent() returns on the first match, so
+# more specific agents must be checked before agents with broad/generic
+# keywords (hector's "find"/"scan" previously stole matches meant for nova's
+# "market opportunities" and sentinel's "security scan" because hector was
+# checked first). Hector is intentionally checked last for that reason.
 ROUTING_PATTERNS = {
     'jose': [
         r'\b(plan|decompose|task|schedule|delegate|orchestrat|handoff|merge|jose)\b'
     ],
-    'hector': [
-        r'\b(research|search|find|lookup|trend|source|scan|citation|hector)\b'
-    ],
     'miya': [
-        r'\b(design|ui|creative|campaign|storyboard|visual|miya|brand|layout)\b'
+        r'\b(design|ui|creative|campaign|storyboard|visual|miya|brand|layout|write|blog|draft|copy|email)\b'
     ],
     'maria': [
         r'\b(audit|risk|compliance|governance|maria|check|review|policy)\b'
@@ -25,6 +28,9 @@ ROUTING_PATTERNS = {
     ],
     'nova': [
         r'\b(opportunity|market|growth|trend|analysis|nova|score|prioritize)\b'
+    ],
+    'hector': [
+        r'\b(research|search|find|lookup|trend|source|scan|citation|hector)\b'
     ]
 }
 

@@ -1,7 +1,22 @@
 # ALPHONSO Boardroom — Agent Roles & Responsibilities
 
+> **CORRECTED 2026-07-10:** This document describes an early, aspirational
+> 11-seat Boardroom design and does **not** reflect the shipped product.
+> The actual Boardroom feature (`src/components/BoardroomView.tsx`) only
+> supports the real 9-agent roster: Alphonso, Jose, Hector, Miya, Maria,
+> Marcus, Echo, Sentinel, Nova (see `src/agents/agentRegistry.js`).
+>
+> **"Hermes" and "Kairo" are not agents in the shipped product** — they
+> never got built. This file's seat 2 row describes "Hermes" as a planned
+> internal runtime-worker concept for Jose (not a user-facing agent), and
+> seat 11 "Kairo" was a planned 10th agent that was never implemented.
+> "Shayan" (seat 1) refers to the app's founder/owner, not an AI agent.
+>
+> Kept for historical context only. Do not treat any of the below as
+> current product behavior.
+
 **Boardroom size:** 11 seats
-**Source of truth:** this file
+**Source of truth:** ~~this file~~ superseded — see correction note above
 **Last updated:** 2026-06-04
 **Mission status:** first wiring in progress — Jose -> Alphonso (Hermes -> OpenCode)
 

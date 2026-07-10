@@ -1,7 +1,14 @@
 # ALPHONSO Boardroom — Model Registry
 
+> **CORRECTED 2026-07-10:** This document describes early, aspirational
+> runtime-candidate planning and does **not** reflect the shipped product.
+> "Kairo" (Backend) was a planned 10th agent that was never implemented —
+> the real roster is the 9 agents in `src/agents/agentRegistry.js`
+> (Alphonso, Jose, Hector, Miya, Maria, Marcus, Echo, Sentinel, Nova). Kept
+> for historical context only.
+
 **Purpose:** candidate runtime assignments for each agent role. Shayan selects per project.
-**Source of truth:** this file
+**Source of truth:** ~~this file~~ superseded — see correction note above
 **Last updated:** 2026-06-03
 
 ## Agent → Runtime Candidates
