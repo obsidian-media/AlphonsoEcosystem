@@ -4,6 +4,28 @@ import type { CrossThreadContextResult } from './boardroomThreadService';
 
 const DEFAULT_MODEL = 'llama3.2:3b';
 
+const LOW_CONFIDENCE_PHRASES = [
+  "i'm not sure",
+  'i am not sure',
+  'not certain',
+  'unclear',
+  "i don't have enough information",
+  'i do not have enough information',
+  'hard to say',
+  "can't be certain",
+  'cannot be certain',
+  'would need more context',
+  'difficult to determine',
+  'no way to know',
+  "i don't know enough",
+  'i do not know enough'
+];
+
+export function detectLowConfidence(text: string): boolean {
+  const lower = text.toLowerCase();
+  return LOW_CONFIDENCE_PHRASES.some((phrase) => lower.includes(phrase));
+}
+
 interface FacilitatorMessage {
   speaker: string;
   content: string;

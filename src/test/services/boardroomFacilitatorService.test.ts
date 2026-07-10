@@ -161,4 +161,23 @@ describe('boardroomFacilitatorService', () => {
       expect(prompt).not.toContain('Relevant context from other threads');
     });
   });
+
+  describe('detectLowConfidence', () => {
+    it('flags text containing a hedging phrase', async () => {
+      const { detectLowConfidence } = await import('../../services/boardroomFacilitatorService');
+      expect(detectLowConfidence("I'm not sure, but it might be related to pricing.")).toBe(true);
+      expect(detectLowConfidence('This is unclear without more data.')).toBe(true);
+      expect(detectLowConfidence('I would need more context to answer that properly.')).toBe(true);
+    });
+
+    it('does not flag confident, direct text', async () => {
+      const { detectLowConfidence } = await import('../../services/boardroomFacilitatorService');
+      expect(detectLowConfidence('The Q3 pricing tier is finalized at $49/mo for the enterprise plan.')).toBe(false);
+    });
+
+    it('is case-insensitive', async () => {
+      const { detectLowConfidence } = await import('../../services/boardroomFacilitatorService');
+      expect(detectLowConfidence('Honestly, I DON\'T HAVE ENOUGH INFORMATION to say.')).toBe(true);
+    });
+  });
 });
