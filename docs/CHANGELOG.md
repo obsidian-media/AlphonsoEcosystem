@@ -6,6 +6,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-10 (later same day)
+
+### Boardroom rebuild (12 phases, real-time multi-agent group chat) + PR #98 merged
+
+Full narrative and rationale: `docs/ALPHONSO_GROUND_TRUTH.md` §11.16.
+
+**Added:**
+
+- **Boardroom chat rebuild** — `BoardroomChatView.tsx` replaces the old
+  session-summary `BoardroomView.tsx` as the mounted Boardroom component.
+  Real-time thread/message chat (`boardroomThreadService.ts`) with
+  `@mention` autocomplete and parsing, real per-agent Ollama generation
+  with persona-specific prompts (`boardroomFacilitatorService.ts`), and
+  legacy session auto-migration.
+- **Bounded `@mention` chaining** — a reply mentioning another agent
+  triggers a real chained response, capped at `MAX_CHAIN_DEPTH = 3` before
+  auto-escalating to a "Needs your decision" banner.
+- **Cross-thread context recall** — agents can draw on relevant messages
+  from other Boardroom threads (keyword-overlap based).
+- **Low-confidence auto-escalation** — hedge-language detection
+  (`detectLowConfidence`) flags hedgy replies for review.
+- **Stop button** — halts further chained generation hops mid-cascade.
+- **Failure handling + Retry** — failed replies render distinct with a
+  Retry action that reconstructs the original call.
+- **Escalation acknowledgment** — one-way Acknowledge control on
+  "Needs your decision" messages.
+- **High-risk content confirmation gate** — messages flagged high-risk
+  render masked behind a "Confirm to reveal" gate.
+- **Model + latency indicator** — real measured model name and response
+  time shown under successful agent replies.
+
+**Fixed:**
+
+- **PR #98 (`feat/in-app-auto-update`) merged into `main`** — the actual
+  blocker was `package.json`/`package-lock.json` never declaring
+  `@tauri-apps/plugin-updater`/`@tauri-apps/plugin-process` despite
+  `node_modules` having them installed and `UpdaterNotification.tsx`
+  importing them; a fresh `npm ci` would have failed the build. Rust-side
+  plugin wiring was already correct on `main`. In-app auto-update
+  (`check()` → `downloadAndInstall()` → `relaunch()`) is now code-complete,
+  though not yet verified against a real signed release.
+- **Doc Count Freshness CI check** — 9 stale numeric claims across
+  README.md/ARCHITECTURE.md/AGENTS.md (lib.rs line count, service/test
+  file counts) corrected against real computed values.
+- Live-verification (not just mocked tests) found and fixed a real bug:
+  `generateOllamaResponse`'s hardcoded 30s timeout failed against a real
+  multi-model Ollama instance (cold model swap alone took 47.3s) — bumped
+  to 120s in `src/lib/ollama.js`.
+
+---
+
 ## [Unreleased] — 2026-07-10
 
 ### User bug-report pass — 15 issues fixed, root causes verified against real code
