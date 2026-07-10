@@ -24,7 +24,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~2,056 lines, 105 Tauri commands (across 25 modules)
+  src/lib.rs           ~2,054 lines, 105 Tauri commands (across 25 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -88,7 +88,7 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 - Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
 ## Do Not Duplicate
-Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 165 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 168 services already exist.
 
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.
