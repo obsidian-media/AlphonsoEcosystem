@@ -8,6 +8,7 @@ import {
   addThreadMessage,
   migrateLegacySessions,
   parseMentions,
+  findCrossThreadContext,
   type BoardroomThread,
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
@@ -139,11 +140,13 @@ export function BoardroomChatView() {
       hopsUsed += 1;
 
       const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
+      const crossThreadContext = findCrossThreadContext({ excludeThreadId: activeThreadId, queryText: text });
       const result = await generateAgentResponse({
         agentId,
         topic: activeThread.topic,
         priorMessages,
-        newMessageText: text
+        newMessageText: text,
+        crossThreadContext
       });
       const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
       addThreadMessage({ threadId: activeThreadId, speaker: agentId, content: replyText });

@@ -252,4 +252,32 @@ describe('BoardroomChatView', () => {
     expect(escalation).toBeInTheDocument();
     expect(facilitator.generateAgentResponse.mock.calls.length).toBeLessThanOrEqual(3);
   });
+
+  it('passes cross-thread context to generateAgentResponse when relevant history exists in another thread', async () => {
+    const threadService = await import('../services/boardroomThreadService');
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'Based on that, yes.' });
+
+    const otherThread = threadService.createThread({ topic: 'Q3 Pricing', participants: ['jose'] });
+    threadService.addThreadMessage({ threadId: otherThread.id, speaker: 'jose', content: 'Tiered pricing decided for enterprise renewal contracts.' });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Renewal Terms' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Renewal Terms');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Jose what did we decide about renewal pricing contracts?' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText('Based on that, yes.');
+    expect(facilitator.generateAgentResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        crossThreadContext: expect.arrayContaining([
+          expect.objectContaining({ threadTopic: 'Q3 Pricing' })
+        ])
+      })
+    );
+  });
 });
