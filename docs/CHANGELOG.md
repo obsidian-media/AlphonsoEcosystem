@@ -6,6 +6,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-10 (v2.6.0 live bug pass)
+
+### 6 live bugs found and fixed after installing the v2.6.0 release
+
+The user installed v2.6.0, confirmed the in-app auto-updater works end-to-end
+for the first time, then reported 7 issues found using the real app. Fixed on
+a dedicated `DEBUGGING` branch, merged to `main` once verified. Full
+narrative: `docs/ALPHONSO_GROUND_TRUTH.md` §11.17.
+
+**Fixed:**
+
+- **Coach Mode falsely reported "requires Tauri runtime" inside the real
+  installed app** — wrong global check (`window.__TAURI__` instead of
+  `window.__TAURI_INTERNALS__`, which Tauri v2 actually sets) silently
+  swallowed every real Coach Mode failure.
+- **Telegram connector showed green/connected but "Test" said credentials
+  were missing** — Test read from a completely different, unrelated storage
+  location than where credentials are actually saved.
+- **Telegram never responded to `/start` at all** — a credential-cache race
+  at boot permanently poisoned the cache to empty before hydration ever
+  ran, so Telegram (and WhatsApp) companion startup silently never fired.
+- **Mobile Companion connected but rejected nearly every message** as "not
+  recognized as a Jose command" — a ChatView-only routing heuristic was
+  wrongly treated as a hard reject with no plain-chat fallback for the
+  companion channel.
+- **The Voice sidebar page was completely empty** — the nav item existed
+  but no view was ever built for it. Added a real status/Start/Stop/WS-URL
+  panel (`VoiceView.tsx`).
+- **Voice OS would not start even after "installing" it via Runtime Hub**
+  — two independent Voice OS provisioning systems never agreed on where
+  the Python virtual environment lives, so a successful Runtime Hub
+  install was invisible to the actual launch command.
+
+**Not yet fixed:** "output lands somewhere unknown, can't find" — user's
+description was cut off before landing; needs clarification.
+
+---
+
 ## [Unreleased] — 2026-07-10 (later same day)
 
 ### Boardroom rebuild (12 phases, real-time multi-agent group chat) + PR #98 merged

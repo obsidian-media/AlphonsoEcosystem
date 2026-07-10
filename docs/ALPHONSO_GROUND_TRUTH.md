@@ -1723,6 +1723,134 @@ items listed above.
 
 ---
 
+## 11.17 v2.6.0 live-verification bug pass — 6 real bugs found and fixed on a dedicated `DEBUGGING` branch (2026-07-10)
+
+The user installed the v2.6.0 release built in 11.16, verified the
+in-app auto-updater end-to-end for the first time (confirmed working —
+banner shown, installer downloaded, old version uninstalled, new
+version installed), and then reported 7 live issues. Per explicit user
+instruction, all investigation and fixes happened on a dedicated
+`DEBUGGING` branch (never on `main` directly) and were merged back only
+once confirmed. Every root cause below was found by reading the actual
+code paths involved, not by guessing from symptoms — several turned
+out to be structurally different bugs than their symptoms suggested.
+
+**Fixed (6 of 7), each with real tests, `cargo fmt`/`clippy -D warnings`
+clean where Rust was touched:**
+
+1. **Coach Mode wrongly said "requires Tauri runtime" inside the
+   real installed desktop app.** `CoachContext.jsx` (3 call sites) and
+   `telegramCompanionService.js`'s `isTauriAvailable()` checked
+   `window.__TAURI__ !== undefined` — but Tauri v2 never sets that
+   global unless `app.withGlobalTauri` is enabled in `tauri.conf.json`
+   (it isn't, and was never intended to be). The correct check, already
+   used correctly everywhere else in the codebase (`App.tsx`,
+   `RuntimeManagerView.tsx`, `nativeSelfDevelopmentAutostartService.ts`),
+   is `window.__TAURI_INTERNALS__`. The broken check meant
+   `isTauriDesktop` was always `false`, so every real Coach Mode failure
+   inside the installed app (e.g. a missing window capability grant) was
+   silently reclassified as the expected-in-browser no-op message
+   instead of surfacing the actual error.
+2. **Telegram connector showed green/connected in Settings, but
+   clicking "Test" said credentials were missing.** Not a race
+   condition — `checkTelegramConnection`'s no-options fallback read the
+   bot token from `localStorage['alphonso_connector_auth_profiles_v1']`
+   under a `profiles[connectorId].apiKey` field, a completely different
+   storage location and shape than where credentials are actually saved
+   (`connectorAuth.ts`'s `saveConnectorCredential`, SQLite-backed under
+   `alphonso_connector_credentials_v1`, keyed per-field e.g.
+   `TELEGRAM_BOT_TOKEN`). The two systems never intersected — Test could
+   never find a real token no matter what was saved in Settings.
+3. **Telegram never responded to `/start` at all — not even the
+   "pairing blocked" message.** `connectorAuth.ts`'s credential cache
+   starts `null` and is only populated by an async
+   `hydrateConnectorCredentialsFromSqlite()` call. `readAllCredentials()`
+   locks the cache to `{}` the instant *anything* reads a credential
+   before that hydrate resolves — and `useBootEffects.js`'s
+   Telegram/WhatsApp companion-startup effects did exactly that, reading
+   the token synchronously on mount with no hydrate call anywhere in the
+   boot path. Once poisoned, the cache stays empty for
+   `CRED_CACHE_TTL_MS` (60s), and any later default (`force=false`)
+   hydrate call is a no-op due to `readAllCredentials`' own early-return
+   guard — so `startTelegramCompanion()`/`startWhatsAppCompanion()` were
+   silently never invoked, every boot, regardless of what was saved.
+4. **Mobile Companion connected successfully but rejected nearly
+   everything typed from the phone** with "Command not recognized as a
+   Jose command." The iOS companion handler in `App.tsx` treated a
+   `false` result from `isJoseIntakeCommand()`/`shouldRouteThroughJose()`
+   as an outright rejection. Those two functions decide, within
+   ChatView's own regular chat flow, between routing through Jose's
+   multi-agent pipeline vs. answering directly via Ollama — returning
+   `false` for ordinary messages (a greeting, a plain statement) is the
+   *correct* signal there, since ChatView has a plain-chat fallback. The
+   companion channel has no such fallback, so almost every message
+   bounced. Fixed by always routing companion commands through Jose, per
+   the effect's own stated purpose.
+5. **The "Voice" sidebar page was completely empty.** `Sidebar.tsx` has
+   always had a `id: 'voice'` nav item, but `App.tsx` never had a
+   matching `activeTab === 'voice'` render branch — clicking it just
+   showed blank content, and no Voice OS control view had ever been
+   built. New `VoiceView.tsx`: real status (polled from the actual
+   `voice_status` Tauri command), Start/Stop, the WebSocket URL once
+   running, and a Python-prerequisite warning. Wired via the same
+   named-export lazy-import `.then()` mapping pattern the rest of
+   `App.tsx` uses, verified against `appLazyImports.test.js` — the
+   regression test that exists specifically because a missing mapping
+   for `BoardroomView` crashed the whole app earlier in this project's
+   history (§11.9).
+6. **Voice OS would not actually start, even after using Runtime
+   Hub to "install" it.** The deepest bug of the six: two completely
+   independent Voice OS provisioning systems exist that never agreed on
+   where the Python virtual environment lives. Runtime Hub's `"voice-os"`
+   `ToolDef` (`runtime_manager.rs`) is the *only* thing that ever
+   `pip install`s Voice OS's dependencies (faster-whisper, piper-tts,
+   fastapi, uvicorn, etc.) — into a venv at
+   `runtimes_dir()/voice-os/venv` (`%APPDATA%\Alphonso\runtimes\voice-os\venv`
+   on Windows). But `voice_sidecar.rs`'s `voice_start` — the command
+   actually wired to the boot watchdog and the new Voice page — only
+   ever checked for a venv under the *bundled app resource directory*, a
+   location nothing ever creates a venv in. So even a fully successful
+   Runtime Hub install was invisible to the real launch path:
+   `voice_start` would silently fall through to bare system `python`,
+   which crashes on the first missing import unless every dependency
+   happened to be installed globally. Fixed with a new
+   `resolve_voice_python()` helper (checks the Runtime Hub venv first,
+   falls back to a bundled-resource venv, then bare system python as a
+   last resort) and 3 new Rust unit tests covering all three resolution
+   paths.
+
+**Not yet fixed (1 of 7):** "output lands somewhere unknown, can't
+find" — the user's message describing this was cut off before the
+detail landed; needs clarification on what output and where it was
+expected before this can be investigated.
+
+**Process note:** all 6 fixes were committed individually on
+`DEBUGGING` (never `main` directly, per explicit instruction), each with
+its own real test (or, for the one exception — the `App.tsx` iOS
+companion fix — a documented reason a new test wasn't added: the fix
+sits inside an inline Tauri `listen()` callback in a 2000+-line
+component with no existing mock harness, and building one from scratch
+was judged disproportionate to a structurally trivial one-branch
+removal; verified instead via full typecheck + lint + the existing
+suite). A recurring hazard during this pass: this working directory is
+shared with a concurrent OpenCode session actively expanding test
+coverage on its own `TestParallal` branch — several `git stash
+push --include-untracked` / commit / `git stash pop` cycles were needed
+to keep OpenCode's uncommitted, unrelated stray files (which the shared
+pre-commit lint hook would otherwise fail on) out of these commits
+without disturbing or deleting any of that work. `DEBUGGING` was merged
+into `main` via `git merge --no-ff` (commit `ef0ce1b`) once all 6 fixes
+were verified, then deleted both locally and on `origin` per explicit
+instruction. Doc-count drift from 3 new JS test files + 3 new Rust unit
+tests fixed in the same pass (`410d4b0`).
+
+Commits (`DEBUGGING`, in order): `175ee28` (Coach Mode), `edf5727`
+(Telegram Test), `802eb23` (Telegram/WhatsApp boot start), `9335c79`
+(Mobile Companion), `ab1b505` (Voice page), `4e6b758` (Voice OS venv
+resolution). Merge: `ef0ce1b`. Doc fix: `410d4b0`.
+
+---
+
 ## 12. Known Audit Errors (for future reference)
 
 These errors appeared in `ALPHONSO-AUDIT-2026-05-31.md` and `ALPHONSO_PARALLEL_SUBAGENTS_2026-05-31.md`. They are recorded here so future sessions do not repeat them.
