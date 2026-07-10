@@ -1,8 +1,16 @@
 # Alphonso In-App Auto-Update — Handoff Plan
 
 **Prepared by:** Claude Code (2026-07-10)
-**Branch:** `feat/in-app-auto-update` (created empty, work not started)
-**Status:** Not started — this document is the complete scope for whoever picks it up
+**Branch:** `feat/in-app-auto-update` (merged into `main` via PR #98 on 2026-07-10)
+**Status:** CLOSED — implemented (`UpdaterNotification.tsx` real `check()` →
+`downloadAndInstall()` → `relaunch()` flow) and merged. Code-complete but
+**not yet verified against a real signed release** — that needs an actual
+version bump + tag. Kept for historical context (this doc's scope/rationale
+still explains why the flow works the way it does). See
+`docs/ALPHONSO_GROUND_TRUTH.md` §11.16 for the merge narrative, including
+the real blocker found (missing `package.json` dependency declarations for
+`@tauri-apps/plugin-updater`/`plugin-process`, not the plugin wiring itself
+— that was already correct on `main`).
 **Single source of truth:** `docs/ALPHONSO_GROUND_TRUTH.md`
 
 ---
