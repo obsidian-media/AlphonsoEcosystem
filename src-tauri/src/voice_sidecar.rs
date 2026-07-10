@@ -43,7 +43,7 @@ pub async fn voice_start(
       "--host",
       "127.0.0.1",
       "--port",
-      "8765",
+      "8766",
       "--app-dir",
     ])
     .arg(&backend_path)

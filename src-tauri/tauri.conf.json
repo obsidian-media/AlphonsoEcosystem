@@ -33,7 +33,7 @@
       "showMenuOnLeftClick": false
     },
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:11434 http://localhost:5173 http://localhost:4444 http://localhost:4000 http://localhost:7860 http://localhost:8188 http://127.0.0.1:8188 http://localhost:5678 http://localhost:8765 http://127.0.0.1:8765 ws://localhost:8765 ws://127.0.0.1:8765 https://api.anthropic.com https://api.openai.com https://api.telegram.org https://graph.facebook.com https://api.clickup.com https://api.notion.com https://www.googleapis.com https://openrouter.ai https://generativelanguage.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:11434 http://localhost:5173 http://localhost:4444 http://localhost:4000 http://localhost:7860 http://localhost:8188 http://127.0.0.1:8188 http://localhost:5678 http://localhost:8766 http://127.0.0.1:8766 ws://localhost:8766 ws://127.0.0.1:8766 https://api.anthropic.com https://api.openai.com https://api.telegram.org https://graph.facebook.com https://api.clickup.com https://api.notion.com https://www.googleapis.com https://openrouter.ai https://generativelanguage.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;"
     }
   },
   "bundle": {

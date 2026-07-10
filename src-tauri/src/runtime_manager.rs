@@ -162,7 +162,7 @@ const TOOLS: &[ToolDef] = &[
   ToolDef {
     name: "voice-os",
     display_name: "Voice OS",
-    description: "Alphonso Voice OS — STT (faster-whisper) + LLM + TTS (piper) WebSocket pipeline on :8765",
+    description: "Alphonso Voice OS — STT (faster-whisper) + LLM + TTS (piper) WebSocket pipeline on :8766",
     repo_url: None,
     pip_packages: &[
       "faster-whisper",
@@ -172,12 +172,13 @@ const TOOLS: &[ToolDef] = &[
       "uvicorn[standard]",
       "websockets",
       "numpy",
+      "httpx",
     ],
     requirements_file: None,
-    port: Some(8765),
+    port: Some(8766),
     health_path: Some("/health"),
     exe: "python",
-    args: &["voice/backend/main.py", "--host", "127.0.0.1", "--port", "8765"],
+    args: &["voice/backend/main.py", "--host", "127.0.0.1", "--port", "8766"],
   },
   ToolDef {
     name: "n8n",

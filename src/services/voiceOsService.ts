@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendAgentActivity } from './agentActivityService.js';
 
-const DEFAULT_WS_URL = 'ws://127.0.0.1:8765/ws';
+const DEFAULT_WS_URL = 'ws://127.0.0.1:8766/ws';
 
 export async function startVoiceServer() {
   const result = await invoke('voice_start');

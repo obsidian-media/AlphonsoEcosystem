@@ -74,13 +74,13 @@ describe('voiceOsService', () => {
   it('getVoiceWebSocketUrl returns default when no saved URL', () => {
     localStorageMock.getItem.mockReturnValue(null);
     const url = getVoiceWebSocketUrl();
-    expect(url).toBe('ws://127.0.0.1:8765/ws');
+    expect(url).toBe('ws://127.0.0.1:8766/ws');
   });
 
   it('getVoiceWebSocketUrl returns default when saved URL invalid', () => {
     localStorageMock.getItem.mockReturnValue('http://invalid.url');
     const url = getVoiceWebSocketUrl();
-    expect(url).toBe('ws://127.0.0.1:8765/ws');
+    expect(url).toBe('ws://127.0.0.1:8766/ws');
   });
 
   it('startVoiceWatchdog sets up interval and resets failure count', () => {
