@@ -168,4 +168,49 @@ describe('parseMentions', () => {
     const { parseMentions } = await import('../../services/boardroomThreadService');
     expect(parseMentions('the email is foo@hector.com', KNOWN_AGENT_IDS)).toEqual([]);
   });
+
+  describe('findCrossThreadContext', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('finds keyword-overlapping messages from other threads, excluding the current thread', async () => {
+      const { createThread, addThreadMessage, findCrossThreadContext } = await import('../../services/boardroomThreadService');
+      const pricing = createThread({ topic: 'Q3 Pricing', participants: ['jose'] });
+      addThreadMessage({ threadId: pricing.id, speaker: 'jose', content: 'We decided on a tiered pricing structure for enterprise renewal contracts.' });
+      const other = createThread({ topic: 'Unrelated Thread', participants: ['hector'] });
+      addThreadMessage({ threadId: other.id, speaker: 'hector', content: 'Completely different market research about weather patterns.' });
+      const current = createThread({ topic: 'Renewal Terms', participants: ['jose'] });
+
+      const results = findCrossThreadContext({ excludeThreadId: current.id, queryText: 'what did we decide about renewal pricing?' });
+
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0].threadTopic).toBe('Q3 Pricing');
+      expect(results.some((r) => r.threadTopic === current.id)).toBe(false);
+    });
+
+    it('returns an empty array when nothing overlaps', async () => {
+      const { createThread, addThreadMessage, findCrossThreadContext } = await import('../../services/boardroomThreadService');
+      const other = createThread({ topic: 'Zzz Thread', participants: ['hector'] });
+      addThreadMessage({ threadId: other.id, speaker: 'hector', content: 'xyzzy plugh qwerty asdf.' });
+      const current = createThread({ topic: 'Current Thread', participants: ['jose'] });
+
+      const results = findCrossThreadContext({ excludeThreadId: current.id, queryText: 'completely unrelated banana topic' });
+
+      expect(results).toEqual([]);
+    });
+
+    it('caps results at maxResults', async () => {
+      const { createThread, addThreadMessage, findCrossThreadContext } = await import('../../services/boardroomThreadService');
+      for (let i = 0; i < 5; i++) {
+        const t = createThread({ topic: `Budget Thread ${i}`, participants: ['jose'] });
+        addThreadMessage({ threadId: t.id, speaker: 'jose', content: 'budget budget budget planning discussion here' });
+      }
+      const current = createThread({ topic: 'Current', participants: ['jose'] });
+
+      const results = findCrossThreadContext({ excludeThreadId: current.id, queryText: 'budget planning', maxResults: 3 });
+
+      expect(results.length).toBeLessThanOrEqual(3);
+    });
+  });
 });

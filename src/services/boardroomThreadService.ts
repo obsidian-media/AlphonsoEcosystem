@@ -116,6 +116,62 @@ export function listThreadMessages(threadId: string): BoardroomThreadMessage[] {
     .sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0) || (a.seq || 0) - (b.seq || 0));
 }
 
+export interface CrossThreadContextResult {
+  threadId: string;
+  threadTopic: string;
+  speaker: string;
+  content: string;
+  score: number;
+}
+
+const STOPWORDS = new Set([
+  'what', 'did', 'we', 'the', 'about', 'that', 'this', 'with', 'from',
+  'have', 'has', 'for', 'and', 'are', 'was', 'were', 'been', 'will',
+  'would', 'could', 'should', 'a', 'an', 'to', 'of', 'in', 'on', 'is', 'it'
+]);
+
+function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 3 && !STOPWORDS.has(w));
+}
+
+export function findCrossThreadContext({
+  excludeThreadId,
+  queryText,
+  maxResults = 3
+}: {
+  excludeThreadId: string;
+  queryText: string;
+  maxResults?: number;
+}): CrossThreadContextResult[] {
+  const queryKeywords = new Set(extractKeywords(queryText));
+  if (queryKeywords.size === 0) return [];
+
+  const threads = listThreads().filter((t) => t.id !== excludeThreadId);
+  const scored: CrossThreadContextResult[] = [];
+
+  for (const thread of threads) {
+    const messages = listThreadMessages(thread.id);
+    for (const message of messages) {
+      const messageKeywords = extractKeywords(message.content);
+      const score = messageKeywords.filter((w) => queryKeywords.has(w)).length;
+      if (score > 0) {
+        scored.push({
+          threadId: thread.id,
+          threadTopic: thread.topic,
+          speaker: message.speaker,
+          content: message.content,
+          score
+        });
+      }
+    }
+  }
+
+  return scored.sort((a, b) => b.score - a.score).slice(0, maxResults);
+}
+
 export function addThreadMessage({
   threadId,
   speaker,
