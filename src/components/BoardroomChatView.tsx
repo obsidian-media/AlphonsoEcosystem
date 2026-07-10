@@ -7,9 +7,11 @@ import {
   listThreadMessages,
   addThreadMessage,
   migrateLegacySessions,
+  parseMentions,
   type BoardroomThread,
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
+import { generateAlphonsoResponse } from '../services/boardroomFacilitatorService';
 
 const AGENT_PROFILES = listAgentProfiles();
 
@@ -57,6 +59,7 @@ export function BoardroomChatView() {
   const [composerText, setComposerText] = useState('');
   const [composerSpeaker, setComposerSpeaker] = useState('user');
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [facilitatorPending, setFacilitatorPending] = useState(false);
 
   const activeThread = useMemo(
     () => threads.find((t) => t.id === activeThreadId) ?? null,
@@ -84,11 +87,30 @@ export function BoardroomChatView() {
     setNewTopic('');
   }
 
-  function handleSend() {
-    if (!activeThreadId || !composerText.trim()) return;
-    addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: composerText.trim() });
+  async function handleSend() {
+    if (!activeThreadId || !activeThread || !composerText.trim()) return;
+    const text = composerText.trim();
+    addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
     setMessages(listThreadMessages(activeThreadId));
     setComposerText('');
+
+    const mentions = parseMentions(text, AGENT_PROFILES.map((p: { id: string }) => p.id));
+    if (mentions.length === 0 && composerSpeaker !== 'alphonso') {
+      setFacilitatorPending(true);
+      const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
+      const result = await generateAlphonsoResponse({
+        topic: activeThread.topic,
+        priorMessages,
+        newMessageText: text
+      });
+      addThreadMessage({
+        threadId: activeThreadId,
+        speaker: 'alphonso',
+        content: result.ok ? result.text : `Alphonso couldn't respond: ${result.error}`
+      });
+      setMessages(listThreadMessages(activeThreadId));
+      setFacilitatorPending(false);
+    }
   }
 
   function handleComposerChange(value: string) {
@@ -158,6 +180,9 @@ export function BoardroomChatView() {
                 <MessageBubble key={m.id} message={m} />
               ))}
             </div>
+            {facilitatorPending && (
+              <div className="px-4 pb-1 text-xs text-[var(--text-3)]">Alphonso is thinking…</div>
+            )}
             <div className="flex items-center gap-2 border-t border-[var(--border)] p-3">
               <select
                 value={composerSpeaker}
