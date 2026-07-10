@@ -1,5 +1,6 @@
 import { generateOllamaResponse, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { listAgentProfiles } from '../agents/agentRegistry';
+import type { CrossThreadContextResult } from './boardroomThreadService';
 
 const DEFAULT_MODEL = 'llama3.2:3b';
 
@@ -48,19 +49,25 @@ export function buildFacilitatorPrompt({
   topic,
   priorMessages,
   newMessageText,
-  agentId = 'alphonso'
+  agentId = 'alphonso',
+  crossThreadContext = []
 }: {
   topic: string;
   priorMessages: FacilitatorMessage[];
   newMessageText: string;
   agentId?: string;
+  crossThreadContext?: CrossThreadContextResult[];
 }): string {
   const historyLines = priorMessages.map((m) => `${m.speaker}: ${m.content}`).join('\n');
+  const crossThreadLines = crossThreadContext
+    .map((c) => `[${c.threadTopic}] ${c.speaker}: ${c.content}`)
+    .join('\n');
   return [
     buildAgentSystemPrompt(agentId),
     '',
     `Thread topic: ${topic}`,
     historyLines ? `\nConversation so far:\n${historyLines}` : '',
+    crossThreadLines ? `\nRelevant context from other threads (may or may not apply — use judgment):\n${crossThreadLines}` : '',
     `\nuser: ${newMessageText}`,
     `\n${agentId}:`
   ].join('\n');
@@ -71,6 +78,7 @@ export async function generateAgentResponse({
   topic,
   priorMessages,
   newMessageText,
+  crossThreadContext = [],
   endpoint = DEFAULT_OLLAMA_ENDPOINT,
   model = DEFAULT_MODEL
 }: {
@@ -78,10 +86,11 @@ export async function generateAgentResponse({
   topic: string;
   priorMessages: FacilitatorMessage[];
   newMessageText: string;
+  crossThreadContext?: CrossThreadContextResult[];
   endpoint?: string;
   model?: string;
 }): Promise<FacilitatorResult> {
-  const prompt = buildFacilitatorPrompt({ topic, priorMessages, newMessageText, agentId });
+  const prompt = buildFacilitatorPrompt({ topic, priorMessages, newMessageText, agentId, crossThreadContext });
   try {
     const result = await generateOllamaResponse({ endpoint, model, prompt });
     return { ok: true, text: (result?.response || '').trim() };

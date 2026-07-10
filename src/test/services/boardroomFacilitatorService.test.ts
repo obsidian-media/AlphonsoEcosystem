@@ -130,4 +130,35 @@ describe('boardroomFacilitatorService', () => {
       expect(result.error).toContain('Ollama is not running');
     });
   });
+
+  describe('cross-thread context in prompts', () => {
+    it('includes a labeled cross-thread context block when crossThreadContext is provided', async () => {
+      const { buildFacilitatorPrompt } = await import('../../services/boardroomFacilitatorService');
+      const prompt = buildFacilitatorPrompt({
+        topic: 'Renewal Terms',
+        priorMessages: [],
+        newMessageText: 'What did we decide on pricing?',
+        agentId: 'jose',
+        crossThreadContext: [
+          { threadId: 't1', threadTopic: 'Q3 Pricing', speaker: 'jose', content: 'Tiered pricing decided.', score: 2 }
+        ]
+      });
+
+      expect(prompt).toContain('Relevant context from other threads');
+      expect(prompt).toContain('Q3 Pricing');
+      expect(prompt).toContain('Tiered pricing decided.');
+    });
+
+    it('omits the cross-thread block entirely when no context is provided', async () => {
+      const { buildFacilitatorPrompt } = await import('../../services/boardroomFacilitatorService');
+      const prompt = buildFacilitatorPrompt({
+        topic: 'Renewal Terms',
+        priorMessages: [],
+        newMessageText: 'Hello',
+        agentId: 'jose'
+      });
+
+      expect(prompt).not.toContain('Relevant context from other threads');
+    });
+  });
 });
