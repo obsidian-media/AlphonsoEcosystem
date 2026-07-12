@@ -42,23 +42,29 @@ struct ContentView: View {
                 }
                 .tag(1)
 
+            VoiceView()
+                .tabItem {
+                    Label("Voice", systemImage: "mic.fill")
+                }
+                .tag(2)
+
             AgentDockView()
                 .tabItem {
                     Label("Agents", systemImage: "person.2")
                 }
-                .tag(2)
+                .tag(3)
 
             BoardroomView()
                 .tabItem {
                     Label("Boardroom", systemImage: "chart.bar")
                 }
-                .tag(3)
+                .tag(4)
 
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
-                .tag(4)
+                .tag(5)
         }
     }
 }

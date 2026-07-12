@@ -50,5 +50,9 @@
 	<array>
 		<string>_alphonso._tcp</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Alphonso uses the microphone for voice conversations.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Alphonso uses speech recognition to transcribe your voice.</string>
 </dict>
 </plist>

@@ -21,17 +21,25 @@ AlphonsoCompanion/
 ├── AlphonsoCompanionApp.swift  — @main entry, DI setup
 ├── ContentView.swift           — Tab view container
 ├── Assets.xcassets/AgentAvatars — agent portrait assets used in Agent Dock
+├── Models/
+│   ├── ConnectionState.swift   — connection and boardroom data models
+│   └── VoiceSession.swift      — voice mode, transcript, and view model
 ├── Views/
 │   ├── ChatView.swift          — Message list, streaming
+│   ├── VoiceView.swift        — Voice shell with local/cloud mode switch
 │   ├── AgentDockView.swift     — 9-agent status grid
 │   ├── BoardroomView.swift     — Goals/batches/tasks
 │   ├── PairingView.swift       — mDNS scan, PIN entry
 │   └── SettingsView.swift      — Connection status
 └── Services/
     ├── WebSocketService.swift    — Client with auth/reconnect
-    └── MDNSService.swift       — Bonjour browser
+    ├── VoiceAudioService.swift   — Mic capture, transcription, and TTS
+    ├── CompanionConnectionStateMachine.swift — reconnect/auth state machine
+    └── MDNSService.swift         — Bonjour browser
 ```
 
 ## Tests
 - `AlphonsoCompanionTests` contains unit coverage for the connection state machine.
+- `VoiceSessionViewModelTests` covers the new voice shell state transitions.
 - `AlphonsoCompanionUITests` contains the launch smoke test for the mobile shell.
+- The Voice tab is split into `Local` and `Cloud` modes so the STT/TTS wiring can diverge cleanly later.
