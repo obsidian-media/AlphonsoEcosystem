@@ -20,6 +20,7 @@ Open `ios/AlphonsoCompanion/AlphonsoCompanion.xcodeproj` in Xcode 15+ on macOS.
 AlphonsoCompanion/
 ├── AlphonsoCompanionApp.swift  — @main entry, DI setup
 ├── ContentView.swift           — Tab view container
+├── Assets.xcassets/AgentAvatars — agent portrait assets used in Agent Dock
 ├── Views/
 │   ├── ChatView.swift          — Message list, streaming
 │   ├── AgentDockView.swift     — 9-agent status grid
@@ -30,3 +31,7 @@ AlphonsoCompanion/
     ├── WebSocketService.swift    — Client with auth/reconnect
     └── MDNSService.swift       — Bonjour browser
 ```
+
+## Tests
+- `AlphonsoCompanionTests` contains unit coverage for the connection state machine.
+- `AlphonsoCompanionUITests` contains the launch smoke test for the mobile shell.

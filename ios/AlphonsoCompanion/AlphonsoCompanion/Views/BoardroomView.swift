@@ -9,16 +9,21 @@ struct BoardroomView: View {
                 if webSocketService.boardroomSessions.isEmpty {
                     Section {
                         VStack(spacing: 12) {
-                            Image(systemName: "tray")
+                            Image(systemName: webSocketService.connectionState == .authenticated ? "tray" : "wifi.slash")
                                 .font(.largeTitle)
                                 .foregroundStyle(.secondary)
-                            Text("No boardroom sessions yet")
+                            Text(webSocketService.connectionState == .authenticated ? "No boardroom sessions yet" : "Connect to the desktop to load boardroom sessions")
                                 .font(.headline)
                                 .foregroundStyle(.secondary)
-                            Text("Sessions will appear here when tasks are executed on the desktop.")
+                            Text(webSocketService.connectionState == .authenticated ? "Sessions will appear here when tasks are executed on the desktop." : "Boardroom data is only available once the companion is paired and authenticated.")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                                 .multilineTextAlignment(.center)
+                            if let lastBoardroomRefreshAt = webSocketService.lastBoardroomRefreshAt {
+                                Text("Last refresh \(lastBoardroomRefreshAt, style: .relative) ago")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
@@ -46,6 +51,17 @@ struct BoardroomView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
+                        }
+                    }
+                }
+
+                if let lastBoardroomRefreshAt = webSocketService.lastBoardroomRefreshAt {
+                    Section("Sync") {
+                        HStack {
+                            Text("Last refresh")
+                            Spacer()
+                            Text(lastBoardroomRefreshAt, style: .relative)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }

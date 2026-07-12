@@ -10,6 +10,23 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 ScrollViewReader { proxy in
                     ScrollView {
+                        if webSocketService.messages.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: webSocketService.connectionState == .authenticated ? "message" : "wifi.slash")
+                                    .font(.largeTitle)
+                                    .foregroundStyle(.secondary)
+                                Text(webSocketService.connectionState == .authenticated ? "No messages yet" : "Connect to the desktop to start chatting")
+                                    .font(.headline)
+                                    .foregroundStyle(.secondary)
+                                if let lastMessageReceivedAt = webSocketService.lastMessageReceivedAt {
+                                    Text("Last message \(lastMessageReceivedAt, style: .relative)")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
+                        }
                         LazyVStack(alignment: .leading, spacing: 12) {
                             let msgs = Array(webSocketService.messages)
                             ForEach(msgs) { msg in
@@ -41,6 +58,16 @@ struct ChatView: View {
                 .background(.regularMaterial)
             }
             .navigationTitle("Chat")
+            .safeAreaInset(edge: .top) {
+                if let hint = webSocketService.connectionHint,
+                   webSocketService.connectionState != .authenticated {
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                        .padding(.top, 4)
+                }
+            }
             .toolbar {
                 if webSocketService.connectionState == .authenticated {
                     Button("Status") {

@@ -19,11 +19,49 @@ struct PairingView: View {
                 )
 
                 Button("Enter IP Manually") {
+                    selectedHost = nil
                     showingManualEntry = true
                 }
                 .foregroundColor(.accentColor)
                 .padding(.horizontal)
                 .padding(.top, 8)
+
+                if !webSocketService.recentEndpoints.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recent connections")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(webSocketService.recentEndpoints) { endpoint in
+                                    Button {
+                                        selectedHost = nil
+                                        manualHost = endpoint.host
+                                        manualPort = "\(endpoint.port)"
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(endpoint.displayName)
+                                                .font(.subheadline.weight(.semibold))
+                                            Text("\(endpoint.host):\(endpoint.port)")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 10)
+                                        .frame(minWidth: 140, alignment: .leading)
+                                        .background(.thinMaterial)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding(.bottom, 8)
+                }
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("PIN Code")
@@ -33,6 +71,7 @@ struct PairingView: View {
                     TextField("6-digit PIN from desktop", text: $pin)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("pairing-pin-field")
                         .onChange(of: pin) { _, newValue in
                             let filtered = newValue.filter { $0.isNumber }
                             if filtered.count > 6 {
@@ -62,6 +101,7 @@ struct PairingView: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                     }
+                    .accessibilityIdentifier("pairing-connect-button")
                     .disabled(!canConnect)
                     .buttonStyle(.plain)
                 }
@@ -72,6 +112,13 @@ struct PairingView: View {
                     Text(error)
                         .foregroundColor(.red)
                         .font(.caption)
+                        .padding(.horizontal)
+                }
+
+                if let hint = webSocketService.connectionHint {
+                    Text(hint)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal)
                         .padding(.bottom, 8)
                 }
@@ -117,12 +164,24 @@ struct PairingView: View {
         if let selected = selectedHost {
             // Resolve the mDNS service endpoint to a real IP before connecting
             mdnsService.resolveHost(selected) { resolvedHost, resolvedPort in
-                self.webSocketService.connect(host: resolvedHost, port: resolvedPort, pin: pin)
+                self.webSocketService.connect(
+                    host: resolvedHost,
+                    port: resolvedPort,
+                    pin: pin,
+                    displayName: selected.name,
+                    source: "bonjour"
+                )
             }
         } else {
             let host = manualHost
             let port = UInt16(manualPort) ?? 8765
-            webSocketService.connect(host: host, port: port, pin: pin)
+            webSocketService.connect(
+                host: host,
+                port: port,
+                pin: pin,
+                displayName: host,
+                source: "manual"
+            )
         }
     }
 }

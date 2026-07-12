@@ -18,6 +18,11 @@
 		A1000008 /* BoardroomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* BoardroomView.swift */; };
 		A1000009 /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009 /* PairingView.swift */; };
 		A100000A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A /* SettingsView.swift */; };
+		B1000000 /* CompanionConnectionStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001 /* CompanionConnectionStateMachine.swift */; };
+		B1000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B2000003 /* XCTest.framework */; };
+		B1000002 /* CompanionConnectionStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002 /* CompanionConnectionStateMachineTests.swift */; };
+		C1000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C2000003 /* XCTest.framework */; };
+		C1000002 /* AlphonsoCompanionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* AlphonsoCompanionUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +39,13 @@
 		A200000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A200000C /* AlphonsoCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlphonsoCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A200000D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B2000001 /* CompanionConnectionStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionConnectionStateMachine.swift; sourceTree = "<group>"; };
+		B2000002 /* CompanionConnectionStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionConnectionStateMachineTests.swift; sourceTree = "<group>"; };
+		B2000003 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+		B2000004 /* AlphonsoCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlphonsoCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C2000001 /* AlphonsoCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphonsoCompanionUITests.swift; sourceTree = "<group>"; };
+		C2000003 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+		C2000004 /* AlphonsoCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlphonsoCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +56,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B3000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000001 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1000001 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -51,6 +79,8 @@
 			isa = PBXGroup;
 			children = (
 				A4000002 /* AlphonsoCompanion */,
+				A4000007 /* AlphonsoCompanionTests */,
+				C4000001 /* AlphonsoCompanionUITests */,
 				A4000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -81,6 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000003 /* WebSocketService.swift */,
+				B2000001 /* CompanionConnectionStateMachine.swift */,
 				A2000004 /* MDNSService.swift */,
 			);
 			path = Services;
@@ -90,6 +121,8 @@
 			isa = PBXGroup;
 			children = (
 				A200000C /* AlphonsoCompanion.app */,
+				B2000004 /* AlphonsoCompanionTests.xctest */,
+				C2000004 /* AlphonsoCompanionUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -104,6 +137,22 @@
 				A200000A /* SettingsView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		A4000007 /* AlphonsoCompanionTests */ = {
+			isa = PBXGroup;
+			children = (
+				B2000002 /* CompanionConnectionStateMachineTests.swift */,
+			);
+			path = AlphonsoCompanionTests;
+			sourceTree = "<group>";
+		};
+		C4000001 /* AlphonsoCompanionUITests */ = {
+			isa = PBXGroup;
+			children = (
+				C2000001 /* AlphonsoCompanionUITests.swift */,
+			);
+			path = AlphonsoCompanionUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -126,6 +175,40 @@
 			productReference = A200000C /* AlphonsoCompanion.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B5000001 /* AlphonsoCompanionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B7000003 /* Build configuration list for PBXNativeTarget "AlphonsoCompanionTests" */;
+			buildPhases = (
+				B6000001 /* Sources */,
+				B3000001 /* Frameworks */,
+				B6000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AlphonsoCompanionTests;
+			productName = AlphonsoCompanionTests;
+			productReference = B2000004 /* AlphonsoCompanionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		C5000001 /* AlphonsoCompanionUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C7000003 /* Build configuration list for PBXNativeTarget "AlphonsoCompanionUITests" */;
+			buildPhases = (
+				C6000001 /* Sources */,
+				C3000001 /* Frameworks */,
+				C6000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AlphonsoCompanionUITests;
+			productName = AlphonsoCompanionUITests;
+			productReference = C2000004 /* AlphonsoCompanionUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -138,6 +221,9 @@
 				TargetAttributes = {
 					A5000001 = {
 						CreatedOnToolsVersion = 15.0;
+					};
+					C5000001 = {
+						TestTargetID = A5000001;
 					};
 				};
 			};
@@ -155,6 +241,8 @@
 			projectRoot = "";
 			targets = (
 				A5000001 /* AlphonsoCompanion */,
+				B5000001 /* AlphonsoCompanionTests */,
+				C5000001 /* AlphonsoCompanionUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -185,6 +273,37 @@
 				A1000008 /* BoardroomView.swift in Sources */,
 				A1000009 /* PairingView.swift in Sources */,
 				A100000A /* SettingsView.swift in Sources */,
+				B1000000 /* CompanionConnectionStateMachine.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000002 /* CompanionConnectionStateMachineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C6000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1000002 /* AlphonsoCompanionUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C6000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,7 +382,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.4.4;
+				MARKETING_VERSION = 2.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.alphonso.companion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -291,11 +410,69 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.4.4;
+				MARKETING_VERSION = 2.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.alphonso.companion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "Alphonso_iOS";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B9000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alphonso.companionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AlphonsoCompanion.app/AlphonsoCompanion";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B9000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alphonso.companionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AlphonsoCompanion.app/AlphonsoCompanion";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C9000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alphonso.companionUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TEST_TARGET_NAME = AlphonsoCompanion;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C9000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alphonso.companionUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TEST_TARGET_NAME = AlphonsoCompanion;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -318,6 +495,24 @@
 			buildConfigurations = (
 				A9000003 /* Debug */,
 				A9000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B7000003 /* Build configuration list for PBXNativeTarget "AlphonsoCompanionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B9000001 /* Debug */,
+				B9000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C7000003 /* Build configuration list for PBXNativeTarget "AlphonsoCompanionUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C9000001 /* Debug */,
+				C9000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

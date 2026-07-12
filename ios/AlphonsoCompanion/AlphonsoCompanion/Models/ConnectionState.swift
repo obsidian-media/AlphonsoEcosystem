@@ -9,10 +9,25 @@ enum ConnectionState: String {
 }
 
 struct DiscoveredHost: Identifiable, Equatable {
-    let id = UUID()
     let name: String
     let host: String
     let port: UInt16
+
+    var id: String {
+        "\(name)|\(host)|\(port)"
+    }
+}
+
+struct ConnectionEndpoint: Identifiable, Codable, Equatable {
+    let host: String
+    let port: UInt16
+    let displayName: String
+    let source: String
+    let lastConnectedAt: Date
+
+    var id: String {
+        "\(host):\(port)"
+    }
 }
 
 struct Message: Identifiable, Codable {

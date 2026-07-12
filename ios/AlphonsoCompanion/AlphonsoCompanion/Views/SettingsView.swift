@@ -40,6 +40,15 @@ struct SettingsView: View {
                         }
                     }
 
+                    if webSocketService.connectionState == .connecting ||
+                       webSocketService.connectionState == .failed {
+                        Button {
+                            webSocketService.pauseReconnects()
+                        } label: {
+                            Label("Stop reconnecting", systemImage: "pause.circle")
+                        }
+                    }
+
                     Button("Disconnect") {
                         webSocketService.disconnect()
                     }
@@ -59,13 +68,45 @@ struct SettingsView: View {
                         Text("\(webSocketService.messages.count)")
                             .foregroundStyle(.secondary)
                     }
+                    if let lastMessageReceivedAt = webSocketService.lastMessageReceivedAt {
+                        HStack {
+                            Text("Last message")
+                            Spacer()
+                            Text(lastMessageReceivedAt, style: .relative)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if let lastBoardroomRefreshAt = webSocketService.lastBoardroomRefreshAt {
+                        HStack {
+                            Text("Boardroom refresh")
+                            Spacer()
+                            Text(lastBoardroomRefreshAt, style: .relative)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section("Diagnostics") {
+                    if let lastSuccessfulConnectionAt = webSocketService.lastSuccessfulConnectionAt {
+                        HStack {
+                            Text("Last connected")
+                            Spacer()
+                            Text(lastSuccessfulConnectionAt, style: .relative)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if let hint = webSocketService.connectionHint {
+                        Text(hint)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("About") {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.4.4")
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.6.0")
                             .foregroundStyle(.secondary)
                     }
                     
@@ -86,7 +127,7 @@ struct SettingsView: View {
                     port: $reconnectPort,
                     pin: $reconnectPin,
                     onConnect: { host, port, pin in
-                        webSocketService.connect(host: host, port: port, pin: pin)
+                        webSocketService.connect(host: host, port: port, pin: pin, displayName: host, source: "manual")
                         showReconnectSheet = false
                     },
                     onCancel: {
@@ -148,7 +189,7 @@ struct ReconnectSheet: View {
                             onConnect(host, portNum, pin)
                         }
                     }
-                    .disabled(host.isEmpty || pin.count != 6)
+                    .disabled(host.isEmpty || pin.count != 6 || UInt16(port) == nil)
                 }
             }
         }
