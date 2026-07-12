@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-12 (repo audit + typecheck fix + branch hygiene)
+
+Full narrative: `docs/ALPHONSO_GROUND_TRUTH.md` §11.18; fast-orientation doc: `FABLE5.md` (new, repo root).
+
+- **Fixed:** `npm run typecheck` was failing (`src/test/test-mocks.ts`
+  used untyped ambient `global.Date`; changed to `globalThis.Date`).
+- **Branch `TestParallal`:** requested for merge into `main`; investigation
+  found it had forked from an older `main` commit and was missing real
+  work (`VoiceView.tsx`, a Voice-OS venv fix, doc updates) main had
+  already gained — merging as-is would have regressed `main`. Its two
+  commits' only real content was unused Tauri/service test-mock
+  scaffolding (`src/test/tauri-mock.ts`, `src/test/test-mocks.ts`) behind
+  a commit message that falsely claimed 14 hook test files / 3738 tests.
+  Salvaged the scaffolding via a clean squash commit with an honest
+  message instead of merging the stale branch/history.
+- **Added:** `FABLE5.md` — a short fast-orientation doc for future agent
+  sessions, read before `CLAUDE.md`/`ALPHONSO_GROUND_TRUTH.md`.
+
 ## [Unreleased] — 2026-07-10 (v2.6.0 live bug pass)
 
 ### 6 live bugs found and fixed after installing the v2.6.0 release

@@ -95,6 +95,12 @@ re-derive them from 12 separate plan docs:
   mismatch) and isn't gating merges. Worth fixing so E2E coverage isn't
   silently broken.
 
+- [ ] `src/test/tauri-mock.ts` + `src/test/test-mocks.ts` (added 2026-07-12,
+  see `docs/ALPHONSO_GROUND_TRUTH.md` §11.18) — Tauri API + service-layer
+  mock scaffolding, imported by zero test files today. Either write the
+  hook tests it was intended for, or reconsider keeping unconsumed test
+  infrastructure around.
+
 ## Dead code — written but never wired in (found 2026-07-10)
 
 Real, substantial implementations (not stubs), confirmed via a full
