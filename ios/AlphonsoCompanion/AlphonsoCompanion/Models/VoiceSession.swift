@@ -170,6 +170,7 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var cloudLanguage: VoiceLanguage = .englishUS
     @Published var selectedAgent: VoiceAgent = .alphonso
     @Published var cloudStatus = "Cloud backend not configured"
+    @Published var cloudAuthStatus = "Sign in to enable Cloud Voice"
 
     private let audioService = VoiceAudioService()
     private let cloudService = VoiceCloudService()
@@ -220,6 +221,7 @@ final class VoiceSessionViewModel: ObservableObject {
             piperFarsiVoice = voice
         }
         cloudStatus = cloudService.statusMessage
+        cloudAuthStatus = cloudService.authenticationStatus
         bindAudioService()
     }
 
@@ -257,6 +259,31 @@ final class VoiceSessionViewModel: ObservableObject {
         UserDefaults.standard.set(voice.rawValue, forKey: "com.alphonso.companion.piperFarsiVoice")
         cloudStatus = "Farsi voice set to \(voice.title)"
     }
+
+    func requestCloudSignIn(email: String) {
+        Task {
+            do {
+                try await cloudService.requestEmailOTP(email: email)
+                cloudAuthStatus = cloudService.authenticationStatus
+            } catch {
+                cloudAuthStatus = error.localizedDescription
+            }
+        }
+    }
+
+    func completeCloudSignIn(email: String, code: String) {
+        Task {
+            do {
+                try await cloudService.verifyEmailOTP(email: email, code: code)
+                cloudAuthStatus = cloudService.authenticationStatus
+                cloudStatus = cloudService.statusMessage
+            } catch {
+                cloudAuthStatus = error.localizedDescription
+            }
+        }
+    }
+
+    var cloudReady: Bool { cloudAuthStatus == "Cloud Voice account connected" && !cloudEndpoint.isEmpty }
 
     func prepareForVoiceSession() {
         audioService.requestPermissions { [weak self] granted in

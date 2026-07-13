@@ -23,6 +23,11 @@ class VoiceRequest(BaseModel):
     piper_voice: Literal["mana", "manta"] = "mana"
 
 
+class DeviceEnrollmentRequest(BaseModel):
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=36, max_length=36)]
+    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+
+
 class Timings(BaseModel):
     llm: int
     tts: int

@@ -6,12 +6,12 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Header, HTTPException
 
-from app.auth import require_bearer_token
 from app.config import Settings
-from app.contracts import ChatMessage, Timings, VoiceRequest, VoiceResponse
+from app.contracts import ChatMessage, DeviceEnrollmentRequest, Timings, VoiceRequest, VoiceResponse
 from app.nvidia import NvidiaClient, NvidiaError
 from app.piper_tts import PiperTTSClient
 from app.voice_policy import VoicePolicyError, build_system_message
+from app.supabase_auth import SupabaseDeviceRegistry
 
 app = FastAPI(title="Alphonso Cloud Voice")
 
@@ -29,12 +29,21 @@ async def ready() -> dict[str, object]:
     return status
 
 
-@app.post("/v1/voice/respond", response_model=VoiceResponse)
-async def respond(payload: VoiceRequest, authorization: str | None = Header(default=None)) -> VoiceResponse:
+@app.post("/v1/voice/devices/enroll")
+async def enroll_device(payload: DeviceEnrollmentRequest, authorization: str | None = Header(default=None)) -> dict[str, str]:
     settings = Settings.from_env()
-    require_bearer_token(authorization, settings.voice_cloud_api_key)
+    registry = SupabaseDeviceRegistry(settings)
+    user = await registry.user_from_authorization(authorization)
+    await registry.enroll(user, payload.device_id, payload.display_name)
+    return {"status": "enrolled", "device_id": payload.device_id}
+
+
+@app.post("/v1/voice/respond", response_model=VoiceResponse)
+async def respond(payload: VoiceRequest, authorization: str | None = Header(default=None), x_alphonso_device_id: str | None = Header(default=None)) -> VoiceResponse:
+    settings = Settings.from_env()
     if not settings.is_ready:
         raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
+    await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
     client = NvidiaClient(settings)
     started = time.perf_counter()
     try:

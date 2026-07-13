@@ -4,6 +4,8 @@ import UIKit
 struct VoiceView: View {
     @EnvironmentObject var webSocketService: WebSocketService
     @StateObject private var viewModel = VoiceSessionViewModel()
+    @State private var cloudEmail = ""
+    @State private var cloudOTP = ""
 
     var body: some View {
         NavigationStack {
@@ -47,6 +49,29 @@ struct VoiceView: View {
                                 .font(.headline)
 
                             Text("Cloud access is configured during secure Alphonso pairing. Provider URLs and credentials are never entered here.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            TextField("Email for Cloud Voice", text: $cloudEmail)
+                                .textFieldStyle(.roundedBorder)
+                                .textInputAutocapitalization(.never)
+                                .keyboardType(.emailAddress)
+                            Button("Email me a sign-in code") {
+                                viewModel.requestCloudSignIn(email: cloudEmail)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(cloudEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                            TextField("One-time code", text: $cloudOTP)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.numberPad)
+                            Button("Verify and enroll this iPhone") {
+                                viewModel.completeCloudSignIn(email: cloudEmail, code: cloudOTP)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(cloudEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || cloudOTP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                            Text(viewModel.cloudAuthStatus)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
@@ -133,7 +158,7 @@ struct VoiceView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.secondary)
-                        .disabled(!viewModel.canSend || (viewModel.mode == .cloud && viewModel.cloudEndpoint.isEmpty))
+                        .disabled(!viewModel.canSend || (viewModel.mode == .cloud && !viewModel.cloudReady))
                         .accessibilityIdentifier("voice-send")
                     }
 
