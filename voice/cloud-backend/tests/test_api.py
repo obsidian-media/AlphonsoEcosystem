@@ -43,4 +43,6 @@ def test_voice_returns_reply_audio_and_timings():
     payload = response.json()
     assert payload["reply"] == "Hello"
     assert payload["audio_base64"]
+    assert payload["agent"] == "alphonso"
+    assert payload["tts_provider"] == "nvidia"
     assert payload["timings_ms"]["total"] >= 0

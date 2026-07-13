@@ -32,8 +32,9 @@ class NvidiaClient:
     def headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.settings.nvidia_api_key}"}
 
-    async def complete(self, messages: list[ChatMessage]) -> str:
-        payload = {"model": self.settings.nim_model, "messages": [message.model_dump() for message in messages], "max_tokens": 320, "temperature": 0.4, "stream": False}
+    async def complete(self, messages: list[dict[str, str] | ChatMessage]) -> str:
+        normalized_messages = [message.model_dump() if isinstance(message, ChatMessage) else message for message in messages]
+        payload = {"model": self.settings.nim_model, "messages": normalized_messages, "max_tokens": 320, "temperature": 0.4, "stream": False}
         try:
             async with httpx.AsyncClient(timeout=self.settings.request_timeout_seconds) as client:
                 response = await client.post(f"{self.settings.nim_base_url}/chat/completions", headers=self.headers, json=payload)

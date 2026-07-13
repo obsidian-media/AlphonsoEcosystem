@@ -7,9 +7,11 @@ from uuid import uuid4
 from fastapi import FastAPI, Header, HTTPException
 
 from app.auth import require_bearer_token
+from app.azure_tts import AzureTTSClient
 from app.config import Settings
 from app.contracts import ChatMessage, Timings, VoiceRequest, VoiceResponse
 from app.nvidia import NvidiaClient, NvidiaError
+from app.voice_policy import VoicePolicyError, build_system_message
 
 app = FastAPI(title="Alphonso Cloud Voice")
 
@@ -36,10 +38,20 @@ async def respond(payload: VoiceRequest, authorization: str | None = Header(defa
     client = NvidiaClient(settings)
     started = time.perf_counter()
     try:
-        reply = await client.complete([*payload.history, ChatMessage(role="user", content=payload.text)])
+        messages = [
+            {"role": "system", "content": build_system_message(payload.agent_id, payload.language)},
+            *[message.model_dump() for message in payload.history],
+            ChatMessage(role="user", content=payload.text).model_dump(),
+        ]
+        reply = await client.complete(messages)
         llm_ms = int((time.perf_counter() - started) * 1000)
-        audio = await client.synthesize(reply, payload.language, payload.tts_model)
-    except NvidiaError as error:
+        if payload.language == "fa-IR":
+            audio = await AzureTTSClient(settings).synthesize(reply)
+            tts_provider = "azure"
+        else:
+            audio = await client.synthesize(reply, payload.language, payload.tts_model)
+            tts_provider = "nvidia"
+    except (NvidiaError, VoicePolicyError) as error:
         raise HTTPException(status_code=error.status_code, detail=error.safe_message) from error
     total_ms = int((time.perf_counter() - started) * 1000)
-    return VoiceResponse(request_id=str(uuid4()), session_id=payload.session_id, reply=reply, audio_base64=base64.b64encode(audio).decode("ascii"), tts_model=payload.tts_model, language=payload.language, timings_ms=Timings(llm=llm_ms, tts=total_ms - llm_ms, total=total_ms))
+    return VoiceResponse(request_id=str(uuid4()), session_id=payload.session_id, agent=payload.agent_id, reply=reply, audio_base64=base64.b64encode(audio).decode("ascii"), tts_model=payload.tts_model, tts_provider=tts_provider, language=payload.language, timings_ms=Timings(llm=llm_ms, tts=total_ms - llm_ms, total=total_ms))

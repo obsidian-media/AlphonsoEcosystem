@@ -21,6 +21,18 @@ def test_request_limits_history_to_twelve_entries():
         VoiceRequest(session_id="s", text="hello", history=history)
 
 
+def test_request_accepts_farsi_and_selected_agent():
+    request = VoiceRequest(session_id="s", text="سلام", language="fa-IR", agent_id="maria")
+
+    assert request.language == "fa-IR"
+    assert request.agent_id == "maria"
+
+
+def test_request_rejects_unknown_agent_and_language():
+    with pytest.raises(ValidationError):
+        VoiceRequest(session_id="s", text="hello", language="it-IT", agent_id="unknown")
+
+
 def test_missing_service_key_is_not_ready(monkeypatch):
     monkeypatch.delenv("VOICE_CLOUD_API_KEY", raising=False)
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
