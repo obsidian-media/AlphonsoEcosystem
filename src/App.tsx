@@ -442,10 +442,49 @@ function AppShell() {
         const activeAborts = new Map<string, AbortController>();
 
         unlistenCommand = await listen('companion://command', async (event) => {
-          const { commandId, text } = event.payload as { commandId: string; text: string };
+          const {
+            commandId,
+            text,
+            agentId = 'alphonso',
+            language = 'en-US',
+            voiceConversation = false
+          } = event.payload as {
+            commandId: string;
+            text: string;
+            agentId?: string;
+            language?: string;
+            voiceConversation?: boolean;
+          };
           const abortCtrl = new AbortController();
           activeAborts.set(commandId, abortCtrl);
           try {
+            if (voiceConversation) {
+              const [{ generateOllamaResponse, PREFERRED_MODEL }, { getAgentProfile }] = await Promise.all([
+                import('./lib/ollama'),
+                import('./agents/agentRegistry')
+              ]);
+              const profile = getAgentProfile(agentId) || getAgentProfile('alphonso');
+              const reply = await generateOllamaResponse({
+                endpoint: settings.endpoint,
+                model: settings.selectedModel || PREFERRED_MODEL,
+                prompt: [
+                  `You are ${profile.name}, the Alphonso ${profile.title}.`,
+                  profile.defaultPrompt,
+                  `Your permitted focus: ${profile.allowedSummary || profile.purpose}.`,
+                  `Hard boundary: ${profile.blockedSummary || 'Do not claim external or destructive work was completed.'}`,
+                  `Reply naturally and concisely in ${language}. Never say you are just a language model.`,
+                  'This is a spoken conversation. Do not claim an action was executed; explain any required approval or handoff instead.',
+                  `User: ${text}`
+                ].filter(Boolean).join('\n\n')
+              });
+              if (!abortCtrl.signal.aborted) {
+                await invoke('companion_broadcast', {
+                  event: 'done',
+                  payload: { commandId, summary: reply?.response || 'I could not prepare a reply.' }
+                });
+              }
+              return;
+            }
             // isJoseIntakeCommand/shouldRouteThroughJose decide, within ChatView,
             // between "run the Jose multi-agent pipeline" vs. "answer directly via
             // Ollama" — they return false for plenty of ordinary messages (a

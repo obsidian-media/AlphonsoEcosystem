@@ -68,6 +68,11 @@ final class VoiceAudioService: NSObject, ObservableObject, AVSpeechSynthesizerDe
         guard !isRecording else { return }
         currentLocale = locale
 
+        guard canRecognize(locale: locale) else {
+            onError?("Speech recognition is unavailable for \(locale.identifier) on this iPhone. Choose another language for this turn.")
+            return
+        }
+
         if authorizationState != .authorized || !micAuthorized || !speechAuthorized {
             requestPermissions { [weak self] granted in
                 guard let self else { return }
@@ -157,6 +162,12 @@ final class VoiceAudioService: NSObject, ObservableObject, AVSpeechSynthesizerDe
                     self.stopRecording()
                 }
             }
+        }
+    }
+
+    func canRecognize(locale: Locale) -> Bool {
+        SFSpeechRecognizer.supportedLocales().contains { supportedLocale in
+            supportedLocale.identifier.caseInsensitiveCompare(locale.identifier) == .orderedSame
         }
     }
 

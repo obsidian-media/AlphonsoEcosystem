@@ -72,12 +72,22 @@ class WebSocketService: ObservableObject {
         ])
     }
 
-    func sendCommand(text: String) -> String {
+    func sendCommand(
+        text: String,
+        agentID: String = "alphonso",
+        language: String = "en-US",
+        voiceConversation: Bool = false
+    ) -> String {
         let id = UUID().uuidString
         sendJSONMessage([
             "id": id,
             "method": "send_command",
-            "params": ["text": text]
+            "params": [
+                "text": text,
+                "agentId": agentID,
+                "language": language,
+                "voiceConversation": voiceConversation,
+            ]
         ])
         messages.append(Message(text: text, isIncoming: false, commandId: id))
         return id

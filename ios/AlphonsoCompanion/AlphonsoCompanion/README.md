@@ -44,6 +44,8 @@ AlphonsoCompanion/
 - `VoiceSessionViewModelTests` covers the new voice shell state transitions.
 - `AlphonsoCompanionUITests` contains the launch smoke test for the mobile shell.
 - The Voice tab is split into `Local` and `Cloud` modes so local speech capture and Railway-backed cloud speech can diverge cleanly.
-- Cloud mode expects a Railway-deployed endpoint that accepts `POST /voice/respond` and returns `reply` plus `audio_base64`.
-- Cloud mode can select between NVIDIA `magpie-tts-multilingual` and `resembleai/chatterbox-multilingual-tts` for the response voice layer.
-- Cloud mode also sends a language code so the backend can synthesize multilingual responses and the mic capture locale can follow the same selection.
+- Voice is push-to-talk. Each turn carries the selected one of nine agents and a language. Local conversational turns are answered by the selected persona through desktop Ollama; non-voice companion commands stay on the policy-gated Jose pipeline.
+- Cloud mode sends `agent_id`, language, and response-voice selection to `POST /v1/voice/respond`. English uses NVIDIA TTS; Persian/Farsi (`fa-IR`) uses Railway-hosted Piper with `Mana` or `Manta`.
+- Cloud playback failures preserve the reply as text and offer a retry; the UI does not imply that a failed reply was spoken.
+- The app intentionally does not expose cloud URLs or service keys. **PARTIAL:** the current local PIN pairing has no durable cloud-device enrollment, so production cloud access must remain blocked until that credential flow exists.
+- Speech-recognition locale support is checked on-device before recording. A user can switch English and Farsi between turns, subject to the iPhone's supported recognition locales.

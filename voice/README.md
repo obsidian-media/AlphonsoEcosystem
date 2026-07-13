@@ -1,12 +1,12 @@
 # Alphonso Voice OS
 
-Real-time interruptible voice agent system with separate local and cloud delivery paths. **Local Voice is complete; Cloud Voice requires Railway deployment and NVIDIA credentials.**
+Real-time interruptible voice agent system with separate local and cloud delivery paths. Local Voice runs on the paired desktop. Railway Cloud Voice and private Piper Farsi are deployed and health-checked, but phone access is **PARTIAL** until local pairing can provision a durable cloud-device credential.
 
 ## Pipeline
 
 ```
 Microphone (AudioWorklet, 16kHz PCM)
-  → WebSocket binary frames → FastAPI (port 8765)
+  → WebSocket binary frames → FastAPI (port 8766)
   → webrtcvad gate (discards silence)
   → faster-whisper STT (tiny.en, CPU int8, lru_cache)
   → 9-agent regex router
@@ -22,7 +22,8 @@ Microphone (AudioWorklet, 16kHz PCM)
 iOS push-to-talk
   → Railway Cloud Voice Service POST /v1/voice/respond
   → NVIDIA NIM reply generation
-  → NVIDIA TTS model: Magpie or Chatterbox
+  → English: NVIDIA TTS (Magpie; Chatterbox optional)
+  → Persian/Farsi: token-protected Railway Piper (Mana or Manta)
   → base64 WAV audio response
   → AVAudioPlayer playback on mobile
 ```
@@ -125,4 +126,4 @@ The voice server is launched and stopped from the main Alphonso app via:
 
 ---
 
-*Last updated: 2026-06-24 — v2.2.0*
+*Last updated: 2026-07-13 — Cloud Voice status reconciled; device enrollment remains PARTIAL.*

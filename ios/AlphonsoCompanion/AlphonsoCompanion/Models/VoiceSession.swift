@@ -173,7 +173,7 @@ final class VoiceSessionViewModel: ObservableObject {
 
     private let audioService = VoiceAudioService()
     private let cloudService = VoiceCloudService()
-    private var localTranscriptSender: ((String) -> Void)?
+    private var localTranscriptSender: ((String, String, String) -> Void)?
     private var lastSpokenMessageID: UUID?
     private var lastCloudResponse: VoiceCloudResponse?
     private var pendingCloudMessageID: UUID?
@@ -223,7 +223,7 @@ final class VoiceSessionViewModel: ObservableObject {
         bindAudioService()
     }
 
-    func setLocalTranscriptSender(_ sender: @escaping (String) -> Void) {
+    func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> Void) {
         localTranscriptSender = sender
     }
 
@@ -317,7 +317,7 @@ final class VoiceSessionViewModel: ObservableObject {
 
         switch mode {
         case .local:
-            localTranscriptSender?(trimmed)
+            localTranscriptSender?(trimmed, selectedAgent.rawValue, cloudLanguage.rawValue)
         case .cloud:
             Task {
                 await sendCloudTranscript(trimmed)

@@ -109,4 +109,30 @@ final class VoiceSessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.cloudLanguage, .spanishUS)
         XCTAssertEqual(viewModel.cloudStatus, "Cloud language set to Spanish")
     }
+
+    func testFarsiLanguageCanBeSelectedForTheNextTurn() {
+        let viewModel = VoiceSessionViewModel()
+
+        viewModel.configureCloudLanguage(.persianIR)
+
+        XCTAssertEqual(viewModel.cloudLanguage, .persianIR)
+    }
+
+    func testSelectedAgentAndLanguageAreIncludedInLocalTranscriptContext() {
+        let viewModel = VoiceSessionViewModel()
+        var capturedAgentID: String?
+        var capturedLanguage: String?
+        viewModel.configureSelectedAgent(.maria)
+        viewModel.configureCloudLanguage(.persianIR)
+        viewModel.setLocalTranscriptSender { _, agentID, language in
+            capturedAgentID = agentID
+            capturedLanguage = language
+        }
+
+        viewModel.draftTranscript = "Review this risk"
+        viewModel.submitDraft()
+
+        XCTAssertEqual(capturedAgentID, "maria")
+        XCTAssertEqual(capturedLanguage, "fa-IR")
+    }
 }

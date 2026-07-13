@@ -183,8 +183,13 @@ struct VoiceView: View {
             }
             .onAppear {
                 viewModel.prepareForVoiceSession()
-                viewModel.setLocalTranscriptSender { text in
-                    _ = webSocketService.sendCommand(text: text)
+                viewModel.setLocalTranscriptSender { text, agentID, language in
+                    _ = webSocketService.sendCommand(
+                        text: text,
+                        agentID: agentID,
+                        language: language,
+                        voiceConversation: true
+                    )
                 }
             }
             .onDisappear {

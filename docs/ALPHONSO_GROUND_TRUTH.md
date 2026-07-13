@@ -139,6 +139,9 @@ Key services that past audits missed or underestimated:
 - `voice/frontend/src/useJarvisVoice.ts` — Standalone frontend hook (AudioWorklet, all exports)
 - `voice/frontend/src/pcm-processor.worklet.ts` — AudioWorklet processor (PCM float32→int16)
 - `src/hooks/pcm-processor.worklet.ts` — **copy required by `useJarvisVoice.ts`** (the hook imports from `./pcm-processor.worklet`; the voice/frontend version is a separate package). Do NOT remove this file.
+- `voice/cloud-backend/` — Railway Cloud Voice FastAPI service. It validates bearer-authenticated requests, applies one of nine voice personas, uses NVIDIA NIM for replies, NVIDIA TTS for non-Farsi replies, and private Railway Piper for `fa-IR` (`mana`/`manta`). `/health` and `/ready` were verified live on 2026-07-13.
+- `voice/piper-farsi/` — token-protected Railway Piper service with a persistent `/data` model cache. `/health` was verified live on 2026-07-13 and reports `mana` and `manta`.
+- **Cloud Voice access truth: PARTIAL.** The iOS Voice UI no longer exposes provider URLs or provider credentials, and it carries selected agent/language metadata for local and cloud turns. The existing Companion PIN is local-network authentication only; it does not yet provision a durable per-device Cloud Voice credential. Do not describe iPhone cloud voice as publicly ready until that enrollment flow exists and is device-tested.
 
 ### UI Polish Sprint (v2.3.1)
 - `src/services/connectors/perplexityConnector.js` — Perplexity AI search: `isPerplexityConfigured`, `searchPerplexity`. Calls `/chat/completions` with `llama-3.1-sonar-small-128k-online`.

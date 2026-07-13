@@ -44,6 +44,21 @@ async fn handle_send_command(params: Value, app: AppHandle) -> Result<Value, Jso
     code: -32602,
     message: "Missing 'text' param".into(),
   })?;
+  let agent_id = params["agentId"].as_str().unwrap_or("alphonso");
+  if !matches!(agent_id, "alphonso" | "jose" | "hector" | "miya" | "maria" | "marcus" | "echo" | "sentinel" | "nova") {
+    return Err(JsonRpcError {
+      code: -32602,
+      message: "Unsupported 'agentId' param".into(),
+    });
+  }
+  let language = params["language"].as_str().unwrap_or("en-US");
+  if !matches!(language, "en-US" | "es-US" | "fr-FR" | "de-DE" | "ja-JP" | "zh-CN" | "fa-IR") {
+    return Err(JsonRpcError {
+      code: -32602,
+      message: "Unsupported 'language' param".into(),
+    });
+  }
+  let voice_conversation = params["voiceConversation"].as_bool().unwrap_or(false);
   let command_id = uuid::Uuid::new_v4().to_string();
 
   // Emit a Tauri event that the React frontend listens to for Jose routing
@@ -53,12 +68,32 @@ async fn handle_send_command(params: Value, app: AppHandle) -> Result<Value, Jso
       json!({
           "commandId": command_id,
           "text": text,
-          "source": "ios_companion"
+          "source": "ios_companion",
+          "agentId": agent_id,
+          "language": language,
+          "voiceConversation": voice_conversation
       }),
     )
     .ok();
 
   Ok(json!({ "commandId": command_id, "status": "queued", "text": text }))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn voice_command_payload_preserves_agent_and_language() {
+    let payload = json!({
+      "agentId": "maria",
+      "language": "fa-IR",
+      "voiceConversation": true
+    });
+    assert_eq!(payload["agentId"], "maria");
+    assert_eq!(payload["language"], "fa-IR");
+    assert_eq!(payload["voiceConversation"], true);
+  }
 }
 
 async fn handle_abort_command(params: Value, app: AppHandle) -> Result<Value, JsonRpcError> {
