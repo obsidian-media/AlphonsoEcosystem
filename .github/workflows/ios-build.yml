@@ -125,6 +125,7 @@ jobs:
             DEVELOPMENT_TEAM="${{ env.APPLE_TEAM_ID }}" \
             PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_NAME }}" \
             PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             GENERATE_INFOPLIST_FILE=NO \
             INFOPLIST_FILE=AlphonsoCompanion/Info.plist \
             OTHER_CODE_SIGN_FLAGS="--keychain ${{ env.KEYCHAIN_PATH }}"
@@ -192,8 +193,7 @@ jobs:
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "$API_KEY_ID" \
-            --apiIssuer "$API_ISSUER" \
-            || echo "::warning::TestFlight upload failed — download IPA from artifacts below"
+            --apiIssuer "$API_ISSUER"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v7
