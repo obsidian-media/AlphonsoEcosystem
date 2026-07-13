@@ -50,15 +50,20 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
     private var audioPlayer: AVAudioPlayer?
 
     override init() {
-        endpoint = UserDefaults.standard.string(forKey: endpointKey) ?? ""
+        let storedEndpoint = UserDefaults.standard.string(forKey: endpointKey) ?? ""
         let securedKey = Self.loadAPIKey(account: apiKeyAccount)
         let legacyKey = UserDefaults.standard.string(forKey: legacyAPIKeyKey)
-        apiKey = securedKey ?? legacyKey ?? ""
+        let storedAPIKey = securedKey ?? legacyKey ?? ""
+
+        endpoint = storedEndpoint
+        apiKey = storedAPIKey
+        statusMessage = storedEndpoint.isEmpty ? "Cloud backend not configured" : "Cloud backend ready"
+        super.init()
+
         if securedKey == nil, let legacyKey, !legacyKey.isEmpty {
             Self.saveAPIKey(legacyKey, account: apiKeyAccount)
             UserDefaults.standard.removeObject(forKey: legacyAPIKeyKey)
         }
-        statusMessage = endpoint.isEmpty ? "Cloud backend not configured" : "Cloud backend ready"
     }
 
     func configure(endpoint: String, apiKey: String = "") {
