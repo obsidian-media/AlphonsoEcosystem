@@ -8,6 +8,7 @@ struct VoiceCloudResponse: Decodable {
     let reply: String
     let audioBase64: String
     let ttsModel: String
+    let language: String
     let state: String
 
     enum CodingKeys: String, CodingKey {
@@ -16,6 +17,7 @@ struct VoiceCloudResponse: Decodable {
         case reply
         case audioBase64 = "audio_base64"
         case ttsModel = "tts_model"
+        case language
         case state
     }
 
@@ -45,16 +47,36 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
     }
 
     func configure(endpoint: String, apiKey: String = "") {
-        self.endpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         self.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if self.endpoint.isEmpty {
+        guard !trimmedEndpoint.isEmpty else {
+            self.endpoint = ""
             UserDefaults.standard.removeObject(forKey: endpointKey)
             statusMessage = "Cloud backend not configured"
-        } else {
-            UserDefaults.standard.set(self.endpoint, forKey: endpointKey)
-            statusMessage = "Cloud backend ready"
+            if self.apiKey.isEmpty {
+                UserDefaults.standard.removeObject(forKey: apiKeyKey)
+            } else {
+                UserDefaults.standard.set(self.apiKey, forKey: apiKeyKey)
+            }
+            return
         }
+
+        guard URL(string: trimmedEndpoint) != nil else {
+            self.endpoint = ""
+            UserDefaults.standard.removeObject(forKey: endpointKey)
+            statusMessage = "Cloud backend URL is invalid"
+            if self.apiKey.isEmpty {
+                UserDefaults.standard.removeObject(forKey: apiKeyKey)
+            } else {
+                UserDefaults.standard.set(self.apiKey, forKey: apiKeyKey)
+            }
+            return
+        }
+
+        self.endpoint = trimmedEndpoint
+        UserDefaults.standard.set(self.endpoint, forKey: endpointKey)
+        statusMessage = "Cloud backend ready"
 
         if self.apiKey.isEmpty {
             UserDefaults.standard.removeObject(forKey: apiKeyKey)
@@ -67,7 +89,8 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         transcript: String,
         mode: VoiceMode,
         history: [VoiceTranscriptEntry],
-        ttsModel: CloudTTSModel
+        ttsModel: CloudTTSModel,
+        language: String
     ) async throws -> VoiceCloudResponse {
         guard let url = URL(string: endpoint), !endpoint.isEmpty else {
             throw VoiceCloudError.notConfigured
@@ -75,6 +98,7 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 75
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if !apiKey.isEmpty {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -85,6 +109,7 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
             "text": transcript,
             "mode": mode.rawValue,
             "tts_model": ttsModel.rawValue,
+            "language": language,
             "history": history.map { entry in
                 [
                     "speaker": entry.speaker.rawValue,
@@ -97,7 +122,13 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
 
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let dataResponse: (Data, URLResponse)
+        do {
+            dataResponse = try await URLSession.shared.data(for: request)
+        } catch {
+            throw VoiceCloudError.network(error.localizedDescription)
+        }
+        let (data, response) = dataResponse
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
             throw VoiceCloudError.badResponse
@@ -147,6 +178,7 @@ enum VoiceCloudError: LocalizedError {
     case notConfigured
     case badResponse
     case invalidPayload
+    case network(String)
 
     var errorDescription: String? {
         switch self {
@@ -156,6 +188,8 @@ enum VoiceCloudError: LocalizedError {
             return "Cloud voice backend returned an unexpected response."
         case .invalidPayload:
             return "Cloud voice backend response could not be parsed."
+        case .network(let message):
+            return "Cloud voice network error: \(message)"
         }
     }
 }

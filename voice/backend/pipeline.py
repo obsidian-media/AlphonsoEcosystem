@@ -66,7 +66,7 @@ async def run_pipeline(session_id, pcm, history):
     yield {'type': 'state', 'value': 'idle'}
 
 
-async def generate_voice_reply(session_id, text, history, tts_model="magpie"):
+async def generate_voice_reply(session_id, text, history, tts_model="magpie", language="en-US"):
     agent = detect_agent(text)
     full_reply = ""
 
@@ -77,7 +77,7 @@ async def generate_voice_reply(session_id, text, history, tts_model="magpie"):
         full_reply += chunk
         yield {'type': 'llm', 'text': chunk}
 
-    audio, used_model = await synthesize_cloud_reply(full_reply, tts_model)
+    audio, used_model = await synthesize_cloud_reply(full_reply, tts_model, language)
 
     yield {
         'type': 'voice_response',
@@ -85,6 +85,7 @@ async def generate_voice_reply(session_id, text, history, tts_model="magpie"):
         'audio_base64': base64.b64encode(audio).decode('ascii') if audio else '',
         'agent': agent,
         'tts_model': used_model,
+        'language': language,
     }
 
     yield {'type': 'state', 'value': 'idle'}
@@ -99,5 +100,9 @@ async def synthesize_cloud_reply(text, tts_model, language="en-US"):
             return await synthesize_nvidia(text, model, language=language), model
         except Exception as error:
             last_error = error
+
+    audio = await synthesize(text)
+    if audio:
+        return audio, "piper-fallback"
 
     raise last_error or RuntimeError("NVIDIA TTS synthesis failed")

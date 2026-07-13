@@ -53,7 +53,7 @@ def _synthesize_sync(text: str) -> bytes:
 
 async def synthesize(text: str) -> bytes:
     """Synthesize text to WAV bytes using Piper TTS (non-blocking)."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(_executor, _synthesize_sync, text)
 
 
@@ -62,6 +62,14 @@ async def synthesize_nvidia(text: str, model: str, language: str = "en-US") -> b
     endpoint_key = f"NVIDIA_TTS_{model.upper()}_URL"
     endpoint = os.environ.get(endpoint_key, "").strip()
     api_key = os.environ.get("NVIDIA_API_KEY", "").strip()
+    voice = os.environ.get(f"NVIDIA_TTS_{model.upper()}_VOICE", "").strip() or os.environ.get(
+        "NVIDIA_TTS_VOICE",
+        "",
+    ).strip()
+    configured_language = os.environ.get(
+        f"NVIDIA_TTS_{model.upper()}_LANGUAGE",
+        "",
+    ).strip() or os.environ.get("NVIDIA_TTS_LANGUAGE", "").strip()
 
     if not endpoint:
         raise RuntimeError(f"{endpoint_key} is not configured")
@@ -70,9 +78,8 @@ async def synthesize_nvidia(text: str, model: str, language: str = "en-US") -> b
 
     files = {
         "text": (None, text),
-        "language": (None, language),
+        "language": (None, configured_language or language),
     }
-    voice = os.environ.get("NVIDIA_TTS_VOICE", "").strip()
     if voice:
         files["voice"] = (None, voice)
 
@@ -81,3 +88,14 @@ async def synthesize_nvidia(text: str, model: str, language: str = "en-US") -> b
         response = await client.post(endpoint, headers=headers, files=files)
         response.raise_for_status()
         return response.content
+
+
+def describe_nvidia_tts_models() -> dict[str, dict[str, bool | str]]:
+    models = {}
+    for model in ("magpie", "chatterbox"):
+        endpoint_key = f"NVIDIA_TTS_{model.upper()}_URL"
+        models[model] = {
+            "configured": bool(os.environ.get(endpoint_key, "").strip() and os.environ.get("NVIDIA_API_KEY", "").strip()),
+            "endpoint_key": endpoint_key,
+        }
+    return models

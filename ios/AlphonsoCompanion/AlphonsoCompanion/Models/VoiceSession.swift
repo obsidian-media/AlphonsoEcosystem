@@ -52,6 +52,41 @@ enum VoiceSpeaker: String, Codable {
     case alphonso
 }
 
+enum VoiceLanguage: String, CaseIterable, Codable, Identifiable {
+    case englishUS = "en-US"
+    case spanishUS = "es-US"
+    case frenchFR = "fr-FR"
+    case germanDE = "de-DE"
+    case japaneseJP = "ja-JP"
+    case chineseCN = "zh-CN"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .englishUS: return "English"
+        case .spanishUS: return "Spanish"
+        case .frenchFR: return "French"
+        case .germanDE: return "German"
+        case .japaneseJP: return "Japanese"
+        case .chineseCN: return "Chinese"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .englishUS: return "English (United States)"
+        case .spanishUS: return "Spanish (United States)"
+        case .frenchFR: return "French (France)"
+        case .germanDE: return "German (Germany)"
+        case .japaneseJP: return "Japanese"
+        case .chineseCN: return "Chinese (Simplified)"
+        }
+    }
+
+    var localeIdentifier: String { rawValue }
+}
+
 enum CloudTTSModel: String, CaseIterable, Codable, Identifiable {
     case magpie
     case chatterbox
@@ -106,6 +141,7 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var cloudEndpoint = ""
     @Published var cloudAPIKey = ""
     @Published var cloudTTSModel: CloudTTSModel = .magpie
+    @Published var cloudLanguage: VoiceLanguage = .englishUS
     @Published var cloudStatus = "Cloud backend not configured"
 
     private let audioService = VoiceAudioService()
@@ -141,6 +177,10 @@ final class VoiceSessionViewModel: ObservableObject {
            let model = CloudTTSModel(rawValue: storedModel) {
             cloudTTSModel = model
         }
+        if let storedLanguage = UserDefaults.standard.string(forKey: "com.alphonso.companion.voiceCloudLanguage"),
+           let language = VoiceLanguage(rawValue: storedLanguage) {
+            cloudLanguage = language
+        }
         cloudStatus = cloudService.statusMessage
         bindAudioService()
     }
@@ -160,6 +200,12 @@ final class VoiceSessionViewModel: ObservableObject {
         cloudTTSModel = model
         UserDefaults.standard.set(model.rawValue, forKey: "com.alphonso.companion.voiceCloudModel")
         cloudStatus = "Cloud TTS set to \(model.title)"
+    }
+
+    func configureCloudLanguage(_ language: VoiceLanguage) {
+        cloudLanguage = language
+        UserDefaults.standard.set(language.rawValue, forKey: "com.alphonso.companion.voiceCloudLanguage")
+        cloudStatus = "Cloud language set to \(language.title)"
     }
 
     func prepareForVoiceSession() {
@@ -195,7 +241,7 @@ final class VoiceSessionViewModel: ObservableObject {
         statusMessage = mode == .local
             ? "Listening for speech in local mode"
             : "Listening for speech to send to Railway"
-        audioService.startRecording()
+        audioService.startRecording(locale: Locale(identifier: cloudLanguage.localeIdentifier))
     }
 
     func stopListening() {
@@ -279,9 +325,14 @@ final class VoiceSessionViewModel: ObservableObject {
                 transcript: transcript,
                 mode: mode,
                 history: self.transcript,
-                ttsModel: cloudTTSModel
+                ttsModel: cloudTTSModel,
+                language: cloudLanguage.rawValue
             )
             appendAssistantReply(response.reply)
+            if response.language != cloudLanguage.rawValue,
+               let normalized = VoiceLanguage(rawValue: response.language) {
+                cloudLanguage = normalized
+            }
             try cloudService.play(response)
             cloudStatus = cloudService.statusMessage
         } catch {

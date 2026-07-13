@@ -52,6 +52,20 @@ struct VoiceView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
+                            Picker("Cloud language", selection: Binding(
+                                get: { viewModel.cloudLanguage },
+                                set: { viewModel.configureCloudLanguage($0) }
+                            )) {
+                                ForEach(VoiceLanguage.allCases) { language in
+                                    Text(language.title).tag(language)
+                                }
+                            }
+                            .pickerStyle(.menu)
+
+                            Text(viewModel.cloudLanguage.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
                             Button("Save endpoint") {
                                 viewModel.configureCloudEndpoint(
                                     viewModel.cloudEndpoint,
@@ -105,6 +119,13 @@ struct VoiceView: View {
                         .tint(.secondary)
                         .disabled(!viewModel.canSend || (viewModel.mode == .cloud && viewModel.cloudEndpoint.isEmpty))
                         .accessibilityIdentifier("voice-send")
+                    }
+
+                    if viewModel.mode == .cloud {
+                        Text("Cloud voice will capture speech in \(viewModel.cloudLanguage.title) and synthesize replies with \(viewModel.cloudTTSModel.title).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     HStack {

@@ -83,4 +83,13 @@ final class VoiceSessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.cloudTTSModel, .chatterbox)
         XCTAssertEqual(viewModel.cloudStatus, "Cloud TTS set to Chatterbox")
     }
+
+    func testCloudLanguageConfigurationPersistsSelection() {
+        let viewModel = VoiceSessionViewModel()
+
+        viewModel.configureCloudLanguage(.spanishUS)
+
+        XCTAssertEqual(viewModel.cloudLanguage, .spanishUS)
+        XCTAssertEqual(viewModel.cloudStatus, "Cloud language set to Spanish")
+    }
 }

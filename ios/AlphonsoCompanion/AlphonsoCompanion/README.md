@@ -46,3 +46,4 @@ AlphonsoCompanion/
 - The Voice tab is split into `Local` and `Cloud` modes so local speech capture and Railway-backed cloud speech can diverge cleanly.
 - Cloud mode expects a Railway-deployed endpoint that accepts `POST /voice/respond` and returns `reply` plus `audio_base64`.
 - Cloud mode can select between NVIDIA `magpie-tts-multilingual` and `resembleai/chatterbox-multilingual-tts` for the response voice layer.
+- Cloud mode also sends a language code so the backend can synthesize multilingual responses and the mic capture locale can follow the same selection.

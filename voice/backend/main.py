@@ -12,7 +12,7 @@ from pipeline import generate_voice_reply, run_pipeline
 from session import register, cancel, cleanup_done
 from state import get_state, set_state, remove_state
 from stt import _load_model as load_stt
-from tts import _load_piper as load_tts
+from tts import _load_piper as load_tts, describe_nvidia_tts_models
 
 
 @asynccontextmanager
@@ -49,6 +49,7 @@ class VoiceResponse(BaseModel):
     reply: str
     audio_base64: str
     tts_model: str = "magpie"
+    language: str = "en-US"
     state: str = "idle"
 
 
@@ -76,7 +77,12 @@ async def health():
         tts_ok = model_path.exists()
     except Exception:
         pass
-    return {"status": "ok", "stt": True, "tts": tts_ok}
+    return {
+        "status": "ok",
+        "stt": True,
+        "tts": tts_ok,
+        "cloud_tts": describe_nvidia_tts_models(),
+    }
 
 
 @app.post("/voice/respond", response_model=VoiceResponse)
@@ -98,8 +104,9 @@ async def voice_respond(payload: VoiceRequest, authorization: str | None = Heade
     agent = "alphonso_core"
     audio_base64 = ""
     used_tts_model = tts_model
+    used_language = payload.language.strip() or "en-US"
 
-    async for event in generate_voice_reply(session_id, text, payload.history, tts_model):
+    async for event in generate_voice_reply(session_id, text, payload.history, tts_model, used_language):
         etype = event.get("type")
         if etype == "agent":
             agent = event.get("value", agent)
@@ -107,6 +114,7 @@ async def voice_respond(payload: VoiceRequest, authorization: str | None = Heade
             reply = event.get("reply", "")
             audio_base64 = event.get("audio_base64", "")
             used_tts_model = event.get("tts_model", used_tts_model)
+            used_language = event.get("language", used_language)
         elif etype == "state":
             set_state(session_id, event.get("value", "idle"))
 
@@ -121,6 +129,7 @@ async def voice_respond(payload: VoiceRequest, authorization: str | None = Heade
         reply=reply,
         audio_base64=audio_base64,
         tts_model=used_tts_model,
+        language=used_language,
         state=str(get_state(session_id)),
     )
 
