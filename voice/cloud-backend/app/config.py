@@ -14,9 +14,9 @@ class Settings:
     magpie_voice: str
     chatterbox_url: str
     chatterbox_voice: str
-    azure_speech_key: str
-    azure_speech_region: str
-    azure_tts_farsi_voice: str
+    piper_farsi_url: str
+    piper_service_token: str
+    piper_farsi_default_voice: str
     request_timeout_seconds: float
 
     @classmethod
@@ -30,9 +30,9 @@ class Settings:
             magpie_voice=os.environ.get("NVIDIA_TTS_MAGPIE_DEFAULT_VOICE", "").strip(),
             chatterbox_url=os.environ.get("NVIDIA_TTS_CHATTERBOX_URL", "").strip(),
             chatterbox_voice=os.environ.get("NVIDIA_TTS_CHATTERBOX_DEFAULT_VOICE", "").strip(),
-            azure_speech_key=os.environ.get("AZURE_SPEECH_KEY", "").strip(),
-            azure_speech_region=os.environ.get("AZURE_SPEECH_REGION", "").strip(),
-            azure_tts_farsi_voice=os.environ.get("AZURE_TTS_FARSI_VOICE", "fa-IR-DilaraNeural").strip(),
+            piper_farsi_url=os.environ.get("PIPER_FARSI_URL", "").rstrip("/"),
+            piper_service_token=os.environ.get("PIPER_SERVICE_TOKEN", "").strip(),
+            piper_farsi_default_voice=os.environ.get("PIPER_FARSI_DEFAULT_VOICE", "mana").strip(),
             request_timeout_seconds=float(os.environ.get("VOICE_CLOUD_TIMEOUT_SECONDS", "60")),
         )
 
@@ -47,6 +47,6 @@ class Settings:
             "tts": {
                 "magpie": bool(self.magpie_url),
                 "chatterbox": bool(self.chatterbox_url),
-                "azure_farsi": bool(self.azure_speech_key and self.azure_speech_region),
+                "piper_farsi": bool(self.piper_farsi_url and self.piper_service_token),
             },
         }

@@ -7,10 +7,10 @@ from uuid import uuid4
 from fastapi import FastAPI, Header, HTTPException
 
 from app.auth import require_bearer_token
-from app.azure_tts import AzureTTSClient
 from app.config import Settings
 from app.contracts import ChatMessage, Timings, VoiceRequest, VoiceResponse
 from app.nvidia import NvidiaClient, NvidiaError
+from app.piper_tts import PiperTTSClient
 from app.voice_policy import VoicePolicyError, build_system_message
 
 app = FastAPI(title="Alphonso Cloud Voice")
@@ -46,8 +46,8 @@ async def respond(payload: VoiceRequest, authorization: str | None = Header(defa
         reply = await client.complete(messages)
         llm_ms = int((time.perf_counter() - started) * 1000)
         if payload.language == "fa-IR":
-            audio = await AzureTTSClient(settings).synthesize(reply)
-            tts_provider = "azure"
+            audio = await PiperTTSClient(settings).synthesize(reply, settings.piper_farsi_default_voice)
+            tts_provider = "piper"
         else:
             audio = await client.synthesize(reply, payload.language, payload.tts_model)
             tts_provider = "nvidia"

@@ -35,7 +35,7 @@ class VoiceResponse(BaseModel):
     reply: str
     audio_base64: str
     tts_model: str
-    tts_provider: Literal["nvidia", "azure"]
+    tts_provider: Literal["nvidia", "piper"]
     language: str
     state: str = "idle"
     timings_ms: Timings
