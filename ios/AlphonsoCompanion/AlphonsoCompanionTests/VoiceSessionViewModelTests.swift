@@ -74,4 +74,13 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.cloudAPIKey, "secret-token")
     }
+
+    func testCloudTTSModelConfigurationPersistsSelection() {
+        let viewModel = VoiceSessionViewModel()
+
+        viewModel.configureCloudTTSModel(.chatterbox)
+
+        XCTAssertEqual(viewModel.cloudTTSModel, .chatterbox)
+        XCTAssertEqual(viewModel.cloudStatus, "Cloud TTS set to Chatterbox")
+    }
 }

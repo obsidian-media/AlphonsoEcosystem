@@ -52,6 +52,27 @@ enum VoiceSpeaker: String, Codable {
     case alphonso
 }
 
+enum CloudTTSModel: String, CaseIterable, Codable, Identifiable {
+    case magpie
+    case chatterbox
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .magpie: return "Magpie"
+        case .chatterbox: return "Chatterbox"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .magpie: return "NVIDIA magpie-tts-multilingual"
+        case .chatterbox: return "ResembleAI chatterbox-multilingual-tts"
+        }
+    }
+}
+
 struct VoiceTranscriptEntry: Identifiable, Codable {
     let id: UUID
     let speaker: VoiceSpeaker
@@ -84,6 +105,7 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var permissionStatus = "Voice permissions not requested"
     @Published var cloudEndpoint = ""
     @Published var cloudAPIKey = ""
+    @Published var cloudTTSModel: CloudTTSModel = .magpie
     @Published var cloudStatus = "Cloud backend not configured"
 
     private let audioService = VoiceAudioService()
@@ -115,6 +137,10 @@ final class VoiceSessionViewModel: ObservableObject {
     init() {
         cloudEndpoint = cloudService.endpoint
         cloudAPIKey = cloudService.apiKey
+        if let storedModel = UserDefaults.standard.string(forKey: "com.alphonso.companion.voiceCloudModel"),
+           let model = CloudTTSModel(rawValue: storedModel) {
+            cloudTTSModel = model
+        }
         cloudStatus = cloudService.statusMessage
         bindAudioService()
     }
@@ -128,6 +154,12 @@ final class VoiceSessionViewModel: ObservableObject {
         cloudEndpoint = cloudService.endpoint
         cloudAPIKey = cloudService.apiKey
         cloudStatus = cloudService.statusMessage
+    }
+
+    func configureCloudTTSModel(_ model: CloudTTSModel) {
+        cloudTTSModel = model
+        UserDefaults.standard.set(model.rawValue, forKey: "com.alphonso.companion.voiceCloudModel")
+        cloudStatus = "Cloud TTS set to \(model.title)"
     }
 
     func prepareForVoiceSession() {
@@ -246,7 +278,8 @@ final class VoiceSessionViewModel: ObservableObject {
             let response = try await cloudService.submit(
                 transcript: transcript,
                 mode: mode,
-                history: self.transcript
+                history: self.transcript,
+                ttsModel: cloudTTSModel
             )
             appendAssistantReply(response.reply)
             try cloudService.play(response)

@@ -26,7 +26,7 @@ def test_voice_respond_returns_reply_and_audio():
         client = TestClient(app)
         response = client.post(
             "/voice/respond",
-            json={"session_id": "s1", "text": "hello", "history": []},
+            json={"session_id": "s1", "text": "hello", "history": [], "tts_model": "magpie"},
         )
 
         assert response.status_code == 200
@@ -35,6 +35,7 @@ def test_voice_respond_returns_reply_and_audio():
         assert payload["reply"] == "Echo: hello"
         assert payload["audio_base64"] == "YXVkaW8="
         assert payload["agent"] == "alphonso_core"
+        assert payload["tts_model"] == "magpie"
 
 
 def test_voice_respond_rejects_blank_text():
@@ -44,7 +45,7 @@ def test_voice_respond_rejects_blank_text():
         client = TestClient(app)
         response = client.post(
             "/voice/respond",
-            json={"session_id": "s1", "text": "   ", "history": []},
+            json={"session_id": "s1", "text": "   ", "history": [], "tts_model": "magpie"},
         )
 
         assert response.status_code == 400
@@ -58,7 +59,20 @@ def test_voice_respond_requires_token_when_configured():
         client = TestClient(app)
         response = client.post(
             "/voice/respond",
-            json={"session_id": "s1", "text": "hello", "history": []},
+            json={"session_id": "s1", "text": "hello", "history": [], "tts_model": "magpie"},
         )
 
         assert response.status_code == 401
+
+
+def test_voice_respond_rejects_unknown_tts_model():
+    with patch("main.generate_voice_reply", side_effect=_voice_reply):
+        from main import app
+
+        client = TestClient(app)
+        response = client.post(
+            "/voice/respond",
+            json={"session_id": "s1", "text": "hello", "history": [], "tts_model": "unknown"},
+        )
+
+        assert response.status_code == 400

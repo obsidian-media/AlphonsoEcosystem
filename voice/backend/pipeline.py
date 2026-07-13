@@ -3,7 +3,7 @@ import base64
 import httpx
 
 from stt import transcribe
-from tts import synthesize
+from tts import synthesize, synthesize_nvidia
 from router import detect_agent
 from vad import is_speech
 
@@ -66,7 +66,7 @@ async def run_pipeline(session_id, pcm, history):
     yield {'type': 'state', 'value': 'idle'}
 
 
-async def generate_voice_reply(session_id, text, history):
+async def generate_voice_reply(session_id, text, history, tts_model="magpie"):
     agent = detect_agent(text)
     full_reply = ""
 
@@ -77,13 +77,27 @@ async def generate_voice_reply(session_id, text, history):
         full_reply += chunk
         yield {'type': 'llm', 'text': chunk}
 
-    audio = await synthesize(full_reply)
+    audio, used_model = await synthesize_cloud_reply(full_reply, tts_model)
 
     yield {
         'type': 'voice_response',
         'reply': full_reply,
         'audio_base64': base64.b64encode(audio).decode('ascii') if audio else '',
         'agent': agent,
+        'tts_model': used_model,
     }
 
     yield {'type': 'state', 'value': 'idle'}
+
+
+async def synthesize_cloud_reply(text, tts_model, language="en-US"):
+    model_order = [tts_model, "magpie" if tts_model != "magpie" else "chatterbox"]
+    last_error = None
+
+    for model in model_order:
+        try:
+            return await synthesize_nvidia(text, model, language=language), model
+        except Exception as error:
+            last_error = error
+
+    raise last_error or RuntimeError("NVIDIA TTS synthesis failed")

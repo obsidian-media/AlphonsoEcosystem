@@ -7,6 +7,7 @@ struct VoiceCloudResponse: Decodable {
     let agent: String
     let reply: String
     let audioBase64: String
+    let ttsModel: String
     let state: String
 
     enum CodingKeys: String, CodingKey {
@@ -14,6 +15,7 @@ struct VoiceCloudResponse: Decodable {
         case agent
         case reply
         case audioBase64 = "audio_base64"
+        case ttsModel = "tts_model"
         case state
     }
 
@@ -61,7 +63,12 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         }
     }
 
-    func submit(transcript: String, mode: VoiceMode, history: [VoiceTranscriptEntry]) async throws -> VoiceCloudResponse {
+    func submit(
+        transcript: String,
+        mode: VoiceMode,
+        history: [VoiceTranscriptEntry],
+        ttsModel: CloudTTSModel
+    ) async throws -> VoiceCloudResponse {
         guard let url = URL(string: endpoint), !endpoint.isEmpty else {
             throw VoiceCloudError.notConfigured
         }
@@ -77,6 +84,7 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
             "session_id": sessionID,
             "text": transcript,
             "mode": mode.rawValue,
+            "tts_model": ttsModel.rawValue,
             "history": history.map { entry in
                 [
                     "speaker": entry.speaker.rawValue,

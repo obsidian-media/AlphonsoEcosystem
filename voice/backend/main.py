@@ -39,6 +39,8 @@ class VoiceRequest(BaseModel):
     session_id: str = Field(default="anon")
     text: str
     history: list[dict[str, Any]] = Field(default_factory=list)
+    tts_model: str = Field(default="magpie")
+    language: str = Field(default="en-US")
 
 
 class VoiceResponse(BaseModel):
@@ -46,7 +48,11 @@ class VoiceResponse(BaseModel):
     agent: str
     reply: str
     audio_base64: str
+    tts_model: str = "magpie"
     state: str = "idle"
+
+
+ALLOWED_TTS_MODELS = {"magpie", "chatterbox"}
 
 
 def _check_cloud_auth(authorization: str | None) -> None:
@@ -81,20 +87,26 @@ async def voice_respond(payload: VoiceRequest, authorization: str | None = Heade
     if not text:
         raise HTTPException(status_code=400, detail="Text is required")
 
+    tts_model = payload.tts_model.strip().lower()
+    if tts_model not in ALLOWED_TTS_MODELS:
+        raise HTTPException(status_code=400, detail="Unsupported TTS model")
+
     session_id = payload.session_id or "anon"
     set_state(session_id, "thinking")
 
     reply = ""
     agent = "alphonso_core"
     audio_base64 = ""
+    used_tts_model = tts_model
 
-    async for event in generate_voice_reply(session_id, text, payload.history):
+    async for event in generate_voice_reply(session_id, text, payload.history, tts_model):
         etype = event.get("type")
         if etype == "agent":
             agent = event.get("value", agent)
         elif etype == "voice_response":
             reply = event.get("reply", "")
             audio_base64 = event.get("audio_base64", "")
+            used_tts_model = event.get("tts_model", used_tts_model)
         elif etype == "state":
             set_state(session_id, event.get("value", "idle"))
 
@@ -108,6 +120,7 @@ async def voice_respond(payload: VoiceRequest, authorization: str | None = Heade
         agent=agent,
         reply=reply,
         audio_base64=audio_base64,
+        tts_model=used_tts_model,
         state=str(get_state(session_id)),
     )
 

@@ -38,6 +38,20 @@ struct VoiceView: View {
                             SecureField("Cloud API key (optional)", text: $viewModel.cloudAPIKey)
                                 .textFieldStyle(.roundedBorder)
 
+                            Picker("Cloud TTS model", selection: Binding(
+                                get: { viewModel.cloudTTSModel },
+                                set: { viewModel.configureCloudTTSModel($0) }
+                            )) {
+                                ForEach(CloudTTSModel.allCases) { model in
+                                    Text(model.title).tag(model)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            Text(viewModel.cloudTTSModel.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
                             Button("Save endpoint") {
                                 viewModel.configureCloudEndpoint(
                                     viewModel.cloudEndpoint,
