@@ -1,10 +1,9 @@
 import json
-import base64
 import os
 import httpx
 
 from stt import transcribe
-from tts import synthesize, synthesize_nvidia
+from tts import synthesize
 from router import detect_agent
 from vad import is_speech
 
@@ -69,45 +68,3 @@ async def run_pipeline(session_id, pcm, history):
     yield {'type': 'tts', 'audio': audio}
 
     yield {'type': 'state', 'value': 'idle'}
-
-
-async def generate_voice_reply(session_id, text, history, tts_model="magpie", language="en-US"):
-    agent = detect_agent(text)
-    full_reply = ""
-
-    yield {'type': 'agent', 'value': agent}
-    yield {'type': 'state', 'value': 'thinking'}
-
-    async for chunk in _call_ollama(session_id, text, agent, history):
-        full_reply += chunk
-        yield {'type': 'llm', 'text': chunk}
-
-    audio, used_model = await synthesize_cloud_reply(full_reply, tts_model, language)
-
-    yield {
-        'type': 'voice_response',
-        'reply': full_reply,
-        'audio_base64': base64.b64encode(audio).decode('ascii') if audio else '',
-        'agent': agent,
-        'tts_model': used_model,
-        'language': language,
-    }
-
-    yield {'type': 'state', 'value': 'idle'}
-
-
-async def synthesize_cloud_reply(text, tts_model, language="en-US"):
-    model_order = [tts_model, "magpie" if tts_model != "magpie" else "chatterbox"]
-    last_error = None
-
-    for model in model_order:
-        try:
-            return await synthesize_nvidia(text, model, language=language), model
-        except Exception as error:
-            last_error = error
-
-    audio = await synthesize(text)
-    if audio:
-        return audio, "piper-fallback"
-
-    raise last_error or RuntimeError("NVIDIA TTS synthesis failed")

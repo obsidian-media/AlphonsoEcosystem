@@ -1,6 +1,6 @@
 # Alphonso Voice OS
 
-Real-time interruptible voice agent system with both local and cloud delivery paths. **Status: Production-ready — merged to main 2026-06-24.**
+Real-time interruptible voice agent system with separate local and cloud delivery paths. **Local Voice is complete; Cloud Voice requires Railway deployment and NVIDIA credentials.**
 
 ## Pipeline
 
@@ -20,9 +20,9 @@ Microphone (AudioWorklet, 16kHz PCM)
 
 ```
 iOS push-to-talk
-  → Railway FastAPI POST /voice/respond
-  → Ollama reply generation
-  → NVIDIA TTS model: magpie or chatterbox
+  → Railway Cloud Voice Service POST /v1/voice/respond
+  → NVIDIA NIM reply generation
+  → NVIDIA TTS model: Magpie or Chatterbox
   → base64 WAV audio response
   → AVAudioPlayer playback on mobile
 ```
@@ -63,14 +63,7 @@ npm run dev
 
 | Variable | Default | Description |
 |---|---|---|
-| `OLLAMA_MODEL` | `llama3` | Ollama model name (overrides default `llama3`) |
-| `VOICE_CLOUD_API_KEY` | unset | Optional bearer token required by `POST /voice/respond` |
-| `NVIDIA_API_KEY` | unset | NVIDIA API key used for hosted TTS calls |
-| `NVIDIA_TTS_MAGPIE_URL` | unset | Hosted endpoint for `magpie-tts-multilingual` |
-| `NVIDIA_TTS_CHATTERBOX_URL` | unset | Hosted endpoint for `resembleai/chatterbox-multilingual-tts` |
-| `NVIDIA_TTS_MAGPIE_VOICE` | unset | Optional voice override for Magpie |
-| `NVIDIA_TTS_CHATTERBOX_VOICE` | unset | Optional voice override for Chatterbox |
-| `NVIDIA_TTS_LANGUAGE` | unset | Optional default language override for cloud synthesis |
+| `LOCAL_OLLAMA_URL` | `http://localhost:11434/api/chat` | Local or LAN Ollama chat endpoint for the Local Voice Gateway |
 
 ## Agent Routing
 
@@ -91,11 +84,11 @@ Voice input is automatically routed to the correct agent based on keywords:
 ## Backend Architecture
 
 ```
-main.py         WebSocket server, barge-in, session management
-pipeline.py     Core async generator: VAD → STT → LLM → TTS/cloud voice
+main.py         Local WebSocket server, barge-in, session management
+pipeline.py     Local async generator: VAD → STT → Ollama → Piper
 vad.py          WebRTC VAD (30ms frame analysis, 30% threshold)
 stt.py          faster-whisper, base model, cpu+int8, lru_cache
-tts.py          piper-tts + NVIDIA hosted TTS adapter
+tts.py          Piper local TTS adapter
 router.py       Regex-based intent → agent mapping
 session.py      Per-session asyncio.Task registry
 state.py        Per-session VoiceState dict
