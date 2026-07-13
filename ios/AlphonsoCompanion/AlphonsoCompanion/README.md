@@ -34,6 +34,7 @@ AlphonsoCompanion/
 └── Services/
     ├── WebSocketService.swift    — Client with auth/reconnect
     ├── VoiceAudioService.swift   — Mic capture, transcription, and TTS
+    ├── VoiceCloudService.swift   — Cloud voice request transport and playback
     ├── CompanionConnectionStateMachine.swift — reconnect/auth state machine
     └── MDNSService.swift         — Bonjour browser
 ```
@@ -42,4 +43,5 @@ AlphonsoCompanion/
 - `AlphonsoCompanionTests` contains unit coverage for the connection state machine.
 - `VoiceSessionViewModelTests` covers the new voice shell state transitions.
 - `AlphonsoCompanionUITests` contains the launch smoke test for the mobile shell.
-- The Voice tab is split into `Local` and `Cloud` modes so the STT/TTS wiring can diverge cleanly later.
+- The Voice tab is split into `Local` and `Cloud` modes so local speech capture and Railway-backed cloud speech can diverge cleanly.
+- Cloud mode expects a Railway-deployed endpoint that accepts `POST /voice/respond` and returns `reply` plus `audio_base64`.

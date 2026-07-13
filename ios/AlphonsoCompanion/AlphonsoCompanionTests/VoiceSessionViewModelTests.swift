@@ -54,4 +54,24 @@ final class VoiceSessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.transcript.first?.speaker, .alphonso)
         XCTAssertEqual(viewModel.transcript.first?.text, "All set")
     }
+
+    func testCloudEndpointConfigurationUpdatesStatus() {
+        let viewModel = VoiceSessionViewModel()
+
+        viewModel.configureCloudEndpoint("https://voice.example.com/alphonso")
+
+        XCTAssertEqual(viewModel.cloudEndpoint, "https://voice.example.com/alphonso")
+        XCTAssertEqual(viewModel.cloudStatus, "Cloud backend ready")
+    }
+
+    func testCloudEndpointConfigurationStoresApiKey() {
+        let viewModel = VoiceSessionViewModel()
+
+        viewModel.configureCloudEndpoint(
+            "https://voice.example.com/alphonso",
+            apiKey: "secret-token"
+        )
+
+        XCTAssertEqual(viewModel.cloudAPIKey, "secret-token")
+    }
 }

@@ -18,7 +18,7 @@ enum VoiceMode: String, CaseIterable, Codable, Identifiable {
     var subtitle: String {
         switch self {
         case .local: return "Ollama on the local stack"
-        case .cloud: return "Cloud voice with NVIDIA backending"
+        case .cloud: return "Railway-backed cloud voice"
         }
     }
 
@@ -82,15 +82,19 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var transcript: [VoiceTranscriptEntry] = []
     @Published var statusMessage = "Ready for voice"
     @Published var permissionStatus = "Voice permissions not requested"
+    @Published var cloudEndpoint = ""
+    @Published var cloudAPIKey = ""
+    @Published var cloudStatus = "Cloud backend not configured"
 
     private let audioService = VoiceAudioService()
+    private let cloudService = VoiceCloudService()
     private var localTranscriptSender: ((String) -> Void)?
     private var lastSpokenMessageID: UUID?
 
     var providerTitle: String {
         switch mode {
         case .local: return "Ollama"
-        case .cloud: return "NVIDIA cloud"
+        case .cloud: return "Railway cloud"
         }
     }
 
@@ -109,11 +113,21 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     init() {
+        cloudEndpoint = cloudService.endpoint
+        cloudAPIKey = cloudService.apiKey
+        cloudStatus = cloudService.statusMessage
         bindAudioService()
     }
 
     func setLocalTranscriptSender(_ sender: @escaping (String) -> Void) {
         localTranscriptSender = sender
+    }
+
+    func configureCloudEndpoint(_ endpoint: String, apiKey: String = "") {
+        cloudService.configure(endpoint: endpoint, apiKey: apiKey)
+        cloudEndpoint = cloudService.endpoint
+        cloudAPIKey = cloudService.apiKey
+        cloudStatus = cloudService.statusMessage
     }
 
     func prepareForVoiceSession() {
@@ -127,7 +141,12 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func selectMode(_ mode: VoiceMode) {
+        if self.mode == .local && phase == .listening {
+            audioService.stopRecording()
+        }
+        cloudService.stopPlayback()
         self.mode = mode
+        phase = .idle
         statusMessage = "\(mode.title) mode selected"
     }
 
@@ -141,7 +160,7 @@ final class VoiceSessionViewModel: ObservableObject {
 
     func startListening() {
         guard mode == .local else {
-            statusMessage = "Cloud voice shell is ready for backend wiring"
+            statusMessage = "Cloud voice uses the Railway backend"
             return
         }
 
@@ -175,7 +194,9 @@ final class VoiceSessionViewModel: ObservableObject {
         case .local:
             localTranscriptSender?(trimmed)
         case .cloud:
-            appendAssistantReply("Cloud voice backend wiring is next.")
+            Task {
+                await sendCloudTranscript(trimmed)
+            }
         }
     }
 
@@ -217,11 +238,29 @@ final class VoiceSessionViewModel: ObservableObject {
 
     func resetConversation() {
         audioService.stopRecording()
+        cloudService.stopPlayback()
         transcript.removeAll()
         draftTranscript = ""
         phase = .idle
         statusMessage = "Conversation cleared"
         lastSpokenMessageID = nil
+    }
+
+    private func sendCloudTranscript(_ transcript: String) async {
+        do {
+            let response = try await cloudService.submit(
+                transcript: transcript,
+                mode: mode,
+                history: self.transcript
+            )
+            appendAssistantReply(response.reply)
+            try cloudService.play(response)
+            cloudStatus = cloudService.statusMessage
+        } catch {
+            statusMessage = error.localizedDescription
+            phase = .idle
+            cloudStatus = error.localizedDescription
+        }
     }
 
     private func bindAudioService() {
@@ -245,6 +284,16 @@ final class VoiceSessionViewModel: ObservableObject {
         }
 
         audioService.onSpeakingEnded = { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                if self.phase == .speaking {
+                    self.phase = .idle
+                    self.statusMessage = "Ready for voice"
+                }
+            }
+        }
+
+        cloudService.onSpeakingEnded = { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
                 if self.phase == .speaking {

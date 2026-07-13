@@ -24,6 +24,37 @@ struct VoiceView: View {
 
                     VoiceModeCard(mode: viewModel.mode)
 
+                    if viewModel.mode == .cloud {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Cloud backend")
+                                .font(.headline)
+
+                            TextField("Cloud endpoint URL", text: $viewModel.cloudEndpoint)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+
+                            SecureField("Cloud API key (optional)", text: $viewModel.cloudAPIKey)
+                                .textFieldStyle(.roundedBorder)
+
+                            Button("Save endpoint") {
+                                viewModel.configureCloudEndpoint(
+                                    viewModel.cloudEndpoint,
+                                    apiKey: viewModel.cloudAPIKey
+                                )
+                            }
+                            .buttonStyle(.borderedProminent)
+
+                            Text(viewModel.cloudStatus)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding()
+                        .background(.thinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Transcript")
                             .font(.headline)
@@ -58,7 +89,7 @@ struct VoiceView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.secondary)
-                        .disabled(!viewModel.canSend)
+                        .disabled(!viewModel.canSend || (viewModel.mode == .cloud && viewModel.cloudEndpoint.isEmpty))
                         .accessibilityIdentifier("voice-send")
                     }
 
@@ -119,10 +150,10 @@ private struct VoiceHeroCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Talk to Alphonso")
                         .font(.title2.bold())
-                    Text("Push to talk now. Local mode speaks through the desktop. Cloud mode is staged for the separate NVIDIA-backed path.")
+                    Text("Push to talk now. Local mode speaks through the desktop. Cloud mode routes to the Railway voice backend.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

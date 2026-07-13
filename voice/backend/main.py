@@ -1,11 +1,14 @@
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
+from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
-from pipeline import run_pipeline
+from pipeline import generate_voice_reply, run_pipeline
 from session import register, cancel, cleanup_done
 from state import get_state, set_state, remove_state
 from stt import _load_model as load_stt
@@ -32,6 +35,31 @@ app.add_middleware(
 )
 
 
+class VoiceRequest(BaseModel):
+    session_id: str = Field(default="anon")
+    text: str
+    history: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class VoiceResponse(BaseModel):
+    session_id: str
+    agent: str
+    reply: str
+    audio_base64: str
+    state: str = "idle"
+
+
+def _check_cloud_auth(authorization: str | None) -> None:
+    required_key = os.environ.get("VOICE_CLOUD_API_KEY", "").strip()
+    if not required_key:
+        return
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing voice cloud auth token")
+    token = authorization.split(" ", 1)[1].strip()
+    if token != required_key:
+        raise HTTPException(status_code=403, detail="Invalid voice cloud auth token")
+
+
 @app.get("/health")
 async def health():
     tts_ok = False
@@ -43,6 +71,45 @@ async def health():
     except Exception:
         pass
     return {"status": "ok", "stt": True, "tts": tts_ok}
+
+
+@app.post("/voice/respond", response_model=VoiceResponse)
+async def voice_respond(payload: VoiceRequest, authorization: str | None = Header(default=None)):
+    _check_cloud_auth(authorization)
+
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+
+    session_id = payload.session_id or "anon"
+    set_state(session_id, "thinking")
+
+    reply = ""
+    agent = "alphonso_core"
+    audio_base64 = ""
+
+    async for event in generate_voice_reply(session_id, text, payload.history):
+        etype = event.get("type")
+        if etype == "agent":
+            agent = event.get("value", agent)
+        elif etype == "voice_response":
+            reply = event.get("reply", "")
+            audio_base64 = event.get("audio_base64", "")
+        elif etype == "state":
+            set_state(session_id, event.get("value", "idle"))
+
+    if not reply:
+        raise HTTPException(status_code=502, detail="Voice backend returned no reply")
+    if not audio_base64:
+        raise HTTPException(status_code=502, detail="Voice backend returned no audio")
+
+    return VoiceResponse(
+        session_id=session_id,
+        agent=agent,
+        reply=reply,
+        audio_base64=audio_base64,
+        state=str(get_state(session_id)),
+    )
 
 
 @app.websocket("/ws")

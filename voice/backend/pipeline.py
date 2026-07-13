@@ -1,4 +1,5 @@
 import json
+import base64
 import httpx
 
 from stt import transcribe
@@ -61,5 +62,28 @@ async def run_pipeline(session_id, pcm, history):
     audio = await synthesize(full_reply)
 
     yield {'type': 'tts', 'audio': audio}
+
+    yield {'type': 'state', 'value': 'idle'}
+
+
+async def generate_voice_reply(session_id, text, history):
+    agent = detect_agent(text)
+    full_reply = ""
+
+    yield {'type': 'agent', 'value': agent}
+    yield {'type': 'state', 'value': 'thinking'}
+
+    async for chunk in _call_ollama(session_id, text, agent, history):
+        full_reply += chunk
+        yield {'type': 'llm', 'text': chunk}
+
+    audio = await synthesize(full_reply)
+
+    yield {
+        'type': 'voice_response',
+        'reply': full_reply,
+        'audio_base64': base64.b64encode(audio).decode('ascii') if audio else '',
+        'agent': agent,
+    }
 
     yield {'type': 'state', 'value': 'idle'}
