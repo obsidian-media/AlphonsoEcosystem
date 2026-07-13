@@ -22,10 +22,11 @@ def test_request_limits_history_to_twelve_entries():
 
 
 def test_request_accepts_farsi_and_selected_agent():
-    request = VoiceRequest(session_id="s", text="سلام", language="fa-IR", agent_id="maria")
+    request = VoiceRequest(session_id="s", text="سلام", language="fa-IR", agent_id="maria", piper_voice="manta")
 
     assert request.language == "fa-IR"
     assert request.agent_id == "maria"
+    assert request.piper_voice == "manta"
 
 
 def test_request_rejects_unknown_agent_and_language():

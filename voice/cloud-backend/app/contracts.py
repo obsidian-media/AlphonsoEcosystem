@@ -20,6 +20,7 @@ class VoiceRequest(BaseModel):
     agent_id: Literal["alphonso", "jose", "hector", "miya", "maria", "marcus", "echo", "sentinel", "nova"] = "alphonso"
     language: Literal["en-US", "es-US", "fr-FR", "de-DE", "ja-JP", "zh-CN", "fa-IR"] = "en-US"
     tts_model: Literal["magpie", "chatterbox"] = "magpie"
+    piper_voice: Literal["mana", "manta"] = "mana"
 
 
 class Timings(BaseModel):

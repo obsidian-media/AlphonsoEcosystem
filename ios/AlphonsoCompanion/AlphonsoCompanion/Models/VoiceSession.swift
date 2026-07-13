@@ -45,6 +45,7 @@ enum VoicePhase: String, Codable {
     case transcribing
     case sending
     case speaking
+    case playbackFailed
 }
 
 enum VoiceSpeaker: String, Codable {
@@ -59,6 +60,7 @@ enum VoiceLanguage: String, CaseIterable, Codable, Identifiable {
     case germanDE = "de-DE"
     case japaneseJP = "ja-JP"
     case chineseCN = "zh-CN"
+    case persianIR = "fa-IR"
 
     var id: String { rawValue }
 
@@ -70,6 +72,7 @@ enum VoiceLanguage: String, CaseIterable, Codable, Identifiable {
         case .germanDE: return "German"
         case .japaneseJP: return "Japanese"
         case .chineseCN: return "Chinese"
+        case .persianIR: return "Persian / Farsi"
         }
     }
 
@@ -81,10 +84,29 @@ enum VoiceLanguage: String, CaseIterable, Codable, Identifiable {
         case .germanDE: return "German (Germany)"
         case .japaneseJP: return "Japanese"
         case .chineseCN: return "Chinese (Simplified)"
+        case .persianIR: return "Persian / Farsi (Iran)"
         }
     }
 
     var localeIdentifier: String { rawValue }
+}
+
+enum VoiceAgent: String, CaseIterable, Codable, Identifiable {
+    case alphonso, jose, hector, miya, maria, marcus, echo, sentinel, nova
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
+enum PiperFarsiVoice: String, CaseIterable, Codable, Identifiable {
+    case mana, manta
+    var id: String { rawValue }
+    var title: String { rawValue == "mana" ? "Mana" : "Manta" }
+}
+
+enum VoiceReplyDelivery: String, Codable {
+    case pendingPlayback
+    case spoken
+    case textOnly
 }
 
 enum CloudTTSModel: String, CaseIterable, Codable, Identifiable {
@@ -113,6 +135,7 @@ struct VoiceTranscriptEntry: Identifiable, Codable {
     let speaker: VoiceSpeaker
     let text: String
     let mode: VoiceMode
+    var delivery: VoiceReplyDelivery
     let timestamp: Date
 
     init(
@@ -120,12 +143,14 @@ struct VoiceTranscriptEntry: Identifiable, Codable {
         speaker: VoiceSpeaker,
         text: String,
         mode: VoiceMode,
+        delivery: VoiceReplyDelivery = .textOnly,
         timestamp: Date = Date()
     ) {
         self.id = id
         self.speaker = speaker
         self.text = text
         self.mode = mode
+        self.delivery = delivery
         self.timestamp = timestamp
     }
 }
@@ -141,13 +166,17 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var cloudEndpoint = ""
     @Published var cloudAPIKey = ""
     @Published var cloudTTSModel: CloudTTSModel = .magpie
+    @Published var piperFarsiVoice: PiperFarsiVoice = .mana
     @Published var cloudLanguage: VoiceLanguage = .englishUS
+    @Published var selectedAgent: VoiceAgent = .alphonso
     @Published var cloudStatus = "Cloud backend not configured"
 
     private let audioService = VoiceAudioService()
     private let cloudService = VoiceCloudService()
     private var localTranscriptSender: ((String) -> Void)?
     private var lastSpokenMessageID: UUID?
+    private var lastCloudResponse: VoiceCloudResponse?
+    private var pendingCloudMessageID: UUID?
 
     var providerTitle: String {
         switch mode {
@@ -163,6 +192,7 @@ final class VoiceSessionViewModel: ObservableObject {
         case .transcribing: return "Transcribing"
         case .sending: return "Sending"
         case .speaking: return "Speaking"
+        case .playbackFailed: return "Audio retry needed"
         }
     }
 
@@ -180,6 +210,14 @@ final class VoiceSessionViewModel: ObservableObject {
         if let storedLanguage = UserDefaults.standard.string(forKey: "com.alphonso.companion.voiceCloudLanguage"),
            let language = VoiceLanguage(rawValue: storedLanguage) {
             cloudLanguage = language
+        }
+        if let storedAgent = UserDefaults.standard.string(forKey: "com.alphonso.companion.voiceAgent"),
+           let agent = VoiceAgent(rawValue: storedAgent) {
+            selectedAgent = agent
+        }
+        if let storedVoice = UserDefaults.standard.string(forKey: "com.alphonso.companion.piperFarsiVoice"),
+           let voice = PiperFarsiVoice(rawValue: storedVoice) {
+            piperFarsiVoice = voice
         }
         cloudStatus = cloudService.statusMessage
         bindAudioService()
@@ -206,6 +244,18 @@ final class VoiceSessionViewModel: ObservableObject {
         cloudLanguage = language
         UserDefaults.standard.set(language.rawValue, forKey: "com.alphonso.companion.voiceCloudLanguage")
         cloudStatus = "Cloud language set to \(language.title)"
+    }
+
+    func configureSelectedAgent(_ agent: VoiceAgent) {
+        selectedAgent = agent
+        UserDefaults.standard.set(agent.rawValue, forKey: "com.alphonso.companion.voiceAgent")
+        statusMessage = "Talking to \(agent.title)"
+    }
+
+    func configurePiperFarsiVoice(_ voice: PiperFarsiVoice) {
+        piperFarsiVoice = voice
+        UserDefaults.standard.set(voice.rawValue, forKey: "com.alphonso.companion.piperFarsiVoice")
+        cloudStatus = "Farsi voice set to \(voice.title)"
     }
 
     func prepareForVoiceSession() {
@@ -293,21 +343,45 @@ final class VoiceSessionViewModel: ObservableObject {
         guard lastSpokenMessageID != message.id else { return }
 
         lastSpokenMessageID = message.id
-        appendAssistantReply(message.text)
+        appendAssistantReply(message.text, delivery: .spoken)
+        phase = .speaking
+        statusMessage = "Speaking reply through \(providerTitle)"
         audioService.speak(message.text)
     }
 
-    func appendAssistantReply(_ text: String) {
-        transcript.append(
-            VoiceTranscriptEntry(
+    @discardableResult
+    func appendAssistantReply(_ text: String, delivery: VoiceReplyDelivery = .pendingPlayback) -> UUID {
+        let entry = VoiceTranscriptEntry(
                 speaker: .alphonso,
                 text: text,
-                mode: mode
+                mode: mode,
+                delivery: delivery
             )
-        )
-        phase = .speaking
-        statusMessage = "Speaking reply through \(providerTitle)"
+        transcript.append(entry)
+        if delivery == .pendingPlayback {
+            phase = .sending
+            statusMessage = "Preparing spoken reply through \(providerTitle)"
+        }
+        return entry.id
     }
+
+    func retryCloudPlayback() {
+        guard let response = lastCloudResponse, let messageID = pendingCloudMessageID else { return }
+        do {
+            try cloudService.play(response)
+            updateAssistantDelivery(messageID, to: .spoken)
+            phase = .speaking
+            statusMessage = "Speaking cloud reply"
+            cloudStatus = cloudService.statusMessage
+        } catch {
+            updateAssistantDelivery(messageID, to: .textOnly)
+            phase = .playbackFailed
+            statusMessage = "Text reply is ready. Audio could not play — try again."
+            cloudStatus = error.localizedDescription
+        }
+    }
+
+    var canRetryPlayback: Bool { phase == .playbackFailed && lastCloudResponse != nil }
 
     func resetConversation() {
         audioService.stopRecording()
@@ -317,6 +391,8 @@ final class VoiceSessionViewModel: ObservableObject {
         phase = .idle
         statusMessage = "Conversation cleared"
         lastSpokenMessageID = nil
+        lastCloudResponse = nil
+        pendingCloudMessageID = nil
     }
 
     private func sendCloudTranscript(_ transcript: String) async {
@@ -326,15 +402,18 @@ final class VoiceSessionViewModel: ObservableObject {
                 mode: mode,
                 history: cloudHistory(),
                 ttsModel: cloudTTSModel,
-                language: cloudLanguage.rawValue
+                language: cloudLanguage.rawValue,
+                agentID: selectedAgent.rawValue,
+                piperVoice: piperFarsiVoice.rawValue
             )
-            appendAssistantReply(response.reply)
+            let messageID = appendAssistantReply(response.reply)
+            lastCloudResponse = response
+            pendingCloudMessageID = messageID
             if response.language != cloudLanguage.rawValue,
                let normalized = VoiceLanguage(rawValue: response.language) {
                 cloudLanguage = normalized
             }
-            try cloudService.play(response)
-            cloudStatus = cloudService.statusMessage
+            retryCloudPlayback()
         } catch {
             statusMessage = error.localizedDescription
             phase = .idle
@@ -349,6 +428,11 @@ final class VoiceSessionViewModel: ObservableObject {
                 content: entry.text
             )
         }
+    }
+
+    private func updateAssistantDelivery(_ id: UUID, to delivery: VoiceReplyDelivery) {
+        guard let index = transcript.firstIndex(where: { $0.id == id }) else { return }
+        transcript[index].delivery = delivery
     }
 
     private func bindAudioService() {

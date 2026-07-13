@@ -24,19 +24,31 @@ struct VoiceView: View {
 
                     VoiceModeCard(mode: viewModel.mode)
 
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Agent")
+                            .font(.headline)
+                        Picker("Agent", selection: Binding(
+                            get: { viewModel.selectedAgent },
+                            set: { viewModel.configureSelectedAgent($0) }
+                        )) {
+                            ForEach(VoiceAgent.allCases) { agent in
+                                Text(agent.title).tag(agent)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+                    .padding()
+                    .background(.thinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
                     if viewModel.mode == .cloud {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Cloud backend")
                                 .font(.headline)
 
-                            TextField("Cloud endpoint URL", text: $viewModel.cloudEndpoint)
-                                .textFieldStyle(.roundedBorder)
-                                .keyboardType(.URL)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-
-                            SecureField("Cloud API key (optional)", text: $viewModel.cloudAPIKey)
-                                .textFieldStyle(.roundedBorder)
+                            Text("Cloud access is configured during secure Alphonso pairing. Provider URLs and credentials are never entered here.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
 
                             Picker("Cloud TTS model", selection: Binding(
                                 get: { viewModel.cloudTTSModel },
@@ -66,13 +78,17 @@ struct VoiceView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
-                            Button("Save endpoint") {
-                                viewModel.configureCloudEndpoint(
-                                    viewModel.cloudEndpoint,
-                                    apiKey: viewModel.cloudAPIKey
-                                )
+                            if viewModel.cloudLanguage == .persianIR {
+                                Picker("Farsi voice", selection: Binding(
+                                    get: { viewModel.piperFarsiVoice },
+                                    set: { viewModel.configurePiperFarsiVoice($0) }
+                                )) {
+                                    ForEach(PiperFarsiVoice.allCases) { voice in
+                                        Text(voice.title).tag(voice)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
                             }
-                            .buttonStyle(.borderedProminent)
 
                             Text(viewModel.cloudStatus)
                                 .font(.caption)
@@ -119,6 +135,13 @@ struct VoiceView: View {
                         .tint(.secondary)
                         .disabled(!viewModel.canSend || (viewModel.mode == .cloud && viewModel.cloudEndpoint.isEmpty))
                         .accessibilityIdentifier("voice-send")
+                    }
+
+                    if viewModel.canRetryPlayback {
+                        Button("Retry audio playback") {
+                            viewModel.retryCloudPlayback()
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
 
                     if viewModel.mode == .cloud {
@@ -186,7 +209,7 @@ private struct VoiceHeroCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Talk to Alphonso")
+                    Text("Talk to \(viewModel.selectedAgent.title)")
                         .font(.title2.bold())
                     Text("Push to talk now. Local mode speaks through the desktop. Cloud mode routes to the Railway voice backend.")
                         .font(.subheadline)
@@ -289,6 +312,11 @@ private struct VoiceTranscriptRow: View {
                 Text(entry.timestamp, style: .time)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+                if entry.speaker == .alphonso && entry.delivery == .textOnly {
+                    Text("Text reply — audio unavailable")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
             }
 
             if entry.speaker == .alphonso { Spacer(minLength: 40) }

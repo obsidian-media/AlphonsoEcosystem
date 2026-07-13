@@ -46,3 +46,17 @@ def test_voice_returns_reply_audio_and_timings():
     assert payload["agent"] == "alphonso"
     assert payload["tts_provider"] == "nvidia"
     assert payload["timings_ms"]["total"] >= 0
+
+
+def test_farsi_voice_uses_selected_piper_voice():
+    with patch.dict(os.environ, ENV | {"PIPER_FARSI_URL": "https://piper.example.test", "PIPER_SERVICE_TOKEN": "piper-key"}, clear=False), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(return_value="سلام")), \
+         patch("app.main.PiperTTSClient.synthesize", new=AsyncMock(return_value=b"RIFFfake-wav")) as synthesize:
+        response = TestClient(app).post(
+            "/v1/voice/respond",
+            headers={"Authorization": "Bearer voice-key"},
+            json={"session_id": "s", "text": "سلام", "language": "fa-IR", "piper_voice": "manta"},
+        )
+    assert response.status_code == 200
+    assert response.json()["tts_provider"] == "piper"
+    synthesize.assert_awaited_once_with("سلام", "manta")

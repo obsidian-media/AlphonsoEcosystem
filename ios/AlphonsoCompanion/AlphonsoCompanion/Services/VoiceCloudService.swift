@@ -98,7 +98,9 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         mode: VoiceMode,
         history: [VoiceCloudHistoryMessage],
         ttsModel: CloudTTSModel,
-        language: String
+        language: String,
+        agentID: String,
+        piperVoice: String
     ) async throws -> VoiceCloudResponse {
         guard let url = URL(string: endpoint), !endpoint.isEmpty else {
             throw VoiceCloudError.notConfigured
@@ -118,6 +120,8 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
             "mode": mode.rawValue,
             "tts_model": ttsModel.rawValue,
             "language": language,
+            "agent_id": agentID,
+            "piper_voice": piperVoice,
             "history": history.map { ["role": $0.role, "content": $0.content] }
         ]
 
@@ -158,7 +162,10 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         audioPlayer = try AVAudioPlayer(data: audioData)
         audioPlayer?.delegate = self
         audioPlayer?.prepareToPlay()
-        audioPlayer?.play()
+        guard audioPlayer?.play() == true else {
+            audioPlayer = nil
+            throw VoiceCloudError.playbackFailed
+        }
         statusMessage = "Speaking cloud reply"
     }
 
@@ -221,6 +228,7 @@ enum VoiceCloudError: LocalizedError {
     case badResponse
     case invalidPayload
     case network(String)
+    case playbackFailed
 
     var errorDescription: String? {
         switch self {
@@ -232,6 +240,8 @@ enum VoiceCloudError: LocalizedError {
             return "Cloud voice backend response could not be parsed."
         case .network(let message):
             return "Cloud voice network error: \(message)"
+        case .playbackFailed:
+            return "Cloud reply audio could not start."
         }
     }
 }

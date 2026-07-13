@@ -18,6 +18,8 @@ class VoiceAgent:
     id: str
     display_name: str
     role_summary: str
+    key_constraint: str
+    capabilities: str
     voice_persona: str
 
 
@@ -45,6 +47,8 @@ def get_voice_agent(agent_id: str) -> VoiceAgent | None:
                 id=raw_agent["id"],
                 display_name=raw_agent["displayName"],
                 role_summary=raw_agent["roleSummary"],
+                key_constraint=raw_agent["keyConstraint"],
+                capabilities=raw_agent["capabilities"],
                 voice_persona=raw_agent["voicePersona"],
             )
     return None
@@ -61,6 +65,8 @@ def build_system_message(agent_id: str, language: str) -> str:
         [
             f"You are {agent.display_name}.",
             f"Role: {agent.role_summary}",
+            f"Key constraint: {agent.key_constraint}",
+            f"Capabilities: {agent.capabilities}",
             f"Voice persona: {agent.voice_persona}",
             f"Reply language: {language_label}.",
             *[str(rule) for rule in _policy()["rules"]],

@@ -46,7 +46,7 @@ async def respond(payload: VoiceRequest, authorization: str | None = Header(defa
         reply = await client.complete(messages)
         llm_ms = int((time.perf_counter() - started) * 1000)
         if payload.language == "fa-IR":
-            audio = await PiperTTSClient(settings).synthesize(reply, settings.piper_farsi_default_voice)
+            audio = await PiperTTSClient(settings).synthesize(reply, payload.piper_voice)
             tts_provider = "piper"
         else:
             audio = await client.synthesize(reply, payload.language, payload.tts_model)
