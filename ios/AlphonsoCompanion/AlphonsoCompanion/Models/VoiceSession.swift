@@ -141,7 +141,7 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func selectMode(_ mode: VoiceMode) {
-        if self.mode == .local && phase == .listening {
+        if phase == .listening {
             audioService.stopRecording()
         }
         cloudService.stopPlayback()
@@ -159,13 +159,10 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func startListening() {
-        guard mode == .local else {
-            statusMessage = "Cloud voice uses the Railway backend"
-            return
-        }
-
         phase = .listening
-        statusMessage = "Listening for speech in local mode"
+        statusMessage = mode == .local
+            ? "Listening for speech in local mode"
+            : "Listening for speech to send to Railway"
         audioService.startRecording()
     }
 
@@ -201,7 +198,6 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func ingestPartialTranscript(_ text: String) {
-        guard mode == .local else { return }
         draftTranscript = text
         if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             phase = .transcribing
@@ -210,7 +206,6 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func ingestFinalTranscript(_ text: String) {
-        guard mode == .local else { return }
         draftTranscript = text
         submitDraft()
     }
