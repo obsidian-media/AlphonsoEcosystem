@@ -1,9 +1,16 @@
 import AVFoundation
 import Combine
 import Foundation
+import Security
+
+struct VoiceCloudHistoryMessage: Encodable, Equatable {
+    let role: String
+    let content: String
+}
 
 struct VoiceCloudResponse: Decodable {
     let sessionID: String
+    let requestID: String
     let agent: String
     let reply: String
     let audioBase64: String
@@ -13,6 +20,7 @@ struct VoiceCloudResponse: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case sessionID = "session_id"
+        case requestID = "request_id"
         case agent
         case reply
         case audioBase64 = "audio_base64"
@@ -36,13 +44,20 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
     var onSpeakingEnded: (() -> Void)?
 
     private let endpointKey = "com.alphonso.companion.voiceCloudEndpoint"
-    private let apiKeyKey = "com.alphonso.companion.voiceCloudApiKey"
+    private let apiKeyAccount = "com.alphonso.companion.voiceCloudApiKey"
+    private let legacyAPIKeyKey = "com.alphonso.companion.voiceCloudApiKey"
     private let sessionID = UUID().uuidString
     private var audioPlayer: AVAudioPlayer?
 
     init() {
         endpoint = UserDefaults.standard.string(forKey: endpointKey) ?? ""
-        apiKey = UserDefaults.standard.string(forKey: apiKeyKey) ?? ""
+        let securedKey = Self.loadAPIKey(account: apiKeyAccount)
+        let legacyKey = UserDefaults.standard.string(forKey: legacyAPIKeyKey)
+        apiKey = securedKey ?? legacyKey ?? ""
+        if securedKey == nil, let legacyKey, !legacyKey.isEmpty {
+            Self.saveAPIKey(legacyKey, account: apiKeyAccount)
+            UserDefaults.standard.removeObject(forKey: legacyAPIKeyKey)
+        }
         statusMessage = endpoint.isEmpty ? "Cloud backend not configured" : "Cloud backend ready"
     }
 
@@ -54,23 +69,15 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
             self.endpoint = ""
             UserDefaults.standard.removeObject(forKey: endpointKey)
             statusMessage = "Cloud backend not configured"
-            if self.apiKey.isEmpty {
-                UserDefaults.standard.removeObject(forKey: apiKeyKey)
-            } else {
-                UserDefaults.standard.set(self.apiKey, forKey: apiKeyKey)
-            }
+            Self.saveAPIKey(self.apiKey, account: apiKeyAccount)
             return
         }
 
-        guard URL(string: trimmedEndpoint) != nil else {
+        guard Self.isAcceptedCloudEndpoint(trimmedEndpoint) else {
             self.endpoint = ""
             UserDefaults.standard.removeObject(forKey: endpointKey)
             statusMessage = "Cloud backend URL is invalid"
-            if self.apiKey.isEmpty {
-                UserDefaults.standard.removeObject(forKey: apiKeyKey)
-            } else {
-                UserDefaults.standard.set(self.apiKey, forKey: apiKeyKey)
-            }
+            Self.saveAPIKey(self.apiKey, account: apiKeyAccount)
             return
         }
 
@@ -78,17 +85,13 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         UserDefaults.standard.set(self.endpoint, forKey: endpointKey)
         statusMessage = "Cloud backend ready"
 
-        if self.apiKey.isEmpty {
-            UserDefaults.standard.removeObject(forKey: apiKeyKey)
-        } else {
-            UserDefaults.standard.set(self.apiKey, forKey: apiKeyKey)
-        }
+        Self.saveAPIKey(self.apiKey, account: apiKeyAccount)
     }
 
     func submit(
         transcript: String,
         mode: VoiceMode,
-        history: [VoiceTranscriptEntry],
+        history: [VoiceCloudHistoryMessage],
         ttsModel: CloudTTSModel,
         language: String
     ) async throws -> VoiceCloudResponse {
@@ -110,14 +113,7 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
             "mode": mode.rawValue,
             "tts_model": ttsModel.rawValue,
             "language": language,
-            "history": history.map { entry in
-                [
-                    "speaker": entry.speaker.rawValue,
-                    "text": entry.text,
-                    "mode": entry.mode.rawValue,
-                    "timestamp": ISO8601DateFormatter().string(from: entry.timestamp)
-                ]
-            }
+            "history": history.map { ["role": $0.role, "content": $0.content] }
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
@@ -171,6 +167,47 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         onSpeakingEnded?()
+    }
+
+    private static func isAcceptedCloudEndpoint(_ value: String) -> Bool {
+        guard let url = URL(string: value), !value.isEmpty else { return false }
+#if DEBUG
+        return url.scheme == "https" || url.host == "localhost" || url.host == "127.0.0.1"
+#else
+        return url.scheme == "https"
+#endif
+    }
+
+    private static func loadAPIKey(account: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Bundle.main.bundleIdentifier ?? "com.alphonso.companion",
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+        ]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private static func saveAPIKey(_ value: String, account: String) {
+        let baseQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Bundle.main.bundleIdentifier ?? "com.alphonso.companion",
+            kSecAttrAccount as String: account,
+        ]
+        if value.isEmpty {
+            SecItemDelete(baseQuery as CFDictionary)
+            return
+        }
+        let data = Data(value.utf8)
+        let update = SecItemUpdate(baseQuery as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if update == errSecItemNotFound {
+            var create = baseQuery
+            create[kSecValueData as String] = data
+            SecItemAdd(create as CFDictionary, nil)
+        }
     }
 }
 

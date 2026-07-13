@@ -324,7 +324,7 @@ final class VoiceSessionViewModel: ObservableObject {
             let response = try await cloudService.submit(
                 transcript: transcript,
                 mode: mode,
-                history: self.transcript,
+                history: cloudHistory(),
                 ttsModel: cloudTTSModel,
                 language: cloudLanguage.rawValue
             )
@@ -339,6 +339,15 @@ final class VoiceSessionViewModel: ObservableObject {
             statusMessage = error.localizedDescription
             phase = .idle
             cloudStatus = error.localizedDescription
+        }
+    }
+
+    func cloudHistory() -> [VoiceCloudHistoryMessage] {
+        transcript.dropLast().suffix(12).map { entry in
+            VoiceCloudHistoryMessage(
+                role: entry.speaker == .user ? "user" : "assistant",
+                content: entry.text
+            )
         }
     }
 

@@ -75,6 +75,23 @@ final class VoiceSessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.cloudAPIKey, "secret-token")
     }
 
+    func testCloudHistoryUsesRoleContentAndExcludesCurrentUserMessage() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.transcript = [
+            VoiceTranscriptEntry(speaker: .user, text: "Earlier request", mode: .cloud),
+            VoiceTranscriptEntry(speaker: .alphonso, text: "Earlier reply", mode: .cloud),
+            VoiceTranscriptEntry(speaker: .user, text: "Current request", mode: .cloud),
+        ]
+
+        XCTAssertEqual(
+            viewModel.cloudHistory(),
+            [
+                VoiceCloudHistoryMessage(role: "user", content: "Earlier request"),
+                VoiceCloudHistoryMessage(role: "assistant", content: "Earlier reply"),
+            ]
+        )
+    }
+
     func testCloudTTSModelConfigurationPersistsSelection() {
         let viewModel = VoiceSessionViewModel()
 
