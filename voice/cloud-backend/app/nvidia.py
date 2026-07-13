@@ -66,6 +66,8 @@ class NvidiaClient:
         if model == "magpie":
             return self.settings.magpie_url, self.settings.magpie_voice
         if model == "chatterbox":
+            if not self.settings.chatterbox_url:
+                raise NvidiaError("Chatterbox TTS is not configured")
             return self.settings.chatterbox_url, self.settings.chatterbox_voice
         raise NvidiaOutputError()
 

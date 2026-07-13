@@ -32,7 +32,7 @@ class Settings:
 
     @property
     def is_ready(self) -> bool:
-        return bool(self.voice_cloud_api_key and self.nvidia_api_key and self.nim_model and self.magpie_url and self.chatterbox_url)
+        return bool(self.voice_cloud_api_key and self.nvidia_api_key and self.nim_model and self.magpie_url)
 
     def public_status(self) -> dict[str, object]:
         return {
