@@ -49,7 +49,7 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
     private let sessionID = UUID().uuidString
     private var audioPlayer: AVAudioPlayer?
 
-    init() {
+    override init() {
         endpoint = UserDefaults.standard.string(forKey: endpointKey) ?? ""
         let securedKey = Self.loadAPIKey(account: apiKeyAccount)
         let legacyKey = UserDefaults.standard.string(forKey: legacyAPIKeyKey)
