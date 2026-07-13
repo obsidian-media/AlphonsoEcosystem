@@ -4,11 +4,12 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any
 
+import httpx
 from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from pipeline import generate_voice_reply, run_pipeline
+from pipeline import local_ollama_url, generate_voice_reply, run_pipeline
 from session import register, cancel, cleanup_done
 from state import get_state, set_state, remove_state
 from stt import _load_model as load_stt
@@ -77,10 +78,18 @@ async def health():
         tts_ok = model_path.exists()
     except Exception:
         pass
+    ollama_reachable = False
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            response = await client.get(local_ollama_url().removesuffix("/api/chat") + "/api/tags")
+            ollama_reachable = response.is_success
+    except Exception:
+        pass
     return {
         "status": "ok",
         "stt": True,
         "tts": tts_ok,
+        "ollama": {"url": local_ollama_url(), "reachable": ollama_reachable},
         "cloud_tts": describe_nvidia_tts_models(),
     }
 

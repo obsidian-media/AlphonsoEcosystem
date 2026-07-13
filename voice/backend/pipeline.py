@@ -1,5 +1,6 @@
 import json
 import base64
+import os
 import httpx
 
 from stt import transcribe
@@ -7,8 +8,12 @@ from tts import synthesize, synthesize_nvidia
 from router import detect_agent
 from vad import is_speech
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
 DEFAULT_MODEL = "llama3.2"
+
+
+def local_ollama_url() -> str:
+    """Return the local or LAN Ollama endpoint used by the Local Voice Gateway."""
+    return os.environ.get("LOCAL_OLLAMA_URL", "http://localhost:11434/api/chat").strip()
 
 
 async def _call_ollama(session_id, text, agent, history):
@@ -17,7 +22,7 @@ async def _call_ollama(session_id, text, agent, history):
     payload = {"model": DEFAULT_MODEL, "messages": messages, "stream": True}
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            async with client.stream("POST", OLLAMA_URL, json=payload) as response:
+            async with client.stream("POST", local_ollama_url(), json=payload) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if not line:
