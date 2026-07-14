@@ -14,6 +14,36 @@
 
 [**Download v2.6.0**](https://github.com/obsidian-media/AlphonsoEcosystem/releases/tag/v2.6.0) · [Docs](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/docs) · [Architecture](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/ARCHITECTURE.md) · [Pricing](docs/PRICING.md) · [Comparison](docs/COMPARISON.md) · [obsidianmedia.online](https://obsidianmedia.online)
 
+## Voice + Mobile pass — 2026-07-14 (unreleased work on `main`)
+
+Recent voice/mobile work since `v2.6.0` has been substantial and spans both the
+desktop app and the iOS companion:
+
+- **Desktop + iPhone voice flows now diverge cleanly into local and cloud paths.**
+  The iOS companion has a dedicated Voice tab with `Local` and `Cloud` modes,
+  while the desktop app remains the local Ollama/Voice OS runtime.
+- **Persona-aware local conversations were added for paired companion sessions.**
+  Local voice turns can now route through the selected one of nine agents instead
+  of always collapsing into a generic reply path.
+- **Cloud voice gained multilingual routing, including Persian/Farsi.**
+  English replies use NVIDIA TTS; `fa-IR` uses Railway-hosted Piper voices
+  (`Mana` / `Manta`) with playback retry handling.
+- **Cloud voice access is now device-gated.**
+  The iOS app signs in via Supabase one-time-code auth, stores the session in
+  Keychain, enrolls a generated device UUID, and sends voice requests only as an
+  authenticated enrolled device. The service-role key remains server-only.
+- **Cloud voice is now a standalone service, not just an extension of local Voice OS.**
+  The repo now contains a dedicated `voice/cloud-backend/` Railway service with
+  its own contracts, auth, tests, deployment config, and provider policy layer.
+- **Local and cloud voice responsibilities were explicitly separated.**
+  The desktop `voice/backend/` path remains the local Ollama/Voice OS runtime,
+  while cloud-specific routing and synthesis moved into the standalone cloud
+  service instead of being mixed into the local backend.
+- **A few infrastructure fixes also landed around this voice pass.**
+  These include safer iOS cloud-service initialization and credential handling,
+  local Ollama gateway configuration for voice requests, Magpie-only cloud
+  readiness, and unique TestFlight build numbers for iOS CI/distribution.
+
 ## Bug-fix pass — 2026-07-10 (no version bump)
 
 User-reported issue triage, fixed against real code rather than assumptions —
@@ -92,7 +122,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **101 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **102 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 - **3,255 tests across 229 test files** — all passing. 0 TypeScript errors. 0 ESLint warnings. Cargo clippy clean.
 
 ## What's New in v2.4.2

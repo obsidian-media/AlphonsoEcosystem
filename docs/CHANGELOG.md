@@ -6,6 +6,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-14 (voice/mobile docs + branch review)
+
+- **Voice + mobile state documented at the top level:** the root docs now
+  reflect that recent unreleased work on `main` spans both the desktop voice
+  stack and the iOS companion voice stack, not just branch hygiene.
+- **iOS companion voice shell:** `VoiceView.swift` exposes separate `Local`
+  and `Cloud` modes, with push-to-talk, per-turn agent/language selection,
+  text-preserving playback failure handling, and cloud playback retry.
+- **Cloud voice security + routing:** the companion uses Supabase one-time-code
+  sign-in, keeps the session in Keychain, enrolls a generated device UUID, and
+  sends authenticated requests to Cloud Voice. English uses NVIDIA TTS;
+  Persian/Farsi (`fa-IR`) uses Railway-hosted Piper (`Mana` / `Manta`).
+- **Local paired conversation routing:** paired local companion conversations
+  now route by the selected persona instead of collapsing into a generic
+  response path.
+- **Standalone cloud voice service split:** recent commits also introduced
+  `voice/cloud-backend/` as a distinct Railway service with its own auth,
+  config, contracts, tests, and deployment files, instead of continuing to
+  overload the local desktop Voice OS backend for cloud behavior.
+- **Supporting fixes around the same pass:** safer iOS cloud service
+  initialization and credential handling, local Ollama gateway config for voice,
+  Magpie-only cloud readiness, and unique TestFlight build numbers.
+
+- **Reviewed `sprint-5-kilo-cli` for PR readiness:** branch is not safe to
+  open as a PR against current `main`. It is 8 commits ahead of its old
+  base but 78 commits behind `main`, fails `npm run typecheck`, fails
+  `npm run verify:docs`, and produces a multi-file merge conflict set
+  against `main` (docs, version files, and several migrated services).
+- **Doc freshness:** corrected README's Rust unit test count from 101 →
+  102 so `npm run verify:docs` passes on `main`.
+
 ## [Unreleased] — 2026-07-12 (repo audit + typecheck fix + branch hygiene)
 
 Full narrative: `docs/ALPHONSO_GROUND_TRUTH.md` §11.18; fast-orientation doc: `FABLE5.md` (new, repo root).

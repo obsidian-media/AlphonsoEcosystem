@@ -1,7 +1,7 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-12 — v2.6.0 (repo audit + typecheck fix + branch hygiene — see section 11.18 — not a version bump)
-**Verified by:** Claude Code session — full repo audit (doc-synthesis + spot-check depth, see `FABLE5.md` for the fast-orientation writeup), fixed a real `npm run typecheck` failure in `src/test/test-mocks.ts`, investigated branch `TestParallal` (requested for merge into `main`), found it was NOT ahead of main — it had forked from an older commit and was missing real work (`VoiceView.tsx`, a Voice-OS venv-resolution fix, doc updates) that main had gained since. Its own 2 commits claimed "14 hook test files, 3738 tests" in the commit message with zero such files actually in the diff. Salvaged only the real content (unused-but-harmless Tauri/service test-mock scaffolding) via a clean squash commit onto current main rather than merging the stale branch as-is. Full details: section 11.18.
-**Version:** 2.6.0 (unchanged — audit/hygiene pass, no release cut; `npm run typecheck` clean; root-level `src/services/*.js` count last measured at 11 `.js` / 123 `.ts`, not independently re-verified this pass — see `FABLE5.md` §3 for what was re-verified this session)
+**Last verified:** 2026-07-14 — v2.6.0 (voice/mobile doc reconciliation + branch review; no version bump)
+**Verified by:** Claude Code session — reconciled the root docs against recent voice/mobile commits already on `main` (desktop Voice OS, iOS companion Voice tab, cloud voice, Farsi routing, Supabase device enrollment), reviewed branch `sprint-5-kilo-cli` for PR readiness against current `main`, and corrected the failing README Rust test count so `npm run verify:docs` passes on `main`. Full details: sections 11.19 and 11.20.
+**Version:** 2.6.0 (unchanged — no release cut; this pass verified current docs against recent `main` history and branch state rather than running the full app/build matrix)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
 
 ---
@@ -1904,6 +1904,47 @@ src/test/test-mocks.ts(117,12): error TS2304: Cannot find name 'global'.
 ---
 
 > _How to verify drift:_ run `npm run export:ground-truth` and read the **Drift vs ground truth** section of the generated file. It will flag any numeric claim in this document that diverges from the live repo.
+
+## 11.19 `sprint-5-kilo-cli` branch review and rejection for PR (2026-07-14)
+
+User asked whether stale local branch `sprint-5-kilo-cli` should be turned into a PR, whether it still verifies, and whether it conflicts with current `main`; docs were to be updated with the result.
+
+**Conclusion:** do **not** open a PR from `sprint-5-kilo-cli` as-is.
+
+- Branch position at review time: `main`/`origin/main` were both at `16ba2cc`; `sprint-5-kilo-cli` was 8 commits ahead of its own stale base but 78 commits behind current `main` (`git rev-list --left-right --count main...sprint-5-kilo-cli` = `78 8`).
+- Branch verification in a temporary worktree failed before merge:
+  - `npm run typecheck` failed with 10 TypeScript errors, including `src/components/BoardroomView.tsx` passing `[]` where `PriorOutputs` is required, `src/components/EcosystemMaturityPanels.tsx` state/type mismatch around `WorkflowOperation.status`, multiple incompatible `MissionRoom.tsx` state shapes, and `src/components/OperatorDashboard.tsx` assigning `OrchestrationReceipt[]` to `Record<string, unknown>[]`.
+  - `npm run lint` completed with 1 warning (`src/components/ChatView.tsx` unexpected `console` call).
+  - `npm run verify:docs` failed with 17 stale claims on that branch, including old version strings and outdated README/AGENTS/ARCHITECTURE counts.
+- Mergeability against current `main` failed:
+  - A non-committing merge in the temp worktree produced content conflicts in `README.md`, `docs/ALPHONSO_GROUND_TRUTH.md`, `docs/CHANGELOG.md`, `package.json`, `src-tauri/Cargo.lock`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src/services/backupService.ts`, `src/services/connectorHealthCheckService.ts`, `src/services/echoFileWatcherService.ts`, `src/services/missionRoomService.ts`, `src/services/novaAnalysisService.ts`, `src/services/pluginSigningService.ts`, `src/services/runtimeManagerService.ts` (add/add), and `src/services/workflowOperationsRegistryService.ts`.
+  - `git merge-tree` also showed a broader changed-in-both/add-in-both conflict surface (27 entries total), confirming this is not a trivial rebase.
+- Practical assessment: this branch is an old TypeScript-migration stack whose surviving unique changes are mixed with stale docs, stale version metadata, and service edits that now collide with later `main` work. Any useful ideas should be cherry-picked or reimplemented on a fresh branch from current `main`, not revived as a direct PR.
+
+**Docs updated as part of this review:** README Rust unit test count fixed from 101 → 102; this section added here; matching note added to `docs/CHANGELOG.md`.
+
+## 11.20 Voice/mobile doc reconciliation after recent `main` commits (2026-07-14)
+
+User pointed out that the recent root-document updates still underrepresented how much had changed in voice and mobile since the stale TypeScript-migration branch. That was correct: the iOS companion README already described newer voice work that the top-level README/changelog summary did not.
+
+**What changed on `main` recently, after the old branch diverged:**
+- `fcc69fc` / `3e2b3b2` — a standalone `voice/cloud-backend/` service was added, then the repo was refactored to separate local Voice OS responsibilities from cloud voice responsibilities instead of mixing both concerns into the desktop backend.
+- `f32f3f0` / `940fbed` / `f60e606` — the iOS companion's cloud voice transport was hardened: safer initialization, better credential handling, and explicit service override behavior.
+- `1c493b2` / `913fecb` / `706b3fd` — follow-up operational fixes landed for local Ollama gateway config, Magpie-only cloud readiness, and unique TestFlight build numbers.
+- `30253ee` / `b8776ac` / `57e9135` — Cloud Voice gained persona-aware routing plus Persian/Farsi support, with a dedicated Railway Piper service and playback retry handling.
+- `b3fa949` — paired local companion conversations were updated to route by the selected persona rather than falling back to a generic reply path.
+- `67703e3` / `16ba2cc` — Cloud Voice gained Supabase-backed device enrollment, and docs were added for that enrollment flow.
+
+**Current architecture summary that top-level docs now need to reflect:**
+- **Desktop app:** still owns the local-first voice runtime (`voice/backend/`, Voice OS, Ollama, local persona routing, companion WebSocket server).
+- **Service split:** `voice/backend/` is the local desktop runtime; `voice/cloud-backend/` is now a separate cloud service with its own auth/config/contracts/tests; `voice/piper-farsi/` is a separate Farsi TTS service.
+- **iOS companion:** now has a dedicated `VoiceView.swift` shell with separate `Local` and `Cloud` modes rather than being only a generic remote-control client.
+- **Local mode:** push-to-talk turns are sent to the paired desktop and answered by the selected persona through desktop Ollama/Voice OS.
+- **Cloud mode:** requests send `agent_id`, language, and response-voice selection to `POST /v1/voice/respond`; English uses NVIDIA TTS, while `fa-IR` uses Railway-hosted Piper voices `Mana` and `Manta`.
+- **Security model:** the iOS app uses Supabase email one-time-code sign-in, stores the resulting session in Keychain, enrolls a generated device UUID, and sends only authenticated device-scoped Cloud Voice requests. Service-role credentials stay server-side.
+- **Operational follow-ups already landed:** local voice calls can be pointed at a configured Ollama gateway, cloud readiness no longer requires more than the Magpie provider path, and the iOS build pipeline now uses unique TestFlight build numbers.
+
+**Docs updated as part of this reconciliation:** README gained a new top-level "Voice + Mobile pass — 2026-07-14" section; `docs/CHANGELOG.md` gained matching unreleased notes; this section was added here to explain why the earlier branch-review-only summary was incomplete and what additional recent work had also landed.
 
 
 
