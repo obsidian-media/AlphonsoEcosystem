@@ -47,5 +47,5 @@ AlphonsoCompanion/
 - Voice is push-to-talk. Each turn carries the selected one of nine agents and a language. Local conversational turns are answered by the selected persona through desktop Ollama; non-voice companion commands stay on the policy-gated Jose pipeline.
 - Cloud mode sends `agent_id`, language, and response-voice selection to `POST /v1/voice/respond`. English uses NVIDIA TTS; Persian/Farsi (`fa-IR`) uses Railway-hosted Piper with `Mana` or `Manta`.
 - Cloud playback failures preserve the reply as text and offer a retry; the UI does not imply that a failed reply was spoken.
-- The app intentionally does not expose cloud URLs or service keys. **PARTIAL:** the current local PIN pairing has no durable cloud-device enrollment, so production cloud access must remain blocked until that credential flow exists.
+- The app intentionally does not expose provider service keys. It uses Supabase email one-time-code sign-in, stores the resulting session in Keychain, and enrolls a generated device UUID with Cloud Voice. Railway validates the user session and active device on every request; the Supabase service-role key remains server-only.
 - Speech-recognition locale support is checked on-device before recording. A user can switch English and Farsi between turns, subject to the iPhone's supported recognition locales.
