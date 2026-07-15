@@ -86,6 +86,10 @@ impl CompanionServer {
   }
 }
 
+// Internal per-connection handler; the parameters are all distinct pieces of
+// connection state (socket, identity, shared registries, config) that don't
+// naturally group into a struct worth introducing here.
+#[allow(clippy::too_many_arguments)]
 async fn handle_connection(
   stream: tokio::net::TcpStream,
   peer_addr: String,
