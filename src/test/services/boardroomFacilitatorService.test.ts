@@ -146,7 +146,12 @@ describe('boardroomFacilitatorService', () => {
       });
 
       expect(result.model).toBe('llama3.2:3b');
-      expect(result.latencyMs).toBeGreaterThanOrEqual(5);
+      // latencyMs is measured via Date.now() deltas around the generation call.
+      // A fake-timer/coarse-clock mock can measure fewer ms than the mocked
+      // setTimeout delay (observed 4ms on fast CI runners), so assert only that
+      // a non-negative measured latency is returned — not a wall-clock floor.
+      expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+      expect(typeof result.latencyMs).toBe('number');
     });
 
     it('does not return model/latencyMs on failure', async () => {

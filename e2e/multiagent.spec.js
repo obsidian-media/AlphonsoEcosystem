@@ -18,7 +18,12 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
  *       Ollama is mocked via tauri-mock.js so no local LLM is required.
  */
 
-test.describe.slow('Multi-Agent Orchestration Pipeline', () => {
+test.describe('Multi-Agent Orchestration Pipeline', () => {
+  // Marks every test in this group as slow (Playwright triples its timeout).
+  // Replaces the invalid `test.describe.slow(...)` form, which does not exist
+  // in @playwright/test 1.60 and threw a collection-time TypeError that aborted
+  // the ENTIRE E2E run (0 tests collected) before any spec could execute.
+  test.slow();
 
   test.beforeEach(async ({ page }) => {
     await page.addInitScript({ path: resolve(__dirname, 'tauri-mock.js') });

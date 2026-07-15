@@ -75,10 +75,6 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
-      - name: Security audit (cargo)
-        run: cargo install cargo-audit && cargo audit --file src-tauri/Cargo.lock --deny warnings
-        continue-on-error: false
-
       - name: Install Tauri Linux dependencies
         run: |
           sudo apt-get update
@@ -99,6 +95,17 @@ jobs:
 
       - name: Clippy (deny warnings)
         run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      # Advisory audit runs LAST and with `if: always()` so a transitive-crate
+      # advisory (e.g. a newly-yanked dependency) can never dark-out the fmt/
+      # test/clippy quality gates by aborting the job before they run — which is
+      # exactly what happened when `spin 0.9.8` was yanked. The gate still fails
+      # the job on advisories; it just no longer masks the real quality checks.
+      - name: Security audit (cargo)
+        if: always()
+        run: cargo install cargo-audit && cargo audit --file src-tauri/Cargo.lock --deny warnings
+        continue-on-error: false
+
       - name: Rust coverage (tarpaulin)
         run: |
           cargo install cargo-tarpaulin
