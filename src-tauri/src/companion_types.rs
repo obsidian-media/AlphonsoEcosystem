@@ -41,6 +41,10 @@ pub struct CompanionConfig {
   pub port: u16,
   pub pin_ttl_secs: u64,
   pub max_clients: usize,
+  /// Maximum wrong-PIN attempts a pending client may make before the
+  /// connection is dropped and the current PIN is invalidated. Bounds
+  /// brute-force of the 6-digit PIN over the network.
+  pub max_pin_attempts: u8,
 }
 
 impl Default for CompanionConfig {
@@ -49,6 +53,7 @@ impl Default for CompanionConfig {
       port: 8765,
       pin_ttl_secs: 300,
       max_clients: 3,
+      max_pin_attempts: 5,
     }
   }
 }
