@@ -7,6 +7,35 @@
 
 ---
 
+## 0. Execution Progress (live — updated 2026-07-15)
+
+This assessment is now being **executed**, not just written. Status of the
+roadmap (§6) so far, on branch `claude/production-readiness-audit-mxenki` (PR #99):
+
+| Task | Status | Notes |
+|---|---|---|
+| **T1** Turn CI green | ✅ done | spin 0.9.9, E2E collection fix, flaky test, audit reorder |
+| **T2** Reorder Rust audit gate | ✅ done | un-masked + fixed a hidden `cargo fmt` violation |
+| **T5** License signing | ✅ done | offline ECDSA-P256 signed tokens; forgery/tamper/expiry rejected; 55/55 tests |
+| **T6** PIN lockout | ✅ done | 5-attempt lockout + PIN invalidation + constant-time compare |
+| **T10** E2E repair | ⏳ partial | collection fixed (0→28 collect); ~22 specs stale; advisory-gate proposed, awaiting owner approval |
+| T3 secret-scan triage, T4 branch protection, T11 persistence, T12 DSL, T13 keychain, T14 lib.rs split, T15 updater verify, T17 observability, T18 svc-role key, T19 doc-gen, T20 budgets | ▶ pending | continuing |
+
+**Score movement:** the two Critical security blockers (fake paywall, unguarded
+PIN) and the CI-red blocker are now closed. That moves **Security 3 → ~6**,
+**Deployment/Infra ~4 → ~5**, and **Overall Production Readiness 4 → ~6** once
+this branch merges with branch protection on. The remaining lift to 7–8 is the
+structural work (persistence schema, observability, `lib.rs` split, OS-keychain,
+E2E repair), not more Critical firefighting.
+
+**Honest caveat on E2E:** the Playwright suite was red-on-collection for months
+(so it gated nothing), and ~22 specs now fail as stale UI assertions that need
+live-app iteration to repair. Making the job advisory (`continue-on-error`) is a
+CI-gate-policy change that requires owner sign-off — **proposed, not applied**.
+The alternative is to leave it blocking-and-red until the specs are repaired (T10).
+
+---
+
 ## 1. Executive Summary
 
 The prior audit (`14.07.2026CurrentStateofRepo.md`) concludes the repo is in "**genuinely good health**" with the only real risk being "**verification debt**." **That conclusion is wrong on the single most important operational fact: CI has been red on `main` for at least the last 8 consecutive runs**, and is red right now on the exact commit that added the audit report itself (`d102a1d`). The prior audit explicitly did not run the test/`cargo`/CI suites ("would require 10+ min and heavy token spend") and never looked at GitHub Actions status — so it graded the project on a static read while the build was broken.

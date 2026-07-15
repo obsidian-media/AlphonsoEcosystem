@@ -6,6 +6,40 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-15 (production-readiness execution — Cycle 1–2)
+
+Execution of the production-readiness roadmap
+(`docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`), branch
+`claude/production-readiness-audit-mxenki` / PR #99.
+
+- **CI turned green (Cycle 1):** bumped yanked `spin 0.9.8 → 0.9.9` so
+  `cargo audit --deny warnings` passes; reordered the `rust-quality` job so
+  `cargo audit` runs last with `if: always()` and can never again dark-out
+  fmt/test/clippy (which had been silently skipped). The reorder immediately
+  un-masked and fixed a real hidden `cargo fmt` violation in
+  `companion_router.rs`.
+- **E2E collection crash fixed:** `test.describe.slow(...)` (not a function in
+  `@playwright/test` 1.60) threw at collection time and aborted the entire
+  Playwright run (0 tests). Replaced with `test.describe(...)` + `test.slow()`;
+  all 28 specs now collect. **~22 specs still fail at runtime** as stale
+  UI-interaction assertions needing live-app repair (tracked, roadmap T10).
+  Recommendation pending owner approval: make the E2E job advisory
+  (non-blocking) until the specs are repaired — not yet applied.
+- **Flaky test fixed:** relaxed a racy `latencyMs >= 5` wall-clock assertion in
+  `boardroomFacilitatorService.test.ts` that intermittently reddened the JS gate.
+- **Security — companion PIN brute-force closed (T6):** the `pin_attempts`
+  counter was tracked but never enforced. Added `max_pin_attempts` (default 5);
+  wrong PINs now lock out and invalidate the live PIN, and `PinManager::verify`
+  uses a constant-time comparison. New Rust tests cover lockout + constant-time.
+- **Security — license paywall bypass closed (T5):** replaced the forgeable
+  client-side regex check with **offline ECDSA-P256 signed license tokens**. The
+  tier is granted only from a token verified against the vendor public key
+  (`src/config/licenseTrustKey.ts`, fail-closed) and recomputed in memory at
+  boot from the stored token, so editing localStorage grants nothing. Added
+  `scripts/issue-license.mjs` (vendor keygen/signing CLI; private key gitignored,
+  never committed) and rewrote the license tests to assert forgery, tampering,
+  and expiry are all rejected (55/55 license+policy tests pass).
+
 ## [Unreleased] — 2026-07-14 (voice/mobile docs + branch review)
 
 - **Voice + mobile state documented at the top level:** the root docs now
