@@ -23,8 +23,10 @@ Execution of the production-readiness roadmap
   Playwright run (0 tests). Replaced with `test.describe(...)` + `test.slow()`;
   all 28 specs now collect. **~22 specs still fail at runtime** as stale
   UI-interaction assertions needing live-app repair (tracked, roadmap T10).
-  Recommendation pending owner approval: make the E2E job advisory
-  (non-blocking) until the specs are repaired — not yet applied.
+  The E2E job is now **advisory (non-blocking)** by owner decision, so the
+  meaningful gates can gate while the specs are repaired; the
+  `continue-on-error` is explicitly temporary and will be removed once T10
+  brings the specs back to green.
 - **Flaky test fixed:** relaxed a racy `latencyMs >= 5` wall-clock assertion in
   `boardroomFacilitatorService.test.ts` that intermittently reddened the JS gate.
 - **Security — companion PIN brute-force closed (T6):** the `pin_attempts`
