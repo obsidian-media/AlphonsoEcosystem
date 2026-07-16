@@ -45,14 +45,20 @@ async fn handle_send_command(params: Value, app: AppHandle) -> Result<Value, Jso
     message: "Missing 'text' param".into(),
   })?;
   let agent_id = params["agentId"].as_str().unwrap_or("alphonso");
-  if !matches!(agent_id, "alphonso" | "jose" | "hector" | "miya" | "maria" | "marcus" | "echo" | "sentinel" | "nova") {
+  if !matches!(
+    agent_id,
+    "alphonso" | "jose" | "hector" | "miya" | "maria" | "marcus" | "echo" | "sentinel" | "nova"
+  ) {
     return Err(JsonRpcError {
       code: -32602,
       message: "Unsupported 'agentId' param".into(),
     });
   }
   let language = params["language"].as_str().unwrap_or("en-US");
-  if !matches!(language, "en-US" | "es-US" | "fr-FR" | "de-DE" | "ja-JP" | "zh-CN" | "fa-IR") {
+  if !matches!(
+    language,
+    "en-US" | "es-US" | "fr-FR" | "de-DE" | "ja-JP" | "zh-CN" | "fa-IR"
+  ) {
     return Err(JsonRpcError {
       code: -32602,
       message: "Unsupported 'language' param".into(),

@@ -292,6 +292,17 @@ function AppShell() {
     })();
   }, []);
 
+  // Verify any stored license token at boot so the paid tier is granted only
+  // from a valid signature (fail-closed until initLicense resolves).
+  useEffect(() => {
+    (async () => {
+      try {
+        const { initLicense } = await import('./services/licenseService');
+        await initLicense();
+      } catch { /* non-critical — stays on free tier */ }
+    })();
+  }, []);
+
   // Wire background services: Sentinel scheduled scans + Maria weekly report
   useEffect(() => {
     let scanStop: (() => void) | null = null;

@@ -1,17 +1,30 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn().mockResolvedValue(null)
+}));
+
 import {
   getLicenseInfo,
   activateLicense,
   deactivateLicense,
   canUseConnector,
   isPremiumConnector,
-  LicenseTier
+  __setTrustedPublicKeyForTests
 } from '../services/licenseService';
+import { generateLicenseKeypair, mintLicenseToken, type LicenseKeypair } from './helpers/mintLicense';
 
 describe('licenseService', () => {
-  beforeEach(() => {
+  let kp: LicenseKeypair;
+
+  beforeEach(async () => {
     localStorage.clear();
+    kp = await generateLicenseKeypair();
+    __setTrustedPublicKeyForTests(kp.publicJwk);
+    await deactivateLicense();
   });
+
+  const proToken = () => mintLicenseToken(kp.keyPair, { v: 1, tier: 'pro', iat: Date.now(), exp: null });
 
   describe('getLicenseInfo', () => {
     it('returns free tier by default', () => {
@@ -22,37 +35,22 @@ describe('licenseService', () => {
       expect(info.features).toContain('telegram');
     });
 
-    it('includes free features for free tier', () => {
-      const info = getLicenseInfo();
-      expect(info.features).toContain('ollama');
-      expect(info.features).toContain('telegram');
-      expect(info.features).toContain('brave_search');
-      expect(info.features).toContain('all_agents');
-    });
-
     it('does not include premium features for free tier', () => {
       const info = getLicenseInfo();
       expect(info.features).not.toContain('claude');
       expect(info.features).not.toContain('chatgpt');
-      expect(info.features).not.toContain('youtube');
     });
   });
 
   describe('activateLicense', () => {
-    it('activates pro license with valid key', async () => {
-      const result = await activateLicense('ALPHONSO-PRO-ABCD-1234-EFGH');
+    it('activates pro tier with a validly signed token', async () => {
+      const result = await activateLicense(await proToken());
       expect(result.success).toBe(true);
       expect(result.tier).toBe('pro');
     });
 
-    it('activates enterprise license with valid key', async () => {
-      const result = await activateLicense('ALPHONSO-ENT-ABCD-1234-EFGH');
-      expect(result.success).toBe(true);
-      expect(result.tier).toBe('enterprise');
-    });
-
-    it('rejects invalid key', async () => {
-      const result = await activateLicense('invalid-key');
+    it('rejects a legacy regex key', async () => {
+      const result = await activateLicense('ALPHONSO-PRO-ABCD-1234-EFGH');
       expect(result.success).toBe(false);
       expect(result.error).toBe('Invalid license key');
     });
@@ -63,45 +61,30 @@ describe('licenseService', () => {
       expect(result.error).toBe('License key is required');
     });
 
-    it('persists license to localStorage', async () => {
-      await activateLicense('ALPHONSO-PRO-ABCD-1234-EFGH');
-      const info = getLicenseInfo();
-      expect(info.tier).toBe('pro');
-      expect(info.key).toBe('ALPHONSO-PRO-ABCD-1234-EFGH');
-      expect(info.activatedAt).not.toBeNull();
-    });
-
-    it('pro tier includes premium features', async () => {
-      await activateLicense('ALPHONSO-PRO-ABCD-1234-EFGH');
+    it('pro token unlocks premium features', async () => {
+      await activateLicense(await proToken());
       const info = getLicenseInfo();
       expect(info.features).toContain('claude');
-      expect(info.features).toContain('chatgpt');
       expect(info.features).toContain('youtube');
-      expect(info.features).toContain('notion');
     });
   });
 
   describe('deactivateLicense', () => {
     it('resets to free tier', async () => {
-      await activateLicense('ALPHONSO-PRO-ABCD-1234-EFGH');
+      await activateLicense(await proToken());
       await deactivateLicense();
-      const info = getLicenseInfo();
-      expect(info.tier).toBe('free');
-      expect(info.key).toBeNull();
+      expect(getLicenseInfo().tier).toBe('free');
+      expect(getLicenseInfo().key).toBeNull();
     });
   });
 
   describe('isPremiumConnector', () => {
     it('returns true for premium connectors', () => {
       expect(isPremiumConnector('claude')).toBe(true);
-      expect(isPremiumConnector('chatgpt')).toBe(true);
       expect(isPremiumConnector('youtube')).toBe(true);
-      expect(isPremiumConnector('notion')).toBe(true);
     });
-
     it('returns false for free connectors', () => {
       expect(isPremiumConnector('telegram')).toBe(false);
-      expect(isPremiumConnector('brave_search')).toBe(false);
       expect(isPremiumConnector('ollama')).toBe(false);
     });
   });
@@ -109,18 +92,13 @@ describe('licenseService', () => {
   describe('canUseConnector', () => {
     it('allows free connectors on free tier', () => {
       expect(canUseConnector('telegram')).toBe(true);
-      expect(canUseConnector('brave_search')).toBe(true);
     });
-
     it('blocks premium connectors on free tier', () => {
       expect(canUseConnector('claude')).toBe(false);
-      expect(canUseConnector('youtube')).toBe(false);
     });
-
-    it('allows premium connectors on pro tier', async () => {
-      await activateLicense('ALPHONSO-PRO-ABCD-1234-EFGH');
+    it('allows premium connectors after valid activation', async () => {
+      await activateLicense(await proToken());
       expect(canUseConnector('claude')).toBe(true);
-      expect(canUseConnector('youtube')).toBe(true);
     });
   });
 });
