@@ -8,6 +8,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-07-16 (production-readiness execution — Cycle 3)
 
+- **Persistence — durable backup is now recoverable + versioned (T11):** the
+  localStorage↔SQLite dual-write was fire-and-forget with no schema/versioning,
+  and the kv_store "durable backup" was write-only and never read back — so it
+  recovered nothing after a localStorage wipe. `durableStore` gains
+  `hydrateKeyFromDurable()` (restore localStorage from kv when missing) and
+  `reconcileKey()` (localStorage-wins divergence resolution), plus
+  `runDurableMigrations()` (versioned, idempotent, fail-stop migration runner
+  wired at boot). Also fixes a write-loss race where writes before the Tauri
+  import resolved were dropped. Value format unchanged — no consumer impact.
+  9 new tests.
+
 - **Security — connector DSL fail-open closed (T12):** `policyDslService`
   previously returned `allow` for every `target:'external'` action, so the DSL
   layer misreported irreversible/costly actions as allowed and would fail open

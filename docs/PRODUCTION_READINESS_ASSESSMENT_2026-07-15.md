@@ -18,6 +18,7 @@ roadmap (§6) so far, on branch `claude/production-readiness-audit-mxenki` (PR #
 | **T2** Reorder Rust audit gate | ✅ done | un-masked + fixed a hidden `cargo fmt` violation |
 | **T5** License signing | ✅ done | offline ECDSA-P256 signed tokens; forgery/tamper/expiry rejected; 55/55 tests |
 | **T6** PIN lockout | ✅ done | 5-attempt lockout + PIN invalidation + constant-time compare |
+| **T11** Persistence recovery + migrations | ✅ done | kv backup now read-back/recoverable; versioned migration runner; write-loss race fixed |
 | **T12** Fail-open DSL default | ✅ done | connector DSL risk-tiered; `require_consent` enforced for publish/paid sends |
 | **T10** E2E repair | ⏳ partial | collection fixed (0→28 collect); ~22 specs stale; job made **advisory** (owner-approved, temporary); specs repair tracked |
 | T3 secret-scan triage, T4 branch protection, T11 persistence, T12 DSL, T13 keychain, T14 lib.rs split, T15 updater verify, T17 observability, T18 svc-role key, T19 doc-gen, T20 budgets | ▶ pending | continuing |
