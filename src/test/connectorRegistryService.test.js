@@ -228,6 +228,22 @@ describe('connectorRegistryService', () => {
       const audit = listConnectorAudit();
       expect(audit.some((e) => e.action === 'policy_allow' || e.action === 'policy_block')).toBe(true);
     });
+
+    it('blocks a require_consent action when not approved', async () => {
+      const { evaluateAction } = await import('../services/policyDslService');
+      evaluateAction.mockReturnValueOnce({ allowed: false, effect: 'require_consent', reason: 'consent needed' });
+      const gate = gateConnectorAction('youtube', 'external_publish', 'my video');
+      expect(gate.ok).toBe(false);
+      expect(gate.requiresConsent).toBe(true);
+      expect(gate.riskLevel).toBe('high');
+    });
+
+    it('allows a require_consent action once explicitly approved', async () => {
+      const { evaluateAction } = await import('../services/policyDslService');
+      evaluateAction.mockReturnValueOnce({ allowed: false, effect: 'require_consent', reason: 'consent needed' });
+      const gate = gateConnectorAction('youtube', 'external_publish', 'my video', { approved: true });
+      expect(gate.ok).toBe(true);
+    });
   });
 
   // ── Circuit breaker ───────────────────────────────────────────────────────
