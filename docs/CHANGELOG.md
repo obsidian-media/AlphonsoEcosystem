@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-16 (production-readiness execution — Cycle 3)
+
+- **Security — connector DSL fail-open closed (T12):** `policyDslService`
+  previously returned `allow` for every `target:'external'` action, so the DSL
+  layer misreported irreversible/costly actions as allowed and would fail open
+  if ever trusted as authoritative. `external_publish` and `paid_connector_send`
+  are now classified `require_consent` (ordered before the retained low-risk
+  catch-all so unknown low-risk types don't fail closed), and
+  `gateConnectorAction` enforces that tier — blocking unless an explicit
+  `approved` flag is supplied. YouTube publish and paid AI sends now require
+  explicit consent as defense-in-depth. New `policyDslService.test.ts` +
+  require_consent gate tests.
+
 ## [Unreleased] — 2026-07-15 (production-readiness execution — Cycle 1–2)
 
 Execution of the production-readiness roadmap
