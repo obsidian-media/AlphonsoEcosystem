@@ -1,3 +1,43 @@
+# Security Policy
+
+## Reporting a Vulnerability
+
+Alphonso is closed-source (SHALAUDE v1.0 license) with a small maintainer
+team. To report a suspected vulnerability:
+
+1. **Do not open a public GitHub issue.** Email the maintainer directly (see
+   the contact address in the repository owner's GitHub profile, or the
+   in-app "About" panel) with a description, reproduction steps, and impact
+   assessment if known.
+2. You should receive an acknowledgment within **5 business days**.
+3. We aim to ship a fix or mitigation within **30 days** for critical/high
+   severity issues, and will keep you informed of progress in the interim.
+4. Please give us a reasonable window to ship a fix before any public
+   disclosure. We're happy to credit reporters in the fix's changelog entry
+   (in `docs/CHANGELOG.md`) unless you prefer to stay anonymous.
+
+## Automated scanning
+
+- **CI secret scanning** (TruffleHog, `.github/workflows/ci.yml` `secrets-scan`
+  job) runs `--only-verified` on every push and PR — it only fails on secrets
+  TruffleHog can actively verify as live, not on pattern matches alone, to
+  keep the signal-to-noise ratio usable. If this job goes red: treat it as a
+  real leak until proven otherwise — do not silence it. Rotate the credential
+  immediately, then purge it from git history (`git filter-repo` or BFG), then
+  investigate whether it was ever committed in a public-facing (or wider-access)
+  context. If investigation confirms a false positive (e.g. a test fixture with
+  an intentionally fake-shaped token), scope an exclusion narrowly (a specific
+  file/line, with a comment explaining why) — never disable the job wholesale.
+- **`cargo audit`** and **`npm audit`** run in CI (`rust-quality` /
+  `test-and-build` jobs) against known CVE advisories in dependencies.
+- **CodeQL** runs static analysis across JS/TS, Rust, Python, Swift, and GitHub
+  Actions workflows.
+
+## Fix history
+
+The tables below are a running log of specific hardening work completed —
+kept for audit/history, not a checklist to re-verify from scratch.
+
 # Alphonso Security Fixes — Batch 1
 
 ## Phase 1: Path Traversal & Policy Gate Hardening
