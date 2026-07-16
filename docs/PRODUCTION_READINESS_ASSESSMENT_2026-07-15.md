@@ -9,17 +9,22 @@
 
 ## 0. Execution Progress (live — updated 2026-07-15)
 
-This assessment is now being **executed**, not just written. Status of the
-roadmap (§6) so far, on branch `claude/production-readiness-audit-mxenki` (PR #99):
+**PR #99 merged into `main` at `f782aa9` on 2026-07-16** (admin-merge; two
+failing checks were pre-existing/unrelated — CodeQL swift already failed on
+`main` before this PR, and Playwright E2E is the exact suite this PR documents
+as temporarily advisory — reviewed in detail before overriding). Status of the
+roadmap (§6):
 
 | Task | Status | Notes |
 |---|---|---|
-| **T1** Turn CI green | ✅ done | spin 0.9.9, E2E collection fix, flaky test, audit reorder |
-| **T2** Reorder Rust audit gate | ✅ done | un-masked + fixed a hidden `cargo fmt` violation |
-| **T5** License signing | ✅ done | offline ECDSA-P256 signed tokens; forgery/tamper/expiry rejected; 55/55 tests |
-| **T6** PIN lockout | ✅ done | 5-attempt lockout + PIN invalidation + constant-time compare |
-| **T10** E2E repair | ⏳ partial | collection fixed (0→28 collect); ~22 specs stale; job made **advisory** (owner-approved, temporary); specs repair tracked |
-| T3 secret-scan triage, T4 branch protection, T11 persistence, T12 DSL, T13 keychain, T14 lib.rs split, T15 updater verify, T17 observability, T18 svc-role key, T19 doc-gen, T20 budgets | ▶ pending | continuing |
+| **T1** Turn CI green | ✅ done, merged | spin 0.9.9, E2E collection fix, flaky test, audit reorder |
+| **T2** Reorder Rust audit gate | ✅ done, merged | un-masked + fixed a hidden `cargo fmt` violation |
+| **T5** License signing | ✅ done, merged | offline ECDSA-P256 signed tokens; forgery/tamper/expiry rejected; 55/55 tests |
+| **T6** PIN lockout | ✅ done, merged | 5-attempt lockout + PIN invalidation + constant-time compare |
+| **T10** E2E repair | ⏳ partial, merged | collection fixed (0→28 collect); ~22 specs stale; job made **advisory** (owner-approved, temporary); specs repair still open |
+| T3 secret-scan triage, T4 branch protection, T11 persistence, T12 DSL, T13 keychain, T14 lib.rs split, T15 updater verify, T16 iOS pairing live-verify, T17 observability, T18 svc-role key, T19 doc-gen, T20 budgets | ▶ **not started** | tracked below and in CLAUDE.md's Real Gaps list — see "Next Recommended" |
+
+**Note on `LICENSE_TRUST_KEY`:** T5 ships fail-closed — `src/config/licenseTrustKey.ts` exports `null` until the vendor generates a real ECDSA-P256 key pair (`node scripts/issue-license.mjs --generate-keys`) and pastes the public JWK in. No paid tier can be granted until that happens; this is intentional, not a bug.
 
 **Score movement:** the two Critical security blockers (fake paywall, unguarded
 PIN) and the CI-red blocker are now closed. That moves **Security 3 → ~6**,
