@@ -23,7 +23,16 @@ const PROJECT_ROOT = resolve(dirname(__filename), '..');
 // silently starts flagging correct docs as wrong (see CLAUDE.md's "Last
 // verified" entry for the 2.4.4/2.5.9 version-drift incident this is meant
 // to prevent from recurring).
-const CURRENT_VERSION = JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8')).version;
+const PACKAGE_JSON = JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8'));
+const CURRENT_VERSION = PACKAGE_JSON.version;
+const CURRENT_VITE_MAJOR = String(PACKAGE_JSON.devDependencies.vite).match(/\d+/)?.[0];
+
+const TRUTH_PATTERNS = [
+  { file: 'docs/ALPHONSO_GROUND_TRUTH.md', label: 'current version', pattern: new RegExp(`\\| Version \\| ${CURRENT_VERSION.replaceAll('.', '\\.')} \\|`) },
+  { file: 'docs/ALPHONSO_GROUND_TRUTH.md', label: 'Vite major', pattern: new RegExp(`Vite ${CURRENT_VITE_MAJOR}`) },
+  { file: 'ARCHITECTURE.md', label: 'Vite major', pattern: new RegExp(`Vite ${CURRENT_VITE_MAJOR}`) },
+  { file: 'AGENTS.md', label: 'Vite major', pattern: new RegExp(`Vite ${CURRENT_VITE_MAJOR}`) },
+];
 
 // Total test count (files + individual tests) is not reliably derivable via
 // static analysis (dynamic test generation, describe.each, etc. make grep-based
@@ -191,6 +200,14 @@ function main() {
 
   // Pre-compute once
   const counts = getAllCounts();
+
+  for (const claim of TRUTH_PATTERNS) {
+    const content = readFileSync(join(PROJECT_ROOT, claim.file), 'utf8');
+    if (!claim.pattern.test(content)) {
+      issues.push({ file: claim.file, label: claim.label, error: `expected ${claim.pattern}` });
+      if (exitCode === 0) exitCode = 1;
+    }
+  }
 
   for (const claim of CLAIMS) {
     const filePath = join(PROJECT_ROOT, claim.file);

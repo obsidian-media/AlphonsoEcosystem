@@ -25,11 +25,11 @@ Do not trust any audit report, progress summary, or parallel-agent brief that ha
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.5.0 |
+| Version | 2.6.0 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
-| Frontend | React 18, Vite 5, Tailwind 3, Lucide React, Framer Motion — 114 `.tsx` + 0 subdirectory `.jsx` components (TypeScript migration complete; only top-level utility .jsx files remain if any) |
+| Frontend | React 18, Vite 8, Tailwind 3, Lucide React, Framer Motion — new UI work is `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain and are tracked for migration. |
 | UI System | **OKLCH** CSS design token system (`src/styles/tokens.css` — all colors in `oklch()` syntax), Framer Motion animation library (`src/lib/motion.ts` — spring/tween/fadeUp/fadeIn/slideInRight/scaleIn/staggerContainer/staggerItem/messageIn/panelIn), component library in `src/components/ui/` (Button, Badge, Card, Input, Tabs, Modal, EmptyState, StatusDot, LoadingState, ProgressRing, Skeleton, index.ts) |
 | AI layer | Ollama local (`llama3.2:3b` default), Claude API, OpenAI API |
 | Voice OS | FastAPI + Python microservice in `voice/` — STT (faster-whisper), LLM (Ollama `/api/chat`), TTS (piper), VAD (webrtcvad), barge-in cancellation. Launched as Tauri sidecar via `voice_sidecar.rs`. |

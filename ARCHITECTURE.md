@@ -2,7 +2,7 @@
 
 ## Overview
 
-Alphonso is a local-first AI companion desktop application built with Tauri v2 (Rust backend + React frontend). It runs entirely on the user's machine with no cloud dependency for core operation. A 9-agent multi-agent system handles intake, orchestration, research, creative generation, governance, distribution, memory, security, and analysis — all coordinated through a durable Jose orchestration pipeline and a centralized policy enforcement layer. The JS `policyEnforcementService.ts` is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors); note the connector **DSL layer (`policyDslService.ts`) still has a documented default-allow gap for certain connector action types** — see `docs/AUDIT_REPORT_2026-07-08.md` (Direction B/G risks).
+Alphonso is a local-first AI companion desktop application built with Tauri v2 (Rust backend + React frontend). It runs entirely on the user's machine with no cloud dependency for core operation. A 9-agent multi-agent system handles intake, orchestration, research, creative generation, governance, distribution, memory, security, and analysis — all coordinated through a durable Jose orchestration pipeline and a centralized policy enforcement layer. The JS `policyEnforcementService.ts` is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors). The supplemental connector DSL (`policyDslService.ts`) is default-deny; it currently applies to the registry image-dispatch path in addition to the primary gate.
 
 ---
 
@@ -10,7 +10,7 @@ Alphonso is a local-first AI companion desktop application built with Tauri v2 (
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite 5, Tailwind CSS 3, Lucide React, Framer Motion — **114 components, 100% `.tsx`** (0 `.jsx` remaining; migration completed in ALPHONSOTOTHEMOON Sprint 3) |
+| Frontend | React 18, Vite 8, Tailwind CSS 3, Lucide React, Framer Motion — new UI components are `.tsx`; legacy production `.jsx` contexts and Content Catalyst files remain for a future migration. |
 | Animation | Framer Motion (`src/lib/motion.ts` — `spring`, `tween`, `fadeUp`, `messageIn`, `panelIn` etc.) |
 | Design Tokens | OKLCH CSS custom properties (`src/styles/tokens.css`) — all colors in perceptually-uniform `oklch()` syntax |
 | Backend | Rust 1.77, Tauri 2.11, tokio async runtime, reqwest HTTP client |
@@ -207,7 +207,7 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 ## Known Technical Debt
 
 - `src-tauri/src/lib.rs` is **~2,054 lines** with **105 `#[tauri::command]` functions** across **25 modules in src-tauri/src/** (incl. `companion_server.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_types.rs`, `voice_sidecar.rs`, and the modules listed below). Module list: `audit_log.rs`, `companion_auth.rs`, `companion_discovery.rs`, `companion_router.rs`, `companion_server.rs`, `companion_types.rs`, `connector_commands.rs`, `kv_store.rs`, `main.rs`, `memory_store.rs`, `meta_publish.rs`, `native_proof.rs`, `ollama.rs`, `plugin_runtime.rs`, `policy_gate.rs`, `runway.rs`, `runtime_manager.rs`, `search.rs`, `telegram.rs`, `utils.rs`, `voice_sidecar.rs`, `whatsapp_webhook.rs`, `workspace.rs`, `youtube.rs`, and `lib.rs` itself.
-- Frontend is **100% `.tsx`** (114 components, 0 `.jsx`). The service layer is **168 services** (36 `.js` + 132 `.ts`); 8 root-level `.js` services remain to be migrated to `.ts` (tracked Sprint 5 backlog).
+- Frontend uses `.tsx` for new UI work, with legacy production `.jsx` contexts and Content Catalyst files still present. The service layer remains mixed JavaScript/TypeScript; current exact counts are verified by `npm run verify:docs`.
 - Some durable data still in `localStorage` instead of SQLite via `kv_set`/`kv_get` (3 keys remaining)
 - WhatsApp Cloud API fully wired (v2.0.2): inbound via `browserPollWhatsAppGateway` (Railway `/queue/drain`), outbound via `browserSendWhatsApp`. No external relay URL needed.
 - Playwright E2E wired into CI (`e2e/smoke.spec.js`, `e2e/boot.spec.js`)
