@@ -31,7 +31,7 @@ test.describe('Alphonso E2E - Policy Gate', () => {
 
   test('approvals panel accessible from sidebar', async ({ page }) => {
     // Orchestration/or Approvals tab
-    const approvalBtn = page.getByRole('button', { name: /^Orchestrator$/ });
+    const approvalBtn = page.getByRole('button', { name: /^Orchestrator$/ }).first();
     if (await approvalBtn.isVisible()) {
       await approvalBtn.click();
     }

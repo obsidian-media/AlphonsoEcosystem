@@ -21,7 +21,7 @@ test.describe('Visual Regression Snapshots', () => {
 
   test('settings panel renders', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.getByRole('button', { name: /Settings/i }).click();
+    await page.getByRole('button', { name: 'Open settings' }).click();
     await page.waitForTimeout(500);
     await expect(page).toHaveScreenshot('settings-panel.png', { threshold: 0.2 });
   });

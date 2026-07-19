@@ -46,7 +46,16 @@
       if (cmd === 'runtime_start_tool') return Promise.resolve({ ok: true });
       if (cmd === 'runtime_stop_tool') return Promise.resolve({ ok: true });
       if (cmd === 'runtime_install_tool') return Promise.resolve({ ok: true });
-      if (cmd === 'runtime_check_prerequisites') return Promise.resolve({ python: true, git: true, ollama: true });
+      // Keep this mock aligned with Rust PrereqStatus (camelCase through Tauri).
+      if (cmd === 'runtime_check_prerequisites') return Promise.resolve({
+        pythonFound: true,
+        gitFound: true,
+        ollamaFound: true,
+        dockerFound: false,
+        nodeFound: true,
+        missing: [],
+        installHint: 'All required runtime prerequisites are available.'
+      });
       if (cmd === 'runtime_install_prerequisite') return Promise.resolve({ ok: true });
       if (cmd === 'runtime_get_autostart_prefs') return Promise.resolve({});
       if (cmd === 'runtime_save_autostart_pref') return Promise.resolve(null);
