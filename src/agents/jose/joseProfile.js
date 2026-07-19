@@ -49,9 +49,25 @@ export const JOSE_PROFILE = {
     'pack.jose-approval-gating',
     'pack.jose-cross-agent-synthesis',
     'pack.jose-pipeline-governance',
-    'pack.workflow.executing-plans'
+    'pack.workflow.executing-plans',
+    'pack.jose-workflow-design',
+    'pack.jose-strategic-planning',
+    'pack.jose-dependency-mapping',
+    'pack.jose-agent-coordination',
+    'pack.jose-parallel-orchestration',
+    'pack.jose-task-prioritization',
+    'pack.jose-risk-assessment',
+    'pack.jose-quality-gates',
+    'pack.jose-compliance-checks',
+    'pack.jose-progress-tracking',
+    'pack.jose-status-reporting',
+    'pack.jose-performance-metrics',
+    'pack.jose-workflow-optimization',
+    'pack.jose-bottleneck-detection',
+    'pack.jose-continuous-improvement',
+    'pack.jose-stakeholder-communication'
   ],
-  skillFocus: 'Professional Orchestration + Task Routing + Approval Gating + Cross-Agent Synthesis + Pipeline Governance Skills',
+  skillFocus: 'Professional Orchestration + Task Routing + Approval Gating + Cross-Agent Synthesis + Pipeline Governance + Workflow Design + Strategic Planning + Dependency Mapping + Agent Coordination + Parallel Orchestration + Task Prioritization + Risk Assessment + Quality Gates + Compliance Checks + Progress Tracking + Status Reporting + Performance Metrics + Workflow Optimization + Bottleneck Detection + Continuous Improvement + Stakeholder Communication',
   exampleTasks: [
     'Split TapCash into requirements, research, UI, implementation, and audit tracks.',
     'Create approval gates for payout, posting, and deployment actions.'

@@ -6,6 +6,150 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-17 (Alphonso + Jose skill pack expansion)
+
+Added 16 new skill packs to Alphonso agent (2 → 18) and 16 new skill packs to Jose agent (6 → 22).
+
+**Alphonso additions:**
+- Core Coding: Full-Stack, TDD, TypeScript, Rust, React, Python
+- Verification: Code Review, Build Verification, Refactoring, Debugging
+- Operations: Runtime Diagnostics, Security Audit, GitHub Integration, Performance Optimization
+- Extended: API Integration, Error Handling
+
+**Jose additions:**
+- Planning: Workflow Design, Strategic Planning, Dependency Mapping
+- Coordination: Agent Coordination, Parallel Orchestration, Task Prioritization
+- Governance: Risk Assessment, Quality Gates, Compliance Checks
+- Monitoring: Progress Tracking, Status Reporting, Performance Metrics
+- Optimization: Workflow Optimization, Bottleneck Detection, Continuous Improvement
+- Communication: Stakeholder Communication
+
+All packs include structured workflow guidance, example tasks, and per-pack scope overrides.
+
+**Maria additions (16 new packs):**
+- Requirements: Requirements Analysis, Risk Classification
+- Compliance: Compliance Auditing, Approval Workflow, Policy Enforcement
+- Evidence: Evidence Collection, Claim Verification, Trust Audit
+- Audit: Audit Trail, State Verification
+- Content: Brand Safety, Content Moderation, Quality Assurance
+- Documentation: Documentation Review, Stakeholder Reporting
+- Incident: Incident Response
+
+**Hector additions (16 new packs):**
+- API Research: API Documentation Research, API Integration Research
+- Compliance: Compliance Research, Security Research
+- Market: Trend Analysis, Market Intelligence, Content Research
+- Technical: Code Pattern Research, Technical Architecture Research, Open Source Analysis
+- Data: Data Gathering, Source Curation, Confidence Scoring, Survey Design
+- Documentation: Documentation Audit, Research Briefing
+
+Files changed:
+- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/agentContractService.ts` — 16 scope overrides
+- `src/agents/hector/hectorProfile.js` — updated `skillPackIds` (23 total)
+- `src/test/hectorSkillPacks.test.js` — new unit tests
+- `src/test/hectorSkillIntegration.test.js` — new integration tests
+- `docs/HECTOR_SKILLS.md` — new dedicated documentation
+- `docs/AGENT_GUIDE.md` — updated Hector section
+
+**Miya additions (16 new packs):**
+- Design: Typography System, Color Palette, Icon System, Design System
+- Content: Content Strategy, Brand Guidelines
+- Video: Video Storyboarding, Video Editing, Animation Design, Motion System
+- Layout: Landing Page, Dashboard Design, Editorial Design
+- Visual: Social Media Design, Illustration Style, User Research
+
+Files changed:
+- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/agentContractService.ts` — 16 scope overrides
+- `src/agents/miya/miyaProfile.js` — updated `skillPackIds` (21 total)
+- `src/test/miyaSkillPacks.test.js` — new unit tests
+- `src/test/miyaSkillIntegration.test.js` — new integration tests
+- `docs/MIYA_SKILLS.md` — new dedicated documentation
+- `docs/AGENT_GUIDE.md` — updated Miya section
+
+**Marcus additions (16 new packs):**
+- Release: GitHub Releases, Changelog Generation, Version Management, Release Readiness
+- Security: Security Audit, Compliance Distribution, Approval Gatekeeping
+- Deployment: Deployment Execution, Rollback Execution, Integration Validation
+- Notification: Slack Notifications, Notification Routing, Release Reporting, Team Communication
+- Risk: Risk Detection, Asset Distribution
+
+Files changed:
+- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/agentContractService.ts` — 16 scope overrides
+- `src/agents/marcus/marcusProfile.js` — updated `skillPackIds` (20 total)
+- `src/test/marcusSkillPacks.test.js` — new unit tests
+- `src/test/marcusSkillIntegration.test.js` — new integration tests
+- `docs/MARCUS_SKILLS.md` — new dedicated documentation
+
+**Echo additions (16 new packs):**
+- Decisions: Decision Capture, Decision Diff, Audit Trail
+- Retention: Retention Classification, Confidence Normalization, Memory Pruning
+- Knowledge: Knowledge Indexing, Knowledge Graph, Historical Context, Context Retrieval
+- Timeline: Timeline Construction, Session Continuity
+- Memory: Memory Synthesis Advanced, Memory Validation, Memory Reporting, Preference Learning
+
+Files changed:
+- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/agentContractService.ts` — 16 scope overrides
+- `src/agents/echo/echoProfile.js` — updated `skillPackIds` (19 total)
+- `src/test/echoSkillPacks.test.js` — new unit tests
+- `src/test/echoSkillIntegration.test.js` — new integration tests
+- `docs/ECHO_SKILLS.md` — new dedicated documentation
+
+**Sentinel additions (16 new packs):**
+- Security: Connector Risk, Secret Hygiene, CSP Audit, Dependency Audit, Data Protection, Injection Scan, Auth Audit
+- Policy: Permission Audit, Automation Safety, Policy Compliance, Approval Enforcement, Connector Gating
+- Monitoring: Threat Detection, Runtime Monitoring
+- Reporting: Risk Scoring, Security Reporting
+
+Files changed:
+- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/agentContractService.ts` — 16 scope overrides
+- `src/agents/sentinel/sentinelProfile.js` — updated `skillPackIds` (19 total)
+- `src/test/sentinelSkillPacks.test.js` — new unit tests
+- `src/test/sentinelSkillIntegration.test.js` — new integration tests
+- `docs/SENTINEL_SKILLS.md` — new dedicated documentation
+
+**Nova additions (16 new packs):**
+- Market: Market Analysis, Competitive Intelligence, Growth Analysis
+- Prioritization: Prioritization Matrix, Value Scoring, Portfolio Analysis
+- Strategy: Strategic Alignment, Resource Optimization, Decision Support, Recommendation Engine
+- Assessment: Risk-Reward, Timing Analysis, Effort Estimation, Capability Assessment
+- Modeling: Scenario Modeling, Trend Forecasting
+
+Files changed:
+- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/agentContractService.ts` — 16 scope overrides
+- `src/agents/nova/novaProfile.js` — updated `skillPackIds` (19 total)
+- `src/test/novaSkillPacks.test.js` — new unit tests
+- `src/test/novaSkillIntegration.test.js` — new integration tests
+- `docs/NOVA_SKILLS.md` — new dedicated documentation
+
+- **Core Coding (6 packs)**: Full-Stack Coding, Test-Driven Development, TypeScript Mastery, Rust Operations, React Patterns, Python Voice Systems
+- **Verification & Quality (4 packs)**: Code Review, Build Verification, Refactoring, Root-Cause Debugging
+- **Operations (4 packs)**: Runtime Diagnostics, Security Audit, GitHub Integration, Performance Optimization
+- **Extended (2 packs)**: API Integration, Error Handling
+
+All packs include:
+- Structured workflow guidance with actionable steps
+- 2-3 example tasks per pack
+- Per-pack scope overrides in `agentContractService.ts`
+- Unit and integration tests
+- Dedicated documentation (`docs/ALPHONSO_SKILLS.md`)
+
+Files changed:
+- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/agentContractService.ts` — 16 scope overrides
+- `src/agents/alphonso/alphonsoProfile.js` — updated `skillPackIds` (18 total)
+- `src/test/alphonsoSkillPacks.test.js` — new unit tests
+- `src/test/alphonsoSkillIntegration.test.js` — new integration tests
+- `docs/ALPHONSO_SKILLS.md` — new dedicated documentation
+- `docs/AGENT_GUIDE.md` — updated Alphonso section
+
+---
+
 ## [Unreleased] — 2026-07-15 (production-readiness execution — Cycle 1–2)
 
 Execution of the production-readiness roadmap

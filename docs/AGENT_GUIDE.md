@@ -9,18 +9,41 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 **Can do:** Run commands, read/write files, build projects, verify outputs
 **Cannot:** Bypass approval gates for risky actions
 **When to use:** Default agent for most tasks. When you say "build me a website" or "fix this bug", Alphonso handles it.
+**Skill Packs (18):**
+- Core Coding: `pack.coding.full-stack`, `pack.coding.tdd`, `pack.alphonso-typescript-mastery`, `pack.alphonso-rust-operations`, `pack.alphonso-react-patterns`, `pack.alphonso-python-voice`
+- Verification: `pack.alphonso-code-review`, `pack.alphonso-build-verification`, `pack.alphonso-refactoring`, `pack.debugging.root-cause`
+- Operations: `pack.alphonso-runtime-diagnostics`, `pack.alphonso-security-audit`, `pack.github.integration`, `pack.alphonso-performance-optimization`
+- Extended: `pack.alphonso-api-integration`, `pack.alphonso-error-handling`
+- Existing: `pack.codex-professional-coding`, `pack.alphonso-runtime-operations`
 
 ### Jose — Orchestrator
 **Role:** Intake, routing, decomposition, merge, confirm, report
 **Can do:** Break complex tasks into sub-tasks, assign to other agents, merge results
 **Cannot:** Bypass high-risk restrictions
 **When to use:** Complex multi-step requests. Jose automatically decomposes "research X, write a report, and email it" into sub-tasks for Hector, Miya, and Marcus.
+**Skill Packs (22):**
+- Orchestration: `pack.jose-professional-orchestration`, `pack.jose-task-routing`, `pack.jose-approval-gating`, `pack.jose-cross-agent-synthesis`, `pack.jose-pipeline-governance`, `pack.workflow.executing-plans`
+- Planning: `pack.jose-workflow-design`, `pack.jose-strategic-planning`, `pack.jose-dependency-mapping`
+- Coordination: `pack.jose-agent-coordination`, `pack.jose-parallel-orchestration`, `pack.jose-task-prioritization`
+- Governance: `pack.jose-risk-assessment`, `pack.jose-quality-gates`, `pack.jose-compliance-checks`
+- Monitoring: `pack.jose-progress-tracking`, `pack.jose-status-reporting`, `pack.jose-performance-metrics`
+- Optimization: `pack.jose-workflow-optimization`, `pack.jose-bottleneck-detection`, `pack.jose-continuous-improvement`
+- Communication: `pack.jose-stakeholder-communication`
 
 ### Hector — Researcher
 **Role:** Research with citations, source scanning
-**Can do:** Web search, document analysis, source verification
+**Runtime:** `src/services/hectorResearchService.js` — Brave Search + RSS + Ollama-powered
+**Can do:** Web search, document analysis, source verification, API docs research, compliance research, competitive analysis
 **Cannot:** Execute terminal commands, filesystem operations, posting, or purchases
-**When to use:** "Research the latest trends in AI", "Find sources for this claim", "Summarize this article".
+**When to use:** "Research the latest trends in AI", "Find sources for this claim", "Summarize this article"
+**Skill Packs (23):**
+- Existing: `pack.hector-professional-marketing`, `pack.hector-market-research`, `pack.hector-competitive-analysis`, `pack.hector-source-verification`, `pack.hector-rss-monitoring`, `pack.workflow.executing-plans`, `pack.github.research`
+- API Research: `pack.hector-api-documentation-research`, `pack.hector-api-integration-research`
+- Compliance: `pack.hector-compliance-research`, `pack.hector-security-research`
+- Market: `pack.hector-trend-analysis`, `pack.hector-market-intelligence`, `pack.hector-content-research`
+- Technical: `pack.hector-code-pattern-research`, `pack.hector-technical-architecture-research`, `pack.hector-open-source-analysis`
+- Data: `pack.hector-data-gathering`, `pack.hector-source-curation`, `pack.hector-confidence-scoring`, `pack.hector-survey-design`
+- Documentation: `pack.hector-documentation-audit`, `pack.hector-research-briefing`
 
 ### Miya — Creative
 **Role:** Strategy, scripting, storyboarding, export
@@ -35,6 +58,15 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 **Cannot:** Perform destructive execution
 **Schema:** `riskLevel`, `approvalRequired`, `policyFindings[]`, `complianceNotes[]`, `summary`
 **When to use:** Automatic — Jose routes governance-flagged actions through Maria before Marcus executes. High/critical risk with `approvalRequired=true` blocks Marcus.
+**Skill Packs (18):**
+- Governance: `pack.maria-audit-governance`, `pack.maria-trust-verification`
+- Requirements: `pack.maria-requirements-analysis`, `pack.maria-risk-classification`
+- Compliance: `pack.maria-compliance-auditing`, `pack.maria-approval-workflow`, `pack.maria-policy-enforcement`
+- Evidence: `pack.maria-evidence-collection`, `pack.maria-claim-verification`, `pack.maria-trust-audit`
+- Audit: `pack.maria-audit-trail`, `pack.maria-state-verification`
+- Content: `pack.maria-brand-safety`, `pack.maria-content-moderation`, `pack.maria-quality-assurance`
+- Documentation: `pack.maria-documentation-review`, `pack.maria-stakeholder-reporting`
+- Incident: `pack.maria-incident-response`
 
 ### Marcus — Distribution Executor
 **Role:** Approved distribution execution across GitHub, Slack, and publish platforms
