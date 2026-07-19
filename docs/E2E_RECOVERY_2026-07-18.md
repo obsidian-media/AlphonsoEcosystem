@@ -30,9 +30,10 @@ so this is a partial, factual ledger rather than a completion claim.
 ## Current status
 
 **PARTIAL:** `runtime-tools.spec.js` and `content-pipeline.spec.js` now pass
-as an isolated group (8 tests, verified locally on 2026-07-19). The Runtime
-Hub failure was a test-harness contract drift: the mock omitted Rust's required
-`missing` array and `installHint` fields. The production Rust command already
-returns that contract. E2E remains advisory until the visual baselines and all
-remaining isolated specs are repaired, the full suite passes on Node 22 in CI,
-and the workflow setting is removed.
+as an isolated group (8 tests, verified locally on 2026-07-19); the visual
+suite also passes (3 tests) against regenerated stable Windows baselines. The
+Runtime Hub failure was a test-harness contract drift: the mock omitted Rust's
+required `missing` array and `installHint` fields. The production Rust command
+already returns that contract. E2E remains advisory until all remaining
+isolated specs pass, the full suite passes on Node 22 in CI, and the workflow
+setting is removed.
