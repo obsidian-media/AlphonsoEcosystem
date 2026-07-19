@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 ## Development Setup
 
 ### Prerequisites
-- **Node.js** 20+ 
+- **Node.js** 22 LTS (run `nvm use` to select the repository-pinned version)
 - **Rust** 1.77+ (with `cargo`, `clippy`, `rustfmt`)
 - **Ollama** running locally with a model (e.g., `ollama pull llama3.2:3b`)
 - **Windows** (primary target platform)

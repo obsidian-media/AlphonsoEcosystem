@@ -245,6 +245,8 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 ### Prerequisites
 
+- Node.js 22 LTS (use `nvm use` to select the repository-pinned version)
+
 | Dependency | Version | Purpose |
 |-----------|---------------|---------------------------|
 | **Node.js** | 20+ | Frontend dev server & build |
