@@ -62,6 +62,15 @@ describe('chatUtils', () => {
     });
   });
 
+  it('routes messaging requests through Jose for policy-gated connector handling', () => {
+    expect(shouldRouteThroughJose('Send a message to the Telegram channel about project status')).toBe(true);
+  });
+
+  it('routes explicit analysis and workflow execution requests through Jose', () => {
+    expect(shouldRouteThroughJose('Analyze the current project for security risks')).toBe(true);
+    expect(shouldRouteThroughJose('Run a workflow for marketing campaign')).toBe(true);
+  });
+
   describe('needsHighRiskApproval', () => {
     it('returns true for destructive action labels', () => {
       expect(needsHighRiskApproval('delete old files')).toBe(true);

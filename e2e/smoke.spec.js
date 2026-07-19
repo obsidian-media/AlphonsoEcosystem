@@ -47,25 +47,21 @@ test.describe('Alphonso E2E smoke tests', () => {
 
   // Epic 1 Task 2: Workflow builder
   test('workflow builder — navigate and render', async ({ page }) => {
-    // Click Workflows in sidebar
-    await page.getByRole('button', { name: /^Workflows$/ }).click();
+    // Automation is the current workflow surface in the sidebar.
+    await page.getByRole('button', { name: /^Automation$/ }).click();
 
     // AutomationView / WorkflowBuilderView should load
     // Look for the "New Workflow" button or workflow list header that WorkflowBuilderView renders
-    await expect(
-      page.locator('text=New Workflow, text=Workflows, text=Build and run').first()
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('New Workflow', { exact: true })).toBeVisible({ timeout: 15000 });
   });
 
   // Epic 1 Task 3: Connector health panel
   test('connector health — navigate and render panel', async ({ page }) => {
     // Click Connectors in sidebar
-    await page.getByRole('button', { name: /^Connectors$/ }).click();
+    await page.getByRole('button', { name: /^Connectors \d+ disabled$/ }).click();
 
     // ConnectorHealthPanel should render with tabs
-    await expect(
-      page.locator('text=Health Monitor, text=Setup').first()
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Connector Health' })).toBeVisible({ timeout: 15000 });
   });
 
 });

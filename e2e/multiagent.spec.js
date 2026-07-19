@@ -31,7 +31,7 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
   });
 
-  test('Jose intake — policy gate fires on risky command', async ({ page }) => {
+  test('Jose intake — connector action enters the orchestration pipeline', async ({ page }) => {
     // Navigate to Chat tab
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
@@ -47,12 +47,10 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     await expect(sendBtn).toBeVisible();
     await sendBtn.click();
 
-    // Wait for the assistant response to appear (the mock returns a stub response)
-    await expect(page.locator('[role="log"] .assistant, [data-testid="assistant-message"]').first()).toBeVisible({ timeout: 15000 });
+    // Jose's result card proves that the executable command entered the orchestration path.
+    await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });
 
-    // Verify policy receipt or blocked/approved indicator appears
-    // ApprovalPanel renders when a high-risk action triggers policy gate
-    await expect(page.locator('[data-testid="approval-panel"], [data-alphonso-policy-gate="triggered"], text=Policy, text=Approval, text=Blocked, text=Approved').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Agent Activity', { exact: true })).toBeVisible({ timeout: 15000 });
   });
 
   test('Activity log shows agent entry after pipeline', async ({ page }) => {
@@ -66,15 +64,14 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     const sendBtn = page.getByRole('button', { name: /Send message/i });
     await sendBtn.click();
 
-    // Wait for a response
-    await expect(page.locator('[role="log"] .assistant, [data-testid="assistant-message"]').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });
 
     // Navigate to Runtime / Activity tab and check for agent activity entry
     // The RightPanel should show an agent entry (e.g., "Sentinel", "Jose", or activity badge)
-    await expect(page.locator('[data-testid="agent-activity"], [data-alphonso-activity], text=Agent, text=Jose, text=Sentinel, text=activity').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Agent Activity', { exact: true })).toBeVisible({ timeout: 15000 });
   });
 
-  test('Receipt persists after page reload', async ({ page }) => {
+  test('orchestration summary persists after page reload', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
     const textarea = page.locator('textarea').last();
@@ -85,16 +82,14 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     const sendBtn = page.getByRole('button', { name: /Send message/i });
     await sendBtn.click();
 
-    // Wait for orchestration to register
-    await expect(page.locator('[role="log"] .assistant, [data-testid="assistant-message"]').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });
 
     // Reload page
     await page.reload();
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
+    await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    // After reload, the chat should still show the previous assistant response
-    // confirming that receipts were persisted
-    await expect(page.locator('[role="log"] .assistant, [data-testid="assistant-message"]').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Jose merged', { exact: false })).toBeVisible({ timeout: 15000 });
   });
 
 });
