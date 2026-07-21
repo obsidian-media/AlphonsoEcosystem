@@ -89,6 +89,15 @@ describe('durableStore', () => {
     expect(second.version).toBe(2);
   });
 
+  it('treats a corrupted schema version as 0 (re-runs migrations) instead of a partial parse', () => {
+    localStorage.setItem('alphonso_durable_schema_version', '2broken');
+    const run = vi.fn();
+    // With a corrupted version read as 0, the to:2 migration must run again.
+    const res = runDurableMigrations([{ to: 2, run }]);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(res.version).toBe(2);
+  });
+
   it('runDurableMigrations stops at a failing migration and does not over-bump', () => {
     const good = vi.fn();
     const bad = vi.fn(() => { throw new Error('boom'); });

@@ -105,8 +105,10 @@ export const DEFAULT_MIGRATIONS = [
 function readVersion() {
   const raw = safeLocalGet(SCHEMA_VERSION_KEY);
   if (raw == null) return 0;
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) ? n : 0;
+  // Number() (not parseInt) so a corrupted value like "2broken" is rejected
+  // whole rather than silently parsed to 2, which would skip migrations.
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n >= 0 ? n : 0;
 }
 
 /**
