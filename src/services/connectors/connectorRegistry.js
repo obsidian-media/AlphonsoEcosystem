@@ -463,6 +463,20 @@ export function gateConnectorAction(connectorId, actionType, commandPreview, opt
     if (dslResult.effect === 'deny') {
       return { ok: false, blocked: true, reason: dslResult.reason || 'DSL policy denied', riskLevel: 'high' };
     }
+    // Enforce the require_consent tier (irreversible/costly actions such as
+    // external_publish / paid_connector_send). Blocks unless the caller has an
+    // explicit approval; the ApprovalModal flow re-invokes with approved:true.
+    if (dslResult.effect === 'require_consent' && !options.approved) {
+      const reason = dslResult.reason || 'This action requires explicit consent';
+      appendConnectorAudit(connectorId, 'policy_block', {
+        actionType,
+        commandPreview: String(commandPreview || '').slice(0, 200),
+        reason,
+        riskLevel: 'high',
+        dsl: 'require_consent'
+      });
+      return { ok: false, blocked: true, reason, riskLevel: 'high', requiresConsent: true };
+    }
     const gate = evaluatePolicyGate({
       connectorId,
       actionType,

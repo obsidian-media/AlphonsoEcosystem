@@ -6,6 +6,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-16 (production-readiness execution — Cycle 3)
+
+- **Persistence — durable backup is now recoverable + versioned (T11):** the
+  localStorage↔SQLite dual-write was fire-and-forget with no schema/versioning,
+  and the kv_store "durable backup" was write-only and never read back — so it
+  recovered nothing after a localStorage wipe. `durableStore` gains
+  `hydrateKeyFromDurable()` (restore localStorage from kv when missing) and
+  `reconcileKey()` (localStorage-wins divergence resolution), plus
+  `runDurableMigrations()` (versioned, idempotent, fail-stop migration runner
+  wired at boot). Also fixes a write-loss race where writes before the Tauri
+  import resolved were dropped. Value format unchanged — no consumer impact.
+  9 new tests.
+
+- **Security — connector DSL fail-open closed (T12):** `policyDslService`
+  previously returned `allow` for every `target:'external'` action, so the DSL
+  layer misreported irreversible/costly actions as allowed and would fail open
+  if ever trusted as authoritative. `external_publish` and `paid_connector_send`
+  are now classified `require_consent` (ordered before the retained low-risk
+  catch-all so unknown low-risk types don't fail closed), and
+  `gateConnectorAction` enforces that tier — blocking unless an explicit
+  `approved` flag is supplied. YouTube publish and paid AI sends now require
+  explicit consent as defense-in-depth. New `policyDslService.test.ts` +
+  require_consent gate tests.
+
 ## [Unreleased] — 2026-07-15 (production-readiness execution — Cycle 1–2)
 
 Execution of the production-readiness roadmap

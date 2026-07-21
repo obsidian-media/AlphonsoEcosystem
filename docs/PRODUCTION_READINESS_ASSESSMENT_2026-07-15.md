@@ -21,10 +21,12 @@ roadmap (§6):
 | **T2** Reorder Rust audit gate | ✅ done, merged | un-masked + fixed a hidden `cargo fmt` violation |
 | **T5** License signing | ✅ done, merged | offline ECDSA-P256 signed tokens; forgery/tamper/expiry rejected; 55/55 tests |
 | **T6** PIN lockout | ✅ done, merged | 5-attempt lockout + PIN invalidation + constant-time compare |
+| **T11** Persistence recovery + migrations | ✅ done, merged | kv backup now read-back/recoverable; versioned migration runner; write-loss race fixed |
+| **T12** Fail-open DSL default | ✅ done, merged | connector DSL risk-tiered; `require_consent` enforced for publish/paid sends |
 | **T10** E2E repair | ⏳ partial, merged | collection fixed (0→28 collect); ~22 specs stale; job made **advisory** (owner-approved, temporary); specs repair still open |
 | **T3** Secret-scan triage | ✅ done, 2026-07-16 | not a real leak — `secrets-scan` job's `base`/`head` both resolved to the pushed commit on every direct push to `main` (only differed on PRs), so TruffleHog's own action refused to run ("BASE and HEAD commits are the same") and hard-failed every push-to-main run for months; fixed by diffing against `github.event.before` on push / PR base sha on PRs; added a proper disclosure/response section + automated-scanning summary to `SECURITY.md` (previously just a fix-log, no reporting process) |
 | **T4** Branch protection | ✅ done, 2026-07-16 | protection already partially existed (Test & Build + Rust Tests & Clippy required, 1 review required, force-push/deletion blocked) — that's why merging PR #99 needed `--admin`. Added `Secrets Scan (TruffleHog)` and `Doc Count Freshness` to the required-contexts list now that both are reliably green (T1-T3). `Playwright E2E Smoke Test` intentionally left out of the required list per T10's advisory decision. `enforce_admins` left `false` — single/small-maintainer repo, an admin override remains available for exactly the kind of judgment call made merging PR #99 |
-| T11 persistence, T12 DSL, T13 keychain, T14 lib.rs split, T15 updater verify, T16 iOS pairing live-verify, T17 observability, T18 svc-role key, T19 doc-gen, T20 budgets | ▶ **not started** | tracked below and in CLAUDE.md's Real Gaps list |
+| T13 keychain, T14 lib.rs split, T15 updater verify, T16 iOS pairing live-verify, T17 observability, T18 svc-role key, T19 doc-gen, T20 budgets | ▶ **not started** | tracked below and in CLAUDE.md's Real Gaps list |
 
 **Note on `LICENSE_TRUST_KEY`:** T5 ships fail-closed — `src/config/licenseTrustKey.ts` exports `null` until the vendor generates a real ECDSA-P256 key pair (`node scripts/issue-license.mjs --generate-keys`) and pastes the public JWK in. No paid tier can be granted until that happens; this is intentional, not a bug.
 

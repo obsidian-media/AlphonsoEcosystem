@@ -303,6 +303,16 @@ function AppShell() {
     })();
   }, []);
 
+  // Run durable-store schema migrations once at boot (versioned, idempotent).
+  useEffect(() => {
+    (async () => {
+      try {
+        const { runDurableMigrations } = await import('./lib/durableStore');
+        runDurableMigrations();
+      } catch { /* non-critical */ }
+    })();
+  }, []);
+
   // Wire background services: Sentinel scheduled scans + Maria weekly report
   useEffect(() => {
     let scanStop: (() => void) | null = null;
