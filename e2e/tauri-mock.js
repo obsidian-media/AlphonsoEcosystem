@@ -46,7 +46,16 @@
       if (cmd === 'runtime_start_tool') return Promise.resolve({ ok: true });
       if (cmd === 'runtime_stop_tool') return Promise.resolve({ ok: true });
       if (cmd === 'runtime_install_tool') return Promise.resolve({ ok: true });
-      if (cmd === 'runtime_check_prerequisites') return Promise.resolve({ python: true, git: true, ollama: true });
+      // Keep this mock aligned with Rust PrereqStatus (camelCase through Tauri).
+      if (cmd === 'runtime_check_prerequisites') return Promise.resolve({
+        pythonFound: true,
+        gitFound: true,
+        ollamaFound: true,
+        dockerFound: false,
+        nodeFound: true,
+        missing: [],
+        installHint: 'All required runtime prerequisites are available.'
+      });
       if (cmd === 'runtime_install_prerequisite') return Promise.resolve({ ok: true });
       if (cmd === 'runtime_get_autostart_prefs') return Promise.resolve({});
       if (cmd === 'runtime_save_autostart_pref') return Promise.resolve(null);
@@ -128,9 +137,12 @@
         return Promise.resolve(new Response(JSON.stringify({ details: { parameter_size: '1.1B' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       }
       if (urlStr.indexOf('/api/generate') !== -1 || urlStr.indexOf('/api/chat') !== -1) {
+        var chunk = urlStr.indexOf('/api/chat') !== -1
+          ? { model: 'tinyllama', message: { role: 'assistant', content: 'Hello!' }, done: true }
+          : { model: 'tinyllama', response: 'Hello!', done: true };
         var stream = new ReadableStream({
           start: function (controller) {
-            controller.enqueue(new TextEncoder().encode(JSON.stringify({ model: 'tinyllama', response: 'Hello!', done: true }) + '\n'));
+            controller.enqueue(new TextEncoder().encode(JSON.stringify(chunk) + '\n'));
             controller.close();
           }
         });

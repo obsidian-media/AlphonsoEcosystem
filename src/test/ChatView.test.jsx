@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 // ── Core Tauri mock ───────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -104,6 +104,8 @@ vi.mock('../components/ConnectorStatusIndicators', () => ({
 
 // ── Component under test ──────────────────────────────────────────────────────
 import { ChatView } from '../components/ChatView';
+import { generateOllamaChatStream } from '../lib/ollama';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -179,6 +181,45 @@ describe('ChatView', () => {
     render(<ChatView {...makeProps()} />);
     // The abort/stop button is only rendered when isGenerating is true
     expect(screen.queryByRole('button', { name: /abort and stop/i })).toBeNull();
+  });
+
+  it('cancels an active Ollama stream from the stop control', async () => {
+    let resolveStream;
+    generateOllamaChatStream.mockImplementationOnce(({ signal }) => new Promise((resolve) => {
+      resolveStream = resolve;
+      expect(signal.aborted).toBe(false);
+    }));
+
+    render(<ChatView {...makeProps()} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    const stopButton = await screen.findByRole('button', { name: /abort and stop/i });
+    fireEvent.click(stopButton);
+
+    await waitFor(() => {
+      expect(generateOllamaChatStream.mock.calls[0][0].signal.aborted).toBe(true);
+    });
+    resolveStream();
+  });
+
+  it('cancels an active Ollama stream from the keyboard shortcut', async () => {
+    let resolveStream;
+    generateOllamaChatStream.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveStream = resolve;
+    }));
+
+    render(<ChatView {...makeProps()} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await screen.findByRole('button', { name: /abort and stop/i });
+    useKeyboardShortcuts.mock.calls.at(-1)[0].abort_generation();
+
+    await waitFor(() => {
+      expect(generateOllamaChatStream.mock.calls[0][0].signal.aborted).toBe(true);
+    });
+    resolveStream();
   });
 
   it('shows model name in placeholder hint when connected', () => {

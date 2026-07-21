@@ -2,7 +2,7 @@
 
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
-- **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 5, Tailwind 3) + Ollama (local LLM)
+- **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 8, Tailwind 3) + Ollama (local LLM)
 - **Version**: 2.6.0 (security hardened, 231 test files, 3,255 tests, 168 services)
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 

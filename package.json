@@ -3,6 +3,9 @@
   "private": true,
   "version": "2.6.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "node scripts/run-vite-dev.mjs",
     "desktop:dev": "npx.cmd tauri dev",

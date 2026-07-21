@@ -1,7 +1,14 @@
 import { test, expect } from '@playwright/test';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 test.describe('Visual Regression Snapshots', () => {
   test.beforeEach(async ({ page }) => {
+    // Visual baselines must not depend on locally installed runtimes, network
+    // reachability, or persisted settings from a prior browser context.
+    await page.addInitScript({ path: resolve(__dirname, 'tauri-mock.js') });
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
   });
@@ -21,7 +28,7 @@ test.describe('Visual Regression Snapshots', () => {
 
   test('settings panel renders', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.getByRole('button', { name: /Settings/i }).click();
+    await page.getByRole('button', { name: 'Open settings', exact: true }).click();
     await page.waitForTimeout(500);
     await expect(page).toHaveScreenshot('settings-panel.png', { threshold: 0.2 });
   });

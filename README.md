@@ -228,7 +228,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 - **Screen Intelligence** — `screenIntelligenceService.js` for on-screen context awareness
 - **Voice OS** — Real-time STT→LLM→TTS pipeline (`voice/`) with faster-whisper, Ollama, and Piper. Launched from Runtime Manager as a Tauri sidecar. AudioWorklet-based `useJarvisVoice` hook with barge-in and conversation history.
 - **Premium Animated UI** — OKLCH design token system, Framer Motion animations (`AnimatePresence` on chat messages), glassmorphism input, sidebar tooltips.
-- **Desktop Native** — Tauri v2 (Rust 1.77) + React 18 + Vite 5; ~6.8MB NSIS/MSI installer for Windows
+- **Desktop Native** — Tauri v2 (Rust 1.77) + React 18 + Vite 8; ~6.8MB NSIS/MSI installer for Windows
 
 ---
 
@@ -245,9 +245,11 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 ### Prerequisites
 
+- Node.js 22 LTS (use `nvm use` to select the repository-pinned version)
+
 | Dependency | Version | Purpose |
 |-----------|---------------|---------------------------|
-| **Node.js** | 20+ | Frontend dev server & build |
+| **Node.js** | 22 LTS | Frontend dev server & build |
 | **npm** | 10+ | Package management |
 | **Rust** | 1.77+ (`cargo`) | Tauri desktop backend |
 | **Ollama** | Latest | Local LLM engine |
@@ -282,7 +284,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                  React 18 (Vite 5, Tailwind 3)                   │
+│                  React 18 (Vite 8, Tailwind 3)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
 │  │  9 Agents     │  │  114 UI          │  │  131+ Services     │  │

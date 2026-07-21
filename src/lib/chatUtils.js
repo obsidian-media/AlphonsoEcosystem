@@ -45,7 +45,7 @@ export function shouldRouteThroughJose(text) {
     'a photo of', 'an image of', 'a picture of',
     'photo of', 'image of', 'picture of',
     'scaffold', 'implement a', 'implement an', 'implement the',
-    'deploy', 'publish to', 'upload to', 'post to', 'send to',
+    'deploy', 'publish to', 'upload to', 'post to', 'send to', 'send a message', 'send message',
     'install ', 'npm run', 'npm install', 'yarn run', 'yarn add',
     'git commit', 'git push', 'git pull', 'git clone',
     'docker', 'rename the', 'rename this', 'delete the', 'delete this',
@@ -56,7 +56,7 @@ export function shouldRouteThroughJose(text) {
     'miya', 'hector ', 'alphonso agent',
     'ask miya', 'ask hector', 'ask alphonso', 'ask agent',
     'tell miya', 'tell hector', 'delegate to', 'delegate this',
-    'agent task', 'run a task', 'batch', 'boardroom',
+    'agent task', 'run a task', 'run a workflow', 'analyze the', 'analyze this', 'batch', 'boardroom',
     'roadmap plan', 'workflow plan', 'task plan'
   ].some((term) => lower.includes(term));
 }

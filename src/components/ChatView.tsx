@@ -319,6 +319,10 @@ export function ChatView({
       streamControllerRef.current.abort();
       streamControllerRef.current = null;
     }
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     setIsGenerating(false);
     onGenerationChange(false);
     onJoseExecutionState?.('aborted', 'Generation cancelled');
@@ -694,6 +698,7 @@ export function ChatView({
       // Persist the user message offline so it can be retried when Ollama comes back
       saveMessageOffline({ role: 'user', content: cleanInput }).catch(() => {});
     } finally {
+      abortRef.current = null;
       setIsGenerating(false);
       onGenerationChange(false);
     }

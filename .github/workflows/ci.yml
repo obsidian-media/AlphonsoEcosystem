@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -124,7 +124,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
@@ -162,7 +162,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
@@ -200,7 +200,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
@@ -253,12 +253,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      # base/head must differ or the action refuses to run ("BASE and HEAD
+      # commits are the same") instead of skipping — on a direct push to
+      # main, `base: main` and `head: HEAD` resolve to the exact same commit
+      # (the one just pushed), so this job hard-failed on every push-to-main
+      # for months with no real secret involved (T3). On PRs, diff against the
+      # PR's base branch; on pushes, diff against the pre-push SHA so only the
+      # newly pushed commits are scanned (falls back to a full scan when
+      # `before` is the all-zero SHA, e.g. a brand-new branch).
       - name: TruffleHog secrets scan
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
+          base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before || '') }}
+          head: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'HEAD' }}
           extra_args: --only-verified
 
   doc-freshness:
@@ -269,7 +277,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies

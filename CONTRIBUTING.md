@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 ## Development Setup
 
 ### Prerequisites
-- **Node.js** 20+ 
+- **Node.js** 22 LTS (run `nvm use` to select the repository-pinned version)
 - **Rust** 1.77+ (with `cargo`, `clippy`, `rustfmt`)
 - **Ollama** running locally with a model (e.g., `ollama pull llama3.2:3b`)
 - **Windows** (primary target platform)
@@ -38,7 +38,7 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 
 5. **Run tests**
    ```bash
-    npm run test         # All 2,151+ tests across 159+ files
+    npm run test         # Full Vitest suite
     npm run lint         # ESLint
     npm run verify:app   # lint + typecheck + test + build
     ```
@@ -46,13 +46,13 @@ Thank you for your interest in contributing to Alphonso! This guide will help yo
 ## Project Structure
 
 ```
-src/                   React frontend (.jsx, 9 .ts services)
+src/                   React frontend (new UI work is .tsx; legacy .jsx remains)
   agents/              9 agent profiles, permissions, schemas
-  components/          82+ UI components
-  services/            124 services (policy-gated)
+  components/          UI components and legacy feature workspaces
+  services/            policy-gated services (exact count verified by npm run verify:docs)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js)
-  test/                73 test files (Vitest)
+  test/                Vitest test files (exact count verified by npm run verify:docs)
 src-tauri/             Rust backend
   src/lib.rs           ~1,455 lines, 76 Tauri commands (across 16 modules)
   src/utils.rs         Shared utilities
@@ -100,7 +100,7 @@ git commit -m "type: description"
 **PR Checklist:**
 - [ ] `npm run verify:app` passes (lint + typecheck + test + build)
 - [ ] `npm run typecheck` — 0 TypeScript errors
-- [ ] `npm run test` — all 2,151+ tests pass; no regressions
+- [ ] `npm run test` — full suite passes with no regressions
 - [ ] New components are `.tsx` with exported prop interfaces
 - [ ] New services have a test file in `src/test/`
 - [ ] No `.env`, `.tauri-updater-key`, or secret files committed
