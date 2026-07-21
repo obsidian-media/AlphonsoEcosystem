@@ -47,6 +47,7 @@ release/rc0/
 
 # Claude Code ephemeral session lock
 .claude/scheduled_tasks.lock
+.claude/settings.local.json
 
 # TypeScript incremental build cache
 *.tsbuildinfo

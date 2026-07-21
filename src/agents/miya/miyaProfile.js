@@ -41,9 +41,25 @@ export const MIYA_PROFILE = {
     'pack.miya-creative-image',
     'pack.miya-ui-ux-design',
     'pack.miya-brand-identity',
-    'pack.miya-motion-graphics'
+    'pack.miya-motion-graphics',
+    'pack.miya-typography-system',
+    'pack.miya-color-palette',
+    'pack.miya-content-strategy',
+    'pack.miya-video-storyboarding',
+    'pack.miya-social-media-design',
+    'pack.miya-editorial-design',
+    'pack.miya-animation-design',
+    'pack.miya-illustration-style',
+    'pack.miya-video-editing',
+    'pack.miya-landing-page',
+    'pack.miya-dashboard-design',
+    'pack.miya-brand-guidelines',
+    'pack.miya-icon-system',
+    'pack.miya-design-system',
+    'pack.miya-user-research',
+    'pack.miya-motion-system'
   ],
-  skillFocus: 'Runway Video Generation + Creative Image + UI/UX Design + Brand Identity + Motion Graphics Skills',
+  skillFocus: 'Runway Video Generation + Creative Image + UI/UX Design + Brand Identity + Motion Graphics + Typography System + Color Palette + Content Strategy + Video Storyboarding + Social Media Design + Editorial Design + Animation Design + Illustration Style + Video Editing + Landing Page + Dashboard Design + Brand Guidelines + Icon System + Design System + User Research + Motion System',
   exampleTasks: [
     'Create dashboard IA and component map for TapCash user/admin views.',
     'Generate landing page structure and design system notes.'

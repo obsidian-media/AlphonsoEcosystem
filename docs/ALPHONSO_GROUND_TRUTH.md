@@ -918,6 +918,29 @@ the ground-truth summary of what actually changed.
   `pack.alphonso-runtime-operations`, `pack.marcus-distribution-execution`,
   `pack.echo-memory-synthesis`, `pack.sentinel-vuln-scan`,
   `pack.nova-opportunity-analysis`.
+- **Alphonso skill pack expansion (2026-07-17)**: Alphonso now has 18 skill packs
+  (2 existing + 16 new). New packs: `pack.coding.full-stack`, `pack.coding.tdd`,
+  `pack.alphonso-typescript-mastery`, `pack.alphonso-rust-operations`,
+  `pack.alphonso-react-patterns`, `pack.alphonso-python-voice`,
+  `pack.alphonso-code-review`, `pack.alphonso-build-verification`,
+  `pack.alphonso-refactoring`, `pack.debugging.root-cause`,
+  `pack.alphonso-runtime-diagnostics`, `pack.alphonso-security-audit`,
+  `pack.github.integration`, `pack.alphonso-performance-optimization`,
+  `pack.alphonso-api-integration`, `pack.alphonso-error-handling`. All packs
+  include structured workflow guidance, example tasks, and per-pack scope
+  overrides. See `docs/ALPHONSO_SKILLS.md` for full documentation.
+- **Jose skill pack expansion (2026-07-17)**: Jose now has 22 skill packs
+  (6 existing + 16 new). New packs: `pack.jose-workflow-design`,
+  `pack.jose-strategic-planning`, `pack.jose-dependency-mapping`,
+  `pack.jose-agent-coordination`, `pack.jose-parallel-orchestration`,
+  `pack.jose-task-prioritization`, `pack.jose-risk-assessment`,
+  `pack.jose-quality-gates`, `pack.jose-compliance-checks`,
+  `pack.jose-progress-tracking`, `pack.jose-status-reporting`,
+  `pack.jose-performance-metrics`, `pack.jose-workflow-optimization`,
+  `pack.jose-bottleneck-detection`, `pack.jose-continuous-improvement`,
+  `pack.jose-stakeholder-communication`. All packs include structured
+  workflow guidance, example tasks, and per-pack scope overrides. See
+  `docs/JOSE_SKILLS.md` for full documentation.
 - **Pipeline loop-guard / execution budget**: `runJoseCommandExecutionPipeline`
   in `joseExecutionEngineService.js` now hard-stops at `PIPELINE_MAX_ASSIGNMENTS`
   (50) or `PIPELINE_MAX_DURATION_MS` (5 minutes), whichever comes first. On
