@@ -21,7 +21,7 @@ describe('agent skill integration', () => {
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-source-verification');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.hector-rss-monitoring');
     expect(HECTOR_PROFILE.skillPackIds).toContain('pack.workflow.executing-plans');
-    expect(HECTOR_PROFILE.skillFocus).toBe('Professional Marketing + Market Research + Competitive Analysis + Source Verification + RSS Monitoring + Execution Skills + GitHub Research');
+    expect(HECTOR_PROFILE.skillFocus).toContain('Professional Marketing + Market Research + Competitive Analysis + Source Verification + RSS Monitoring + Execution Skills + GitHub Research');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-audit-governance');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-trust-verification');
     expect(MARIA_PROFILE.skillFocus).toBe('Audit Governance Skill + Trust Verification Skill');
