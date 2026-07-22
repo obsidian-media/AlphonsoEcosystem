@@ -13,16 +13,25 @@ struct PairingView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                PairingHero(
+                    state: webSocketService.connectionState,
+                    selectedTarget: selectedTarget
+                )
+                .padding(.horizontal)
+                .padding(.top, 12)
+
                 HostListView(
                     hosts: mdnsService.discovered,
                     selectedHost: $selectedHost
                 )
 
-                Button("Enter IP Manually") {
+                Button {
                     selectedHost = nil
                     showingManualEntry = true
+                } label: {
+                    Label("Enter desktop address", systemImage: "network")
                 }
-                .foregroundColor(.accentColor)
+                .buttonStyle(.bordered)
                 .padding(.horizontal)
                 .padding(.top, 8)
 
@@ -55,6 +64,10 @@ struct PairingView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     }
                                     .buttonStyle(.plain)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .strokeBorder(manualEndpoint?.host == endpoint.host && manualEndpoint?.port == endpoint.port ? Color.accentColor : .clear, lineWidth: 2)
+                                    }
                                 }
                             }
                             .padding(.horizontal)
@@ -64,22 +77,20 @@ struct PairingView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("PIN Code")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Label("Desktop PIN", systemImage: "key.fill")
+                        .font(.subheadline.weight(.semibold))
 
                     TextField("6-digit PIN from desktop", text: $pin)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("pairing-pin-field")
                         .onChange(of: pin) { _, newValue in
-                            let filtered = newValue.filter { $0.isNumber }
-                            if filtered.count > 6 {
-                                pin = String(filtered.prefix(6))
-                            } else {
-                                pin = filtered
-                            }
+                            pin = PairingInput.pin(from: newValue)
                         }
+
+                    Text(pairingInstruction)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
                     Button(action: connect) {
                         HStack {
@@ -95,9 +106,7 @@ struct PairingView: View {
                             Spacer()
                         }
                         .padding()
-                        .background(
-                            canConnect ? Color.accentColor : Color.secondary.opacity(0.3)
-                        )
+                        .background(canConnect ? Color.accentColor : Color.secondary.opacity(0.3))
                         .foregroundColor(.white)
                         .cornerRadius(10)
                     }
@@ -106,7 +115,9 @@ struct PairingView: View {
                     .buttonStyle(.plain)
                 }
                 .padding()
-                .background(.regularMaterial)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .padding()
 
                 if let error = webSocketService.errorMessage {
                     Text(error)
@@ -155,7 +166,21 @@ struct PairingView: View {
     }
 
     private var canConnect: Bool {
-        pin.count == 6 && (selectedHost != nil || !manualHost.isEmpty)
+        pin.count == 6 && (selectedHost != nil || manualEndpoint != nil)
+    }
+
+    private var manualEndpoint: PairingEndpoint? {
+        PairingEndpoint(host: manualHost, portText: manualPort)
+    }
+
+    private var selectedTarget: String? {
+        selectedHost?.name ?? manualEndpoint?.host
+    }
+
+    private var pairingInstruction: String {
+        guard pin.count == 6 else { return "Enter the six-digit one-time PIN shown by Alphonso Desktop." }
+        guard selectedHost != nil || manualEndpoint != nil else { return "Choose a discovered desktop or enter a valid address." }
+        return "Ready to create an encrypted, authenticated desktop session."
     }
 
     private func connect() {
@@ -172,17 +197,36 @@ struct PairingView: View {
                     source: "bonjour"
                 )
             }
-        } else {
-            let host = manualHost
-            let port = UInt16(manualPort) ?? 8765
+        } else if let endpoint = manualEndpoint {
             webSocketService.connect(
-                host: host,
-                port: port,
+                host: endpoint.host,
+                port: endpoint.port,
                 pin: pin,
-                displayName: host,
+                displayName: endpoint.host,
                 source: "manual"
             )
         }
+    }
+}
+
+private struct PairingHero: View {
+    let state: ConnectionState
+    let selectedTarget: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(state == .authenticated ? "Paired with desktop" : "Connect your workspace", systemImage: state == .authenticated ? "checkmark.seal.fill" : "link")
+                .font(.subheadline.weight(.semibold))
+            Text(state == .authenticated ? "Your companion is live." : "One secure pairing, then your workspace follows you.")
+                .font(.system(.title3, design: .rounded).weight(.bold))
+            Text(selectedTarget.map { "Selected: \($0)" } ?? "Find Alphonso Desktop automatically or enter its address.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 

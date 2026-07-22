@@ -18,6 +18,30 @@ struct DiscoveredHost: Identifiable, Equatable {
     }
 }
 
+struct PairingEndpoint: Equatable {
+    let host: String
+    let port: UInt16
+
+    init?(host: String, portText: String) {
+        let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPort = portText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedHost.isEmpty,
+              !trimmedHost.contains(where: { $0.isWhitespace }),
+              let parsedPort = UInt16(trimmedPort),
+              parsedPort > 0 else {
+            return nil
+        }
+        self.host = trimmedHost
+        self.port = parsedPort
+    }
+}
+
+enum PairingInput {
+    static func pin(from value: String) -> String {
+        String(value.filter(\.isNumber).prefix(6))
+    }
+}
+
 struct ConnectionEndpoint: Identifiable, Codable, Equatable {
     let host: String
     let port: UInt16
