@@ -14,6 +14,10 @@ vi.mock('../../services/connectors/connectorAuth', () => ({
   getConnectorCredential: vi.fn(() => '')
 }));
 
+vi.mock('../../services/connectorRegistryService', () => ({
+  isConnectorAuthenticated: vi.fn(() => ({ ok: false }))
+}));
+
 describe('connectorHealthCheckService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,9 +110,6 @@ describe('connectorHealthCheckService', () => {
 
     it('returns error when whatsapp not authenticated', async () => {
       const { checkWhatsAppConnection } = await import('../../services/connectorHealthCheckService');
-      vi.mock('../../services/connectorRegistryService', () => ({
-        isConnectorAuthenticated: () => ({ ok: false })
-      }));
       const result = await checkWhatsAppConnection();
       expect(result.ok).toBe(false);
     });
@@ -122,18 +123,12 @@ describe('connectorHealthCheckService', () => {
 
     it('routes to checkTelegramConnection for telegram', async () => {
       const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
-      vi.mock('../../services/connectorRegistryService', () => ({
-        isConnectorAuthenticated: () => ({ ok: false })
-      }));
       const result = await checkConnectorHealth('telegram');
       expect(result).toHaveProperty('ok');
     });
 
     it('routes to checkWhatsAppConnection for whatsapp', async () => {
       const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
-      vi.mock('../../services/connectorRegistryService', () => ({
-        isConnectorAuthenticated: () => ({ ok: false })
-      }));
       const result = await checkConnectorHealth('whatsapp');
       expect(result).toHaveProperty('ok');
     });

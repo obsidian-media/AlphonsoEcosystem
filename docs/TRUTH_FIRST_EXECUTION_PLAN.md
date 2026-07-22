@@ -33,20 +33,22 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 
 | Area | Current status | Evidence / limitation |
 |---|---|---|
-| Branch state | Verified | `main` matched `origin/main` at `7be039a` on 2026-07-21. |
-| Lint | Verified | `npm run lint` passed after `7be039a`. |
+| Branch state | Verified | `main` matched `origin/main` at `e98b77a` before this work began. |
+| Lint | Verified | `npm run lint` passed via the commit hook on 2026-07-21. |
 | Skill-pack contracts | Verified (targeted) | 18 files / 146 tests passed after `28b2ee2`. This is not a substitute for the full suite. |
-| Documentation verifier | Verified | `npm run verify:docs` passed during the 2026-07-21 reconciliation. |
-| Full Vitest suite | Open | Prior run stalled during worker startup; no current full-suite success evidence. |
-| Rust quality after lock refresh | Open | `cargo check` did not finish in the available session window. |
-| Dependency advisories | Open | GitHub reported two moderate Dependabot advisories after the lock refresh. |
+| Documentation verifier | Verified | `npm run verify:docs` passed on 2026-07-22. |
+| Full Vitest suite | Verified once | `npm run test`: 249 files / 3,516 tests, exit 0; 285.78s Vitest duration (2026-07-22). |
+| Web build | Verified | `npm run build` passed on 2026-07-22. |
+| Cloud Voice tests | Verified | Isolated pytest 9.0.3 environment: 12 passed (2026-07-22). |
+| Rust quality after lock refresh | Blocked | `cargo check` exceeded five minutes; Linux-target graph then failed downloading `cairo-rs` from crates.io. |
+| Dependency advisories | Partial | npm audit reports 0; pytest advisory remediated. One Linux GTK/WebKit `glib` advisory remains. |
 | Playwright E2E | Partial | Approximately 22 of 28 legacy specs require repair/reclassification. |
 
 ## Work queue
 
 ### A. Verification and release truth
 
-- [ ] **A1 — Produce a reproducible full verification baseline**
+- [~] **A1 — Produce a reproducible full verification baseline**
   - **Owner:** Alphonso (execution), Jose (coordination), Maria (evidence review)
   - Run `npm run lint`, `npm run test`, `npm run build`, `npm run verify:docs`,
     `cargo check`, `cargo test`, `cargo clippy -- -D warnings`, dependency
@@ -56,15 +58,19 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - **Done when:** every result is PASS, FAIL, BLOCKED, or time-bounded ADVISORY;
     none is implied by an older result.
 
-- [ ] **A2 — Make the Vitest suite deterministic**
+- [~] **A2 — Make the Vitest suite deterministic**
   - **Owner:** Alphonso
   - Diagnose worker/pool startup stalls, leaked handles, timer/browser mock
     issues, and uncontrolled parallelism.
   - Establish separate unit and slow/integration commands where justified.
+  - **Evidence so far:** `npm run test` passed 249 files / 3,516 tests on
+    2026-07-22 after the runner was set to one fork with file parallelism off;
+    `connectorHealthCheckService.test.js` no longer emits the hoisted-mock
+    warning. The external `--localstorage-file` warning remains noisy.
   - **Done when:** a fresh checkout passes the full unit suite twice in a row
     within a documented time budget.
 
-- [ ] **A3 — Validate Rust after the dependency lock refresh**
+- [~] **A3 — Validate Rust after the dependency lock refresh**
   - **Owner:** Alphonso
   - Complete `cargo check`, `cargo test`, and `cargo clippy -- -D warnings` on
     the committed lockfile; address compatibility or warning failures.
@@ -86,13 +92,18 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 
 ### B. Dependency and security hardening
 
-- [ ] **B1 — Triage and close dependency advisories**
+- [~] **B1 — Triage and close dependency advisories**
   - **Owner:** Sentinel; **execution:** Alphonso
   - Identify the two moderate Dependabot findings, dependency paths,
     exploitability, upgrades, and test impact. Upgrade, replace, or create a
     time-bounded documented exception.
   - **Done when:** no high/critical advisory is untriaged and every remaining
     moderate advisory has a documented disposition and expiry.
+  - **Evidence so far:** Dependabot #4 (`pytest` < 9.0.3, development-only)
+    is remediated by `pytest==9.0.3`; an isolated environment passed all 12
+    Cloud Voice tests. Dependabot #3 is `glib` 0.18.5, pulled by Linux
+    `wry`/GTK/WebKit dependencies; it needs an upstream-compatible Tauri/Wry
+    upgrade or a formally reviewed platform-scoped disposition.
 
 - [ ] **B2 — Verify connector DSL default-deny behavior**
   - **Owner:** Sentinel; **review:** Maria

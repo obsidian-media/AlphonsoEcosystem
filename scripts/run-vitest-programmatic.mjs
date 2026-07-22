@@ -37,6 +37,8 @@ const ctx = await startVitest(
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setupTests.js'],
+    pool: 'forks',
+    fileParallelism: false,
     configFile: false
   },
   {

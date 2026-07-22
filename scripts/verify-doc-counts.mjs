@@ -38,8 +38,8 @@ const TRUTH_PATTERNS = [
 // static analysis (dynamic test generation, describe.each, etc. make grep-based
 // counting inaccurate) — same reasoning getAllCounts() already applies to test
 // file counts. This must be updated by hand when the suite's test count changes
-// materially; verified against the actual `npm test` output as of 2026-07-05.
-const CURRENT_TOTAL_TESTS = '3,255';
+// materially; verified against the actual `npm test` output as of 2026-07-22.
+const CURRENT_TOTAL_TESTS = '3,516';
 
 // Each entry defines a claim to verify:
 //   file        — relative path from project root

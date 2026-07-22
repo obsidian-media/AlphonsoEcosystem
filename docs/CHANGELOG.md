@@ -8,6 +8,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-07-21 (skill-pack integration and dependency refresh)
 
+- **Verification reliability:** updated the programmatic Vitest runner to use
+  one fork and disable file-level parallelism in this Windows environment;
+  `npm run test` now completes with 249 files / 3,516 tests passing. Moved the
+  connector health registry mock to module scope to prevent a future Vitest
+  hoisting error.
+- **Cloud Voice dependency security:** upgraded development-only `pytest` from
+  8.3.3 to 9.0.3 (the first patched release for Dependabot #4); the isolated
+  Cloud Voice suite passes 12 tests under pytest 9.0.3.
+
 - Integrated the all-agent skill-pack branch and refreshed `package-lock.json` and
   `Cargo.lock` within the existing manifest ranges. The Rust lock refresh includes
   Tauri 2.11.5 and compatible ecosystem updates.
