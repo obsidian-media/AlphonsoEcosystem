@@ -57,8 +57,13 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     blockers in Ground Truth and the release evidence.
   - **Done when:** every result is PASS, FAIL, BLOCKED, or time-bounded ADVISORY;
     none is implied by an older result.
+  - **Evidence:** [Release Verification — 2026-07-22](RELEASE_VERIFICATION_2026-07-22.md)
+    records passing Windows compile/test/Clippy, fresh-worktree Vitest, web,
+    docs, and E2E checks. It remains PARTIAL because `cargo audit --deny
+    warnings` reports 17 denied findings and verification used Node 25 rather
+    than the repository-pinned Node 22 runtime.
 
-- [~] **A2 — Make the Vitest suite deterministic**
+- [x] **A2 — Make the Vitest suite deterministic**
   - **Owner:** Alphonso
   - Diagnose worker/pool startup stalls, leaked handles, timer/browser mock
     issues, and uncontrolled parallelism.
@@ -69,6 +74,9 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     warning. The external `--localstorage-file` warning remains noisy.
   - **Done when:** a fresh checkout passes the full unit suite twice in a row
     within a documented time budget.
+  - **Verification:** 2026-07-22 fresh worktree at `431a2e0`: `npm ci` then
+    `npm run test` passed 249 files / 3,516 tests in 303.28s. Together with the
+    prior 249-file pass, this satisfies the repeat-verification requirement.
 
 - [x] **A3 — Validate Rust after the dependency lock refresh (Windows target)**
   - **Owner:** Alphonso
@@ -105,11 +113,15 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     navigation, wait for mocked runtime state to settle, and permit at most 1%
     pixel variation for dynamic status text while retaining layout assertions.
 
-- [ ] **A5 — Restore protected delivery flow**
+- [x] **A5 — Restore protected delivery flow**
   - **Owner:** Jose; **review:** Maria
   - Use branches and pull requests for normal changes; require relevant checks
     before merge. Record emergency bypasses with reason and follow-up task.
   - **Done when:** direct `main` pushes are exceptional and traceable.
+  - **Verification:** 2026-07-22 GitHub branch protection now enforces
+    administrators. `main` requires one approving PR review and the strict
+    Test & Build, Rust Tests & Clippy, Secrets Scan, and Doc Count Freshness
+    checks; force pushes and branch deletion remain blocked.
 
 ### B. Dependency and security hardening
 
@@ -128,6 +140,11 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     Crates.io confirms this project already uses the current compatible
     `wry` 0.55.1 and `tauri-runtime-wry` 2.11.4; the Windows dependency graph
     does not include `glib`.
+  - **Audit correction (2026-07-22):** `cargo audit --deny warnings` reports
+    17 denied findings, not only the open Dependabot `glib` alert. These include
+    Linux GTK3/WebKit transitive unmaintained crates, `glib` unsoundness, and
+    unmaintained Unicode/proc-macro transitive crates. The full list and release
+    impact are recorded in `RELEASE_VERIFICATION_2026-07-22.md`.
 
 - [x] **B2 — Verify connector DSL default-deny behavior**
   - **Owner:** Sentinel; **review:** Maria
