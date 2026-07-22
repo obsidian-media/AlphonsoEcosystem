@@ -40,9 +40,9 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 | Full Vitest suite | Verified once | `npm run test`: 249 files / 3,516 tests, exit 0; 285.78s Vitest duration (2026-07-22). |
 | Web build | Verified | `npm run build` passed on 2026-07-22. |
 | Cloud Voice tests | Verified | Isolated pytest 9.0.3 environment: 12 passed (2026-07-22). |
-| Rust quality after lock refresh | Partial | Windows `cargo check --target x86_64-pc-windows-msvc` passed on 2026-07-22 (cold: 9m54s). Rust tests and Clippy remain unverified; the all-target Linux graph could not download `cairo-rs`. |
+| Rust quality after lock refresh | Verified (Windows) | `cargo check`, 108 Rust tests, and `cargo clippy -- -D warnings` passed for `x86_64-pc-windows-msvc` on 2026-07-22. |
 | Dependency advisories | Partial | npm audit reports 0; pytest advisory remediated. One Linux GTK/WebKit `glib` advisory remains. |
-| Playwright E2E | Partial | Approximately 22 of 28 legacy specs require repair/reclassification. |
+| Playwright E2E | Blocked | Current inventory is 26 tests / 7 specs. The full run exceeded ten minutes without producing a result; per-spec isolation is next. |
 
 ## Work queue
 
@@ -70,22 +70,28 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - **Done when:** a fresh checkout passes the full unit suite twice in a row
     within a documented time budget.
 
-- [~] **A3 — Validate Rust after the dependency lock refresh**
+- [x] **A3 — Validate Rust after the dependency lock refresh (Windows target)**
   - **Owner:** Alphonso
   - Complete `cargo check`, `cargo test`, and `cargo clippy -- -D warnings` on
     the committed lockfile; address compatibility or warning failures.
   - **Done when:** all three commands pass and results are recorded.
-  - **Evidence so far:** Windows `cargo check --target x86_64-pc-windows-msvc`
-    passed on 2026-07-22 after 9m54s. The remaining all-target limitation is
-    an unavailable Linux GTK/WebKit dependency download (`cairo-rs`).
+  - **Evidence:** Windows `cargo check --target x86_64-pc-windows-msvc` passed
+    in 9m54s; `cargo test --target x86_64-pc-windows-msvc` passed 108 tests;
+    `cargo clippy --target x86_64-pc-windows-msvc -- -D warnings` passed in
+    9m38s (all on 2026-07-22). The separate Linux GTK/WebKit advisory remains
+    tracked in B1.
 
-- [ ] **A4 — Make E2E status honest and enforceable**
+- [~] **A4 — Make E2E status honest and enforceable**
   - **Owner:** Alphonso; **review:** Maria
   - Classify every Playwright spec as passing, repair-needed, retired, or
     environment-dependent. Repair stale specs and promote a stable golden-path
     smoke suite to blocking CI.
   - **Done when:** no failing E2E test is silently ignored; every advisory has
     owner, rationale, and expiry.
+  - **Evidence so far:** `playwright test --list` finds 26 tests in 7 specs.
+    The full `npm run test:e2e` run exceeded ten minutes on 2026-07-22 without
+    a result; isolate individual specs and distinguish app startup from test
+    failures before repair or CI reclassification.
 
 - [ ] **A5 — Restore protected delivery flow**
   - **Owner:** Jose; **review:** Maria
