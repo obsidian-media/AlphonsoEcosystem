@@ -232,7 +232,7 @@ struct VoiceView: View {
                         agentID: agentID,
                         language: language,
                         voiceConversation: true
-                    ) != nil
+                    )
                 }
             }
             .onDisappear {
@@ -245,6 +245,12 @@ struct VoiceView: View {
             .onChange(of: webSocketService.messages.count) { _, _ in
                 guard !webSocketService.isStreaming, let lastMessage = webSocketService.messages.last else { return }
                 viewModel.handleIncomingDesktopReply(lastMessage)
+            }
+            .onChange(of: webSocketService.commandFailures) { _, failures in
+                for commandID in failures.keys {
+                    guard let message = webSocketService.consumeCommandFailure(commandID) else { continue }
+                    viewModel.handleLocalCommandFailure(commandID: commandID, message: message)
+                }
             }
         }
     }

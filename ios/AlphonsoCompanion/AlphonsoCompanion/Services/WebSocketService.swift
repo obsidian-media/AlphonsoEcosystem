@@ -10,6 +10,7 @@ class WebSocketService: ObservableObject {
     @Published var tokenCount: Int = 0
     @Published var isStreaming: Bool = false
     @Published private(set) var activeCommandIDs: Set<String> = []
+    @Published private(set) var commandFailures: [String: String] = [:]
     @Published var boardroomSessions: [BoardroomSession] = []
     @Published var recentEndpoints: [ConnectionEndpoint] = []
     @Published var lastSuccessfulConnectionAt: Date?
@@ -155,21 +156,38 @@ class WebSocketService: ObservableObject {
 
     private func send(text: String, commandID: String? = nil) {
         guard let webSocketTask else {
-            if let commandID { activeCommandIDs.remove(commandID) }
-            errorMessage = "Desktop connection is unavailable"
-            connectionHint = "Reconnect before sending a command"
+            recordCommandFailure(
+                commandID,
+                message: "Desktop connection is unavailable",
+                hint: "Reconnect before sending a command"
+            )
             return
         }
         webSocketTask.send(.string(text)) { [weak self] error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error = error {
-                    if let commandID { self.activeCommandIDs.remove(commandID) }
-                    self.errorMessage = error.localizedDescription
-                    self.connectionHint = "Send failed: \(error.localizedDescription)"
+                    self.recordCommandFailure(
+                        commandID,
+                        message: error.localizedDescription,
+                        hint: "Send failed: \(error.localizedDescription)"
+                    )
                 }
             }
         }
+    }
+
+    func consumeCommandFailure(_ commandID: String) -> String? {
+        commandFailures.removeValue(forKey: commandID)
+    }
+
+    private func recordCommandFailure(_ commandID: String?, message: String, hint: String) {
+        if let commandID {
+            activeCommandIDs.remove(commandID)
+            commandFailures[commandID] = message
+        }
+        errorMessage = message
+        connectionHint = hint
     }
 
     private func receive() {

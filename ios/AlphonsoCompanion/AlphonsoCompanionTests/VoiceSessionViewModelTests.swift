@@ -14,7 +14,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
     func testSubmitDraftAppendsTranscriptAndClearsDraft() {
         let viewModel = VoiceSessionViewModel()
-        viewModel.setLocalTranscriptSender { _, _, _ in true }
+        viewModel.setLocalTranscriptSender { _, _, _ in "command-1" }
         viewModel.draftTranscript = "Hello Alphonso"
 
         viewModel.submitDraft()
@@ -128,7 +128,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
         viewModel.setLocalTranscriptSender { _, agentID, language in
             capturedAgentID = agentID
             capturedLanguage = language
-            return true
+            return "command-1"
         }
 
         viewModel.draftTranscript = "Review this risk"
@@ -169,7 +169,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
     func testCloudVoiceDoesNotAllowConcurrentSends() {
         let viewModel = VoiceSessionViewModel()
-        viewModel.setLocalTranscriptSender { _, _, _ in true }
+        viewModel.setLocalTranscriptSender { _, _, _ in "command-1" }
         viewModel.draftTranscript = "First local request"
         viewModel.submitDraft()
         viewModel.draftTranscript = "Second local request"
@@ -183,12 +183,28 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
     func testLocalVoiceReturnsToIdleWhenDesktopDispatchFails() {
         let viewModel = VoiceSessionViewModel()
-        viewModel.setLocalTranscriptSender { _, _, _ in false }
+        viewModel.setLocalTranscriptSender { _, _, _ in nil }
         viewModel.draftTranscript = "Check connection"
 
         viewModel.submitDraft()
 
         XCTAssertEqual(viewModel.phase, .idle)
         XCTAssertEqual(viewModel.statusMessage, "Could not send to the paired desktop")
+    }
+
+    func testLocalVoiceRecoversWhenAnAsynchronousDesktopDispatchFails() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in "command-1" }
+        viewModel.draftTranscript = "Check connection"
+
+        viewModel.submitDraft()
+        viewModel.handleLocalCommandFailure(commandID: "command-1", message: "Network connection lost")
+
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertTrue(viewModel.canSend)
+        XCTAssertEqual(
+            viewModel.statusMessage,
+            "Could not send to the paired desktop: Network connection lost"
+        )
     }
 }

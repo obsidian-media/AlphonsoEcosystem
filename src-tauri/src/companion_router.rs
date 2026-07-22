@@ -120,6 +120,24 @@ mod tests {
     assert_eq!(snapshot["activeWork"][0]["id"], "live");
     assert_eq!(snapshot["recentOutcomes"][0]["id"], "done");
   }
+
+  #[test]
+  fn operations_snapshot_keeps_all_completed_receipt_variants_out_of_active_work() {
+    let receipts = vec![
+      json!({ "id": "executed", "status": "executed", "timestampMs": 1 }),
+      json!({ "id": "reported", "status": "reported_to_jose", "timestampMs": 2 }),
+      json!({ "id": "success", "status": "success", "timestampMs": 3 }),
+      json!({ "id": "approval", "status": "pending_approval", "timestampMs": 4 }),
+    ];
+
+    let snapshot = operations_snapshot(&receipts);
+
+    assert_eq!(snapshot["activeWork"][0]["id"], "approval");
+    assert_eq!(snapshot["recentOutcomes"].as_array().unwrap().len(), 3);
+    assert_eq!(snapshot["recentOutcomes"][0]["id"], "success");
+    assert_eq!(snapshot["recentOutcomes"][1]["id"], "reported");
+    assert_eq!(snapshot["recentOutcomes"][2]["id"], "executed");
+  }
 }
 
 async fn handle_abort_command(params: Value, app: AppHandle) -> Result<Value, JsonRpcError> {
@@ -210,6 +228,10 @@ fn operations_snapshot(receipts: &[Value]) -> Value {
         | "stopped"
         | "approved"
         | "rejected"
+        | "executed"
+        | "reported_to_jose"
+        | "success"
+        | "dead_letter"
     )
   };
   let mut active_work = Vec::new();

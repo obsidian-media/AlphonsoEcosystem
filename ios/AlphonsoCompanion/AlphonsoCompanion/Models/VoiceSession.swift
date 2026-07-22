@@ -175,7 +175,8 @@ final class VoiceSessionViewModel: ObservableObject {
 
     private let audioService = VoiceAudioService()
     private let cloudService = VoiceCloudService()
-    private var localTranscriptSender: ((String, String, String) -> Bool)?
+    private var localTranscriptSender: ((String, String, String) -> String?)?
+    private var pendingLocalCommandID: String?
     private var lastSpokenMessageID: UUID?
     private var lastCloudResponse: VoiceCloudResponse?
     private var pendingCloudMessageID: UUID?
@@ -233,7 +234,7 @@ final class VoiceSessionViewModel: ObservableObject {
         bindAudioService()
     }
 
-    func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> Bool) {
+    func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> String?) {
         localTranscriptSender = sender
     }
 
@@ -329,6 +330,7 @@ final class VoiceSessionViewModel: ObservableObject {
         }
         cloudService.stopPlayback()
         self.mode = mode
+        pendingLocalCommandID = nil
         phase = .idle
         statusMessage = "\(mode.title) mode selected"
     }
@@ -378,11 +380,12 @@ final class VoiceSessionViewModel: ObservableObject {
 
         switch mode {
         case .local:
-            guard localTranscriptSender?(trimmed, selectedAgent.rawValue, cloudLanguage.rawValue) == true else {
+            guard let commandID = localTranscriptSender?(trimmed, selectedAgent.rawValue, cloudLanguage.rawValue) else {
                 phase = .idle
                 statusMessage = "Could not send to the paired desktop"
                 return
             }
+            pendingLocalCommandID = commandID
         case .cloud:
             cloudSubmissionTask = Task { [weak self] in
                 guard let self else { return }
@@ -409,10 +412,18 @@ final class VoiceSessionViewModel: ObservableObject {
         guard lastSpokenMessageID != message.id else { return }
 
         lastSpokenMessageID = message.id
+        pendingLocalCommandID = nil
         appendAssistantReply(message.text, delivery: .spoken)
         phase = .speaking
         statusMessage = "Speaking reply through \(providerTitle)"
         audioService.speak(message.text)
+    }
+
+    func handleLocalCommandFailure(commandID: String, message: String) {
+        guard pendingLocalCommandID == commandID else { return }
+        pendingLocalCommandID = nil
+        phase = .idle
+        statusMessage = "Could not send to the paired desktop: \(message)"
     }
 
     @discardableResult
@@ -459,6 +470,7 @@ final class VoiceSessionViewModel: ObservableObject {
         phase = .idle
         statusMessage = "Conversation cleared"
         lastSpokenMessageID = nil
+        pendingLocalCommandID = nil
         lastCloudResponse = nil
         pendingCloudMessageID = nil
     }
