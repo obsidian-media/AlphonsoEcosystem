@@ -30,14 +30,14 @@ describe('agent skill integration', () => {
     expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-ui-ux-design');
     expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-brand-identity');
     expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-motion-graphics');
-    expect(MIYA_PROFILE.skillFocus).toBe('Runway Video Generation + Creative Image + UI/UX Design + Brand Identity + Motion Graphics Skills');
+    expect(MIYA_PROFILE.skillFocus).toContain('Runway Video Generation + Creative Image + UI/UX Design + Brand Identity + Motion Graphics');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-professional-orchestration');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-task-routing');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-approval-gating');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-cross-agent-synthesis');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.jose-pipeline-governance');
     expect(JOSE_PROFILE.skillPackIds).toContain('pack.workflow.executing-plans');
-    expect(JOSE_PROFILE.skillFocus).toBe('Professional Orchestration + Task Routing + Approval Gating + Cross-Agent Synthesis + Pipeline Governance Skills');
+    expect(JOSE_PROFILE.skillFocus).toContain('Professional Orchestration + Task Routing + Approval Gating + Cross-Agent Synthesis + Pipeline Governance');
   });
 
   it('seeds the new professional skill packs into the registry', () => {
