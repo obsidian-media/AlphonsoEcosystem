@@ -59,6 +59,13 @@ describe('boardroomThreadService', () => {
       expect(msg?.secretRedacted).toBe(true);
     });
 
+    it('does not persist a secret-bearing thread topic', async () => {
+      const { createThread } = await import('../../services/boardroomThreadService');
+      const thread = createThread({ topic: 'Deploy with token sk-abc123def456ghi789', participants: ['alphonso'] });
+      expect(thread.topic).toBe('[REDACTED_SECRET]');
+      expect(localStorage.getItem('alphonso_boardroom_threads_v2')).not.toContain('sk-abc123def456ghi789');
+    });
+
     it('returns null for empty content', async () => {
       const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
       const thread = createThread({ topic: 'Test', participants: ['jose'] });

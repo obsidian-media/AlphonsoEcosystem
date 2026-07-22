@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { readFile } from 'fs/promises';
-import { join, extname, resolve, sep } from 'path';
+import { join, extname, resolve, relative, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -21,8 +21,23 @@ const MIME = {
   '.webp': 'image/webp',
 };
 
+function resolveStaticFilePath(requestPath) {
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(requestPath);
+  } catch {
+    return null;
+  }
+  if (!decodedPath.startsWith('/') || decodedPath.includes('\0')) return null;
+
+  const candidate = resolve(DIST, `.${decodedPath === '/' ? '/index.html' : decodedPath}`);
+  const pathFromDist = relative(DIST, candidate);
+  if (pathFromDist === '..' || pathFromDist.startsWith('../') || isAbsolute(pathFromDist)) return null;
+  return candidate;
+}
+
 createServer(async (req, res) => {
-  const urlPath = req.url.split('?')[0];
+  const urlPath = new URL(req.url, 'http://localhost').pathname;
 
   if (urlPath === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -30,8 +45,8 @@ createServer(async (req, res) => {
     return;
   }
 
-  const filePath = resolve(DIST, '.' + (urlPath === '/' ? '/index.html' : urlPath));
-  if (filePath !== DIST && !filePath.startsWith(DIST + sep)) {
+  const filePath = resolveStaticFilePath(urlPath);
+  if (!filePath) {
     res.writeHead(403);
     res.end('Forbidden');
     return;
