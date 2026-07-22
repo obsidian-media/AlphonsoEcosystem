@@ -23,6 +23,8 @@
 		A100000D /* VoiceAudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* VoiceAudioService.swift */; };
 		A100000E /* VoiceCloudService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* VoiceCloudService.swift */; };
 		A100000F /* OperationsSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* OperationsSnapshot.swift */; };
+		A1000011 /* CompanionDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* CompanionDesignSystem.swift */; };
+		A1000012 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* OperationsView.swift */; };
 		B1000000 /* CompanionConnectionStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001 /* CompanionConnectionStateMachine.swift */; };
 		B1000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B2000003 /* XCTest.framework */; };
 		B1000002 /* CompanionConnectionStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002 /* CompanionConnectionStateMachineTests.swift */; };
@@ -51,6 +53,8 @@
 		A2000010 /* VoiceAudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioService.swift; sourceTree = "<group>"; };
 		A2000011 /* VoiceCloudService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCloudService.swift; sourceTree = "<group>"; };
 		A2000012 /* OperationsSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsSnapshot.swift; sourceTree = "<group>"; };
+		A2000013 /* CompanionDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionDesignSystem.swift; sourceTree = "<group>"; };
+		A2000014 /* OperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsView.swift; sourceTree = "<group>"; };
 		B2000001 /* CompanionConnectionStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionConnectionStateMachine.swift; sourceTree = "<group>"; };
 		B2000002 /* CompanionConnectionStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionConnectionStateMachineTests.swift; sourceTree = "<group>"; };
 		B2000005 /* VoiceSessionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionViewModelTests.swift; sourceTree = "<group>"; };
@@ -149,6 +153,8 @@
 			isa = PBXGroup;
 			children = (
 				A2000006 /* ChatView.swift */,
+				A2000013 /* CompanionDesignSystem.swift */,
+				A2000014 /* OperationsView.swift */,
 				A200000F /* VoiceView.swift */,
 				A2000007 /* AgentDockView.swift */,
 				A2000008 /* BoardroomView.swift */,
@@ -299,6 +305,8 @@
 				A100000D /* VoiceAudioService.swift in Sources */,
 				A100000E /* VoiceCloudService.swift in Sources */,
 				A100000F /* OperationsSnapshot.swift in Sources */,
+				A1000011 /* CompanionDesignSystem.swift in Sources */,
+				A1000012 /* OperationsView.swift in Sources */,
 				B1000000 /* CompanionConnectionStateMachine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

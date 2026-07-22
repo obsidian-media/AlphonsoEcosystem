@@ -30,41 +30,47 @@ struct ContentView: View {
     
     private var mainContent: some View {
         TabView(selection: $selectedTab) {
+            OperationsView()
+                .tabItem {
+                    Label("Operations", systemImage: "bolt.horizontal")
+                }
+                .tag(0)
+
             PairingView()
                 .tabItem {
                     Label("Connect", systemImage: "link")
                 }
-                .tag(0)
+                .tag(1)
 
             ChatView()
                 .tabItem {
                     Label("Chat", systemImage: "message")
                 }
-                .tag(1)
+                .tag(2)
 
             VoiceView()
                 .tabItem {
                     Label("Voice", systemImage: "mic.fill")
                 }
-                .tag(2)
+                .tag(3)
 
             AgentDockView()
                 .tabItem {
                     Label("Agents", systemImage: "person.2")
                 }
-                .tag(3)
+                .tag(4)
 
             BoardroomView()
                 .tabItem {
                     Label("Boardroom", systemImage: "chart.bar")
                 }
-                .tag(4)
+                .tag(5)
 
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
-                .tag(5)
+                .tag(6)
         }
     }
 }
