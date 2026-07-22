@@ -51,7 +51,6 @@ export const HECTOR_PROFILE = {
     'pack.hector-source-verification',
     'pack.hector-rss-monitoring',
     'pack.workflow.executing-plans',
-    'pack.github.research',
     'pack.hector-api-documentation-research',
     'pack.hector-compliance-research',
     'pack.hector-trend-analysis',

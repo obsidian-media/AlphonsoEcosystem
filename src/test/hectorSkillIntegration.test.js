@@ -35,10 +35,10 @@ describe('Hector skill pack contract validation', () => {
       const pack = packs.find((p) => p.id === id);
       expect(pack).toBeDefined();
       const result = validateSkillPackAgainstContract('hector', pack.permissions, pack.id);
-      expect(result.ok).toBe(true);
       if (!result.ok) {
         throw new Error(`Pack ${id} failed contract validation: ${result.reason}`);
       }
+      expect(result.ok).toBe(true);
     });
   });
 
@@ -65,7 +65,7 @@ describe('Hector skill guidance loading', () => {
   it('loadAgentSkillGuidance returns all Hector packs', () => {
     const result = loadAgentSkillGuidance('hector');
     expect(result.agent).toBe('hector');
-    expect(result.activeSkills).toHaveLength(23);
+    expect(result.activeSkills).toHaveLength(22);
   });
 
   it('loadAgentSkillGuidance includes guidance for all new packs', () => {
@@ -102,7 +102,7 @@ describe('Hector skill guidance loading', () => {
 describe('Hector profile integration', () => {
   it('profile skillPackIds matches registry pack IDs', () => {
     const packs = listSkillPacks();
-    const registryIds = packs.filter((p) => p.ownerAgent === 'hector').map((p) => p.id);
+    const registryIds = packs.map((p) => p.id);
 
     HECTOR_PROFILE.skillPackIds.forEach((id) => {
       expect(registryIds).toContain(id);

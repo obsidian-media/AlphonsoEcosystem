@@ -282,7 +282,19 @@ export function validateSkillPackAgainstContract(agentName: string | undefined, 
     return { ok: true, reason: null };
   }
   const contract = AGENT_EXECUTION_CONTRACTS[agentName];
-  const allowedPrefixes = (packId && AGENT_SKILL_PACK_SCOPE_OVERRIDES[packId]) || AGENT_SKILL_PERMISSION_PREFIXES[agentName];
+  const overridePrefixes = packId && AGENT_SKILL_PACK_SCOPE_OVERRIDES[packId];
+  const legacyHectorPackIds = new Set([
+    'pack.hector-professional-marketing', 'pack.hector-market-research',
+    'pack.hector-competitive-analysis', 'pack.hector-source-verification',
+    'pack.hector-rss-monitoring'
+  ]);
+  const usesAgentWideTaxonomyScope =
+    (agentName === AGENTS.HECTOR && packId?.startsWith('pack.hector-') && !legacyHectorPackIds.has(packId)) ||
+    (agentName === AGENTS.ECHO && packId?.startsWith('pack.echo-')) ||
+    (agentName === AGENTS.NOVA && packId?.startsWith('pack.nova-'));
+  const allowedPrefixes = usesAgentWideTaxonomyScope
+    ? AGENT_SKILL_PERMISSION_PREFIXES[agentName]
+    : overridePrefixes || AGENT_SKILL_PERMISSION_PREFIXES[agentName];
   if (!contract || !allowedPrefixes) {
     // Unknown agent or no declared skill-permission scope — nothing to validate against.
     return { ok: true, reason: null };

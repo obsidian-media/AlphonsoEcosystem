@@ -3,7 +3,7 @@ import { listSkillPacks } from '../services/skillPackService';
 import { ECHO_PROFILE } from '../agents/echo/echoProfile';
 
 const ECHO_PACK_IDS = [
-  'pack.memory.archival', 'pack.memory.historian', 'pack.echo-memory-synthesis',
+  'pack.echo-memory-synthesis',
   'pack.echo-decision-capture', 'pack.echo-retention-classification', 'pack.echo-confidence-normalization',
   'pack.echo-knowledge-indexing', 'pack.echo-historical-context', 'pack.echo-audit-trail',
   'pack.echo-memory-synthesis-advanced', 'pack.echo-context-retrieval', 'pack.echo-memory-pruning',
@@ -21,10 +21,10 @@ describe('Echo skill packs', () => {
     ECHO_PACK_IDS.forEach((id) => { expect(ids).toContain(id); });
   });
 
-  it('seeds exactly 19 Echo-owned packs', () => {
+  it('seeds exactly 17 Echo-owned packs plus two shared packs', () => {
     const packs = listSkillPacks();
     const echoPacks = packs.filter((p) => p.ownerAgent === 'echo');
-    expect(echoPacks).toHaveLength(19);
+    expect(echoPacks).toHaveLength(17);
   });
 
   it('has valid manifest structure for all new Echo packs', () => {
@@ -45,7 +45,7 @@ describe('Echo skill packs', () => {
   });
 
   it('profile skillPackIds has exactly 19 entries', () => {
-    expect(ECHO_PROFILE.skillPackIds).toHaveLength(19);
+    expect(ECHO_PROFILE.skillPackIds).toHaveLength(17);
   });
 
   it('has no duplicate pack IDs', () => {

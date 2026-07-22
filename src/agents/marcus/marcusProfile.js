@@ -43,8 +43,6 @@ export const MARCUS_PROFILE = {
   defaultPrompt: 'Act as Marcus. Audit for security, compliance, and release readiness with explicit risks and controls.',
   skillPackIds: [
     'pack.workflow.executing-plans',
-    'pack.github.releases',
-    'pack.slack.notifications',
     'pack.marcus-distribution-execution',
     'pack.marcus-github-releases',
     'pack.marcus-slack-notifications',

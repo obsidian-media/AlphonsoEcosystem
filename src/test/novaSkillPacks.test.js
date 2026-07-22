@@ -3,7 +3,7 @@ import { listSkillPacks } from '../services/skillPackService';
 import { NOVA_PROFILE } from '../agents/nova/novaProfile';
 
 const NOVA_PACK_IDS = [
-  'pack.analysis.opportunities', 'pack.trends.scoring', 'pack.nova-opportunity-analysis',
+  'pack.nova-opportunity-analysis',
   'pack.nova-market-analysis', 'pack.nova-prioritization-matrix', 'pack.nova-risk-reward',
   'pack.nova-timing-analysis', 'pack.nova-effort-estimation', 'pack.nova-strategic-alignment',
   'pack.nova-growth-analysis', 'pack.nova-competitive-intelligence', 'pack.nova-value-scoring',
@@ -21,10 +21,10 @@ describe('Nova skill packs', () => {
     NOVA_PACK_IDS.forEach((id) => { expect(ids).toContain(id); });
   });
 
-  it('seeds exactly 19 Nova-owned packs', () => {
+  it('seeds exactly 17 Nova-owned packs plus two shared packs', () => {
     const packs = listSkillPacks();
     const novaPacks = packs.filter((p) => p.ownerAgent === 'nova');
-    expect(novaPacks).toHaveLength(19);
+    expect(novaPacks).toHaveLength(17);
   });
 
   it('has valid manifest structure for all new Nova packs', () => {
@@ -45,7 +45,7 @@ describe('Nova skill packs', () => {
   });
 
   it('profile skillPackIds has exactly 19 entries', () => {
-    expect(NOVA_PROFILE.skillPackIds).toHaveLength(19);
+    expect(NOVA_PROFILE.skillPackIds).toHaveLength(17);
   });
 
   it('has no duplicate pack IDs', () => {

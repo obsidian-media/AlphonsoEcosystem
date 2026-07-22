@@ -102,7 +102,7 @@ describe('Jose skill guidance loading', () => {
 describe('Jose profile integration', () => {
   it('profile skillPackIds matches registry pack IDs', () => {
     const packs = listSkillPacks();
-    const registryIds = packs.filter((p) => p.ownerAgent === 'jose').map((p) => p.id);
+    const registryIds = packs.map((p) => p.id);
 
     JOSE_PROFILE.skillPackIds.forEach((id) => {
       expect(registryIds).toContain(id);

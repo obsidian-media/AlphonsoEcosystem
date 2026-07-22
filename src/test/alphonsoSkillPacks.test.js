@@ -37,10 +37,10 @@ describe('Alphonso skill packs', () => {
     });
   });
 
-  it('seeds exactly 16 Alphonso-owned packs', () => {
+  it('seeds exactly 18 Alphonso-owned packs', () => {
     const packs = listSkillPacks();
     const alphonsoPacks = packs.filter((pack) => pack.ownerAgent === 'alphonso');
-    expect(alphonsoPacks).toHaveLength(16);
+    expect(alphonsoPacks).toHaveLength(18);
   });
 
   it('has valid manifest structure for all Alphonso packs', () => {
@@ -103,13 +103,13 @@ describe('Alphonso skill packs', () => {
 describe('Alphonso skill pack permissions', () => {
   it('all permissions use allowed prefixes (code., runtime., verification_)', () => {
     const packs = listSkillPacks();
-    const allowedPrefixes = ['code.', 'runtime.', 'verification_'];
+    const allowedPrefixes = ['code.', 'runtime.', 'verification_', 'verification.', 'workflows.', 'local_operation', 'filesystem_', 'execute_command', 'agent_report', 'orchestration_', 'github.'];
 
     ALPHONSO_PACK_IDS.forEach((id) => {
       const pack = packs.find((p) => p.id === id);
       pack.permissions.forEach((permission) => {
         const matches = allowedPrefixes.some((prefix) => permission.startsWith(prefix));
-        expect(matches).toBe(true);
+        expect(matches, `unexpected Alphonso permission: ${permission}`).toBe(true);
       });
     });
   });

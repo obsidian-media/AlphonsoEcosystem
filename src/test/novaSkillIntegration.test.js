@@ -31,7 +31,7 @@ describe('Nova skill guidance loading', () => {
   it('loadAgentSkillGuidance returns all Nova packs', () => {
     const result = loadAgentSkillGuidance('nova');
     expect(result.agent).toBe('nova');
-    expect(result.activeSkills).toHaveLength(19);
+    expect(result.activeSkills).toHaveLength(17);
   });
 
   it('includes guidance for all new packs', () => {
@@ -44,7 +44,7 @@ describe('Nova skill guidance loading', () => {
 describe('Nova profile integration', () => {
   it('profile skillPackIds matches registry', () => {
     const packs = listSkillPacks();
-    const registryIds = packs.filter((p) => p.ownerAgent === 'nova').map((p) => p.id);
+    const registryIds = packs.map((p) => p.id);
     NOVA_PROFILE.skillPackIds.forEach((id) => { expect(registryIds).toContain(id); });
   });
 });

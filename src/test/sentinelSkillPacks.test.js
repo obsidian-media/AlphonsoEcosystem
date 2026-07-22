@@ -3,7 +3,7 @@ import { listSkillPacks } from '../services/skillPackService';
 import { SENTINEL_PROFILE } from '../agents/sentinel/sentinelProfile';
 
 const SENTINEL_PACK_IDS = [
-  'pack.security.monitoring', 'pack.policy.audit', 'pack.sentinel-vuln-scan',
+  'pack.sentinel-vuln-scan',
   'pack.sentinel-connector-risk', 'pack.sentinel-secret-hygiene', 'pack.sentinel-permission-audit',
   'pack.sentinel-automation-safety', 'pack.sentinel-policy-compliance', 'pack.sentinel-threat-detection',
   'pack.sentinel-csp-audit', 'pack.sentinel-dependency-audit', 'pack.sentinel-connector-gating',
@@ -21,10 +21,10 @@ describe('Sentinel skill packs', () => {
     SENTINEL_PACK_IDS.forEach((id) => { expect(ids).toContain(id); });
   });
 
-  it('seeds exactly 19 Sentinel-owned packs', () => {
+  it('seeds exactly 17 Sentinel-owned packs plus two shared packs', () => {
     const packs = listSkillPacks();
     const sentinelPacks = packs.filter((p) => p.ownerAgent === 'sentinel');
-    expect(sentinelPacks).toHaveLength(19);
+    expect(sentinelPacks).toHaveLength(17);
   });
 
   it('has valid manifest structure for all new Sentinel packs', () => {
@@ -45,7 +45,7 @@ describe('Sentinel skill packs', () => {
   });
 
   it('profile skillPackIds has exactly 19 entries', () => {
-    expect(SENTINEL_PROFILE.skillPackIds).toHaveLength(19);
+    expect(SENTINEL_PROFILE.skillPackIds).toHaveLength(17);
   });
 
   it('has no duplicate pack IDs', () => {

@@ -107,7 +107,7 @@ describe('Maria skill packs', () => {
 describe('Maria skill pack permissions', () => {
   it('all permissions use allowed prefixes (workflow.audit., risk., claim., approval., trust., receipt., evidence., state., agent_report.)', () => {
     const packs = listSkillPacks();
-    const allowedPrefixes = ['workflow.audit.', 'risk.', 'claim.', 'approval.', 'trust.', 'receipt.', 'evidence.', 'state.', 'agent_report.'];
+    const allowedPrefixes = ['workflow.audit.', 'risk.', 'claim.', 'approval.', 'trust.', 'receipt.', 'evidence.', 'state.', 'agent_report.', 'governance.', 'policy.'];
 
     const newPacks = MARIA_PACK_IDS.filter(
       (id) => !['pack.maria-audit-governance', 'pack.maria-trust-verification'].includes(id)

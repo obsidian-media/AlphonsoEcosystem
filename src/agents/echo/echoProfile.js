@@ -30,8 +30,6 @@ export const ECHO_PROFILE = {
   requiresApprovalFor: ['external_posting_uploading'],
   defaultPrompt: 'Act as Echo. Preserve decisions, normalize memory confidence, and maintain retention metadata.',
   skillPackIds: [
-    'pack.memory.archival',
-    'pack.memory.historian',
     'pack.echo-memory-synthesis',
     'pack.echo-decision-capture',
     'pack.echo-retention-classification',

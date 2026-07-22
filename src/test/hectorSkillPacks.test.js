@@ -9,7 +9,6 @@ const HECTOR_PACK_IDS = [
   'pack.hector-source-verification',
   'pack.hector-rss-monitoring',
   'pack.workflow.executing-plans',
-  'pack.github.research',
   'pack.hector-api-documentation-research',
   'pack.hector-compliance-research',
   'pack.hector-trend-analysis',
@@ -42,10 +41,10 @@ describe('Hector skill packs', () => {
     });
   });
 
-  it('seeds exactly 23 Hector-owned packs', () => {
+  it('seeds exactly 21 Hector-owned packs plus one shared pack', () => {
     const packs = listSkillPacks();
     const hectorPacks = packs.filter((pack) => pack.ownerAgent === 'hector');
-    expect(hectorPacks).toHaveLength(23);
+    expect(hectorPacks).toHaveLength(21);
   });
 
   it('has valid manifest structure for all new Hector packs', () => {
@@ -97,7 +96,7 @@ describe('Hector skill packs', () => {
   });
 
   it('profile skillPackIds has exactly 23 entries', () => {
-    expect(HECTOR_PROFILE.skillPackIds).toHaveLength(23);
+    expect(HECTOR_PROFILE.skillPackIds).toHaveLength(22);
   });
 
   it('has no duplicate pack IDs', () => {

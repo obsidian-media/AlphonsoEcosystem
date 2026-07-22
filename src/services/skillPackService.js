@@ -1759,7 +1759,7 @@ const BASE_PACKS = [
     name: 'Echo Audit Trail',
     version: '1.0.0',
     enabled: true,
-    permissions: ['timeline.audit', 'memory.trail', 'knowledge追溯'],
+    permissions: ['timeline.audit', 'memory.trail', 'knowledge.trace'],
     category: 'agent_skill',
     ownerAgent: 'echo',
     trust: TRUST_STATES.VERIFIED,
@@ -2231,7 +2231,7 @@ const BASE_PACKS = [
     name: 'Nova Timing Analysis',
     version: '1.0.0',
     enabled: true,
-    permissions: ['opportunity.timing', 'analysis.window', 'strategy sequencing'],
+    permissions: ['opportunity.timing', 'analysis.window', 'strategy.sequencing'],
     category: 'agent_skill',
     ownerAgent: 'nova',
     trust: TRUST_STATES.VERIFIED,
@@ -2366,7 +2366,7 @@ const BASE_PACKS = [
     name: 'Nova Capability Assessment',
     version: '1.0.0',
     enabled: true,
-    permissions: ['analysis.capability', 'opportunity readiness', 'strategy.maturity'],
+    permissions: ['analysis.capability', 'opportunity.readiness', 'strategy.maturity'],
     category: 'agent_skill',
     ownerAgent: 'nova',
     trust: TRUST_STATES.VERIFIED,
@@ -2396,7 +2396,7 @@ const BASE_PACKS = [
     name: 'Nova Portfolio Analysis',
     version: '1.0.0',
     enabled: true,
-    permissions: ['analysis.portfolio', 'prioritization.balance', 'strategyportfolio'],
+    permissions: ['analysis.portfolio', 'prioritization.balance', 'strategy.portfolio'],
     category: 'agent_skill',
     ownerAgent: 'nova',
     trust: TRUST_STATES.VERIFIED,
@@ -3349,11 +3349,18 @@ const SKILL_WORKFLOW_GUIDANCE = {
   }
 };
 
+// Shared packs are intentionally reusable. Profiles declare which ones they
+// receive; they are not owned by a single agent in the registry.
+const SHARED_AGENT_SKILL_PACK_IDS = {
+  jose: ['pack.workflow.executing-plans'],
+  hector: ['pack.workflow.executing-plans'],
+  marcus: ['pack.workflow.executing-plans']
+};
+
 export function loadAgentSkillGuidance(agentName) {
   const packs = listSkillPacks().filter((p) => p.enabled);
-  // Guidance is agent-specific. Shared workflow packs are available through
-  // their explicit workflow path and must not inflate every agent's pack list.
-  const agentPacks = packs.filter((p) => p.ownerAgent === agentName);
+  const sharedIds = new Set(SHARED_AGENT_SKILL_PACK_IDS[agentName] || []);
+  const agentPacks = packs.filter((p) => p.ownerAgent === agentName || sharedIds.has(p.id));
   const guidance = [];
   const activeSteps = [];
 

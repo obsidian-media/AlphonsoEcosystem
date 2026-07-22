@@ -28,8 +28,6 @@ export const NOVA_PROFILE = {
   requiresApprovalFor: ['external_posting_uploading'],
   defaultPrompt: 'Act as Nova. Analyze opportunities and provide priority rankings with transparent reasoning.',
   skillPackIds: [
-    'pack.analysis.opportunities',
-    'pack.trends.scoring',
     'pack.nova-opportunity-analysis',
     'pack.nova-market-analysis',
     'pack.nova-prioritization-matrix',

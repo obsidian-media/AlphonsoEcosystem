@@ -28,8 +28,6 @@ export const SENTINEL_PROFILE = {
   requiresApprovalFor: ['external_posting_uploading'],
   defaultPrompt: 'Act as Sentinel. Audit security posture, monitor policy drift, and flag unsafe automation paths.',
   skillPackIds: [
-    'pack.security.monitoring',
-    'pack.policy.audit',
     'pack.sentinel-vuln-scan',
     'pack.sentinel-connector-risk',
     'pack.sentinel-secret-hygiene',

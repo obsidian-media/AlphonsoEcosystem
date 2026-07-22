@@ -31,7 +31,7 @@ describe('Sentinel skill guidance loading', () => {
   it('loadAgentSkillGuidance returns all Sentinel packs', () => {
     const result = loadAgentSkillGuidance('sentinel');
     expect(result.agent).toBe('sentinel');
-    expect(result.activeSkills).toHaveLength(19);
+    expect(result.activeSkills).toHaveLength(17);
   });
 
   it('includes guidance for all new packs', () => {
@@ -44,7 +44,7 @@ describe('Sentinel skill guidance loading', () => {
 describe('Sentinel profile integration', () => {
   it('profile skillPackIds matches registry', () => {
     const packs = listSkillPacks();
-    const registryIds = packs.filter((p) => p.ownerAgent === 'sentinel').map((p) => p.id);
+    const registryIds = packs.map((p) => p.id);
     SENTINEL_PROFILE.skillPackIds.forEach((id) => { expect(registryIds).toContain(id); });
   });
 });

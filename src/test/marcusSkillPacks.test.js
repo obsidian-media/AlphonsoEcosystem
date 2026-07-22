@@ -4,8 +4,6 @@ import { MARCUS_PROFILE } from '../agents/marcus/marcusProfile';
 
 const MARCUS_PACK_IDS = [
   'pack.workflow.executing-plans',
-  'pack.github.releases',
-  'pack.slack.notifications',
   'pack.marcus-distribution-execution',
   'pack.marcus-github-releases',
   'pack.marcus-slack-notifications',
@@ -36,10 +34,10 @@ describe('Marcus skill packs', () => {
     MARCUS_PACK_IDS.forEach((id) => { expect(ids).toContain(id); });
   });
 
-  it('seeds exactly 20 Marcus-owned packs', () => {
+  it('seeds exactly 17 Marcus-owned packs plus one shared pack', () => {
     const packs = listSkillPacks();
     const marcusPacks = packs.filter((pack) => pack.ownerAgent === 'marcus');
-    expect(marcusPacks).toHaveLength(20);
+    expect(marcusPacks).toHaveLength(17);
   });
 
   it('has valid manifest structure for all new Marcus packs', () => {
@@ -71,7 +69,7 @@ describe('Marcus skill packs', () => {
   });
 
   it('profile skillPackIds has exactly 20 entries', () => {
-    expect(MARCUS_PROFILE.skillPackIds).toHaveLength(20);
+    expect(MARCUS_PROFILE.skillPackIds).toHaveLength(18);
   });
 
   it('has no duplicate pack IDs', () => {

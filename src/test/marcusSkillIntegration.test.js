@@ -31,7 +31,7 @@ describe('Marcus skill guidance loading', () => {
   it('loadAgentSkillGuidance returns all Marcus packs', () => {
     const result = loadAgentSkillGuidance('marcus');
     expect(result.agent).toBe('marcus');
-    expect(result.activeSkills).toHaveLength(20);
+    expect(result.activeSkills).toHaveLength(18);
   });
 
   it('includes guidance for all new packs', () => {
@@ -49,7 +49,7 @@ describe('Marcus skill guidance loading', () => {
 describe('Marcus profile integration', () => {
   it('profile skillPackIds matches registry', () => {
     const packs = listSkillPacks();
-    const registryIds = packs.filter((p) => p.ownerAgent === 'marcus').map((p) => p.id);
+    const registryIds = packs.map((p) => p.id);
     MARCUS_PROFILE.skillPackIds.forEach((id) => { expect(registryIds).toContain(id); });
   });
 
