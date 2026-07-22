@@ -175,10 +175,11 @@ final class VoiceSessionViewModel: ObservableObject {
 
     private let audioService = VoiceAudioService()
     private let cloudService = VoiceCloudService()
-    private var localTranscriptSender: ((String, String, String) -> Void)?
+    private var localTranscriptSender: ((String, String, String) -> Bool)?
     private var lastSpokenMessageID: UUID?
     private var lastCloudResponse: VoiceCloudResponse?
     private var pendingCloudMessageID: UUID?
+    private var cloudSubmissionTask: Task<Void, Never>?
 
     var providerTitle: String {
         switch mode {
@@ -232,7 +233,7 @@ final class VoiceSessionViewModel: ObservableObject {
         bindAudioService()
     }
 
-    func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> Void) {
+    func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> Bool) {
         localTranscriptSender = sender
     }
 
@@ -268,8 +269,9 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func requestCloudSignIn(email: String) {
+        guard !isCloudAuthInFlight else { return }
+        isCloudAuthInFlight = true
         Task {
-            isCloudAuthInFlight = true
             defer { isCloudAuthInFlight = false }
             do {
                 try await cloudService.requestEmailOTP(email: email)
@@ -281,8 +283,9 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func completeCloudSignIn(email: String, code: String) {
+        guard !isCloudAuthInFlight else { return }
+        isCloudAuthInFlight = true
         Task {
-            isCloudAuthInFlight = true
             defer { isCloudAuthInFlight = false }
             do {
                 try await cloudService.verifyEmailOTP(email: email, code: code)
@@ -295,10 +298,14 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func signOutCloudVoice() {
+        cloudSubmissionTask?.cancel()
+        cloudSubmissionTask = nil
         cloudService.stopPlayback()
         cloudService.signOut()
         cloudAuthStatus = cloudService.authenticationStatus
         cloudStatus = cloudService.statusMessage
+        lastCloudResponse = nil
+        pendingCloudMessageID = nil
         if mode == .cloud {
             stopListening()
         }
@@ -371,10 +378,15 @@ final class VoiceSessionViewModel: ObservableObject {
 
         switch mode {
         case .local:
-            localTranscriptSender?(trimmed, selectedAgent.rawValue, cloudLanguage.rawValue)
+            guard localTranscriptSender?(trimmed, selectedAgent.rawValue, cloudLanguage.rawValue) == true else {
+                phase = .idle
+                statusMessage = "Could not send to the paired desktop"
+                return
+            }
         case .cloud:
-            Task {
-                await sendCloudTranscript(trimmed)
+            cloudSubmissionTask = Task { [weak self] in
+                guard let self else { return }
+                await self.sendCloudTranscript(trimmed)
             }
         }
     }
@@ -438,6 +450,8 @@ final class VoiceSessionViewModel: ObservableObject {
     var canRetryPlayback: Bool { phase == .playbackFailed && lastCloudResponse != nil }
 
     func resetConversation() {
+        cloudSubmissionTask?.cancel()
+        cloudSubmissionTask = nil
         audioService.stopRecording()
         cloudService.stopPlayback()
         transcript.removeAll()
@@ -460,6 +474,7 @@ final class VoiceSessionViewModel: ObservableObject {
                 agentID: selectedAgent.rawValue,
                 piperVoice: piperFarsiVoice.rawValue
             )
+            guard !Task.isCancelled, cloudReady else { return }
             let messageID = appendAssistantReply(response.reply)
             lastCloudResponse = response
             pendingCloudMessageID = messageID
@@ -469,6 +484,7 @@ final class VoiceSessionViewModel: ObservableObject {
             }
             retryCloudPlayback()
         } catch {
+            guard !Task.isCancelled else { return }
             statusMessage = error.localizedDescription
             phase = .idle
             cloudStatus = error.localizedDescription

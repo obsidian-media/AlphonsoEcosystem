@@ -227,12 +227,12 @@ struct VoiceView: View {
             .onAppear {
                 viewModel.prepareForVoiceSession()
                 viewModel.setLocalTranscriptSender { text, agentID, language in
-                    _ = webSocketService.sendCommand(
+                    webSocketService.sendCommand(
                         text: text,
                         agentID: agentID,
                         language: language,
                         voiceConversation: true
-                    )
+                    ) != nil
                 }
             }
             .onDisappear {

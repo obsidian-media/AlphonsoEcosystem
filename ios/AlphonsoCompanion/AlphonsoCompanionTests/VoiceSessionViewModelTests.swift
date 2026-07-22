@@ -14,6 +14,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
     func testSubmitDraftAppendsTranscriptAndClearsDraft() {
         let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in true }
         viewModel.draftTranscript = "Hello Alphonso"
 
         viewModel.submitDraft()
@@ -127,6 +128,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
         viewModel.setLocalTranscriptSender { _, agentID, language in
             capturedAgentID = agentID
             capturedLanguage = language
+            return true
         }
 
         viewModel.draftTranscript = "Review this risk"
@@ -167,6 +169,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
     func testCloudVoiceDoesNotAllowConcurrentSends() {
         let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in true }
         viewModel.draftTranscript = "First local request"
         viewModel.submitDraft()
         viewModel.draftTranscript = "Second local request"
@@ -176,5 +179,16 @@ final class VoiceSessionViewModelTests: XCTestCase {
         viewModel.submitDraft()
 
         XCTAssertEqual(viewModel.transcript.count, 1)
+    }
+
+    func testLocalVoiceReturnsToIdleWhenDesktopDispatchFails() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in false }
+        viewModel.draftTranscript = "Check connection"
+
+        viewModel.submitDraft()
+
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertEqual(viewModel.statusMessage, "Could not send to the paired desktop")
     }
 }

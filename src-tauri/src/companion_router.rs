@@ -198,7 +198,20 @@ fn receipt_title(receipt: &Value) -> String {
 }
 
 fn operations_snapshot(receipts: &[Value]) -> Value {
-  let is_active = |status: &str| matches!(status, "queued" | "pending" | "running" | "processing");
+  let is_terminal = |status: &str| {
+    matches!(
+      status,
+      "recorded"
+        | "completed"
+        | "failed"
+        | "cancelled"
+        | "canceled"
+        | "aborted"
+        | "stopped"
+        | "approved"
+        | "rejected"
+    )
+  };
   let mut active_work = Vec::new();
   let mut recent_outcomes = Vec::new();
 
@@ -214,10 +227,10 @@ fn operations_snapshot(receipts: &[Value]) -> Value {
       "commandId": receipt["commandId"].as_str(),
       "timestampMs": receipt["timestampMs"].as_u64().unwrap_or(0),
     });
-    if is_active(status) {
-      active_work.push(item);
-    } else {
+    if is_terminal(status) {
       recent_outcomes.push(item);
+    } else {
+      active_work.push(item);
     }
   }
 

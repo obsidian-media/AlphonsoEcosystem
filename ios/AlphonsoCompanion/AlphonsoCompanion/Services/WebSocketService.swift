@@ -80,15 +80,14 @@ class WebSocketService: ObservableObject {
         agentID: String = "alphonso",
         language: String = "en-US",
         voiceConversation: Bool = false
-    ) -> String {
-        let id = UUID().uuidString
+    ) -> String? {
         guard connectionState == .authenticated else {
             errorMessage = "Connect to the desktop before sending a message"
             connectionHint = "Chat is available after pairing completes"
-            return id
+            return nil
         }
-        activeCommandIDs.insert(id)
-        sendJSONMessage([
+        let id = UUID().uuidString
+        let payload: [String: Any] = [
             "id": id,
             "method": "send_command",
             "params": [
@@ -96,9 +95,18 @@ class WebSocketService: ObservableObject {
                 "agentId": agentID,
                 "language": language,
                 "voiceConversation": voiceConversation,
-            ]
-        ])
+            ],
+        ]
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload),
+              let request = String(data: data, encoding: .utf8) else {
+            errorMessage = "Failed to encode websocket request"
+            connectionHint = "Could not encode command payload"
+            return nil
+        }
+        activeCommandIDs.insert(id)
         messages.append(Message(text: text, isIncoming: false, commandId: id))
+        send(text: request, commandID: id)
         return id
     }
 
@@ -145,11 +153,18 @@ class WebSocketService: ObservableObject {
         send(text: text)
     }
 
-    private func send(text: String) {
-        webSocketTask?.send(.string(text)) { [weak self] error in
+    private func send(text: String, commandID: String? = nil) {
+        guard let webSocketTask else {
+            if let commandID { activeCommandIDs.remove(commandID) }
+            errorMessage = "Desktop connection is unavailable"
+            connectionHint = "Reconnect before sending a command"
+            return
+        }
+        webSocketTask.send(.string(text)) { [weak self] error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error = error {
+                    if let commandID { self.activeCommandIDs.remove(commandID) }
                     self.errorMessage = error.localizedDescription
                     self.connectionHint = "Send failed: \(error.localizedDescription)"
                 }

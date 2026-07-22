@@ -46,7 +46,7 @@ private struct AgentDockHeader: View {
                 .font(.system(.title2, design: .rounded).weight(.bold))
 
             Text(isConnected
-                 ? "(activeCount) agent\(activeCount == 1 ? "" : "s") active now. Live status updates arrive from your desktop."
+                 ? "\(activeCount) agent\(activeCount == 1 ? "" : "s") active now. Live status updates arrive from your desktop."
                  : "Pair with your desktop to see live activity and delegate work with confidence.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
