@@ -84,4 +84,25 @@ test.describe('Content Studio pipeline E2E', () => {
     await expect(asset).toHaveAttribute('src', /^data:image\/png;base64,/);
     await expect(page.getByText('C:/content/coffee-launch.png')).toBeVisible();
   });
+
+  test('Content Studio makes a missing image runtime actionable without pretending an asset exists', async ({ page }) => {
+    await page.evaluate(() => {
+      localStorage.setItem('alphonso_content_catalyst_jobs_v1', JSON.stringify([{
+        id: 'e2e-image-runtime-job',
+        status: 'image_pending',
+        currentStep: 'image',
+        request: { idea: 'A hand-poured candle launch', needs: { image: true, video: false, narration: false, publish: false } },
+        draft: { hook: 'Light the moment', caption: 'A warmer room starts here.', hashtags: '#candle' },
+        assets: { image_url: null, image_preview_base64: null, image_path: null, video_url: null }
+      }]));
+    });
+    await page.reload();
+    await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
+    await openContentStudio(page);
+
+    await expect(page.getByText(/No image asset is available yet/i)).toBeVisible();
+    await expect(page.getByText('ComfyUI not installed')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Install ComfyUI in Runtimes' })).toBeDisabled();
+    await expect(page.getByLabel('Production steps').getByRole('button', { name: 'Image', exact: true })).toBeVisible();
+  });
 });

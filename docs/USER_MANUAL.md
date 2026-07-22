@@ -321,7 +321,16 @@ Each project can have its own working directory:
 
 ## 7. Content Catalyst
 
-Content Catalyst is Miya's **full content creation pipeline** for social media.
+Content Catalyst is Miya's **content creation studio** for social media. Start
+with a creative brief, choose the asset types you need, then review each output
+before it moves forward. The studio never treats an unavailable asset as a
+finished one.
+
+For image work, the studio checks the local ComfyUI runtime. If ComfyUI is
+installed but stopped, use **Start ComfyUI** from the active job; if it is not
+installed, set it up in **Runtimes** first. A generated image is shown directly
+in the Creative output card when available. Video generation uses Runway only
+when it is configured. Publishing always requires approval.
 
 ### Trigger
 
@@ -337,7 +346,7 @@ Make a YouTube video script for product launch
 2. **Draft** — LLM generates the content draft
 3. **Image** — ComfyUI generates visual assets
 4. **Video** — Runway generates video (if requested)
-5. **Narration** — Voiceover (if requested)
+5. **Narration** — A narration script (if requested; audio generation is not implied)
 6. **Preview** — Shows the complete package
 7. **Publish** — Posts to the platform (requires approval)
 

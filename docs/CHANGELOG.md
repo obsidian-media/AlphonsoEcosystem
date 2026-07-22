@@ -8,6 +8,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-07-21 (skill-pack integration and dependency refresh)
 
+- **Content Studio creation room:** reframed the workspace around the real
+  brief-to-asset production loop, with live ComfyUI readiness, an in-place
+  start action when the runtime is installed, and an explicit setup state when
+  it is not. Generated image assets render in the creative output card; no
+  image is represented as an unavailable asset rather than a completed result.
+  Added Content Studio E2E coverage for both rendered image assets and the
+  unavailable-runtime state.
 - **Boardroom cancellation:** Stop now aborts the current Ollama generation,
   prevents its cancelled reply from appearing, and retains the existing guard
   against further chained replies. Remaining Boardroom scope is explicitly

@@ -24,7 +24,7 @@ function resolveImagePreview(assets = {}) {
   return null;
 }
 
-export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish }) {
+export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, imageRuntime, onStartImageRuntime }) {
   if (!activeJob) {
     return (
       <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-8 text-center">
@@ -40,7 +40,10 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">Draft preview</span>
+        <div>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-200">Creative output</span>
+          <p className="mt-0.5 text-[10px] text-[var(--text-4)]">Review the work, then move it to the next production step.</p>
+        </div>
         <div className="flex gap-1.5">
           <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[var(--text-4)]">{activeJob.status}</span>
           <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[9px] uppercase tracking-widest text-cyan-300">{activeJob.currentStep || 'brief'}</span>
@@ -65,9 +68,10 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish }) {
                 className="mt-2 max-h-64 w-full rounded-md object-contain bg-black/20"
               />
             ) : imageRequested ? (
-              <p className="mt-2 text-xs text-amber-200">
-                No image asset is available yet. Generate Image requires a running local ComfyUI runtime.
-              </p>
+              <div className="mt-2 space-y-2 text-xs text-amber-200">
+                <p>No image asset is available yet. {imageRuntime?.message || 'Checking ComfyUI…'}</p>
+                {!imageRuntime?.running && <button type="button" disabled={imageRuntime?.starting || !imageRuntime?.installed} onClick={onStartImageRuntime} className="rounded border border-amber-400/30 px-2 py-1 text-[10px] font-bold uppercase disabled:opacity-40">{imageRuntime?.starting ? 'Starting ComfyUI…' : imageRuntime?.installed ? 'Start ComfyUI' : 'Install ComfyUI in Runtimes'}</button>}
+              </div>
             ) : (
               <p className="mt-2 text-xs text-[var(--text-4)]">Image generation was not selected for this job.</p>
             )}
@@ -84,7 +88,7 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish }) {
         )}
 
         {/* Step buttons */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" aria-label="Production steps">
           {STEPS.map(({ key, label, icon: Icon, accent }) => (
             <button
               key={key}
