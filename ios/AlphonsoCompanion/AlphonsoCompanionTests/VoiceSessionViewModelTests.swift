@@ -135,4 +135,19 @@ final class VoiceSessionViewModelTests: XCTestCase {
         XCTAssertEqual(capturedAgentID, "maria")
         XCTAssertEqual(capturedLanguage, "fa-IR")
     }
+
+    func testCloudVoiceServerErrorPreservesSafeStatusAndReason() {
+        let error = VoiceCloudError.server(status: 403, message: "This device is not enrolled for Cloud Voice")
+
+        XCTAssertEqual(
+            error.errorDescription,
+            "Cloud Voice request failed (HTTP 403): This device is not enrolled for Cloud Voice"
+        )
+    }
+
+    func testCloudVoiceServerErrorDoesNotRequireAResponseBody() {
+        let error = VoiceCloudError.server(status: 502, message: "")
+
+        XCTAssertEqual(error.errorDescription, "Cloud Voice request failed (HTTP 502).")
+    }
 }
