@@ -32,6 +32,7 @@
     "auth:meta": "node scripts/auth-meta.mjs",
     "auth:outlook": "node scripts/auth-outlook.mjs",
     "preview": "node scripts/run-vite-preview.mjs",
+    "e2e:server": "node scripts/run-e2e-server.mjs",
     "tauri": "tauri",
     "test:e2e": "playwright test",
     "test:rust": "cd src-tauri && cargo test",

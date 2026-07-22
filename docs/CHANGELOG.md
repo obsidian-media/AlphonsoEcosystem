@@ -20,6 +20,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   default-deny for unmatched actions and requires explicit consent for
   costly/irreversible actions; removed the stale default-allow warning from
   AGENTS. Focused policy tests: 31 passing.
+- **Reliable E2E execution:** Playwright now builds and serves the production
+  bundle through `npm run e2e:server` instead of waiting on the interactive
+  Vite dev server. The complete suite passes **26 tests across 7 specs** with
+  retries disabled. Visual baselines now establish viewport and mocked-runtime
+  readiness before capture, with a 1% maximum dynamic-pixel tolerance.
 
 - Integrated the all-agent skill-pack branch and refreshed `package-lock.json` and
   `Cargo.lock` within the existing manifest ranges. The Rust lock refresh includes

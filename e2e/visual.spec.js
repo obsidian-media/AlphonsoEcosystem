@@ -5,31 +5,43 @@ import { fileURLToPath } from 'url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 test.describe('Visual Regression Snapshots', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
   test.beforeEach(async ({ page }) => {
     // Visual baselines must not depend on locally installed runtimes, network
     // reachability, or persisted settings from a prior browser context.
     await page.addInitScript({ path: resolve(__dirname, 'tauri-mock.js') });
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
+    await page.evaluate(() => document.fonts.ready);
+    // The mock resolves runtime/model checks asynchronously. Let their fixed
+    // mock state settle before taking a cross-run visual baseline.
+    await page.waitForTimeout(750);
   });
 
   test('app shell layout', async ({ page }) => {
     // Sidebar + topbar + main area at 1280×800
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await expect(page).toHaveScreenshot('shell-layout.png', { threshold: 0.2 });
+    await expect(page).toHaveScreenshot('shell-layout.png', {
+      threshold: 0.2,
+      maxDiffPixelRatio: 0.01
+    });
   });
 
   test('sidebar expanded', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
     // Wait for sidebar to render
     await expect(page.getByRole('button', { name: /^Chat$/ })).toBeVisible();
-    await expect(page).toHaveScreenshot('sidebar-expanded.png', { threshold: 0.2 });
+    await expect(page).toHaveScreenshot('sidebar-expanded.png', {
+      threshold: 0.2,
+      maxDiffPixelRatio: 0.01
+    });
   });
 
   test('settings panel renders', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByRole('button', { name: 'Open settings', exact: true }).click();
     await page.waitForTimeout(500);
-    await expect(page).toHaveScreenshot('settings-panel.png', { threshold: 0.2 });
+    await expect(page).toHaveScreenshot('settings-panel.png', {
+      threshold: 0.2,
+      maxDiffPixelRatio: 0.01
+    });
   });
 });

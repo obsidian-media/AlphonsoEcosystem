@@ -853,8 +853,8 @@ Before writing any new service or feature, verify it does not already exist:
 
 These items were explicitly deferred by the product owner. Do not skip them permanently — revisit when the milestone conditions are met.
 
-### Production-readiness roadmap T11–T20 (not started, tracked 2026-07-15/16)
-Full task list, plan, risk, and dependencies for each: `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6. T1/T2/T3/T4/T5/T6 are done (see §11.21/§11.22); T10 is partial (E2E collection fixed, specs still need repair). Do not re-derive scope for these from memory — read that doc's §6 before starting any of them, since each has explicit dependencies on the others (e.g. T13 keychain depends on T5's token format). Short list for quick reference:
+### Production-readiness roadmap T11–T20 (active, tracked 2026-07-15/22)
+Full task list, plan, risk, and dependencies for each: `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6. T1/T2/T3/T4/T5/T6 are done (see §11.21/§11.22); **T10 E2E is verified** as of 2026-07-22 (26 tests / 7 specs, no retries) using the production-preview server in `npm run e2e:server`. The active, evidence-backed queue is `docs/TRUTH_FIRST_EXECUTION_PLAN.md`; do not re-derive scope from memory. Short list for quick reference:
 - **T11** — harden KV/localStorage persistence with a real schema + migrations
 - **T12** — replace the fail-open connector policy DSL default with risk-tiered rules
 - **T13** — move credentials to OS-level secret storage (depends on T5's token format)

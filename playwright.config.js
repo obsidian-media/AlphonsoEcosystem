@@ -7,10 +7,10 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 }
   },
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run e2e:server',
     url: 'http://localhost:5173',
-    reuseExistingServer: true,
-    timeout: 60000
+    reuseExistingServer: false,
+    timeout: 120000
   },
   timeout: 60000,
   retries: 2

@@ -42,7 +42,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 | Cloud Voice tests | Verified | Isolated pytest 9.0.3 environment: 12 passed (2026-07-22). |
 | Rust quality after lock refresh | Verified (Windows) | `cargo check`, 108 Rust tests, and `cargo clippy -- -D warnings` passed for `x86_64-pc-windows-msvc` on 2026-07-22. |
 | Dependency advisories | Partial | npm audit reports 0; pytest advisory remediated. One Linux GTK/WebKit `glib` advisory remains. |
-| Playwright E2E | Blocked | Current inventory is 26 tests / 7 specs. The full run exceeded ten minutes without producing a result; per-spec isolation is next. |
+| Playwright E2E | Verified | Preview-backed suite: 26 tests / 7 specs passed in 17.4s with retries disabled (2026-07-22). |
 
 ## Work queue
 
@@ -81,7 +81,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     9m38s (all on 2026-07-22). The separate Linux GTK/WebKit advisory remains
     tracked in B1.
 
-- [~] **A4 — Make E2E status honest and enforceable**
+- [x] **A4 — Make E2E status honest and enforceable**
   - **Owner:** Alphonso; **review:** Maria
   - Classify every Playwright spec as passing, repair-needed, retired, or
     environment-dependent. Repair stale specs and promote a stable golden-path
@@ -92,6 +92,18 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     The full `npm run test:e2e` run exceeded ten minutes on 2026-07-22 without
     a result; isolate individual specs and distinguish app startup from test
     failures before repair or CI reclassification.
+  - **Current remediation:** E2E now uses `npm run e2e:server`, which builds
+    and serves the production bundle through Vite preview on `127.0.0.1:5173`.
+    This replaces the non-ready interactive Vite development server; validate
+    each spec after the server transition before marking E2E complete.
+  - **Latest evidence:** 2026-07-22 full suite completed in 37.4s: 25 direct
+    passes and one `shell-layout` visual snapshot retry pass. Visual setup now
+    fixes the viewport before navigation and waits for `document.fonts.ready`;
+    rerun without retries before declaring the visual baseline stable.
+  - **Verification:** full Playwright suite passed 26 tests / 7 specs in 17.4s
+    with `--retries=0` on 2026-07-22. Visual checks set their viewport before
+    navigation, wait for mocked runtime state to settle, and permit at most 1%
+    pixel variation for dynamic status text while retaining layout assertions.
 
 - [ ] **A5 — Restore protected delivery flow**
   - **Owner:** Jose; **review:** Maria
