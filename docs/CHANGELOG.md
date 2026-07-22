@@ -8,6 +8,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-07-21 (skill-pack integration and dependency refresh)
 
+- **Boardroom cancellation:** Stop now aborts the current Ollama generation,
+  prevents its cancelled reply from appearing, and retains the existing guard
+  against further chained replies. Remaining Boardroom scope is explicitly
+  deferred in Ground Truth and the readiness plan.
+- **External-agent availability:** unsupported `acc` and `gemini` providers
+  are hidden from the selectable provider list until they have policy,
+  contract, audit, and verification parity. Direct adapter calls remain
+  fail-closed as `not_wired`.
 - **Verification reliability:** updated the programmatic Vitest runner to use
   one fork and disable file-level parallelism in this Windows environment;
   `npm run test` now completes with 249 files / 3,516 tests passing. Moved the

@@ -197,18 +197,23 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - **Done when:** a compatibility matrix and real-device evidence are linked
     from Ground Truth.
 
-- [ ] **D3 — Resolve or explicitly defer Boardroom gaps**
+- [~] **D3 — Resolve or explicitly defer Boardroom gaps**
   - **Owner:** Jose; **review:** Maria
-  - Decide and document status for true in-flight cancellation, resource
-    contention, cards, regenerate/diff, voice input, and mobile parity.
+  - **Implemented (2026-07-22):** Stop now aborts the active Boardroom Ollama
+    request and suppresses its cancelled reply; it still prevents further
+    chained hops. Covered by `boardroomChatView.test.jsx`.
+  - **Explicitly deferred:** resource contention, cards, regenerate/diff,
+    voice input, and mobile parity. They remain outside readiness claims until
+    each has an owner, schedule, and verification evidence.
   - **Done when:** each item is implemented with evidence, scheduled with an
     owner/date, or removed from readiness claims.
 
-- [ ] **D4 — Make unsupported external providers unambiguous**
+- [x] **D4 — Make unsupported external providers unambiguous**
   - **Owner:** Marcus; **review:** Maria
-  - Keep `acc` and `gemini` labelled `NOT WIRED` until they have policy,
-    contract, audit, and verification parity; otherwise remove user-facing
-    availability signals.
+  - **Evidence (2026-07-22):** `acc` and `gemini` are absent from
+    `listSupportedExternalProviders()` and remain rejected as `not_wired` if
+    called directly. The ACC Bridge configuration is separate from this
+    provider list and is not represented as a live external agent.
   - **Done when:** product UI, docs, and adapter behavior agree.
 
 ### E. Documentation governance

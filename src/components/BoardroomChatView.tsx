@@ -132,6 +132,7 @@ export function BoardroomChatView() {
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [facilitatorPending, setFacilitatorPending] = useState(false);
   const stopRequestedRef = useRef(false);
+  const generationAbortControllerRef = useRef<AbortController | null>(null);
 
   const activeThread = useMemo(
     () => threads.find((t) => t.id === activeThreadId) ?? null,
@@ -176,6 +177,7 @@ export function BoardroomChatView() {
 
     setFacilitatorPending(true);
     stopRequestedRef.current = false;
+    generationAbortControllerRef.current = new AbortController();
     let hopsUsed = 0;
 
     while (respondingAgents.length > 0) {
@@ -212,8 +214,21 @@ export function BoardroomChatView() {
         topic: activeThread.topic,
         priorMessages,
         newMessageText: text,
-        crossThreadContext
+        crossThreadContext,
+        signal: generationAbortControllerRef.current.signal
       });
+
+      if (stopRequestedRef.current) {
+        addThreadMessage({
+          threadId: activeThreadId,
+          speaker: 'alphonso',
+          content: 'Generation stopped by user.',
+          kind: 'system'
+        });
+        setMessages(listThreadMessages(activeThreadId));
+        break;
+      }
+
       const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
       addThreadMessage({
         threadId: activeThreadId,
@@ -240,11 +255,13 @@ export function BoardroomChatView() {
         respondingAgents.push(...chainedMentions);
       }
     }
+    generationAbortControllerRef.current = null;
     setFacilitatorPending(false);
   }
 
   function handleStop() {
     stopRequestedRef.current = true;
+    generationAbortControllerRef.current?.abort();
   }
 
   async function handleRetry(message: BoardroomThreadMessage) {
