@@ -6,15 +6,11 @@ import { messageIn } from '../lib/motion';
 
 const IMPORT_META_ENV = (import.meta as unknown as { env: Record<string, unknown> }).env;
 
-// T10: dev-only profiler wrapper — logs ChatMessageList renders > 16ms (one frame)
-const onProfilerRender = IMPORT_META_ENV.DEV
-  ? (_id: string, phase: string, actualDuration: number, _base?: unknown, __commit?: unknown, msgCount?: number) =>
-      actualDuration > 16 && console.debug(`[Profiler] ChatMessageList ${phase}: ${actualDuration.toFixed(1)}ms`)
-  : undefined;
+// T10: dev-only profiler wrapper preserves render instrumentation without console output.
 function MessageListProfiler({ children, msgCount }: { children: React.ReactNode; msgCount: number }) {
   if (!IMPORT_META_ENV.DEV) return <>{children}</>;
   return (
-    <React.Profiler id="ChatMessageList" onRender={(id, phase, actual) => onProfilerRender?.(id, phase, actual, null, null, msgCount)}>
+    <React.Profiler id="ChatMessageList" onRender={() => void msgCount}>
       {children}
     </React.Profiler>
   );
