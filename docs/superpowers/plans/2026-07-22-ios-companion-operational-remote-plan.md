@@ -10,6 +10,19 @@
 
 ---
 
+## Execution status (2026-07-22)
+
+- [x] Defined and committed the typed iOS operations snapshot (`44c0212`).
+- [x] Added the truthful `get_operations` desktop RPC backed only by Rust KV receipts (`44c0212`).
+- [x] Added and committed the premium Operations home and shared native type/color system (`5350663`).
+- [x] Removed Bonjour's unsafe guessed-port fallback and committed the pairing flow update (`ef29949`).
+- [x] Ran Rust formatting and the repository pre-commit lint successfully.
+- [ ] Run Rust unit tests to completion; the cold Windows build exceeded the 60-second execution window.
+- [ ] Run the iOS XCTest suite and simulator review in macOS CI; Windows has no Xcode/Swift toolchain.
+- [ ] Finish the remaining focused-surface visual migration, documentation, CodeRabbit response, and physical TestFlight acceptance matrix.
+
+---
+
 ## File structure
 
 - Create `ios/AlphonsoCompanion/AlphonsoCompanion/Models/OperationsSnapshot.swift`: typed, testable decoding for desktop status, active work, recent outcomes, and approval items.
