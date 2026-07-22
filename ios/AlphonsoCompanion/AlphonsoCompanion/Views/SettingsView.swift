@@ -126,8 +126,8 @@ struct SettingsView: View {
                     host: $reconnectHost,
                     port: $reconnectPort,
                     pin: $reconnectPin,
-                    onConnect: { host, port, pin in
-                        webSocketService.connect(host: host, port: port, pin: pin, displayName: host, source: "manual")
+                    onConnect: { endpoint, pin in
+                        webSocketService.connect(host: endpoint.host, port: endpoint.port, pin: pin, displayName: endpoint.host, source: "manual")
                         showReconnectSheet = false
                     },
                     onCancel: {
@@ -156,7 +156,7 @@ struct ReconnectSheet: View {
     @Binding var host: String
     @Binding var port: String
     @Binding var pin: String
-    let onConnect: (String, UInt16, String) -> Void
+    let onConnect: (PairingEndpoint, String) -> Void
     let onCancel: () -> Void
     
     var body: some View {
@@ -185,11 +185,11 @@ struct ReconnectSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Connect") {
-                        if let portNum = UInt16(port) {
-                            onConnect(host, portNum, pin)
+                        if let endpoint = PairingEndpoint(host: host, portText: port) {
+                            onConnect(endpoint, pin)
                         }
                     }
-                    .disabled(host.isEmpty || pin.count != 6 || UInt16(port) == nil)
+                    .disabled(PairingEndpoint(host: host, portText: port) == nil || pin.count != 6)
                 }
             }
         }

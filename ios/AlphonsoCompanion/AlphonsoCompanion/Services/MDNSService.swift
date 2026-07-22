@@ -1,6 +1,20 @@
 import Network
 import Foundation
 
+enum MDNSResolutionError: LocalizedError {
+    case endpointUnavailable
+    case failed(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .endpointUnavailable:
+            return "The discovered desktop did not provide a reachable network endpoint."
+        case .failed(let error):
+            return error.localizedDescription
+        }
+    }
+}
+
 @MainActor
 class MDNSService: ObservableObject {
     @Published var discovered: [DiscoveredHost] = []
@@ -56,7 +70,7 @@ class MDNSService: ObservableObject {
         browser = nil
     }
     
-    func resolveHost(_ host: DiscoveredHost, completion: @escaping (String, UInt16) -> Void) {
+    func resolveHost(_ host: DiscoveredHost, completion: @escaping (Result<(host: String, port: UInt16), MDNSResolutionError>) -> Void) {
         // For Bonjour services, we connect using the service name
         // NWConnection will resolve the endpoint automatically
         let endpoint = NWEndpoint.service(
@@ -77,15 +91,13 @@ class MDNSService: ObservableObject {
                     if case .hostPort(let host, let port) = connection.currentPath?.remoteEndpoint {
                         let hostname = "\(host)"
                         let portValue = UInt16(port.rawValue)
-                        completion(hostname, portValue)
+                        completion(.success((hostname, portValue)))
                     } else {
-                        // Fallback to service name
-                        completion(host.name, 8765)
+                        completion(.failure(.endpointUnavailable))
                     }
                     connection.cancel()
-                case .failed:
-                    // Fallback
-                    completion(host.name, 8765)
+                case .failed(let error):
+                    completion(.failure(.failed(error)))
                     connection.cancel()
                 default:
                     break
