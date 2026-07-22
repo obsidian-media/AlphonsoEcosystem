@@ -40,7 +40,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 | Full Vitest suite | Verified once | `npm run test`: 249 files / 3,516 tests, exit 0; 285.78s Vitest duration (2026-07-22). |
 | Web build | Verified | `npm run build` passed on 2026-07-22. |
 | Cloud Voice tests | Verified | Isolated pytest 9.0.3 environment: 12 passed (2026-07-22). |
-| Rust quality after lock refresh | Blocked | `cargo check` exceeded five minutes; Linux-target graph then failed downloading `cairo-rs` from crates.io. |
+| Rust quality after lock refresh | Partial | Windows `cargo check --target x86_64-pc-windows-msvc` passed on 2026-07-22 (cold: 9m54s). Rust tests and Clippy remain unverified; the all-target Linux graph could not download `cairo-rs`. |
 | Dependency advisories | Partial | npm audit reports 0; pytest advisory remediated. One Linux GTK/WebKit `glib` advisory remains. |
 | Playwright E2E | Partial | Approximately 22 of 28 legacy specs require repair/reclassification. |
 
@@ -75,6 +75,9 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - Complete `cargo check`, `cargo test`, and `cargo clippy -- -D warnings` on
     the committed lockfile; address compatibility or warning failures.
   - **Done when:** all three commands pass and results are recorded.
+  - **Evidence so far:** Windows `cargo check --target x86_64-pc-windows-msvc`
+    passed on 2026-07-22 after 9m54s. The remaining all-target limitation is
+    an unavailable Linux GTK/WebKit dependency download (`cairo-rs`).
 
 - [ ] **A4 — Make E2E status honest and enforceable**
   - **Owner:** Alphonso; **review:** Maria
@@ -104,6 +107,9 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     Cloud Voice tests. Dependabot #3 is `glib` 0.18.5, pulled by Linux
     `wry`/GTK/WebKit dependencies; it needs an upstream-compatible Tauri/Wry
     upgrade or a formally reviewed platform-scoped disposition.
+    Crates.io confirms this project already uses the current compatible
+    `wry` 0.55.1 and `tauri-runtime-wry` 2.11.4; the Windows dependency graph
+    does not include `glib`.
 
 - [x] **B2 — Verify connector DSL default-deny behavior**
   - **Owner:** Sentinel; **review:** Maria
