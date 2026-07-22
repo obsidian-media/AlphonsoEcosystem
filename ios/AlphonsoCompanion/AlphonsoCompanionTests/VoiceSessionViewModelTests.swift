@@ -150,4 +150,31 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
         XCTAssertEqual(error.errorDescription, "Cloud Voice request failed (HTTP 502).")
     }
+
+    func testCloudVoiceCannotRecordOrSendUntilTheIPhoneIsEnrolled() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.selectMode(.cloud)
+        viewModel.draftTranscript = "Test the cloud path"
+
+        XCTAssertFalse(viewModel.canStartListening)
+        XCTAssertFalse(viewModel.canSend)
+
+        viewModel.startListening()
+
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertEqual(viewModel.statusMessage, "Sign in to Cloud Voice before recording")
+    }
+
+    func testCloudVoiceDoesNotAllowConcurrentSends() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.draftTranscript = "First local request"
+        viewModel.submitDraft()
+        viewModel.draftTranscript = "Second local request"
+
+        XCTAssertFalse(viewModel.canSend)
+
+        viewModel.submitDraft()
+
+        XCTAssertEqual(viewModel.transcript.count, 1)
+    }
 }

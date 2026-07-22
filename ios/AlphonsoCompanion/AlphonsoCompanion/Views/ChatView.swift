@@ -4,6 +4,7 @@ struct ChatView: View {
     @EnvironmentObject var webSocketService: WebSocketService
 
     @State private var inputText = ""
+    @State private var activeCommandID: String?
 
     var body: some View {
         NavigationStack {
@@ -49,13 +50,21 @@ struct ChatView: View {
                         .lineLimit(1...5)
 
                     Button(action: sendMessage) {
-                        Image(systemName: "arrow.up.circle.fill")
+                        Image(systemName: activeCommandID == nil ? "arrow.up.circle.fill" : "stop.circle.fill")
                             .font(.title2)
                     }
-                    .disabled(inputText.isEmpty || webSocketService.connectionState != .authenticated)
+                    .accessibilityLabel(activeCommandID == nil ? "Send message" : "Stop response")
+                    .disabled(activeCommandID == nil && (inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || webSocketService.connectionState != .authenticated))
                 }
                 .padding()
                 .background(.regularMaterial)
+
+                if activeCommandID != nil {
+                    Label("Alphonso is responding", systemImage: "ellipsis.message")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom, 8)
+                }
             }
             .navigationTitle("Chat")
             .safeAreaInset(edge: .top) {
@@ -75,13 +84,23 @@ struct ChatView: View {
                     }
                 }
             }
+            .onChange(of: webSocketService.activeCommandIDs) { _ in
+                guard let activeCommandID, !webSocketService.activeCommandIDs.contains(activeCommandID) else { return }
+                self.activeCommandID = nil
+            }
         }
     }
 
     private func sendMessage() {
-        let text = inputText
+        if let activeCommandID {
+            webSocketService.abortCommand(commandId: activeCommandID)
+            return
+        }
+
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
         inputText = ""
-        _ = webSocketService.sendCommand(text: text)
+        activeCommandID = webSocketService.sendCommand(text: text)
     }
 }
 

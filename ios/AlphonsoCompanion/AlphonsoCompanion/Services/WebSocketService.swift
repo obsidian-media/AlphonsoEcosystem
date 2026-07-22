@@ -9,6 +9,7 @@ class WebSocketService: ObservableObject {
     @Published var errorMessage: String?
     @Published var tokenCount: Int = 0
     @Published var isStreaming: Bool = false
+    @Published private(set) var activeCommandIDs: Set<String> = []
     @Published var boardroomSessions: [BoardroomSession] = []
     @Published var recentEndpoints: [ConnectionEndpoint] = []
     @Published var lastSuccessfulConnectionAt: Date?
@@ -79,6 +80,12 @@ class WebSocketService: ObservableObject {
         voiceConversation: Bool = false
     ) -> String {
         let id = UUID().uuidString
+        guard connectionState == .authenticated else {
+            errorMessage = "Connect to the desktop before sending a message"
+            connectionHint = "Chat is available after pairing completes"
+            return id
+        }
+        activeCommandIDs.insert(id)
         sendJSONMessage([
             "id": id,
             "method": "send_command",
@@ -249,6 +256,9 @@ class WebSocketService: ObservableObject {
             isStreaming = false
             if let payload = payload as? [String: Any] {
                 let commandId = payload["commandId"] as? String
+                if let commandId {
+                    activeCommandIDs.remove(commandId)
+                }
                 if let error = payload["error"] as? String {
                     errorMessage = error
                 } else if let summary = payload["summary"] as? String, let commandId = commandId {
@@ -314,6 +324,7 @@ class WebSocketService: ObservableObject {
         pin = nil
         pendingDisplayName = nil
         pendingSource = "manual"
+        activeCommandIDs.removeAll()
         connectionState = connectionMachine.connectionState
         connectionHint = "Disconnected"
     }
@@ -325,6 +336,7 @@ class WebSocketService: ObservableObject {
         pendingReconnectWorkItem = nil
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
+        activeCommandIDs.removeAll()
         connectionState = connectionMachine.connectionState
         connectionHint = "Reconnect paused"
     }

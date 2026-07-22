@@ -171,6 +171,7 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var selectedAgent: VoiceAgent = .alphonso
     @Published var cloudStatus = "Cloud backend not configured"
     @Published var cloudAuthStatus = "Sign in to enable Cloud Voice"
+    @Published var isCloudAuthInFlight = false
 
     private let audioService = VoiceAudioService()
     private let cloudService = VoiceCloudService()
@@ -198,7 +199,13 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     var canSend: Bool {
-        !draftTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        phase != .sending
+            && !draftTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (mode != .cloud || cloudReady)
+    }
+
+    var canStartListening: Bool {
+        mode != .cloud || cloudReady
     }
 
     init() {
@@ -262,6 +269,8 @@ final class VoiceSessionViewModel: ObservableObject {
 
     func requestCloudSignIn(email: String) {
         Task {
+            isCloudAuthInFlight = true
+            defer { isCloudAuthInFlight = false }
             do {
                 try await cloudService.requestEmailOTP(email: email)
                 cloudAuthStatus = cloudService.authenticationStatus
@@ -273,6 +282,8 @@ final class VoiceSessionViewModel: ObservableObject {
 
     func completeCloudSignIn(email: String, code: String) {
         Task {
+            isCloudAuthInFlight = true
+            defer { isCloudAuthInFlight = false }
             do {
                 try await cloudService.verifyEmailOTP(email: email, code: code)
                 cloudAuthStatus = cloudService.authenticationStatus
@@ -280,6 +291,16 @@ final class VoiceSessionViewModel: ObservableObject {
             } catch {
                 cloudAuthStatus = error.localizedDescription
             }
+        }
+    }
+
+    func signOutCloudVoice() {
+        cloudService.stopPlayback()
+        cloudService.signOut()
+        cloudAuthStatus = cloudService.authenticationStatus
+        cloudStatus = cloudService.statusMessage
+        if mode == .cloud {
+            stopListening()
         }
     }
 
@@ -314,6 +335,12 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func startListening() {
+        guard canStartListening else {
+            phase = .idle
+            statusMessage = "Sign in to Cloud Voice before recording"
+            cloudStatus = "Enroll this iPhone before using Cloud Voice"
+            return
+        }
         phase = .listening
         statusMessage = mode == .local
             ? "Listening for speech in local mode"
@@ -328,8 +355,8 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func submitDraft() {
+        guard canSend else { return }
         let trimmed = draftTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
 
         transcript.append(
             VoiceTranscriptEntry(
