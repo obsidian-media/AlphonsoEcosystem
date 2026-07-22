@@ -14,9 +14,15 @@ const STEPS = [
   { key: 'draft', label: 'Draft', icon: FileText },
   { key: 'image', label: 'Image', icon: Image },
   { key: 'video', label: 'Video', icon: Video },
-  { key: 'narration', label: 'Voice', icon: Mic },
+  { key: 'narration', label: 'Script', icon: Mic },
   { key: 'publish-preview', label: 'Preview', icon: Eye, accent: true },
 ];
+
+function resolveImagePreview(assets = {}) {
+  if (assets.image_preview_base64) return `data:image/png;base64,${assets.image_preview_base64}`;
+  if (typeof assets.image_url === 'string' && /^(https?:|data:image\/)/i.test(assets.image_url)) return assets.image_url;
+  return null;
+}
 
 export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish }) {
   if (!activeJob) {
@@ -27,6 +33,9 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish }) {
       </div>
     );
   }
+
+  const imagePreview = resolveImagePreview(activeJob.assets);
+  const imageRequested = Boolean(activeJob.request?.needs?.image);
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
@@ -47,9 +56,32 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish }) {
         </div>
 
         <div className="grid grid-cols-1 gap-2">
-          <MiniField label="Image URL" value={activeJob.assets?.image_url || 'none'} mono />
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="text-[9px] uppercase tracking-widest text-[var(--text-4)] font-bold">Generated image</div>
+            {imagePreview ? (
+              <img
+                src={imagePreview}
+                alt={`Generated visual for ${activeJob.request?.idea || 'content job'}`}
+                className="mt-2 max-h-64 w-full rounded-md object-contain bg-black/20"
+              />
+            ) : imageRequested ? (
+              <p className="mt-2 text-xs text-amber-200">
+                No image asset is available yet. Generate Image requires a running local ComfyUI runtime.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-[var(--text-4)]">Image generation was not selected for this job.</p>
+            )}
+            {activeJob.assets?.image_path && <div className="mt-2 text-[10px] font-mono break-all text-[var(--text-4)]">{activeJob.assets.image_path}</div>}
+          </div>
           <MiniField label="Video URL" value={activeJob.assets?.video_url || 'none'} mono />
         </div>
+
+        {activeJob.narration?.narration_text && (
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
+            <div className="text-[9px] uppercase tracking-widest text-[var(--text-4)] font-bold">Narration script</div>
+            <p className="mt-1 whitespace-pre-wrap">{activeJob.narration.narration_text}</p>
+          </div>
+        )}
 
         {/* Step buttons */}
         <div className="flex flex-wrap gap-1.5">
