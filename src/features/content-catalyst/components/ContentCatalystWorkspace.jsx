@@ -62,9 +62,13 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
   const [imageRuntime, setImageRuntime] = useState({ checked: false, running: false, installed: false, starting: false, message: '' });
 
   const refreshImageRuntime = async () => {
-    const tools = await getAllStatus().catch(() => []);
-    const comfyui = tools.find((tool) => tool.name === 'comfyui');
-    setImageRuntime((current) => ({ ...current, checked: true, running: Boolean(comfyui?.running), installed: Boolean(comfyui?.installed), message: comfyui?.running ? 'ComfyUI ready' : comfyui?.installed ? 'ComfyUI stopped' : 'ComfyUI not installed' }));
+    try {
+      const tools = await getAllStatus();
+      const comfyui = tools.find((tool) => tool.name === 'comfyui');
+      setImageRuntime((current) => ({ ...current, checked: true, running: Boolean(comfyui?.running), installed: Boolean(comfyui?.installed), message: comfyui?.running ? 'ComfyUI ready' : comfyui?.installed ? 'ComfyUI stopped' : 'ComfyUI not installed' }));
+    } catch {
+      setImageRuntime((current) => ({ ...current, checked: false, running: false, installed: false, starting: false, message: 'ComfyUI status unavailable. Retry the runtime check or use Runtimes.' }));
+    }
   };
 
   useEffect(() => {
@@ -341,7 +345,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
             onGenerate={createJob}
             isLoading={busy}
           />
-          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} imageRuntime={imageRuntime} onStartImageRuntime={startImageRuntime} />
+          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} imageRuntime={imageRuntime} onStartImageRuntime={startImageRuntime} onRefreshImageRuntime={refreshImageRuntime} />
         </div>
       )}
 
@@ -349,7 +353,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
       {contentTab === 'drafts' && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1.1fr]">
           <DraftList drafts={drafts} onSelect={(id) => { setActiveJobId(id); }} />
-          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} imageRuntime={imageRuntime} onStartImageRuntime={startImageRuntime} />
+          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} imageRuntime={imageRuntime} onStartImageRuntime={startImageRuntime} onRefreshImageRuntime={refreshImageRuntime} />
         </div>
       )}
 

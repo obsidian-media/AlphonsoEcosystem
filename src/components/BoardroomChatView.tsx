@@ -161,7 +161,7 @@ export function BoardroomChatView() {
   }
 
   async function handleSend() {
-    if (!activeThreadId || !activeThread || !composerText.trim()) return;
+    if (!activeThreadId || !activeThread || !composerText.trim() || generationAbortControllerRef.current) return;
     const text = composerText.trim();
     addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
     setMessages(listThreadMessages(activeThreadId));
@@ -175,11 +175,13 @@ export function BoardroomChatView() {
 
     if (respondingAgents.length === 0) return;
 
+    const controller = new AbortController();
+    generationAbortControllerRef.current = controller;
     setFacilitatorPending(true);
     stopRequestedRef.current = false;
-    generationAbortControllerRef.current = new AbortController();
     let hopsUsed = 0;
 
+    try {
     while (respondingAgents.length > 0) {
       const agentId = respondingAgents.shift() as string;
 
@@ -215,7 +217,7 @@ export function BoardroomChatView() {
         priorMessages,
         newMessageText: text,
         crossThreadContext,
-        signal: generationAbortControllerRef.current.signal
+        signal: controller.signal
       });
 
       if (stopRequestedRef.current) {
@@ -255,8 +257,12 @@ export function BoardroomChatView() {
         respondingAgents.push(...chainedMentions);
       }
     }
-    generationAbortControllerRef.current = null;
-    setFacilitatorPending(false);
+    } finally {
+      if (generationAbortControllerRef.current === controller) {
+        generationAbortControllerRef.current = null;
+        setFacilitatorPending(false);
+      }
+    }
   }
 
   function handleStop() {

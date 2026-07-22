@@ -11,7 +11,7 @@
 1. [What is Alphonso](#1-what-is-alphonso)
 2. [Getting Started](#2-getting-started)
 3. [Chat Interface](#3-chat-interface)
-4. [Voice OS — Real-Time Voice Pipeline](#4-voice-os--real-time-voice-pipeline)
+4. [Voice OS — Local Voice Pipeline](#4-voice-os--local-voice-pipeline)
 5. [Jose Command System](#5-jose-command-system)
 6. [9 Agents — Who Does What](#6-9-agents--who-does-what)
 7. [Boardroom Orchestrator](#7-boardroom-orchestrator)
@@ -173,7 +173,7 @@ The voice pipeline uses the same 9 agents as the chat interface. Routing is keyw
 The server exposes a health endpoint:
 
 ```bash
-curl http://127.0.0.1:8765/health
+curl http://127.0.0.1:8766/health
 # → {"status": "ok"}
 ```
 

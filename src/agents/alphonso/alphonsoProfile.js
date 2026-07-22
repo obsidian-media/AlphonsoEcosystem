@@ -83,7 +83,7 @@ export const ALPHONSO_PROFILE = {
     'pack.alphonso-api-integration',
     'pack.alphonso-error-handling'
   ],
-  skillFocus: 'Full-Stack Coding + TDD + TypeScript + Rust + React + Python + Code Review + Build Verification + Refactoring + Debugging + Runtime Diagnostics + Security Audit + GitHub Integration + Performance Optimization + API Integration + Error Handling',
+  skillFocus: 'Codex Professional Coding + Full-Stack Coding + TDD + TypeScript + Rust + React + Python + Code Review + Build Verification + Refactoring + Debugging + Runtime Diagnostics + Security Audit + GitHub Integration + Performance Optimization + API Integration + Error Handling',
   exampleTasks: [
     'Generate local setup + build/test checklist for Next.js + Firebase stack.',
     'Produce verification receipts required before release.',

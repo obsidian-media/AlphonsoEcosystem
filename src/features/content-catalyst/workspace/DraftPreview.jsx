@@ -18,13 +18,14 @@ const STEPS = [
   { key: 'publish-preview', label: 'Preview', icon: Eye, accent: true },
 ];
 
-function resolveImagePreview(assets = {}) {
+function resolveImagePreview(assets) {
+  assets = assets || {};
   if (assets.image_preview_base64) return `data:image/png;base64,${assets.image_preview_base64}`;
   if (typeof assets.image_url === 'string' && /^(https?:|data:image\/)/i.test(assets.image_url)) return assets.image_url;
   return null;
 }
 
-export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, imageRuntime, onStartImageRuntime }) {
+export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, imageRuntime, onStartImageRuntime, onRefreshImageRuntime }) {
   if (!activeJob) {
     return (
       <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-8 text-center">
@@ -36,6 +37,12 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
 
   const imagePreview = resolveImagePreview(activeJob.assets);
   const imageRequested = Boolean(activeJob.request?.needs?.image);
+  const narrationText = activeJob.narration?.narration_text || activeJob.draft?.narration;
+  const imageStatusMessage = activeJob.status === 'failed'
+    ? 'PARTIAL — image generation failed. Review the failure and retry the Image production step when the runtime is ready.'
+    : activeJob.status === 'image_ready'
+      ? 'PARTIAL — the job is marked image-ready, but no preview asset was persisted.'
+      : 'PARTIAL — no image asset is available yet for this job.';
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
@@ -69,8 +76,12 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
               />
             ) : imageRequested ? (
               <div className="mt-2 space-y-2 text-xs text-amber-200">
-                <p>No image asset is available yet. {imageRuntime?.message || 'Checking ComfyUI…'}</p>
-                {!imageRuntime?.running && <button type="button" disabled={imageRuntime?.starting || !imageRuntime?.installed} onClick={onStartImageRuntime} className="rounded border border-amber-400/30 px-2 py-1 text-[10px] font-bold uppercase disabled:opacity-40">{imageRuntime?.starting ? 'Starting ComfyUI…' : imageRuntime?.installed ? 'Start ComfyUI' : 'Install ComfyUI in Runtimes'}</button>}
+                <p>{imageStatusMessage} {imageRuntime?.message || 'Checking ComfyUI…'}</p>
+                {!imageRuntime?.checked ? (
+                  <button type="button" onClick={onRefreshImageRuntime} className="rounded border border-amber-400/30 px-2 py-1 text-[10px] font-bold uppercase">Retry runtime check</button>
+                ) : !imageRuntime?.running && (
+                  <button type="button" disabled={imageRuntime?.starting || !imageRuntime?.installed} onClick={onStartImageRuntime} className="rounded border border-amber-400/30 px-2 py-1 text-[10px] font-bold uppercase disabled:opacity-40">{imageRuntime?.starting ? 'Starting ComfyUI…' : imageRuntime?.installed ? 'Start ComfyUI' : 'Install ComfyUI in Runtimes'}</button>
+                )}
               </div>
             ) : (
               <p className="mt-2 text-xs text-[var(--text-4)]">Image generation was not selected for this job.</p>
@@ -80,10 +91,10 @@ export function DraftPreview({ activeJob, busy, onRunStep, onApprovePublish, ima
           <MiniField label="Video URL" value={activeJob.assets?.video_url || 'none'} mono />
         </div>
 
-        {activeJob.narration?.narration_text && (
+        {narrationText && (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
             <div className="text-[9px] uppercase tracking-widest text-[var(--text-4)] font-bold">Narration script</div>
-            <p className="mt-1 whitespace-pre-wrap">{activeJob.narration.narration_text}</p>
+            <p className="mt-1 whitespace-pre-wrap">{narrationText}</p>
           </div>
         )}
 

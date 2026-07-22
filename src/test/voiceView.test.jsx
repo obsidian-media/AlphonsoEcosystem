@@ -71,6 +71,20 @@ describe('VoiceView', () => {
     expect(screen.getByRole('button', { name: /start local voice/i })).toBeDisabled();
   });
 
+  it('requires the managed Voice OS runtime before enabling local start', async () => {
+    const { getVoiceServerStatus } = await import('../services/voiceOsService');
+    const { checkPrerequisites, getAllStatus } = await import('../services/runtimeManagerService');
+    getVoiceServerStatus.mockResolvedValue('stopped');
+    checkPrerequisites.mockResolvedValue({ pythonFound: true });
+    getAllStatus.mockResolvedValue([]);
+
+    const { VoiceView } = await import('../components/VoiceView');
+    render(<VoiceView />);
+
+    expect(await screen.findByText(/needs to be installed in Runtimes/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start local voice/i })).toBeDisabled();
+  });
+
   it('keeps Cloud Voice explicitly pending until physical-device verification', async () => {
     const { getVoiceServerStatus } = await import('../services/voiceOsService');
     getVoiceServerStatus.mockResolvedValue('stopped');

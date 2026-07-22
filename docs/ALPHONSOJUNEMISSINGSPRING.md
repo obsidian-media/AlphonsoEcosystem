@@ -153,7 +153,7 @@ These components are fully implemented and tested but have no navigation entry p
 ## SECTION 5 — Content Generation Pipeline
 
 ### 5.1 ComfyUI image generation not verified
-- **Status:** partial — studio readiness and unavailable-asset states are surfaced; live generation remains unverified
+- **Status:** PARTIAL — studio readiness and unavailable-asset states are surfaced; live generation remains unverified
 - **Effort:** M  
 - **What to do:** `contentCatalystService.js` calls `generateComfyUiImage`. This requires ComfyUI running on port 8188. Test: install ComfyUI from Runtimes, start it, run a content generation from Content Studio, confirm image appears.  
 - **Blocking:** Creative content pipeline.  
@@ -166,9 +166,9 @@ These components are fully implemented and tested but have no navigation entry p
 - **File:** `src/components/ConnectorSetupPanel.jsx`
 
 ### 5.3 Content pipeline error states not surfaced to user
-- **Status:** partial — the active job now shows the real ComfyUI readiness state and no-image condition; a live ComfyUI failure still needs desktop verification
+- **Status:** PARTIAL — the active job now shows the real ComfyUI readiness state and no-image condition; a live ComfyUI failure still needs desktop verification
 - **Effort:** M  
-- **What to do:** `contentCatalystService.js` degrades gracefully — if ComfyUI is down, it skips images and continues. But the user sees a content piece with no image and no explanation. Should surface a warning toast: "Image generation skipped — ComfyUI not running."  
+- **What to do:** Verify live desktop handling when ComfyUI fails during image generation. The active job already shows an in-card PARTIAL status and runtime/no-image explanation; record real failure evidence and refine recovery only if that flow is unclear.
 - **File:** `src/features/content-catalyst/services/contentCatalystService.js`
 
 ---

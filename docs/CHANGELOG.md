@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — 2026-07-21 (skill-pack integration and dependency refresh)
+## [Unreleased] — 2026-07-22 (product readiness and review follow-up)
 
 - **Voice console:** replaced the single opaque start/stop card with local
   runtime, Python, and WebSocket readiness checks; added refreshable state and

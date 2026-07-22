@@ -197,7 +197,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - **Done when:** a compatibility matrix and real-device evidence are linked
     from Ground Truth.
 
-- [~] **D3 — Resolve or explicitly defer Boardroom gaps**
+- [PARTIAL] **D3 — Resolve or explicitly defer Boardroom gaps**
   - **Owner:** Jose; **review:** Maria
   - **Implemented (2026-07-22):** Stop now aborts the active Boardroom Ollama
     request and suppresses its cancelled reply; it still prevents further

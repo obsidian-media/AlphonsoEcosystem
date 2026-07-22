@@ -270,6 +270,7 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         guard let http = response as? HTTPURLResponse else { throw VoiceCloudError.enrollmentFailed }
         guard (200...299).contains(http.statusCode) else {
             throw VoiceCloudError.server(status: http.statusCode, message: Self.serverMessage(from: data))
+        }
     }
 
     private func deviceID() throws -> String {
@@ -281,9 +282,11 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
 
     private static func serverMessage(from data: Data) -> String {
         if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let detail = object["detail"] as? String,
-           !detail.isEmpty {
-            return detail
+           let detail = object["detail"] as? String {
+            let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return String(trimmed.prefix(240))
+            }
         }
         let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return String(text.prefix(240))

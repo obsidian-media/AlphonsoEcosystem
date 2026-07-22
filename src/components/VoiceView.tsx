@@ -88,7 +88,7 @@ export function VoiceView() {
   }
 
   const isRunning = status === 'running';
-  const canStart = pythonFound !== false;
+  const canStart = pythonFound === true && runtime.checked && runtime.installed;
   const localSummary = isRunning
     ? 'The local speech pipeline is running. The Chat microphone can connect to it.'
     : pythonFound === false

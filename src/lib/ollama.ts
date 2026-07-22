@@ -106,7 +106,8 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
   const controller = new AbortController();
   const externalSignal = options.signal;
   const abortForExternalSignal = () => controller.abort(externalSignal?.reason);
-  externalSignal?.addEventListener('abort', abortForExternalSignal, { once: true });
+  if (externalSignal?.aborted) abortForExternalSignal();
+  else externalSignal?.addEventListener('abort', abortForExternalSignal, { once: true });
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {

@@ -62,7 +62,7 @@ test.describe('Content Studio pipeline E2E', () => {
 
   test('Content Studio renders a generated image asset instead of only its metadata', async ({ page }) => {
     await page.evaluate(() => {
-      localStorage.setItem('alphonso_content_catalyst_jobs_v1', JSON.stringify([{
+      globalThis.localStorage.setItem('alphonso_content_catalyst_jobs_v1', JSON.stringify([{
         id: 'e2e-image-job',
         status: 'image_ready',
         currentStep: 'image',
@@ -87,7 +87,7 @@ test.describe('Content Studio pipeline E2E', () => {
 
   test('Content Studio makes a missing image runtime actionable without pretending an asset exists', async ({ page }) => {
     await page.evaluate(() => {
-      localStorage.setItem('alphonso_content_catalyst_jobs_v1', JSON.stringify([{
+      globalThis.localStorage.setItem('alphonso_content_catalyst_jobs_v1', JSON.stringify([{
         id: 'e2e-image-runtime-job',
         status: 'image_pending',
         currentStep: 'image',
