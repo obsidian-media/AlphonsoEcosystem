@@ -105,7 +105,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     `wry`/GTK/WebKit dependencies; it needs an upstream-compatible Tauri/Wry
     upgrade or a formally reviewed platform-scoped disposition.
 
-- [ ] **B2 — Verify connector DSL default-deny behavior**
+- [x] **B2 — Verify connector DSL default-deny behavior**
   - **Owner:** Sentinel; **review:** Maria
   - Reconcile the documented DSL status with code, then ensure unknown,
     malformed, paid, and irreversible actions deny unless explicitly allowed.
@@ -113,6 +113,10 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     contract enforcement.
   - **Done when:** code, tests, AGENTS, architecture docs, and Ground Truth
     agree on a fail-closed model.
+  - **Evidence:** 2026-07-22 code review confirmed `evaluateAction()` returns
+    `deny` for unmatched rules and `gateConnectorAction()` blocks both `deny`
+    and unapproved `require_consent` results before the main gate. Focused
+    `policyDslService` and connector-registry tests passed: 2 files / 31 tests.
 
 - [ ] **B3 — Complete credential-at-rest hardening**
   - **Owner:** Sentinel; **execution:** Alphonso

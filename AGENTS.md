@@ -77,7 +77,7 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 | Nova | Scoring, analysis, opportunity prioritization | Analysis only | Cached analytics | **17 skill packs**: Opportunity Analysis, Market Analysis, Prioritization Matrix, Risk-Reward Assessment, Timing Analysis, Effort Estimation, Strategic Alignment, Growth Analysis, Competitive Intelligence, Value Scoring, Resource Optimization, Scenario Modeling, Decision Support, Capability Assessment, Trend Forecasting, Portfolio Analysis, Recommendation Engine |
 
 ## Key Architecture Rules
-- **policyEnforcementService.ts** is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors); note the connector DSL layer (`policyDslService.ts`) still has a documented default-allow gap for some connector action types (see audit report). Every outbound connector call goes through this gate.
+- **policyEnforcementService.ts** is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors). The supplemental connector DSL (`policyDslService.ts`) is default-deny: unmatched actions deny and costly/irreversible actions require explicit consent. Every outbound connector call goes through the connector gate.
 - **licenseService.ts** — license tier validation (Free/Pro/Enterprise) gates premium connectors
 - **agentContractService.ts** enforces per-agent allowed/blocked action prefixes
 - **parallelExecutionService.ts** — parallel task execution with concurrency control and retry

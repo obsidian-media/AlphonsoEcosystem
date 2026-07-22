@@ -16,6 +16,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Cloud Voice dependency security:** upgraded development-only `pytest` from
   8.3.3 to 9.0.3 (the first patched release for Dependabot #4); the isolated
   Cloud Voice suite passes 12 tests under pytest 9.0.3.
+- **Policy documentation correction:** verified the connector DSL is
+  default-deny for unmatched actions and requires explicit consent for
+  costly/irreversible actions; removed the stale default-allow warning from
+  AGENTS. Focused policy tests: 31 passing.
 
 - Integrated the all-agent skill-pack branch and refreshed `package-lock.json` and
   `Cargo.lock` within the existing manifest ranges. The Rust lock refresh includes
