@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-07-21 (skill-pack integration and dependency refresh)
 
+- **Voice console:** replaced the single opaque start/stop card with local
+  runtime, Python, and WebSocket readiness checks; added refreshable state and
+  a clear local start/stop path. Cloud Voice is explicitly shown as pending
+  physical-device verification rather than represented as ready.
 - **Content Studio creation room:** reframed the workspace around the real
   brief-to-asset production loop, with live ComfyUI readiness, an in-place
   start action when the runtime is installed, and an explicit setup state when

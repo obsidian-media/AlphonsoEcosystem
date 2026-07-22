@@ -100,15 +100,19 @@ After agent execution, you'll see a **Pipeline Result Card** showing:
 
 ---
 
-## 4. Voice OS — Real-Time Voice Pipeline
+## 4. Voice OS — Local Voice Pipeline
 
-Alphonso includes a full real-time voice pipeline that lets you speak naturally and receive spoken responses. It runs as a Python microservice (`voice/backend/`) launched from the **Runtime Manager**.
+Alphonso's desktop Voice console shows the real readiness of the local voice
+pipeline: the managed Voice OS runtime, Python, and the local WebSocket
+service. It runs as a Python microservice (`voice/backend/`) launched from
+**Runtimes**. A running process is not proof that a microphone-to-audio reply
+has been verified; use the Chat microphone to make that check.
 
 ### How It Works
 
 ```
 Microphone (AudioWorklet PCM)
-  → WebSocket → FastAPI voice server (port 8765)
+  → WebSocket → FastAPI voice server (port 8766)
   → VAD gate (webrtcvad — discards silence)
   → STT (faster-whisper, CPU, int8)
   → Agent routing (9-agent regex patterns)
@@ -120,16 +124,16 @@ Microphone (AudioWorklet PCM)
 ### Starting the Voice Server
 
 **From Runtime Manager (recommended):**
-1. Open Alphonso → Runtime Manager
+1. Open Alphonso → **Voice** to review readiness, or **Runtimes** to install the managed runtime
 2. Find the **Voice OS** entry
-3. Click **Start** — the server launches on `ws://127.0.0.1:8765`
+3. Click **Start local voice** in Voice, or **Start** in Runtimes — the server launches on `ws://127.0.0.1:8766`
 
 **From terminal (development):**
 ```bash
 cd voice/backend
 python -m venv .venv && .venv\Scripts\activate
 pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 8765
+python -m uvicorn main:app --host 127.0.0.1 --port 8766
 ```
 
 ### Using Voice in Chat
@@ -141,6 +145,12 @@ Once the Voice OS server is running:
 3. Alphonso transcribes, routes to the appropriate agent, generates a response, and plays it back
 4. **Barge in** at any time by speaking — the current response will be cancelled immediately
 5. Click **Stop** to end the voice session; click **Reset** to clear the conversation history
+
+### Cloud Voice companion
+
+Cloud Voice is separate from desktop Voice OS. It requires a paired, enrolled
+iPhone plus a real request/reply audio check. The Voice console deliberately
+marks it as pending until that physical-device verification has been recorded.
 
 ### Voice Agent Routing
 

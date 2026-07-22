@@ -33,9 +33,9 @@ Each item has:
 - **File:** `src-tauri/src/runtime_manager.rs:988–1004`
 
 ### 1.3 Voice OS has no health check
-- **Status:** cut  
+- **Status:** complete — `/health` is exposed and Runtime Hub checks it on port 8766
 - **Effort:** S  
-- **What to do:** `health_path: None` means "running" is detected only by PID, not by actually hitting port 8765. If the Python process crashes silently (bad model, OOM), the UI shows "running" forever. Fix: add a health endpoint to `voice/backend/main.py` at `/health` and set `health_path: Some("/health")` in Rust.  
+- **What was done:** `voice/backend/main.py` exposes `/health`, and the `voice-os` Runtime Hub definition checks it on port 8766. Keep the live desktop health check in the release-verification baseline.
 - **File:** `voice/backend/main.py`, `src-tauri/src/runtime_manager.rs:177`
 
 ### 1.4 Piper TTS model not downloaded automatically
