@@ -6,6 +6,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-21 (skill-pack integration and dependency refresh)
+
+- Integrated the all-agent skill-pack branch and refreshed `package-lock.json` and
+  `Cargo.lock` within the existing manifest ranges. The Rust lock refresh includes
+  Tauri 2.11.5 and compatible ecosystem updates.
+- Corrected the documented Vitest file count to 249 and ignored the local Claude
+  settings file.
+- **PARTIAL:** the merged skill-pack suite currently has registry/profile and
+  permission-contract expectation mismatches. Do not label the skill-pack work
+  test-clean until those tests are reconciled; the full Vitest run also hit the
+  repository's existing startup timeout before test execution.
+
 ## [Unreleased] — 2026-07-16 (production-readiness execution — Cycle 3)
 
 - **Persistence — durable backup is now recoverable + versioned (T11):** the

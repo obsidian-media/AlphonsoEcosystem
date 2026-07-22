@@ -1,5 +1,5 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-14 — v2.6.0 (voice/mobile doc reconciliation + branch review; no version bump)
+**Last verified:** 2026-07-21 — v2.6.0 (skill-pack integration and dependency-lock refresh; no version bump)
 **Verified by:** Claude Code session — reconciled the root docs against recent voice/mobile commits already on `main` (desktop Voice OS, iOS companion Voice tab, cloud voice, Farsi routing, Supabase device enrollment), reviewed branch `sprint-5-kilo-cli` for PR readiness against current `main`, and corrected the failing README Rust test count so `npm run verify:docs` passes on `main`. Full details: sections 11.19 and 11.20.
 **Version:** 2.6.0 (unchanged — no release cut; this pass verified current docs against recent `main` history and branch state rather than running the full app/build matrix)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
@@ -173,7 +173,7 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 226 Files in `src/test/` (not zero)
+## 4. Test Suite — 249 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 

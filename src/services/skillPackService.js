@@ -3351,7 +3351,9 @@ const SKILL_WORKFLOW_GUIDANCE = {
 
 export function loadAgentSkillGuidance(agentName) {
   const packs = listSkillPacks().filter((p) => p.enabled);
-  const agentPacks = packs.filter((p) => p.ownerAgent === agentName || p.category === 'agent_workflow');
+  // Guidance is agent-specific. Shared workflow packs are available through
+  // their explicit workflow path and must not inflate every agent's pack list.
+  const agentPacks = packs.filter((p) => p.ownerAgent === agentName);
   const guidance = [];
   const activeSteps = [];
 
