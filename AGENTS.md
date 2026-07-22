@@ -93,6 +93,13 @@ Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.
 
+## Mandatory Work Queue
+Before starting maintenance, security, dependency, release, agent-contract, iOS,
+voice, or documentation work, read and update
+[`docs/TRUTH_FIRST_EXECUTION_PLAN.md`](docs/TRUTH_FIRST_EXECUTION_PLAN.md).
+Use its checkboxes and evidence rules; do not mark work complete without the
+required verification evidence.
+
 ## Version Rules
 - v0.1.0: local install/build/test/release pipeline works
 - v1.0.0: publicly installable + runtime proof — achieved

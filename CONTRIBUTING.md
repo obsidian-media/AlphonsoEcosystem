@@ -2,6 +2,15 @@
 
 Thank you for your interest in contributing to Alphonso! This guide will help you get started.
 
+## Required readiness tracking
+
+Before beginning maintenance, security, dependency, release, agent-contract,
+iOS, voice, or documentation work, read
+[`docs/TRUTH_FIRST_EXECUTION_PLAN.md`](docs/TRUTH_FIRST_EXECUTION_PLAN.md) with
+the [Ground Truth](docs/ALPHONSO_GROUND_TRUTH.md). Choose an unchecked task,
+mark it in progress, and only check it off when its stated verification evidence
+has been recorded.
+
 ## Development Setup
 
 ### Prerequisites

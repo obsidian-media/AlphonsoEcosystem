@@ -13,10 +13,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   Tauri 2.11.5 and compatible ecosystem updates.
 - Corrected the documented Vitest file count to 249 and ignored the local Claude
   settings file.
-- **PARTIAL:** the merged skill-pack suite currently has registry/profile and
-  permission-contract expectation mismatches. Do not label the skill-pack work
-  test-clean until those tests are reconciled; the full Vitest run also hit the
-  repository's existing startup timeout before test execution.
+- **Skill-pack contract reconciliation:** resolved registry/profile and
+  permission-contract mismatches in `28b2ee2`; the targeted suite passed 18
+  files / 146 tests. The full Vitest suite remains unverified due to the
+  repository's worker-startup timeout; see
+  [TRUTH_FIRST_EXECUTION_PLAN.md](TRUTH_FIRST_EXECUTION_PLAN.md) for the active
+  verification backlog and evidence rules.
 
 ## [Unreleased] — 2026-07-16 (production-readiness execution — Cycle 3)
 

@@ -1,5 +1,10 @@
 # Alphonso Architecture
 
+> **Execution status:** Architecture describes intended and implemented design;
+> it is not proof of release readiness. For active remediation tasks and required
+> evidence, read [docs/TRUTH_FIRST_EXECUTION_PLAN.md](docs/TRUTH_FIRST_EXECUTION_PLAN.md)
+> with [Ground Truth](docs/ALPHONSO_GROUND_TRUTH.md).
+
 ## Overview
 
 Alphonso is a local-first AI companion desktop application built with Tauri v2 (Rust backend + React frontend). It runs entirely on the user's machine with no cloud dependency for core operation. A 9-agent multi-agent system handles intake, orchestration, research, creative generation, governance, distribution, memory, security, and analysis — all coordinated through a durable Jose orchestration pipeline and a centralized policy enforcement layer. The JS `policyEnforcementService.ts` is fail-closed on missing credentials and Zero-Cost Mode (blocks paid connectors). The supplemental connector DSL (`policyDslService.ts`) is default-deny; it currently applies to the registry image-dispatch path in addition to the primary gate.

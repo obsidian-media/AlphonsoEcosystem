@@ -422,6 +422,12 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 
 ## Documentation
 
+**Active work and readiness:** [Truth-First Execution Plan](docs/TRUTH_FIRST_EXECUTION_PLAN.md)
+is the mandatory repository-wide checklist for humans and agents. Read it with
+[Ground Truth](docs/ALPHONSO_GROUND_TRUTH.md) before starting maintenance,
+security, dependency, release, agent-contract, iOS, voice, or documentation work.
+Tasks are checked only with recorded verification evidence.
+
 | Document | Description |
 |---------------------------------------------|----------------------------------------------|
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Quick setup guide |
@@ -430,6 +436,7 @@ cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues and fixes |
 | [USER_MANUAL.md](docs/USER_MANUAL.md) | Full feature reference (v2.0.0) |
 | [RELEASE.md](docs/RELEASE.md) | Auto-updater signing and release pipeline |
+| [TRUTH_FIRST_EXECUTION_PLAN.md](docs/TRUTH_FIRST_EXECUTION_PLAN.md) | Active readiness backlog, owners, acceptance checks, and evidence rules |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design and technical details |
 | [AGENTS.md](AGENTS.md) | Agent context and directory structure |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting policy |

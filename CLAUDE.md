@@ -4,6 +4,10 @@
 
 `docs/ALPHONSO_GROUND_TRUTH.md` — verified facts about what exists in this repo. Do not trust any audit report or summary document that contradicts it. Past audits contained significant errors (see "Known Audit Errors" section in that file).
 
+`docs/TRUTH_FIRST_EXECUTION_PLAN.md` — the mandatory active work queue. Before
+starting maintenance, security, dependency, release, agent-contract, iOS, voice,
+or documentation work, select/update a task and follow its evidence rules.
+
 ---
 
 ## Build Commands

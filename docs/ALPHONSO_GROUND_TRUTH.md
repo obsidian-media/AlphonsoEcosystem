@@ -18,6 +18,14 @@ This file must be updated whenever:
 
 Do not trust any audit report, progress summary, or parallel-agent brief that has not been checked against this file. Past audits have contained significant errors (see "Known Audit Errors" section at the bottom).
 
+## Active execution queue
+
+[`TRUTH_FIRST_EXECUTION_PLAN.md`](TRUTH_FIRST_EXECUTION_PLAN.md) is the
+repository-wide remediation backlog. Every human and agent must read it before
+starting maintenance, security, dependency, release, agent-contract, iOS, voice,
+or documentation work. Update its checkbox and evidence record with this file in
+the same change; no task is complete without the plan's stated verification.
+
 ---
 
 ## 1. Project Identity

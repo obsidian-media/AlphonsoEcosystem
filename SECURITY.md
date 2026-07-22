@@ -1,5 +1,12 @@
 # Security Policy
 
+## Active security work
+
+Security remediation is tracked in the mandatory
+[Truth-First Execution Plan](docs/TRUTH_FIRST_EXECUTION_PLAN.md). Contributors
+and agents must use its evidence rules and update the relevant security task
+before marking any hardening work complete.
+
 ## Reporting a Vulnerability
 
 Alphonso is closed-source (SHALAUDE v1.0 license) with a small maintainer
