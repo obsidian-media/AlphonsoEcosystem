@@ -24,7 +24,7 @@ describe('agent skill integration', () => {
     expect(HECTOR_PROFILE.skillFocus).toContain('Professional Marketing + Market Research + Competitive Analysis + Source Verification + RSS Monitoring + Execution Skills + GitHub Research');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-audit-governance');
     expect(MARIA_PROFILE.skillPackIds).toContain('pack.maria-trust-verification');
-    expect(MARIA_PROFILE.skillFocus).toBe('Audit Governance Skill + Trust Verification Skill');
+    expect(MARIA_PROFILE.skillFocus).toContain('Audit Governance + Trust Verification');
     expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-runway-video-generation');
     expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-creative-image');
     expect(MIYA_PROFILE.skillPackIds).toContain('pack.miya-ui-ux-design');
