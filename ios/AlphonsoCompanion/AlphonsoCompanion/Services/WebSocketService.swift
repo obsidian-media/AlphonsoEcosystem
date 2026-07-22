@@ -15,6 +15,8 @@ class WebSocketService: ObservableObject {
     @Published var lastSuccessfulConnectionAt: Date?
     @Published var lastMessageReceivedAt: Date?
     @Published var lastBoardroomRefreshAt: Date?
+    @Published private(set) var operationsSnapshot = OperationsSnapshot.empty
+    @Published private(set) var lastOperationsRefreshAt: Date?
     @Published var connectionHint: String?
 
     private var webSocketTask: URLSessionWebSocketTask?
@@ -108,6 +110,18 @@ class WebSocketService: ObservableObject {
         ])
     }
 
+    func refreshOperations() {
+        guard connectionState == .authenticated else {
+            connectionHint = "Operations are available after pairing completes"
+            return
+        }
+        sendJSONMessage([
+            "id": "operations",
+            "method": "get_operations",
+            "params": [String: Any](),
+        ])
+    }
+
     func abortCommand(commandId: String) {
         sendJSONMessage([
             "id": "abort",
@@ -197,8 +211,14 @@ class WebSocketService: ObservableObject {
                 connectionMachine.markAuthenticated()
                 connectionState = connectionMachine.connectionState
                 recordSuccessfulConnection()
+                getStatus()
+                refreshOperations()
             } else if result["goals"] != nil {
                 parseBoardroomResponse(result)
+            } else if let snapshot = OperationsSnapshot(dictionary: result) {
+                operationsSnapshot = snapshot
+                lastOperationsRefreshAt = Date()
+                connectionHint = "Operations refreshed"
             }
         }
     }
