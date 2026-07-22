@@ -66,7 +66,7 @@ If Ollama is not running, Alphonso will show a preflight warning. To start Ollam
 ```powershell
 $env:OLLAMA_ORIGINS="*"
 ollama serve
-```
+```text
 
 ---
 
@@ -131,7 +131,7 @@ Microphone (AudioWorklet PCM)
 **From terminal (development):**
 ```bash
 cd voice/backend
-python -m venv .venv && .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m uvicorn main:app --host 127.0.0.1 --port 8766
 ```

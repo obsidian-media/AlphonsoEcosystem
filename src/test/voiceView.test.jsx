@@ -15,8 +15,11 @@ vi.mock('../services/runtimeManagerService', () => ({
 }));
 
 describe('VoiceView', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { checkPrerequisites, getAllStatus } = await import('../services/runtimeManagerService');
+    checkPrerequisites.mockResolvedValue({ pythonFound: true });
+    getAllStatus.mockResolvedValue([{ name: 'voice-os', installed: true, running: false }]);
   });
 
   it('shows stopped status with a Start button when the voice server is not running', async () => {
@@ -81,7 +84,7 @@ describe('VoiceView', () => {
     const { VoiceView } = await import('../components/VoiceView');
     render(<VoiceView />);
 
-    expect(await screen.findByText(/needs to be installed in Runtimes/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Install Voice OS from Runtimes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start local voice/i })).toBeDisabled();
   });
 

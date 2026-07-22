@@ -116,10 +116,13 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
   const analytics = useMemo(() => getContentAnalyticsSnapshot(), [jobs]);
   const trendSuggestions = useMemo(() => getTrendResearchSuggestions(brandProfile, drafts), [brandProfile, drafts]);
   const bridgeResponse = activeJob ? createContentBridgeResponse(activeJob) : null;
+  const hasImagePreview = Boolean(activeJob?.assets?.image_url || activeJob?.assets?.image_preview_base64);
   const creativeState = activeJob?.status === 'failed'
     ? 'Needs attention'
-    : activeJob?.assets?.image_url || activeJob?.assets?.image_preview_base64
+    : hasImagePreview
       ? 'Asset ready'
+      : activeJob?.status === 'image_ready'
+        ? 'Needs attention'
       : activeJob ? 'In creation' : 'Ready to create';
 
   const refresh = (nextActiveId = activeJobId) => {
