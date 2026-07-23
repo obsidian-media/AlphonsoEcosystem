@@ -203,7 +203,11 @@ async function testConnector(connectorId: string): Promise<TestResult> {
   }
 
   if (connectorId === 'mobile_bridge') {
-    return { ok: true, message: 'Local only — no key required' };
+    return checkConnectorHealth('mobile_bridge');
+  }
+
+  if (['github', 'slack', 'discord', 'generic_webhook', 'n8n', 'brave_search', 'perplexity', 'tavily', 'deepseek'].includes(connectorId)) {
+    return checkConnectorHealth(connectorId);
   }
 
   const envKey = CONNECTOR_VITE_ENV_KEYS[connectorId];

@@ -67,10 +67,10 @@ export const DEFAULT_CONNECTORS = [
     id: 'mobile_bridge',
     name: 'Mobile Bridge',
     status: 'foundation_only',
-    transport: 'future_secure_local_relay',
+    transport: 'companion_websocket_pin_paired',
     requiredEnv: [],
     permissions: ['remote_approvals', 'runtime_status', 'active_tasks', 'voice_notes'],
-    disabledReason: 'Mobile transport is not implemented yet.'
+    disabledReason: 'Requires the Companion pairing server running locally (port 8765) and at least one paired device. Pair from Settings → Companion.'
   },
   {
     id: 'chatgpt',
