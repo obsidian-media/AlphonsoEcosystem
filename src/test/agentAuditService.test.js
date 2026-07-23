@@ -15,6 +15,24 @@ describe('agentAuditService', () => {
       expect(log[0].action).toBe('publish_post');
       expect(log[0].outcome).toBe('approved');
       expect(typeof log[0].timestamp).toBe('number');
+      expect(log[0].riskLevel).toBeUndefined();
+      expect(log[0].mariaScore).toBeUndefined();
+    });
+
+    it('stores optional riskLevel and mariaScore when provided', () => {
+      logApprovalEvent('pkt-2', 'maria', 'audit_run', 'approved', 'high', 85);
+      const log = getAuditLog();
+      expect(log.length).toBe(1);
+      expect(log[0].riskLevel).toBe('high');
+      expect(log[0].mariaScore).toBe(85);
+    });
+
+    it('stores null mariaScore explicitly', () => {
+      logApprovalEvent('pkt-3', 'sentinel', 'scan', 'denied', 'critical', null);
+      const log = getAuditLog();
+      expect(log.length).toBe(1);
+      expect(log[0].riskLevel).toBe('critical');
+      expect(log[0].mariaScore).toBeNull();
     });
 
     it('appends multiple events in insertion order', () => {

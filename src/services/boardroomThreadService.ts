@@ -1,7 +1,7 @@
 import { redactMissionRoomSecrets, classifyMissionRoomRisk } from './missionRoomService';
 
-const THREADS_KEY = 'alphonso_boardroom_threads_v2';
-const MESSAGES_KEY = 'alphonso_boardroom_thread_messages_v2';
+export const THREADS_KEY = 'alphonso_boardroom_threads_v2';
+export const MESSAGES_KEY = 'alphonso_boardroom_thread_messages_v2';
 
 export interface BoardroomThread {
   id: string;

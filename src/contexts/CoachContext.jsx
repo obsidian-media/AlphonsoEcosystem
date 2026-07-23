@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { openCoachWindow, closeCoachWindow } from '../services/coachModeService';
-import { recordCoachInterventionAction, buildDemoSlotIntervention, getLatestSessionGuardBridgeIntervention } from '../services/coachInterventionService';
+import { recordCoachInterventionAction, buildDemoIntervention, getLatestCoachEngineIntervention, subscribeCoachEngine } from '../services/coachInterventionService';
+import { runCoachDetectors, getCoachMessageStyle } from '../services/coachEngineService';
 import { COACH_LAYOUT_KEY, COACH_CORNERS, COACH_PAUSE_MS } from '../constants/appConstants';
 import { getStorage } from '../lib/appStorage';
 import { useSettings } from './SettingsContext';
@@ -19,8 +20,47 @@ export function CoachProvider({ children }) {
     const layout = getStorage(COACH_LAYOUT_KEY, { mini: false, corner: 'bottom-right' });
     return COACH_CORNERS.includes(layout?.corner) ? layout.corner : 'bottom-right';
   });
-  const [coachIntervention, setCoachIntervention] = useState(() => getLatestSessionGuardBridgeIntervention());
+  const [coachIntervention, setCoachIntervention] = useState(() => getLatestCoachEngineIntervention());
   const [coachPauseUntilMs, setCoachPauseUntilMs] = useState(0);
+  const detectorIntervalRef = useRef(null);
+
+  useEffect(() => {
+    const runDetectors = () => {
+      const signal = runCoachDetectors(getCoachMessageStyle());
+      if (signal) {
+        setCoachIntervention({
+          id: signal.id,
+          source: 'coach-engine',
+          sessionType: 'alphonso-session',
+          type: signal.id,
+          level: signal.severity === 'critical' ? 'hard' : signal.severity === 'warning' ? 'firm' : 'quiet',
+          title: signal.severity === 'critical' ? 'Hard pause recommended' : signal.severity === 'warning' ? 'Coach check-in' : 'Quiet nudge',
+          message: signal.message,
+          rawMessage: signal.message,
+          metrics: { spinCount: 0, netResult: 0, longestLosingStretch: 0, elapsedMinutes: 0 },
+          timestampMs: signal.detectedAtMs,
+          localOnly: true,
+          actions: signal.severity === 'critical'
+            ? ['pause_60_seconds', 'end_session', 'continue_anyway']
+            : signal.severity === 'warning'
+              ? ['pause_60_seconds', 'continue']
+              : ['continue']
+        });
+      }
+    };
+
+    runDetectors();
+    detectorIntervalRef.current = window.setInterval(runDetectors, 120_000);
+
+    const unsubscribe = subscribeCoachEngine((event) => {
+      if (event?.intervention) setCoachIntervention(event.intervention);
+    });
+
+    return () => {
+      if (detectorIntervalRef.current) window.clearInterval(detectorIntervalRef.current);
+      unsubscribe();
+    };
+  }, []);
 
   const handleToggleCoachMode = useCallback(async () => {
     if (coachMode) {
@@ -108,7 +148,7 @@ export function CoachProvider({ children }) {
     }
   }, [coachAlwaysOnTop]);
 
-  const showDemoIntervention = useCallback(() => setCoachIntervention(buildDemoSlotIntervention()), []);
+  const showDemoIntervention = useCallback(() => setCoachIntervention(buildDemoIntervention()), []);
 
   const value = useMemo(() => ({
     coachMode, setCoachMode,

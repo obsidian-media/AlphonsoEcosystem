@@ -1,5 +1,5 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-21 — v2.6.0 (skill-pack integration and dependency-lock refresh; no version bump)
+**Last verified:** 2026-07-23 — v2.6.1 (Session Coach Phase 3: 3 configurable message styles per detector — direct/balanced/gentle; 33 hand-written message variants, 3,619 tests; no version bump)
 **Verified by:** Claude Code session — reconciled the root docs against recent voice/mobile commits already on `main` (desktop Voice OS, iOS companion Voice tab, cloud voice, Farsi routing, Supabase device enrollment), reviewed branch `sprint-5-kilo-cli` for PR readiness against current `main`, and corrected the failing README Rust test count so `npm run verify:docs` passes on `main`. Full details: sections 11.19 and 11.20.
 **Version:** 2.6.0 (unchanged — no release cut; this pass verified current docs against recent `main` history and branch state rather than running the full app/build matrix)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.
@@ -65,7 +65,7 @@ Every agent has a profile, permissions file, and schema in `src/agents/`. All 9 
 
 ---
 
-## 3. Service Layer — ~168 Services in `src/services/`
+## 3. Service Layer — ~169 Services in `src/services/`
 
 Key services that past audits missed or underestimated:
 
@@ -181,12 +181,12 @@ Key services that past audits missed or underestimated:
 
 ---
 
-## 4. Test Suite — 249 Files in `src/test/` (not zero)
+## 4. Test Suite — 250 Files in `src/test/` (not zero)
 
 The test suite exists and is substantial. Any agent or audit that says "no test suite" or "zero coverage" is wrong.
 
 **Test files (verified 2026-06-30 v2.5.0, all passing):**
-- 218 test files, 3174 tests passing (re-verified in isolation 2026-07-02; +7 tests added for onboarding wizard approval-mode/advanced-services steps)
+- 250 test files, 3590 tests passing (re-verified in isolation 2026-07-02; +7 tests added for onboarding wizard approval-mode/advanced-services steps)
 - 94 Rust unit tests total (`cargo test` in src-tauri/): 91 passing, 3 known pre-existing failures unrelated to any recent change — tracked in `todo.md` (`runtime_manager::tests::all_tools_have_unique_ports`, `runtime_manager::tests::autostart_prefs_defaults_ollama_only`, `workspace::tests::absolute_path_detected`). Re-verified in isolation 2026-07-02; count grew from the historical "14" figure as more modules gained test coverage over time — that figure is stale, do not cite it as current.
 - 22+ new test files added in Batch 2 (feat/batch2-testing-completeness)
 ```
@@ -2025,6 +2025,7 @@ User asked to proceed with T4 and to make sure the repo-root audit doc `14.07.20
 **`14.07.2026CurrentStateofRepo.md` trust caveat:** added an explicit warning banner at the top of the file itself (not just referenced from elsewhere) stating it is a frozen 2026-07-14 snapshot, pointing to this file's own §12 "Known Audit Errors" and to `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` (which already opens by saying it independently re-verified this report's claims rather than trusting them), and stating plainly that no single document is ground truth — code + `ALPHONSO_GROUND_TRUTH.md` + `CLAUDE.md` + `CHANGELOG.md` together are, and when those disagree or leave a gap, the answer is to ask the user, not to guess which doc is more current. Also added a corresponding row to this file's own §12 table so a reader who reaches §12 first (rather than opening the root file first) still learns about it.
 
 **What's still open:** roadmap tasks T11–T20 (secret-scan triage, branch protection enablement, persistence schema, connector-DSL fail-open default, OS-keychain credentials, `lib.rs` split, live auto-updater/iOS-pairing verification, sidecar observability, service-role-key blast radius, doc-drift auto-generation, multi-agent budgets) are **not started** — full detail in `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6, which itself was updated same-pass to record the merge and mark T1/T2/T5/T6 done, T10 partial. CLAUDE.md's Real Gaps list and TODO §11 below were updated to point at the same roadmap doc rather than duplicating the full task list inline, so it can't drift out of sync across two places.
+
 
 
 
