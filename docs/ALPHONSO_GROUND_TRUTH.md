@@ -1,5 +1,5 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-07-23 — v2.6.1 (Session Coach Phase 2: 4 new detectors — agent_whiplash, boardroom_hedge_pileup, unused_surface_area, license_wall; 11 detectors total, 3,611 tests; no version bump)
+**Last verified:** 2026-07-23 — v2.6.1 (Session Coach Phase 3: 3 configurable message styles per detector — direct/balanced/gentle; 33 hand-written message variants, 3,619 tests; no version bump)
 **Verified by:** Claude Code session — reconciled the root docs against recent voice/mobile commits already on `main` (desktop Voice OS, iOS companion Voice tab, cloud voice, Farsi routing, Supabase device enrollment), reviewed branch `sprint-5-kilo-cli` for PR readiness against current `main`, and corrected the failing README Rust test count so `npm run verify:docs` passes on `main`. Full details: sections 11.19 and 11.20.
 **Version:** 2.6.0 (unchanged — no release cut; this pass verified current docs against recent `main` history and branch state rather than running the full app/build matrix)
 **Purpose:** Single source of truth for any agent, Claude session, or human operator starting fresh. Read this before reading any other document. If this file conflicts with an audit report or summary doc, trust this file and update the other.

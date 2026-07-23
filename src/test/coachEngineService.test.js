@@ -12,7 +12,11 @@ import {
   detectUnusedSurfaceArea,
   detectLicenseWall,
   runCoachDetectors,
-  resetCoachCooldowns
+  resetCoachCooldowns,
+  getCoachMessageStyle,
+  setCoachMessageStyle,
+  COACH_STYLE_KEY,
+  MessageStyle
 } from '../services/coachEngineService';
 import { logApprovalEvent, clearAuditLog, getAuditLog } from '../services/agentAuditService';
 import { getDeadLetterCount, getOldestDeadLetterTimestamp } from '../services/orchestrationQueueService';
@@ -34,6 +38,7 @@ function clearAllCoachData() {
   localStorage.removeItem('alphonso_boardroom_threads_v2');
   localStorage.removeItem('alphonso_boardroom_thread_messages_v2');
   localStorage.removeItem('alphonso_skill_pack_invocation_v1');
+  localStorage.removeItem(COACH_STYLE_KEY);
 }
 
 beforeEach(() => {
@@ -677,6 +682,77 @@ describe('coachEngineService', () => {
       ]));
       const signal = runCoachDetectors();
       expect(signal).not.toBeNull();
+    });
+  });
+
+  // ── Phase 3: Message style variants ────────────────────────────────────
+
+  describe('getCoachMessageStyle / setCoachMessageStyle', () => {
+    it('defaults to balanced when no style stored', () => {
+      localStorage.removeItem(COACH_STYLE_KEY);
+      expect(getCoachMessageStyle()).toBe('balanced');
+    });
+
+    it('returns stored style', () => {
+      setCoachMessageStyle('direct');
+      expect(getCoachMessageStyle()).toBe('direct');
+    });
+
+    it('returns stored gentle style', () => {
+      setCoachMessageStyle('gentle');
+      expect(getCoachMessageStyle()).toBe('gentle');
+    });
+  });
+
+  describe('message style variants', () => {
+    beforeEach(() => {
+      const ts = new Date();
+      ts.setHours(2, 0, 0, 0);
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{
+        packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85
+      }]));
+    });
+
+    it('detectLateNightApproval returns direct message when style=direct', () => {
+      const signal = detectLateNightApproval('direct');
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain('Review it again');
+    });
+
+    it('detectLateNightApproval returns balanced message when style=balanced', () => {
+      const signal = detectLateNightApproval('balanced');
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain('No judgment');
+    });
+
+    it('detectLateNightApproval returns gentle message when style=gentle', () => {
+      const signal = detectLateNightApproval('gentle');
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain('Just a heads-up');
+    });
+  });
+
+  describe('runCoachDetectors with style parameter', () => {
+    it('passes style to detectors and returns styled message', () => {
+      const ts = new Date();
+      ts.setHours(2, 0, 0, 0);
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{
+        packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85
+      }]));
+      const signal = runCoachDetectors('gentle');
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain('Just a heads-up');
+    });
+
+    it('defaults to balanced style when no argument', () => {
+      const ts = new Date();
+      ts.setHours(2, 0, 0, 0);
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{
+        packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85
+      }]));
+      const signal = runCoachDetectors();
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain('No judgment');
     });
   });
 });

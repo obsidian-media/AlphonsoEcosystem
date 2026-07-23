@@ -13,4 +13,12 @@
 - [x] **All 3611 tests pass**, lint clean, tsc clean.
 - [x] **Phase 1→2 ordering**: Both phases are in this branch. `coachInterventionService.ts` Phase 2 event types were added as new entries to the existing `COACH_ENGINE_EVENT_TYPES` map — they do not rename or remove Phase 1 entries, so merging is safe regardless of order.
 
+### CLOSED — 2026-07-23 (Session Coach Phase 3 implementation — same day, after Phase 2)
+- [x] **3 configurable message styles per detector** (`direct`/`balanced`/`gentle`) — all 11 detectors across Phase 1+2 now accept an optional `style: MessageStyle` parameter.
+- [x] **33 hand-written message variants** — not auto-generated from templates. Every trigger reads as if written for that tone.
+- [x] **Persistence layer**: `getCoachMessageStyle()`/`setCoachMessageStyle()` via `COACH_STYLE_KEY` localStorage key; defaults to `balanced`.
+- [x] **Wiring**: `CoachContext.jsx` passes `getCoachMessageStyle()` to `runCoachDetectors()` on every interval tick.
+- [x] **8 new tests** for style getter/setter, per-style message content verification, and `runCoachDetectors` style passthrough.
+- [x] **All 3619 tests pass**, lint clean, tsc clean.
+
 ### CLOSED — 2026-07-02 (User-reported bug batch, post-audit Phase 1)
