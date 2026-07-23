@@ -12,74 +12,66 @@ struct PairingView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            CompanionPage {
+                PairingHero(
+                    state: webSocketService.connectionState,
+                    selectedTarget: selectedTarget
+                )
+                CompanionRule()
+
+                CompanionSectionHeader("Find your desktop", detail: "Bonjour discovery stays local to your network.")
+
                 HostListView(
                     hosts: mdnsService.discovered,
                     selectedHost: $selectedHost
                 )
 
-                Button("Enter IP Manually") {
+                CompanionActionButton("Enter desktop address") {
                     selectedHost = nil
                     showingManualEntry = true
                 }
-                .foregroundColor(.accentColor)
-                .padding(.horizontal)
-                .padding(.top, 8)
 
                 if !webSocketService.recentEndpoints.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Recent connections")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal)
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(webSocketService.recentEndpoints) { endpoint in
-                                    Button {
-                                        selectedHost = nil
-                                        manualHost = endpoint.host
-                                        manualPort = "\(endpoint.port)"
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(endpoint.displayName)
-                                                .font(.subheadline.weight(.semibold))
-                                            Text("\(endpoint.host):\(endpoint.port)")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 10)
-                                        .frame(minWidth: 140, alignment: .leading)
-                                        .background(.thinMaterial)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                    }
-                                    .buttonStyle(.plain)
+                    CompanionSectionHeader("Recent desktops")
+                    ForEach(webSocketService.recentEndpoints) { endpoint in
+                        Button {
+                            selectedHost = nil
+                            manualHost = endpoint.host
+                            manualPort = "\(endpoint.port)"
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(endpoint.displayName).font(CompanionTheme.title)
+                                    Text("\(endpoint.host):\(endpoint.port)")
+                                        .font(CompanionTheme.caption)
+                                        .foregroundStyle(CompanionTheme.mutedInk)
+                                }
+                                Spacer()
+                                if manualEndpoint?.host == endpoint.host && manualEndpoint?.port == endpoint.port {
+                                    Image(systemName: "checkmark").foregroundStyle(CompanionTheme.accent)
                                 }
                             }
-                            .padding(.horizontal)
+                            .padding(.vertical, 14)
                         }
+                        .buttonStyle(.plain)
+                        CompanionRule()
                     }
-                    .padding(.bottom, 8)
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("PIN Code")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    CompanionSectionHeader("Authenticate", detail: "Use the six-digit, one-time PIN shown by Alphonso Desktop.")
 
                     TextField("6-digit PIN from desktop", text: $pin)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("pairing-pin-field")
                         .onChange(of: pin) { _, newValue in
-                            let filtered = newValue.filter { $0.isNumber }
-                            if filtered.count > 6 {
-                                pin = String(filtered.prefix(6))
-                            } else {
-                                pin = filtered
-                            }
+                            pin = PairingInput.pin(from: newValue)
                         }
+
+                    Text(pairingInstruction)
+                        .font(CompanionTheme.caption)
+                        .foregroundStyle(CompanionTheme.mutedInk)
 
                     Button(action: connect) {
                         HStack {
@@ -94,33 +86,27 @@ struct PairingView: View {
                             }
                             Spacer()
                         }
-                        .padding()
-                        .background(
-                            canConnect ? Color.accentColor : Color.secondary.opacity(0.3)
-                        )
+                        .padding(.vertical, 14)
+                        .background(canConnect ? CompanionTheme.accent : CompanionTheme.rule)
                         .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .accessibilityIdentifier("pairing-connect-button")
                     .disabled(!canConnect)
                     .buttonStyle(.plain)
                 }
-                .padding()
-                .background(.regularMaterial)
+                .padding(.bottom, 8)
 
                 if let error = webSocketService.errorMessage {
                     Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                        .padding(.horizontal)
+                        .foregroundColor(CompanionTheme.danger)
+                        .font(CompanionTheme.caption)
                 }
 
                 if let hint = webSocketService.connectionHint {
                     Text(hint)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
+                        .foregroundStyle(CompanionTheme.mutedInk)
                 }
             }
             .navigationTitle("Connect to Desktop")
@@ -155,7 +141,21 @@ struct PairingView: View {
     }
 
     private var canConnect: Bool {
-        pin.count == 6 && (selectedHost != nil || !manualHost.isEmpty)
+        pin.count == 6 && (selectedHost != nil || manualEndpoint != nil)
+    }
+
+    private var manualEndpoint: PairingEndpoint? {
+        PairingEndpoint(host: manualHost, portText: manualPort)
+    }
+
+    private var selectedTarget: String? {
+        selectedHost?.name ?? manualEndpoint?.host
+    }
+
+    private var pairingInstruction: String {
+        guard pin.count == 6 else { return "Enter the six-digit one-time PIN shown by Alphonso Desktop." }
+        guard selectedHost != nil || manualEndpoint != nil else { return "Choose a discovered desktop or enter a valid address." }
+        return "Ready to create an encrypted, authenticated desktop session."
     }
 
     private func connect() {
@@ -163,26 +163,49 @@ struct PairingView: View {
 
         if let selected = selectedHost {
             // Resolve the mDNS service endpoint to a real IP before connecting
-            mdnsService.resolveHost(selected) { resolvedHost, resolvedPort in
-                self.webSocketService.connect(
-                    host: resolvedHost,
-                    port: resolvedPort,
-                    pin: pin,
-                    displayName: selected.name,
-                    source: "bonjour"
-                )
+            mdnsService.resolveHost(selected) { result in
+                switch result {
+                case .success(let endpoint):
+                    self.webSocketService.connect(
+                        host: endpoint.host,
+                        port: endpoint.port,
+                        pin: pin,
+                        displayName: selected.name,
+                        source: "bonjour"
+                    )
+                case .failure(let error):
+                    self.webSocketService.errorMessage = "Could not resolve \(selected.name): \(error.localizedDescription)"
+                    self.webSocketService.connectionHint = "Select the desktop again or enter its exact address manually."
+                }
             }
-        } else {
-            let host = manualHost
-            let port = UInt16(manualPort) ?? 8765
+        } else if let endpoint = manualEndpoint {
             webSocketService.connect(
-                host: host,
-                port: port,
+                host: endpoint.host,
+                port: endpoint.port,
                 pin: pin,
-                displayName: host,
+                displayName: endpoint.host,
                 source: "manual"
             )
         }
+    }
+}
+
+private struct PairingHero: View {
+    let state: ConnectionState
+    let selectedTarget: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(state == .authenticated ? "Paired with desktop" : "Connect your workspace", systemImage: state == .authenticated ? "checkmark.seal.fill" : "link")
+                .font(CompanionTheme.section)
+                .foregroundStyle(CompanionTheme.accent)
+            Text(state == .authenticated ? "Your companion is live." : "One secure pairing, then your workspace follows you.")
+                .font(CompanionTheme.display)
+            Text(selectedTarget.map { "Selected: \($0)" } ?? "Find Alphonso Desktop automatically or enter its address.")
+                .font(CompanionTheme.body)
+                .foregroundStyle(CompanionTheme.mutedInk)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -201,12 +224,11 @@ struct HostListView: View {
             .padding(.vertical, 8)
             .padding(.horizontal)
         } else {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(hosts) { host in
-                        HostRow(host: host, isSelected: selectedHost?.id == host.id)
-                            .onTapGesture { selectedHost = host }
-                    }
+            LazyVStack(spacing: 0) {
+                ForEach(hosts) { host in
+                    HostRow(host: host, isSelected: selectedHost?.id == host.id)
+                        .onTapGesture { selectedHost = host }
+                    CompanionRule()
                 }
             }
         }
@@ -221,19 +243,18 @@ struct HostRow: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(host.name)
-                    .font(.headline)
+                    .font(CompanionTheme.title)
                 Text("\(host.host):\(host.port)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(CompanionTheme.caption)
+                    .foregroundStyle(CompanionTheme.mutedInk)
             }
             Spacer()
             if isSelected {
                 Image(systemName: "checkmark")
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(CompanionTheme.accent)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .foregroundColor(.primary)
+        .padding(.vertical, 14)
+        .foregroundColor(CompanionTheme.ink)
     }
 }

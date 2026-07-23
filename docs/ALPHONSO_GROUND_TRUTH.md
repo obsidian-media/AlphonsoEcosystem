@@ -1716,7 +1716,11 @@ for Boardroom messaging.
 **Deliberately deferred**, not forgotten (see each phase's own "Explicitly
 NOT in this phase" section for exact scope): cards (spec 1.5),
 regenerate/diff view (1.10.3/1.10.4), resource contention handling
-(1.10.14), voice input (1.10.6), mobile parity (1.10.8).
+(1.10.14), voice input (1.10.6), mobile parity (1.10.8). On 2026-07-22,
+the prior cancellation limitation was resolved: Boardroom Stop aborts the
+active Ollama request, prevents a cancelled reply from being posted, and
+continues to stop later chained hops. These remaining items are still deferred
+and must not be claimed as shipped.
 
 **PR #98 (`feat/in-app-auto-update`) resolved in the same pass:** merged
 `main` into the branch (25 commits, zero conflicts — Rust-side plugin

@@ -14,6 +14,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
     func testSubmitDraftAppendsTranscriptAndClearsDraft() {
         let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in "command-1" }
         viewModel.draftTranscript = "Hello Alphonso"
 
         viewModel.submitDraft()
@@ -127,6 +128,7 @@ final class VoiceSessionViewModelTests: XCTestCase {
         viewModel.setLocalTranscriptSender { _, agentID, language in
             capturedAgentID = agentID
             capturedLanguage = language
+            return "command-1"
         }
 
         viewModel.draftTranscript = "Review this risk"
@@ -134,5 +136,75 @@ final class VoiceSessionViewModelTests: XCTestCase {
 
         XCTAssertEqual(capturedAgentID, "maria")
         XCTAssertEqual(capturedLanguage, "fa-IR")
+    }
+
+    func testCloudVoiceServerErrorPreservesSafeStatusAndReason() {
+        let error = VoiceCloudError.server(status: 403, message: "This device is not enrolled for Cloud Voice")
+
+        XCTAssertEqual(
+            error.errorDescription,
+            "Cloud Voice request failed (HTTP 403): This device is not enrolled for Cloud Voice"
+        )
+    }
+
+    func testCloudVoiceServerErrorDoesNotRequireAResponseBody() {
+        let error = VoiceCloudError.server(status: 502, message: "")
+
+        XCTAssertEqual(error.errorDescription, "Cloud Voice request failed (HTTP 502).")
+    }
+
+    func testCloudVoiceCannotRecordOrSendUntilTheIPhoneIsEnrolled() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.selectMode(.cloud)
+        viewModel.draftTranscript = "Test the cloud path"
+
+        XCTAssertFalse(viewModel.canStartListening)
+        XCTAssertFalse(viewModel.canSend)
+
+        viewModel.startListening()
+
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertEqual(viewModel.statusMessage, "Sign in to Cloud Voice before recording")
+    }
+
+    func testCloudVoiceDoesNotAllowConcurrentSends() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in "command-1" }
+        viewModel.draftTranscript = "First local request"
+        viewModel.submitDraft()
+        viewModel.draftTranscript = "Second local request"
+
+        XCTAssertFalse(viewModel.canSend)
+
+        viewModel.submitDraft()
+
+        XCTAssertEqual(viewModel.transcript.count, 1)
+    }
+
+    func testLocalVoiceReturnsToIdleWhenDesktopDispatchFails() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in nil }
+        viewModel.draftTranscript = "Check connection"
+
+        viewModel.submitDraft()
+
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertEqual(viewModel.statusMessage, "Could not send to the paired desktop")
+    }
+
+    func testLocalVoiceRecoversWhenAnAsynchronousDesktopDispatchFails() {
+        let viewModel = VoiceSessionViewModel()
+        viewModel.setLocalTranscriptSender { _, _, _ in "command-1" }
+        viewModel.draftTranscript = "Check connection"
+
+        viewModel.submitDraft()
+        viewModel.handleLocalCommandFailure(commandID: "command-1", message: "Network connection lost")
+
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertTrue(viewModel.canSend)
+        XCTAssertEqual(
+            viewModel.statusMessage,
+            "Could not send to the paired desktop: Network connection lost"
+        )
     }
 }

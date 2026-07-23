@@ -6,6 +6,7 @@ use tauri::Emitter;
 pub async fn route(req: JsonRpcRequest, app: AppHandle) -> JsonRpcResponse {
   let result = match req.method.as_str() {
     "get_status" => handle_get_status().await,
+    "get_operations" => handle_get_operations(app.clone()).await,
     "send_command" => handle_send_command(req.params, app).await,
     "abort_command" => handle_abort_command(req.params, app.clone()).await,
     "approve_task" => handle_approve_task(req.params, app).await,
@@ -100,6 +101,43 @@ mod tests {
     assert_eq!(payload["language"], "fa-IR");
     assert_eq!(payload["voiceConversation"], true);
   }
+
+  #[test]
+  fn operations_snapshot_keeps_empty_state_honest() {
+    let snapshot = operations_snapshot(&[]);
+    assert_eq!(snapshot["activeWork"], json!([]));
+    assert_eq!(snapshot["recentOutcomes"], json!([]));
+    assert_eq!(snapshot["approvals"], json!([]));
+  }
+
+  #[test]
+  fn operations_snapshot_separates_active_and_terminal_receipts() {
+    let receipts = vec![
+      json!({ "id": "done", "status": "completed", "agent": "maria", "details": { "summary": "Verified" }, "timestampMs": 2 }),
+      json!({ "id": "live", "status": "running", "agent": "jose", "details": { "summary": "Deploying" }, "timestampMs": 3 }),
+    ];
+    let snapshot = operations_snapshot(&receipts);
+    assert_eq!(snapshot["activeWork"][0]["id"], "live");
+    assert_eq!(snapshot["recentOutcomes"][0]["id"], "done");
+  }
+
+  #[test]
+  fn operations_snapshot_keeps_all_completed_receipt_variants_out_of_active_work() {
+    let receipts = vec![
+      json!({ "id": "executed", "status": "executed", "timestampMs": 1 }),
+      json!({ "id": "reported", "status": "reported_to_jose", "timestampMs": 2 }),
+      json!({ "id": "success", "status": "success", "timestampMs": 3 }),
+      json!({ "id": "approval", "status": "pending_approval", "timestampMs": 4 }),
+    ];
+
+    let snapshot = operations_snapshot(&receipts);
+
+    assert_eq!(snapshot["activeWork"][0]["id"], "approval");
+    assert_eq!(snapshot["recentOutcomes"].as_array().unwrap().len(), 3);
+    assert_eq!(snapshot["recentOutcomes"][0]["id"], "success");
+    assert_eq!(snapshot["recentOutcomes"][1]["id"], "reported");
+    assert_eq!(snapshot["recentOutcomes"][2]["id"], "executed");
+  }
 }
 
 async fn handle_abort_command(params: Value, app: AppHandle) -> Result<Value, JsonRpcError> {
@@ -166,6 +204,76 @@ async fn handle_get_projects(app: AppHandle) -> Result<Value, JsonRpcError> {
       .cmp(&a["lastActivityMs"].as_u64().unwrap_or(0))
   });
   Ok(json!({ "projects": list }))
+}
+
+fn receipt_title(receipt: &Value) -> String {
+  receipt["details"]["summary"]
+    .as_str()
+    .or_else(|| receipt["details"]["reason"].as_str())
+    .or_else(|| receipt["actionType"].as_str())
+    .unwrap_or("Desktop activity")
+    .to_string()
+}
+
+fn operations_snapshot(receipts: &[Value]) -> Value {
+  let is_terminal = |status: &str| {
+    matches!(
+      status,
+      "recorded"
+        | "completed"
+        | "failed"
+        | "cancelled"
+        | "canceled"
+        | "aborted"
+        | "stopped"
+        | "approved"
+        | "rejected"
+        | "executed"
+        | "reported_to_jose"
+        | "success"
+        | "dead_letter"
+    )
+  };
+  let mut active_work = Vec::new();
+  let mut recent_outcomes = Vec::new();
+
+  for receipt in receipts.iter().rev() {
+    let status = receipt["status"].as_str().unwrap_or("recorded");
+    let title = receipt_title(receipt);
+    let item = json!({
+      "id": receipt["id"].as_str().unwrap_or_default(),
+      "title": title,
+      "summary": title,
+      "agent": receipt["agent"].as_str().unwrap_or("alphonso"),
+      "status": status,
+      "commandId": receipt["commandId"].as_str(),
+      "timestampMs": receipt["timestampMs"].as_u64().unwrap_or(0),
+    });
+    if is_terminal(status) {
+      recent_outcomes.push(item);
+    } else {
+      active_work.push(item);
+    }
+  }
+
+  active_work.truncate(12);
+  recent_outcomes.truncate(12);
+  json!({
+    "activeWork": active_work,
+    "recentOutcomes": recent_outcomes,
+    // The authoritative approval queue is currently owned by the desktop web runtime.
+    // Do not derive actionable approvals from historical receipts.
+    "approvals": [],
+  })
+}
+
+async fn handle_get_operations(app: AppHandle) -> Result<Value, JsonRpcError> {
+  let raw =
+    crate::kv_store::kv_get(app, "alphonso_orchestration_receipts_v1".to_string()).unwrap_or(None);
+  let receipts: Vec<Value> = raw
+    .and_then(|value| serde_json::from_str(&value).ok())
+    .unwrap_or_default();
+  Ok(json!({ "operations": operations_snapshot(&receipts) }))
 }
 
 async fn handle_get_boardroom(app: AppHandle) -> Result<Value, JsonRpcError> {

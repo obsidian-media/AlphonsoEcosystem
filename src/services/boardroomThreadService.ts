@@ -76,6 +76,13 @@ function writeJson<T>(key: string, value: T): T {
   return value;
 }
 
+function safeTextForStorage(content: string): string {
+  const text = String(content || '');
+  return classifyMissionRoomRisk(text).secretDetected
+    ? '[REDACTED_SECRET]'
+    : redactMissionRoomSecrets(text);
+}
+
 export function listThreads(): BoardroomThread[] {
   const threads = readJson<BoardroomThread[]>(THREADS_KEY, []);
   return threads.slice().sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0) || (b.seq || 0) - (a.seq || 0));
@@ -88,7 +95,7 @@ export function getThread(threadId: string): BoardroomThread | null {
 export function createThread({ topic, participants }: { topic: string; participants: string[] }): BoardroomThread {
   const thread: BoardroomThread = {
     id: makeId('boardroom_thread'),
-    topic: redactMissionRoomSecrets(topic).trim(),
+    topic: safeTextForStorage(topic).trim(),
     participants,
     status: 'active',
     createdAt: nowIso(),

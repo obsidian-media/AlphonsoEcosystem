@@ -345,11 +345,32 @@ describe('BoardroomChatView', () => {
 
     resolveFirstHop({ ok: true, text: '@Jose keep going' });
 
-    await screen.findByText('@Jose keep going');
     await screen.findByText(/generation stopped/i);
+    expect(screen.queryByText('@Jose keep going')).not.toBeInTheDocument();
     expect(facilitator.generateAgentResponse).not.toHaveBeenCalledWith(
       expect.objectContaining({ agentId: 'jose' })
     );
+  });
+
+  it('aborts the in-flight generation and does not post its cancelled reply', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockImplementation(({ signal }) => new Promise((resolve) => {
+      signal.addEventListener('abort', () => resolve({ ok: false, text: '', error: 'aborted' }), { once: true });
+    }));
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Abort Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Abort Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector investigate this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /^stop$/i }));
+
+    expect(await screen.findByText(/generation stopped by user/i)).toBeInTheDocument();
+    expect(screen.queryByText(/hector couldn't respond: aborted/i)).not.toBeInTheDocument();
   });
 
   it('does not show a Stop button when nothing is generating', async () => {

@@ -33,9 +33,9 @@ Each item has:
 - **File:** `src-tauri/src/runtime_manager.rs:988–1004`
 
 ### 1.3 Voice OS has no health check
-- **Status:** cut  
+- **Status:** complete — `/health` is exposed and Runtime Hub checks it on port 8766
 - **Effort:** S  
-- **What to do:** `health_path: None` means "running" is detected only by PID, not by actually hitting port 8765. If the Python process crashes silently (bad model, OOM), the UI shows "running" forever. Fix: add a health endpoint to `voice/backend/main.py` at `/health` and set `health_path: Some("/health")` in Rust.  
+- **What was done:** `voice/backend/main.py` exposes `/health`, and the `voice-os` Runtime Hub definition checks it on port 8766. Keep the live desktop health check in the release-verification baseline.
 - **File:** `voice/backend/main.py`, `src-tauri/src/runtime_manager.rs:177`
 
 ### 1.4 Piper TTS model not downloaded automatically
@@ -153,7 +153,7 @@ These components are fully implemented and tested but have no navigation entry p
 ## SECTION 5 — Content Generation Pipeline
 
 ### 5.1 ComfyUI image generation not verified
-- **Status:** untested  
+- **Status:** PARTIAL — studio readiness and unavailable-asset states are surfaced; live generation remains unverified
 - **Effort:** M  
 - **What to do:** `contentCatalystService.js` calls `generateComfyUiImage`. This requires ComfyUI running on port 8188. Test: install ComfyUI from Runtimes, start it, run a content generation from Content Studio, confirm image appears.  
 - **Blocking:** Creative content pipeline.  
@@ -166,9 +166,9 @@ These components are fully implemented and tested but have no navigation entry p
 - **File:** `src/components/ConnectorSetupPanel.jsx`
 
 ### 5.3 Content pipeline error states not surfaced to user
-- **Status:** cut  
+- **Status:** PARTIAL — the active job now shows the real ComfyUI readiness state and no-image condition; a live ComfyUI failure still needs desktop verification
 - **Effort:** M  
-- **What to do:** `contentCatalystService.js` degrades gracefully — if ComfyUI is down, it skips images and continues. But the user sees a content piece with no image and no explanation. Should surface a warning toast: "Image generation skipped — ComfyUI not running."  
+- **What to do:** Verify live desktop handling when ComfyUI fails during image generation. The active job already shows an in-card PARTIAL status and runtime/no-image explanation; record real failure evidence and refine recovery only if that flow is unclear.
 - **File:** `src/features/content-catalyst/services/contentCatalystService.js`
 
 ---

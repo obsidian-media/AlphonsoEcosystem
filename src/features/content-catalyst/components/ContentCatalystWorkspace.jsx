@@ -42,6 +42,7 @@ import { DraftList } from '../workspace/DraftList';
 import { DraftPreview } from '../workspace/DraftPreview';
 import { GeneratorForm } from '../workspace/GeneratorForm';
 import { TrendResearch } from '../workspace/TrendResearch';
+import { getAllStatus, startTool, waitForTool } from '../../../services/runtimeManagerService';
 
 const DEFAULT_FORM = createDefaultContentRequest();
 
@@ -58,6 +59,17 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
   const [bridgePackets, setBridgePackets] = useState(() => listAccBridgePackets(8));
   const [bridgeBusy, setBridgeBusy] = useState(false);
   const [bridgeNotice, setBridgeNotice] = useState('');
+  const [imageRuntime, setImageRuntime] = useState({ checked: false, running: false, installed: false, starting: false, message: '' });
+
+  const refreshImageRuntime = async () => {
+    try {
+      const tools = await getAllStatus();
+      const comfyui = tools.find((tool) => tool.name === 'comfyui');
+      setImageRuntime((current) => ({ ...current, checked: true, running: Boolean(comfyui?.running), installed: Boolean(comfyui?.installed), message: comfyui?.running ? 'ComfyUI ready' : comfyui?.installed ? 'ComfyUI stopped' : 'ComfyUI not installed' }));
+    } catch {
+      setImageRuntime((current) => ({ ...current, checked: false, running: false, installed: false, starting: false, message: 'ComfyUI status unavailable. Retry the runtime check or use Runtimes.' }));
+    }
+  };
 
   useEffect(() => {
     setJobs(listContentJobs());
@@ -71,6 +83,15 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
       if (newOnes.length > 0) setJobs((current) => [...newOnes, ...current]);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => { refreshImageRuntime(); }, []);
+
+  const startImageRuntime = async () => {
+    setImageRuntime((current) => ({ ...current, starting: true, message: 'Starting ComfyUI…' }));
+    const result = await startTool('comfyui').catch((error) => ({ ok: false, message: String(error) }));
+    const running = result?.ok ? await waitForTool('comfyui', 20_000) : false;
+    setImageRuntime((current) => ({ ...current, starting: false, running, message: running ? 'ComfyUI ready' : result?.message || 'Could not start ComfyUI' }));
+  };
 
   useEffect(() => {
     if (jobs.length > 0) persistContentJobsToSqlite(jobs).catch(() => {});
@@ -95,6 +116,14 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
   const analytics = useMemo(() => getContentAnalyticsSnapshot(), [jobs]);
   const trendSuggestions = useMemo(() => getTrendResearchSuggestions(brandProfile, drafts), [brandProfile, drafts]);
   const bridgeResponse = activeJob ? createContentBridgeResponse(activeJob) : null;
+  const hasImagePreview = Boolean(activeJob?.assets?.image_url || activeJob?.assets?.image_preview_base64);
+  const creativeState = activeJob?.status === 'failed'
+    ? 'Needs attention'
+    : hasImagePreview
+      ? 'Asset ready'
+      : activeJob?.status === 'image_ready'
+        ? 'Needs attention'
+      : activeJob ? 'In creation' : 'Ready to create';
 
   const refresh = (nextActiveId = activeJobId) => {
     const nextJobs = listContentJobs();
@@ -236,12 +265,17 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
     <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
 
       {/* Page header */}
-      <header className="pb-5 border-b border-white/[0.06] flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[15px] font-bold tracking-tight text-white">Content Studio</h1>
-          <p className="mt-0.5 text-[11px] text-zinc-500">
-            {analytics?.totalDrafts ?? 0} drafts · {analytics?.publishedCount ?? 0} published
-          </p>
+      <header className="relative overflow-hidden rounded-2xl border border-cyan-400/15 bg-gradient-to-br from-cyan-500/[0.13] via-[var(--surface-1)] to-violet-500/[0.10] px-5 py-5 flex items-center justify-between gap-4">
+        <div className="relative">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">Creation room</div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">Content Studio</h1>
+          <p className="mt-1 text-sm font-semibold text-zinc-200">Make the asset. Ship the story.</p>
+          <p className="mt-1 text-xs text-zinc-400">Brief → copy → image → motion → approved distribution. Every output stays attached to the job.</p>
+          <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wider">
+            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-zinc-300">{analytics?.totalDrafts ?? 0} drafts</span>
+            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-zinc-300">{analytics?.publishedCount ?? 0} published</span>
+            <span className={`rounded-full border px-2.5 py-1 ${activeJob?.status === 'failed' ? 'border-rose-400/30 text-rose-200' : 'border-cyan-400/30 text-cyan-200'}`}>{creativeState}</span>
+          </div>
         </div>
         {/* ACC Bridge pill */}
         <div className="flex items-center gap-2 shrink-0">
@@ -314,7 +348,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
             onGenerate={createJob}
             isLoading={busy}
           />
-          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} />
+          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} imageRuntime={imageRuntime} onStartImageRuntime={startImageRuntime} onRefreshImageRuntime={refreshImageRuntime} />
         </div>
       )}
 
@@ -322,7 +356,7 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
       {contentTab === 'drafts' && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1.1fr]">
           <DraftList drafts={drafts} onSelect={(id) => { setActiveJobId(id); }} />
-          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} />
+          <DraftPreview activeJob={activeJob} busy={busy} onRunStep={runStep} onApprovePublish={handlePublish} imageRuntime={imageRuntime} onStartImageRuntime={startImageRuntime} onRefreshImageRuntime={refreshImageRuntime} />
         </div>
       )}
 

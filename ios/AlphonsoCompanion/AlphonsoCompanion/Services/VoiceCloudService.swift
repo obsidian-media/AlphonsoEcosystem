@@ -180,9 +180,11 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
             throw VoiceCloudError.network(error.localizedDescription)
         }
         let (data, response) = dataResponse
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw VoiceCloudError.badResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw VoiceCloudError.server(status: httpResponse.statusCode, message: Self.serverMessage(from: data))
         }
 
         let decoded: VoiceCloudResponse
@@ -204,9 +206,10 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabasePublishableKey, forHTTPHeaderField: "apikey")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["email": email, "create_user": true])
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw VoiceCloudError.authFailed
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw VoiceCloudError.authFailed }
+        guard (200...299).contains(http.statusCode) else {
+            throw VoiceCloudError.server(status: http.statusCode, message: Self.serverMessage(from: data))
         }
         authenticationStatus = "Check your email for the sign-in code"
     }
@@ -221,8 +224,9 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         request.setValue(supabasePublishableKey, forHTTPHeaderField: "apikey")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["email": email, "token": code, "type": "email"])
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw VoiceCloudError.authFailed
+        guard let http = response as? HTTPURLResponse else { throw VoiceCloudError.authFailed }
+        guard (200...299).contains(http.statusCode) else {
+            throw VoiceCloudError.server(status: http.statusCode, message: Self.serverMessage(from: data))
         }
         let session = try JSONDecoder().decode(SupabaseSession.self, from: data)
         try Self.saveSession(session, account: sessionAccount)
@@ -266,8 +270,11 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["device_id": id, "display_name": UIDevice.current.name])
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw VoiceCloudError.enrollmentFailed }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw VoiceCloudError.enrollmentFailed }
+        guard (200...299).contains(http.statusCode) else {
+            throw VoiceCloudError.server(status: http.statusCode, message: Self.serverMessage(from: data))
+        }
     }
 
     private func deviceID() throws -> String {
@@ -275,6 +282,18 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         let id = UUID().uuidString
         Self.saveAPIKey(id, account: deviceIDAccount)
         return id
+    }
+
+    private static func serverMessage(from data: Data) -> String {
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let detail = object["detail"] as? String {
+            let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return String(trimmed.prefix(240))
+            }
+        }
+        let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return String(text.prefix(240))
     }
 
     func play(_ response: VoiceCloudResponse) throws {
@@ -374,6 +393,7 @@ enum VoiceCloudError: LocalizedError {
     case authFailed
     case signInRequired
     case enrollmentFailed
+    case server(status: Int, message: String)
 
     var errorDescription: String? {
         switch self {
@@ -395,6 +415,10 @@ enum VoiceCloudError: LocalizedError {
             return "Sign in to Cloud Voice before sending a request."
         case .enrollmentFailed:
             return "This iPhone could not be enrolled for Cloud Voice."
+        case .server(let status, let message):
+            return message.isEmpty
+                ? "Cloud Voice request failed (HTTP \(status))."
+                : "Cloud Voice request failed (HTTP \(status)): \(message)"
         }
     }
 }

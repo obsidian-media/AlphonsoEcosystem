@@ -50,6 +50,7 @@ import {
   decomposeTask,
   getRelevantPatterns,
   buildThinkingPrompt,
+  sanitizeRelativePath,
 } from '../../services/agentBrainService';
 
 const PATTERN_MEMORY_KEY = 'alphonso_brain_patterns_v1';
@@ -58,6 +59,15 @@ describe('agentBrainService', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
+  });
+
+  describe('sanitizeRelativePath', () => {
+    it('rejects traversal and absolute artifact paths instead of rewriting them', () => {
+      expect(sanitizeRelativePath('../secrets.txt')).toBeNull();
+      expect(sanitizeRelativePath('src/../../secrets.txt')).toBeNull();
+      expect(sanitizeRelativePath('/etc/passwd')).toBeNull();
+      expect(sanitizeRelativePath('src/components/App.tsx')).toBe('src/components/App.tsx');
+    });
   });
 
   describe('needsClarification', () => {

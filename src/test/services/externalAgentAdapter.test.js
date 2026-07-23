@@ -48,9 +48,9 @@ describe('externalAgentAdapter', () => {
   });
 
   describe('listSupportedExternalProviders', () => {
-    it('returns array of 6 providers', () => {
+    it('returns only the 4 wired or credential-gated providers', () => {
       const providers = listSupportedExternalProviders();
-      expect(providers).toHaveLength(6);
+      expect(providers).toHaveLength(4);
     });
 
     it('includes openai provider', () => {
@@ -71,16 +71,16 @@ describe('externalAgentAdapter', () => {
       expect(ollama.enabled).toBe(true);
     });
 
-    it('includes gemini provider as planned', () => {
+    it('hides gemini until it has a complete implementation', () => {
       const providers = listSupportedExternalProviders();
       const gemini = providers.find(p => p.id === 'gemini');
-      expect(gemini.status).toBe('planned_v2.6');
+      expect(gemini).toBeUndefined();
     });
 
-    it('includes acc provider as not_wired', () => {
+    it('hides acc until it has a complete implementation', () => {
       const providers = listSupportedExternalProviders();
       const acc = providers.find(p => p.id === 'acc');
-      expect(acc.status).toBe('not_wired');
+      expect(acc).toBeUndefined();
     });
   });
 

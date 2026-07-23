@@ -6,6 +6,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 test.describe('Alphonso E2E - Voice Flow', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript({ path: resolve(__dirname, 'tauri-mock.js') });
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
   });
@@ -29,6 +30,7 @@ test.describe('Alphonso E2E - Voice Flow', () => {
 
 test.describe('Alphonso E2E - Policy Gate', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript({ path: resolve(__dirname, 'tauri-mock.js') });
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
   });

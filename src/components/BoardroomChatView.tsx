@@ -132,6 +132,7 @@ export function BoardroomChatView() {
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [facilitatorPending, setFacilitatorPending] = useState(false);
   const stopRequestedRef = useRef(false);
+  const generationAbortControllerRef = useRef<AbortController | null>(null);
 
   const activeThread = useMemo(
     () => threads.find((t) => t.id === activeThreadId) ?? null,
@@ -160,7 +161,7 @@ export function BoardroomChatView() {
   }
 
   async function handleSend() {
-    if (!activeThreadId || !activeThread || !composerText.trim()) return;
+    if (!activeThreadId || !activeThread || !composerText.trim() || generationAbortControllerRef.current) return;
     const text = composerText.trim();
     addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
     setMessages(listThreadMessages(activeThreadId));
@@ -174,10 +175,13 @@ export function BoardroomChatView() {
 
     if (respondingAgents.length === 0) return;
 
+    const controller = new AbortController();
+    generationAbortControllerRef.current = controller;
     setFacilitatorPending(true);
     stopRequestedRef.current = false;
     let hopsUsed = 0;
 
+    try {
     while (respondingAgents.length > 0) {
       const agentId = respondingAgents.shift() as string;
 
@@ -212,8 +216,21 @@ export function BoardroomChatView() {
         topic: activeThread.topic,
         priorMessages,
         newMessageText: text,
-        crossThreadContext
+        crossThreadContext,
+        signal: controller.signal
       });
+
+      if (stopRequestedRef.current) {
+        addThreadMessage({
+          threadId: activeThreadId,
+          speaker: 'alphonso',
+          content: 'Generation stopped by user.',
+          kind: 'system'
+        });
+        setMessages(listThreadMessages(activeThreadId));
+        break;
+      }
+
       const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
       addThreadMessage({
         threadId: activeThreadId,
@@ -240,11 +257,17 @@ export function BoardroomChatView() {
         respondingAgents.push(...chainedMentions);
       }
     }
-    setFacilitatorPending(false);
+    } finally {
+      if (generationAbortControllerRef.current === controller) {
+        generationAbortControllerRef.current = null;
+        setFacilitatorPending(false);
+      }
+    }
   }
 
   function handleStop() {
     stopRequestedRef.current = true;
+    generationAbortControllerRef.current?.abort();
   }
 
   async function handleRetry(message: BoardroomThreadMessage) {

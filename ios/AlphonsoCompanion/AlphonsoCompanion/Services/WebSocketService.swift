@@ -9,11 +9,15 @@ class WebSocketService: ObservableObject {
     @Published var errorMessage: String?
     @Published var tokenCount: Int = 0
     @Published var isStreaming: Bool = false
+    @Published private(set) var activeCommandIDs: Set<String> = []
+    @Published private(set) var commandFailures: [String: String] = [:]
     @Published var boardroomSessions: [BoardroomSession] = []
     @Published var recentEndpoints: [ConnectionEndpoint] = []
     @Published var lastSuccessfulConnectionAt: Date?
     @Published var lastMessageReceivedAt: Date?
     @Published var lastBoardroomRefreshAt: Date?
+    @Published private(set) var operationsSnapshot = OperationsSnapshot.empty
+    @Published private(set) var lastOperationsRefreshAt: Date?
     @Published var connectionHint: String?
 
     private var webSocketTask: URLSessionWebSocketTask?
@@ -77,9 +81,14 @@ class WebSocketService: ObservableObject {
         agentID: String = "alphonso",
         language: String = "en-US",
         voiceConversation: Bool = false
-    ) -> String {
+    ) -> String? {
+        guard connectionState == .authenticated else {
+            errorMessage = "Connect to the desktop before sending a message"
+            connectionHint = "Chat is available after pairing completes"
+            return nil
+        }
         let id = UUID().uuidString
-        sendJSONMessage([
+        let payload: [String: Any] = [
             "id": id,
             "method": "send_command",
             "params": [
@@ -87,9 +96,18 @@ class WebSocketService: ObservableObject {
                 "agentId": agentID,
                 "language": language,
                 "voiceConversation": voiceConversation,
-            ]
-        ])
+            ],
+        ]
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload),
+              let request = String(data: data, encoding: .utf8) else {
+            errorMessage = "Failed to encode websocket request"
+            connectionHint = "Could not encode command payload"
+            return nil
+        }
+        activeCommandIDs.insert(id)
         messages.append(Message(text: text, isIncoming: false, commandId: id))
+        send(text: request, commandID: id)
         return id
     }
 
@@ -98,6 +116,18 @@ class WebSocketService: ObservableObject {
             "id": "status",
             "method": "get_status",
             "params": [String: Any]()
+        ])
+    }
+
+    func refreshOperations() {
+        guard connectionState == .authenticated else {
+            connectionHint = "Operations are available after pairing completes"
+            return
+        }
+        sendJSONMessage([
+            "id": "operations",
+            "method": "get_operations",
+            "params": [String: Any](),
         ])
     }
 
@@ -124,16 +154,40 @@ class WebSocketService: ObservableObject {
         send(text: text)
     }
 
-    private func send(text: String) {
-        webSocketTask?.send(.string(text)) { [weak self] error in
+    private func send(text: String, commandID: String? = nil) {
+        guard let webSocketTask else {
+            recordCommandFailure(
+                commandID,
+                message: "Desktop connection is unavailable",
+                hint: "Reconnect before sending a command"
+            )
+            return
+        }
+        webSocketTask.send(.string(text)) { [weak self] error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error = error {
-                    self.errorMessage = error.localizedDescription
-                    self.connectionHint = "Send failed: \(error.localizedDescription)"
+                    self.recordCommandFailure(
+                        commandID,
+                        message: error.localizedDescription,
+                        hint: "Send failed: \(error.localizedDescription)"
+                    )
                 }
             }
         }
+    }
+
+    func consumeCommandFailure(_ commandID: String) -> String? {
+        commandFailures.removeValue(forKey: commandID)
+    }
+
+    private func recordCommandFailure(_ commandID: String?, message: String, hint: String) {
+        if let commandID {
+            activeCommandIDs.remove(commandID)
+            commandFailures[commandID] = message
+        }
+        errorMessage = message
+        connectionHint = hint
     }
 
     private func receive() {
@@ -190,8 +244,14 @@ class WebSocketService: ObservableObject {
                 connectionMachine.markAuthenticated()
                 connectionState = connectionMachine.connectionState
                 recordSuccessfulConnection()
+                getStatus()
+                refreshOperations()
             } else if result["goals"] != nil {
                 parseBoardroomResponse(result)
+            } else if let snapshot = OperationsSnapshot(dictionary: result) {
+                operationsSnapshot = snapshot
+                lastOperationsRefreshAt = Date()
+                connectionHint = "Operations refreshed"
             }
         }
     }
@@ -249,6 +309,9 @@ class WebSocketService: ObservableObject {
             isStreaming = false
             if let payload = payload as? [String: Any] {
                 let commandId = payload["commandId"] as? String
+                if let commandId {
+                    activeCommandIDs.remove(commandId)
+                }
                 if let error = payload["error"] as? String {
                     errorMessage = error
                 } else if let summary = payload["summary"] as? String, let commandId = commandId {
@@ -314,6 +377,7 @@ class WebSocketService: ObservableObject {
         pin = nil
         pendingDisplayName = nil
         pendingSource = "manual"
+        activeCommandIDs.removeAll()
         connectionState = connectionMachine.connectionState
         connectionHint = "Disconnected"
     }
@@ -325,6 +389,7 @@ class WebSocketService: ObservableObject {
         pendingReconnectWorkItem = nil
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
+        activeCommandIDs.removeAll()
         connectionState = connectionMachine.connectionState
         connectionHint = "Reconnect paused"
     }

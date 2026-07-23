@@ -60,7 +60,7 @@ struct VoiceView: View {
                                 viewModel.requestCloudSignIn(email: cloudEmail)
                             }
                             .buttonStyle(.bordered)
-                            .disabled(cloudEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .disabled(viewModel.isCloudAuthInFlight || cloudEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                             TextField("One-time code", text: $cloudOTP)
                                 .textFieldStyle(.roundedBorder)
@@ -69,11 +69,28 @@ struct VoiceView: View {
                                 viewModel.completeCloudSignIn(email: cloudEmail, code: cloudOTP)
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(cloudEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || cloudOTP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .disabled(viewModel.isCloudAuthInFlight || cloudEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || cloudOTP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-                            Text(viewModel.cloudAuthStatus)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            HStack {
+                                if viewModel.isCloudAuthInFlight {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                                Text(viewModel.cloudAuthStatus)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            if viewModel.cloudReady {
+                                Button("Sign out of Cloud Voice", role: .destructive) {
+                                    viewModel.signOutCloudVoice()
+                                }
+                                .buttonStyle(.bordered)
+                            } else {
+                                Text("Cloud Voice stays unavailable until this iPhone is enrolled. Local Voice remains available.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
 
                             Picker("Cloud TTS model", selection: Binding(
                                 get: { viewModel.cloudTTSModel },
@@ -151,6 +168,7 @@ struct VoiceView: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(VoicePrimaryButtonStyle(mode: viewModel.mode))
+                        .disabled(!viewModel.canStartListening)
                         .accessibilityIdentifier("voice-push-to-talk")
 
                         Button("Send") {
@@ -158,7 +176,7 @@ struct VoiceView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.secondary)
-                        .disabled(!viewModel.canSend || (viewModel.mode == .cloud && !viewModel.cloudReady))
+                        .disabled(!viewModel.canSend)
                         .accessibilityIdentifier("voice-send")
                     }
 
@@ -209,7 +227,7 @@ struct VoiceView: View {
             .onAppear {
                 viewModel.prepareForVoiceSession()
                 viewModel.setLocalTranscriptSender { text, agentID, language in
-                    _ = webSocketService.sendCommand(
+                    webSocketService.sendCommand(
                         text: text,
                         agentID: agentID,
                         language: language,
@@ -227,6 +245,12 @@ struct VoiceView: View {
             .onChange(of: webSocketService.messages.count) { _, _ in
                 guard !webSocketService.isStreaming, let lastMessage = webSocketService.messages.last else { return }
                 viewModel.handleIncomingDesktopReply(lastMessage)
+            }
+            .onChange(of: webSocketService.commandFailures) { _, failures in
+                for commandID in failures.keys {
+                    guard let message = webSocketService.consumeCommandFailure(commandID) else { continue }
+                    viewModel.handleLocalCommandFailure(commandID: commandID, message: message)
+                }
             }
         }
     }

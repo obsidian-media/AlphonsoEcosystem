@@ -8,7 +8,10 @@ export function GeneratorForm({ form, setForm, brandProfile, injectedIdea, onIde
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-3)]">New Job</span>
+        <div>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-200">Creative brief</span>
+          <p className="mt-1 text-xs text-[var(--text-3)]">Describe the outcome. Choose what you want produced.</p>
+        </div>
       </div>
 
       {injectedIdea && (
@@ -77,6 +80,8 @@ export function GeneratorForm({ form, setForm, brandProfile, injectedIdea, onIde
           </button>
         ))}
       </div>
+
+      <p className="text-[10px] leading-relaxed text-[var(--text-4)]">Image uses your local ComfyUI runtime. Video uses Runway when configured. Publishing always requires approval.</p>
 
       <button
         type="button"

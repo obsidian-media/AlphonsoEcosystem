@@ -171,13 +171,16 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var selectedAgent: VoiceAgent = .alphonso
     @Published var cloudStatus = "Cloud backend not configured"
     @Published var cloudAuthStatus = "Sign in to enable Cloud Voice"
+    @Published var isCloudAuthInFlight = false
 
     private let audioService = VoiceAudioService()
     private let cloudService = VoiceCloudService()
-    private var localTranscriptSender: ((String, String, String) -> Void)?
+    private var localTranscriptSender: ((String, String, String) -> String?)?
+    private var pendingLocalCommandID: String?
     private var lastSpokenMessageID: UUID?
     private var lastCloudResponse: VoiceCloudResponse?
     private var pendingCloudMessageID: UUID?
+    private var cloudSubmissionTask: Task<Void, Never>?
 
     var providerTitle: String {
         switch mode {
@@ -198,7 +201,13 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     var canSend: Bool {
-        !draftTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        phase != .sending
+            && !draftTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (mode != .cloud || cloudReady)
+    }
+
+    var canStartListening: Bool {
+        mode != .cloud || cloudReady
     }
 
     init() {
@@ -225,7 +234,7 @@ final class VoiceSessionViewModel: ObservableObject {
         bindAudioService()
     }
 
-    func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> Void) {
+    func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> String?) {
         localTranscriptSender = sender
     }
 
@@ -261,7 +270,10 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func requestCloudSignIn(email: String) {
+        guard !isCloudAuthInFlight else { return }
+        isCloudAuthInFlight = true
         Task {
+            defer { isCloudAuthInFlight = false }
             do {
                 try await cloudService.requestEmailOTP(email: email)
                 cloudAuthStatus = cloudService.authenticationStatus
@@ -272,7 +284,10 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func completeCloudSignIn(email: String, code: String) {
+        guard !isCloudAuthInFlight else { return }
+        isCloudAuthInFlight = true
         Task {
+            defer { isCloudAuthInFlight = false }
             do {
                 try await cloudService.verifyEmailOTP(email: email, code: code)
                 cloudAuthStatus = cloudService.authenticationStatus
@@ -280,6 +295,20 @@ final class VoiceSessionViewModel: ObservableObject {
             } catch {
                 cloudAuthStatus = error.localizedDescription
             }
+        }
+    }
+
+    func signOutCloudVoice() {
+        cloudSubmissionTask?.cancel()
+        cloudSubmissionTask = nil
+        cloudService.stopPlayback()
+        cloudService.signOut()
+        cloudAuthStatus = cloudService.authenticationStatus
+        cloudStatus = cloudService.statusMessage
+        lastCloudResponse = nil
+        pendingCloudMessageID = nil
+        if mode == .cloud {
+            stopListening()
         }
     }
 
@@ -301,6 +330,7 @@ final class VoiceSessionViewModel: ObservableObject {
         }
         cloudService.stopPlayback()
         self.mode = mode
+        pendingLocalCommandID = nil
         phase = .idle
         statusMessage = "\(mode.title) mode selected"
     }
@@ -314,6 +344,12 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func startListening() {
+        guard canStartListening else {
+            phase = .idle
+            statusMessage = "Sign in to Cloud Voice before recording"
+            cloudStatus = "Enroll this iPhone before using Cloud Voice"
+            return
+        }
         phase = .listening
         statusMessage = mode == .local
             ? "Listening for speech in local mode"
@@ -328,8 +364,8 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     func submitDraft() {
+        guard canSend else { return }
         let trimmed = draftTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
 
         transcript.append(
             VoiceTranscriptEntry(
@@ -344,10 +380,16 @@ final class VoiceSessionViewModel: ObservableObject {
 
         switch mode {
         case .local:
-            localTranscriptSender?(trimmed, selectedAgent.rawValue, cloudLanguage.rawValue)
+            guard let commandID = localTranscriptSender?(trimmed, selectedAgent.rawValue, cloudLanguage.rawValue) else {
+                phase = .idle
+                statusMessage = "Could not send to the paired desktop"
+                return
+            }
+            pendingLocalCommandID = commandID
         case .cloud:
-            Task {
-                await sendCloudTranscript(trimmed)
+            cloudSubmissionTask = Task { [weak self] in
+                guard let self else { return }
+                await self.sendCloudTranscript(trimmed)
             }
         }
     }
@@ -370,10 +412,18 @@ final class VoiceSessionViewModel: ObservableObject {
         guard lastSpokenMessageID != message.id else { return }
 
         lastSpokenMessageID = message.id
+        pendingLocalCommandID = nil
         appendAssistantReply(message.text, delivery: .spoken)
         phase = .speaking
         statusMessage = "Speaking reply through \(providerTitle)"
         audioService.speak(message.text)
+    }
+
+    func handleLocalCommandFailure(commandID: String, message: String) {
+        guard pendingLocalCommandID == commandID else { return }
+        pendingLocalCommandID = nil
+        phase = .idle
+        statusMessage = "Could not send to the paired desktop: \(message)"
     }
 
     @discardableResult
@@ -411,6 +461,8 @@ final class VoiceSessionViewModel: ObservableObject {
     var canRetryPlayback: Bool { phase == .playbackFailed && lastCloudResponse != nil }
 
     func resetConversation() {
+        cloudSubmissionTask?.cancel()
+        cloudSubmissionTask = nil
         audioService.stopRecording()
         cloudService.stopPlayback()
         transcript.removeAll()
@@ -418,6 +470,7 @@ final class VoiceSessionViewModel: ObservableObject {
         phase = .idle
         statusMessage = "Conversation cleared"
         lastSpokenMessageID = nil
+        pendingLocalCommandID = nil
         lastCloudResponse = nil
         pendingCloudMessageID = nil
     }
@@ -433,6 +486,7 @@ final class VoiceSessionViewModel: ObservableObject {
                 agentID: selectedAgent.rawValue,
                 piperVoice: piperFarsiVoice.rawValue
             )
+            guard !Task.isCancelled, cloudReady else { return }
             let messageID = appendAssistantReply(response.reply)
             lastCloudResponse = response
             pendingCloudMessageID = messageID
@@ -442,6 +496,7 @@ final class VoiceSessionViewModel: ObservableObject {
             }
             retryCloudPlayback()
         } catch {
+            guard !Task.isCancelled else { return }
             statusMessage = error.localizedDescription
             phase = .idle
             cloudStatus = error.localizedDescription

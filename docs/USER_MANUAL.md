@@ -11,7 +11,7 @@
 1. [What is Alphonso](#1-what-is-alphonso)
 2. [Getting Started](#2-getting-started)
 3. [Chat Interface](#3-chat-interface)
-4. [Voice OS — Real-Time Voice Pipeline](#4-voice-os--real-time-voice-pipeline)
+4. [Voice OS — Local Voice Pipeline](#4-voice-os--local-voice-pipeline)
 5. [Jose Command System](#5-jose-command-system)
 6. [9 Agents — Who Does What](#6-9-agents--who-does-what)
 7. [Boardroom Orchestrator](#7-boardroom-orchestrator)
@@ -66,7 +66,7 @@ If Ollama is not running, Alphonso will show a preflight warning. To start Ollam
 ```powershell
 $env:OLLAMA_ORIGINS="*"
 ollama serve
-```
+```text
 
 ---
 
@@ -100,15 +100,19 @@ After agent execution, you'll see a **Pipeline Result Card** showing:
 
 ---
 
-## 4. Voice OS — Real-Time Voice Pipeline
+## 4. Voice OS — Local Voice Pipeline
 
-Alphonso includes a full real-time voice pipeline that lets you speak naturally and receive spoken responses. It runs as a Python microservice (`voice/backend/`) launched from the **Runtime Manager**.
+Alphonso's desktop Voice console shows the real readiness of the local voice
+pipeline: the managed Voice OS runtime, Python, and the local WebSocket
+service. It runs as a Python microservice (`voice/backend/`) launched from
+**Runtimes**. A running process is not proof that a microphone-to-audio reply
+has been verified; use the Chat microphone to make that check.
 
 ### How It Works
 
 ```
 Microphone (AudioWorklet PCM)
-  → WebSocket → FastAPI voice server (port 8765)
+  → WebSocket → FastAPI voice server (port 8766)
   → VAD gate (webrtcvad — discards silence)
   → STT (faster-whisper, CPU, int8)
   → Agent routing (9-agent regex patterns)
@@ -120,16 +124,16 @@ Microphone (AudioWorklet PCM)
 ### Starting the Voice Server
 
 **From Runtime Manager (recommended):**
-1. Open Alphonso → Runtime Manager
+1. Open Alphonso → **Voice** to review readiness, or **Runtimes** to install the managed runtime
 2. Find the **Voice OS** entry
-3. Click **Start** — the server launches on `ws://127.0.0.1:8765`
+3. Click **Start local voice** in Voice, or **Start** in Runtimes — the server launches on `ws://127.0.0.1:8766`
 
 **From terminal (development):**
 ```bash
 cd voice/backend
-python -m venv .venv && .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 8765
+python -m uvicorn main:app --host 127.0.0.1 --port 8766
 ```
 
 ### Using Voice in Chat
@@ -141,6 +145,12 @@ Once the Voice OS server is running:
 3. Alphonso transcribes, routes to the appropriate agent, generates a response, and plays it back
 4. **Barge in** at any time by speaking — the current response will be cancelled immediately
 5. Click **Stop** to end the voice session; click **Reset** to clear the conversation history
+
+### Cloud Voice companion
+
+Cloud Voice is separate from desktop Voice OS. It requires a paired, enrolled
+iPhone plus a real request/reply audio check. The Voice console deliberately
+marks it as pending until that physical-device verification has been recorded.
 
 ### Voice Agent Routing
 
@@ -163,7 +173,7 @@ The voice pipeline uses the same 9 agents as the chat interface. Routing is keyw
 The server exposes a health endpoint:
 
 ```bash
-curl http://127.0.0.1:8765/health
+curl http://127.0.0.1:8766/health
 # → {"status": "ok"}
 ```
 
@@ -321,7 +331,16 @@ Each project can have its own working directory:
 
 ## 7. Content Catalyst
 
-Content Catalyst is Miya's **full content creation pipeline** for social media.
+Content Catalyst is Miya's **content creation studio** for social media. Start
+with a creative brief, choose the asset types you need, then review each output
+before it moves forward. The studio never treats an unavailable asset as a
+finished one.
+
+For image work, the studio checks the local ComfyUI runtime. If ComfyUI is
+installed but stopped, use **Start ComfyUI** from the active job; if it is not
+installed, set it up in **Runtimes** first. A generated image is shown directly
+in the Creative output card when available. Video generation uses Runway only
+when it is configured. Publishing always requires approval.
 
 ### Trigger
 
@@ -337,7 +356,7 @@ Make a YouTube video script for product launch
 2. **Draft** — LLM generates the content draft
 3. **Image** — ComfyUI generates visual assets
 4. **Video** — Runway generates video (if requested)
-5. **Narration** — Voiceover (if requested)
+5. **Narration** — A narration script (if requested; audio generation is not implied)
 6. **Preview** — Shows the complete package
 7. **Publish** — Posts to the platform (requires approval)
 

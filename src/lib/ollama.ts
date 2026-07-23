@@ -51,6 +51,7 @@ export interface GenerateResponseOptions {
   endpoint: string;
   model: string;
   prompt: string;
+  signal?: AbortSignal;
 }
 
 export interface OllamaMessage {
@@ -103,6 +104,10 @@ export function formatModelSize(size: number): string {
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
+  const externalSignal = options.signal;
+  const abortForExternalSignal = () => controller.abort(externalSignal?.reason);
+  if (externalSignal?.aborted) abortForExternalSignal();
+  else externalSignal?.addEventListener('abort', abortForExternalSignal, { once: true });
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -112,6 +117,7 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
     });
   } finally {
     window.clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', abortForExternalSignal);
   }
 }
 
@@ -459,7 +465,7 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
   }
 }
 
-export async function generateOllamaResponse({ endpoint, model, prompt }: GenerateResponseOptions): Promise<{ response: string; done: boolean }> {
+export async function generateOllamaResponse({ endpoint, model, prompt, signal }: GenerateResponseOptions): Promise<{ response: string; done: boolean }> {
   const baseUrl = normalizeEndpoint(endpoint);
   try {
     const response = await fetchWithTimeout(`${baseUrl}/api/generate`, {
@@ -472,8 +478,9 @@ export async function generateOllamaResponse({ endpoint, model, prompt }: Genera
         model,
         prompt,
         stream: false
-      })
-    }, 30000);
+      }),
+      signal
+    }, 120000);
 
     if (!response.ok) {
       let message = `Ollama /api/generate returned HTTP ${response.status}`;
@@ -488,6 +495,9 @@ export async function generateOllamaResponse({ endpoint, model, prompt }: Genera
 
     return response.json() as Promise<{ response: string; done: boolean }>;
   } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
     const classified = classifyOllamaError(error);
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
       throw error;

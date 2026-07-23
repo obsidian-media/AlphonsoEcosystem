@@ -8,10 +8,9 @@ import { generateOllamaChatStream } from '../../lib/ollama.js';
  * External Agent Adapter — routes external agent tasks to live providers.
  *
  * Wired providers: OpenAI/ChatGPT, Claude/Anthropic, Ollama, DeepSeek
- * Planned providers: Gemini (v2.6), ACC (v2.6)
- *
- * Note: Gemini requires Google AI Studio API key — planned for v2.6.
- * ACC is the Alphonso Companion project MCP server — planned for inter-project calls.
+ * Unsupported providers are intentionally absent from the selectable list.
+ * Gemini and ACC remain rejected by the adapter until they have a complete,
+ * policy-gated implementation.
  */
 const _adapterUsageLog = [];
 
@@ -19,10 +18,8 @@ export function listSupportedExternalProviders() {
   return [
     { id: 'openai', enabled: false, status: isConnectorAuthenticated('chatgpt').ok ? 'live' : 'no_credentials' },
     { id: 'claude', enabled: false, status: isConnectorAuthenticated('claude').ok ? 'live' : 'no_credentials' },
-    { id: 'gemini', enabled: false, status: 'planned_v2.6' },
     { id: 'ollama', enabled: true, status: 'live' },
-    { id: 'deepseek', enabled: isDeepSeekConfigured(), status: isDeepSeekConfigured() ? 'live' : 'no_credentials' },
-    { id: 'acc', enabled: false, status: 'not_wired' }
+    { id: 'deepseek', enabled: isDeepSeekConfigured(), status: isDeepSeekConfigured() ? 'live' : 'no_credentials' }
   ];
 }
 

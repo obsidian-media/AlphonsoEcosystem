@@ -20,14 +20,14 @@ const MAX_FILES_PER_STEP = 3;
 // (e.g. "....//" collapses to "../" after one pass). Loop until no further
 // traversal markers are stripped, and drop leading separators each pass too
 // (".. /../foo" style splits that reintroduce a leading slash).
-function sanitizeRelativePath(rawPath) {
-  let prev;
-  let safePath = String(rawPath);
-  do {
-    prev = safePath;
-    safePath = safePath.replace(/^[/\\]+/, '').replace(/\.\.[/\\]/g, '').replace(/^[/\\]+/, '');
-  } while (safePath !== prev);
-  return safePath;
+export function sanitizeRelativePath(rawPath) {
+  const normalized = String(rawPath || '').replaceAll('\\', '/');
+  if (!normalized || normalized.includes('\0') || normalized.startsWith('/')) return null;
+
+  const segments = normalized.split('/');
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) return null;
+
+  return segments.join('/');
 }
 
 // ─── Brain 1: Context Reader ────────────────────────────────────────────────
@@ -690,6 +690,10 @@ export async function executeWithBrain(commandText, options = {}) {
         for (const file of stepFiles) {
           if (file.path && file.content) {
             const safePath = sanitizeRelativePath(file.path);
+            if (!safePath) {
+              results.push('Skipped unsafe artifact path');
+              continue;
+            }
             try {
               await writeWorkspaceArtifact({
                 workspaceRoot: projectDirectory || '',
@@ -778,8 +782,12 @@ export async function executeWithBrain(commandText, options = {}) {
         if (fixParsed && Array.isArray(fixParsed.files)) {
           for (const file of fixParsed.files.slice(0, 2)) {
             if (file.path && file.content) {
-              const safePath = sanitizeRelativePath(file.path);
-              await writeWorkspaceArtifact({
+            const safePath = sanitizeRelativePath(file.path);
+            if (!safePath) {
+              results.push('Skipped unsafe fix artifact path');
+              continue;
+            }
+            await writeWorkspaceArtifact({
                 workspaceRoot: projectDirectory || '',
                 relativePath: safePath,
                 content: String(file.content)

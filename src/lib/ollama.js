@@ -30,6 +30,10 @@ export function formatModelSize(size) {
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
+  const externalSignal = options.signal;
+  const abortForExternalSignal = () => controller.abort(externalSignal?.reason);
+  if (externalSignal?.aborted) abortForExternalSignal();
+  else externalSignal?.addEventListener('abort', abortForExternalSignal, { once: true });
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -39,6 +43,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_M
     });
   } finally {
     window.clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', abortForExternalSignal);
   }
 }
 
@@ -452,7 +457,7 @@ export async function generateOllamaChatStream({ endpoint, model, messages, onTo
   throw lastError || new Error('All models in fallback chain failed.');
 }
 
-export async function generateOllamaResponse({ endpoint, model, prompt }) {
+export async function generateOllamaResponse({ endpoint, model, prompt, signal }) {
   const baseUrl = normalizeEndpoint(endpoint);
   try {
     const response = await fetchWithTimeout(`${baseUrl}/api/generate`, {
@@ -465,13 +470,14 @@ export async function generateOllamaResponse({ endpoint, model, prompt }) {
         model,
         prompt,
         stream: false
-      })
+      }),
       // 120s, not 30s: verified live against a real multi-model Ollama
       // instance that a cold model swap (unloading one model, loading
       // another into memory) alone can take 45-50s before generation even
       // starts — total_duration was 73s for a trivial prompt with
       // load_duration accounting for 47s of that. A 30s cap made this
       // reliably fail whenever the requested model wasn't already resident.
+      signal
     }, 120000);
 
     if (!response.ok) {
@@ -489,6 +495,9 @@ export async function generateOllamaResponse({ endpoint, model, prompt }) {
 
     return response.json();
   } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
     const classified = classifyOllamaError(error);
     if (!isTauri() || !['cors', 'not_running', 'disconnected', 'timeout'].includes(classified.code)) {
       throw new Error(`Ollama response generation failed for model ${model}: ${error?.message || error}`);

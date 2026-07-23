@@ -53,4 +53,14 @@ final class CompanionConnectionStateMachineTests: XCTestCase {
 
         XCTAssertEqual(first.id, second.id)
     }
+
+    func testManualPairingEndpointRejectsAnInvalidPortInsteadOfFallingBack() {
+        XCTAssertNil(PairingEndpoint(host: "192.168.1.100", portText: "not-a-port"))
+        XCTAssertNil(PairingEndpoint(host: "", portText: "8765"))
+        XCTAssertEqual(PairingEndpoint(host: "192.168.1.100", portText: "8765"), PairingEndpoint(host: "192.168.1.100", portText: "8765"))
+    }
+
+    func testPairingPinKeepsOnlyTheFirstSixDigits() {
+        XCTAssertEqual(PairingInput.pin(from: "12a34-5678"), "123456")
+    }
 }

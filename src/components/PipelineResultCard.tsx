@@ -5,11 +5,26 @@ import { Bot, CheckCircle2, ChevronDown, ChevronUp, Clock, Copy, Download, Exter
 // Agent-generated resultUrl strings must never be rendered as an href unchecked —
 // a malicious/hallucinated "javascript:" or "data:" scheme would execute in-app,
 // and other schemes could be used for open-redirect-style phishing.
+const TRUSTED_RESULT_HOSTS = new Set([
+  'github.com',
+  'www.github.com',
+  'vercel.com',
+  'www.vercel.com',
+  'railway.app',
+  'www.railway.app',
+]);
+
 function safeHttpUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
     const parsed = new URL(url);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? url : null;
+    const trustedSubdomain = [...TRUSTED_RESULT_HOSTS].some(
+      (host) => parsed.hostname.endsWith(`.${host}`),
+    );
+    if (parsed.protocol !== 'https:' || (!TRUSTED_RESULT_HOSTS.has(parsed.hostname) && !trustedSubdomain)) {
+      return null;
+    }
+    return parsed.href;
   } catch {
     return null;
   }

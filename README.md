@@ -122,7 +122,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **103 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **106 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 - **3,516 tests across 249 test files** — verified 2026-07-22; see the ground truth for current verification status.
 
 ## What's New in v2.4.2

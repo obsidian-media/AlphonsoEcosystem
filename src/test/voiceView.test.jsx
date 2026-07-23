@@ -10,12 +10,16 @@ vi.mock('../services/voiceOsService', () => ({
 }));
 
 vi.mock('../services/runtimeManagerService', () => ({
-  checkPrerequisites: vi.fn().mockResolvedValue({ pythonFound: true })
+  checkPrerequisites: vi.fn().mockResolvedValue({ pythonFound: true }),
+  getAllStatus: vi.fn().mockResolvedValue([{ name: 'voice-os', installed: true, running: false }])
 }));
 
 describe('VoiceView', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { checkPrerequisites, getAllStatus } = await import('../services/runtimeManagerService');
+    checkPrerequisites.mockResolvedValue({ pythonFound: true });
+    getAllStatus.mockResolvedValue([{ name: 'voice-os', installed: true, running: false }]);
   });
 
   it('shows stopped status with a Start button when the voice server is not running', async () => {
@@ -25,8 +29,9 @@ describe('VoiceView', () => {
     const { VoiceView } = await import('../components/VoiceView');
     render(<VoiceView />);
 
-    expect(await screen.findByText(/stopped/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument();
+    expect(await screen.findByText(/local voice offline/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start local voice/i })).toBeInTheDocument();
+    expect(screen.getByText(/Voice OS runtime/i)).toBeInTheDocument();
   });
 
   it('shows running status with a Stop button and the WebSocket URL when the voice server is running', async () => {
@@ -37,7 +42,7 @@ describe('VoiceView', () => {
     render(<VoiceView />);
 
     expect(await screen.findByText(/running/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^stop$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /stop local voice/i })).toBeInTheDocument();
     expect(screen.getByText(/ws:\/\/127\.0\.0\.1:8766\/ws/i)).toBeInTheDocument();
   });
 
@@ -49,11 +54,11 @@ describe('VoiceView', () => {
     const { VoiceView } = await import('../components/VoiceView');
     render(<VoiceView />);
 
-    await screen.findByRole('button', { name: /^start$/i });
-    fireEvent.click(screen.getByRole('button', { name: /^start$/i }));
+    await screen.findByRole('button', { name: /start local voice/i });
+    fireEvent.click(screen.getByRole('button', { name: /start local voice/i }));
 
     await waitFor(() => expect(startVoiceServer).toHaveBeenCalled());
-    expect(await screen.findByRole('button', { name: /^stop$/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /stop local voice/i })).toBeInTheDocument();
   });
 
   it('warns when Python was not detected as a prerequisite', async () => {
@@ -66,5 +71,30 @@ describe('VoiceView', () => {
     render(<VoiceView />);
 
     expect(await screen.findByText(/python.*not.*(found|detected)/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start local voice/i })).toBeDisabled();
+  });
+
+  it('requires the managed Voice OS runtime before enabling local start', async () => {
+    const { getVoiceServerStatus } = await import('../services/voiceOsService');
+    const { checkPrerequisites, getAllStatus } = await import('../services/runtimeManagerService');
+    getVoiceServerStatus.mockResolvedValue('stopped');
+    checkPrerequisites.mockResolvedValue({ pythonFound: true });
+    getAllStatus.mockResolvedValue([]);
+
+    const { VoiceView } = await import('../components/VoiceView');
+    render(<VoiceView />);
+
+    expect(await screen.findByText(/Install Voice OS from Runtimes/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start local voice/i })).toBeDisabled();
+  });
+
+  it('keeps Cloud Voice explicitly pending until physical-device verification', async () => {
+    const { getVoiceServerStatus } = await import('../services/voiceOsService');
+    getVoiceServerStatus.mockResolvedValue('stopped');
+
+    const { VoiceView } = await import('../components/VoiceView');
+    render(<VoiceView />);
+
+    expect(await screen.findByText(/Physical-device verification pending/i)).toBeInTheDocument();
   });
 });

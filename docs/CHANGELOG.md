@@ -6,8 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — 2026-07-21 (skill-pack integration and dependency refresh)
+## [Unreleased] — 2026-07-22 (product readiness and review follow-up)
 
+- **Voice console:** replaced the single opaque start/stop card with local
+  runtime, Python, and WebSocket readiness checks; added refreshable state and
+  a clear local start/stop path. Cloud Voice is explicitly shown as pending
+  physical-device verification rather than represented as ready.
+- **Content Studio creation room:** reframed the workspace around the real
+  brief-to-asset production loop, with live ComfyUI readiness, an in-place
+  start action when the runtime is installed, and an explicit setup state when
+  it is not. Generated image assets render in the creative output card; no
+  image is represented as an unavailable asset rather than a completed result.
+  Added Content Studio E2E coverage for both rendered image assets and the
+  unavailable-runtime state.
+- **Boardroom cancellation:** Stop now aborts the current Ollama generation,
+  prevents its cancelled reply from appearing, and retains the existing guard
+  against further chained replies. Remaining Boardroom scope is explicitly
+  deferred in Ground Truth and the readiness plan.
+- **External-agent availability:** unsupported `acc` and `gemini` providers
+  are hidden from the selectable provider list until they have policy,
+  contract, audit, and verification parity. Direct adapter calls remain
+  fail-closed as `not_wired`.
 - **Verification reliability:** updated the programmatic Vitest runner to use
   one fork and disable file-level parallelism in this Windows environment;
   `npm run test` now completes with 249 files / 3,516 tests passing. Moved the

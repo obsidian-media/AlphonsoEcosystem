@@ -104,7 +104,8 @@ export async function generateAgentResponse({
   newMessageText,
   crossThreadContext = [],
   endpoint = DEFAULT_OLLAMA_ENDPOINT,
-  model = DEFAULT_MODEL
+  model = DEFAULT_MODEL,
+  signal
 }: {
   agentId: string;
   topic: string;
@@ -113,11 +114,12 @@ export async function generateAgentResponse({
   crossThreadContext?: CrossThreadContextResult[];
   endpoint?: string;
   model?: string;
+  signal?: AbortSignal;
 }): Promise<FacilitatorResult> {
   const prompt = buildFacilitatorPrompt({ topic, priorMessages, newMessageText, agentId, crossThreadContext });
   const startedAt = Date.now();
   try {
-    const result = await generateOllamaResponse({ endpoint, model, prompt });
+    const result = await generateOllamaResponse({ endpoint, model, prompt, signal });
     return { ok: true, text: (result?.response || '').trim(), model, latencyMs: Date.now() - startedAt };
   } catch (error) {
     return { ok: false, text: '', error: (error as Error)?.message || String(error) };

@@ -1,153 +1,172 @@
 import SwiftUI
-import UIKit
 
 struct AgentDockView: View {
     @EnvironmentObject var webSocketService: WebSocketService
 
-    private let agents = [
-        "Alphonso", "Jose", "Hector", "Miya", "Maria",
-        "Marcus", "Echo", "Sentinel", "Nova"
-    ]
+    private let agents = AgentIdentity.all
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    ForEach(agents, id: \.self) { agent in
-                        AgentCard(name: agent, status: webSocketService.agentStatuses[agent])
+                VStack(alignment: .leading, spacing: 20) {
+                    AgentDockHeader(
+                        activeCount: webSocketService.agentStatuses.values.filter { $0.status == "running" || $0.status == "active" }.count,
+                        isConnected: webSocketService.connectionState == .authenticated
+                    )
+
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 164), spacing: 14)],
+                        spacing: 14
+                    ) {
+                        ForEach(agents) { agent in
+                            AgentCard(agent: agent, status: webSocketService.agentStatuses[agent.name])
+                        }
                     }
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
+            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("Agents")
         }
     }
 }
 
-struct AgentCard: View {
-    let name: String
+private struct AgentDockHeader: View {
+    let activeCount: Int
+    let isConnected: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(isConnected ? "Companion connected" : "Desktop connection required", systemImage: isConnected ? "checkmark.circle.fill" : "link.badge.plus")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isConnected ? Color.green : Color.secondary)
+
+            Text(isConnected ? "Your operating crew" : "Meet your operating crew")
+                .font(.system(.title2, design: .rounded).weight(.bold))
+
+            Text(isConnected
+                 ? "\(activeCount) agent\(activeCount == 1 ? "" : "s") active now. Live status updates arrive from your desktop."
+                 : "Pair with your desktop to see live activity and delegate work with confidence.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(
+            LinearGradient(
+                colors: [Color.indigo.opacity(0.92), Color.blue.opacity(0.72)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .foregroundStyle(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AgentCard: View {
+    let agent: AgentIdentity
     let status: AgentStatus?
 
     var body: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(avatarGradient)
-                    .frame(width: 76, height: 76)
-                    .shadow(color: statusColor.opacity(0.2), radius: 10, y: 4)
+        VStack(alignment: .leading, spacing: 12) {
+            AgentPortrait(agent: agent)
+                .frame(maxWidth: .infinity)
+                .frame(height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(alignment: .bottomLeading) {
+                    Text(agent.name)
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            LinearGradient(
+                                colors: [.clear, .black.opacity(0.72)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
 
-                AgentPortrait(name: name)
-                    .frame(width: 66, height: 66)
-                    .clipShape(Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Color.white.opacity(0.9), lineWidth: 2)
-                    }
+            Text(agent.role)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(agent.accent)
 
+            Text(agent.summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 6) {
                 Circle()
                     .fill(statusColor)
-                    .frame(width: 14, height: 14)
-                    .overlay {
-                        Circle()
-                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                    }
-                    .offset(x: 24, y: 24)
-            }
-
-            VStack(spacing: 4) {
-                Text(name)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-
+                    .frame(width: 8, height: 8)
                 Text(statusText)
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
+                Spacer()
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, minHeight: 174)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.regularMaterial)
-        )
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(agent.name), \(agent.role), \(statusText)")
     }
 
-    private var statusText: String {
-        if let status {
-            return status.status.capitalized
-        }
-        return "Idle"
-    }
-
-    private var avatarGradient: LinearGradient {
-        let colors: [Color]
-        switch name.lowercased() {
-        case "alphonso":
-            colors = [Color.blue.opacity(0.95), Color.cyan.opacity(0.75)]
-        case "jose":
-            colors = [Color.indigo.opacity(0.95), Color.purple.opacity(0.7)]
-        case "hector":
-            colors = [Color.green.opacity(0.9), Color.teal.opacity(0.7)]
-        case "miya":
-            colors = [Color.pink.opacity(0.95), Color.orange.opacity(0.7)]
-        case "maria":
-            colors = [Color.red.opacity(0.9), Color.orange.opacity(0.65)]
-        case "marcus":
-            colors = [Color.brown.opacity(0.9), Color.orange.opacity(0.65)]
-        case "echo":
-            colors = [Color.gray.opacity(0.9), Color.blue.opacity(0.6)]
-        case "sentinel":
-            colors = [Color.black.opacity(0.9), Color.gray.opacity(0.55)]
-        case "nova":
-            colors = [Color.mint.opacity(0.95), Color.cyan.opacity(0.7)]
-        default:
-            colors = [statusColor.opacity(0.95), statusColor.opacity(0.6)]
-        }
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
+    private var statusText: String { status?.status.capitalized ?? "Standing by" }
 
     private var statusColor: Color {
-        guard let status = status else { return .secondary }
-        switch status.status {
+        switch status?.status.lowercased() {
         case "running", "active": return .green
-        case "idle": return .yellow
-        case "error": return .red
+        case "idle", "waiting": return .orange
+        case "error", "failed": return .red
         default: return .secondary
         }
     }
 }
 
-struct AgentPortrait: View {
-    let name: String
+private struct AgentPortrait: View {
+    let agent: AgentIdentity
 
     var body: some View {
-        if UIImage(named: assetName) != nil {
-            Image(assetName)
-                .resizable()
-                .scaledToFill()
-        } else {
-            ZStack {
-                LinearGradient(
-                    colors: [Color.black.opacity(0.2), Color.black.opacity(0.05)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                Text(initials)
-                    .font(.headline.weight(.bold))
-                    .foregroundColor(.white)
-            }
-        }
+        Image(agent.assetName)
+            .resizable()
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: agent.portraitAlignment)
+            .clipped()
+            .accessibilityHidden(true)
     }
+}
 
-    private var assetName: String {
-        name.lowercased()
-    }
+private struct AgentIdentity: Identifiable {
+    let name: String
+    let role: String
+    let summary: String
+    let accent: Color
+    let portraitAlignment: Alignment
 
-    private var initials: String {
-        String(name.prefix(1)).uppercased()
-    }
+    var id: String { name }
+    var assetName: String { name.lowercased() }
+
+    static let all: [AgentIdentity] = [
+        .init(name: "Alphonso", role: "Local operator", summary: "Runs work, checks results, and packages outcomes.", accent: .cyan, portraitAlignment: .trailing),
+        .init(name: "Jose", role: "Orchestrator", summary: "Routes work, coordinates agents, and keeps approvals visible.", accent: .orange, portraitAlignment: .center),
+        .init(name: "Hector", role: "Research", summary: "Finds, verifies, and synthesizes reliable sources.", accent: .blue, portraitAlignment: .center),
+        .init(name: "Miya", role: "Creative director", summary: "Shapes campaign ideas, storyboards, and exports.", accent: .pink, portraitAlignment: .center),
+        .init(name: "Maria", role: "Governance", summary: "Reviews risk, approvals, and audit evidence.", accent: .purple, portraitAlignment: .center),
+        .init(name: "Marcus", role: "Distribution", summary: "Executes approved publishing and delivery work.", accent: .green, portraitAlignment: .center),
+        .init(name: "Echo", role: "Memory historian", summary: "Preserves context and makes past work retrievable.", accent: .indigo, portraitAlignment: .center),
+        .init(name: "Sentinel", role: "Safety monitor", summary: "Watches automation safety and policy boundaries.", accent: .red, portraitAlignment: .center),
+        .init(name: "Nova", role: "Opportunity analyst", summary: "Scores options and highlights the strongest next move.", accent: .yellow, portraitAlignment: .center),
+    ]
 }
