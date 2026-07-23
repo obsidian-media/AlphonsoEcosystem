@@ -26,12 +26,9 @@ pnpm-debug.log*
 *.local
 *.log
 
-# Local-only Coach / SessionGuard bridge data
-.sessionguard/
+# Local-only Coach data
 .coach-bridge/
-sessionguard-bridge/
 coach-session-events*.json
-sessionguard-events*.json
 .vercel
 
 # Playwright outputs

@@ -41,7 +41,7 @@ export function useAppShellState({
   const [snapshots, setSnapshots] = useState(() => listSnapshots());
   const [showWorkflowPanel, setShowWorkflowPanel] = useState(false);
   const [approvalRequiredNotice, setApprovalRequiredNotice] = useState(false);
-  const [approvalPending, setApprovalPending] = useState(null);
+  const [approvalPending, setApprovalPending] = useState(null); // { actionLabel, packetId, agent, riskLevel, mariaScore }
   const [showOnboarding, setShowOnboarding] = useState(() => !getStorage('alphonso_onboarding_complete_v1', false));
   const [nativeSelfDevProof, setNativeSelfDevProof] = useState(() => {
     const stored = getStorage('alphonso_native_selfdev_proof', null);
@@ -102,13 +102,13 @@ export function useAppShellState({
 
   const nativeProofHooks = useMemo(() => ({ writeStage: writeNativeProofStage }), [writeNativeProofStage]);
 
-  const requestApproval = useCallback((actionLabel) => {
+  const requestApproval = useCallback(({ actionLabel, packetId = null, agent = 'jose', riskLevel = 'medium', mariaScore = null } = {}) => {
     // Logic from App.jsx
     if (!settings.approvalMode) return Promise.resolve(true);
     if (!needsHighRiskApproval(actionLabel)) return Promise.resolve(true);
     return new Promise((resolve) => {
       approvalResolveRef.current = resolve;
-      setApprovalPending(actionLabel);
+      setApprovalPending({ actionLabel, packetId, agent, riskLevel, mariaScore });
     });
   }, [settings.approvalMode]);
 
@@ -138,14 +138,14 @@ export function useAppShellState({
 
   const handleCreateSnapshot = useCallback(async () => {
     // Logic from App.jsx
-    if (!await requestApproval('Create restore point snapshot')) return;
+    if (!await requestApproval({ actionLabel: 'Create restore point snapshot' })) return;
     const snapshot = await createSnapshot({ settings, ollamaStatus, activeChatId, verificationLogCount: verificationLogs.length, memoryCount: memoryItems.length });
     setSnapshots((current) => [...current, snapshot].slice(-SNAPSHOT_HISTORY_CAP));
   }, [requestApproval, settings, ollamaStatus, activeChatId, verificationLogs.length, memoryItems.length]);
 
   const handleRestoreSnapshot = useCallback(async (snapshotId) => {
     // Logic from App.jsx
-    if (!await requestApproval(`Restore snapshot: ${snapshotId}`)) return;
+    if (!await requestApproval({ actionLabel: `Restore snapshot: ${snapshotId}` })) return;
     const payload = restoreSnapshotById(snapshotId);
     if (!payload) return;
     if (payload.settings) setSettings(payload.settings);
@@ -159,7 +159,7 @@ export function useAppShellState({
 
   const handleBackupMemory = useCallback(async () => {
     // Logic from App.jsx
-    if (!await requestApproval('Create memory backup')) return;
+    if (!await requestApproval({ actionLabel: 'Create memory backup' })) return;
     const backup = backupMemoryLedger(memoryItems);
     const log = appendVerificationLog({ type: 'memory_backup', source: 'local-recovery', trust: TRUST_STATES.VERIFIED, payload: { backupId: backup.id, count: backup.items.length } });
     setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
@@ -167,7 +167,7 @@ export function useAppShellState({
 
   const handleRequestScreenObserverPermission = useCallback(async () => {
     // Logic from App.jsx
-    if (!await requestApproval('Request desktop notification permission for screen alerts')) return;
+    if (!await requestApproval({ actionLabel: 'Request desktop notification permission for screen alerts' })) return;
     const permission = await requestScreenNotificationPermission();
     const next = updateScreenObserverState({
       currentSummary: permission === 'granted' ? 'Notification permission granted.'
@@ -179,7 +179,7 @@ export function useAppShellState({
 
   const handleStartScreenObserver = useCallback(async () => {
     // Logic from App.jsx
-    if (!await requestApproval('Start visible screen observer (manual permission prompt)')) return;
+    if (!await requestApproval({ actionLabel: 'Start visible screen observer (manual permission prompt)' })) return;
     const current = getScreenObserverState();
     const result = await startScreenObserver({
       sampleEveryMs: current.sampleEveryMs || SCREEN_OBSERVER_INTERVAL_MS,
