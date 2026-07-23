@@ -33,7 +33,7 @@ the same change; no task is complete without the plan's stated verification.
 | Field | Value |
 |---|---|
 | App name | Alphonso |
-| Version | 2.6.0 |
+| Version | 2.6.1 |
 | Type | Tauri v2 desktop app (Windows) |
 | Project root | `D:\AgentDevWork\repos\AlphonsoEcosystem` |
 | Backend | Rust 1.77, Tauri 2.11, SQLite (rusqlite bundled), tokio, reqwest, tokio-tungstenite (companion) |
