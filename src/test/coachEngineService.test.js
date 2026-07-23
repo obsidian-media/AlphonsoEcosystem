@@ -7,6 +7,10 @@ import {
   detectConfidenceDecay,
   detectApprovalRubberStamp,
   detectLongUnbrokenSession,
+  detectAgentWhiplash,
+  detectBoardroomHedgePileup,
+  detectUnusedSurfaceArea,
+  detectLicenseWall,
   runCoachDetectors,
   resetCoachCooldowns
 } from '../services/coachEngineService';
@@ -16,15 +20,20 @@ import { getPerformanceTrend } from '../services/agentPerformanceService';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { listAgentPackets } from '../services/agentBusService';
 import { timestampMs } from '../services/trustModel';
+import { clearLicenseDenialLog } from '../services/licenseService';
 
 const originalDateNow = Date.now;
 
 function clearAllCoachData() {
   clearAuditLog();
+  clearLicenseDenialLog();
   localStorage.removeItem('alphonso_agent_bus_packets_v1');
   localStorage.removeItem('alphonso_agent_performance_snapshots_v1');
   localStorage.removeItem('alphonso_orchestration_receipts_v1');
   localStorage.removeItem('alphonso_session_start_ts');
+  localStorage.removeItem('alphonso_boardroom_threads_v2');
+  localStorage.removeItem('alphonso_boardroom_thread_messages_v2');
+  localStorage.removeItem('alphonso_skill_pack_invocation_v1');
 }
 
 beforeEach(() => {
@@ -396,6 +405,278 @@ describe('coachEngineService', () => {
       expect(detectApprovalRubberStamp()).toBeNull();
       resetCoachCooldowns();
       expect(detectApprovalRubberStamp()).not.toBeNull();
+    });
+  });
+
+  // ── Phase 2 detectors ──────────────────────────────────────────────────
+
+  describe('detectAgentWhiplash', () => {
+    it('returns null when fewer than 10 packets', () => {
+      expect(detectAgentWhiplash()).toBeNull();
+    });
+
+    it('fires when same actionType bounced between 3+ agents in < 60s', () => {
+      const now = timestampMs();
+      const packets = [];
+      for (let i = 0; i < 10; i++) {
+        packets.push({
+          id: `pkt-${i}`,
+          fromAgent: 'jose',
+          toAgent: i < 5 ? 'hector' : 'alphonso',
+          actionType: 'research',
+          status: 'assigned',
+          createdAtMs: now - (10 - i) * 1000,
+          updatedAtMs: now
+        });
+      }
+      // Bounce between 3 agents
+      packets[7] = { ...packets[7], toAgent: 'hector', createdAtMs: now - 3000 };
+      packets[8] = { ...packets[8], toAgent: 'miya', createdAtMs: now - 2000 };
+      packets[9] = { ...packets[9], toAgent: 'alphonso', createdAtMs: now - 1000 };
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
+      const signal = detectAgentWhiplash();
+      expect(signal).not.toBeNull();
+      expect(signal.id).toBe('agent_whiplash');
+      expect(signal.severity).toBe('warning');
+      expect(signal.message).toContain('research');
+    });
+
+    it('returns null when same agent handles all assignments', () => {
+      const now = timestampMs();
+      const packets = [];
+      for (let i = 0; i < 10; i++) {
+        packets.push({
+          id: `pkt-${i}`,
+          fromAgent: 'jose',
+          toAgent: 'hector',
+          actionType: 'research',
+          status: 'assigned',
+          createdAtMs: now - (10 - i) * 1000
+        });
+      }
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
+      expect(detectAgentWhiplash()).toBeNull();
+    });
+
+    it('returns null when bounces span > 60s', () => {
+      const now = timestampMs();
+      const packets = [];
+      for (let i = 0; i < 10; i++) {
+        packets.push({
+          id: `pkt-${i}`,
+          fromAgent: 'jose',
+          toAgent: i < 5 ? 'hector' : i < 8 ? 'miya' : 'alphonso',
+          actionType: 'research',
+          status: 'assigned',
+          createdAtMs: now - (10 - i) * 15000
+        });
+      }
+      packets[0] = { ...packets[0], createdAtMs: now - 120000 };
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
+      expect(detectAgentWhiplash()).toBeNull();
+    });
+
+    it('respects cooldown', () => {
+      const now = timestampMs();
+      const packets = [];
+      for (let i = 0; i < 10; i++) {
+        packets.push({
+          id: `pkt-${i}`,
+          fromAgent: 'jose',
+          toAgent: i < 5 ? 'hector' : i < 8 ? 'miya' : 'alphonso',
+          actionType: 'research',
+          status: 'assigned',
+          createdAtMs: now - (10 - i) * 1000
+        });
+      }
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
+      detectAgentWhiplash();
+      expect(detectAgentWhiplash()).toBeNull();
+    });
+  });
+
+  describe('detectBoardroomHedgePileup', () => {
+    it('returns null when no boardroom threads exist', () => {
+      expect(detectBoardroomHedgePileup()).toBeNull();
+    });
+
+    it('fires when 3+ messages in active thread use low-confidence language', () => {
+      const threadId = 'thread-1';
+      localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{
+        id: threadId, topic: 'Deployment strategy', status: 'active', updatedAtMs: timestampMs()
+      }]));
+      const now = timestampMs();
+      const messages = [
+        { id: 'm1', threadId, speaker: 'hector', content: 'I can confirm the deployment pipeline is ready.', kind: 'message', createdAtMs: now - 4000 },
+        { id: 'm2', threadId, speaker: 'miya', content: "I'm not sure about the timing — hard to say if it is safe.", kind: 'response', createdAtMs: now - 3000 },
+        { id: 'm3', threadId, speaker: 'hector', content: 'Based on the data, the rollout should work.', kind: 'message', createdAtMs: now - 2000 },
+        { id: 'm4', threadId, speaker: 'miya', content: "I don't have enough information to be confident about this.", kind: 'response', createdAtMs: now - 1000 },
+        { id: 'm5', threadId, speaker: 'echo', content: 'Previous rollbacks at this scale suggest caution. Hard to say.', kind: 'message', createdAtMs: now }
+      ];
+      localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
+      const signal = detectBoardroomHedgePileup();
+      expect(signal).not.toBeNull();
+      expect(signal.id).toBe('boardroom_hedge_pileup');
+      expect(signal.severity).toBe('warning');
+      expect(signal.message).toContain('Deployment strategy');
+    });
+
+    it('returns null when fewer than 3 hedge messages', () => {
+      const threadId = 'thread-2';
+      localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{
+        id: threadId, topic: 'Simple task', status: 'active', updatedAtMs: timestampMs()
+      }]));
+      const messages = [
+        { id: 'm1', threadId, speaker: 'hector', content: 'This is straightforward and ready.', kind: 'message', createdAtMs: timestampMs() - 2000 },
+        { id: 'm2', threadId, speaker: 'miya', content: "I'm not sure about this part.", kind: 'response', createdAtMs: timestampMs() - 1000 }
+      ];
+      localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
+      expect(detectBoardroomHedgePileup()).toBeNull();
+    });
+
+    it('returns null when no active threads', () => {
+      localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{
+        id: 'thread-3', topic: 'Done', status: 'concluded', updatedAtMs: timestampMs()
+      }]));
+      expect(detectBoardroomHedgePileup()).toBeNull();
+    });
+
+    it('respects cooldown', () => {
+      const threadId = 'thread-4';
+      localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{
+        id: threadId, topic: 'Research', status: 'active', updatedAtMs: timestampMs()
+      }]));
+      const now = timestampMs();
+      const messages = [
+        { id: 'm1', threadId, speaker: 'hector', content: "I'm not sure about this.", kind: 'message', createdAtMs: now - 3000 },
+        { id: 'm2', threadId, speaker: 'miya', content: 'Hard to say what the best approach is.', kind: 'response', createdAtMs: now - 2000 },
+        { id: 'm3', threadId, speaker: 'echo', content: "I don't have enough information to conclude.", kind: 'response', createdAtMs: now - 1000 }
+      ];
+      localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
+      detectBoardroomHedgePileup();
+      expect(detectBoardroomHedgePileup()).toBeNull();
+    });
+  });
+
+  describe('detectUnusedSurfaceArea', () => {
+    it('returns null when no stale items detected', () => {
+      expect(detectUnusedSurfaceArea()).toBeNull();
+    });
+
+    it('fires when 3+ configured items are stale', () => {
+      const now = timestampMs();
+      const stale = now - 10 * 24 * 3600 * 1000;
+      // 3 stale connectors
+      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify([
+        { id: 'github', name: 'GitHub', status: 'active', updatedAtMs: stale },
+        { id: 'slack', name: 'Slack', status: 'active', updatedAtMs: stale },
+        { id: 'discord', name: 'Discord', status: 'active', updatedAtMs: stale }
+      ]));
+      // 1 stale skill pack with installedAtMs to confirm it's been around
+      localStorage.setItem('alphonso_skill_packs_v1', JSON.stringify([
+        { id: 'pack.coding.full-stack', name: 'Full-Stack Coding', enabled: true, installedAtMs: stale }
+      ]));
+      const signal = detectUnusedSurfaceArea();
+      expect(signal).not.toBeNull();
+      expect(signal.id).toBe('unused_surface_area');
+      expect(signal.severity).toBe('neutral');
+      expect(signal.message).toContain('GitHub');
+    });
+
+    it('does not fire when fewer than 3 stale items', () => {
+      const now = timestampMs();
+      const fresh = now - 1000;
+      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify([
+        { id: 'github', name: 'GitHub', status: 'active', updatedAtMs: fresh }
+      ]));
+      expect(detectUnusedSurfaceArea()).toBeNull();
+    });
+
+    it('respects cooldown', () => {
+      const now = timestampMs();
+      const stale = now - 10 * 24 * 3600 * 1000;
+      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify([
+        { id: 'github', name: 'GitHub', status: 'active', updatedAtMs: stale },
+        { id: 'slack', name: 'Slack', status: 'active', updatedAtMs: stale },
+        { id: 'discord', name: 'Discord', status: 'active', updatedAtMs: stale }
+      ]));
+      detectUnusedSurfaceArea();
+      expect(detectUnusedSurfaceArea()).toBeNull();
+    });
+  });
+
+  describe('detectLicenseWall', () => {
+    it('returns null when no denials exist', () => {
+      expect(detectLicenseWall()).toBeNull();
+    });
+
+    it('fires when same connector denied 3+ times in last hour', () => {
+      const now = timestampMs();
+      // Add 3 recent denials for youtube
+      localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
+        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 120 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+      ]));
+      const signal = detectLicenseWall();
+      expect(signal).not.toBeNull();
+      expect(signal.id).toBe('license_wall');
+      expect(signal.severity).toBe('warning');
+      expect(signal.message).toContain('youtube');
+    });
+
+    it('returns null when fewer than 3 total denials', () => {
+      const now = timestampMs();
+      localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
+        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' }
+      ]));
+      expect(detectLicenseWall()).toBeNull();
+    });
+
+    it('returns null when denials are older than 1 hour', () => {
+      const now = timestampMs();
+      localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
+        { connectorId: 'youtube', timestamp: now - 2 * 3600 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 2 * 3600 * 1000 + 60 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 2 * 3600 * 1000 + 120 * 1000, tierAtTime: 'free' }
+      ]));
+      expect(detectLicenseWall()).toBeNull();
+    });
+
+    it('respects cooldown', () => {
+      const now = timestampMs();
+      localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
+        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 120 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+      ]));
+      detectLicenseWall();
+      expect(detectLicenseWall()).toBeNull();
+    });
+
+    it('detects wall for different connectors independently', () => {
+      const now = timestampMs();
+      localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
+        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 120 * 1000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+      ]));
+      const signal = detectLicenseWall();
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain('youtube');
+    });
+  });
+
+  describe('runCoachDetectors with Phase 2 detectors', () => {
+    it('runs the full detector pipeline including new detectors', () => {
+      const now = timestampMs();
+      localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
+        { connectorId: 'chatgpt', timestamp: now - 60 * 1000, tierAtTime: 'free' },
+        { connectorId: 'chatgpt', timestamp: now - 120 * 1000, tierAtTime: 'free' },
+        { connectorId: 'chatgpt', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+      ]));
+      const signal = runCoachDetectors();
+      expect(signal).not.toBeNull();
     });
   });
 });

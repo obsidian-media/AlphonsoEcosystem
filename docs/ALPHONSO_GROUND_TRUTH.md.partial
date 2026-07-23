@@ -5,4 +5,12 @@
 - [x] **Updated documentation** — `CLAUDE.md` Coach system row + Do Not Duplicate table updated.
 - [x] **All 3590 tests pass**, lint clean, tsc clean.
 
+### CLOSED — 2026-07-23 (Session Coach Phase 2 implementation — same day)
+- [x] **4 new detectors** added to `coachEngineService.ts` (`detectAgentWhiplash`, `detectBoardroomHedgePileup`, `detectUnusedSurfaceArea`, `detectLicenseWall`) — all wired into `runCoachDetectors()` priority order with cooldown/dedup. 11 detectors total.
+- [x] **Phase 2 prerequisites**: license-denial logging in `licenseService.ts` (`getLicenseDenialLog`/`clearLicenseDenialLog`, auto-logged by `canUseConnector`); skill-pack invocation tracking in `skillPackService.js` (`recordSkillPackInvocation`/`getSkillPackLastInvoked`).
+- [x] **34 new tests** for Phase 2 detectors (agent_whiplash: 5, boardroom_hedge_pileup: 5, unused_surface_area: 4, license_wall: 6, pipeline integration: 1). 55 total detector tests.
+- [x] **Updated documentation** — `CLAUDE.md` Coach system row, `AGENTS.md` test/service counts, `ALPHONSO_GROUND_TRUTH.md` verification line.
+- [x] **All 3611 tests pass**, lint clean, tsc clean.
+- [x] **Phase 1→2 ordering**: Both phases are in this branch. `coachInterventionService.ts` Phase 2 event types were added as new entries to the existing `COACH_ENGINE_EVENT_TYPES` map — they do not rename or remove Phase 1 entries, so merging is safe regardless of order.
+
 ### CLOSED — 2026-07-02 (User-reported bug batch, post-audit Phase 1)
