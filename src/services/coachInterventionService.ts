@@ -16,7 +16,11 @@ export const COACH_ENGINE_EVENT_TYPES = {
   DEAD_LETTER_GRAVEYARD: 'dead_letter_graveyard',
   CONFIDENCE_DECAY: 'confidence_decay',
   APPROVAL_RUBBER_STAMP: 'approval_rubber_stamp',
-  LONG_UNBROKEN_SESSION: 'long_unbroken_session'
+  LONG_UNBROKEN_SESSION: 'long_unbroken_session',
+  AGENT_WHIPLASH: 'agent_whiplash',
+  BOARDROOM_HEDGE_PILEUP: 'boardroom_hedge_pileup',
+  UNUSED_SURFACE_AREA: 'unused_surface_area',
+  LICENSE_WALL: 'license_wall'
 } as const;
 
 export const COACH_ENGINE_STORAGE_KEY = 'alphonso_coach_engine_events_v1';

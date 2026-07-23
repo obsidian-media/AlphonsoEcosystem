@@ -3,7 +3,7 @@ import { persistScopeRows } from './runtimeLedgerService';
 import { validateAgentExecutionContract } from './agentContractService';
 import { durableGet, durableSet } from '../lib/durableStore';
 
-const PACKET_KEY = 'alphonso_agent_bus_packets_v1';
+export const PACKET_KEY = 'alphonso_agent_bus_packets_v1';
 export const PACKET_SCOPE = 'agent_bus_packets_v1';
 
 export interface AgentPacket {
