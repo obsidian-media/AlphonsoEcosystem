@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import Foundation
 import Security
+import UIKit
 
 struct VoiceCloudHistoryMessage: Encodable, Equatable {
     let role: String
@@ -95,8 +96,11 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
 
         endpoint = storedEndpoint
         apiKey = storedAPIKey
-        authenticationStatus = Self.loadSession(account: sessionAccount) == nil ? "Sign in to enable Cloud Voice" : "Cloud Voice account connected"
-        statusMessage = storedEndpoint.isEmpty ? "Cloud backend not configured" : authenticationStatus
+        let initialAuthenticationStatus = Self.loadSession(account: sessionAccount) == nil
+            ? "Sign in to enable Cloud Voice"
+            : "Cloud Voice account connected"
+        authenticationStatus = initialAuthenticationStatus
+        statusMessage = storedEndpoint.isEmpty ? "Cloud backend not configured" : initialAuthenticationStatus
         super.init()
 
         if securedKey == nil, let legacyKey, !legacyKey.isEmpty {

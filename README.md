@@ -428,6 +428,10 @@ is the mandatory repository-wide checklist for humans and agents. Read it with
 security, dependency, release, agent-contract, iOS, voice, or documentation work.
 Tasks are checked only with recorded verification evidence.
 
+**Latest verification:** [Release Verification — 2026-07-22](docs/RELEASE_VERIFICATION_2026-07-22.md)
+records the current PASS/PARTIAL baseline and remaining Rust dependency-audit
+blocker.
+
 | Document | Description |
 |---------------------------------------------|----------------------------------------------|
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Quick setup guide |

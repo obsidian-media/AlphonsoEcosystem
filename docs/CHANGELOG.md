@@ -25,6 +25,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   Vite dev server. The complete suite passes **26 tests across 7 specs** with
   retries disabled. Visual baselines now establish viewport and mocked-runtime
   readiness before capture, with a 1% maximum dynamic-pixel tolerance.
+- **Release evidence and delivery protection:** added the 2026-07-22 release
+  verification record; enabled administrator enforcement on `main` so the
+  existing PR review and required-check rules cannot be bypassed. The Rust
+  audit's 17 denied transitive dependency findings remain explicitly tracked.
 
 - Integrated the all-agent skill-pack branch and refreshed `package-lock.json` and
   `Cargo.lock` within the existing manifest ranges. The Rust lock refresh includes
