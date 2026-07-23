@@ -15,8 +15,7 @@ import {
   resetCoachCooldowns,
   getCoachMessageStyle,
   setCoachMessageStyle,
-  COACH_STYLE_KEY,
-  MessageStyle
+  COACH_STYLE_KEY
 } from '../services/coachEngineService';
 import { logApprovalEvent, clearAuditLog, getAuditLog } from '../services/agentAuditService';
 import { getDeadLetterCount, getOldestDeadLetterTimestamp } from '../services/orchestrationQueueService';
@@ -704,31 +703,120 @@ describe('coachEngineService', () => {
     });
   });
 
-  describe('message style variants', () => {
-    beforeEach(() => {
-      const ts = new Date();
-      ts.setHours(2, 0, 0, 0);
-      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{
-        packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85
-      }]));
-    });
+  describe('message style variants — all 11 detectors', () => {
+    const setupLateNight = () => {
+      const ts = new Date(); ts.setHours(2, 0, 0, 0);
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{ packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85 }]));
+    };
+    const setupApprovalTheater = () => {
+      for (let i = 0; i < 20; i++) logApprovalEvent(`pkt-${i}`, 'jose', 'read', 'approved', 'low', 20);
+      for (let i = 0; i < 5; i++) logApprovalEvent(`pkt-high-${i}`, 'jose', 'publish_post', 'approved', 'high', 85);
+    };
+    const setupPipelineFailure = () => {
+      const r = [];
+      for (let i = 0; i < 10; i++) r.push({ id: `r-${i}`, status: 'completed', agent: 'alphonso', actionType: 'test', timestampMs: timestampMs() - i * 1000 });
+      for (let i = 0; i < 3; i++) r[i] = { id: `r-fail-${i}`, status: 'failed', agent: 'hector', actionType: 'research', blocked: false, timestampMs: timestampMs() - i * 1000 };
+      localStorage.setItem('alphonso_orchestration_receipts_v1', JSON.stringify(r));
+    };
+    const setupDeadLetter = () => {
+      const p = [];
+      for (let i = 0; i < 5; i++) p.push({ status: 'dead_letter', createdAtMs: timestampMs() - i * 3600000 });
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(p));
+    };
+    const setupConfidenceDecay = () => {
+      localStorage.setItem('alphonso_agent_performance_snapshots_v1', JSON.stringify([
+        { id: 's-1', timestampMs: timestampMs() - 30 * 86400000, summary: { overallSuccessRate: 80, totalExecutions: 10 } },
+        { id: 's-2', timestampMs: timestampMs() - 15 * 86400000, summary: { overallSuccessRate: 50, totalExecutions: 10 } }
+      ]));
+    };
+    const setupRubberStamp = () => {
+      const base = timestampMs();
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([
+        { packetId: 'pk1', agent: 'jose', action: 'read', outcome: 'approved', timestamp: base, riskLevel: 'low', mariaScore: null },
+        { packetId: 'pk2', agent: 'jose', action: 'read', outcome: 'approved', timestamp: base + 1000, riskLevel: 'low', mariaScore: null },
+        { packetId: 'pk3', agent: 'jose', action: 'read', outcome: 'approved', timestamp: base + 2000, riskLevel: 'low', mariaScore: null },
+        { packetId: 'pk4', agent: 'jose', action: 'read', outcome: 'approved', timestamp: base + 2500, riskLevel: 'low', mariaScore: null }
+      ]));
+    };
+    const setupLongSession = () => localStorage.setItem('alphonso_session_start_ts', String(timestampMs() - 100 * 60000));
+    const setupWhiplash = () => {
+      const now = timestampMs();
+      const p = [];
+      for (let i = 0; i < 10; i++) p.push({ id: `p-${i}`, fromAgent: 'jose', toAgent: 'hector', actionType: 'research', status: 'assigned', createdAtMs: now - (10 - i) * 1000, updatedAtMs: now });
+      p[7] = { ...p[7], toAgent: 'hector', createdAtMs: now - 3000 };
+      p[8] = { ...p[8], toAgent: 'miya', createdAtMs: now - 2000 };
+      p[9] = { ...p[9], toAgent: 'alphonso', createdAtMs: now - 1000 };
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(p));
+    };
+    const setupHedgePileup = () => {
+      const tid = 't-1';
+      localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{ id: tid, topic: 'Deployment', status: 'active', updatedAtMs: timestampMs() }]));
+      const now = timestampMs();
+      localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify([
+        { id: 'm1', threadId: tid, speaker: 'hector', content: "I'm not sure about the timing.", kind: 'message', createdAtMs: now - 4000 },
+        { id: 'm2', threadId: tid, speaker: 'miya', content: "I don't have enough information to be confident.", kind: 'response', createdAtMs: now - 3000 },
+        { id: 'm3', threadId: tid, speaker: 'echo', content: 'Hard to say if this is safe.', kind: 'response', createdAtMs: now - 2000 }
+      ]));
+    };
+    const setupUnused = () => {
+      const stale = timestampMs() - 10 * 24 * 3600 * 1000;
+      localStorage.setItem('alphonso_connector_registry_v2', JSON.stringify([
+        { id: 'gh', name: 'GitHub', status: 'active', updatedAtMs: stale },
+        { id: 'sl', name: 'Slack', status: 'active', updatedAtMs: stale },
+        { id: 'dc', name: 'Discord', status: 'active', updatedAtMs: stale }
+      ]));
+    };
+    const setupLicenseWall = () => {
+      const now = timestampMs();
+      localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
+        { connectorId: 'yt', timestamp: now - 60 * 1000, tierAtTime: 'free' },
+        { connectorId: 'yt', timestamp: now - 120 * 1000, tierAtTime: 'free' },
+        { connectorId: 'yt', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+      ]));
+    };
 
-    it('detectLateNightApproval returns direct message when style=direct', () => {
-      const signal = detectLateNightApproval('direct');
-      expect(signal).not.toBeNull();
-      expect(signal.message).toContain('Review it again');
-    });
+    const allCases = [
+      { name: 'detectLateNightApproval', fn: detectLateNightApproval, setup: setupLateNight,
+        direct: 'Review it again', bal: 'No judgment', gentle: 'Just a heads-up' },
+      { name: 'detectApprovalTheater', fn: detectApprovalTheater, setup: setupApprovalTheater,
+        direct: 'tighten the review', bal: 'Worth reviewing whether', gentle: 'routine enough' },
+      { name: 'detectRepeatedPipelineFailure', fn: detectRepeatedPipelineFailure, setup: setupPipelineFailure,
+        direct: 'Check its configuration', bal: 'Might be worth checking its skill pack', gentle: 'had some trouble with' },
+      { name: 'detectDeadLetterGraveyard', fn: detectDeadLetterGraveyard, setup: setupDeadLetter,
+        direct: 'Clear them or investigate', bal: 'Worth a review, or safe to clear', gentle: 'Might be a good time to check' },
+      { name: 'detectConfidenceDecay', fn: detectConfidenceDecay, setup: setupConfidenceDecay,
+        direct: 'Investigate recent task assignments', bal: 'has dropped noticeably', gentle: 'performance has shifted' },
+      { name: 'detectApprovalRubberStamp', fn: detectApprovalRubberStamp, setup: setupRubberStamp,
+        direct: 'pause and verify one before continuing', bal: 'just checking nothing', gentle: 'just wanted to flag it' },
+      { name: 'detectLongUnbrokenSession', fn: detectLongUnbrokenSession, setup: setupLongSession,
+        direct: 'Take a break', bal: 'No rush', gentle: 'A short break can do wonders' },
+      { name: 'detectAgentWhiplash', fn: detectAgentWhiplash, setup: setupWhiplash,
+        direct: 'Stop reassigning and clarify the task first', bal: 'Consider pausing to clarify', gentle: 'Might help to pause and clarify' },
+      { name: 'detectBoardroomHedgePileup', fn: detectBoardroomHedgePileup, setup: setupHedgePileup,
+        direct: 'This needs your direct judgment', bal: 'The thread might need more context', gentle: 'seem uncertain' },
+      { name: 'detectUnusedSurfaceArea', fn: detectUnusedSurfaceArea, setup: setupUnused,
+        direct: 'Review and disable what you don\'t need', bal: 'Consider auditing your connected services', gentle: 'A quick audit might help keep things tidy' },
+      { name: 'detectLicenseWall', fn: detectLicenseWall, setup: setupLicenseWall,
+        direct: 'Upgrade now or stop attempting premium features', bal: 'consider upgrading your license', gentle: 'an upgrade might be worth considering' },
+    ];
 
-    it('detectLateNightApproval returns balanced message when style=balanced', () => {
-      const signal = detectLateNightApproval('balanced');
+    it.each(allCases)('$name direct variant matches expected text', ({ fn, setup, direct }) => {
+      clearAllCoachData(); setup();
+      const signal = fn('direct');
       expect(signal).not.toBeNull();
-      expect(signal.message).toContain('No judgment');
+      expect(signal.message).toContain(direct);
     });
-
-    it('detectLateNightApproval returns gentle message when style=gentle', () => {
-      const signal = detectLateNightApproval('gentle');
+    it.each(allCases)('$name balanced variant matches expected text', ({ fn, setup, bal }) => {
+      clearAllCoachData(); setup();
+      const signal = fn('balanced');
       expect(signal).not.toBeNull();
-      expect(signal.message).toContain('Just a heads-up');
+      expect(signal.message).toContain(bal);
+    });
+    it.each(allCases)('$name gentle variant matches expected text', ({ fn, setup, gentle }) => {
+      clearAllCoachData(); setup();
+      const signal = fn('gentle');
+      expect(signal).not.toBeNull();
+      expect(signal.message).toContain(gentle);
     });
   });
 
