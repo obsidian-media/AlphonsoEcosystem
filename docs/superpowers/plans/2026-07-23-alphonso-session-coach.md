@@ -1,9 +1,11 @@
 # Alphonso Session Coach — Implementation Plan
 
-**Status:** Ready for implementation
-**Author:** Claude Code (planning pass), 2026-07-23
+**Status:** Ready for implementation — full spec, 6 phases (not v1-only)
+**Author:** Claude Code (planning pass), 2026-07-23 — expanded same day from an initial v1-only draft after explicit direction to make it comprehensive
 **Implementer:** OpenCode (this document is the handoff)
 **Verifier:** Claude Code (post-implementation audit — see the verification prompt at the bottom of this doc's companion message)
+
+**Recommended delivery approach:** implement and PR **one phase at a time**, not as one giant PR. This repo's own Boardroom rebuild (`docs/superpowers/plans/2026-07-10-boardroom-*-phase{1..12}.md`) used exactly this pattern — independently planned, independently committed-and-pushed phases, each stating its own scope up front — and it's called out favorably in `CLAUDE.md` as the model to follow. Phase 0 and Phase 1 (§2–§4) are the load-bearing core; Phases 2–5 (§9–§12) are real, fully-specced, but each is independently useful and independently deferrable if priorities shift mid-build.
 
 ---
 
@@ -22,8 +24,7 @@ Not a connection between the two products — they solve unrelated problems for 
 - **No connection to the SessionGuard repo or product**, in code, data, or naming. Do not add any dependency, import, network call, file-read, or shared-storage path pointing at `D:\AgentDevWork\repos\SESSIONGUARD` or anything resembling it. This plan borrows a *pattern*, not a *pipe*.
 - No new database engine, ORM, or cloud service. Everything here fits in the existing local SQLite store.
 - No screen capture, OCR, or keystroke/activity monitoring of any kind. All signals come from services Alphonso already runs and already logs to.
-- No multi-style message tone configuration (SessionGuard's `strict/balanced/supportive` selector) in v1 — ship one well-written tone per trigger. Configurable tone is an explicit Phase 2 candidate, not v1 scope.
-- No LLM-generated intervention text in v1 (rule-based only, per explicit decision — see §3). Ollama-narrative generation is an explicit Phase 2 candidate.
+- Phase 1 ships one well-written tone per trigger, no style selector, and rule-based text only, no LLM generation — but both of those ARE now in scope, specced in full in §10 (message styles) and §11 (Ollama narrative layer). "Not v1" does not mean "not in this plan" — see the phase breakdown below.
 
 ---
 
@@ -105,7 +106,7 @@ Severity tiers, in firing priority order (most severe wins if multiple fire at o
 - **Logic:** Elapsed time since session start (or since last detected break) exceeds a threshold — suggest 90 minutes as the v1 default, but this is a judgment call, not a hard number; note your choice and reasoning in the PR description.
 - **Message (neutral):** `"You've been actively driving Alphonso for over {N} minutes straight. No rush — just a nudge to take a break if it's a good moment."`
 
-**Deferred to Phase 2 (documented here so they aren't forgotten, not built now):** "Agent whiplash" (task type bouncing between agents), "Boardroom hedge pile-up" (cross-referencing `detectLowConfidence` hits across a thread), "You built it, you never used it" (unused skill packs/connectors), "The wall you keep hitting" (repeated license-tier gate denials). Each needs its own data-source audit before scoping — do not start these without a fresh planning pass.
+The 4 remaining ideas from the original brainstorm are not deferred/vague anymore — they're fully specced in **§9 (Phase 2 triggers)**, grounded in real code the same way as the 7 above. Build them after Phase 1 is merged and stable, in their own phase/PR.
 
 ---
 
@@ -169,6 +170,8 @@ export function runCoachDetectors(): CoachSignal | null {
 
 ## 6. File-by-file task list
 
+### Phase 0 + 1 (core — do these first)
+
 | File | Change |
 |---|---|
 | `src/services/agentAuditService.ts` | Extend `ApprovalAuditEntry` with optional `riskLevel`/`mariaScore` (Phase 0) |
@@ -182,6 +185,36 @@ export function runCoachDetectors(): CoachSignal | null {
 | `CLAUDE.md` | Update "Coach system" row in Do Not Duplicate table; remove or correct any stale "SessionGuard bridge" description |
 | `.gitignore` | Remove `.sessionguard/`/`.coach-bridge/`/`sessionguard-bridge/` entries only if confirmed unused post-rename |
 
+### Phase 2 (§9)
+
+| File | Change |
+|---|---|
+| `src/services/coachEngineService.ts` | Add `detectAgentWhiplash`, `detectBoardroomHedgePileup`, `detectUnusedSurfaceArea`, `detectLicenseWall`; extend `DETECTORS` array |
+| `src/services/licenseService.ts` (or a new small companion service) | Add the denial-logging prerequisite from §9.4 |
+| `src/services/skillPackService.js` | Optional: add "last invoked at" tracking if building the skill-pack half of §9.3 |
+| `src/test/services/coachEngineService.test.js` | Add fire/silent tests for the 4 new detectors |
+
+### Phase 3 (§10)
+
+| File | Change |
+|---|---|
+| `src/services/coachEngineService.ts` | Add `style` parameter to every detector's message construction; 3 hand-written variants each |
+| `src/services/coachModeService.ts` or settings store | Persist chosen style |
+
+### Phase 4 (§11)
+
+| File | Change |
+|---|---|
+| `src/services/coachEngineService.ts` | Add `generateNarrativeCoachMessage()`, gated + fallback-safe per §11 |
+
+### Phase 5 (§12)
+
+| File | Change |
+|---|---|
+| `src/components/SettingsView.tsx` | New Coach settings section — master toggle, per-trigger toggles, style selector, Ollama toggle, snooze control |
+| `src/components/CoachHistoryPanel.tsx` | **New file** — history list UI, mirrors `NovaHistoryChart.jsx`/`EchoTimeline` pattern |
+| `src/services/coachEngineService.ts` or a new `coachHistoryService.ts` | Persist fired signals to a capped ring buffer |
+
 ---
 
 ## 7. Testing & merge requirements (repo standard — see `CLAUDE.md`)
@@ -191,15 +224,100 @@ export function runCoachDetectors(): CoachSignal | null {
 - `npm run lint` clean.
 - This repo has **branch protection on `main`** requiring 4 status checks (Test & Build, Rust Tests & Clippy, Secrets Scan, Doc Count Freshness) — direct pushes to `main` are rejected by GitHub. Work on a feature branch, push it, open a PR via `gh pr create`, wait for CI to go green, then merge — do not attempt `git push origin main` directly, it will fail.
 - If `docs/ALPHONSO_GROUND_TRUTH.md`, `README.md`, or `AGENTS.md` reference version/count numbers that this change affects, run `node scripts/verify-doc-counts.mjs` before opening the PR (this exact check has failed a real PR before over a missed doc sync — see repo history).
-- Each of the 7 detectors needs at least one test proving it fires under a constructed scenario and one proving it stays silent under a normal/clean scenario — mirroring how `live_coach_engine.py`'s detectors are individually testable.
+- Every detector across all phases (7 in Phase 1, 4 more in Phase 2 — 11 total) needs at least one test proving it fires under a constructed scenario and one proving it stays silent under a normal/clean scenario — mirroring how `live_coach_engine.py`'s detectors are individually testable.
+- Ship each phase as its own PR, in order (0 → 1 → 2 → 3 → 4 → 5), each independently green on CI before the next starts. Do not batch multiple phases into one PR — this repo's own precedent (the 12-phase Boardroom rebuild) shows small, independently-verified phases catch real bugs (a timeout bug, a lazy-import crash) that a single giant PR would have buried.
 
 ---
 
 ## 8. Explicit boundaries for whoever implements this
 
-- Do not touch `D:\AgentDevWork\repos\SESSIONGUARD` in any way — it's a separate repo, separate product, not in scope.
-- Do not add a 3-style message tone system in v1 — one message per trigger.
-- Do not add LLM-generated messages in v1 — rule-based only (explicit decision, see §0).
-- Do not build the 4 deferred Phase 2 triggers listed in §3 — document them if you want, but don't implement.
-- Do not invent a new local database/storage mechanism — use `durableStore.js`.
-- If any of the "find the real call site" tasks (Phase 0's ApprovalModal wiring, the session-start-for-§3.7 check) turn out to already exist somewhere not mentioned in this doc, use what's there — don't build a duplicate. This repo has a documented history of exactly that mistake (see `CLAUDE.md`'s "Do Not Duplicate" table) and it's explicitly called out as something to check first.
+- Do not touch `D:\AgentDevWork\repos\SESSIONGUARD` in any way — it's a separate repo, separate product, not in scope, in any phase.
+- Phase 1 (§3–§4) ships one message per trigger, no style selector, rule-based only. Do not pull §10/§11 work forward into the Phase 1 PR — keep phases independently mergeable.
+- Do not invent a new local database/storage mechanism in any phase — use `durableStore.js`.
+- If any of the "find the real call site" tasks (Phase 0's ApprovalModal wiring, the session-start-for-§3.7 check, the license-denial logging in §9.4) turn out to already exist somewhere not mentioned in this doc, use what's there — don't build a duplicate. This repo has a documented history of exactly that mistake (see `CLAUDE.md`'s "Do Not Duplicate" table) and it's explicitly called out as something to check first.
+- Every new prerequisite instrumentation point this doc introduces (Phase 0's approval logging, §9.4's license-denial logging) must follow the same shape: extend an existing service's data with new optional fields / a new small logging call, never a parallel duplicate logging system.
+
+---
+
+## 9. Phase 2 — the 4 originally-deferred triggers, now fully specced
+
+These were "ideas" in the original brainstorm. They are now grounded in real, verified code — same rigor as §3. Build after Phase 1 is merged.
+
+### 9.1 `agent_whiplash`
+- **Data source:** task-type → agent assignment history. **Not yet grounded in an existing store** — before writing new tracking, check `joseExecutionEngineService.js`'s assignment records and `agentBusService`'s packet history for whether action-type + assigned-agent is already recorded per packet (it likely is, since routing decisions have to be persisted somewhere for the orchestration queue to work at all — confirm the exact field name before assuming a shape).
+- **Logic:** In the last 10 packets sharing the same normalized `actionType`, if the assigned `agent` changes ≥ 3 times (A→B→A or similar oscillation, not just "3 different agents ever") within a short window (e.g. last hour), fire.
+- **Message (neutral):** `"'{actionType}' has bounced between {agentList} a few times recently. Might be worth deciding which agent should own this task type."`
+
+### 9.2 `boardroom_hedge_pileup`
+- **Data source:** confirmed real and already persisted — `BoardroomChatView.tsx` already calls `detectLowConfidence(replyText)` (from `boardroomFacilitatorService.ts`) and, when true, persists a real message via `addThreadMessage({ ..., kind: 'escalation' })` into `boardroomThreadService.ts`'s thread storage. No new instrumentation needed — this is the cheapest Phase 2 trigger.
+- **Logic:** Query recent thread messages (via `listThreadMessages`/equivalent) across active threads; if ≥ 3 messages with `kind === 'escalation'` land in the same thread within a short window (e.g. last 30 minutes), fire — regardless of which agents produced them.
+- **Message (warning):** `"{N} agents have flagged low confidence in the same Boardroom thread. This might genuinely need your judgment call rather than another agent's guess."`
+
+### 9.3 `unused_surface_area` — "You built it, you never used it"
+- **Data source:** `getConnectorAuditLog()` / `getLastEntryForConnector(connectorId)` from `connectorAuditLogService.ts` (confirmed real, tracks per-connector call attempts with `ok`/`latencyMs`/`errorCode`) cross-referenced with `connectorRegistryService.ts`'s "configured" connectors (from `envPresence`/`status`). Skill-pack usage tracking was **not found** in `skillPackService.js` during this planning pass — if you want the skill-pack half of this trigger, you'll need to add a lightweight "last invoked at" timestamp to skill-pack records first (a Phase-0-shaped prerequisite); the connector half needs no new instrumentation and can ship alone if the skill-pack half is deferred further.
+- **Logic (connector half):** A connector is "configured" (has required env present / `status === 'configured'`) but `getLastEntryForConnector(connectorId)` is `null` or older than N days (suggest 14).
+- **Message (neutral):** `"{connectorName} has credentials saved but hasn't been used in {days} days. Worth trying it, or is it safe to disable?"`
+
+### 9.4 `license_wall` — "The wall you keep hitting"
+- **Prerequisite instrumentation gap found, same pattern as Phase 0:** `licenseService.ts` has a real `canUseConnector(connectorId)` gate function, consumed by `policyEnforcementService.ts`, but **nothing logs when it returns `false`** — there is no denial-event history anywhere in the codebase (confirmed via grep). This trigger cannot be built until that's added.
+- **Prerequisite task:** wherever `canUseConnector`'s `false` result actually blocks an action in the UI (trace it from `policyEnforcementService.ts`'s consumers), log a lightweight denial event — connector id + timestamp — into a small new ring buffer (mirror `agentAuditService.ts`'s exact shape: a capped array in `durableStore`). Do not build a generic analytics system for this — one small, purpose-built log, same pattern as the audit log.
+- **Logic (after the prerequisite exists):** Same connector denied ≥ 5 times within the last 7 days.
+- **Message (neutral):** `"You've tried to use {connectorName} {N} times this week — that's Pro-gated on your current tier. Worth upgrading, or should this stay off your radar?"`
+
+---
+
+## 10. Phase 3 — configurable message styles
+
+SessionGuard's `live_coach_engine.py` supports `strict/balanced/supportive` — same detection, different phrasing. Port that idea, renamed to fit Alphonso's tone (avoid literally reusing SessionGuard's names, to keep the "borrowed pattern, not shared identity" boundary clean — suggest `direct / balanced / gentle`).
+
+- Extend each `detect*()` function's message construction to take a `style` parameter and return the right variant — mirror `live_coach_engine.py`'s `m(critical_text, balanced_text, supportive_text)` helper pattern exactly, it's a clean, proven shape.
+- Every trigger in §3 and §9 needs all 3 style variants written — this is real writing work, not boilerplate; don't auto-generate from a template, each should read like it was written for that tone.
+- Store the user's chosen style as a setting (see §12) — default to `balanced`.
+- **Acceptance:** every detector has 3 hand-written message variants; switching the setting changes live output without needing an app restart.
+
+---
+
+## 11. Phase 4 — optional Ollama-narrative layer
+
+SessionGuard's `_nvidia_coach()` is gated behind `has_issue` (only called for consequential situations, not every trigger) and falls back cleanly to rule-based text on any failure (`except Exception: return None`, then `_detect_patterns()` runs anyway). Port that exact gating and fallback shape — do not make every intervention an LLM call, and never let an LLM failure produce a blank/broken intervention.
+
+- New function, e.g. `generateNarrativeCoachMessage(signal: CoachSignal, style: string): Promise<string | null>` — calls local Ollama (reuse `generateOllamaResponse`/whatever the existing single-turn helper is in `src/lib/ollama.js` — do not add a second Ollama client) with a system prompt adapted from `live_coach_engine.py`'s `COACH_SYSTEM` constant, but rewritten for Alphonso's actual domain (agent orchestration, not gambling) — do not reuse gambling-specific language.
+- Only call it for `critical` and `warning` severity signals — skip it for `neutral`/`positive` (matches SessionGuard's `has_issue` gate, adapted).
+- Timeout it aggressively (SessionGuard's Boardroom work already hit a real 30s-default-timeout bug against local Ollama under cold model-swap — see `CLAUDE.md`'s Boardroom Phase 4 note; budget for a slow first call, but don't block Coach Mode's UI on it — fire the rule-based message immediately and swap in the narrative version if/when it resolves, rather than delaying the intervention).
+- On any failure or timeout, silently fall back to the Phase 3 rule-based/styled message — never surface an Ollama error to the user in the coach window.
+- Gate this behind a setting, default **off** — Phase 1–3 already deliver full value without it, and it adds a real dependency (Ollama running) to a feature that's supposed to work standalone.
+
+---
+
+## 12. Phase 5 — settings, history, and observability
+
+Coach Mode currently has zero user configurability and zero record of what it's ever said. Fix both:
+
+**Settings** (add to `SettingsView.tsx`, alongside the existing Coach-adjacent settings):
+- Master on/off toggle for the whole detection engine (independent of the Coach window itself being open/closed — detectors can run and queue a signal even if the window isn't open, so it's there when the user next opens it).
+- Per-trigger enable/disable checkboxes (all 11 triggers across §3 + §9).
+- Message style selector (§10) — `direct / balanced / gentle`.
+- Ollama-narrative toggle (§11) — default off.
+- A "snooze" control — mute all coaching for N hours, separate from disabling individual triggers.
+
+**History** (new, mirrors the existing `NovaHistoryChart.jsx` / `EchoTimeline` pattern already in `SettingsView.tsx` — same UI convention, don't invent a new one):
+- Persist every fired `CoachSignal` (not just the currently-displayed one) to a capped local log, same ring-buffer shape as `agentAuditService.ts`.
+- A `CoachHistoryPanel.tsx` component listing recent interventions with timestamp, trigger id, severity, and the exact message shown — lets the user see what the coach has said over time, and lets *you* (or a future implementer) tell whether detectors are firing too often, too rarely, or on noise.
+- **This history log is also the feedback loop for tuning thresholds** — if a trigger fires constantly and gets dismissed every time, that's a signal the threshold in §3/§9 was set too aggressively; this doc's suggested numbers (5 approvals, 25 percentage points, 48 hours, etc.) are starting points, not final — the history panel is what lets someone actually validate or correct them post-launch.
+
+**Acceptance:** a user can turn off a specific trigger and confirm it stops firing; a user can review the last 20 things Coach Mode has said; snoozing suppresses all firing for the chosen duration.
+
+---
+
+## 13. Full phase summary (for planning/sequencing)
+
+| Phase | What | Depends on | New instrumentation needed |
+|---|---|---|---|
+| 0 | Wire real approval logging | — | Yes — `logApprovalEvent` call site (§2) |
+| 1 | 7 core triggers + engine + rename | Phase 0 (2 of 7 triggers) | No (beyond Phase 0) |
+| 2 | 4 more triggers | Phase 1 (reuses engine) | Yes — license-denial log (§9.4); optional skill-pack "last used" (§9.3) |
+| 3 | 3 message styles per trigger | Phase 1 (+ Phase 2 if built) | No |
+| 4 | Ollama-narrative layer | Phase 3 (styles feed the prompt) | No (reuses existing Ollama client) |
+| 5 | Settings + history panel | Phase 1 minimum, ideally all prior phases | Yes — new capped history log (reuse `agentAuditService.ts`'s shape) |
+
+Phases 0–1 are the minimum viable version of "Coach Mode actually coaches." Phases 2–5 are what makes it complete — this is the honest answer to "is the doc comprehensive": it is now; it wasn't in the original v1-only draft.
