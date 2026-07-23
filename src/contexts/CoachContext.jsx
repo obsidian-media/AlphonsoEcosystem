@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { openCoachWindow, closeCoachWindow } from '../services/coachModeService';
 import { recordCoachInterventionAction, buildDemoIntervention, getLatestCoachEngineIntervention, subscribeCoachEngine } from '../services/coachInterventionService';
-import { runCoachDetectors } from '../services/coachEngineService';
+import { runCoachDetectors, getCoachMessageStyle } from '../services/coachEngineService';
 import { COACH_LAYOUT_KEY, COACH_CORNERS, COACH_PAUSE_MS } from '../constants/appConstants';
 import { getStorage } from '../lib/appStorage';
 import { useSettings } from './SettingsContext';
@@ -26,7 +26,7 @@ export function CoachProvider({ children }) {
 
   useEffect(() => {
     const runDetectors = () => {
-      const signal = runCoachDetectors();
+      const signal = runCoachDetectors(getCoachMessageStyle());
       if (signal) {
         setCoachIntervention({
           id: signal.id,
