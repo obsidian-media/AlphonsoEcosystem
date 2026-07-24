@@ -28,7 +28,20 @@ import {
   getCoachNarrativeEnabled,
   setCoachNarrativeEnabled,
   generateNarrativeCoachMessage,
-  COACH_NARRATIVE_ENABLED_KEY
+  COACH_NARRATIVE_ENABLED_KEY,
+  ALL_COACH_TRIGGER_IDS,
+  getCoachEnabled,
+  setCoachEnabled,
+  COACH_ENABLED_KEY,
+  isCoachTriggerEnabled,
+  setCoachTriggerEnabled,
+  getAllCoachTriggerToggles,
+  COACH_TRIGGER_TOGGLES_KEY,
+  getCoachSnoozeUntilMs,
+  setCoachSnoozeHours,
+  clearCoachSnooze,
+  isCoachSnoozed,
+  COACH_SNOOZE_UNTIL_KEY
 } from '../services/coachEngineService';
 import * as ollama from '../lib/ollama';
 import { logApprovalEvent, clearAuditLog, getAuditLog } from '../services/agentAuditService';
@@ -38,6 +51,7 @@ import { listOrchestrationReceipts } from '../services/orchestrationReceiptServi
 import { listAgentPackets } from '../services/agentBusService';
 import { timestampMs } from '../services/trustModel';
 import { clearLicenseDenialLog } from '../services/licenseService';
+import { getCoachHistory, clearCoachHistory } from '../services/coachHistoryService';
 
 const originalDateNow = Date.now;
 
@@ -53,6 +67,10 @@ function clearAllCoachData() {
   localStorage.removeItem('alphonso_skill_pack_invocation_v1');
   localStorage.removeItem(COACH_STYLE_KEY);
   localStorage.removeItem(COACH_NARRATIVE_ENABLED_KEY);
+  localStorage.removeItem(COACH_ENABLED_KEY);
+  localStorage.removeItem(COACH_TRIGGER_TOGGLES_KEY);
+  localStorage.removeItem(COACH_SNOOZE_UNTIL_KEY);
+  clearCoachHistory();
 }
 
 beforeEach(() => {
@@ -911,6 +929,110 @@ describe('coachEngineService', () => {
       ollama.generateOllamaResponse.mockResolvedValue({ response: '   ', done: true });
       const result = await generateNarrativeCoachMessage(warningSignal, 'balanced');
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getCoachEnabled / setCoachEnabled (Phase 5 master toggle)', () => {
+    it('defaults to true', () => {
+      expect(getCoachEnabled()).toBe(true);
+    });
+
+    it('persists false after being set', () => {
+      setCoachEnabled(false);
+      expect(getCoachEnabled()).toBe(false);
+    });
+
+    it('runCoachDetectors returns null immediately when master toggle is off, even with a firing scenario', () => {
+      const ts = new Date();
+      ts.setHours(2, 0, 0, 0);
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{
+        packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85
+      }]));
+      setCoachEnabled(false);
+      expect(runCoachDetectors()).toBeNull();
+    });
+  });
+
+  describe('per-trigger toggles (Phase 5)', () => {
+    it('ALL_COACH_TRIGGER_IDS lists all 11 triggers', () => {
+      expect(ALL_COACH_TRIGGER_IDS).toHaveLength(11);
+      expect(ALL_COACH_TRIGGER_IDS).toContain('dead_letter_graveyard');
+      expect(ALL_COACH_TRIGGER_IDS).toContain('license_wall');
+    });
+
+    it('all triggers default to enabled', () => {
+      const toggles = getAllCoachTriggerToggles();
+      for (const id of ALL_COACH_TRIGGER_IDS) {
+        expect(toggles[id]).toBe(true);
+        expect(isCoachTriggerEnabled(id)).toBe(true);
+      }
+    });
+
+    it('disabling a specific trigger stops it from firing via runCoachDetectors', () => {
+      setCoachTriggerEnabled('dead_letter_graveyard', false);
+      expect(isCoachTriggerEnabled('dead_letter_graveyard')).toBe(false);
+      expect(getDeadLetterCount()).toBeDefined();
+    });
+
+    it('disabled dead_letter_graveyard is skipped even when its own detector would fire', () => {
+      const packets = [];
+      for (let i = 0; i < 5; i++) {
+        packets.push({ status: 'dead_letter', createdAtMs: timestampMs() - i * 3600000 });
+      }
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
+      setCoachTriggerEnabled('dead_letter_graveyard', false);
+      const signal = runCoachDetectors();
+      expect(signal?.id).not.toBe('dead_letter_graveyard');
+    });
+  });
+
+  describe('snooze (Phase 5)', () => {
+    it('is not snoozed by default', () => {
+      expect(isCoachSnoozed()).toBe(false);
+      expect(getCoachSnoozeUntilMs()).toBe(0);
+    });
+
+    it('setCoachSnoozeHours snoozes for the given duration', () => {
+      setCoachSnoozeHours(4);
+      expect(isCoachSnoozed()).toBe(true);
+      expect(getCoachSnoozeUntilMs()).toBeGreaterThan(Date.now());
+    });
+
+    it('clearCoachSnooze un-snoozes immediately', () => {
+      setCoachSnoozeHours(4);
+      clearCoachSnooze();
+      expect(isCoachSnoozed()).toBe(false);
+    });
+
+    it('runCoachDetectors returns null while snoozed, even with a firing scenario', () => {
+      const ts = new Date();
+      ts.setHours(2, 0, 0, 0);
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{
+        packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85
+      }]));
+      setCoachSnoozeHours(1);
+      expect(runCoachDetectors()).toBeNull();
+    });
+  });
+
+  describe('runCoachDetectors history recording (Phase 5)', () => {
+    it('records a fired signal into coach history', () => {
+      const ts = new Date();
+      ts.setHours(2, 0, 0, 0);
+      localStorage.setItem('alphonso_approval_audit_v1', JSON.stringify([{
+        packetId: 'pkt-1', agent: 'jose', action: 'publish_post', outcome: 'approved', timestamp: ts.getTime(), riskLevel: 'high', mariaScore: 85
+      }]));
+      const signal = runCoachDetectors();
+      expect(signal).not.toBeNull();
+      const history = getCoachHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].id).toBe(signal.id);
+    });
+
+    it('does not record anything when no detector fires', () => {
+      for (const id of ALL_COACH_TRIGGER_IDS) setCoachTriggerEnabled(id, false);
+      runCoachDetectors();
+      expect(getCoachHistory()).toHaveLength(0);
     });
   });
 });
