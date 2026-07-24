@@ -93,6 +93,16 @@ function freeLicense(): LicenseInfo {
   return { tier: 'free', key: null, activatedAt: null, expiresAt: null, features: FREE_FEATURES };
 }
 
+// --- license denial log (for coach engine's detectLicenseWall) -------------
+export interface LicenseDenialEntry {
+  connectorId: string;
+  timestamp: number;
+  tierAtTime: LicenseTier;
+}
+
+const DENIAL_LOG_KEY = 'alphonso_license_denial_log_v1';
+const MAX_DENIAL_LOG = 100;
+
 // --- verified in-memory state (the only source of truth for gating) ---------
 let trustedKeyJwk: JsonWebKey | null = LICENSE_TRUST_KEY;
 let verified: LicenseInfo = freeLicense();
@@ -214,7 +224,22 @@ export function isPremiumConnector(connectorId: string): boolean {
 export function canUseConnector(connectorId: string): boolean {
   const id = String(connectorId || '').toLowerCase();
   if (!isPremiumConnector(id)) return true;
-  return verified.features.includes(id);
+  const allowed = verified.features.includes(id);
+  if (!allowed) {
+    const log = getLicenseDenialLog();
+    log.push({ connectorId: id, timestamp: Date.now(), tierAtTime: verified.tier });
+    if (log.length > MAX_DENIAL_LOG) log.splice(0, log.length - MAX_DENIAL_LOG);
+    try { localStorage.setItem(DENIAL_LOG_KEY, JSON.stringify(log)); } catch { /* ignore */ }
+  }
+  return allowed;
+}
+
+export function getLicenseDenialLog(): LicenseDenialEntry[] {
+  try { return JSON.parse(localStorage.getItem(DENIAL_LOG_KEY) || '[]'); } catch { return []; }
+}
+
+export function clearLicenseDenialLog(): void {
+  try { localStorage.removeItem(DENIAL_LOG_KEY); } catch { /* ignore */ }
 }
 
 export async function activateLicense(

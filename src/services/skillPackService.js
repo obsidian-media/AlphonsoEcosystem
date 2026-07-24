@@ -3381,3 +3381,21 @@ export function loadAgentSkillGuidance(agentName) {
     recommendedSteps: [...new Set(activeSteps)].slice(0, 8)
   };
 }
+
+// ── Skill pack "last invoked at" tracking (for coach engine's detectUnusedSurfaceArea) ──
+const SKILL_PACK_INVOCATION_KEY = 'alphonso_skill_pack_invocation_v1';
+
+export function recordSkillPackInvocation(packId) {
+  const map = getSkillPackInvocationMap();
+  map[packId] = Date.now();
+  try { localStorage.setItem(SKILL_PACK_INVOCATION_KEY, JSON.stringify(map)); } catch { /* ignore */ }
+}
+
+export function getSkillPackLastInvoked(packId) {
+  const map = getSkillPackInvocationMap();
+  return map[packId] || null;
+}
+
+function getSkillPackInvocationMap() {
+  try { return JSON.parse(localStorage.getItem(SKILL_PACK_INVOCATION_KEY) || '{}'); } catch { return {}; }
+}

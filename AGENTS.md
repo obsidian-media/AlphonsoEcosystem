@@ -50,7 +50,7 @@ gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 3,516 tests (250 files; verified 2026-07-22)
+npm run test             # 3,516 tests (250 files; verified 2026-07-23)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
@@ -88,7 +88,7 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 - Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
 ## Do Not Duplicate
-Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 168 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 169 services already exist.
 
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.

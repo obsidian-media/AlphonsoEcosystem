@@ -5,6 +5,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 import { companionStateFromVoice, coachMessageFromVoice, nextCoachCorner } from '../constants/appConstants';
 import { ViewLoadingState } from './ViewLoadingState';
+import { getCoachMessageStyle, setCoachMessageStyle } from '../services/coachEngineService';
 
 const CoachMissionBadge = lazy(() => import('./CoachMissionBadge').then((mod) => ({ default: mod.CoachMissionBadge })));
 const CoachInterventionCard = lazy(() => import('./CoachInterventionCard').then((mod) => ({ default: mod.CoachInterventionCard })));
@@ -32,6 +33,7 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
   } = useCoach();
   const { settings } = useSettings();
   const voice = useVoiceInput();
+  const [messageStyle, setMessageStyle] = React.useState(getCoachMessageStyle);
 
   const coachAgent = coachAgentFromQuery || settings.coachAgent || 'alphonso';
   const coachState = coachAgent === 'miya'
@@ -69,6 +71,16 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
               className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
             >
               Snap: {coachSnapCorner}
+            </button>
+            <button
+              onClick={() => {
+                const next = messageStyle === 'balanced' ? 'direct' : messageStyle === 'direct' ? 'gentle' : 'balanced';
+                setMessageStyle(next);
+                setCoachMessageStyle(next);
+              }}
+              className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+            >
+              Style: {messageStyle}
             </button>
           </div>
         </div>
