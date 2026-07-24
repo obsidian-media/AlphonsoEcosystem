@@ -9,11 +9,13 @@ export interface ApprovalAuditEntry {
   action: string;
   outcome: string;
   timestamp: number;
+  riskLevel?: string;
+  mariaScore?: number | null;
 }
 
-export function logApprovalEvent(packetId: string, agent: string, action: string, outcome: string): void {
+export function logApprovalEvent(packetId: string, agent: string, action: string, outcome: string, riskLevel?: string, mariaScore?: number | null): void {
   const log = getAuditLog();
-  log.push({ packetId, agent, action, outcome, timestamp: Date.now() });
+  log.push({ packetId, agent, action, outcome, timestamp: Date.now(), riskLevel, mariaScore });
   if (log.length > MAX_ENTRIES) log.splice(0, log.length - MAX_ENTRIES);
   try { durableSet(AUDIT_KEY, JSON.stringify(log)); } catch { /* ignore */ }
 }

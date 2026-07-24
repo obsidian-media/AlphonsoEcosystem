@@ -26,13 +26,13 @@ export function PluginProvider({ children, requestApproval, setVerificationLogs,
   const [lastManifestValidation, setLastManifestValidation] = useState(null);
 
   const handleTogglePlugin = useCallback(async (pluginId, enabled) => {
-    if (!await requestApproval(`${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}`)) return;
+    if (!await requestApproval({ actionLabel: `${enabled ? 'Enable' : 'Disable'} plugin: ${pluginId}` })) return;
     setPlugins(togglePlugin(pluginId, enabled));
     setPluginAudit(listPluginAudit());
   }, [requestApproval]);
 
   const handleDiscoverPlugins = useCallback(async () => {
-    if (!await requestApproval('Discover plugin manifests from disk')) return;
+    if (!await requestApproval({ actionLabel: 'Discover plugin manifests from disk' })) return;
     const manifests = await discoverDiskPluginManifests(settings.workspaceRoot);
     setDiskPluginManifests(manifests);
     const log = appendVerificationLog({
@@ -50,7 +50,7 @@ export function PluginProvider({ children, requestApproval, setVerificationLogs,
 
   const handleValidatePluginManifest = useCallback(async (manifestPath) => {
     if (!manifestPath) return;
-    if (!await requestApproval(`Validate plugin manifest ${manifestPath}`)) return;
+    if (!await requestApproval({ actionLabel: `Validate plugin manifest ${manifestPath}` })) return;
     try {
       const validation = await validatePluginManifestDisk(manifestPath);
       setLastManifestValidation(validation);
@@ -154,7 +154,7 @@ export function PluginProvider({ children, requestApproval, setVerificationLogs,
       }
     }
 
-    if (!await requestApproval(`Execute plugin tool ${pluginId}:${toolId}`)) return;
+    if (!await requestApproval({ actionLabel: `Execute plugin tool ${pluginId}:${toolId}` })) return;
     try {
       const proof = await executePluginToolRun({
         manifestPath, pluginId, toolId, extraArgs, workspaceRoot: settings.workspaceRoot

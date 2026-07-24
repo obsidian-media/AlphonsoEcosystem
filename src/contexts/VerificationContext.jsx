@@ -20,26 +20,26 @@ export function VerificationProvider({ children, requestApproval, setApprovalReq
   const { runOllamaCheck } = useOllama();
 
   const verifyOllamaWithProof = useCallback(async () => {
-    if (!await requestApproval('Run Ollama runtime verification')) return;
+    if (!await requestApproval({ actionLabel: 'Run Ollama runtime verification' })) return;
     await runOllamaCheck();
     const proof = await verifyOllamaRuntimeProof(settings.endpoint);
     setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   }, [requestApproval, runOllamaCheck, settings.endpoint]);
 
   const verifyProcesses = useCallback(async (names) => {
-    if (!await requestApproval(`Check process state: ${names.join(', ')}`)) return;
+    if (!await requestApproval({ actionLabel: `Check process state: ${names.join(', ')}` })) return;
     const proof = await verifyProcessProof(names);
     setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   }, [requestApproval]);
 
   const verifyPaths = useCallback(async (paths) => {
-    if (!await requestApproval(`Verify filesystem paths: ${paths.join(', ')}`)) return;
+    if (!await requestApproval({ actionLabel: `Verify filesystem paths: ${paths.join(', ')}` })) return;
     const proof = await verifyPathProof(paths);
     setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   }, [requestApproval]);
 
   const verifyAuditChain = useCallback(async () => {
-    if (!await requestApproval('Verify durable audit chain integrity')) return;
+    if (!await requestApproval({ actionLabel: 'Verify durable audit chain integrity' })) return;
     const proof = await verifyDurableAuditChain();
     setAuditChainProof(proof?.payload || null);
     setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
@@ -60,18 +60,18 @@ export function VerificationProvider({ children, requestApproval, setApprovalReq
         return;
       }
     }
-    if (!await requestApproval(`Execute command: ${program} ${args.join(' ')}`)) return;
+    if (!await requestApproval({ actionLabel: `Execute command: ${program} ${args.join(' ')}` })) return;
     const proof = await verifyCommandExecution(program, args, null);
     setVerificationLogs((current) => [...current, proof].slice(-VERIFICATION_LOG_CAP));
   }, [settings.safeMode, requestApproval, setApprovalRequiredNotice]);
 
   const handleRunReleasePreflight = useCallback(async () => {
-    if (!await requestApproval('Run release preflight: test + build + tauri build')) return;
+    if (!await requestApproval({ actionLabel: 'Run release preflight: test + build + tauri build' })) return;
     await verifyCommand('npm.cmd', ['run', 'verify:desktop']);
   }, [requestApproval, verifyCommand]);
 
   const handleRuntimeRepair = useCallback(async () => {
-    if (!await requestApproval('Run supervised runtime repair checks')) return;
+    if (!await requestApproval({ actionLabel: 'Run supervised runtime repair checks' })) return;
     await runOllamaCheck();
     await verifyProcesses(['ollama']);
     const log = appendVerificationLog({

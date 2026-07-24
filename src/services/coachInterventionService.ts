@@ -7,55 +7,54 @@ export const COACH_INTERVENTION_LEVELS = {
   HARD: 'hard'
 } as const;
 
-export const SESSION_GUARD_EVENT_TYPES = {
-  LOSS_STRETCH: 'loss_stretch',
-  BANKROLL_DROP: 'bankroll_drop',
-  TIME_LIMIT: 'time_limit',
-  CHASE_PATTERN: 'chase_pattern',
-  HIGH_VOLATILITY: 'high_volatility'
+export type CoachInterventionLevel = typeof COACH_INTERVENTION_LEVELS[keyof typeof COACH_INTERVENTION_LEVELS];
+
+export const COACH_ENGINE_EVENT_TYPES = {
+  APPROVAL_THEATER: 'approval_theater',
+  LATE_NIGHT_APPROVAL: 'late_night_approval',
+  REPEATED_PIPELINE_FAILURE: 'repeated_pipeline_failure',
+  DEAD_LETTER_GRAVEYARD: 'dead_letter_graveyard',
+  CONFIDENCE_DECAY: 'confidence_decay',
+  APPROVAL_RUBBER_STAMP: 'approval_rubber_stamp',
+  LONG_UNBROKEN_SESSION: 'long_unbroken_session'
 } as const;
 
-export const SESSION_GUARD_BRIDGE_STORAGE_KEY = 'alphonso_sessionguard_bridge_events_v1';
+export const COACH_ENGINE_STORAGE_KEY = 'alphonso_coach_engine_events_v1';
 export const COACH_INTERVENTION_ACTION_LOG_KEY = 'alphonso_coach_intervention_action_log_v1';
-export const SESSION_GUARD_BRIDGE_EVENT = 'alphonso:sessionguard-event';
+export const COACH_ENGINE_EVENT = 'alphonso:coach-engine-event';
 
-interface SessionGuardMetrics {
-  spinCount?: number;
-  spins?: number;
-  netResult?: number;
-  net?: number;
-  longestLosingStretch?: number;
-  losingStretch?: number;
-  elapsedMinutes?: number;
+interface CoachEngineMetrics {
+  count?: number;
+  hoursAgo?: number;
+  action?: string;
+  agent?: string;
+  rateDrop?: string;
 }
 
-interface SessionGuardEvent {
+interface CoachEngineEvent {
   id?: string;
   source?: string;
-  sessionType?: string;
   type?: string;
   severity?: string;
-  riskLevel?: string;
   message?: string;
-  summary?: string;
-  metrics?: SessionGuardMetrics;
+  metrics?: CoachEngineMetrics;
   timestampMs?: number;
   localOnly?: boolean;
   [key: string]: unknown;
 }
 
-interface NormalizedSessionGuardEvent {
+interface NormalizedCoachEngineEvent {
   id: string;
   source: string;
-  sessionType: string;
   type: string;
   severity: string;
   message: string;
   metrics: {
-    spinCount: number;
-    netResult: number;
-    longestLosingStretch: number;
-    elapsedMinutes: number;
+    count: number;
+    hoursAgo: number;
+    action: string;
+    agent: string;
+    rateDrop: string;
   };
   timestampMs: number;
   localOnly: boolean;
@@ -75,92 +74,55 @@ function readJsonArray(key: string): Record<string, unknown>[] {
 function writeJsonArray(key: string, rows: Record<string, unknown>[], limit: number = 50): void {
   if (typeof localStorage === 'undefined') return;
   const sliced = rows.slice(-limit);
-  try {
-    invoke('kv_set', { key, value: JSON.stringify(sliced) }).catch(() => {});
-  } catch {
-    // SQLite not available in browser
-  }
+  invoke('kv_set', { key, value: JSON.stringify(sliced) }).catch(() => {});
   localStorage.setItem(key, JSON.stringify(sliced));
 }
 
-export function normalizeSessionGuardEvent(event: SessionGuardEvent = {}): NormalizedSessionGuardEvent {
+export function normalizeCoachEngineEvent(event: CoachEngineEvent = {}): NormalizedCoachEngineEvent {
   const metrics = event.metrics || {};
   return {
-    id: event.id || `sessionguard-${timestampMs()}`,
-    source: event.source || 'sessionguard',
-    sessionType: event.sessionType || 'unknown_session',
-    type: event.type || SESSION_GUARD_EVENT_TYPES.HIGH_VOLATILITY,
-    severity: event.severity || event.riskLevel || 'info',
-    message: event.message || event.summary || 'SessionGuard detected a session pattern.',
+    id: event.id || `coach-engine-${timestampMs()}`,
+    source: event.source || 'coach-engine',
+    type: event.type || COACH_ENGINE_EVENT_TYPES.APPROVAL_THEATER,
+    severity: event.severity || 'info',
+    message: event.message || 'Coach engine detected a session pattern.',
     metrics: {
-      spinCount: Number(metrics.spinCount || metrics.spins || 0),
-      netResult: Number(metrics.netResult || metrics.net || 0),
-      longestLosingStretch: Number(metrics.longestLosingStretch || metrics.losingStretch || 0),
-      elapsedMinutes: Number(metrics.elapsedMinutes || 0)
+      count: Number(metrics.count || 0),
+      hoursAgo: Number(metrics.hoursAgo || 0),
+      action: String(metrics.action || ''),
+      agent: String(metrics.agent || ''),
+      rateDrop: String(metrics.rateDrop || '')
     },
     timestampMs: event.timestampMs || timestampMs(),
     localOnly: event.localOnly !== false
   };
 }
 
-function money(value: number): string {
-  const number = Number(value || 0);
-  const sign = number < 0 ? '-' : '';
-  return `${sign}$${Math.abs(number).toFixed(2)}`;
-}
-
-export function chooseCoachInterventionLevel(event: SessionGuardEvent = {}): string {
-  const normalized = normalizeSessionGuardEvent(event);
-  const { metrics, severity, type } = normalized;
-
-  if (
-    severity === 'critical' ||
-    type === SESSION_GUARD_EVENT_TYPES.CHASE_PATTERN ||
-    metrics.longestLosingStretch >= 25 ||
-    metrics.netResult <= -100
-  ) {
-    return COACH_INTERVENTION_LEVELS.HARD;
-  }
-
-  if (
-    severity === 'warning' ||
-    metrics.longestLosingStretch >= 10 ||
-    metrics.netResult <= -25 ||
-    metrics.elapsedMinutes >= 45
-  ) {
-    return COACH_INTERVENTION_LEVELS.FIRM;
-  }
-
-  return COACH_INTERVENTION_LEVELS.QUIET;
-}
-
 interface CoachIntervention {
   id: string;
   source: string;
-  sessionType: string;
   type: string;
   level: string;
   title: string;
   message: string;
   rawMessage: string;
-  metrics: NormalizedSessionGuardEvent['metrics'];
+  metrics: NormalizedCoachEngineEvent['metrics'];
   timestampMs: number;
   localOnly: boolean;
   actions: string[];
 }
 
-export function buildCoachIntervention(event: SessionGuardEvent = {}): CoachIntervention {
-  const normalized = normalizeSessionGuardEvent(event);
-  const level = chooseCoachInterventionLevel(normalized);
-  const { metrics } = normalized;
+export function buildCoachIntervention(event: CoachEngineEvent = {}): CoachIntervention {
+  const normalized = normalizeCoachEngineEvent(event);
+  const { metrics, severity, type } = normalized;
 
-  const parts: string[] = [];
-  if (metrics.spinCount) parts.push(`${metrics.spinCount} spins in`);
-  if (metrics.netResult) parts.push(`net ${money(metrics.netResult)}`);
-  if (metrics.longestLosingStretch) parts.push(`${metrics.longestLosingStretch}-spin losing stretch`);
-  if (metrics.elapsedMinutes) parts.push(`${metrics.elapsedMinutes} minutes elapsed`);
+  let level: CoachInterventionLevel = COACH_INTERVENTION_LEVELS.QUIET;
+  if (severity === 'critical' || type === COACH_ENGINE_EVENT_TYPES.APPROVAL_THEATER) {
+    level = COACH_INTERVENTION_LEVELS.HARD;
+  } else if (severity === 'warning') {
+    level = COACH_INTERVENTION_LEVELS.FIRM;
+  }
 
-  const context = parts.length ? `You're ${parts.join(', ')}.` : normalized.message;
   const action = level === COACH_INTERVENTION_LEVELS.HARD
     ? 'Pause now. Take 60 seconds before continuing.'
     : level === COACH_INTERVENTION_LEVELS.FIRM
@@ -170,7 +132,6 @@ export function buildCoachIntervention(event: SessionGuardEvent = {}): CoachInte
   return {
     id: normalized.id,
     source: normalized.source,
-    sessionType: normalized.sessionType,
     type: normalized.type,
     level,
     title: level === COACH_INTERVENTION_LEVELS.HARD
@@ -178,7 +139,7 @@ export function buildCoachIntervention(event: SessionGuardEvent = {}): CoachInte
       : level === COACH_INTERVENTION_LEVELS.FIRM
         ? 'Coach check-in'
         : 'Quiet nudge',
-    message: `${context} ${action}`,
+    message: `${normalized.message} ${action}`,
     rawMessage: normalized.message,
     metrics,
     timestampMs: normalized.timestampMs,
@@ -189,73 +150,67 @@ export function buildCoachIntervention(event: SessionGuardEvent = {}): CoachInte
   };
 }
 
-export function buildDemoSlotIntervention(): CoachIntervention {
+export function buildDemoIntervention(): CoachIntervention {
   return buildCoachIntervention({
-    source: 'sessionguard',
-    sessionType: 'slot_machine',
-    type: SESSION_GUARD_EVENT_TYPES.LOSS_STRETCH,
-    severity: 'warning',
-    message: 'Noticeable losing stretch detected.',
-    metrics: {
-      spinCount: 82,
-      netResult: -43.25,
-      longestLosingStretch: 14,
-      elapsedMinutes: 28
-    },
+    source: 'coach-engine',
+    type: COACH_ENGINE_EVENT_TYPES.APPROVAL_THEATER,
+    severity: 'critical',
+    message: 'Demo intervention: approval theater detected.',
+    metrics: { count: 5, action: 'publish_post', agent: 'miya', hoursAgo: 2, rateDrop: '' },
     localOnly: true
   });
 }
 
-interface BridgeEvent extends NormalizedSessionGuardEvent {
+interface EngineEvent extends NormalizedCoachEngineEvent {
   intervention: CoachIntervention;
   receivedAtMs: number;
 }
 
-export function listSessionGuardBridgeEvents(): BridgeEvent[] {
-  return readJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY) as unknown as BridgeEvent[];
+export function listCoachEngineEvents(): EngineEvent[] {
+  return readJsonArray(COACH_ENGINE_STORAGE_KEY) as unknown as EngineEvent[];
 }
 
-export function pushSessionGuardBridgeEvent(event: SessionGuardEvent = {}): BridgeEvent {
+export function pushCoachEngineEvent(event: CoachEngineEvent = {}): EngineEvent {
   const intervention = buildCoachIntervention(event);
-  const bridgeEvent: BridgeEvent = {
-    ...normalizeSessionGuardEvent(event),
+  const engineEvent: EngineEvent = {
+    ...normalizeCoachEngineEvent(event),
     intervention,
     receivedAtMs: timestampMs()
   };
 
-  const events = [...listSessionGuardBridgeEvents(), bridgeEvent];
-  writeJsonArray(SESSION_GUARD_BRIDGE_STORAGE_KEY, events as unknown as Record<string, unknown>[], 20);
+  const events = [...listCoachEngineEvents(), engineEvent];
+  writeJsonArray(COACH_ENGINE_STORAGE_KEY, events as unknown as Record<string, unknown>[], 20);
 
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(SESSION_GUARD_BRIDGE_EVENT, { detail: bridgeEvent }));
+    window.dispatchEvent(new CustomEvent(COACH_ENGINE_EVENT, { detail: engineEvent }));
   }
 
-  return bridgeEvent;
+  return engineEvent;
 }
 
-export function getLatestSessionGuardBridgeIntervention(): CoachIntervention | null {
-  return listSessionGuardBridgeEvents().at(-1)?.intervention || null;
+export function getLatestCoachEngineIntervention(): CoachIntervention | null {
+  return listCoachEngineEvents().at(-1)?.intervention || null;
 }
 
-export function subscribeSessionGuardBridge(onBridgeEvent: (event: BridgeEvent) => void): () => void {
+export function subscribeCoachEngine(onEngineEvent: (event: EngineEvent) => void): () => void {
   if (typeof window === 'undefined') return () => {};
 
   const handleCustomEvent = (event: Event) => {
-    const ce = event as CustomEvent<BridgeEvent>;
-    if (ce?.detail?.intervention) onBridgeEvent(ce.detail);
+    const ce = event as CustomEvent<EngineEvent>;
+    if (ce?.detail?.intervention) onEngineEvent(ce.detail);
   };
 
   const handleStorageEvent = (event: StorageEvent) => {
-    if (event.key !== SESSION_GUARD_BRIDGE_STORAGE_KEY) return;
-    const latest = listSessionGuardBridgeEvents().at(-1);
-    if (latest?.intervention) onBridgeEvent(latest);
+    if (event.key !== COACH_ENGINE_STORAGE_KEY) return;
+    const latest = listCoachEngineEvents().at(-1);
+    if (latest?.intervention) onEngineEvent(latest);
   };
 
-  window.addEventListener(SESSION_GUARD_BRIDGE_EVENT, handleCustomEvent);
+  window.addEventListener(COACH_ENGINE_EVENT, handleCustomEvent);
   window.addEventListener('storage', handleStorageEvent);
 
   return () => {
-    window.removeEventListener(SESSION_GUARD_BRIDGE_EVENT, handleCustomEvent);
+    window.removeEventListener(COACH_ENGINE_EVENT, handleCustomEvent);
     window.removeEventListener('storage', handleStorageEvent);
   };
 }

@@ -6,6 +6,7 @@ import { appendVerificationLog } from './services/verificationService';
 import { TRUST_STATES } from './services/trustModel';
 import { sendNativeNotification } from './services/notificationService';
 import { checkAppUpdate } from './services/appUpdateService';
+import { logApprovalEvent } from './services/agentAuditService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
@@ -639,18 +640,20 @@ function AppShell() {
       {approvalPending && (
         <Suspense fallback={null}>
           <ApprovalModal
-            label={approvalPending}
-            action={approvalPending}
+            label={approvalPending.actionLabel}
+            action={approvalPending.actionLabel}
             connector={undefined}
-            riskLevel={undefined}
-            mariaScore={undefined}
+            riskLevel={approvalPending.riskLevel}
+            mariaScore={approvalPending.mariaScore}
             onConfirm={() => {
-              sendNativeNotification('Alphonso', `Approved: ${approvalPending}`);
+              logApprovalEvent(approvalPending.packetId || `approval-${Date.now()}`, approvalPending.agent, approvalPending.actionLabel, 'approved', approvalPending.riskLevel, approvalPending.mariaScore);
+              sendNativeNotification('Alphonso', `Approved: ${approvalPending.actionLabel}`);
               setApprovalPending(null);
               approvalResolveRef.current?.(true);
             }}
             onCancel={() => {
-              sendNativeNotification('Alphonso', `Denied: ${approvalPending}`);
+              logApprovalEvent(approvalPending.packetId || `approval-${Date.now()}`, approvalPending.agent, approvalPending.actionLabel, 'denied', approvalPending.riskLevel, approvalPending.mariaScore);
+              sendNativeNotification('Alphonso', `Denied: ${approvalPending.actionLabel}`);
               setApprovalPending(null);
               setApprovalRequiredNotice(true);
               approvalResolveRef.current?.(false);

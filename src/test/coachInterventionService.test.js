@@ -2,81 +2,82 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   COACH_INTERVENTION_ACTION_LOG_KEY,
   COACH_INTERVENTION_LEVELS,
-  SESSION_GUARD_BRIDGE_EVENT,
-  SESSION_GUARD_BRIDGE_STORAGE_KEY,
-  SESSION_GUARD_EVENT_TYPES,
+  COACH_ENGINE_EVENT,
+  COACH_ENGINE_EVENT_TYPES,
+  COACH_ENGINE_STORAGE_KEY,
   buildCoachIntervention,
-  buildDemoSlotIntervention,
+  buildDemoIntervention,
   chooseCoachInterventionLevel,
+  listCoachEngineEvents,
   listCoachInterventionActionLog,
-  listSessionGuardBridgeEvents,
-  pushSessionGuardBridgeEvent,
+  pushCoachEngineEvent,
   recordCoachInterventionAction,
-  subscribeSessionGuardBridge
+  subscribeCoachEngine
 } from '../services/coachInterventionService';
 
 describe('coachInterventionService', () => {
   beforeEach(() => {
-    localStorage.removeItem(SESSION_GUARD_BRIDGE_STORAGE_KEY);
+    localStorage.removeItem(COACH_ENGINE_STORAGE_KEY);
     localStorage.removeItem(COACH_INTERVENTION_ACTION_LOG_KEY);
   });
 
-  it('builds a firm protective slot intervention from SessionGuard metrics', () => {
-    const intervention = buildDemoSlotIntervention();
-    expect(intervention.source).toBe('sessionguard');
-    expect(intervention.sessionType).toBe('slot_machine');
-    expect(intervention.level).toBe(COACH_INTERVENTION_LEVELS.FIRM);
-    expect(intervention.message).toContain('82 spins in');
-    expect(intervention.message).toContain('net -$43.25');
-    expect(intervention.message).toContain('Pause for 60 seconds');
+  it('builds a firm demo intervention from CoachEngine metrics', () => {
+    const intervention = buildDemoIntervention();
+    expect(intervention.source).toBe('coach-engine');
+    expect(intervention.type).toBe(COACH_ENGINE_EVENT_TYPES.APPROVAL_THEATER);
+    expect(intervention.level).toBe(COACH_INTERVENTION_LEVELS.HARD);
+    expect(intervention.message).toContain('approval theater detected');
     expect(intervention.localOnly).toBe(true);
   });
 
-  it('escalates chase patterns and deep losing stretches to hard pauses', () => {
-    expect(chooseCoachInterventionLevel({
-      type: SESSION_GUARD_EVENT_TYPES.CHASE_PATTERN,
-      metrics: { spinCount: 140, netResult: -80, longestLosingStretch: 18 }
-    })).toBe(COACH_INTERVENTION_LEVELS.HARD);
+  it('escalates approval theater to hard pauses', () => {
+    const intervention = buildCoachIntervention({
+      type: COACH_ENGINE_EVENT_TYPES.APPROVAL_THEATER,
+      severity: 'critical',
+      metrics: { count: 5, action: 'publish_post', agent: 'miya', hoursAgo: 2 }
+    });
+    expect(intervention.level).toBe(COACH_INTERVENTION_LEVELS.HARD);
 
-    expect(chooseCoachInterventionLevel({
-      type: SESSION_GUARD_EVENT_TYPES.LOSS_STRETCH,
-      metrics: { longestLosingStretch: 25 }
-    })).toBe(COACH_INTERVENTION_LEVELS.HARD);
+    const intervention2 = buildCoachIntervention({
+      type: COACH_ENGINE_EVENT_TYPES.REPEATED_PIPELINE_FAILURE,
+      severity: 'warning',
+      metrics: { count: 3, action: 'research', agent: 'hector', hoursAgo: 1 }
+    });
+    expect(intervention2.level).toBe(COACH_INTERVENTION_LEVELS.FIRM);
   });
 
-  it('keeps mild events as quiet nudges', () => {
+  it('keeps neutral events as quiet nudges', () => {
     const intervention = buildCoachIntervention({
-      type: SESSION_GUARD_EVENT_TYPES.HIGH_VOLATILITY,
-      severity: 'info',
-      metrics: { spinCount: 12, netResult: -4, longestLosingStretch: 3 }
+      type: COACH_ENGINE_EVENT_TYPES.LONG_UNBROKEN_SESSION,
+      severity: 'neutral',
+      metrics: { count: 1, hoursAgo: 2, action: '', agent: '', rateDrop: '' }
     });
     expect(intervention.level).toBe(COACH_INTERVENTION_LEVELS.QUIET);
     expect(intervention.message).toContain('Heads up');
   });
 
-  it('bridges SessionGuard JSON into a stored CoachInterventionCard payload', () => {
+  it('bridges CoachEngine JSON into a stored CoachInterventionCard payload', () => {
     const listener = vi.fn();
-    window.addEventListener(SESSION_GUARD_BRIDGE_EVENT, listener);
+    window.addEventListener(COACH_ENGINE_EVENT, listener);
 
-    const bridgeEvent = pushSessionGuardBridgeEvent({
-      id: 'sg-1',
-      sessionType: 'slot_machine',
-      type: SESSION_GUARD_EVENT_TYPES.BANKROLL_DROP,
+    const bridgeEvent = pushCoachEngineEvent({
+      id: 'ce-1',
+      type: COACH_ENGINE_EVENT_TYPES.APPROVAL_THEATER,
       severity: 'critical',
-      metrics: { spins: 101, net: -125 }
+      metrics: { count: 5, action: 'publish_post', agent: 'miya', hoursAgo: 2 }
     });
 
     expect(bridgeEvent.intervention.level).toBe(COACH_INTERVENTION_LEVELS.HARD);
-    expect(listSessionGuardBridgeEvents()).toHaveLength(1);
+    expect(listCoachEngineEvents()).toHaveLength(1);
     expect(listener).toHaveBeenCalledTimes(1);
 
-    window.removeEventListener(SESSION_GUARD_BRIDGE_EVENT, listener);
+    window.removeEventListener(COACH_ENGINE_EVENT, listener);
   });
 
   it('subscribes to local bridge events and records local-only action choices', () => {
     const subscriber = vi.fn();
-    const unsubscribe = subscribeSessionGuardBridge(subscriber);
-    const bridgeEvent = pushSessionGuardBridgeEvent({ metrics: { longestLosingStretch: 12 } });
+    const unsubscribe = subscribeCoachEngine(subscriber);
+    const bridgeEvent = pushCoachEngineEvent({ metrics: { count: 12 } });
 
     expect(subscriber).toHaveBeenCalledWith(expect.objectContaining({ intervention: bridgeEvent.intervention }));
 

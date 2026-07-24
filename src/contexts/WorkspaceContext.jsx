@@ -31,7 +31,7 @@ export function WorkspaceProvider({ children, requestApproval, setVerificationLo
       setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       return;
     }
-    if (!await requestApproval(`Collect workspace proof for ${settings.workspaceRoot}`)) return;
+    if (!await requestApproval({ actionLabel: `Collect workspace proof for ${settings.workspaceRoot}` })) return;
     try {
       const proof = await collectWorkspaceProof(settings.workspaceRoot, 1200);
       setWorkspaceProof(proof);
@@ -54,7 +54,7 @@ export function WorkspaceProvider({ children, requestApproval, setVerificationLo
   }, [settings.workspaceRoot, requestApproval, setVerificationLogs, setDurableAuditLogs]);
 
   const handleCheckOcrCapability = useCallback(async () => {
-    if (!await requestApproval('Check OCR engine capability')) return;
+    if (!await requestApproval({ actionLabel: 'Check OCR engine capability' })) return;
     try {
       const proof = await checkOcrCapability(settings.ocrEnginePath);
       setOcrCapability(proof);
@@ -89,7 +89,7 @@ export function WorkspaceProvider({ children, requestApproval, setVerificationLo
       setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       return;
     }
-    if (!await requestApproval(`Build workspace symbol index for ${settings.workspaceRoot}`)) return;
+    if (!await requestApproval({ actionLabel: `Build workspace symbol index for ${settings.workspaceRoot}` })) return;
     try {
       const index = await buildWorkspaceSymbolIndex(settings.workspaceRoot, SYMBOL_INDEX_FILE_LIMIT);
       setWorkspaceSymbolIndex(index);
@@ -118,7 +118,7 @@ export function WorkspaceProvider({ children, requestApproval, setVerificationLo
       setVerificationLogs((current) => [...current, log].slice(-VERIFICATION_LOG_CAP));
       return;
     }
-    if (!await requestApproval(`Run OCR adapter ${adapter}`)) return;
+    if (!await requestApproval({ actionLabel: `Run OCR adapter ${adapter}` })) return;
     try {
       const proof = await runOcrAdapter({
         adapter, enginePath: settings.ocrEnginePath, imagePath: imagePath || null, extraArgs

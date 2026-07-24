@@ -1,0 +1,8 @@
+### CLOSED — 2026-07-23 (Session Coach Phase 0+1 implementation)
+- [x] **Session Coach approval audit was never wired** — `logApprovalEvent()` in `agentAuditService.ts` existed but was never called from any production code path. The `ApprovalModal` in `App.tsx` only called `sendNativeNotification` on confirm/deny. Fixed: wired real `logApprovalEvent(packetId, agent, action, outcome, riskLevel, mariaScore)` at the confirm/deny handlers; extended `ApprovalAuditEntry` with optional `riskLevel`/`mariaScore`; updated tests.
+- [x] **Session Coach intervention card had zero real signal source** — `coachInterventionService.ts` was entirely named/structured around a dead `SessionGuard` bridge to an unrelated product (`SESSIONGUARD`). No detectors ever fired. Fixed: renamed all `SESSION_GUARD_*` to `COACH_ENGINE_*`; created `coachEngineService.ts` with 7 pure detectors (`critical_override_pattern`, `late_night_approval`, `repeated_pipeline_failure`, `dead_letter_graveyard`, `confidence_decay`, `approval_rubber_stamp`, `long_unbroken_session`) + `runCoachDetectors()` (ordered by severity, cooldown/dedup); wired `CoachContext.jsx` to run detectors on a 2-min interval via `subscribeCoachEngine`.
+- [x] **Removed stale `.gitignore` entries** — deleted `.sessionguard/`, `.coach-bridge/`, `sessionguard-bridge/` references.
+- [x] **Updated documentation** — `CLAUDE.md` Coach system row + Do Not Duplicate table updated.
+- [x] **All 3590 tests pass**, lint clean, tsc clean.
+
+### CLOSED — 2026-07-02 (User-reported bug batch, post-audit Phase 1)
