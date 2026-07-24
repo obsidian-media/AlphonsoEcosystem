@@ -8,7 +8,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-07-23/24 (Session Coach engine, connector health checks, repo governance)
 
-- **Connector health checks (real, not stubbed):** `ConnectorHealthPanel`'s Test
+**Correction (2026-07-24):** this entry originally stated the Session Coach
+work below was already merged to `main`. That was wrong — it was merged to
+`main` in **connector health checks** only (PR #104, already merged). The
+**Session Coach Phases 0–3** are still on **open PR #108**
+(`feat/alphonso-session-coach-phase2`), not yet merged; this branch
+(`agent/hermes-governance-bootstrap`, PR #109) was itself branched from PR
+#108's tip, so it is stacked on top of it and inherits those commits in its
+diff. Wording below corrected to reflect that these are pending, not live.
+
+- **Connector health checks (real, not stubbed) — merged to main via PR #104:** `ConnectorHealthPanel`'s Test
   button previously hardcoded Mobile Bridge as always-ok despite its transport
   (`companion_server.rs` — WebSocket + PIN auth + mDNS + JSON-RPC router) being
   fully built; added `checkMobileBridgeConnection()` backed by the real
@@ -20,7 +29,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `/user`, Slack `auth.test`, Discord `/users/@me`, n8n reuses `isN8nHealthy`,
   the rest credential-presence checks matching the existing pattern for paid
   APIs with no free ping endpoint).
-- **Session Coach detection engine (Phases 0–3):** replaced the dead
+- **Session Coach detection engine (Phases 0–3) — pending on open PR #108, not yet merged:** replaced the dead
   `SessionGuard`/`.sessionguard`/coach-bridge naming with a real local
   detection engine (`coachEngineService.ts`), wired into `CoachContext.jsx` on
   a 2-minute interval.
@@ -43,7 +52,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     the message variants but no UI to choose between them).
   - 89 new/updated tests across `coachEngineService.test.js` (parameterized per
     detector × style) and `agentAuditService.test.js`.
-- **Repo governance bootstrap:** added `REPO_RULES.md` v1.0.0 (documentation
+- **Repo governance bootstrap — this PR (#109), stacked on #108:** added `REPO_RULES.md` v1.0.0 (documentation
   truth, audit conventions, branch/CI policy, security rules — enforced via a
   new `gate` CI workflow and `scripts/verify.sh`/`verify.ps1`), plus
   `REPO_DIRECTIVE.md` (goal-layer constitution — current phase: **P1 Ecosystem
