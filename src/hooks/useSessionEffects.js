@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import {
   COACH_INTERVENTION_LEVELS,
-  subscribeSessionGuardBridge
+  subscribeCoachEngine
 } from '../services/coachInterventionService';
 import { playCoachSoundCue } from '../services/coachSoundCueService';
 import { TRUST_STATES } from '../services/trustModel';
@@ -19,10 +19,10 @@ export function useSessionEffects({
   setCoachMode,
   setJoseCompanionState
 }) {
-  // Session guard bridge subscription
-  useEffect(() => subscribeSessionGuardBridge((bridgeEvent) => {
-    setCoachIntervention(bridgeEvent.intervention);
-    const level = bridgeEvent.intervention?.level;
+  // Coach engine intervention subscription
+  useEffect(() => subscribeCoachEngine((engineEvent) => {
+    setCoachIntervention(engineEvent.intervention);
+    const level = engineEvent.intervention?.level;
     if (level === COACH_INTERVENTION_LEVELS.HARD) {
       setCoachMiniMode(false);
       setCoachMode(true);
