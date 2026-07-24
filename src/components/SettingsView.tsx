@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic } from 'lucide-react';
+import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 
 const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent'> = {
@@ -28,6 +28,19 @@ import { SessionHistoryView } from './SessionHistoryView';
 import { FilesView } from './FilesView';
 import { getWatcherConfig, saveWatcherConfig } from '../services/echoFileWatcherService';
 import { getUsageStats } from '../services/memoryMonitorService';
+import { CoachHistoryPanel } from './CoachHistoryPanel';
+import {
+  ALL_COACH_TRIGGER_IDS,
+  getCoachEnabled,
+  setCoachEnabled,
+  getAllCoachTriggerToggles,
+  setCoachTriggerEnabled,
+  getCoachNarrativeEnabled,
+  setCoachNarrativeEnabled,
+  getCoachSnoozeUntilMs,
+  setCoachSnoozeHours,
+  clearCoachSnooze,
+} from '../services/coachEngineService';
 
 interface MemoryItem {
   id?: string;
@@ -98,6 +111,117 @@ function EchoTimeline() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+const COACH_TRIGGER_LABELS: Record<string, string> = {
+  critical_override_pattern: 'Approval theater (repeated high-risk approvals)',
+  late_night_approval: 'Late-night high-risk approval',
+  repeated_pipeline_failure: 'Repeated pipeline failure',
+  confidence_decay: 'Agent confidence decay',
+  approval_rubber_stamp: 'Approval rubber-stamping',
+  dead_letter_graveyard: 'Dead-letter queue graveyard',
+  long_unbroken_session: 'Long unbroken session',
+  agent_whiplash: 'Agent whiplash (task bouncing between agents)',
+  boardroom_hedge_pileup: 'Boardroom hedge pileup',
+  unused_surface_area: 'Unused connectors / skill packs',
+  license_wall: 'License wall (repeated Pro-gated denials)',
+};
+
+function CoachSettingsSection() {
+  const [enabled, setEnabledState] = useState(getCoachEnabled);
+  const [narrativeEnabled, setNarrativeEnabledState] = useState(getCoachNarrativeEnabled);
+  const [triggerToggles, setTriggerToggles] = useState(getAllCoachTriggerToggles);
+  const [snoozeUntil, setSnoozeUntil] = useState(getCoachSnoozeUntilMs);
+
+  const snoozeActive = snoozeUntil > Date.now();
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+        <div>
+          <div className="text-sm font-semibold text-[var(--text-1)]">Session Coach detection engine</div>
+          <div className="text-xs text-[var(--text-4)] mt-0.5">
+            Master toggle — when off, no detector runs, regardless of the Coach window being open.
+          </div>
+        </div>
+        <button
+          onClick={() => { const next = !enabled; setCoachEnabled(next); setEnabledState(next); }}
+          className={`p-1 rounded-full transition-colors ${enabled ? 'text-[var(--success)]' : 'text-[var(--text-4)]'}`}
+        >
+          {enabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+        <div>
+          <div className="text-sm font-semibold text-[var(--text-1)]">Ollama-narrative rewriting</div>
+          <div className="text-xs text-[var(--text-4)] mt-0.5">
+            Rephrase coach messages via local Ollama for critical/warning signals. Falls back silently to the
+            rule-based message on any failure. Off by default — requires Ollama running.
+          </div>
+        </div>
+        <button
+          onClick={() => { const next = !narrativeEnabled; setCoachNarrativeEnabled(next); setNarrativeEnabledState(next); }}
+          className={`p-1 rounded-full transition-colors ${narrativeEnabled ? 'text-[var(--success)]' : 'text-[var(--text-4)]'}`}
+        >
+          {narrativeEnabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+        </button>
+      </div>
+
+      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-3">
+        <div>
+          <div className="text-sm font-semibold text-[var(--text-1)]">Snooze</div>
+          <div className="text-xs text-[var(--text-4)] mt-0.5">
+            Mute all coaching for a set number of hours, independent of the per-trigger toggles below.
+          </div>
+        </div>
+        {snoozeActive ? (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-[var(--warning)]">
+              Snoozed until {new Date(snoozeUntil).toLocaleString()}
+            </span>
+            <button
+              onClick={() => { clearCoachSnooze(); setSnoozeUntil(0); }}
+              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-3)]"
+            >
+              Clear snooze
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            {[1, 4, 24].map((hours) => (
+              <button
+                key={hours}
+                onClick={() => { setCoachSnoozeHours(hours); setSnoozeUntil(Date.now() + hours * 3600 * 1000); }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-3)]"
+              >
+                {hours}h
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-2">
+        <div className="text-sm font-semibold text-[var(--text-1)] mb-2">Per-trigger toggles</div>
+        {ALL_COACH_TRIGGER_IDS.map((id) => (
+          <div key={id} className="flex items-center justify-between py-1.5">
+            <span className="text-xs text-[var(--text-2)]">{COACH_TRIGGER_LABELS[id] || id}</span>
+            <button
+              onClick={() => {
+                const next = !triggerToggles[id];
+                setCoachTriggerEnabled(id, next);
+                setTriggerToggles({ ...triggerToggles, [id]: next });
+              }}
+              className={`p-0.5 rounded-full transition-colors ${triggerToggles[id] ? 'text-[var(--success)]' : 'text-[var(--text-4)]'}`}
+            >
+              {triggerToggles[id] ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -333,6 +457,7 @@ const SETTINGS_SECTIONS = [
   { id: 'memory',      label: 'Memory',       Icon: Database },
   { id: 'knowledge',   label: 'Knowledge',    Icon: Compass },
   { id: 'appearance',  label: 'Appearance',   Icon: Palette },
+  { id: 'coach',       label: 'Coach',        Icon: MessageSquare },
   { id: 'plugins',     label: 'Plugins',      Icon: Package },
   { id: 'logs',        label: 'Logs',         Icon: ScrollText },
   { id: 'backup',      label: 'Backup',       Icon: Download },
@@ -1250,6 +1375,18 @@ export function SettingsView({
   {activeSection === 'knowledge' && (
     <div className="max-w-4xl mx-auto min-h-[60vh]">
       <FilesView memoryItems={memoryItems as Parameters<typeof FilesView>[0]['memoryItems']} />
+    </div>
+  )}
+  {activeSection === 'coach' && (
+    <div className="max-w-4xl mx-auto space-y-10">
+      <section className="space-y-4">
+        <SectionHeader icon={MessageSquare} label="Session Coach" />
+        <CoachSettingsSection />
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={ScrollText} label="Coach History" />
+        <CoachHistoryPanel />
+      </section>
     </div>
   )}
   {activeSection === 'plugins' && <PluginMarketplacePanel />}
