@@ -26,7 +26,7 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
   # (b) content-based: first-party code/config only, require an assigned QUOTED
   #     LITERAL value (not a variable/identifier reference) — matches the bash
   #     script's fix: `SOMETHING_API_KEY: someVariableName` no longer matches,
-  #     only `SOMETHING_API_KEY: "actual-literal-value"` shapes do. Test dirs
+  #     only a token field set to an actual quoted literal string still does. Test dirs
   #     excluded outright since fake placeholder tokens are expected there.
   #     Exclude dependency / generated dirs + *.env.example / *.env.sample templates.
   $excludeDirsWithTests = '[\\/](node_modules|\.git|audits[\\/]private|\.venv|_repo_clone|dist|build|\.cache|coverage|test|tests|e2e)[\\/]'
