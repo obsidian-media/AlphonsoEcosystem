@@ -9,6 +9,7 @@ import { THREADS_KEY, MESSAGES_KEY } from './boardroomThreadService';
 import { listConnectors } from './connectors/connectorRegistry';
 import { listSkillPacks, getSkillPackLastInvoked } from './skillPackService';
 import { getLicenseDenialLog } from './licenseService';
+import { generateOllamaResponse, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 
 export type MessageStyle = 'direct' | 'balanced' | 'gentle';
 
@@ -39,6 +40,65 @@ export function getCoachMessageStyle(): MessageStyle {
 
 export function setCoachMessageStyle(style: MessageStyle): void {
   try { localStorage.setItem(COACH_STYLE_KEY, style); } catch { /* ignore */ }
+}
+
+// ── Phase 4: optional Ollama-narrative layer ───────────────────────────
+// Ported from SessionGuard's live_coach_engine.py `_nvidia_coach()` gating
+// shape (has_issue-only, silent fallback on any failure) — rewritten for
+// Alphonso's own domain (agent orchestration), not gambling. Default OFF:
+// Phases 1-3 already deliver full value without an LLM dependency.
+export const COACH_NARRATIVE_ENABLED_KEY = 'alphonso_coach_narrative_enabled_v1';
+const NARRATIVE_MODEL = 'llama3.2:3b';
+
+export function getCoachNarrativeEnabled(): boolean {
+  try { return localStorage.getItem(COACH_NARRATIVE_ENABLED_KEY) === 'true'; } catch { return false; }
+}
+
+export function setCoachNarrativeEnabled(enabled: boolean): void {
+  try { localStorage.setItem(COACH_NARRATIVE_ENABLED_KEY, String(enabled)); } catch { /* ignore */ }
+}
+
+const COACH_NARRATIVE_SYSTEM_PROMPT = `You are Alphonso's Session Coach — a calm, concise voice that occasionally
+notices a pattern in how the user is operating their AI agents and says something
+about it. You are not an agent, not a chatbot, and you do not take actions. You
+only rephrase a single already-detected observation into one short, natural
+sentence or two, in the requested tone. Never invent facts beyond what is given.
+Never mention approval workflows, risk scores, or agent internals not present in
+the input. Never use gambling, casino, or "session" terminology from any other
+product. Keep it under 40 words.`;
+
+/**
+ * Rewrite a rule-based CoachSignal's message into a more natural, one-off
+ * phrasing via local Ollama. Only ever called for consequential (critical/
+ * warning) signals — mirrors SessionGuard's has_issue gate. On any failure,
+ * timeout, or disabled setting, returns null so the caller keeps showing the
+ * rule-based message already displayed; never surfaces an Ollama error to the
+ * user and never blocks on this — call it after the rule-based message is
+ * already visible, then swap the text in only if/when this resolves.
+ */
+export async function generateNarrativeCoachMessage(
+  signal: CoachSignal,
+  style: MessageStyle,
+  opts: { endpoint?: string; model?: string; signal?: AbortSignal } = {}
+): Promise<string | null> {
+  if (signal.severity !== 'critical' && signal.severity !== 'warning') return null;
+  if (!getCoachNarrativeEnabled()) return null;
+
+  const { endpoint = DEFAULT_OLLAMA_ENDPOINT, model = NARRATIVE_MODEL, signal: abortSignal } = opts;
+  const toneLine = style === 'direct'
+    ? 'Tone: direct and plain-spoken.'
+    : style === 'gentle'
+      ? 'Tone: gentle and reassuring.'
+      : 'Tone: balanced and matter-of-fact.';
+  const prompt = `${COACH_NARRATIVE_SYSTEM_PROMPT}\n\n${toneLine}\n\nObservation to rephrase: "${signal.message}"\n\nRewritten:`;
+
+  try {
+    const result = await generateOllamaResponse({ endpoint, model, prompt, signal: abortSignal });
+    const text = (result?.response || '').trim();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null;
+  }
 }
 
 function canFire(id: string): boolean {

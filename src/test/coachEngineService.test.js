@@ -1,4 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../lib/ollama', async () => {
+  const actual = await vi.importActual('../lib/ollama');
+  return {
+    ...actual,
+    generateOllamaResponse: vi.fn()
+  };
+});
+
 import {
   detectApprovalTheater,
   detectLateNightApproval,
@@ -15,8 +24,13 @@ import {
   resetCoachCooldowns,
   getCoachMessageStyle,
   setCoachMessageStyle,
-  COACH_STYLE_KEY
+  COACH_STYLE_KEY,
+  getCoachNarrativeEnabled,
+  setCoachNarrativeEnabled,
+  generateNarrativeCoachMessage,
+  COACH_NARRATIVE_ENABLED_KEY
 } from '../services/coachEngineService';
+import * as ollama from '../lib/ollama';
 import { logApprovalEvent, clearAuditLog, getAuditLog } from '../services/agentAuditService';
 import { getDeadLetterCount, getOldestDeadLetterTimestamp } from '../services/orchestrationQueueService';
 import { getPerformanceTrend } from '../services/agentPerformanceService';
@@ -38,6 +52,7 @@ function clearAllCoachData() {
   localStorage.removeItem('alphonso_boardroom_thread_messages_v2');
   localStorage.removeItem('alphonso_skill_pack_invocation_v1');
   localStorage.removeItem(COACH_STYLE_KEY);
+  localStorage.removeItem(COACH_NARRATIVE_ENABLED_KEY);
 }
 
 beforeEach(() => {
@@ -45,6 +60,7 @@ beforeEach(() => {
   resetCoachCooldowns();
   clearAllCoachData();
   vi.setSystemTime(new Date());
+  ollama.generateOllamaResponse.mockReset();
 });
 
 afterEach(() => {
@@ -841,6 +857,60 @@ describe('coachEngineService', () => {
       const signal = runCoachDetectors();
       expect(signal).not.toBeNull();
       expect(signal.message).toContain('No judgment');
+    });
+  });
+
+  describe('getCoachNarrativeEnabled / setCoachNarrativeEnabled', () => {
+    it('defaults to false', () => {
+      expect(getCoachNarrativeEnabled()).toBe(false);
+    });
+
+    it('persists true after being set', () => {
+      setCoachNarrativeEnabled(true);
+      expect(getCoachNarrativeEnabled()).toBe(true);
+    });
+  });
+
+  describe('generateNarrativeCoachMessage', () => {
+    const neutralSignal = { id: 'long_unbroken_session', severity: 'neutral', message: 'Take a break.', detectedAtMs: Date.now() };
+    const warningSignal = { id: 'confidence_decay', severity: 'warning', message: 'Success rate dropped.', detectedAtMs: Date.now() };
+
+    it('returns null for a neutral-severity signal without calling Ollama, even when enabled', async () => {
+      setCoachNarrativeEnabled(true);
+      const result = await generateNarrativeCoachMessage(neutralSignal, 'balanced');
+      expect(result).toBeNull();
+      expect(ollama.generateOllamaResponse).not.toHaveBeenCalled();
+    });
+
+    it('returns null for a warning-severity signal when the setting is disabled (default)', async () => {
+      const result = await generateNarrativeCoachMessage(warningSignal, 'balanced');
+      expect(result).toBeNull();
+      expect(ollama.generateOllamaResponse).not.toHaveBeenCalled();
+    });
+
+    it('calls Ollama and returns the trimmed rewritten text when enabled for a warning signal', async () => {
+      setCoachNarrativeEnabled(true);
+      ollama.generateOllamaResponse.mockResolvedValue({ response: '  Heads up — this one is trending down.  ', done: true });
+      const result = await generateNarrativeCoachMessage(warningSignal, 'gentle');
+      expect(result).toBe('Heads up — this one is trending down.');
+      expect(ollama.generateOllamaResponse).toHaveBeenCalledTimes(1);
+      const promptArg = ollama.generateOllamaResponse.mock.calls[0][0].prompt;
+      expect(promptArg).toContain('Success rate dropped.');
+      expect(promptArg).toContain('gentle');
+    });
+
+    it('returns null and does not throw when Ollama rejects', async () => {
+      setCoachNarrativeEnabled(true);
+      ollama.generateOllamaResponse.mockRejectedValue(new Error('Ollama is not running'));
+      const result = await generateNarrativeCoachMessage(warningSignal, 'balanced');
+      expect(result).toBeNull();
+    });
+
+    it('returns null when Ollama resolves with an empty response', async () => {
+      setCoachNarrativeEnabled(true);
+      ollama.generateOllamaResponse.mockResolvedValue({ response: '   ', done: true });
+      const result = await generateNarrativeCoachMessage(warningSignal, 'balanced');
+      expect(result).toBeNull();
     });
   });
 });
