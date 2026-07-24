@@ -23,14 +23,19 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
     -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch $excludeDirs }
   if ($badFiles) { Err "secret-scan" "secret files present: $($badFiles.FullName -join ', ')" }
-  # (b) content-based: first-party code/config only, require an assigned value.
+  # (b) content-based: first-party code/config only, require an assigned QUOTED
+  #     LITERAL value (not a variable/identifier reference) — matches the bash
+  #     script's fix: `SOMETHING_API_KEY: someVariableName` no longer matches,
+  #     only `SOMETHING_API_KEY: "actual-literal-value"` shapes do. Test dirs
+  #     excluded outright since fake placeholder tokens are expected there.
   #     Exclude dependency / generated dirs + *.env.example / *.env.sample templates.
+  $excludeDirsWithTests = '[\\/](node_modules|\.git|audits[\\/]private|\.venv|_repo_clone|dist|build|\.cache|coverage|test|tests|e2e)[\\/]'
   $hits = Get-ChildItem -Path $RepoRoot -Recurse -File `
     -Include *.json,*.env,*.ts,*.js,*.py,*.yml,*.yaml,*.toml,*.sh `
     -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch $excludeDirs } |
+    Where-Object { $_.FullName -notmatch $excludeDirsWithTests } |
     Where-Object { $_.Name -notmatch '\.env\.(example|sample)$' } |
-    Where-Object { Select-String -Path $_.FullName -Pattern '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)\s*[=:]\s*["'']?[A-Za-z0-9/+_-]{8,}' -Quiet }
+    Where-Object { Select-String -Path $_.FullName -Pattern '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)\s*[=:]\s*["''][A-Za-z0-9/+_-]{8,}["'']' -Quiet }
   if ($hits) { Err "secret-scan" "possible hardcoded secrets in: $($hits.FullName -join ', ')" }
 }
 
@@ -102,7 +107,13 @@ if ($PM) {
 # ---------------------------------------------------------------- 4. deploy-dry
 Write-Host "== deploy-dry =="
 if (Test-Path (Join-Path $RepoRoot 'vercel.json')) {
-  vercel build --dry-run; if ($LASTEXITCODE -ne 0) { Err "deploy" "vercel dry-run failed" }
+  if (-not (Get-Command vercel -ErrorAction SilentlyContinue)) {
+    Notice "deploy" "vercel.json present but vercel CLI not installed on this runner; smoke build already covered"
+  } elseif (-not $env:VERCEL_TOKEN) {
+    Notice "deploy" "vercel.json present but VERCEL_TOKEN not set; skipping authenticated dry-run — smoke build already covered"
+  } else {
+    vercel build --dry-run; if ($LASTEXITCODE -ne 0) { Err "deploy" "vercel dry-run failed" }
+  }
 } elseif ((Test-Path (Join-Path $RepoRoot 'railway.json')) -or (Test-Path (Join-Path $RepoRoot 'railway.toml'))) {
   Notice "deploy" "railway target present; run 'railway up --detach' manually"
 } elseif (Test-Path (Join-Path $RepoRoot 'eas.json')) {
