@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { openCoachWindow, closeCoachWindow } from '../services/coachModeService';
 import { recordCoachInterventionAction, buildDemoIntervention, getLatestCoachEngineIntervention, subscribeCoachEngine } from '../services/coachInterventionService';
-import { runCoachDetectors, getCoachMessageStyle } from '../services/coachEngineService';
+import { runCoachDetectors, getCoachMessageStyle, generateNarrativeCoachMessage } from '../services/coachEngineService';
 import { COACH_LAYOUT_KEY, COACH_CORNERS, COACH_PAUSE_MS } from '../constants/appConstants';
 import { getStorage } from '../lib/appStorage';
 import { useSettings } from './SettingsContext';
@@ -26,7 +26,8 @@ export function CoachProvider({ children }) {
 
   useEffect(() => {
     const runDetectors = () => {
-      const signal = runCoachDetectors(getCoachMessageStyle());
+      const style = getCoachMessageStyle();
+      const signal = runCoachDetectors(style);
       if (signal) {
         setCoachIntervention({
           id: signal.id,
@@ -46,6 +47,19 @@ export function CoachProvider({ children }) {
               ? ['pause_60_seconds', 'continue']
               : ['continue']
         });
+
+        // Phase 4: fire the rule-based message immediately above, then swap in
+        // a narrative rewrite only if/when it resolves — never block the
+        // intervention on the LLM call. Guard against a race where a newer
+        // signal fired while this was in flight by checking the intervention
+        // still matches this signal's id/timestamp before overwriting.
+        generateNarrativeCoachMessage(signal, style).then((narrativeText) => {
+          if (!narrativeText) return;
+          setCoachIntervention((current) => {
+            if (!current || current.id !== signal.id || current.timestampMs !== signal.detectedAtMs) return current;
+            return { ...current, message: narrativeText, rawMessage: narrativeText };
+          });
+        }).catch(() => {});
       }
     };
 
