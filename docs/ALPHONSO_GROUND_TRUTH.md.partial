@@ -1,0 +1,24 @@
+### CLOSED — 2026-07-23 (Session Coach Phase 0+1 implementation)
+- [x] **Session Coach approval audit was never wired** — `logApprovalEvent()` in `agentAuditService.ts` existed but was never called from any production code path. The `ApprovalModal` in `App.tsx` only called `sendNativeNotification` on confirm/deny. Fixed: wired real `logApprovalEvent(packetId, agent, action, outcome, riskLevel, mariaScore)` at the confirm/deny handlers; extended `ApprovalAuditEntry` with optional `riskLevel`/`mariaScore`; updated tests.
+- [x] **Session Coach intervention card had zero real signal source** — `coachInterventionService.ts` was entirely named/structured around a dead `SessionGuard` bridge to an unrelated product (`SESSIONGUARD`). No detectors ever fired. Fixed: renamed all `SESSION_GUARD_*` to `COACH_ENGINE_*`; created `coachEngineService.ts` with 7 pure detectors (`critical_override_pattern`, `late_night_approval`, `repeated_pipeline_failure`, `dead_letter_graveyard`, `confidence_decay`, `approval_rubber_stamp`, `long_unbroken_session`) + `runCoachDetectors()` (ordered by severity, cooldown/dedup); wired `CoachContext.jsx` to run detectors on a 2-min interval via `subscribeCoachEngine`.
+- [x] **Removed stale `.gitignore` entries** — deleted `.sessionguard/`, `.coach-bridge/`, `sessionguard-bridge/` references.
+- [x] **Updated documentation** — `CLAUDE.md` Coach system row + Do Not Duplicate table updated.
+- [x] **All 3590 tests pass**, lint clean, tsc clean.
+
+### CLOSED — 2026-07-23 (Session Coach Phase 2 implementation — same day)
+- [x] **4 new detectors** added to `coachEngineService.ts` (`detectAgentWhiplash`, `detectBoardroomHedgePileup`, `detectUnusedSurfaceArea`, `detectLicenseWall`) — all wired into `runCoachDetectors()` priority order with cooldown/dedup. 11 detectors total.
+- [x] **Phase 2 prerequisites**: license-denial logging in `licenseService.ts` (`getLicenseDenialLog`/`clearLicenseDenialLog`, auto-logged by `canUseConnector`); skill-pack invocation tracking in `skillPackService.js` (`recordSkillPackInvocation`/`getSkillPackLastInvoked`).
+- [x] **34 new tests** for Phase 2 detectors (agent_whiplash: 5, boardroom_hedge_pileup: 5, unused_surface_area: 4, license_wall: 6, pipeline integration: 1). 55 total detector tests.
+- [x] **Updated documentation** — `CLAUDE.md` Coach system row, `AGENTS.md` test/service counts, `ALPHONSO_GROUND_TRUTH.md` verification line.
+- [x] **All 3611 tests pass**, lint clean, tsc clean.
+- [x] **Phase 1→2 ordering**: Both phases are in this branch. `coachInterventionService.ts` Phase 2 event types were added as new entries to the existing `COACH_ENGINE_EVENT_TYPES` map — they do not rename or remove Phase 1 entries, so merging is safe regardless of order.
+
+### CLOSED — 2026-07-23 (Session Coach Phase 3 implementation — same day, after Phase 2)
+- [x] **3 configurable message styles per detector** (`direct`/`balanced`/`gentle`) — all 11 detectors across Phase 1+2 now accept an optional `style: MessageStyle` parameter.
+- [x] **33 hand-written message variants** — not auto-generated from templates. Every trigger reads as if written for that tone.
+- [x] **Persistence layer**: `getCoachMessageStyle()`/`setCoachMessageStyle()` via `COACH_STYLE_KEY` localStorage key; defaults to `balanced`.
+- [x] **Wiring**: `CoachContext.jsx` passes `getCoachMessageStyle()` to `runCoachDetectors()` on every interval tick.
+- [x] **8 new tests** for style getter/setter, per-style message content verification, and `runCoachDetectors` style passthrough.
+- [x] **All 3619 tests pass**, lint clean, tsc clean.
+
+### CLOSED — 2026-07-02 (User-reported bug batch, post-audit Phase 1)

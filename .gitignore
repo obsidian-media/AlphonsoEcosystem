@@ -26,12 +26,9 @@ pnpm-debug.log*
 *.local
 *.log
 
-# Local-only Coach / SessionGuard bridge data
-.sessionguard/
+# Local-only Coach data
 .coach-bridge/
-sessionguard-bridge/
 coach-session-events*.json
-sessionguard-events*.json
 .vercel
 
 # Playwright outputs
@@ -75,3 +72,19 @@ ALPHONSO BOARDROOM HANDOFF.pdf
 # Windows folder-view metadata
 desktop.ini
 .superpowers/
+# --- Repo Governance additions (merged into .gitignore by apply script) ---
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*_credential*
+*credential*
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+.vs/
+desktop.ini
+audits/private/

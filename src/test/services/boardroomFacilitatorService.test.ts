@@ -42,6 +42,18 @@ describe('boardroomFacilitatorService', () => {
       expect(prompt.toLowerCase()).toContain('@hector');
       expect(prompt.toLowerCase()).toContain('facilitator');
     });
+
+    it('builds a persona prompt using the specified agentId instead of defaulting to Alphonso', async () => {
+      const { buildFacilitatorPrompt } = await import('../../services/boardroomFacilitatorService');
+      const prompt = buildFacilitatorPrompt({
+        topic: 'Test',
+        priorMessages: [],
+        newMessageText: 'hello',
+        agentId: 'hector'
+      });
+      expect(prompt).toContain('Hector');
+      expect(prompt).not.toContain('facilitator'); // Hector's role, not Alphonso's
+    });
   });
 
   describe('generateAlphonsoResponse', () => {
@@ -146,10 +158,6 @@ describe('boardroomFacilitatorService', () => {
       });
 
       expect(result.model).toBe('llama3.2:3b');
-      // latencyMs is measured via Date.now() deltas around the generation call.
-      // A fake-timer/coarse-clock mock can measure fewer ms than the mocked
-      // setTimeout delay (observed 4ms on fast CI runners), so assert only that
-      // a non-negative measured latency is returned — not a wall-clock floor.
       expect(result.latencyMs).toBeGreaterThanOrEqual(0);
       expect(typeof result.latencyMs).toBe('number');
     });
@@ -168,6 +176,20 @@ describe('boardroomFacilitatorService', () => {
 
       expect(result.model).toBeUndefined();
       expect(result.latencyMs).toBeUndefined();
+    });
+  });
+
+  describe('generateAlphonsoResponse (back-compat wrapper)', () => {
+    it('still works exactly as before — delegates to generateAgentResponse with agentId alphonso', async () => {
+      const ollama = await import('../../lib/ollama');
+      (ollama.generateOllamaResponse as any).mockResolvedValue({ response: 'facilitator reply', done: true });
+
+      const { generateAlphonsoResponse } = await import('../../services/boardroomFacilitatorService');
+      const result = await generateAlphonsoResponse({ topic: 'Test', priorMessages: [], newMessageText: 'hi' });
+
+      expect(result.ok).toBe(true);
+      expect(result.text).toBe('facilitator reply');
+      expect(ollama.generateOllamaResponse).toHaveBeenCalled();
     });
   });
 
