@@ -6,6 +6,54 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-07-23/24 (Session Coach engine, connector health checks, repo governance)
+
+- **Connector health checks (real, not stubbed):** `ConnectorHealthPanel`'s Test
+  button previously hardcoded Mobile Bridge as always-ok despite its transport
+  (`companion_server.rs` — WebSocket + PIN auth + mDNS + JSON-RPC router) being
+  fully built; added `checkMobileBridgeConnection()` backed by the real
+  `companion_get_status` Tauri command. Also found and fixed: 9 of 22 registered
+  connectors (GitHub, Slack, Discord, Generic Webhook, n8n, Brave Search,
+  Perplexity, Tavily, DeepSeek) fell through to "Unknown connector" on Test even
+  with valid credentials, because later registry-migration batches never taught
+  the health-check panel about them. Added real checks per connector (GitHub
+  `/user`, Slack `auth.test`, Discord `/users/@me`, n8n reuses `isN8nHealthy`,
+  the rest credential-presence checks matching the existing pattern for paid
+  APIs with no free ping endpoint).
+- **Session Coach detection engine (Phases 0–3):** replaced the dead
+  `SessionGuard`/`.sessionguard`/coach-bridge naming with a real local
+  detection engine (`coachEngineService.ts`), wired into `CoachContext.jsx` on
+  a 2-minute interval.
+  - Phase 0: real approval-event logging wired — `ApprovalModal` confirm/deny
+    now calls `logApprovalEvent` with risk level + Maria score context.
+  - Phase 1: 7 pure detectors (critical override pattern, late-night approval,
+    repeated pipeline failure, dead-letter graveyard, confidence decay,
+    approval rubber-stamp, long unbroken session), each with cooldown/dedup.
+  - Phase 2: 4 more detectors (agent whiplash — 3+ agents in <60s;
+    boardroom hedge pileup — 3+ low-confidence messages in one thread; unused
+    surface area — stale connectors/never-invoked skill packs; license wall —
+    3+ denials per connector/hour). Required new tracking primitives:
+    `licenseService.ts` denial log (`getLicenseDenialLog`/`clearLicenseDenialLog`)
+    and `skillPackService.js` invocation tracking
+    (`recordSkillPackInvocation`/`getSkillPackLastInvoked`).
+  - Phase 3: every detector now accepts an optional `style` param
+    (`direct`/`balanced`/`gentle`) — 33 hand-written message variants total —
+    persisted via `getCoachMessageStyle()`/`setCoachMessageStyle()`; a style
+    selector was added to `CoachWindow.tsx` (closed a gap where Phase 3 shipped
+    the message variants but no UI to choose between them).
+  - 89 new/updated tests across `coachEngineService.test.js` (parameterized per
+    detector × style) and `agentAuditService.test.js`.
+- **Repo governance bootstrap:** added `REPO_RULES.md` v1.0.0 (documentation
+  truth, audit conventions, branch/CI policy, security rules — enforced via a
+  new `gate` CI workflow and `scripts/verify.sh`/`verify.ps1`), plus
+  `REPO_DIRECTIVE.md` (goal-layer constitution — current phase: **P1 Ecosystem
+  Audit**). `directive-lint` (stage 5 of `verify.sh`) checks that repo tasks
+  trace to a defined Phase/Sprint/Epic id; it's `notice`-only until every
+  portfolio repo has a linted `REPO_DIRECTIVE.md`.
+- No version bump this pass — `package.json` remains `2.6.1`.
+
+---
+
 ## [2.6.1] — 2026-07-22 (product readiness and review follow-up)
 
 - **Voice console:** replaced the single opaque start/stop card with local
