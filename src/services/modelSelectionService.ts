@@ -1,7 +1,17 @@
 import { fetchOllamaModels, chooseBestModelForTask, listAvailableModels, PREFERRED_MODEL } from '../lib/ollama';
 
 const MODEL_PREF_KEY = 'alphonso_model_preferences_v1';
+const MODEL_PROVIDER_KEY = 'alphonso_model_provider_v1';
 const MAX_RECENT = 10;
+
+export type ModelProvider = 'ollama' | 'nvidia_nim' | 'gemini';
+const CLOUD_PROVIDERS: ModelProvider[] = ['nvidia_nim', 'gemini'];
+
+// Curated, not enumerated via API — Gemini has no bulk free-tier-catalog
+// endpoint the way NVIDIA does. Reconfirm against aistudio.google.com before
+// assuming these stay free-tier-eligible. See
+// docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §4.
+const GEMINI_FREE_TIER_MODELS = ['gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro'];
 
 interface ModelPreferences {
   selected: string;
@@ -69,5 +79,32 @@ export async function getRecommendedModel(endpoint?: string | null, taskType?: s
     return chooseBestModelForTask(models, taskType || 'code');
   } catch {
     return PREFERRED_MODEL;
+  }
+}
+
+export function getSelectedProvider(): ModelProvider {
+  try {
+    const raw = localStorage.getItem(MODEL_PROVIDER_KEY);
+    return (CLOUD_PROVIDERS as string[]).includes(raw || '') ? (raw as ModelProvider) : 'ollama';
+  } catch {
+    return 'ollama';
+  }
+}
+
+export function setSelectedProvider(provider: ModelProvider) {
+  try {
+    localStorage.setItem(MODEL_PROVIDER_KEY, provider);
+  } catch { /* quota */ }
+}
+
+export async function getCloudModelList(provider: 'nvidia_nim' | 'gemini'): Promise<string[]> {
+  try {
+    if (provider === 'nvidia_nim') {
+      const { listNvidiaModels } = await import('./connectors/nvidiaNimConnector');
+      return await listNvidiaModels();
+    }
+    return [...GEMINI_FREE_TIER_MODELS];
+  } catch {
+    return [];
   }
 }
