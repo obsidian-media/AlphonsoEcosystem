@@ -4,7 +4,6 @@ import { getPerformanceTrend } from './agentPerformanceService';
 import { listOrchestrationReceipts } from './orchestrationReceiptService';
 import { listAgentPackets, PACKET_KEY } from './agentBusService';
 import { timestampMs } from './trustModel';
-import { detectLowConfidence } from './boardroomFacilitatorService';
 import { THREADS_KEY, MESSAGES_KEY } from './boardroomThreadService';
 import { listConnectors } from './connectors/connectorRegistry';
 import { listSkillPacks, getSkillPackLastInvoked } from './skillPackService';
@@ -305,7 +304,11 @@ export function detectAgentWhiplash(style: MessageStyle = 'balanced'): CoachSign
   try { packets = JSON.parse(localStorage.getItem(PACKET_KEY) || '[]'); } catch { return null; }
   if (packets.length < 10) return null;
 
-  const recent = packets.slice(-20);
+  // Wide enough recent window to gather up to 10 packets per actionType even
+  // when other actionTypes are interleaved; per-actionType slicing to the
+  // last 10 happens below, matching the plan's "last 10 packets sharing the
+  // same actionType" spec.
+  const recent = packets.slice(-50);
   const actionAgentMap: Record<string, { agent: string; timeMs: number }[]> = {};
 
   for (const pkt of recent) {
@@ -314,21 +317,34 @@ export function detectAgentWhiplash(style: MessageStyle = 'balanced'): CoachSign
     actionAgentMap[pkt.actionType].push({ agent: pkt.toAgent, timeMs: pkt.createdAtMs || pkt.updatedAtMs || 0 });
   }
 
-  for (const [actionType, assignments] of Object.entries(actionAgentMap)) {
+  const ONE_HOUR_MS = 3600000;
+
+  for (const [actionType, allAssignments] of Object.entries(actionAgentMap)) {
+    const assignments = allAssignments.slice(-10);
     if (assignments.length < 3) continue;
-    const uniqueAgents = [...new Set(assignments.map((a) => a.agent))];
-    if (uniqueAgents.length >= 3) {
-      const spanMs = (assignments[assignments.length - 1]?.timeMs || 0) - (assignments[0]?.timeMs || 0);
-      if (spanMs < 60000) {
-        if (!canFire('agent_whiplash')) return null;
 
-        const d = `'${actionType}' bounced between ${uniqueAgents.join(', ')} ${assignments.length} times in ${Math.round(spanMs / 1000)}s. Stop reassigning and clarify the task first.`;
-        const b = `'${actionType}' got bounced between ${uniqueAgents.join(', ')} — ${assignments.length} reassignments in under ${Math.round(spanMs / 1000)}s. Consider pausing to clarify the task definition before routing again.`;
-        const g = `I've noticed '${actionType}' has been passed between ${uniqueAgents.join(', ')} a few times in the last ${Math.round(spanMs / 1000)}s. Might help to pause and clarify the task before assigning it again.`;
-
-        return makeSignal('agent_whiplash', 'warning', msg(d, b, g, style));
-      }
+    // Count actual reassignments (oscillation), not just distinct agents
+    // seen — A→B→A is 2 changes across 2 agents and is real whiplash, not
+    // "3 different agents ever".
+    let changes = 0;
+    for (let i = 1; i < assignments.length; i++) {
+      if (assignments[i].agent !== assignments[i - 1].agent) changes++;
     }
+    if (changes < 3) continue;
+
+    const spanMs = (assignments[assignments.length - 1]?.timeMs || 0) - (assignments[0]?.timeMs || 0);
+    if (spanMs > ONE_HOUR_MS) continue;
+
+    if (!canFire('agent_whiplash')) return null;
+
+    const uniqueAgents = [...new Set(assignments.map((a) => a.agent))];
+    const spanLabel = spanMs < 60000 ? `${Math.round(spanMs / 1000)}s` : `${Math.round(spanMs / 60000)}min`;
+
+    const d = `'${actionType}' bounced between ${uniqueAgents.join(', ')} ${changes} times in ${spanLabel}. Stop reassigning and clarify the task first.`;
+    const b = `'${actionType}' got bounced between ${uniqueAgents.join(', ')} — ${changes} reassignments in ${spanLabel}. Consider pausing to clarify the task definition before routing again.`;
+    const g = `I've noticed '${actionType}' has been passed between ${uniqueAgents.join(', ')} a few times in the last ${spanLabel}. Might help to pause and clarify the task before assigning it again.`;
+
+    return makeSignal('agent_whiplash', 'warning', msg(d, b, g, style));
   }
   return null;
 }
@@ -339,24 +355,27 @@ export function detectBoardroomHedgePileup(style: MessageStyle = 'balanced'): Co
   const activeThreads = threads.filter((t) => t.status === 'active');
   if (activeThreads.length === 0) return null;
 
-  const newestThread = activeThreads.sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0))[0];
-  if (!newestThread) return null;
-
   let allMessages: any[] = [];
   try { allMessages = JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]'); } catch { return null; }
-  const threadMessages = allMessages
-    .filter((m) => m.threadId === newestThread.id && (m.kind === 'message' || m.kind === 'response'))
-    .sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
 
-  const recentMessages = threadMessages.slice(-10);
-  const hedgeMessages = recentMessages.filter((m) => detectLowConfidence(m.content || ''));
+  const THIRTY_MIN_MS = 30 * 60000;
+  const now = Date.now();
 
-  if (hedgeMessages.length >= 3) {
+  // Query already-persisted escalations (kind: 'escalation', written by
+  // BoardroomChatView's own detectLowConfidence call) rather than
+  // re-running hedge detection here — no new instrumentation needed, per
+  // the plan. Check every active thread, not just the newest.
+  for (const thread of activeThreads) {
+    const escalations = allMessages.filter(
+      (m) => m.threadId === thread.id && m.kind === 'escalation' && now - (m.createdAtMs || 0) < THIRTY_MIN_MS
+    );
+    if (escalations.length < 3) continue;
+
     if (!canFire('boardroom_hedge_pileup')) return null;
 
-    const d = `${hedgeMessages.length} agents expressed low confidence in the '${newestThread.topic}' thread. This needs your direct judgment — agents are guessing, not deciding.`;
-    const b = `${hedgeMessages.length} messages in the current Boardroom thread ('${newestThread.topic}') contain low-confidence language. The thread might need more context or a facilitator nudge.`;
-    const g = `Some participants in the '${newestThread.topic}' Boardroom thread seem uncertain (${hedgeMessages.length} messages with hedged language). A bit more context or a direct decision from you might help move things forward.`;
+    const d = `${escalations.length} agents expressed low confidence in the '${thread.topic}' thread. This needs your direct judgment — agents are guessing, not deciding.`;
+    const b = `${escalations.length} agents have flagged low confidence in the same Boardroom thread ('${thread.topic}'). This might genuinely need your judgment call rather than another agent's guess.`;
+    const g = `Some participants in the '${thread.topic}' Boardroom thread seem uncertain (${escalations.length} low-confidence flags). A bit more context or a direct decision from you might help move things forward.`;
 
     return makeSignal('boardroom_hedge_pileup', 'warning', msg(d, b, g, style));
   }
@@ -407,12 +426,12 @@ export function detectUnusedSurfaceArea(style: MessageStyle = 'balanced'): Coach
 
 export function detectLicenseWall(style: MessageStyle = 'balanced'): CoachSignal | null {
   const log = getLicenseDenialLog();
-  if (log.length < 3) return null;
+  if (log.length < 5) return null;
 
-  const ONE_HOUR_MS = 3600000;
+  const SEVEN_DAYS_MS = 7 * 24 * 3600000;
   const now = Date.now();
-  const recent = log.filter((e) => now - e.timestamp < ONE_HOUR_MS);
-  if (recent.length < 3) return null;
+  const recent = log.filter((e) => now - e.timestamp < SEVEN_DAYS_MS);
+  if (recent.length < 5) return null;
 
   const denialCounts: Record<string, number> = {};
   for (const e of recent) {
@@ -420,12 +439,12 @@ export function detectLicenseWall(style: MessageStyle = 'balanced'): CoachSignal
   }
 
   for (const [connectorId, count] of Object.entries(denialCounts)) {
-    if (count >= 3) {
+    if (count >= 5) {
       if (!canFire('license_wall')) return null;
 
-      const d = `'${connectorId}' blocked ${count} times in the last hour by your license tier. Upgrade now or stop attempting premium features.`;
-      const b = `'${connectorId}' has been blocked ${count} times in the last hour by your current license tier. If you need this connector regularly, consider upgrading your license.`;
-      const g = `It looks like '${connectorId}' was blocked ${count} times this past hour because of your current plan. If it's something you use often, an upgrade might be worth considering.`;
+      const d = `'${connectorId}' blocked ${count} times this week by your license tier. Upgrade now or stop attempting premium features.`;
+      const b = `You've tried to use '${connectorId}' ${count} times this week — that's Pro-gated on your current tier. Worth upgrading, or should this stay off your radar?`;
+      const g = `It looks like '${connectorId}' was blocked ${count} times this past week because of your current plan. If it's something you use often, an upgrade might be worth considering.`;
 
       return makeSignal('license_wall', 'warning', msg(d, b, g, style));
     }

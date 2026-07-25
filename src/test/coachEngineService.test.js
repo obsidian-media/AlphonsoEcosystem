@@ -453,24 +453,20 @@ describe('coachEngineService', () => {
       expect(detectAgentWhiplash()).toBeNull();
     });
 
-    it('fires when same actionType bounced between 3+ agents in < 60s', () => {
+    it('fires on 3+ real reassignments (oscillation) within an hour', () => {
       const now = timestampMs();
-      const packets = [];
-      for (let i = 0; i < 10; i++) {
-        packets.push({
-          id: `pkt-${i}`,
-          fromAgent: 'jose',
-          toAgent: i < 5 ? 'hector' : 'alphonso',
-          actionType: 'research',
-          status: 'assigned',
-          createdAtMs: now - (10 - i) * 1000,
-          updatedAtMs: now
-        });
-      }
-      // Bounce between 3 agents
-      packets[7] = { ...packets[7], toAgent: 'hector', createdAtMs: now - 3000 };
-      packets[8] = { ...packets[8], toAgent: 'miya', createdAtMs: now - 2000 };
-      packets[9] = { ...packets[9], toAgent: 'alphonso', createdAtMs: now - 1000 };
+      // hector,hector,hector,hector,hector,alphonso,alphonso,hector,miya,alphonso
+      // = 4 actual agent changes (not just "3 distinct agents ever")
+      const toAgents = ['hector', 'hector', 'hector', 'hector', 'hector', 'alphonso', 'alphonso', 'hector', 'miya', 'alphonso'];
+      const packets = toAgents.map((toAgent, i) => ({
+        id: `pkt-${i}`,
+        fromAgent: 'jose',
+        toAgent,
+        actionType: 'research',
+        status: 'assigned',
+        createdAtMs: now - (10 - i) * 1000,
+        updatedAtMs: now
+      }));
       localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
       const signal = detectAgentWhiplash();
       expect(signal).not.toBeNull();
@@ -496,37 +492,50 @@ describe('coachEngineService', () => {
       expect(detectAgentWhiplash()).toBeNull();
     });
 
-    it('returns null when bounces span > 60s', () => {
+    it('returns null when 3 distinct agents were used but agent never actually flip-flopped (only 2 changes)', () => {
       const now = timestampMs();
-      const packets = [];
-      for (let i = 0; i < 10; i++) {
-        packets.push({
-          id: `pkt-${i}`,
-          fromAgent: 'jose',
-          toAgent: i < 5 ? 'hector' : i < 8 ? 'miya' : 'alphonso',
-          actionType: 'research',
-          status: 'assigned',
-          createdAtMs: now - (10 - i) * 15000
-        });
-      }
-      packets[0] = { ...packets[0], createdAtMs: now - 120000 };
+      // hector x5, miya x3, alphonso x2 = 3 distinct agents, but only 2 real
+      // reassignments (h->m, m->a) — the plan explicitly excludes this shape
+      // ("not just 3 different agents ever").
+      const toAgents = ['hector', 'hector', 'hector', 'hector', 'hector', 'miya', 'miya', 'miya', 'alphonso', 'alphonso'];
+      const packets = toAgents.map((toAgent, i) => ({
+        id: `pkt-${i}`,
+        fromAgent: 'jose',
+        toAgent,
+        actionType: 'research',
+        status: 'assigned',
+        createdAtMs: now - (10 - i) * 1000
+      }));
+      localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
+      expect(detectAgentWhiplash()).toBeNull();
+    });
+
+    it('returns null when reassignments span > 1 hour', () => {
+      const now = timestampMs();
+      const toAgents = ['hector', 'hector', 'hector', 'hector', 'hector', 'alphonso', 'alphonso', 'hector', 'miya', 'alphonso'];
+      const packets = toAgents.map((toAgent, i) => ({
+        id: `pkt-${i}`,
+        fromAgent: 'jose',
+        toAgent,
+        actionType: 'research',
+        status: 'assigned',
+        createdAtMs: now - (10 - i) * 15 * 60000 // spread 15 min apart -> 135 min total span
+      }));
       localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
       expect(detectAgentWhiplash()).toBeNull();
     });
 
     it('respects cooldown', () => {
       const now = timestampMs();
-      const packets = [];
-      for (let i = 0; i < 10; i++) {
-        packets.push({
-          id: `pkt-${i}`,
-          fromAgent: 'jose',
-          toAgent: i < 5 ? 'hector' : i < 8 ? 'miya' : 'alphonso',
-          actionType: 'research',
-          status: 'assigned',
-          createdAtMs: now - (10 - i) * 1000
-        });
-      }
+      const toAgents = ['hector', 'hector', 'hector', 'hector', 'hector', 'alphonso', 'alphonso', 'hector', 'miya', 'alphonso'];
+      const packets = toAgents.map((toAgent, i) => ({
+        id: `pkt-${i}`,
+        fromAgent: 'jose',
+        toAgent,
+        actionType: 'research',
+        status: 'assigned',
+        createdAtMs: now - (10 - i) * 1000
+      }));
       localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(packets));
       detectAgentWhiplash();
       expect(detectAgentWhiplash()).toBeNull();
@@ -538,7 +547,7 @@ describe('coachEngineService', () => {
       expect(detectBoardroomHedgePileup()).toBeNull();
     });
 
-    it('fires when 3+ messages in active thread use low-confidence language', () => {
+    it('fires when 3+ already-persisted escalation messages land in the same thread within 30 min', () => {
       const threadId = 'thread-1';
       localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{
         id: threadId, topic: 'Deployment strategy', status: 'active', updatedAtMs: timestampMs()
@@ -546,10 +555,10 @@ describe('coachEngineService', () => {
       const now = timestampMs();
       const messages = [
         { id: 'm1', threadId, speaker: 'hector', content: 'I can confirm the deployment pipeline is ready.', kind: 'message', createdAtMs: now - 4000 },
-        { id: 'm2', threadId, speaker: 'miya', content: "I'm not sure about the timing — hard to say if it is safe.", kind: 'response', createdAtMs: now - 3000 },
+        { id: 'm2', threadId, speaker: 'miya', content: "I'm not sure about the timing.", kind: 'escalation', createdAtMs: now - 3000 },
         { id: 'm3', threadId, speaker: 'hector', content: 'Based on the data, the rollout should work.', kind: 'message', createdAtMs: now - 2000 },
-        { id: 'm4', threadId, speaker: 'miya', content: "I don't have enough information to be confident about this.", kind: 'response', createdAtMs: now - 1000 },
-        { id: 'm5', threadId, speaker: 'echo', content: 'Previous rollbacks at this scale suggest caution. Hard to say.', kind: 'message', createdAtMs: now }
+        { id: 'm4', threadId, speaker: 'miya', content: "I don't have enough information to be confident about this.", kind: 'escalation', createdAtMs: now - 1000 },
+        { id: 'm5', threadId, speaker: 'echo', content: 'Previous rollbacks at this scale suggest caution.', kind: 'escalation', createdAtMs: now }
       ];
       localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
       const signal = detectBoardroomHedgePileup();
@@ -559,14 +568,30 @@ describe('coachEngineService', () => {
       expect(signal.message).toContain('Deployment strategy');
     });
 
-    it('returns null when fewer than 3 hedge messages', () => {
+    it('returns null when fewer than 3 escalation messages', () => {
       const threadId = 'thread-2';
       localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{
         id: threadId, topic: 'Simple task', status: 'active', updatedAtMs: timestampMs()
       }]));
       const messages = [
         { id: 'm1', threadId, speaker: 'hector', content: 'This is straightforward and ready.', kind: 'message', createdAtMs: timestampMs() - 2000 },
-        { id: 'm2', threadId, speaker: 'miya', content: "I'm not sure about this part.", kind: 'response', createdAtMs: timestampMs() - 1000 }
+        { id: 'm2', threadId, speaker: 'miya', content: "I'm not sure about this part.", kind: 'escalation', createdAtMs: timestampMs() - 1000 }
+      ];
+      localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
+      expect(detectBoardroomHedgePileup()).toBeNull();
+    });
+
+    it('returns null when escalations exist but fall outside the 30-minute window', () => {
+      const threadId = 'thread-2b';
+      localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{
+        id: threadId, topic: 'Stale escalations', status: 'active', updatedAtMs: timestampMs()
+      }]));
+      const now = timestampMs();
+      const stale = now - 45 * 60000;
+      const messages = [
+        { id: 'm1', threadId, speaker: 'hector', content: 'Not sure.', kind: 'escalation', createdAtMs: stale },
+        { id: 'm2', threadId, speaker: 'miya', content: 'Hard to say.', kind: 'escalation', createdAtMs: stale - 1000 },
+        { id: 'm3', threadId, speaker: 'echo', content: 'Uncertain.', kind: 'escalation', createdAtMs: stale - 2000 }
       ];
       localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
       expect(detectBoardroomHedgePileup()).toBeNull();
@@ -586,9 +611,9 @@ describe('coachEngineService', () => {
       }]));
       const now = timestampMs();
       const messages = [
-        { id: 'm1', threadId, speaker: 'hector', content: "I'm not sure about this.", kind: 'message', createdAtMs: now - 3000 },
-        { id: 'm2', threadId, speaker: 'miya', content: 'Hard to say what the best approach is.', kind: 'response', createdAtMs: now - 2000 },
-        { id: 'm3', threadId, speaker: 'echo', content: "I don't have enough information to conclude.", kind: 'response', createdAtMs: now - 1000 }
+        { id: 'm1', threadId, speaker: 'hector', content: "I'm not sure about this.", kind: 'escalation', createdAtMs: now - 3000 },
+        { id: 'm2', threadId, speaker: 'miya', content: 'Hard to say what the best approach is.', kind: 'escalation', createdAtMs: now - 2000 },
+        { id: 'm3', threadId, speaker: 'echo', content: "I don't have enough information to conclude.", kind: 'escalation', createdAtMs: now - 1000 }
       ];
       localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify(messages));
       detectBoardroomHedgePileup();
@@ -648,13 +673,14 @@ describe('coachEngineService', () => {
       expect(detectLicenseWall()).toBeNull();
     });
 
-    it('fires when same connector denied 3+ times in last hour', () => {
+    it('fires when same connector denied 5+ times in last 7 days', () => {
       const now = timestampMs();
-      // Add 3 recent denials for youtube
       localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
-        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 120 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+        { connectorId: 'youtube', timestamp: now - 1 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 2 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 3 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 4 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 5 * 86400000, tierAtTime: 'free' }
       ]));
       const signal = detectLicenseWall();
       expect(signal).not.toBeNull();
@@ -663,20 +689,26 @@ describe('coachEngineService', () => {
       expect(signal.message).toContain('youtube');
     });
 
-    it('returns null when fewer than 3 total denials', () => {
+    it('returns null when fewer than 5 total denials', () => {
       const now = timestampMs();
       localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
-        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' }
+        { connectorId: 'youtube', timestamp: now - 1 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 2 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 3 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 4 * 86400000, tierAtTime: 'free' }
       ]));
       expect(detectLicenseWall()).toBeNull();
     });
 
-    it('returns null when denials are older than 1 hour', () => {
+    it('returns null when denials are older than 7 days', () => {
       const now = timestampMs();
+      const stale = now - 8 * 86400000;
       localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
-        { connectorId: 'youtube', timestamp: now - 2 * 3600 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 2 * 3600 * 1000 + 60 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 2 * 3600 * 1000 + 120 * 1000, tierAtTime: 'free' }
+        { connectorId: 'youtube', timestamp: stale, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: stale - 60000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: stale - 120000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: stale - 180000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: stale - 240000, tierAtTime: 'free' }
       ]));
       expect(detectLicenseWall()).toBeNull();
     });
@@ -684,9 +716,11 @@ describe('coachEngineService', () => {
     it('respects cooldown', () => {
       const now = timestampMs();
       localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
-        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 120 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+        { connectorId: 'youtube', timestamp: now - 1 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 2 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 3 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 4 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 5 * 86400000, tierAtTime: 'free' }
       ]));
       detectLicenseWall();
       expect(detectLicenseWall()).toBeNull();
@@ -695,9 +729,11 @@ describe('coachEngineService', () => {
     it('detects wall for different connectors independently', () => {
       const now = timestampMs();
       localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
-        { connectorId: 'youtube', timestamp: now - 60 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 120 * 1000, tierAtTime: 'free' },
-        { connectorId: 'youtube', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+        { connectorId: 'youtube', timestamp: now - 1 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 2 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 3 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 4 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'youtube', timestamp: now - 5 * 86400000, tierAtTime: 'free' }
       ]));
       const signal = detectLicenseWall();
       expect(signal).not.toBeNull();
@@ -775,11 +811,8 @@ describe('coachEngineService', () => {
     const setupLongSession = () => localStorage.setItem('alphonso_session_start_ts', String(timestampMs() - 100 * 60000));
     const setupWhiplash = () => {
       const now = timestampMs();
-      const p = [];
-      for (let i = 0; i < 10; i++) p.push({ id: `p-${i}`, fromAgent: 'jose', toAgent: 'hector', actionType: 'research', status: 'assigned', createdAtMs: now - (10 - i) * 1000, updatedAtMs: now });
-      p[7] = { ...p[7], toAgent: 'hector', createdAtMs: now - 3000 };
-      p[8] = { ...p[8], toAgent: 'miya', createdAtMs: now - 2000 };
-      p[9] = { ...p[9], toAgent: 'alphonso', createdAtMs: now - 1000 };
+      const toAgents = ['hector', 'hector', 'hector', 'hector', 'hector', 'alphonso', 'alphonso', 'hector', 'miya', 'alphonso'];
+      const p = toAgents.map((toAgent, i) => ({ id: `p-${i}`, fromAgent: 'jose', toAgent, actionType: 'research', status: 'assigned', createdAtMs: now - (10 - i) * 1000, updatedAtMs: now }));
       localStorage.setItem('alphonso_agent_bus_packets_v1', JSON.stringify(p));
     };
     const setupHedgePileup = () => {
@@ -787,9 +820,9 @@ describe('coachEngineService', () => {
       localStorage.setItem('alphonso_boardroom_threads_v2', JSON.stringify([{ id: tid, topic: 'Deployment', status: 'active', updatedAtMs: timestampMs() }]));
       const now = timestampMs();
       localStorage.setItem('alphonso_boardroom_thread_messages_v2', JSON.stringify([
-        { id: 'm1', threadId: tid, speaker: 'hector', content: "I'm not sure about the timing.", kind: 'message', createdAtMs: now - 4000 },
-        { id: 'm2', threadId: tid, speaker: 'miya', content: "I don't have enough information to be confident.", kind: 'response', createdAtMs: now - 3000 },
-        { id: 'm3', threadId: tid, speaker: 'echo', content: 'Hard to say if this is safe.', kind: 'response', createdAtMs: now - 2000 }
+        { id: 'm1', threadId: tid, speaker: 'hector', content: "I'm not sure about the timing.", kind: 'escalation', createdAtMs: now - 4000 },
+        { id: 'm2', threadId: tid, speaker: 'miya', content: "I don't have enough information to be confident.", kind: 'escalation', createdAtMs: now - 3000 },
+        { id: 'm3', threadId: tid, speaker: 'echo', content: 'Hard to say if this is safe.', kind: 'escalation', createdAtMs: now - 2000 }
       ]));
     };
     const setupUnused = () => {
@@ -803,9 +836,11 @@ describe('coachEngineService', () => {
     const setupLicenseWall = () => {
       const now = timestampMs();
       localStorage.setItem('alphonso_license_denial_log_v1', JSON.stringify([
-        { connectorId: 'yt', timestamp: now - 60 * 1000, tierAtTime: 'free' },
-        { connectorId: 'yt', timestamp: now - 120 * 1000, tierAtTime: 'free' },
-        { connectorId: 'yt', timestamp: now - 180 * 1000, tierAtTime: 'free' }
+        { connectorId: 'yt', timestamp: now - 1 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'yt', timestamp: now - 2 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'yt', timestamp: now - 3 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'yt', timestamp: now - 4 * 86400000, tierAtTime: 'free' },
+        { connectorId: 'yt', timestamp: now - 5 * 86400000, tierAtTime: 'free' }
       ]));
     };
 
@@ -827,11 +862,11 @@ describe('coachEngineService', () => {
       { name: 'detectAgentWhiplash', fn: detectAgentWhiplash, setup: setupWhiplash,
         direct: 'Stop reassigning and clarify the task first', bal: 'Consider pausing to clarify', gentle: 'Might help to pause and clarify' },
       { name: 'detectBoardroomHedgePileup', fn: detectBoardroomHedgePileup, setup: setupHedgePileup,
-        direct: 'This needs your direct judgment', bal: 'The thread might need more context', gentle: 'seem uncertain' },
+        direct: 'This needs your direct judgment', bal: 'genuinely need your judgment call', gentle: 'seem uncertain' },
       { name: 'detectUnusedSurfaceArea', fn: detectUnusedSurfaceArea, setup: setupUnused,
         direct: 'Review and disable what you don\'t need', bal: 'Consider auditing your connected services', gentle: 'A quick audit might help keep things tidy' },
       { name: 'detectLicenseWall', fn: detectLicenseWall, setup: setupLicenseWall,
-        direct: 'Upgrade now or stop attempting premium features', bal: 'consider upgrading your license', gentle: 'an upgrade might be worth considering' },
+        direct: 'Upgrade now or stop attempting premium features', bal: 'Pro-gated on your current tier', gentle: 'an upgrade might be worth considering' },
     ];
 
     it.each(allCases)('$name direct variant matches expected text', ({ fn, setup, direct }) => {
