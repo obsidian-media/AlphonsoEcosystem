@@ -10,7 +10,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 // for longer runway over flash. Reconfirm at ai.google.dev/gemini-api/docs
 // before assuming this stays current — Google's free-tier lineup shifts
 // often. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §2.2.
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+export const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 
 export interface GeminiMessage {
   role: string;

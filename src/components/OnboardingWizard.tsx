@@ -26,6 +26,8 @@ import { getVoiceServerStatus } from '../services/voiceOsService';
 import type { PrereqStatus } from '../services/runtimeManagerService';
 import { saveConnectorCredential } from '../services/connectors/connectorAuth';
 import { updateConnectorAuthProfile } from '../services/connectorRegistryService';
+import { DEFAULT_MODEL as NVIDIA_DEFAULT_MODEL } from '../services/connectors/nvidiaNimConnector';
+import { DEFAULT_MODEL as GEMINI_DEFAULT_MODEL } from '../services/connectors/geminiConnector';
 
 function openExternal(url: string) {
   invoke('open_url', { url }).catch(() => { window.open(url, '_blank'); });
@@ -1025,7 +1027,11 @@ export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: s
           {step === 0 && (
             <CheckOllamaStep
               onNext={() => setStep(1)}
-              onSkipToCloud={(provider) => { setSelectedProvider(provider); setSelectedModel(''); setStep(2); }}
+              onSkipToCloud={(provider) => {
+                setSelectedProvider(provider);
+                setSelectedModel(provider === 'nvidia_nim' ? NVIDIA_DEFAULT_MODEL : GEMINI_DEFAULT_MODEL);
+                setStep(2);
+              }}
             />
           )}
           {step === 1 && <PickModelStep onNext={(model) => { setSelectedModel(model); setStep(2); }} />}

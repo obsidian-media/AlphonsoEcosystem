@@ -6,7 +6,7 @@ const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
 // chat models as of 2026-07-23. Reconfirm against build.nvidia.com's current
 // catalog before assuming this stays free/available long-term — see
 // docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §2.1.
-const DEFAULT_MODEL = 'meta/llama-3.1-8b-instruct';
+export const DEFAULT_MODEL = 'meta/llama-3.1-8b-instruct';
 
 export interface NvidiaMessage {
   role: string;

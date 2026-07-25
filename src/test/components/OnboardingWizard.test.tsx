@@ -233,6 +233,6 @@ describe('OnboardingWizard', () => {
     await screen.findByText("You're ready", {}, { timeout: 5000 });
     fireEvent.click(screen.getByRole('button', { name: /Start chatting/i }));
 
-    expect(onComplete).toHaveBeenCalledWith('', 'nvidia_nim');
+    expect(onComplete).toHaveBeenCalledWith('meta/llama-3.1-8b-instruct', 'nvidia_nim');
   });
 });
