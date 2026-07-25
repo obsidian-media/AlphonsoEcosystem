@@ -22,7 +22,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 
 ## Directory Structure
-```
+```text
 src/                   React frontend (100% .tsx — 116 components, 0 .jsx remaining)
   agents/              9 agent profiles, permissions, schemas
   components/          116 UI components (.tsx)

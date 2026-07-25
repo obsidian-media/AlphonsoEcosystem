@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Vitest, `fetch` (no new dependencies), existing `getConnectorCredential`/`evaluatePolicyGate` primitives.
 
-**Source doc:** `docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md` — this plan implements §2, §3, §5, and the connector-related rows of §7/§8. §4 (model-diversity picker UI) and §6 (onboarding integration) are explicitly out of scope for this PR per that doc's own §1 boundaries and the user's confirmed scope choice.
+**Source doc:** `docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md` — this plan implements §2, §3, §5, and the connector-related rows of §7/§8. §4 (model-diversity picker UI) and §6 (onboarding integration) were originally scoped out of this PR per that doc's own §1 boundaries, but were pulled into the same PR (#122) later at the user's explicit request — see `docs/governance/DEFERRED_WORK.md`'s 2026-07-25 entries for what was actually built (`CloudModelPicker`/`ModelProviderPicker` in `ModelSwitcher.tsx`, provider-aware `ChatView.tsx` generation routing, and `OnboardingWizard.tsx`'s skip-Ollama step) and what's still open.
 
 ---
 
@@ -760,4 +760,4 @@ git push -u origin feat/free-tier-cloud-providers
 - No Vertex AI, no NVIDIA metered/enterprise tier — free-tier endpoints only.
 - Do not add `nvidia_nim` or `gemini` to `PAID_OR_METERED_CONNECTORS`.
 - Do not skip the disclosure copy in Task 6 — it's a user-trust requirement.
-- §4 (model-diversity picker UI) and §6 (onboarding integration) are separate follow-up plans, not part of this PR.
+- §4 (model-diversity picker UI) and §6 (onboarding integration) were originally scoped as separate follow-up plans, but were implemented in this same PR (#122) at the user's explicit request later in the session — see the note at the top of this document.
