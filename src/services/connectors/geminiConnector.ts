@@ -1,4 +1,5 @@
 import { getConnectorCredential } from './connectorAuth';
+import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 // gemini-1.5-flash is a Google AI Studio free-tier-eligible model as of
@@ -51,6 +52,17 @@ export async function sendGeminiMessage(
 ): Promise<GeminiSendResult> {
   const apiKey = getConnectorCredential('gemini', 'GEMINI_API_KEY');
   if (!apiKey) throw new Error('Gemini API key not configured');
+
+  const gate = evaluatePolicyGate({
+    connectorId: 'gemini',
+    actionType: 'chat',
+    commandPreview: JSON.stringify({ model, messages, maxTokens, temperature }),
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gate.ok) {
+    throw new Error(gate.reason || 'Policy gate blocked');
+  }
 
   const contents = messages
     .filter((m) => m.role !== 'system')

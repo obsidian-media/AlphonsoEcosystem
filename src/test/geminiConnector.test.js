@@ -7,7 +7,12 @@ vi.mock('../services/connectors/connectorAuth.js', () => ({
   })
 }));
 
+vi.mock('../services/policyEnforcementService.js', () => ({
+  evaluatePolicyGate: vi.fn(() => ({ ok: true, blocked: false }))
+}));
+
 const { isGeminiConfigured, sendGeminiMessage } = await import('../services/connectors/geminiConnector.js');
+const { evaluatePolicyGate } = await import('../services/policyEnforcementService.js');
 
 describe('geminiConnector', () => {
   beforeEach(() => {
@@ -75,5 +80,12 @@ describe('geminiConnector', () => {
     const { getConnectorCredential } = await import('../services/connectors/connectorAuth.js');
     getConnectorCredential.mockReturnValueOnce('');
     await expect(sendGeminiMessage([{ role: 'user', content: 'Hi' }])).rejects.toThrow('Gemini API key not configured');
+  });
+
+  it('sendGeminiMessage calls evaluatePolicyGate and throws when the gate blocks', async () => {
+    evaluatePolicyGate.mockReturnValueOnce({ ok: false, blocked: true, reason: 'Approval Mode requires confirmation' });
+    await expect(sendGeminiMessage([{ role: 'user', content: 'Hi' }])).rejects.toThrow('Approval Mode requires confirmation');
+    expect(evaluatePolicyGate).toHaveBeenCalledWith(expect.objectContaining({ connectorId: 'gemini' }));
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

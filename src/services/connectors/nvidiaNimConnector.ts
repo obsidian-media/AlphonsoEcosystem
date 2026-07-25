@@ -1,4 +1,5 @@
 import { getConnectorCredential } from './connectorAuth';
+import { evaluatePolicyGate } from '../policyEnforcementService';
 
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
 // meta/llama-3.1-8b-instruct is one of NVIDIA NIM's widely-available free-tier
@@ -46,6 +47,17 @@ export async function sendNvidiaMessage(
 ): Promise<NvidiaSendResult> {
   const apiKey = getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY');
   if (!apiKey) throw new Error('NVIDIA API key not configured');
+
+  const gate = evaluatePolicyGate({
+    connectorId: 'nvidia_nim',
+    actionType: 'chat',
+    commandPreview: JSON.stringify({ model, messages, maxTokens, temperature }),
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gate.ok) {
+    throw new Error(gate.reason || 'Policy gate blocked');
+  }
 
   const r = await fetch(`${NVIDIA_API_BASE}/chat/completions`, {
     method: 'POST',

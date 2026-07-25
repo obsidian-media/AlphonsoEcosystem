@@ -7,7 +7,12 @@ vi.mock('../services/connectors/connectorAuth.js', () => ({
   })
 }));
 
+vi.mock('../services/policyEnforcementService.js', () => ({
+  evaluatePolicyGate: vi.fn(() => ({ ok: true, blocked: false }))
+}));
+
 const { isNvidiaConfigured, sendNvidiaMessage, listNvidiaModels } = await import('../services/connectors/nvidiaNimConnector.js');
+const { evaluatePolicyGate } = await import('../services/policyEnforcementService.js');
 
 describe('nvidiaNimConnector', () => {
   beforeEach(() => {
@@ -60,6 +65,13 @@ describe('nvidiaNimConnector', () => {
     const { getConnectorCredential } = await import('../services/connectors/connectorAuth.js');
     getConnectorCredential.mockReturnValueOnce('');
     await expect(sendNvidiaMessage([{ role: 'user', content: 'Hi' }])).rejects.toThrow('NVIDIA API key not configured');
+  });
+
+  it('sendNvidiaMessage calls evaluatePolicyGate and throws when the gate blocks', async () => {
+    evaluatePolicyGate.mockReturnValueOnce({ ok: false, blocked: true, reason: 'Approval Mode requires confirmation' });
+    await expect(sendNvidiaMessage([{ role: 'user', content: 'Hi' }])).rejects.toThrow('Approval Mode requires confirmation');
+    expect(evaluatePolicyGate).toHaveBeenCalledWith(expect.objectContaining({ connectorId: 'nvidia_nim' }));
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('listNvidiaModels returns the model id list', async () => {
