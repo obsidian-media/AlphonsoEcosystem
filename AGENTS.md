@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 8, Tailwind 3) + Ollama (local LLM)
-- **Version**: 2.6.1 (security hardened, 253 test files, 3,516 tests, 172 services)
+- **Version**: 2.6.1 (security hardened, 254 test files, 3,516 tests, 172 services)
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 
 ## Directory Structure
@@ -30,7 +30,7 @@ src/                   React frontend (100% .tsx — 116 components, 0 .jsx rema
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                253 test files, 3,516 tests (Vitest; see ground truth for current verification status)
+  test/                254 test files, 3,516 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -65,7 +65,7 @@ gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 3,516 tests (253 files; verified 2026-07-24)
+npm run test             # 3,516 tests (254 files; verified 2026-07-24)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
