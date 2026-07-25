@@ -88,4 +88,11 @@ describe('nvidiaNimConnector', () => {
       expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer nvapi-test-key' }) })
     );
   });
+
+  it('listNvidiaModels calls evaluatePolicyGate and throws when the gate blocks, without fetching', async () => {
+    evaluatePolicyGate.mockReturnValueOnce({ ok: false, blocked: true, reason: 'Approval Mode requires confirmation' });
+    await expect(listNvidiaModels()).rejects.toThrow('Approval Mode requires confirmation');
+    expect(evaluatePolicyGate).toHaveBeenCalledWith(expect.objectContaining({ connectorId: 'nvidia_nim' }));
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

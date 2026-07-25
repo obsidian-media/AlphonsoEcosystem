@@ -188,7 +188,7 @@ describe('getCloudModelList', () => {
     const models = await getCloudModelList('gemini');
     expect(Array.isArray(models)).toBe(true);
     expect(models.length).toBeGreaterThan(0);
-    expect(models).toContain('gemini-1.5-flash');
+    expect(models).toContain('gemini-2.5-flash-lite');
   });
 
   it('returns empty array when listNvidiaModels throws (not configured)', async () => {

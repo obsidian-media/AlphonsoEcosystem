@@ -8,10 +8,13 @@ export type ModelProvider = 'ollama' | 'nvidia_nim' | 'gemini';
 const CLOUD_PROVIDERS: ModelProvider[] = ['nvidia_nim', 'gemini'];
 
 // Curated, not enumerated via API — Gemini has no bulk free-tier-catalog
-// endpoint the way NVIDIA does. Reconfirm against aistudio.google.com before
-// assuming these stay free-tier-eligible. See
-// docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §4.
-const GEMINI_FREE_TIER_MODELS = ['gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro'];
+// endpoint the way NVIDIA does. gemini-1.5-* and Gemini 2.0 Flash/Flash-Lite
+// are retired as of 2026-07-25; Pro-tier models are paid-only since
+// 2026-04-01. This list must stay in sync with geminiConnector.ts's
+// DEFAULT_MODEL. Reconfirm against ai.google.dev/gemini-api/docs before
+// assuming these stay free-tier-eligible — Google's lineup shifts often.
+// See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §4.
+const GEMINI_FREE_TIER_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 
 interface ModelPreferences {
   selected: string;

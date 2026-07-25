@@ -45,6 +45,45 @@ describe('geminiConnector', () => {
     expect(body.contents[0]).toEqual({ role: 'user', parts: [{ text: 'Hello' }] });
   });
 
+  it('sends the default model as gemini-2.5-flash-lite (2.5-era, not retired 1.5)', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: 'ack' }] } }] })
+    });
+    await sendGeminiMessage([{ role: 'user', content: 'Hi' }]);
+    expect(fetch.mock.calls[0][0]).toContain('/models/gemini-2.5-flash-lite:generateContent');
+  });
+
+  it('maps a system message to Gemini systemInstruction instead of dropping it', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: 'ack' }] } }] })
+    });
+
+    await sendGeminiMessage([
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'Hi' }
+    ]);
+
+    const body = JSON.parse(fetch.mock.calls[0][1].body);
+    expect(body.systemInstruction).toEqual({ parts: [{ text: 'You are a helpful assistant.' }] });
+    expect(body.contents).toEqual([{ role: 'user', parts: [{ text: 'Hi' }] }]);
+    expect(body.contents.some((c) => JSON.stringify(c).includes('helpful assistant'))).toBe(false);
+  });
+
+  it('omits systemInstruction entirely when no system message is present', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: 'ack' }] } }] })
+    });
+    await sendGeminiMessage([{ role: 'user', content: 'Hi' }]);
+    const body = JSON.parse(fetch.mock.calls[0][1].body);
+    expect(body.systemInstruction).toBeUndefined();
+  });
+
   it('maps assistant role to Gemini "model" role', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,

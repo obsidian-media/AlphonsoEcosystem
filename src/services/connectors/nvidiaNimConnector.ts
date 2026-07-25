@@ -97,6 +97,17 @@ export async function listNvidiaModels(): Promise<string[]> {
   const apiKey = getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY');
   if (!apiKey) throw new Error('NVIDIA API key not configured');
 
+  const gate = evaluatePolicyGate({
+    connectorId: 'nvidia_nim',
+    actionType: 'list_models',
+    commandPreview: 'list_models',
+    approved: false,
+    auth: { enabled: false, isAuthorized: false }
+  });
+  if (!gate.ok) {
+    throw new Error(gate.reason || 'Policy gate blocked');
+  }
+
   const r = await fetch(`${NVIDIA_API_BASE}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` }
   });
