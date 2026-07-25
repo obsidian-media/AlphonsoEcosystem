@@ -43,6 +43,7 @@ tauri-plugin-global-shortcut = "2.3.2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 arboard = "3"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 
 [profile.release]
 lto = true

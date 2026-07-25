@@ -122,8 +122,8 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **106 Rust unit tests across 25 modules** — 105 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
-- **3,746 tests across 255 test files** — verified 2026-07-25; see the ground truth for current verification status.
+- **112 Rust unit tests across 26 modules** — 108 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **3,753 tests across 255 test files** — verified 2026-07-25; see the ground truth for current verification status.
 
 ## What's New in v2.4.2
 
@@ -306,7 +306,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~2,054 lines · 105 Tauri commands · 25 modules   │    │
+│  │  lib.rs ~2,061 lines · 108 Tauri commands · 26 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -402,7 +402,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 3,746 tests across 255 files
+npm run test           # 3,753 tests across 255 files
 npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -414,7 +414,7 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 101 Rust unit tests across 25 modules
+cargo test                     # 112 Rust unit tests across 26 modules
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 

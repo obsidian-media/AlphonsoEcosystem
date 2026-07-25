@@ -233,13 +233,82 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     and unapproved `require_consent` results before the main gate. Focused
     `policyDslService` and connector-registry tests passed: 2 files / 31 tests.
 
-- [ ] **B3 — Complete credential-at-rest hardening**
+- [x] **B3 — Complete credential-at-rest hardening**
   - **Owner:** Sentinel; **execution:** Alphonso
   - Inventory secrets; migrate long-lived credentials from browser storage to
     OS-backed secure storage where supported; define migration, recovery, and
     secure cleanup behavior.
   - **Done when:** no long-lived secret remains in browser local storage and
     tests verify secrets are absent from logs and diagnostics.
+  - **Evidence (2026-07-25):** inventoried the actual credential path first
+    rather than assuming: `connectorAuth.ts`'s single `CREDS_KEY`
+    (`alphonso_connector_credentials_v1`) JSON blob is the real, sole
+    long-lived-credential store used by every connector (GitHub, Slack,
+    Telegram, WhatsApp, Notion, ClickUp, all AI-provider keys, etc. — one
+    blob, not per-connector keys). It had already been moved off plain
+    `localStorage` into SQLite (`kv_set`/`kv_get`) in an earlier pass, but
+    SQLite-on-disk (`rusqlite`, no encryption pragma — confirmed by reading
+    `kv_store.rs`) is still not "OS-backed secure storage," the literal
+    target this task asks for.
+    - Real near-miss caught before committing, not after: the module was
+      first written as `secure_credential_store.rs`, which `.gitignore`'s
+      broad `*credential*` pattern (there specifically to stop real secret
+      files from ever being committed) silently matched — `git status`
+      showed it as neither modified nor untracked, i.e. invisible. Renamed
+      to `os_keychain_store.rs` rather than punching a hole in that
+      protective pattern.
+    - Added `src-tauri/src/os_keychain_store.rs`: three Tauri commands
+      (`secure_credential_set/get/delete`) wrapping the `keyring` crate
+      (v3.6.3 — pinned to the stable v3 API rather than the newly-released
+      v4, which is a from-scratch architecture rewrite with an unfamiliar
+      API surface not worth the risk for this change), covering Windows
+      Credential Manager, macOS Keychain, and Linux Secret Service (D-Bus)
+      via the crate's documented `apple-native`/`windows-native`/
+      `sync-secret-service` features.
+    - `connectorAuth.ts`'s hydration path now checks the secure store first,
+      then falls back through legacy SQLite `kv_get` and legacy
+      `localStorage` in that order — each fallback hit migrates the value
+      into the secure store and deletes it from the older location before
+      returning, so migration happens at most once per install regardless of
+      which prior version a user is upgrading from. `saveConnectorCredential`
+      now writes only to the secure store.
+    - **Real, not assumed, verification against the actual OS credential
+      store** (not just unit tests): wrote a throwaway probe test that set a
+      real credential, ran it, then independently confirmed via Windows'
+      own `cmdkey /list` (a tool this session's code never touches) that the
+      entry genuinely existed under `LegacyGeneric:target=
+      alphonso_manual_verify_probe.com.shayan.alphonso`. Ran the delete step,
+      re-checked `cmdkey /list`, confirmed `CONFIRMED GONE`. The throwaway
+      probe test was then removed from the source tree — its job was this
+      one-time external verification, not to ship.
+    - 5 pure-logic unit tests (key handling, empty-key short-circuits) run
+      under normal `cargo test`; 1 additional round-trip test against the
+      real credential store is `#[ignore]`d by default (CI's `ubuntu-latest`
+      runner has no D-Bus Secret Service daemon in its headless container —
+      documented in the test's own comment) and was run manually on this
+      session's Windows machine, passing.
+    - 5 new JS tests in `connectorAuth.test.js` cover all 4 migration
+      waterfall states (secure store already populated / migrate-from-kv /
+      migrate-from-localStorage / nothing anywhere) using
+      `vi.resetModules()` + dynamic re-import per test, since credential
+      state lives in a module-level cache with no exported reset.
+    - **"Secrets absent from logs/diagnostics"** verified directly, not
+      inferred: `saveConnectorCredential` never calls `appendConnectorAudit`
+      at all (confirmed by reading the source before writing the assertion);
+      `updateConnectorAuthProfile`'s audit payload only ever contains
+      `enabled`/`allowlistCount`/`mode`. Two new regression tests assert
+      this by `JSON.stringify`-ing every real audit-mock call and confirming
+      a real secret string never appears in it.
+    - Full verification after this change: `cargo check`/`test`/`clippy -D
+      warnings`/`fmt --check` all clean (116 Rust tests passing, up from
+      111); `npm run lint`/`tsc --noEmit`/`npm run build` all clean; full
+      `npm test` 255 files / 3,753 tests, 0 failures.
+    - **Scope note:** this closes the primary, highest-value target (the one
+      credential blob every connector actually uses). `licenseService.ts`'s
+      signed license tokens and other non-connector app state were not moved
+      — those are lower-sensitivity (a verification token, not remote
+      account access) and out of this task's literal "credentials" scope;
+      not silently dropped, just not in scope for this pass.
 
 - [ ] **B4 — Add security regression gates**
   - **Owner:** Sentinel

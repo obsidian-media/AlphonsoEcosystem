@@ -39,7 +39,7 @@ const TRUTH_PATTERNS = [
 // counting inaccurate) — same reasoning getAllCounts() already applies to test
 // file counts. This must be updated by hand when the suite's test count changes
 // materially; verified against the actual `npm test` output as of 2026-07-22.
-const CURRENT_TOTAL_TESTS = '3,746';
+const CURRENT_TOTAL_TESTS = '3,753';
 
 // Each entry defines a claim to verify:
 //   file        — relative path from project root

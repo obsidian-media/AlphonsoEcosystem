@@ -23,6 +23,7 @@ mod memory_store;
 mod meta_publish;
 mod native_proof;
 mod ollama;
+mod os_keychain_store;
 mod plugin_runtime;
 mod policy_gate;
 mod runtime_manager;
@@ -72,6 +73,9 @@ pub(crate) use native_proof::{
   run_native_rc0_proof, start_native_rc0_proof_if_requested, NativeProofStageProof,
 };
 pub(crate) use ollama::*;
+pub(crate) use os_keychain_store::{
+  secure_credential_delete, secure_credential_get, secure_credential_set,
+};
 pub(crate) use plugin_runtime::*;
 pub(crate) use policy_gate::*;
 pub(crate) use runway::{runway_generate_video, runway_list_pending_jobs, runway_resume_task};
@@ -2099,6 +2103,9 @@ pub fn run() {
       kv_set,
       kv_get,
       kv_delete,
+      secure_credential_set,
+      secure_credential_get,
+      secure_credential_delete,
       verify_paths,
       read_runtime_env_value,
       alphonso_bridge_status,
