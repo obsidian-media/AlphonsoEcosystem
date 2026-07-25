@@ -188,3 +188,133 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
     </div>
   );
 }
+
+// meta/llama-3.1-8b-instruct and a handful of common instruct models are
+// sorted to the top of NVIDIA NIM's list when present — 70-80+ raw options
+// is a UX regression, not a feature, per
+// docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §4.
+const RECOMMENDED_NVIDIA_MODELS = [
+  'meta/llama-3.1-8b-instruct',
+  'meta/llama-3.1-70b-instruct',
+  'nvidia/nemotron-4-340b-instruct',
+  'mistralai/mixtral-8x7b-instruct-v0.1'
+];
+
+function sortRecommendedFirst(models: string[], recommended: string[]): string[] {
+  const recommendedPresent = recommended.filter((m) => models.includes(m));
+  const rest = models.filter((m) => !recommendedPresent.includes(m)).sort();
+  return [...recommendedPresent, ...rest];
+}
+
+export type CloudProvider = 'nvidia_nim' | 'gemini';
+
+interface CloudModelPickerProps {
+  provider: CloudProvider;
+  selectedModel: string;
+  onModelChange: (name: string) => void;
+}
+
+export function CloudModelPicker({ provider, selectedModel, onModelChange }: CloudModelPickerProps): React.JSX.Element {
+  const [models, setModels] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    import('../services/modelSelectionService').then(({ getCloudModelList }) => getCloudModelList(provider)).then((list) => {
+      if (cancelled) return;
+      const ordered = provider === 'nvidia_nim' ? sortRecommendedFirst(list, RECOMMENDED_NVIDIA_MODELS) : list;
+      setModels(ordered);
+      setLoading(false);
+      if (ordered.length > 0 && !ordered.includes(selectedModel)) {
+        onModelChange(ordered[0]);
+      }
+    }).catch(() => {
+      if (!cancelled) { setModels([]); setLoading(false); }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/5 rounded-lg text-[10px] text-zinc-500 font-medium uppercase tracking-widest">
+        <Cpu className="w-3 h-3 shrink-0" /><span>Loading models…</span>
+      </div>
+    );
+  }
+
+  if (models.length === 0) {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-amber-500/20 rounded-lg text-[10px] text-amber-400 font-medium uppercase tracking-widest">
+        <Cpu className="w-3 h-3 shrink-0" /><span>No models available</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
+      <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
+      <select value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
+        className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
+        title={selectedModel || 'Select a model'}>
+        {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
+      </select>
+      <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-2 pointer-events-none" />
+    </div>
+  );
+}
+
+export type ModelProviderId = 'ollama' | CloudProvider;
+
+const PROVIDER_LABELS: Record<ModelProviderId, string> = {
+  ollama: 'Ollama',
+  nvidia_nim: 'NVIDIA NIM',
+  gemini: 'Gemini'
+};
+
+interface ModelProviderPickerProps {
+  provider: ModelProviderId;
+  onProviderChange: (provider: ModelProviderId) => void;
+  selectedModel: string;
+  onModelChange: (name: string) => void;
+  ollamaPicker: React.ReactNode;
+}
+
+export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker }: ModelProviderPickerProps): React.JSX.Element {
+  const [configured, setConfigured] = useState<Record<CloudProvider, boolean>>({ nvidia_nim: false, gemini: false });
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      import('../services/connectors/nvidiaNimConnector').then((m) => m.isNvidiaConfigured()),
+      import('../services/connectors/geminiConnector').then((m) => m.isGeminiConfigured())
+    ]).then(([nvidia, gemini]) => {
+      if (!cancelled) setConfigured({ nvidia_nim: nvidia, gemini });
+    }).catch(() => { /* leave both false — treated as unconfigured */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const isConfigured = (id: ModelProviderId) => id === 'ollama' || configured[id as CloudProvider];
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-[9px]">
+        {(Object.keys(PROVIDER_LABELS) as ModelProviderId[]).map((id) => {
+          const disabled = !isConfigured(id);
+          return (
+            <button key={id} type="button" disabled={disabled}
+              onClick={() => onProviderChange(id)}
+              title={disabled ? `${PROVIDER_LABELS[id]} is not configured — add a key in Settings → Connectors` : PROVIDER_LABELS[id]}
+              className={`px-2 py-0.5 uppercase tracking-widest font-bold transition-colors ${
+                provider === id ? 'bg-amber-500 text-black' : disabled ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}>
+              {PROVIDER_LABELS[id]}
+            </button>
+          );
+        })}
+      </div>
+      {provider === 'ollama' ? ollamaPicker : <CloudModelPicker provider={provider} selectedModel={selectedModel} onModelChange={onModelChange} />}
+    </div>
+  );
+}
