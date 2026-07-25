@@ -59,7 +59,9 @@ class WebSocketService: ObservableObject {
             shouldReconnect = false
             connectionState = connectionMachine.connectionState
             errorMessage = "Invalid host or port"
-            connectionHint = "Could not form websocket URL"
+            // Surfaced on-screen (not just via print()) so this is diagnosable from a device
+            // with no paired Mac / Console.app access — see docs/governance/DEFERRED_WORK.md.
+            connectionHint = "Could not build ws:// URL for host=\"\(host)\" port=\(port)"
             return
         }
         webSocketTask = session.webSocketTask(with: url)
