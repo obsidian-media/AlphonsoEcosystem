@@ -310,12 +310,87 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
       account access) and out of this task's literal "credentials" scope;
       not silently dropped, just not in scope for this pass.
 
-- [ ] **B4 — Add security regression gates**
+- [x] **B4 — Add security regression gates**
   - **Owner:** Sentinel
   - Cover Tauri command exposure, filesystem traversal, outbound policy bypass,
     secret logging, insecure defaults, and dependency advisories.
   - **Done when:** relevant checks run in CI and security-sensitive changes
     require review evidence.
+  - **Evidence (2026-07-25):** audited what already exists per category
+    before assuming anything was missing — 4 of 6 categories already had
+    real, CI-gated regression coverage:
+    - **Tauri command exposure** — `policy_gate.rs`, 8 `#[test]`s
+      (`allowed_program_rejects_dangerous_programs`,
+      `allowed_args_git_blocks_dangerous_subcommands`, etc.), runs under the
+      required `Rust Tests & Clippy` CI check.
+    - **Filesystem traversal** — `workspace.rs`, 6 `#[test]`s
+      (`parent_dir_component_detected`, `traversal_with_mixed_components`,
+      etc.), same required check.
+    - **Outbound policy bypass** — 4 JS test files
+      (`policyEnforcementService.test.js`/`.ts`, `policyEnforcementCaching.test.ts`,
+      `policyDslService.test.ts`), runs under the required `Test & Build`
+      check.
+    - **Insecure defaults** — already directly asserted, not just implied:
+      `policyEnforcementService.test.js`'s `getRuntimePolicySettings` describe
+      block explicitly checks `approvalMode === false` and
+      `zeroCostMode === true` on empty storage.
+    - **Secret logging — the one real, previously-uncovered gap.** Read
+      `crashLogService.ts` before assuming anything: `logError(error,
+      context)` persisted its free-form `context` argument verbatim to
+      durable storage (localStorage + SQLite backup) with zero redaction
+      anywhere in the path — a caller passing a raw credential inside a
+      caught error's context (a realistic shape for an HTTP-client error
+      object) would have written it to disk in plaintext. Fixed with
+      deterministic key-name redaction (case-insensitive match on
+      `token|secret|password|credential|api[_-]?key|auth(orization)?|
+      passphrase|private[_-]?key`), applied recursively through nested
+      objects and arrays, with circular-reference protection. Deliberately
+      NOT a message/stack content scanner — documented in the code as an
+      explicit scope decision (a free-text pattern scanner would either miss
+      creative secret formats or mangle legitimate error messages with
+      overly broad matching; a separately-justified, larger effort). 5 new
+      tests in `crashLogService.test.js` cover top-level redaction, nested
+      redaction, array-of-objects redaction, the common credential-key-name
+      variants actually used elsewhere in this codebase
+      (`SLACK_BOT_TOKEN`/`NOTION_API_KEY`/etc.), and the circular-reference
+      edge case. Also checked `agentAuditService.ts`'s `logApprovalEvent` —
+      its signature is narrow/typed (`packetId, agent, action, outcome,
+      riskLevel, mariaScore`), structurally unable to accept an arbitrary
+      free-form object the way `crashLogService` could, so no fix needed
+      there.
+    - **Dependency advisories** — already CI-gated (`npm audit`, B1's
+      per-advisory `cargo audit --deny warnings`).
+  - **"Security-sensitive changes require review evidence" — real finding,
+    not silently resolved:** checked actual current GitHub branch protection
+    via `gh api .../branches/main/protection` rather than trusting an
+    earlier Ground Truth claim that main "requires one approving PR review"
+    — that field (`required_pull_request_reviews`) is **not currently set at
+    all**, while `enforce_admins` is `true` (a change since the 2026-07-16
+    Ground Truth entry that deliberately left it `false` "single/small-
+    maintainer repo... forcing every judgment call through a second approver
+    isn't warranted yet"). This repo's own `docs/governance/BRANCH_POLICY.md`
+    already states the intended policy ("Require review from Shayan or
+    CODEOWNERS") — it was written but never actually applied in GitHub's
+    settings, a real docs-vs-reality gap.
+    **Deliberately not fixed unilaterally:** enabling a required-approving-
+    review count while `enforce_admins: true` and this repository has a
+    single collaborator would lock the owner out of merging anything at all
+    (no second person exists to approve). This is a real, high-consequence,
+    hard-to-reverse-in-practice infrastructure change affecting how the
+    owner works, not a code fix — flagged here as an explicit open
+    recommendation for the owner to decide (add a second
+    reviewer/CODEOWNERS entry first, or accept the PR-based review norm as
+    documented-but-unenforced), not silently applied and not silently
+    ignored. In the meantime, "review evidence" is satisfied at the process
+    level this session actually used: every change in this session went
+    through a feature branch and PR (never a direct push to `main`), which
+    is what `BRANCH_POLICY.md` already defines as the review mechanism.
+  - **"Relevant checks run in CI"** — satisfied: all of the above test files
+    already run under the required `Test & Build` and `Rust Tests & Clippy`
+    checks; no separate/duplicate security-only CI job was added, since one
+    would just re-run the same tests under a different name.
+  - Full verification: `npx tsc --noEmit` clean, `npm run lint` clean,
+    `crashLogService.test.js` 11/11 passing (6 original + 5 new).
 
 ### C. Agent contracts and skill packs
 
