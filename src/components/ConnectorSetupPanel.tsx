@@ -54,6 +54,8 @@ const CONNECTOR_ICONS: Record<string, LucideIcon> = {
   mobile_bridge: Smartphone,
   n8n: Zap,
   deepseek: Cpu,
+  nvidia_nim: Cpu,
+  gemini: Cpu,
 };
 
 interface Connector {
@@ -273,6 +275,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
   const [n8nBaseUrl, setN8nBaseUrl] = useState(() => getConnectorCredential('n8n', 'N8N_BASE_URL') || 'http://localhost:5678');
   const [deepseekApiKey, setDeepseekApiKey] = useState(() => getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
+  const [nvidiaApiKey, setNvidiaApiKey] = useState(() => getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY'));
+  const [geminiApiKey, setGeminiApiKey] = useState(() => getConnectorCredential('gemini', 'GEMINI_API_KEY'));
 
   // The credential useState initializers above read from an in-memory cache that starts
   // empty until hydrated from the Tauri SQLite store. Nothing hydrates that cache at app
@@ -311,6 +315,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setTavilyApiKey((prev) => prev || getConnectorCredential('tavily', 'TAVILY_API_KEY'));
       setRunwayApiKey((prev) => prev || getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
       setDeepseekApiKey((prev) => prev || getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
+      setNvidiaApiKey((prev) => prev || getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY'));
+      setGeminiApiKey((prev) => prev || getConnectorCredential('gemini', 'GEMINI_API_KEY'));
     }).catch(() => { /* best-effort — in-memory cache stays as-is */ });
     return () => { cancelled = true; };
   }, []);
@@ -807,6 +813,18 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('deepseek', { DEEPSEEK_API_KEY: deepseekApiKey })}
             hint="Get your key at platform.deepseek.com. OpenAI-compatible API — deepseek-chat model. Use as an alternative to Claude/ChatGPT for Hector research."
             savedLabel="DeepSeek key saved" />
+
+          <CredentialSection title="NVIDIA NIM" icon={Cpu} borderColor="border-lime-300/20" bgColor="bg-lime-500/8" accentColor="text-lime-400"
+            fields={[{ label: 'API Key', placeholder: 'nvapi-...', value: nvidiaApiKey, onChange: setNvidiaApiKey, key: 'NVIDIA_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('nvidia_nim', { NVIDIA_API_KEY: nvidiaApiKey })}
+            hint="Get a free key at build.nvidia.com — 70-80+ hosted models via one OpenAI-compatible endpoint. Free tier, not local: requests leave your machine and go to NVIDIA's cloud. Rate-limited and provider-controlled, not guaranteed by Alphonso — if NVIDIA changes their free-tier policy, this may stop working or require billing on their side."
+            savedLabel="NVIDIA NIM key saved" />
+
+          <CredentialSection title="Google Gemini" icon={Cpu} borderColor="border-blue-300/20" bgColor="bg-blue-500/8" accentColor="text-blue-400"
+            fields={[{ label: 'API Key', placeholder: 'AIza...', value: geminiApiKey, onChange: setGeminiApiKey, key: 'GEMINI_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('gemini', { GEMINI_API_KEY: geminiApiKey })}
+            hint="Get a free key at aistudio.google.com (AI Studio free tier, not billed Vertex AI). Free tier, not local: requests leave your machine and go to Google's cloud. Rate-limited and provider-controlled, not guaranteed by Alphonso — if Google changes their free-tier policy, this may stop working or require billing on their side."
+            savedLabel="Gemini key saved" />
         </div>
       </div>
 
