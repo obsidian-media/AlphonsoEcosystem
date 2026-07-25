@@ -113,28 +113,36 @@ class MDNSService: ObservableObject {
 
     /// Converts a resolved `NWEndpoint.Host` into a string safe to hand to `URLComponents.host`.
     ///
-    /// `"\(host)"` on an `.ipv6` case can include a zone/scope id (e.g. `fe80::1%en0`) appended
-    /// by the system when the address is only reachable via a specific interface. The `%`
+    /// `"\(address)"` on a scoped/interface-bound address (confirmed on a real device to include
+    /// `.ipv4` — not just `.ipv6` as originally assumed — e.g. `"10.0.0.17%en0"`) appends a
+    /// `%<interface>` suffix when the address is only reachable via a specific interface. The `%`
     /// character is not valid in a URI host component (RFC 3986 / RFC 6874 requires it to be
     /// percent-encoded as `%25<zone>`), so passing it straight through makes
     /// `URLComponents.url` return `nil` — which is the "Could not form websocket URL" failure.
-    /// Stripping the zone id here keeps IPv6 hosts usable for standard URL construction; the
-    /// (rare, link-local-address) tradeoff is documented in the deferred-work register.
+    /// Stripping the suffix here keeps the host usable for standard URL construction; the (rare,
+    /// link-local-address) tradeoff is documented in the deferred-work register.
     /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
     static func sanitizedHostString(from host: NWEndpoint.Host) -> String {
         switch host {
         case .ipv4(let address):
-            return "\(address)"
+            return stripInterfaceSuffix("\(address)")
         case .ipv6(let address):
-            let raw = "\(address)"
-            if let zoneSeparator = raw.firstIndex(of: "%") {
-                return String(raw[..<zoneSeparator])
-            }
-            return raw
+            return stripInterfaceSuffix("\(address)")
         case .name(let name, _):
-            return name
+            return stripInterfaceSuffix(name)
         @unknown default:
-            return "\(host)"
+            return stripInterfaceSuffix("\(host)")
         }
+    }
+
+    /// Removes a trailing `%<interface>` scope/zone suffix (e.g. `"10.0.0.17%en0"` ->
+    /// `"10.0.0.17"`) from an address string. Confirmed on a real device to appear on `.ipv4`
+    /// addresses, not just `.ipv6` as originally assumed. Split out from `sanitizedHostString` so
+    /// it can be unit-tested directly with plain strings — constructing a real scoped
+    /// `NWEndpoint.Host` requires a live `NWInterface`, which has no test-friendly initializer.
+    /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
+    static func stripInterfaceSuffix(_ raw: String) -> String {
+        guard let separator = raw.firstIndex(of: "%") else { return raw }
+        return String(raw[..<separator])
     }
 }
