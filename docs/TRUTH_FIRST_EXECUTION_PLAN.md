@@ -550,19 +550,45 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 
 ### D. Product verification and explicit scope
 
-- [ ] **D1 — Live-verify the signed updater**
+- `BLOCKED` **D1 — Live-verify the signed updater**
   - **Owner:** Marcus; **review:** Maria
   - Test discovery, download, signature verification, installation/restart,
     rollback, and reported version against a real signed release artifact.
   - **Done when:** evidence includes release tag, platform, procedure, and
     observed result.
+  - **Blocked (2026-07-25), named dependency: explicit owner authorization.**
+    Genuinely verifying this requires tagging and pushing a real version
+    bump, letting `release.yml` build and **publish a real signed public
+    GitHub release**, then downloading and installing that real artifact to
+    exercise the actual update flow — a visible, hard-to-reverse action
+    affecting a real public release surface, categorically different from a
+    code change on a branch. Not attempted without asking first, regardless
+    of this session's general autonomous-execution instruction — publishing
+    software to end users is not a class of action that blanket authorization
+    covers. Everything short of publishing was still done honestly: `npm run
+    build`, `cargo check`, and the full local verification baseline (A1) all
+    passed clean this session, so the code that *would* be released is
+    verified — only the live publish-and-install round-trip is blocked
+    pending the owner's explicit go-ahead.
 
-- [ ] **D2 — Verify iOS pairing and Cloud Voice on physical devices**
+- `BLOCKED` **D2 — Verify iOS pairing and Cloud Voice on physical devices**
   - **Owner:** Alphonso
   - Test supported iOS versions, mDNS and fallback networking, authentication
     renewal, English/Farsi acceptance, and failure recovery.
   - **Done when:** a compatibility matrix and real-device evidence are linked
     from Ground Truth.
+  - **Blocked (2026-07-25), named dependency: physical hardware access this
+    environment does not have.** This session runs on a Windows dev machine
+    with no physical iPhone/iPad and no access to the Cloud Voice Railway
+    deployment's real device-enrollment flow. Both require a real device in
+    a real user's hands — there is no code-only or simulator-only path that
+    would constitute genuine verification here (the whole point of this task
+    is catching real-device failure modes a simulator or code review can't
+    surface, per the exact pattern that found and fixed the real
+    "Could not form websocket URL" bug in a prior session — see Ground Truth
+    §11 for that history). Not faked, not skipped silently: recorded as
+    BLOCKED with the specific missing dependency named, per this plan's own
+    status rules.
 
 - [x] **D3 — Resolve or explicitly defer Boardroom gaps**
   - **Owner:** Jose; **review:** Maria
