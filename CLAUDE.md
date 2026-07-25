@@ -151,6 +151,7 @@ Before writing any new service, component, or feature, check this list:
 | RightPanel auto-refresh | `src/components/RightPanel.tsx` — 10-min `setInterval` calling `runQuickScan()` |
 | Onboarding connector step | `src/components/OnboardingWizard.tsx` — "Connect" step with Telegram/WhatsApp/Composio/Skip cards, saves to `alphonso_onboarding_connector_v1` |
 | Onboarding approval-mode step | `src/components/OnboardingWizard.tsx` — `ApprovalModeStep`, writes decision via `setRuntimePolicySettings({ approvalMode })` from `policyEnforcementService.ts` |
+| Onboarding skip-Ollama cloud step | `src/components/OnboardingWizard.tsx` — `SkipOllamaCloudGuide`, an inline expand under `CheckOllamaStep` (link: "Don't want to install Ollama? Use a free NVIDIA/Gemini key instead"). Saves via `saveConnectorCredential`/`updateConnectorAuthProfile`, skips `PickModelStep`, and threads the chosen provider through `OnboardingWizard`'s `onComplete(selectedModel, selectedProvider)` into `App.tsx`'s `settings.selectedProvider` |
 | Onboarding advanced services step | `src/components/OnboardingWizard.tsx` — `AdvancedServicesStep`, checks `isChromaHealthy()` and `getVoiceServerStatus()` + `checkPrerequisites().pythonFound` |
 | Crash log viewer | `src/components/CrashLogView.jsx` — entry list with timestamp/message/context, "Clear" button; wired as Logs tab in SettingsView |
 | Nova history chart | `src/components/NovaHistoryChart.jsx` — SVG sparkline of last 10 scores, most-recent recommendation, wired in SettingsView |
