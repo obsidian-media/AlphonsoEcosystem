@@ -7,6 +7,7 @@ const SettingsContext = createContext(/** @type {any} */(null));
 const DEFAULT_SETTINGS = {
   endpoint: 'http://localhost:11434',
   selectedModel: '',
+  selectedProvider: 'ollama',
   workspaceRoot: getDefaultWorkspaceRoot(),
   ocrEnginePath: '',
   miyaCompanionPinned: true,

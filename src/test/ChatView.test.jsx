@@ -63,6 +63,17 @@ vi.mock('../hooks/useKeyboardShortcuts', () => ({
   getShortcutList: vi.fn().mockReturnValue([])
 }));
 
+// ── Cloud provider connector mocks ────────────────────────────────────────────
+vi.mock('../services/connectors/nvidiaNimConnector', () => ({
+  isNvidiaConfigured: vi.fn().mockReturnValue(true),
+  sendNvidiaMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from NVIDIA', model: 'meta/llama-3.1-8b-instruct', provider: 'nvidia_nim' })
+}));
+
+vi.mock('../services/connectors/geminiConnector', () => ({
+  isGeminiConfigured: vi.fn().mockReturnValue(true),
+  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-2.5-flash-lite', provider: 'gemini' })
+}));
+
 // ── Lazy / heavy sub-component mocks ─────────────────────────────────────────
 vi.mock('../components/MarkdownMessage', () => ({
   MarkdownMessage: ({ content }) => <span data-testid="markdown-message">{content}</span>
@@ -70,7 +81,8 @@ vi.mock('../components/MarkdownMessage', () => ({
 
 vi.mock('../components/ModelSwitcher', () => ({
   ModelSwitcher: ({ initialModel }) => <span data-testid="model-switcher">{initialModel}</span>,
-  OllamaModelPicker: ({ initialModel }) => <span data-testid="model-picker">{initialModel}</span>
+  OllamaModelPicker: ({ initialModel }) => <span data-testid="model-picker">{initialModel}</span>,
+  ModelProviderPicker: ({ ollamaPicker }) => <div data-testid="model-provider-picker">{ollamaPicker}</div>
 }));
 
 vi.mock('../components/ApprovalPanel', () => ({
@@ -106,6 +118,10 @@ vi.mock('../components/ConnectorStatusIndicators', () => ({
 import { ChatView } from '../components/ChatView';
 import { generateOllamaChatStream } from '../lib/ollama';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
+import { isGeminiConfigured } from '../services/connectors/geminiConnector';
+import { nextMsgId } from '../lib/chatUtils';
+import { invoke } from '@tauri-apps/api/core';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -232,5 +248,119 @@ describe('ChatView', () => {
       />
     );
     expect(screen.getAllByText(/llama3\.2:3b/).length).toBeGreaterThan(0);
+  });
+
+  it('routes generation through sendNvidiaMessage when nvidia_nim is the selected provider', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user').mockReturnValueOnce('msg-assistant');
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedProvider: 'nvidia_nim', selectedModel: 'meta/llama-3.1-8b-instruct', colorScheme: 'dark' }
+        })}
+      />
+    );
+    // ChatView's chat-loading useEffect (unrelated to provider routing) fetches
+    // persisted messages on mount and calls setMessages once it settles. In
+    // production that resolves long before a user can type and send; in a test
+    // that clicks send immediately, it can resolve AFTER generation completes
+    // and clobber messages back to []. Let it settle before interacting.
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(sendNvidiaMessage).toHaveBeenCalled();
+      expect(generateOllamaChatStream).not.toHaveBeenCalled();
+      expect(screen.getByText('Hello from NVIDIA')).toBeTruthy();
+    });
+  });
+
+  it('does not apply a cloud provider result after Stop was clicked mid-request', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user-abort').mockReturnValueOnce('msg-assistant-abort');
+    let resolveCloud;
+    sendNvidiaMessage.mockImplementationOnce(() => new Promise((resolve) => { resolveCloud = resolve; }));
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedProvider: 'nvidia_nim', selectedModel: 'meta/llama-3.1-8b-instruct', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    const stopButton = await screen.findByRole('button', { name: /abort and stop/i });
+    fireEvent.click(stopButton);
+
+    resolveCloud({ ok: true, content: 'Hello from NVIDIA', model: 'meta/llama-3.1-8b-instruct', provider: 'nvidia_nim' });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Hello from NVIDIA')).toBeNull();
+    });
+  });
+
+  it('shows a distinct generic-failure message when a cloud result is ok:false but not rate-limited', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user-3').mockReturnValueOnce('msg-assistant-3');
+    sendNvidiaMessage.mockResolvedValueOnce({ ok: false, rateLimited: false, status: 500, message: 'server error', provider: 'nvidia_nim' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedProvider: 'nvidia_nim', selectedModel: 'meta/llama-3.1-8b-instruct', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/request failed/i)).toBeTruthy();
+      expect(screen.queryByText(/rate-limited/i)).toBeNull();
+    });
+  });
+
+  it('shows a rate-limited message distinct from a generic error when the cloud provider is saturated', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user-2').mockReturnValueOnce('msg-assistant-2');
+    sendNvidiaMessage.mockResolvedValueOnce({ ok: false, rateLimited: true, status: 429, message: 'quota', provider: 'nvidia_nim' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedProvider: 'nvidia_nim', selectedModel: 'meta/llama-3.1-8b-instruct', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/rate-limited/i)).toBeTruthy();
+    });
+  });
+
+  it('blocks send with a clear message when the selected cloud provider is not configured', async () => {
+    nextMsgId.mockReturnValueOnce('msg-3');
+    isGeminiConfigured.mockReturnValue(false);
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedProvider: 'gemini', selectedModel: 'gemini-2.5-flash-lite', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Gemini is not configured/i)).toBeTruthy();
+    });
+    isGeminiConfigured.mockReturnValue(true);
   });
 });

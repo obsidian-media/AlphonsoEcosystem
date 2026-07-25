@@ -6,7 +6,10 @@ import {
   getModelForTask,
   getRecentModels,
   getModelList,
-  getRecommendedModel
+  getRecommendedModel,
+  getSelectedProvider,
+  setSelectedProvider,
+  getCloudModelList
 } from '../services/modelSelectionService';
 
 vi.mock('../lib/ollama', () => ({
@@ -16,6 +19,10 @@ vi.mock('../lib/ollama', () => ({
   chooseDefaultModel: vi.fn((models) => models[0]?.name || 'qwen2.5-coder:7b'),
   chooseBestModelForTask: vi.fn((models, task) => models[0]?.name || 'qwen2.5-coder:7b'),
   classifyModelTier: vi.fn(() => 'standard')
+}));
+
+vi.mock('../services/connectors/nvidiaNimConnector', () => ({
+  listNvidiaModels: vi.fn(async () => ['meta/llama-3.1-8b-instruct', 'nvidia/nemotron-4-340b-instruct'])
 }));
 
 const PREF_KEY = 'alphonso_model_preferences_v1';
@@ -143,5 +150,51 @@ describe('getRecommendedModel', () => {
     fetchOllamaModels.mockRejectedValueOnce(new Error('connection refused'));
     const model = await getRecommendedModel('http://localhost:11434', 'code');
     expect(model).toBe('qwen2.5-coder:7b');
+  });
+});
+
+// ── getSelectedProvider / setSelectedProvider ─────────────────────────────────
+
+describe('getSelectedProvider / setSelectedProvider', () => {
+  it('defaults to ollama when nothing is set', () => {
+    expect(getSelectedProvider()).toBe('ollama');
+  });
+
+  it('returns the provider that was set', () => {
+    setSelectedProvider('nvidia_nim');
+    expect(getSelectedProvider()).toBe('nvidia_nim');
+  });
+
+  it('persists provider selection to localStorage', () => {
+    setSelectedProvider('gemini');
+    expect(localStorage.getItem('alphonso_model_provider_v1')).toBe('gemini');
+  });
+
+  it('falls back to ollama for a corrupt/unknown stored value', () => {
+    localStorage.setItem('alphonso_model_provider_v1', 'not-a-real-provider');
+    expect(getSelectedProvider()).toBe('ollama');
+  });
+});
+
+// ── getCloudModelList ──────────────────────────────────────────────────────────
+
+describe('getCloudModelList', () => {
+  it('returns NVIDIA NIM models via listNvidiaModels', async () => {
+    const models = await getCloudModelList('nvidia_nim');
+    expect(models).toEqual(['meta/llama-3.1-8b-instruct', 'nvidia/nemotron-4-340b-instruct']);
+  });
+
+  it('returns a curated static list for gemini', async () => {
+    const models = await getCloudModelList('gemini');
+    expect(Array.isArray(models)).toBe(true);
+    expect(models.length).toBeGreaterThan(0);
+    expect(models).toContain('gemini-2.5-flash-lite');
+  });
+
+  it('returns empty array when listNvidiaModels throws (not configured)', async () => {
+    const { listNvidiaModels } = await import('../services/connectors/nvidiaNimConnector');
+    listNvidiaModels.mockRejectedValueOnce(new Error('NVIDIA API key not configured'));
+    const models = await getCloudModelList('nvidia_nim');
+    expect(models).toEqual([]);
   });
 });

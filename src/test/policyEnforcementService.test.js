@@ -113,6 +113,17 @@ describe('policyEnforcementService', () => {
       expect(result.blocked).toBe(false);
     });
 
+    it('allows nvidia_nim and gemini in zero-cost mode (intentionally not in PAID_OR_METERED_CONNECTORS)', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: true, approvalMode: false }));
+      const nvidiaResult = evaluatePolicyGate({ connectorId: 'nvidia_nim' });
+      expect(nvidiaResult.ok).toBe(true);
+      expect(nvidiaResult.blocked).toBe(false);
+
+      const geminiResult = evaluatePolicyGate({ connectorId: 'gemini' });
+      expect(geminiResult.ok).toBe(true);
+      expect(geminiResult.blocked).toBe(false);
+    });
+
     it('allows paid connectors with approved override', () => {
       localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: true }));
       const result = evaluatePolicyGate({ connectorId: 'chatgpt', approved: true });

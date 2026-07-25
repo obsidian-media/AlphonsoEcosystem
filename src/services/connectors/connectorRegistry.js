@@ -226,6 +226,24 @@ export const DEFAULT_CONNECTORS = [
     disabledReason: 'DeepSeek API key is not configured.'
   },
   {
+    id: 'nvidia_nim',
+    name: 'NVIDIA NIM',
+    status: 'not_configured',
+    transport: 'nvidia_nim_api',
+    requiredEnv: ['NVIDIA_API_KEY'],
+    permissions: ['prompt_exchange'],
+    disabledReason: 'NVIDIA API key is not configured.'
+  },
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
+    status: 'not_configured',
+    transport: 'gemini_api',
+    requiredEnv: ['GEMINI_API_KEY'],
+    permissions: ['prompt_exchange'],
+    disabledReason: 'Gemini API key is not configured.'
+  },
+  {
     id: 'n8n',
     name: 'n8n Automation',
     status: 'foundation_only',

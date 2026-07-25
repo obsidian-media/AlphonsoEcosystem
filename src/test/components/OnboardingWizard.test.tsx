@@ -43,7 +43,17 @@ vi.mock('../../services/voiceOsService', () => ({
   getVoiceServerStatus: vi.fn().mockResolvedValue('stopped'),
 }));
 
+vi.mock('../../services/connectors/connectorAuth', () => ({
+  saveConnectorCredential: vi.fn(),
+}));
+
+vi.mock('../../services/connectorRegistryService', () => ({
+  updateConnectorAuthProfile: vi.fn(),
+}));
+
 import { OnboardingWizard } from '../../components/OnboardingWizard';
+import { saveConnectorCredential } from '../../services/connectors/connectorAuth';
+import { updateConnectorAuthProfile } from '../../services/connectorRegistryService';
 
 // Helper: wait for step 0's Continue button to become enabled (Ollama check completes)
 async function waitForStep0Continue() {
@@ -162,5 +172,67 @@ describe('OnboardingWizard', () => {
     await screen.findByText("You're ready", {}, { timeout: 5000 });
     fireEvent.click(screen.getByRole('button', { name: /Start chatting/i }));
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers a skip-Ollama cloud option on step 0', async () => {
+    render(<OnboardingWizard onComplete={vi.fn()} />);
+    await waitForStep0Continue();
+    expect(screen.getByText(/free NVIDIA\/Gemini key/i)).toBeTruthy();
+  });
+
+  it('expands the inline cloud key form when the skip link is clicked', async () => {
+    render(<OnboardingWizard onComplete={vi.fn()} />);
+    await waitForStep0Continue();
+    fireEvent.click(screen.getByText(/free NVIDIA\/Gemini key/i));
+    expect(screen.getByPlaceholderText(/nvapi-/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^NVIDIA NIM$/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Gemini$/i })).toBeTruthy();
+  });
+
+  it('saving a cloud key skips Pick a Model and jumps straight to Approval mode', async () => {
+    render(<OnboardingWizard onComplete={vi.fn()} />);
+    await waitForStep0Continue();
+    fireEvent.click(screen.getByText(/free NVIDIA\/Gemini key/i));
+
+    fireEvent.change(screen.getByPlaceholderText(/nvapi-/i), { target: { value: 'nvapi-test-key' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save & Continue/i }));
+
+    expect(saveConnectorCredential).toHaveBeenCalledWith('nvidia_nim', 'NVIDIA_API_KEY', 'nvapi-test-key');
+    expect(updateConnectorAuthProfile).toHaveBeenCalledWith('nvidia_nim', expect.objectContaining({ enabled: true }));
+    await screen.findByText('Approval mode', {}, { timeout: 5000 });
+    expect(screen.queryByText('Pick a model')).toBeNull();
+  });
+
+  it('switching to the Gemini tab saves under the gemini connector id', async () => {
+    render(<OnboardingWizard onComplete={vi.fn()} />);
+    await waitForStep0Continue();
+    fireEvent.click(screen.getByText(/free NVIDIA\/Gemini key/i));
+    fireEvent.click(screen.getByRole('button', { name: /^Gemini$/i }));
+
+    fireEvent.change(screen.getByPlaceholderText(/AIza/i), { target: { value: 'gemini-test-key' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save & Continue/i }));
+
+    expect(saveConnectorCredential).toHaveBeenCalledWith('gemini', 'GEMINI_API_KEY', 'gemini-test-key');
+  });
+
+  it('passes the chosen provider through to onComplete after skipping Ollama', async () => {
+    const onComplete = vi.fn();
+    render(<OnboardingWizard onComplete={onComplete} />);
+    await waitForStep0Continue();
+    fireEvent.click(screen.getByText(/free NVIDIA\/Gemini key/i));
+    fireEvent.change(screen.getByPlaceholderText(/nvapi-/i), { target: { value: 'nvapi-test-key' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save & Continue/i }));
+
+    await screen.findByText('Approval mode', {}, { timeout: 5000 });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    await screen.findByText('Connect', {}, { timeout: 5000 });
+    const btns = screen.getAllByRole('button', { name: /Continue/i });
+    fireEvent.click(btns[btns.length - 1]);
+    await screen.findByText('Optional services', {}, { timeout: 5000 });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    await screen.findByText("You're ready", {}, { timeout: 5000 });
+    fireEvent.click(screen.getByRole('button', { name: /Start chatting/i }));
+
+    expect(onComplete).toHaveBeenCalledWith('meta/llama-3.1-8b-instruct', 'nvidia_nim');
   });
 });

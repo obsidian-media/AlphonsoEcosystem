@@ -24,6 +24,10 @@ import { setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { isChromaHealthy } from '../services/chromaDbService';
 import { getVoiceServerStatus } from '../services/voiceOsService';
 import type { PrereqStatus } from '../services/runtimeManagerService';
+import { saveConnectorCredential } from '../services/connectors/connectorAuth';
+import { updateConnectorAuthProfile } from '../services/connectorRegistryService';
+import { DEFAULT_MODEL as NVIDIA_DEFAULT_MODEL } from '../services/connectors/nvidiaNimConnector';
+import { DEFAULT_MODEL as GEMINI_DEFAULT_MODEL } from '../services/connectors/geminiConnector';
 
 function openExternal(url: string) {
   invoke('open_url', { url }).catch(() => { window.open(url, '_blank'); });
@@ -63,14 +67,100 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 // ─── Step 1: Check Ollama (enhanced with Runtime Hub auto-start) ──────────────
 
 type OllamaCheckStatus = 'checking' | 'connected' | 'not_installed' | 'not_running' | 'no_models' | 'error';
+type CloudSkipProvider = 'nvidia_nim' | 'gemini';
 
-function CheckOllamaStep({ onNext }: { onNext: () => void }) {
+const CLOUD_SKIP_PROVIDERS: Record<CloudSkipProvider, { label: string; url: string; envKey: string; placeholder: string }> = {
+  nvidia_nim: { label: 'NVIDIA NIM', url: 'https://build.nvidia.com', envKey: 'NVIDIA_API_KEY', placeholder: 'nvapi-…' },
+  gemini: { label: 'Gemini', url: 'https://aistudio.google.com', envKey: 'GEMINI_API_KEY', placeholder: 'AIza…' },
+};
+
+// Addresses the onboarding-friction gap named in
+// docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §0/§6: a
+// user without Ollama installed previously had no path forward from this
+// step. Both NVIDIA NIM and Gemini free tiers are genuinely rate-limited,
+// not billed — see that doc before changing which connectors appear here.
+function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider) => void }) {
+  const [provider, setProvider] = useState<CloudSkipProvider>('nvidia_nim');
+  const [apiKey, setApiKey] = useState('');
+  const [saved, setSaved] = useState(false);
+  const info = CLOUD_SKIP_PROVIDERS[provider];
+
+  const handleSaveAndContinue = () => {
+    if (!apiKey.trim()) return;
+    saveConnectorCredential(provider, info.envKey, apiKey.trim());
+    updateConnectorAuthProfile(provider, { enabled: true });
+    setSaved(true);
+    onSkip(provider);
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-lime-500/20 bg-lime-500/5 px-4 py-3 space-y-3">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-lime-400">Skip Ollama — Free Cloud Model</div>
+      <p className="text-xs text-[var(--text-3)]">
+        Both are genuinely free-tier (rate-limited, not billed), but requests leave your machine and go to{' '}
+        {info.label}&apos;s cloud — this is not local like Ollama.
+      </p>
+      <div className="flex rounded-lg overflow-hidden border border-white/10 w-fit text-[10px]">
+        {(Object.keys(CLOUD_SKIP_PROVIDERS) as CloudSkipProvider[]).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setProvider(p)}
+            className={`px-3 py-1 uppercase tracking-widest font-bold transition-colors ${
+              provider === p ? 'bg-lime-500 text-black' : 'bg-[var(--surface-2)] text-[var(--text-4)] hover:text-[var(--text-2)]'
+            }`}
+          >
+            {CLOUD_SKIP_PROVIDERS[p].label}
+          </button>
+        ))}
+      </div>
+      <ol className="space-y-1.5 text-xs text-[var(--text-3)] list-none">
+        <li className="flex gap-2">
+          <span className="text-lime-400 font-bold shrink-0">1.</span>
+          Get a free key at{' '}
+          <button onClick={() => openExternal(info.url)} className="text-lime-400 underline hover:text-lime-300 transition-colors">
+            {info.url.replace('https://', '')}
+          </button>.
+        </li>
+        <li className="flex gap-2">
+          <span className="text-lime-400 font-bold shrink-0">2.</span>
+          Paste it below and continue — you can change this anytime in Settings → Connectors.
+        </li>
+      </ol>
+      {saved ? (
+        <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+          <CheckCircle size={12} /> Key saved — continuing with {info.label}.
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="password"
+            placeholder={info.placeholder}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-white/10 text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-lime-500/50"
+          />
+          <button
+            onClick={handleSaveAndContinue}
+            disabled={!apiKey.trim()}
+            className="px-3 py-1.5 rounded-lg bg-lime-600 hover:bg-lime-500 disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-white text-xs font-bold transition-colors"
+          >
+            Save & Continue
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkipToCloud: (provider: CloudSkipProvider) => void }) {
   const [status, setStatus] = useState<OllamaCheckStatus>('checking');
   const [message, setMessage] = useState('Checking Ollama...');
   const [isRetrying, setIsRetrying] = useState(false);
   const [prereqs, setPrereqs] = useState<PrereqStatus | null>(null);
   const [starting, setStarting] = useState(false);
   const [startMsg, setStartMsg] = useState<string | null>(null);
+  const [showCloudSkip, setShowCloudSkip] = useState(false);
   const hasMountedRef = useRef(false);
 
   const runCheck = async () => {
@@ -265,6 +355,15 @@ function CheckOllamaStep({ onNext }: { onNext: () => void }) {
           Continue <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowCloudSkip((v) => !v)}
+        className="mt-3 self-start text-[11px] text-[var(--text-4)] hover:text-[var(--text-2)] underline transition-colors"
+      >
+        {showCloudSkip ? 'Hide' : "Don't want to install Ollama? Use a free NVIDIA/Gemini key instead"}
+      </button>
+      {showCloudSkip && <SkipOllamaCloudGuide onSkip={onSkipToCloud} />}
     </div>
   );
 }
@@ -897,13 +996,14 @@ function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinis
 
 // ─── Root wizard ──────────────────────────────────────────────────────────────
 
-export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: string) => void }) {
+export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: string, selectedProvider?: string) => void }) {
   const [step, setStep] = useState(0);
   const [selectedModel, setSelectedModel] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<'ollama' | CloudSkipProvider>('ollama');
 
   const handleFinish = () => {
     setStorage('alphonso_onboarding_complete_v1', true);
-    onComplete(selectedModel);
+    onComplete(selectedModel, selectedProvider);
   };
 
   return (
@@ -924,7 +1024,16 @@ export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: s
 
           <StepIndicator currentStep={step} />
 
-          {step === 0 && <CheckOllamaStep onNext={() => setStep(1)} />}
+          {step === 0 && (
+            <CheckOllamaStep
+              onNext={() => setStep(1)}
+              onSkipToCloud={(provider) => {
+                setSelectedProvider(provider);
+                setSelectedModel(provider === 'nvidia_nim' ? NVIDIA_DEFAULT_MODEL : GEMINI_DEFAULT_MODEL);
+                setStep(2);
+              }}
+            />
+          )}
           {step === 1 && <PickModelStep onNext={(model) => { setSelectedModel(model); setStep(2); }} />}
           {step === 2 && <ApprovalModeStep onNext={() => setStep(3)} />}
           {step === 3 && <ConnectChannelStep onNext={() => setStep(4)} />}

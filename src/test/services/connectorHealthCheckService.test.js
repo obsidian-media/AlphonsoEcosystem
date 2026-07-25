@@ -258,15 +258,15 @@ describe('connectorHealthCheckService', () => {
     });
   });
 
-  describe('API-key-presence connectors (brave_search, perplexity, tavily, deepseek)', () => {
-    it.each(['brave_search', 'perplexity', 'tavily', 'deepseek'])('%s: reports not-ok with no key configured', async (connectorId) => {
+  describe('API-key-presence connectors (brave_search, perplexity, tavily, deepseek, nvidia_nim, gemini)', () => {
+    it.each(['brave_search', 'perplexity', 'tavily', 'deepseek', 'nvidia_nim', 'gemini'])('%s: reports not-ok with no key configured', async (connectorId) => {
       const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
       const result = await checkConnectorHealth(connectorId);
       expect(result.ok).toBe(false);
       expect(result.details.reason).toBe('missing_key');
     });
 
-    it.each(['brave_search', 'perplexity', 'tavily', 'deepseek'])('%s: reports ok when a key is configured', async (connectorId) => {
+    it.each(['brave_search', 'perplexity', 'tavily', 'deepseek', 'nvidia_nim', 'gemini'])('%s: reports ok when a key is configured', async (connectorId) => {
       mockGetConnectorCredential.mockReturnValue('a-real-key');
       const { checkConnectorHealth } = await import('../../services/connectorHealthCheckService');
       const result = await checkConnectorHealth(connectorId);
@@ -308,7 +308,7 @@ describe('connectorHealthCheckService', () => {
       expect(result.details.reason).toBe('not_implemented');
     });
 
-    it.each(['github', 'slack', 'discord', 'generic_webhook', 'n8n', 'brave_search', 'perplexity', 'tavily', 'deepseek'])(
+    it.each(['github', 'slack', 'discord', 'generic_webhook', 'n8n', 'brave_search', 'perplexity', 'tavily', 'deepseek', 'nvidia_nim', 'gemini'])(
       'routes %s to a real check, not the not_implemented fallback',
       async (connectorId) => {
         global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) });

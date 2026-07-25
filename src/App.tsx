@@ -612,8 +612,12 @@ function AppShell() {
     return (
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
         <OnboardingWizard
-          onComplete={(chosenModel: string) => {
-            if (chosenModel) setSettings((current: any) => ({ ...current, selectedModel: chosenModel }));
+          onComplete={(chosenModel: string, chosenProvider?: string) => {
+            setSettings((current: any) => ({
+              ...current,
+              ...(chosenModel ? { selectedModel: chosenModel } : {}),
+              ...(chosenProvider ? { selectedProvider: chosenProvider } : {})
+            }));
             setShowOnboarding(false);
           }}
         />
@@ -711,7 +715,7 @@ function AppShell() {
                 )}
                 {activeTab === 'chat' && (
                   <Suspense fallback={<ViewLoadingState activeTab="Chat" />}>
-                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
+                    <ChatView activeChatId={activeChatId} settings={settings} setConversations={setConversations} ollamaStatus={ollamaStatus} installedModels={installedModels} selectedModelMissing={selectedModelMissing} voice={voice} onGenerationChange={setIsGeneratingResponse} onTaskComplete={() => setLastTaskCompletedAt(Date.now())} onRetryOllama={runOllamaCheck} onJoseExecutionState={(state: string, message: string) => setJoseCompanionState({ state, message })} onOpenSettings={() => switchTab('settings')} onModelChange={(modelName: string) => setSettings((current: any) => ({ ...current, selectedModel: modelName }))} onProviderChange={(provider: string) => setSettings((current: any) => ({ ...current, selectedProvider: provider, selectedModel: '' }))} screenObserverLogs={screenObserverLogs} setActiveTab={switchTab} onPendingCountChange={setPendingApprovalCount} />
                   </Suspense>
                 )}
                 {activeTab === 'miya' && (
