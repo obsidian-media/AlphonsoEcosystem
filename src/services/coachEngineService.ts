@@ -10,6 +10,7 @@ import { listConnectors } from './connectors/connectorRegistry';
 import { listSkillPacks, getSkillPackLastInvoked } from './skillPackService';
 import { getLicenseDenialLog } from './licenseService';
 import { generateOllamaResponse, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { recordCoachHistory } from './coachHistoryService';
 
 export type MessageStyle = 'direct' | 'balanced' | 'gentle';
 
@@ -434,25 +435,89 @@ export function detectLicenseWall(style: MessageStyle = 'balanced'): CoachSignal
 
 // ── Detector registration ──────────────────────────────────────────────
 
-const DETECTORS: ((style?: MessageStyle) => CoachSignal | null)[] = [
-  detectApprovalTheater,
-  detectLateNightApproval,
-  detectRepeatedPipelineFailure,
-  detectConfidenceDecay,
-  detectApprovalRubberStamp,
-  detectDeadLetterGraveyard,
-  detectLongUnbrokenSession,
-  detectAgentWhiplash,
-  detectBoardroomHedgePileup,
-  detectUnusedSurfaceArea,
-  detectLicenseWall,
+const DETECTOR_ENTRIES: { id: string; detect: (style?: MessageStyle) => CoachSignal | null }[] = [
+  { id: 'critical_override_pattern', detect: detectApprovalTheater },
+  { id: 'late_night_approval', detect: detectLateNightApproval },
+  { id: 'repeated_pipeline_failure', detect: detectRepeatedPipelineFailure },
+  { id: 'confidence_decay', detect: detectConfidenceDecay },
+  { id: 'approval_rubber_stamp', detect: detectApprovalRubberStamp },
+  { id: 'dead_letter_graveyard', detect: detectDeadLetterGraveyard },
+  { id: 'long_unbroken_session', detect: detectLongUnbrokenSession },
+  { id: 'agent_whiplash', detect: detectAgentWhiplash },
+  { id: 'boardroom_hedge_pileup', detect: detectBoardroomHedgePileup },
+  { id: 'unused_surface_area', detect: detectUnusedSurfaceArea },
+  { id: 'license_wall', detect: detectLicenseWall },
 ];
 
+export const ALL_COACH_TRIGGER_IDS: string[] = DETECTOR_ENTRIES.map((e) => e.id);
+
+// ── Phase 5: master toggle, per-trigger toggles, snooze ────────────────
+export const COACH_ENABLED_KEY = 'alphonso_coach_enabled_v1';
+export const COACH_TRIGGER_TOGGLES_KEY = 'alphonso_coach_trigger_toggles_v1';
+export const COACH_SNOOZE_UNTIL_KEY = 'alphonso_coach_snooze_until_v1';
+
+export function getCoachEnabled(): boolean {
+  try {
+    const stored = localStorage.getItem(COACH_ENABLED_KEY);
+    return stored === null ? true : stored === 'true';
+  } catch { return true; }
+}
+
+export function setCoachEnabled(enabled: boolean): void {
+  try { localStorage.setItem(COACH_ENABLED_KEY, String(enabled)); } catch { /* ignore */ }
+}
+
+function readTriggerToggles(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(COACH_TRIGGER_TOGGLES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+export function isCoachTriggerEnabled(triggerId: string): boolean {
+  const toggles = readTriggerToggles();
+  return toggles[triggerId] !== false;
+}
+
+export function setCoachTriggerEnabled(triggerId: string, enabled: boolean): void {
+  const toggles = readTriggerToggles();
+  toggles[triggerId] = enabled;
+  try { localStorage.setItem(COACH_TRIGGER_TOGGLES_KEY, JSON.stringify(toggles)); } catch { /* ignore */ }
+}
+
+export function getAllCoachTriggerToggles(): Record<string, boolean> {
+  const toggles = readTriggerToggles();
+  const result: Record<string, boolean> = {};
+  for (const id of ALL_COACH_TRIGGER_IDS) result[id] = toggles[id] !== false;
+  return result;
+}
+
+export function getCoachSnoozeUntilMs(): number {
+  try { return Number(localStorage.getItem(COACH_SNOOZE_UNTIL_KEY) || 0); } catch { return 0; }
+}
+
+export function setCoachSnoozeHours(hours: number): void {
+  try { localStorage.setItem(COACH_SNOOZE_UNTIL_KEY, String(Date.now() + hours * 60 * 60 * 1000)); } catch { /* ignore */ }
+}
+
+export function clearCoachSnooze(): void {
+  try { localStorage.removeItem(COACH_SNOOZE_UNTIL_KEY); } catch { /* ignore */ }
+}
+
+export function isCoachSnoozed(): boolean {
+  return Date.now() < getCoachSnoozeUntilMs();
+}
+
 export function runCoachDetectors(style?: MessageStyle): CoachSignal | null {
+  if (!getCoachEnabled() || isCoachSnoozed()) return null;
   const resolvedStyle = style ?? getCoachMessageStyle();
-  for (const detect of DETECTORS) {
+  for (const { id, detect } of DETECTOR_ENTRIES) {
+    if (!isCoachTriggerEnabled(id)) continue;
     const signal = detect(resolvedStyle);
-    if (signal) return signal;
+    if (signal) {
+      recordCoachHistory(signal);
+      return signal;
+    }
   }
   return null;
 }
