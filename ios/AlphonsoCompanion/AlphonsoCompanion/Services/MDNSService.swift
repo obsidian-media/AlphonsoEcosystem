@@ -89,14 +89,17 @@ class MDNSService: ObservableObject {
                 case .ready:
                     // Once connected, we can get the actual endpoint
                     if case .hostPort(let host, let port) = connection.currentPath?.remoteEndpoint {
-                        let hostname = "\(host)"
+                        let hostname = Self.sanitizedHostString(from: host)
                         let portValue = UInt16(port.rawValue)
+                        print("[MDNSService] Resolved \(host.name) -> raw=\(host) sanitized=\(hostname) port=\(portValue)")
                         completion(.success((hostname, portValue)))
                     } else {
+                        print("[MDNSService] No remote endpoint on ready connection for \(host.name)")
                         completion(.failure(.endpointUnavailable))
                     }
                     connection.cancel()
                 case .failed(let error):
+                    print("[MDNSService] Resolution connection failed for \(host.name): \(error)")
                     completion(.failure(.failed(error)))
                     connection.cancel()
                 default:
@@ -104,7 +107,34 @@ class MDNSService: ObservableObject {
                 }
             }
         }
-        
+
         connection.start(queue: .main)
+    }
+
+    /// Converts a resolved `NWEndpoint.Host` into a string safe to hand to `URLComponents.host`.
+    ///
+    /// `"\(host)"` on an `.ipv6` case can include a zone/scope id (e.g. `fe80::1%en0`) appended
+    /// by the system when the address is only reachable via a specific interface. The `%`
+    /// character is not valid in a URI host component (RFC 3986 / RFC 6874 requires it to be
+    /// percent-encoded as `%25<zone>`), so passing it straight through makes
+    /// `URLComponents.url` return `nil` — which is the "Could not form websocket URL" failure.
+    /// Stripping the zone id here keeps IPv6 hosts usable for standard URL construction; the
+    /// (rare, link-local-address) tradeoff is documented in the deferred-work register.
+    /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
+    static func sanitizedHostString(from host: NWEndpoint.Host) -> String {
+        switch host {
+        case .ipv4(let address):
+            return "\(address)"
+        case .ipv6(let address):
+            let raw = "\(address)"
+            if let zoneSeparator = raw.firstIndex(of: "%") {
+                return String(raw[..<zoneSeparator])
+            }
+            return raw
+        case .name(let name, _):
+            return name
+        @unknown default:
+            return "\(host)"
+        }
     }
 }

@@ -30,6 +30,8 @@
 		B1000002 /* CompanionConnectionStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002 /* CompanionConnectionStateMachineTests.swift */; };
 		B1000003 /* VoiceSessionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005 /* VoiceSessionViewModelTests.swift */; };
 		B1000004 /* OperationsSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000006 /* OperationsSnapshotTests.swift */; };
+		B1000005 /* WebSocketServiceURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000007 /* WebSocketServiceURLTests.swift */; };
+		B1000006 /* MDNSServiceHostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000008 /* MDNSServiceHostTests.swift */; };
 		C1000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C2000003 /* XCTest.framework */; };
 		C1000002 /* AlphonsoCompanionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* AlphonsoCompanionUITests.swift */; };
 /* End PBXBuildFile section */
@@ -59,6 +61,8 @@
 		B2000002 /* CompanionConnectionStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionConnectionStateMachineTests.swift; sourceTree = "<group>"; };
 		B2000005 /* VoiceSessionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionViewModelTests.swift; sourceTree = "<group>"; };
 		B2000006 /* OperationsSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsSnapshotTests.swift; sourceTree = "<group>"; };
+		B2000007 /* WebSocketServiceURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketServiceURLTests.swift; sourceTree = "<group>"; };
+		B2000008 /* MDNSServiceHostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MDNSServiceHostTests.swift; sourceTree = "<group>"; };
 		B2000003 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 		B2000004 /* AlphonsoCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlphonsoCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2000001 /* AlphonsoCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphonsoCompanionUITests.swift; sourceTree = "<group>"; };
@@ -170,6 +174,8 @@
 				B2000002 /* CompanionConnectionStateMachineTests.swift */,
 				B2000005 /* VoiceSessionViewModelTests.swift */,
 				B2000006 /* OperationsSnapshotTests.swift */,
+				B2000007 /* WebSocketServiceURLTests.swift */,
+				B2000008 /* MDNSServiceHostTests.swift */,
 			);
 			path = AlphonsoCompanionTests;
 			sourceTree = "<group>";
@@ -318,6 +324,8 @@
 				B1000002 /* CompanionConnectionStateMachineTests.swift in Sources */,
 				B1000003 /* VoiceSessionViewModelTests.swift in Sources */,
 				B1000004 /* OperationsSnapshotTests.swift in Sources */,
+				B1000005 /* WebSocketServiceURLTests.swift in Sources */,
+				B1000006 /* MDNSServiceHostTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
