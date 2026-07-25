@@ -28,7 +28,9 @@ import {
   classifyOllamaError,
   generateOllamaChatStream
 } from '../lib/ollama';
-import { OllamaModelPicker } from './ModelSwitcher';
+import { OllamaModelPicker, ModelProviderPicker, type ModelProviderId } from './ModelSwitcher';
+import { isNvidiaConfigured, sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
+import { isGeminiConfigured, sendGeminiMessage } from '../services/connectors/geminiConnector';
 import { listConnectors } from '../services/connectorRegistryService';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
@@ -213,6 +215,7 @@ interface ChatViewProps {
   onJoseExecutionState?: (state: string, detail?: string) => void;
   onOpenSettings: () => void;
   onModelChange?: (model: string) => void;
+  onProviderChange?: (provider: string) => void;
   screenObserverLogs?: unknown[];
   setActiveTab?: (tab: string) => void;
   onPendingCountChange?: (count: number) => void;
@@ -232,6 +235,7 @@ export function ChatView({
   onJoseExecutionState,
   onOpenSettings,
   onModelChange,
+  onProviderChange,
   screenObserverLogs = [],
   setActiveTab,
   onPendingCountChange
@@ -459,7 +463,13 @@ export function ChatView({
     }
   }, [messages, isGenerating, settings.autoScroll]);
 
-  const modelReady = settings.selectedModel && !selectedModelMissing;
+  const selectedProvider = ((settings.selectedProvider as string) || 'ollama') as ModelProviderId;
+  const cloudProviderConfigured = selectedProvider === 'nvidia_nim' ? isNvidiaConfigured()
+    : selectedProvider === 'gemini' ? isGeminiConfigured()
+    : true;
+  const modelReady = selectedProvider === 'ollama'
+    ? Boolean(settings.selectedModel) && !selectedModelMissing
+    : Boolean(settings.selectedModel) && cloudProviderConfigured;
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -632,13 +642,16 @@ export function ChatView({
     }
 
     if (!modelReady) {
+      const providerLabel = selectedProvider === 'nvidia_nim' ? 'NVIDIA NIM' : 'Gemini';
       setMessages((current) => [...current, {
         id: nextMsgId(),
         role: 'assistant',
         isError: true,
-        content: selectedModelMissing
-          ? `Model not found: ${settings.selectedModel}. Choose one of the installed models: ${installedModels.map((model) => model.name).join(', ')}.`
-          : 'No Ollama model is selected. Run Check Ollama and choose an installed model.'
+        content: selectedProvider !== 'ollama'
+          ? `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
+          : selectedModelMissing
+            ? `Model not found: ${settings.selectedModel}. Choose one of the installed models: ${installedModels.map((model) => model.name).join(', ')}.`
+            : 'No Ollama model is selected. Run Check Ollama and choose an installed model.'
       }]);
       return;
     }
@@ -668,31 +681,61 @@ export function ChatView({
 
     abortRef.current = new AbortController();
     try {
-      await generateOllamaChatStream({
-        endpoint: settings.endpoint as string,
-        model: settings.selectedModel as string,
-        messages: chatMessages,
-        signal: abortRef.current.signal,
-        onToken: (_tok, full) => {
+      if (selectedProvider === 'ollama') {
+        await generateOllamaChatStream({
+          endpoint: settings.endpoint as string,
+          model: settings.selectedModel as string,
+          messages: chatMessages,
+          signal: abortRef.current.signal,
+          onToken: (_tok, full) => {
+            setMessages((current) => current.map((msg) =>
+              msg.id === assistantMsgId ? { ...msg, content: full } : msg
+            ));
+          }
+        });
+        setMessages((current) => current.map((msg) => {
+          if (msg.id !== assistantMsgId) return msg;
+          return msg.content ? msg : { ...msg, content: 'Ollama returned an empty response.' };
+        }));
+        onTaskComplete();
+      } else {
+        // NVIDIA NIM / Gemini free-tier connectors are single-shot (no SSE
+        // streaming) — deliver the full reply in one update rather than
+        // faking a token stream.
+        const providerLabel = selectedProvider === 'nvidia_nim' ? 'NVIDIA NIM' : 'Gemini';
+        const sendCloudMessage = selectedProvider === 'nvidia_nim' ? sendNvidiaMessage : sendGeminiMessage;
+        const result = await sendCloudMessage(chatMessages, { model: settings.selectedModel as string });
+        if (!result.ok) {
           setMessages((current) => current.map((msg) =>
-            msg.id === assistantMsgId ? { ...msg, content: full } : msg
+            msg.id === assistantMsgId
+              ? { ...msg, isError: true, content: `${providerLabel} is rate-limited right now (free tier). Try again shortly, or switch to Ollama.` }
+              : msg
           ));
+        } else {
+          setMessages((current) => current.map((msg) =>
+            msg.id === assistantMsgId ? { ...msg, content: result.content || `${providerLabel} returned an empty response.` } : msg
+          ));
+          onTaskComplete();
         }
-      });
-      setMessages((current) => current.map((msg) => {
-        if (msg.id !== assistantMsgId) return msg;
-        return msg.content ? msg : { ...msg, content: 'Ollama returned an empty response.' };
-      }));
-      onTaskComplete();
+      }
     } catch (error) {
-      const classified = classifyOllamaError(error);
-      setMessages((current) => current.map((msg) =>
-        msg.id === assistantMsgId
-          ? { ...msg, isError: true, content: `${classified.label}\n\n${classified.message}\n\nPowerShell:\n${OLLAMA_TROUBLESHOOTING_COMMAND}` }
-          : msg
-      ));
-      // Persist the user message offline so it can be retried when Ollama comes back
-      saveMessageOffline({ role: 'user', content: cleanInput }).catch(() => {});
+      if (selectedProvider === 'ollama') {
+        const classified = classifyOllamaError(error);
+        setMessages((current) => current.map((msg) =>
+          msg.id === assistantMsgId
+            ? { ...msg, isError: true, content: `${classified.label}\n\n${classified.message}\n\nPowerShell:\n${OLLAMA_TROUBLESHOOTING_COMMAND}` }
+            : msg
+        ));
+        // Persist the user message offline so it can be retried when Ollama comes back
+        saveMessageOffline({ role: 'user', content: cleanInput }).catch(() => {});
+      } else {
+        const providerLabel = selectedProvider === 'nvidia_nim' ? 'NVIDIA NIM' : 'Gemini';
+        setMessages((current) => current.map((msg) =>
+          msg.id === assistantMsgId
+            ? { ...msg, isError: true, content: `${providerLabel} request failed.\n\n${String(error)}` }
+            : msg
+        ));
+      }
     } finally {
       abortRef.current = null;
       setIsGenerating(false);
@@ -777,9 +820,17 @@ export function ChatView({
       <div className="border-b border-[var(--border)] shrink-0 bg-[var(--surface-0)]">
         <div className="h-12 flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <OllamaModelPicker
-              initialModel={settings.selectedModel as string | undefined}
-              onModelChange={onModelChange}
+            <ModelProviderPicker
+              provider={selectedProvider}
+              onProviderChange={(provider) => onProviderChange?.(provider)}
+              selectedModel={settings.selectedModel as string || ''}
+              onModelChange={(model) => onModelChange?.(model)}
+              ollamaPicker={
+                <OllamaModelPicker
+                  initialModel={settings.selectedModel as string | undefined}
+                  onModelChange={onModelChange}
+                />
+              }
             />
             <button
               onClick={() => setDirectMode((d) => !d)}
