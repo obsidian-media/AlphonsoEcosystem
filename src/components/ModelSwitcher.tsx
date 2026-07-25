@@ -285,13 +285,20 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      import('../services/connectors/nvidiaNimConnector').then((m) => m.isNvidiaConfigured()),
-      import('../services/connectors/geminiConnector').then((m) => m.isGeminiConfigured())
-    ]).then(([nvidia, gemini]) => {
-      if (!cancelled) setConfigured({ nvidia_nim: nvidia, gemini });
-    }).catch(() => { /* leave both false — treated as unconfigured */ });
-    return () => { cancelled = true; };
+    const checkConfigured = () => {
+      Promise.all([
+        import('../services/connectors/nvidiaNimConnector').then((m) => m.isNvidiaConfigured()),
+        import('../services/connectors/geminiConnector').then((m) => m.isGeminiConfigured())
+      ]).then(([nvidia, gemini]) => {
+        if (!cancelled) setConfigured({ nvidia_nim: nvidia, gemini });
+      }).catch(() => { /* leave as-is — treated as unconfigured until a successful check */ });
+    };
+    checkConfigured();
+    // A credential saved in Settings while this component stays mounted
+    // (e.g. ChatView never unmounts) wouldn't otherwise be picked up until
+    // a remount — re-check whenever the window regains focus.
+    window.addEventListener('focus', checkConfigured);
+    return () => { cancelled = true; window.removeEventListener('focus', checkConfigured); };
   }, []);
 
   const isConfigured = (id: ModelProviderId) => id === 'ollama' || configured[id as CloudProvider];

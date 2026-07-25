@@ -77,4 +77,20 @@ describe('ModelProviderPicker', () => {
       expect(screen.getByText('meta/llama-3.1-8b-instruct')).toBeInTheDocument();
     });
   });
+
+  it('re-checks configured status on window focus, so a credential added elsewhere is picked up without a remount', async () => {
+    const { isGeminiConfigured } = await import('../services/connectors/geminiConnector');
+    render(<ModelProviderPicker provider="ollama" onProviderChange={() => {}} selectedModel="" onModelChange={() => {}} ollamaPicker={<div>ollama-picker</div>} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Gemini').closest('button')).toBeDisabled();
+    });
+
+    isGeminiConfigured.mockReturnValueOnce(true);
+    fireEvent(window, new Event('focus'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Gemini').closest('button')).not.toBeDisabled();
+    });
+  });
 });
