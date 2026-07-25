@@ -59,7 +59,9 @@ class WebSocketService: ObservableObject {
             shouldReconnect = false
             connectionState = connectionMachine.connectionState
             errorMessage = "Invalid host or port"
-            connectionHint = "Could not form websocket URL"
+            // Surfaced on-screen (not just via print()) so this is diagnosable from a device
+            // with no paired Mac / Console.app access — see docs/governance/DEFERRED_WORK.md.
+            connectionHint = "Could not build ws:// URL for host=\"\(host)\" port=\(port)"
             return
         }
         webSocketTask = session.webSocketTask(with: url)
@@ -426,11 +428,19 @@ class WebSocketService: ObservableObject {
         UserDefaults.standard.set(data, forKey: key)
     }
 
-    private static func makeWebSocketURL(host: String, port: UInt16) -> URL? {
+    /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
+    static func makeWebSocketURL(host: String, port: UInt16) -> URL? {
         var components = URLComponents()
         components.scheme = "ws"
-        components.host = host
         components.port = Int(port)
-        return components.url
+        // IPv6 literals (e.g. "fe80::1") must be wrapped in brackets for URLComponents to
+        // produce a valid URL — see Apple's URLComponents.host documentation.
+        let isBareIPv6Literal = host.contains(":") && !host.hasPrefix("[")
+        components.host = isBareIPv6Literal ? "[\(host)]" : host
+        guard let url = components.url else {
+            print("[WebSocketService] Failed to construct ws:// URL for host=\"\(host)\" port=\(port) bracketed=\(isBareIPv6Literal)")
+            return nil
+        }
+        return url
     }
 }
