@@ -57,11 +57,51 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     blockers in Ground Truth and the release evidence.
   - **Done when:** every result is PASS, FAIL, BLOCKED, or time-bounded ADVISORY;
     none is implied by an older result.
-  - **Evidence:** [Release Verification — 2026-07-22](RELEASE_VERIFICATION_2026-07-22.md)
-    records passing Windows compile/test/Clippy, fresh-worktree Vitest, web,
-    docs, and E2E checks. It remains PARTIAL because `cargo audit --deny
-    warnings` reports 17 denied findings and verification used Node 25 rather
-    than the repository-pinned Node 22 runtime.
+  - **Evidence (2026-07-25, commit `873e4c5`, Windows `x86_64-pc-windows-msvc`,
+    Node v25.9.0):** every command below was run in full this pass, not
+    inferred from an older result:
+    - `npm run lint` — PASS, clean.
+    - `npm run test` — PASS, 255 files / 3,746 tests, 0 failures, 261s
+      (`scripts/run-vitest-programmatic.mjs`, one fork, file parallelism off).
+    - `npm run build` — PASS, 35.6s (only pre-existing informational Rollup
+      warnings: 3 `INEFFECTIVE_DYNAMIC_IMPORT`, 1 `PLUGIN_TIMINGS`).
+    - `npx tsc --noEmit` — PASS, clean.
+    - `npm run verify:docs` — FAIL on first run this pass (a real, legitimate
+      catch: this session's C3 work added a 255th test file and neither
+      `README.md`/`AGENTS.md` nor the checker's own hardcoded
+      `CURRENT_TOTAL_TESTS` constant had been updated to match) — fixed
+      (`scripts/verify-doc-counts.mjs`, `README.md`, `AGENTS.md`), then PASS.
+    - `npm run verify:skill-matrix` — PASS (new C3 check).
+    - `cargo check --target x86_64-pc-windows-msvc` — PASS, 5m41s.
+    - `cargo test --target x86_64-pc-windows-msvc` — PASS, 111/111.
+    - `cargo clippy --target x86_64-pc-windows-msvc -- -D warnings` — PASS,
+      3m43s, zero warnings.
+    - `cargo fmt --all -- --check` — PASS, clean.
+    - `npm audit` — PASS, 0 vulnerabilities.
+    - GitHub Dependabot alerts (`gh api .../dependabot/alerts`) — 1 open,
+      medium, `glib` (Rust, RUSTSEC-2024-0429) — matches B1's existing
+      tracked finding, no new alerts.
+    - `cargo audit --file Cargo.lock --deny warnings` (CI's exact command) —
+      **FAIL, exit 1, 17 denied warnings** (16 "unmaintained" +1 "unsound",
+      no CVE-severity vulnerabilities). Cross-checked against GitHub Actions
+      directly: the last real CI run of this exact step on `main`
+      (`gh run view 30154765984`, 2026-07-25T10:36 UTC, ~2h before this
+      check) **passed with zero findings** against the same `Cargo.lock`.
+      The RustSec advisory-db a local `cargo audit` fetches live gained these
+      17 entries in the time between that CI run and this check — a
+      time-of-check dependency, not a code regression. Full triage in B1.
+    - `npm run test:e2e` (Playwright, production preview build) — PASS,
+      28/28, 1.3m, `--retries` default.
+  - **Node version note:** this environment has no `nvm`/`fnm`; Node 22 (the
+    version pinned in `.nvmrc`) could not be installed to re-verify against
+    it this pass. Still an open, honestly-unresolved gap, carried forward
+    from the 2026-07-22 evidence rather than silently dropped.
+  - **Still PARTIAL, not fully DONE:** the `cargo audit --deny warnings`
+    failure above is real and current; A1 cannot be marked `[x]` until B1
+    resolves or formally, time-boundedly excepts it (dependency-advisory
+    triage is B1's job, not A1's — recording the true current state here is
+    the acceptance criterion this task actually asks for).
+  - Prior evidence: [Release Verification — 2026-07-22](RELEASE_VERIFICATION_2026-07-22.md).
 
 - [x] **A2 — Make the Vitest suite deterministic**
   - **Owner:** Alphonso
