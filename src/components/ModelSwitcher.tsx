@@ -233,7 +233,6 @@ export function CloudModelPicker({ provider, selectedModel, onModelChange }: Clo
       if (!cancelled) { setModels([]); setLoading(false); }
     });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
   if (loading) {
