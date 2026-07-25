@@ -8,6 +8,10 @@ const SETTINGS_KEY = 'alphonso_settings';
 const policyCache = new MemoryCache({ maxSize: 500 });
 const RISK_CACHE_TTL = 300000;
 
+// nvidia_nim and gemini are intentionally NOT in this set — both are
+// genuinely free-tier (rate-limited, not billed on overage) as of
+// 2026-07-25. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md
+// before adding them here or removing them from here.
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
