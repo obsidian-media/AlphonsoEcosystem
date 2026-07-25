@@ -314,6 +314,10 @@ export async function checkConnectorHealth(connectorId: string, options: { botTo
       return checkApiKeyConfigured('tavily', 'TAVILY_API_KEY', 'Tavily');
     case 'deepseek':
       return checkApiKeyConfigured('deepseek', 'DEEPSEEK_API_KEY', 'DeepSeek');
+    case 'nvidia_nim':
+      return checkApiKeyConfigured('nvidia_nim', 'NVIDIA_API_KEY', 'NVIDIA NIM');
+    case 'gemini':
+      return checkApiKeyConfigured('gemini', 'GEMINI_API_KEY', 'Gemini');
     default:
       return {
         ok: false,
