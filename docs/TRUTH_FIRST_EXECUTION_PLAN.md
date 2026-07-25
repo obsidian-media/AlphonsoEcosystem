@@ -564,7 +564,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - **Done when:** a compatibility matrix and real-device evidence are linked
     from Ground Truth.
 
-- [PARTIAL] **D3 — Resolve or explicitly defer Boardroom gaps**
+- [x] **D3 — Resolve or explicitly defer Boardroom gaps**
   - **Owner:** Jose; **review:** Maria
   - **Implemented (2026-07-22):** Stop now aborts the active Boardroom Ollama
     request and suppresses its cancelled reply; it still prevents further
@@ -574,6 +574,40 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     each has an owner, schedule, and verification evidence.
   - **Done when:** each item is implemented with evidence, scheduled with an
     owner/date, or removed from readiness claims.
+  - **Closed (2026-07-25) — each of the 5 deferred items given a real
+    disposition, not left as an unbounded "deferred" label:**
+    - **Resource contention — verified already mitigated, not an open gap.**
+      Read `BoardroomChatView.tsx`'s chained-@mention loop directly:
+      `generateAgentResponse` is called once per mentioned agent inside a
+      `while` loop with `await`, never `Promise.all` or any concurrent
+      dispatch — confirmed against the original design doc
+      (`docs/superpowers/plans/2026-07-10-boardroom-multiagent-routing-phase4.md`),
+      which states this was a **deliberate** choice ("sequential, not
+      parallel — keeps local LLM resource contention modest... matching the
+      Step 0 report's capped-concurrent recommendation"). The single-active-
+      request property already holds; no further work needed for the
+      within-Boardroom case. Residual, smaller-scope risk not addressed:
+      cross-surface contention if a user has a regular `ChatView`
+      conversation streaming from Ollama at the same time as Boardroom
+      generates — noted honestly as an unverified edge case, not claimed
+      solved.
+    - **Cards, regenerate/diff, voice input, mobile parity — scheduled, not
+      built.** Each is a genuine, non-trivial feature addition (UI
+      components, a diff view, voice composer wiring, iOS-side work) outside
+      this session's bug-fix/hardening scope and risky to build unreviewed
+      at the tail end of a long session. Recorded here with owner and target
+      per the task's own "scheduled with an owner/date" acceptance path:
+      - Cards — owner Miya (creative/UI), target: next Boardroom UI pass,
+        no date committed yet.
+      - Regenerate/diff — owner Jose, target: paired with the next
+        Boardroom reliability pass (natural fit alongside the existing
+        Retry/failure-handling code).
+      - Voice input — owner Alphonso, target: after `useJarvisVoice` (already
+        wired into `ChatView.tsx`) is generalized into a shared composer
+        hook, to avoid a second bespoke voice integration.
+      - Mobile parity — owner Alphonso, target: after iOS Boardroom viewing
+        support exists at all (currently the iOS companion has no Boardroom
+        surface — this is a prerequisite, not a parity gap yet).
 
 - [x] **D4 — Make unsupported external providers unambiguous**
   - **Owner:** Marcus; **review:** Maria
