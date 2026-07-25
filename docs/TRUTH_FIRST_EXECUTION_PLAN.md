@@ -48,7 +48,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 
 ### A. Verification and release truth
 
-- [~] **A1 — Produce a reproducible full verification baseline**
+- [x] **A1 — Produce a reproducible full verification baseline**
   - **Owner:** Alphonso (execution), Jose (coordination), Maria (evidence review)
   - Run `npm run lint`, `npm run test`, `npm run build`, `npm run verify:docs`,
     `cargo check`, `cargo test`, `cargo clippy -- -D warnings`, dependency
@@ -96,11 +96,14 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     version pinned in `.nvmrc`) could not be installed to re-verify against
     it this pass. Still an open, honestly-unresolved gap, carried forward
     from the 2026-07-22 evidence rather than silently dropped.
-  - **Still PARTIAL, not fully DONE:** the `cargo audit --deny warnings`
-    failure above is real and current; A1 cannot be marked `[x]` until B1
-    resolves or formally, time-boundedly excepts it (dependency-advisory
-    triage is B1's job, not A1's — recording the true current state here is
-    the acceptance criterion this task actually asks for).
+  - **Closed (2026-07-25, after B1):** B1 added a per-advisory-ID `--ignore`
+    list to CI's exact audit command; re-ran the exact same command locally
+    afterward and confirmed 17 findings → 0, exit 0. Every A1 acceptance
+    command now genuinely passes: lint, test (255/3,746), build, typecheck,
+    verify:docs, verify:skill-matrix, cargo check/test/clippy/fmt, npm audit,
+    cargo audit (post-B1), and E2E (28/28). The Node 22 vs 25 gap remains the
+    one honestly-unresolved environment limitation, carried forward rather
+    than silently dropped or claimed fixed.
   - Prior evidence: [Release Verification — 2026-07-22](RELEASE_VERIFICATION_2026-07-22.md).
 
 - [x] **A2 — Make the Vitest suite deterministic**
@@ -165,7 +168,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 
 ### B. Dependency and security hardening
 
-- [~] **B1 — Triage and close dependency advisories**
+- [x] **B1 — Triage and close dependency advisories**
   - **Owner:** Sentinel; **execution:** Alphonso
   - Identify the two moderate Dependabot findings, dependency paths,
     exploitability, upgrades, and test impact. Upgrade, replace, or create a
@@ -185,6 +188,37 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     Linux GTK3/WebKit transitive unmaintained crates, `glib` unsoundness, and
     unmaintained Unicode/proc-macro transitive crates. The full list and release
     impact are recorded in `RELEASE_VERIFICATION_2026-07-22.md`.
+  - **Full triage closed (2026-07-25):** identified the exact dependency path
+    for all 17 (not assumed from the count alone) via `cargo tree -i
+    <crate> --target x86_64-unknown-linux-gnu` for each: (1) 12 advisories
+    (`atk`, `atk-sys`, `gdk`, `gdk-sys`, `gdkwayland-sys`, `gdkx11`,
+    `gdkx11-sys`, `gtk`, `gtk-sys`, `gtk3-macros`, `proc-macro-error`,
+    `glib` — includes the tracked Dependabot #3) trace to a single path:
+    `tauri 2.11.5` → `tray-icon 0.24.1` → `libappindicator 0.9.0` →
+    `gtk 0.18.2`, Tauri's Linux system-tray implementation; (2) 5 advisories
+    (`unic-char-property`, `unic-char-range`, `unic-common`,
+    `unic-ucd-ident`, `unic-ucd-version`) trace to `tauri 2.11.5` →
+    `tauri-utils 2.9.3` → `urlpattern 0.3.0`. Confirmed, not assumed, that no
+    upgrade is available in our control: `cargo update -p tauri --dry-run`
+    and `cargo update -p tauri-utils --dry-run` both report nothing newer —
+    `tauri 2.11.5` is already the latest compatible 2.x release, and
+    `tray-icon 0.24.1` is already latest on crates.io. A newer `urlpattern
+    0.6.0` exists but `tauri-utils` pins the `0.3.x` range; only an upstream
+    Tauri release can move that pin. Severity: all 17 are RustSec
+    "unmaintained"/"unsound" warnings, zero are CVE-severity exploitable
+    vulnerabilities. Disposition: explicit per-advisory-ID `--ignore` list
+    added to the `Security audit (cargo)` step in `.github/workflows/ci.yml`
+    (not a blanket `--deny` downgrade, not a crate-name ignore, not a config
+    file — `audit.toml` auto-discovery was tried and confirmed non-functional
+    against the installed `cargo-audit 0.22.2` before being discarded rather
+    than left in place looking like a fix that doesn't work) — each of the
+    17 RUSTSEC IDs is individually named with an inline comment recording
+    crate, warning type, and dependency chain, so any NEW/different advisory
+    against these same crates still fails CI immediately. Expiry: re-check on
+    the next `tauri`/`tray-icon` release, or by 2026-10-25 regardless.
+    Verified locally with the exact CI command before committing: 17 findings
+    → 0, exit 0, `cargo audit --file src-tauri/Cargo.lock --deny warnings`
+    plus all 17 `--ignore` flags.
 
 - [x] **B2 — Verify connector DSL default-deny behavior**
   - **Owner:** Sentinel; **review:** Maria
