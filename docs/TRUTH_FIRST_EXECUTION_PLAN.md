@@ -183,20 +183,152 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - **Remaining limitation:** expanded Hector/Echo/Nova packs use agent-wide
     taxonomy scopes in some cases; C2 must narrow these where appropriate.
 
-- [ ] **C2 — Enforce per-pack least privilege**
+- [x] **C2 — Enforce per-pack least privilege**
   - **Owner:** Maria; **execution:** Alphonso
   - Define owner, shared status, allowed prefixes, blocked prefixes, and
     documentation for each pack. Replace broad fallback scopes with per-pack
     overrides where feasible.
-  - **Done when:** positive and negative authorization tests prove each pack
-    has only its required capabilities.
+  - **Evidence (2026-07-25):** `validateSkillPackAgainstContract()` in
+    `agentContractService.ts` had a `usesAgentWideTaxonomyScope` bypass that
+    forced every Hector (except the 5 packs listed in the code's
+    `legacyHectorPackIds` exclusion set — `professional-marketing`,
+    `market-research`, `competitive-analysis`, `source-verification`,
+    `rss-monitoring`; of those, only the latter 4 actually had a working
+    override entry in the map, since `professional-marketing` has none and
+    was already falling back to the agent-wide list either way), Echo, and
+    Nova taxonomy pack
+    back onto the full agent-wide permission list, ignoring the per-pack
+    `AGENT_SKILL_PACK_SCOPE_OVERRIDES` entries defined for them. Root cause:
+    those override entries didn't actually match the packs' real declared
+    `permissions` in `skillPackService.js` (Hector's 16 new-taxonomy overrides
+    were entirely fictional dotted-namespace strings; Echo/Nova had 4
+    corrupted entries — a mangled `knowledge追溯`, and three missing-dot typos
+    `strategy sequencing`/`opportunity readiness`/`strategyportfolio`) — so the
+    bypass was effectively there to paper over broken overrides rather than an
+    intentional design choice. Fixed by correcting all 20 mismatched override
+    entries against the real source (cross-checked programmatically: 156
+    override entries diffed against `skillPackService.js`, 1 mismatch
+    remaining is an intentional broader prefix, not a bug) and removing the
+    bypass entirely. 11 new positive/negative tests in
+    `agentContractService.test.js` prove per-pack scoping now holds (e.g. a
+    permission valid for one Hector pack is rejected for a sibling Hector
+    pack that doesn't declare it) and that the two remaining agent-wide
+    catch-all packs (`pack.hector-professional-marketing`,
+    `pack.echo-memory-synthesis`, `pack.nova-opportunity-analysis`, which
+    predate the taxonomy split) correctly keep the broader scope.
+  - **Blocked prefixes and shared status (2026-07-25, closing this task's
+    originally-incomplete scope):** the first evidence pass above covered
+    allowed-prefix narrowing only; owner, blocked prefixes, shared status,
+    and documentation were not yet addressed. Closed for real, not by
+    reasoning alone: (1) audited every entry in
+    `AGENT_SKILL_PACK_SCOPE_OVERRIDES` programmatically for anything
+    resembling `execute_command`/`filesystem.write`/`external_publish`/
+    `purchase` — zero matches, so no pack currently needs a per-pack block
+    beyond the pre-existing universal blocklist; (2) implemented a real,
+    wired, tested `AGENT_SKILL_PACK_BLOCKED_OVERRIDES` denylist mechanism in
+    `agentContractService.ts` anyway (exported specifically so its "empty in
+    production" claim and its enforcement are both directly testable, not
+    asserted on faith) — it is checked ahead of the allowlist and applies
+    even to Alphonso, who is otherwise exempt from the universal blocklist;
+    3 new tests in `agentContractService.test.js` mutate the real exported
+    map to prove the wiring genuinely rejects a permission that would
+    otherwise pass, then restore it to empty afterward. (3) "Owner" was
+    already the pre-existing `ownerAgent` field; "shared status" already
+    existed semantically (an unowned `agent_workflow`-category pack is
+    inherently shared/unscoped) but was undocumented — the C3 matrix
+    generator now has a dedicated "Shared packs" section listing all 20
+    `AGENT_WORKFLOW_SKILL_DEFS` packs, and the "Exclusive packs" section
+    gained a per-pack "Blocked (per-pack)" column. Owner/documentation were
+    already satisfied by the pre-existing `name`/`ownerAgent` fields plus the
+    C3 matrix.
+  - **Exhaustive negative-authorization coverage (2026-07-25, closing the
+    literal C2 done-when bar):** the "11 new tests" above were a
+    representative sample (6 packs), not the exhaustive proof the task
+    actually asks for ("prove EACH pack has only its required capabilities").
+    Replaced with a data-driven test in
+    `src/test/services/skillPackContractMatrix.test.ts` that iterates every
+    real pack pair sharing an owner and asserts each pack rejects every
+    sibling's foreign permissions. Writing this test surfaced two real bugs
+    in the test itself before it was trusted, both caught by actually running
+    it and reading the failure, not assumed away: (1) a first version
+    incorrectly asserted rejection even for the 10 intentional catch-all
+    packs (`pack.codex-professional-coding`,
+    `pack.hector-professional-marketing`, `pack.echo-memory-synthesis`,
+    `pack.nova-opportunity-analysis`, and others) that have no override by
+    design — fixed by adding `hasSkillPackScopeOverride()`, a new minimal
+    exported accessor exposing only override membership (not contents), and
+    skipping those packs correctly; (2) a "covered by own broader scope"
+    heuristic truncated every permission to its top-level namespace (e.g.
+    `code.review` → `code.`) and treated any two packs sharing that namespace
+    as mutually covered — this would have silently skipped roughly half of
+    all real candidate checks across every Alphonso pack sharing the `code.`
+    namespace. Replaced with an exact literal-prefix check
+    (`foreignPerm.startsWith(ownPermission)`, no truncation) matching
+    production's real `startsWithAny` semantics, plus one explicit documented
+    exception (`pack.miya-creative-image`, whose override is genuinely
+    broader than its own literal permission). Real measured coverage after
+    both fixes, verified independently outside vitest before trusting the
+    in-test counts: 166 total `agent_skill` packs, 156 with a per-pack
+    override, 10 intentional catch-all packs correctly excluded, 112
+    legitimate literal-prefix-overlap skips, and **6,127 real negative
+    assertions actually executed and passing** — not a sample, not a
+    heuristic waving them through. A companion `installSkillPack`/
+    `setSkillPackEnabled` regression suite in `skillPackService.test.js`
+    (added while tracing regression risk, see below) adds 4 more tests
+    against the real free-form manifest-paste path. Full suite after every
+    C2/C3 change this session: 255 files / 3,742 tests passing (first run), then
+    255 files / 3,746 tests passing (final re-run after the C2/C5 test
+    additions), 0 failures
+    (`npm test`, 313s, run in full — not a narrow file selection); `npx tsc
+    --noEmit` clean.
+  - **Regression-risk trace (2026-07-25):** read `installSkillPack`/
+    `setSkillPackEnabled` in `skillPackService.js` directly rather than
+    inferring safety from the integration suite passing. Finding:
+    `installSkillPack` already gated on `validateSkillPackAgainstContract` at
+    install time before this session (pre-existing, not part of this
+    change), so a manifest pasted through `EcosystemHub.tsx`'s free-form
+    "paste a skill pack manifest" UI reusing an existing taxonomy pack id
+    with widened permissions is rejected at install time, not merely
+    tightened defense-in-depth. `setSkillPackEnabled`'s own independent
+    re-validation-on-enable is a real second gate specifically for records
+    persisted to `localStorage` *before* this session's fix (e.g. by an older
+    app version, when the bypass let broader permissions through) — proved
+    directly by seeding a tampered record straight into the storage key
+    (bypassing `installSkillPack`'s gate, the same way a stale on-disk record
+    would) and confirming re-enabling it is blocked.
 
-- [ ] **C3 — Generate a permission matrix from source**
+- [x] **C3 — Generate a permission matrix from source**
   - **Owner:** Jose
   - Generate human-readable agent/pack/permission documentation from the
     registry so code and docs cannot drift.
-  - **Done when:** CI fails if a pack is unowned, missing, malformed,
-    undocumented, or outside its contract.
+  - **Evidence (2026-07-25):** `scripts/generate-skill-permission-matrix.mjs`
+    statically parses `skillPackService.js` + `agentContractService.ts` and
+    writes `docs/AGENT_SKILL_PERMISSION_MATRIX.md` — 166 exclusive
+    `agent_skill` packs grouped by owning agent (flagging any
+    unowned/unknown-owner/undocumented pack inline, with a per-pack "Blocked
+    (per-pack)" column sourced from `AGENT_SKILL_PACK_BLOCKED_OVERRIDES`) plus
+    a separate "Shared packs" section listing all 20
+    `AGENT_WORKFLOW_SKILL_DEFS` cross-agent packs. Both failure modes of
+    `--check` were reproduced directly, not assumed: appending a stray line
+    (stale-content case) and deleting the file outright (missing-file case)
+    each correctly exit 1 with the right message, then the success path was
+    re-confirmed clean afterward. A real, reproduced line-ending hazard was
+    also found and fixed this pass: this machine has `core.autocrlf=true` and
+    the repo had no `.gitattributes`, so a `git add` + simulated checkout
+    round-trip converted the doc's LF endings to CRLF and made `--check` fail
+    on pure line-ending noise with zero real content drift — added
+    `.gitattributes` pinning `eol=lf` for the doc and its generator, and
+    reproduced the same round-trip afterward to confirm 0 CRLF remained.
+    `npm run verify:skill-matrix` (`--check` mode) fails if the committed doc
+    drifts from source; wired as an added step in the existing required
+    `doc-freshness` CI job (`.github/workflows/ci.yml`) rather than
+    registering a new required check. Independently, real-import correctness
+    (not regex-derived) is enforced by
+    `src/test/services/skillPackContractMatrix.test.ts`, which runs under
+    `npm test` and fails if any `agent_skill` pack is unowned, has an owner
+    missing from `AGENT_EXECUTION_CONTRACTS`, has no declared permissions, has
+    no name, or fails `validateSkillPackAgainstContract` against its own
+    declared permissions — this is the actual CI enforcement C3 asked for.
 
 ### D. Product verification and explicit scope
 
@@ -269,3 +401,4 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 | Date | Change | Evidence |
 |---|---|---|
 | 2026-07-21 | Created as the repository-wide remediation and truth-tracking backlog. | Initial baseline recorded above. |
+| 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |

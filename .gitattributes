@@ -1,0 +1,16 @@
+# Force LF for the generated skill-permission matrix and its generator
+# script, regardless of a checking-out machine's core.autocrlf setting.
+#
+# Why: scripts/generate-skill-permission-matrix.mjs writes the doc with a
+# literal '\n' join (LF only). verify:skill-matrix's --check mode does an
+# exact string comparison against a freshly regenerated copy. Without this
+# file, a Windows checkout with core.autocrlf=true (the default for many
+# Windows Git installs, and the setting on this machine) silently converts
+# the committed LF endings to CRLF on checkout, which makes --check report
+# "stale" on a file whose actual content never changed — a false failure
+# caused entirely by line-ending conversion, not real drift. Verified by
+# reproducing it directly: `git add` the doc, delete it, `git checkout --`
+# it back with autocrlf=true active, and --check failed with 246 lines
+# converted to CRLF and zero real content changes.
+docs/AGENT_SKILL_PERMISSION_MATRIX.md text eol=lf
+scripts/generate-skill-permission-matrix.mjs text eol=lf
