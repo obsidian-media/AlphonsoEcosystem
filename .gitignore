@@ -26,9 +26,6 @@ pnpm-debug.log*
 *.local
 *.log
 
-# Local-only Coach data
-.coach-bridge/
-coach-session-events*.json
 .vercel
 
 # Playwright outputs
