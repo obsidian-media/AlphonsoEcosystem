@@ -69,3 +69,7 @@ ALPHONSO BOARDROOM HANDOFF.pdf
 # Windows folder-view metadata
 desktop.ini
 .superpowers/
+
+# Repo governance — credential files and private audit notes
+*credential*
+audits/private/
