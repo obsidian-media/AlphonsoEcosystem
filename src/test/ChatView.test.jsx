@@ -71,7 +71,7 @@ vi.mock('../services/connectors/nvidiaNimConnector', () => ({
 
 vi.mock('../services/connectors/geminiConnector', () => ({
   isGeminiConfigured: vi.fn().mockReturnValue(true),
-  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-1.5-flash', provider: 'gemini' })
+  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-2.5-flash-lite', provider: 'gemini' })
 }));
 
 // ── Lazy / heavy sub-component mocks ─────────────────────────────────────────
@@ -276,6 +276,53 @@ describe('ChatView', () => {
     });
   });
 
+  it('does not apply a cloud provider result after Stop was clicked mid-request', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user-abort').mockReturnValueOnce('msg-assistant-abort');
+    let resolveCloud;
+    sendNvidiaMessage.mockImplementationOnce(() => new Promise((resolve) => { resolveCloud = resolve; }));
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedProvider: 'nvidia_nim', selectedModel: 'meta/llama-3.1-8b-instruct', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    const stopButton = await screen.findByRole('button', { name: /abort and stop/i });
+    fireEvent.click(stopButton);
+
+    resolveCloud({ ok: true, content: 'Hello from NVIDIA', model: 'meta/llama-3.1-8b-instruct', provider: 'nvidia_nim' });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Hello from NVIDIA')).toBeNull();
+    });
+  });
+
+  it('shows a distinct generic-failure message when a cloud result is ok:false but not rate-limited', async () => {
+    nextMsgId.mockReturnValueOnce('msg-user-3').mockReturnValueOnce('msg-assistant-3');
+    sendNvidiaMessage.mockResolvedValueOnce({ ok: false, rateLimited: false, status: 500, message: 'server error', provider: 'nvidia_nim' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedProvider: 'nvidia_nim', selectedModel: 'meta/llama-3.1-8b-instruct', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/request failed/i)).toBeTruthy();
+      expect(screen.queryByText(/rate-limited/i)).toBeNull();
+    });
+  });
+
   it('shows a rate-limited message distinct from a generic error when the cloud provider is saturated', async () => {
     nextMsgId.mockReturnValueOnce('msg-user-2').mockReturnValueOnce('msg-assistant-2');
     sendNvidiaMessage.mockResolvedValueOnce({ ok: false, rateLimited: true, status: 429, message: 'quota', provider: 'nvidia_nim' });
@@ -302,10 +349,12 @@ describe('ChatView', () => {
     render(
       <ChatView
         {...makeProps({
-          settings: { selectedProvider: 'gemini', selectedModel: 'gemini-1.5-flash', colorScheme: 'dark' }
+          settings: { selectedProvider: 'gemini', selectedModel: 'gemini-2.5-flash-lite', colorScheme: 'dark' }
         })}
       />
     );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
     fireEvent.click(screen.getByRole('button', { name: /send message/i }));
 

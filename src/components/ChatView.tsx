@@ -464,12 +464,14 @@ export function ChatView({
   }, [messages, isGenerating, settings.autoScroll]);
 
   const selectedProvider = ((settings.selectedProvider as string) || 'ollama') as ModelProviderId;
-  const cloudProviderConfigured = selectedProvider === 'nvidia_nim' ? isNvidiaConfigured()
-    : selectedProvider === 'gemini' ? isGeminiConfigured()
-    : true;
-  const modelReady = selectedProvider === 'ollama'
-    ? Boolean(settings.selectedModel) && !selectedModelMissing
-    : Boolean(settings.selectedModel) && cloudProviderConfigured;
+  const modelReady = useMemo(() => {
+    const cloudProviderConfigured = selectedProvider === 'nvidia_nim' ? isNvidiaConfigured()
+      : selectedProvider === 'gemini' ? isGeminiConfigured()
+      : true;
+    return selectedProvider === 'ollama'
+      ? Boolean(settings.selectedModel) && !selectedModelMissing
+      : Boolean(settings.selectedModel) && cloudProviderConfigured;
+  }, [selectedProvider, settings.selectedModel, selectedModelMissing]);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -703,13 +705,19 @@ export function ChatView({
         // streaming) — deliver the full reply in one update rather than
         // faking a token stream.
         const providerLabel = selectedProvider === 'nvidia_nim' ? 'NVIDIA NIM' : 'Gemini';
-        const sendCloudMessage = selectedProvider === 'nvidia_nim' ? sendNvidiaMessage : sendGeminiMessage;
-        const result = await sendCloudMessage(chatMessages, { model: settings.selectedModel as string });
-        if (!result.ok) {
+        const result = selectedProvider === 'nvidia_nim'
+          ? await sendNvidiaMessage(chatMessages, { model: settings.selectedModel as string })
+          : await sendGeminiMessage(chatMessages, { model: settings.selectedModel as string });
+        if (!abortRef.current) return; // aborted while the cloud request was in flight — drop the result
+        if (!result.ok && 'rateLimited' in result && result.rateLimited) {
           setMessages((current) => current.map((msg) =>
             msg.id === assistantMsgId
               ? { ...msg, isError: true, content: `${providerLabel} is rate-limited right now (free tier). Try again shortly, or switch to Ollama.` }
               : msg
+          ));
+        } else if (!result.ok) {
+          setMessages((current) => current.map((msg) =>
+            msg.id === assistantMsgId ? { ...msg, isError: true, content: `${providerLabel} request failed.` } : msg
           ));
         } else {
           setMessages((current) => current.map((msg) =>
