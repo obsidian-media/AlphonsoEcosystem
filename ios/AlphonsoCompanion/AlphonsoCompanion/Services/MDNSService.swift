@@ -88,10 +88,10 @@ class MDNSService: ObservableObject {
                 switch state {
                 case .ready:
                     // Once connected, we can get the actual endpoint
-                    if case .hostPort(let host, let port) = connection.currentPath?.remoteEndpoint {
-                        let hostname = Self.sanitizedHostString(from: host)
+                    if case .hostPort(let resolvedHost, let port) = connection.currentPath?.remoteEndpoint {
+                        let hostname = Self.sanitizedHostString(from: resolvedHost)
                         let portValue = UInt16(port.rawValue)
-                        print("[MDNSService] Resolved \(host.name) -> raw=\(host) sanitized=\(hostname) port=\(portValue)")
+                        print("[MDNSService] Resolved \(host.name) -> raw=\(resolvedHost) sanitized=\(hostname) port=\(portValue)")
                         completion(.success((hostname, portValue)))
                     } else {
                         print("[MDNSService] No remote endpoint on ready connection for \(host.name)")
