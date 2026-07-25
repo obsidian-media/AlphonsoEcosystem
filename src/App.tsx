@@ -612,8 +612,12 @@ function AppShell() {
     return (
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
         <OnboardingWizard
-          onComplete={(chosenModel: string) => {
-            if (chosenModel) setSettings((current: any) => ({ ...current, selectedModel: chosenModel }));
+          onComplete={(chosenModel: string, chosenProvider?: string) => {
+            setSettings((current: any) => ({
+              ...current,
+              ...(chosenModel ? { selectedModel: chosenModel } : {}),
+              ...(chosenProvider ? { selectedProvider: chosenProvider } : {})
+            }));
             setShowOnboarding(false);
           }}
         />

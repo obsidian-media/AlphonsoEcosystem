@@ -231,7 +231,7 @@ describe('OnboardingWizard — Step 6 (ready)', () => {
     await waitFor(() => expect(screen.getByText("You're ready")).toBeTruthy());
     expect(screen.getByText('llama3.2:3b')).toBeTruthy();
     fireEvent.click(screen.getByText(/Start chatting/i));
-    expect(mockOnComplete).toHaveBeenCalledWith('llama3.2:3b');
+    expect(mockOnComplete).toHaveBeenCalledWith('llama3.2:3b', 'ollama');
     expect(setStorage).toHaveBeenCalledWith('alphonso_onboarding_complete_v1', true);
   });
 });
