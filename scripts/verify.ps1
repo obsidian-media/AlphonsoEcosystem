@@ -18,7 +18,7 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
   # (a) filename-based: private key / credential files must not be committed.
   #     Exclude dependency / generated dirs (node_modules, .venv, _repo_clone,
   #     dist, build, .cache, coverage) — library files there are not first-party.
-  $excludeDirs = '[\\/](node_modules|\.git|audits[\\/]private|\.venv|_repo_clone|dist|build|\.cache|coverage)[\\/]'
+  $excludeDirs = '[\\/](node_modules|\.git|audits[\\/]private|venv|\.venv|target|_repo_clone|dist|build|\.cache|coverage|scripts[\\/]certs|\.tauri)[\\/]'
   $badFiles = Get-ChildItem -Path $RepoRoot -Recurse -File -Include *.p8,*.p12,*credential*,*.pem,*.key `
     -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch $excludeDirs }
@@ -29,7 +29,7 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
   #     only a token field set to an actual quoted literal string still does. Test dirs
   #     excluded outright since fake placeholder tokens are expected there.
   #     Exclude dependency / generated dirs + *.env.example / *.env.sample templates.
-  $excludeDirsWithTests = '[\\/](node_modules|\.git|audits[\\/]private|\.venv|_repo_clone|dist|build|\.cache|coverage|test|tests|e2e)[\\/]'
+  $excludeDirsWithTests = '[\\/](node_modules|\.git|audits[\\/]private|venv|\.venv|target|_repo_clone|dist|build|\.cache|coverage|scripts[\\/]certs|\.tauri|test|tests|e2e)[\\/]'
   $hits = Get-ChildItem -Path $RepoRoot -Recurse -File `
     -Include *.json,*.env,*.ts,*.js,*.py,*.yml,*.yaml,*.toml,*.sh `
     -ErrorAction SilentlyContinue |

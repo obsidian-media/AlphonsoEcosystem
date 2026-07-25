@@ -17,13 +17,18 @@ if command -v gitleaks >/dev/null 2>&1; then
   gitleaks detect --no-banner --redact || error "secret-scan" "gitleaks found secrets"
 else
   # (a) filename-based: private key / credential files must not be committed.
-  #     Exclude dependency / generated dirs (.venv, node_modules, dist, build,
-  #     _repo_clone, .cache, coverage) — library files there are not first-party.
+  #     Exclude dependency / generated dirs (venv, node_modules, dist, build,
+  #     target, _repo_clone, .cache, coverage) — library files there are not
+  #     first-party — plus this repo's own gitignored local-secret dirs
+  #     (scripts/certs/, .tauri/) which are expected to hold real key/cert
+  #     files on disk without ever being committed.
   bad_files=$(find . -type f \( -name '*.p8' -o -name '*.p12' -o -name '*credential*' \
     -o -name '*.pem' -o -name '*.key' \) \
     -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/audits/private/*' \
-    -not -path '*/.venv/*' -not -path '*/_repo_clone/*' -not -path '*/dist/*' \
-    -not -path '*/build/*' -not -path '*/.cache/*' -not -path '*/coverage/*' 2>/dev/null || true)
+    -not -path '*/venv/*' -not -path '*/.venv/*' -not -path '*/target/*' \
+    -not -path '*/_repo_clone/*' -not -path '*/dist/*' \
+    -not -path '*/build/*' -not -path '*/.cache/*' -not -path '*/coverage/*' \
+    -not -path '*/scripts/certs/*' -not -path '*/.tauri/*' 2>/dev/null || true)
   if [ -n "$bad_files" ]; then error "secret-scan" "secret files present: $bad_files"; fi
   # (b) content-based: only scan first-party code/config, require an ASSIGNED
   #     QUOTED LITERAL value (not a variable/identifier reference). Requiring
@@ -37,7 +42,8 @@ else
   #     placeholder tokens are expected and intentional there, not a leak.
   hits=$(grep -rIlE "(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)[[:space:]]*[=:][[:space:]]*[\"'][A-Za-z0-9/+_-]{8,}[\"']" \
     --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=audits/private \
-    --exclude-dir=.venv --exclude-dir=_repo_clone --exclude-dir=dist --exclude-dir=build \
+    --exclude-dir=venv --exclude-dir=.venv --exclude-dir=target --exclude-dir=_repo_clone \
+    --exclude-dir=dist --exclude-dir=build --exclude-dir=certs \
     --exclude-dir=.cache --exclude-dir=coverage --exclude-dir=test --exclude-dir=tests --exclude-dir=e2e \
     --include='*.json' --include='*.env' --include='*.ts' --include='*.js' --include='*.py' \
     --include='*.yml' --include='*.yaml' --include='*.toml' --include='*.sh' . 2>/dev/null || true)
