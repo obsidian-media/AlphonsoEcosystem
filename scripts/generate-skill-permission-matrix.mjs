@@ -43,7 +43,16 @@ function parseStringArray(raw) {
 function extractPacks(source) {
   // Matches each `{ id: 'pack.x', ... permissions: [...], ... ownerAgent: 'y', ... }`
   // block in BASE_PACKS / AGENT_WORKFLOW_SKILL_DEFS array-literal order.
-  const packRe = /\{\s*id:\s*['"]([^'"]+)['"][\s\S]*?name:\s*['"]([^'"]+)['"][\s\S]*?permissions:\s*\[([^\]]*)\][\s\S]*?category:\s*['"]([^'"]+)['"](?:[\s\S]*?ownerAgent:\s*['"]([^'"]+)['"])?[\s\S]*?\n\s{2}\}/g;
+  //
+  // Uses [^{}]* (not [\s\S]*) between fields so each lazy scan is bounded to
+  // the current object's own braces and can never cross into a sibling pack.
+  // The previous [\s\S]*? version could and did: any pack with no ownerAgent
+  // field (e.g. pack.developer-core) let the optional ownerAgent group's
+  // unbounded lazy scan reach forward into a LATER sibling that does have one,
+  // silently dropping the pack in between from the generated doc entirely.
+  // Caught by the pack-count cross-check in buildMatrix() below, which found
+  // pack.developer-core and pack.codex-professional-coding missing.
+  const packRe = /\{\s*id:\s*['"]([^'"]+)['"][^{}]*?name:\s*['"]([^'"]+)['"][^{}]*?permissions:\s*\[([^\]]*)\][^{}]*?category:\s*['"]([^'"]+)['"](?:[^{}]*?ownerAgent:\s*['"]([^'"]+)['"])?[^{}]*?\n\s{2}\}/g;
   const packs = [];
   let m;
   while ((m = packRe.exec(source))) {
@@ -60,7 +69,13 @@ function extractPacks(source) {
 
 function extractContractAgents(source) {
   const block = source.match(/AGENT_EXECUTION_CONTRACTS[^{]*=\s*\{([\s\S]*?)\n\};/);
-  if (!block) return [];
+  if (!block) {
+    throw new Error(
+      'generate-skill-permission-matrix: AGENT_EXECUTION_CONTRACTS block regex ' +
+      'found no match in agentContractService.ts — source shape likely changed. ' +
+      'Fix the regex rather than silently publishing an empty agent list.'
+    );
+  }
   const agentRe = /\[AGENTS\.(\w+)\]:\s*\{\s*role:\s*['"]([^'"]+)['"]/g;
   const agents = [];
   let m;
@@ -72,7 +87,13 @@ function extractContractAgents(source) {
 
 function extractOverrideIds(source) {
   const block = source.match(/const AGENT_SKILL_PACK_SCOPE_OVERRIDES[^{]*=\s*\{([\s\S]*?)\n\};/);
-  if (!block) return new Set();
+  if (!block) {
+    throw new Error(
+      'generate-skill-permission-matrix: AGENT_SKILL_PACK_SCOPE_OVERRIDES block ' +
+      'regex found no match in agentContractService.ts — source shape likely ' +
+      'changed. Fix the regex rather than silently publishing zero overrides.'
+    );
+  }
   const idRe = /'(pack\.[^']+)':/g;
   const ids = new Set();
   let m;
@@ -95,12 +116,31 @@ function extractWorkflowPacks(source) {
   while ((m = packRe.exec(block[1]))) {
     packs.push({ id: m[1], name: m[2], description: m[3], permissions: parseStringArray(m[4]) });
   }
+  if (packs.length === 0) {
+    throw new Error(
+      'generate-skill-permission-matrix: AGENT_WORKFLOW_SKILL_DEFS block was ' +
+      'found but its per-entry regex matched zero packs — source shape likely ' +
+      'changed. Fix the regex rather than silently publishing zero workflow packs.'
+    );
+  }
   return packs;
 }
 
 function extractBlockedOverrides(source) {
-  const block = source.match(/AGENT_SKILL_PACK_BLOCKED_OVERRIDES[^{]*=\s*\{([\s\S]*?)\n\};/);
-  if (!block) return new Map();
+  // Note: unlike the two regexes above, this one must also match the current
+  // legitimately-empty single-line form (`= {};`, no newline before the
+  // closing brace) — AGENT_SKILL_PACK_BLOCKED_OVERRIDES has no entries in
+  // production today (Truth-First C2/C3). An empty result here is valid; the
+  // throw below is only for the block itself going missing entirely.
+  const block = source.match(/AGENT_SKILL_PACK_BLOCKED_OVERRIDES[^{]*=\s*\{([\s\S]*?)\};/);
+  if (!block) {
+    throw new Error(
+      'generate-skill-permission-matrix: AGENT_SKILL_PACK_BLOCKED_OVERRIDES ' +
+      'block regex found no match in agentContractService.ts — source shape ' +
+      'likely changed. Fix the regex rather than silently publishing zero ' +
+      'blocked overrides.'
+    );
+  }
   const entryRe = /'(pack\.[^']+)':\s*\[([^\]]*)\]/g;
   const map = new Map();
   let m;
@@ -114,11 +154,30 @@ function buildMatrix() {
   const skillPackSource = readFileSync(SKILL_PACK_SERVICE_PATH, 'utf8');
   const contractSource = readFileSync(AGENT_CONTRACT_SERVICE_PATH, 'utf8');
 
-  const packs = extractPacks(skillPackSource).filter((p) => p.category === 'agent_skill');
+  const allExtractedPacks = extractPacks(skillPackSource);
+  const packs = allExtractedPacks.filter((p) => p.category === 'agent_skill');
   const workflowPacks = extractWorkflowPacks(skillPackSource);
   const agents = extractContractAgents(contractSource);
   const overrideIds = extractOverrideIds(contractSource);
   const blockedOverrides = extractBlockedOverrides(contractSource);
+
+  // Cross-check: every `id: 'pack.x'` occurrence in the source must be
+  // accounted for by either extractPacks (BASE_PACKS, any category) or
+  // extractWorkflowPacks (AGENT_WORKFLOW_SKILL_DEFS) — if the count doesn't
+  // match, one of those regexes silently missed real packs rather than the
+  // source genuinely having fewer packs, and a doc silently missing packs is
+  // worse than a loud failure.
+  const totalPackIdOccurrences = (skillPackSource.match(/id:\s*['"]pack\.[^'"]+['"]/g) || []).length;
+  const accountedFor = allExtractedPacks.length + workflowPacks.length;
+  if (accountedFor !== totalPackIdOccurrences) {
+    throw new Error(
+      `generate-skill-permission-matrix: found ${totalPackIdOccurrences} ` +
+      `'id: pack.*' occurrences in skillPackService.js but only accounted ` +
+      `for ${accountedFor} via extractPacks + extractWorkflowPacks — one of ` +
+      'those regexes is silently missing real packs. Fix the regex rather ' +
+      'than publishing an incomplete matrix.'
+    );
+  }
 
   const agentNames = new Set(agents.map((a) => a.key.toLowerCase()));
   const byOwner = new Map();

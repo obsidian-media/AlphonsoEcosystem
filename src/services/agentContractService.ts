@@ -329,14 +329,18 @@ export function validateSkillPackAgainstContract(agentName: string | undefined, 
     return { ok: true, reason: null };
   }
   const contract = AGENT_EXECUTION_CONTRACTS[agentName];
-  const overridePrefixes = packId && AGENT_SKILL_PACK_SCOPE_OVERRIDES[packId];
+  const overridePrefixes = packId && hasSkillPackScopeOverride(packId)
+    ? AGENT_SKILL_PACK_SCOPE_OVERRIDES[packId]
+    : undefined;
   const allowedPrefixes = overridePrefixes || AGENT_SKILL_PERMISSION_PREFIXES[agentName];
   if (!contract || !allowedPrefixes) {
     // Unknown agent or no declared skill-permission scope — nothing to validate against.
     return { ok: true, reason: null };
   }
 
-  const blockedPrefixes = (packId && AGENT_SKILL_PACK_BLOCKED_OVERRIDES[packId]) || [];
+  const blockedPrefixes = (packId && Object.prototype.hasOwnProperty.call(AGENT_SKILL_PACK_BLOCKED_OVERRIDES, packId)
+    ? AGENT_SKILL_PACK_BLOCKED_OVERRIDES[packId]
+    : undefined) || [];
 
   const offendingPermissions = (permissions || []).filter((permission) => {
     const value = String(permission || '').toLowerCase();

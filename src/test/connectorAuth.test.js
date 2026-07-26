@@ -252,6 +252,46 @@ describe('hydrateConnectorCredentialsFromSqlite — OS secure-store migration', 
     expect(deleteCall[1].key).toBe('alphonso_connector_credentials_v1');
   });
 
+  it('does not delete the legacy kv_store copy if the secure-store write fails', async () => {
+    const invokeMock = vi.fn(async (cmd, args) => {
+      if (cmd === 'secure_credential_get') return null; // not yet migrated
+      if (cmd === 'kv_get' && args.key === 'alphonso_connector_credentials_v1') {
+        return JSON.stringify({ slack: { SLACK_BOT_TOKEN: 'from-legacy-kv' } });
+      }
+      if (cmd === 'secure_credential_set') throw new Error('OS secure store unavailable');
+      return null;
+    });
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    // The in-memory cache still has it for this session...
+    expect(mod.getConnectorCredential('slack', 'SLACK_BOT_TOKEN')).toBe('from-legacy-kv');
+    // ...but since the durable write failed, the legacy copy must survive so
+    // the credential isn't lost forever on next restart.
+    const deleteCall = invokeMock.mock.calls.find((c) => c[0] === 'kv_delete');
+    expect(deleteCall).toBeUndefined();
+  });
+
+  it('does not delete the legacy localStorage copy if the secure-store write fails', async () => {
+    localStorage.setItem(
+      'alphonso_connector_credentials_v1',
+      JSON.stringify({ notion: { NOTION_API_KEY: 'from-legacy-localstorage' } })
+    );
+    const invokeMock = vi.fn(async (cmd) => {
+      if (cmd === 'secure_credential_set') throw new Error('OS secure store unavailable');
+      return null; // secure store and kv both empty
+    });
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    expect(mod.getConnectorCredential('notion', 'NOTION_API_KEY')).toBe('from-legacy-localstorage');
+    expect(localStorage.getItem('alphonso_connector_credentials_v1')).not.toBeNull();
+    const deleteCall = invokeMock.mock.calls.find((c) => c[0] === 'kv_delete');
+    expect(deleteCall).toBeUndefined();
+  });
+
   it('migrates from legacy localStorage (oldest location) when neither secure store nor kv has it', async () => {
     localStorage.setItem(
       'alphonso_connector_credentials_v1',

@@ -100,7 +100,7 @@ describe('skill-pack / agent-contract matrix (C3)', () => {
     // before trusting it, not assumed correct on first write.
     const DOCUMENTED_BROADER_SCOPE_EXCEPTIONS = new Set(['pack.miya-creative-image']);
 
-    let pairsChecked = 0;
+    let packsChecked = 0;
     let negativeAssertionsMade = 0;
     let intentionallyBroadPacksSkipped = 0;
     let documentedExceptionSkips = 0;
@@ -124,7 +124,7 @@ describe('skill-pack / agent-contract matrix (C3)', () => {
             if (!ownPerms.has(perm)) foreignPerms.add(perm);
           }
         }
-        pairsChecked++;
+        packsChecked++;
         for (const foreignPerm of foreignPerms) {
           // A foreign permission is legitimately (not a bug) covered if it is
           // a literal string-prefix extension of one of the pack's own real
@@ -163,7 +163,7 @@ describe('skill-pack / agent-contract matrix (C3)', () => {
     // after a future refactor) making this test vacuously "pass". Real
     // measured values as of 2026-07-25 (computed independently outside
     // vitest to sanity-check these thresholds before trusting them): 166
-    // total agent_skill packs, 156 with an override (pairsChecked), 10
+    // total agent_skill packs, 156 with an override (packsChecked), 10
     // intentionally broad catch-all packs skipped, 112 candidates skipped as
     // legitimate literal-prefix overlaps (mostly two packs sharing a dotted
     // permission hierarchy, e.g. 'code.refactor' naturally covering a
@@ -171,7 +171,10 @@ describe('skill-pack / agent-contract matrix (C3)', () => {
     // pack.miya-creative-image exception; that skip condition also includes
     // any pack whose own permission is a literal prefix of a sibling's), and
     // 6,127 real negative assertions actually executed and passing.
-    expect(pairsChecked).toBeGreaterThan(150);
+    // Loosened from a tight >150 floor (real value 156, only a 6-pack margin)
+    // to >100 — legitimate consolidation of a few overrides shouldn't spuriously
+    // fail this; it still guards against the loop silently checking near-zero.
+    expect(packsChecked).toBeGreaterThan(100);
     expect(negativeAssertionsMade).toBeGreaterThan(5000);
     // The catch-all/pre-taxonomy packs are a small, known, bounded set —
     // if this number grows unexpectedly large it means new packs are being

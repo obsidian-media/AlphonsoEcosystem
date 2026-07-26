@@ -57,9 +57,11 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     blockers in Ground Truth and the release evidence.
   - **Done when:** every result is PASS, FAIL, BLOCKED, or time-bounded ADVISORY;
     none is implied by an older result.
-  - **Evidence (2026-07-25, commit `873e4c5`, Windows `x86_64-pc-windows-msvc`,
+  - **Evidence (2026-07-25, commit `ce38d3b`, Windows `x86_64-pc-windows-msvc`,
     Node v25.9.0):** every command below was run in full this pass, not
-    inferred from an older result:
+    inferred from an older result. (`51c2f02` closed the one blocker — the
+    17 cargo-audit findings — that this baseline had been waiting on;
+    `ce38d3b` is where the baseline run itself was recorded.)
     - `npm run lint` — PASS, clean.
     - `npm run test` — PASS, 255 files / 3,746 tests, 0 failures, 261s
       (`scripts/run-vitest-programmatic.mjs`, one fork, file parallelism off).
@@ -590,7 +592,16 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     BLOCKED with the specific missing dependency named, per this plan's own
     status rules.
 
-- [x] **D3 — Resolve or explicitly defer Boardroom gaps**
+- [~] **D3 — Resolve or explicitly defer Boardroom gaps**
+  - **Status correction (2026-07-25, CodeRabbit review on PR #123):** this
+    task's own "Done when" bar requires each deferred item to carry an
+    owner **and** a date. Resource contention meets that bar (verified
+    mitigated, no further work needed). The other 4 items have an owner and
+    a target sequencing note but explicitly no committed date — "no date
+    committed yet" appears in this file for two of them. That does not
+    satisfy the stricter "owner/date" reading of Done-when, so this stays
+    `[~]` In progress rather than `[x]` Verified until real dates land or
+    the bar is deliberately relaxed with reasoning, not silently met.
   - **Owner:** Jose; **review:** Maria
   - **Implemented (2026-07-22):** Stop now aborts the active Boardroom Ollama
     request and suppresses its cancelled reply; it still prevents further

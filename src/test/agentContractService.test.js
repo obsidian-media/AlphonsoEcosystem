@@ -527,10 +527,10 @@ describe('agentContractService', () => {
       // the allowlist would admit it.
       const allowed = validateSkillPackAgainstContract(
         'alphonso',
-        ['runtime.diagnose'],
+        ['runtime.diagnose.shell_exec'],
         'pack.alphonso-runtime-diagnostics'
       );
-      expect(allowed.ok).toBe(true); // sanity: this permission is normally fine
+      expect(allowed.ok).toBe(true); // sanity: the allowlist alone admits this exact permission
 
       AGENT_SKILL_PACK_BLOCKED_OVERRIDES['pack.alphonso-runtime-diagnostics'] = ['runtime.diagnose.shell_exec'];
       const blocked = validateSkillPackAgainstContract(

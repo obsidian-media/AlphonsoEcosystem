@@ -123,7 +123,6 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
 - **112 Rust unit tests across 26 modules** — 108 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
-- **3,758 tests across 255 test files** — verified 2026-07-25; see the ground truth for current verification status.
 
 ## What's New in v2.4.2
 
@@ -414,7 +413,9 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 112 Rust unit tests across 26 modules
+cargo test                     # 112 static Rust unit tests across 26 modules
+                                # (cargo test's own count may run a few more —
+                                # async #[tokio::test] cases, per AGENTS.md)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)
 ```
 

@@ -68,9 +68,18 @@ export async function hydrateConnectorCredentialsFromSqlite(force = false): Prom
       if (parsed && typeof parsed === 'object') {
         _credCache = parsed;
         _credCacheHydratedAt = Date.now();
-        await invoke('secure_credential_set', { key: CREDS_KEY, value: kvJson }).catch(() => {});
-        await invoke('kv_delete', { key: CREDS_KEY }).catch(() => {});
-        try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
+        // Only delete the legacy copy once the secure-store write is confirmed
+        // to have succeeded — otherwise a failed write (Windows Credential
+        // Manager blob-size limit, keychain/D-Bus unavailable, etc.) would
+        // silently lose the credential forever: it only ever lived in the
+        // in-memory cache for this session, with both older copies gone.
+        const migrated = await invoke('secure_credential_set', { key: CREDS_KEY, value: kvJson })
+          .then(() => true)
+          .catch(() => false);
+        if (migrated) {
+          await invoke('kv_delete', { key: CREDS_KEY }).catch(() => {});
+          try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
+        }
         return;
       }
     }
@@ -82,9 +91,13 @@ export async function hydrateConnectorCredentialsFromSqlite(force = false): Prom
       if (parsed && typeof parsed === 'object') {
         _credCache = parsed;
         _credCacheHydratedAt = Date.now();
-        await invoke('secure_credential_set', { key: CREDS_KEY, value: raw }).catch(() => {});
-        await invoke('kv_delete', { key: CREDS_KEY }).catch(() => {});
-        localStorage.removeItem(CREDS_KEY);
+        const migrated = await invoke('secure_credential_set', { key: CREDS_KEY, value: raw })
+          .then(() => true)
+          .catch(() => false);
+        if (migrated) {
+          await invoke('kv_delete', { key: CREDS_KEY }).catch(() => {});
+          localStorage.removeItem(CREDS_KEY);
+        }
       }
     }
   } catch {
@@ -110,7 +123,13 @@ function writeAllCredentials(creds: ConnectorCredentials): void {
   _credCache = creds;
   _credCacheHydratedAt = Date.now();
   try {
-    invoke('secure_credential_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => {});
+    invoke('secure_credential_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch((error) => {
+      // The in-memory cache still has this write for the rest of the current
+      // session, but nothing durable does — surface it so a failed persist
+      // (Windows Credential Manager blob-size limit, keychain/D-Bus
+      // unavailable, etc.) isn't mistaken for a successful save.
+      console.error('Failed to persist connector credentials to the OS secure store:', error);
+    });
   } catch {
     // OS secure credential store not available outside Tauri
   }

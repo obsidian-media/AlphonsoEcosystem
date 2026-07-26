@@ -25,7 +25,7 @@ additionally carry its own narrower denylist in
 `AGENT_SKILL_PACK_BLOCKED_OVERRIDES`, applied even to Alphonso, shown per
 pack below when present.
 
-Total exclusive `agent_skill` category packs: **166**
+Total exclusive `agent_skill` category packs: **167**
 Total shared `agent_workflow` category packs: **20**
 
 ## Exclusive packs (owned by one agent)
@@ -49,6 +49,7 @@ Role: `operator`
 | `pack.alphonso-rust-operations` | Rust Operations | per-pack override | `code.rust.tauri`, `code.rust.async`, `code.rust.error_handling` | — |
 | `pack.alphonso-security-audit` | Security Audit | per-pack override | `verification.security.scan`, `verification.security.review`, `verification.security.harden`, `verification.secrets.check` | — |
 | `pack.alphonso-typescript-mastery` | TypeScript Mastery | per-pack override | `code.typescript.strict`, `code.typescript.types`, `code.typescript.refactor` | — |
+| `pack.codex-professional-coding` | OpenAI Codex Professional Coding Skill | agent-wide default | `workflows.read`, `workflows.write`, `runtime.read`, `code.review`, `code.plan` | — |
 | `pack.coding.full-stack` | Full-Stack Coding | per-pack override | `code.write`, `code.edit`, `code.refactor`, `runtime.test` | — |
 | `pack.coding.tdd` | Test-Driven Development | per-pack override | `code.test.first`, `code.test.verify`, `code.refactor.minimal` | — |
 | `pack.debugging.root-cause` | Root-Cause Debugging | per-pack override | `runtime.debug.observe`, `runtime.debug.hypothesize`, `runtime.debug.test`, `runtime.debug.verify` | — |

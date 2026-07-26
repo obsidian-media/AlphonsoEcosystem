@@ -24,21 +24,29 @@ function redactSensitiveKeys(value: unknown, seen = new WeakSet<object>()): unkn
   if (seen.has(value as object)) return '[CIRCULAR]';
   seen.add(value as object);
 
-  if (Array.isArray(value)) {
-    return value.map((item) => redactSensitiveKeys(item, seen));
-  }
-
-  const result: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-    if (SENSITIVE_KEY_PATTERN.test(key)) {
-      result[key] = REDACTED;
-    } else if (val !== null && typeof val === 'object') {
-      result[key] = redactSensitiveKeys(val, seen);
-    } else {
-      result[key] = val;
+  try {
+    if (Array.isArray(value)) {
+      return value.map((item) => redactSensitiveKeys(item, seen));
     }
+
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      if (SENSITIVE_KEY_PATTERN.test(key)) {
+        result[key] = REDACTED;
+      } else if (val !== null && typeof val === 'object') {
+        result[key] = redactSensitiveKeys(val, seen);
+      } else {
+        result[key] = val;
+      }
+    }
+    return result;
+  } finally {
+    // Remove from `seen` once this node's children are done, so `seen` only
+    // reflects the active recursion path (true cycle detection) — otherwise
+    // a shared (non-circular) object referenced from two different
+    // properties would be wrongly flagged [CIRCULAR] on its second visit.
+    seen.delete(value as object);
   }
-  return result;
 }
 
 export interface CrashLogEntry {
