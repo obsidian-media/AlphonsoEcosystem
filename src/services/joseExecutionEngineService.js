@@ -295,12 +295,17 @@ const TASK_RETRY_BACKOFF_MS = [1000, 2000, 4000];
 const _escalationFailCounts = new Map(); // key: commandText → count
 const _escalationLog = []; // recent escalation records (max 50)
 const MAX_ESCALATION_LOG = 50;
+const MAX_ESCALATION_FAIL_COUNTS = 200;
 const ESCALATION_THRESHOLD = 2;
 
 function _recordEscalationFailure(commandText) {
   const key = String(commandText || '').slice(0, 200);
   const current = (_escalationFailCounts.get(key) || 0) + 1;
   _escalationFailCounts.set(key, current);
+  if (_escalationFailCounts.size > MAX_ESCALATION_FAIL_COUNTS) {
+    const firstKey = _escalationFailCounts.keys().next().value;
+    if (firstKey) _escalationFailCounts.delete(firstKey);
+  }
   if (current >= ESCALATION_THRESHOLD) {
     const entry = { commandText: key, failCount: current, escalatedAt: Date.now() };
     _escalationLog.push(entry);

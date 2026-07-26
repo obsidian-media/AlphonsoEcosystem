@@ -13,18 +13,15 @@ test.describe('Alphonso E2E - Voice Flow', () => {
 
   test('voice button renders in toolbar', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
-    const voiceBtn = page.locator('button', { hasText: /VOICE/i }).first();
+    const voiceBtn = page.getByRole('button', { name: /voice/i });
     await expect(voiceBtn).toBeVisible({ timeout: 10000 });
   });
 
   test('voice button click shows state change', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
-    const voiceBtn = page.locator('button', { hasText: /VOICE/i }).first();
-    if (await voiceBtn.isVisible()) {
-      await voiceBtn.click();
-      // Should not crash - voice button handles click gracefully
-      await expect(page.locator('body')).toBeVisible();
-    }
+    const voiceBtn = page.getByRole('button', { name: /voice/i });
+    await voiceBtn.click();
+    await expect(page.locator('body')).toBeVisible();
   });
 });
 
@@ -36,12 +33,9 @@ test.describe('Alphonso E2E - Policy Gate', () => {
   });
 
   test('approvals panel accessible from sidebar', async ({ page }) => {
-    // Orchestration/or Approvals tab
-    const approvalBtn = page.getByRole('button', { name: /^Orchestrator$/ }).first();
-    if (await approvalBtn.isVisible()) {
-      await approvalBtn.click();
-    }
-    // Panel should render without error
+    const approvalBtn = page.getByRole('button', { name: /^Orchestrator$/ });
+    await expect(approvalBtn).toBeVisible({ timeout: 10000 });
+    await approvalBtn.click();
     await expect(page.locator('body')).toBeVisible();
   });
 });
@@ -60,9 +54,8 @@ test.describe('Alphonso E2E - Additional Smoke Tests', () => {
 
   test('voice sidebar nav clickable', async ({ page }) => {
     const voiceNav = page.getByRole('button', { name: /Voice/i });
-    if (await voiceNav.isVisible()) {
-      await voiceNav.click();
-      await expect(page.locator('body')).toBeVisible();
-    }
+    await expect(voiceNav).toBeVisible({ timeout: 10000 });
+    await voiceNav.click();
+    await expect(page.locator('body')).toBeVisible();
   });
 });

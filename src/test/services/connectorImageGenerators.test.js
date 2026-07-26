@@ -129,9 +129,13 @@ describe('connectorImageGenerators', () => {
     });
 
     it('records success on ok result', async () => {
+      const core = await import('@tauri-apps/api/core');
+      core.invoke.mockImplementation(() => Promise.resolve({ ok: true, provider: 'automatic1111' }));
       const { generateSdWebUiImage } = await import('../../services/connectors/connectorImageGenerators');
-      await generateSdWebUiImage({ prompt: 'test' });
+      const result = await generateSdWebUiImage({ prompt: 'test' });
+      expect(result.ok).toBe(true);
       expect(localStorageMock.setItem).toHaveBeenCalled();
+      core.invoke.mockReset();
     });
   });
 

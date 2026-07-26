@@ -35,11 +35,37 @@ impl CompanionDiscovery {
   }
 }
 
+/// Resolves the local (outbound-facing) IPv4 address by connecting a UDP
+/// socket to 8.8.8.8 (Google Public DNS). This is a well-known cross-platform
+/// technique — the socket never actually sends data; it only asks the kernel
+/// which interface would be used to reach that IP.
+///
+/// Dependencies:
+///   - External: 8.8.8.8 (Google DNS). If that host is unreachable (air-gapped
+///     network, no default route), the connect will fail and we fall back to
+///     "0.0.0.0" which prevents mDNS advertisement from working correctly.
+///     In an air-gapped setup, mDNS-based companion discovery is inherently
+///     limited to link-local; add a manual-IP fallback in the UI if needed.
 #[allow(dead_code)]
 fn local_ip() -> Option<String> {
   use std::net::{IpAddr, UdpSocket};
   let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
-  socket.connect("8.8.8.8:80").ok()?;
+  if socket.connect("8.8.8.8:80").is_err() {
+    // Fallback: bind a TCP listener and inspect the local address without
+    // connecting to an external host. Works on all platforms and handles
+    // air-gapped / no-default-route scenarios gracefully.
+    drop(socket);
+    let local = UdpSocket::bind("0.0.0.0:0").ok()?;
+    local.connect("127.0.0.1:0").ok()?;
+    if let Ok(addr) = local.local_addr() {
+      if let IpAddr::V4(ip) = addr.ip() {
+        if !ip.is_loopback() {
+          return Some(ip.to_string());
+        }
+      }
+    }
+    return None;
+  }
   match socket.local_addr().ok()?.ip() {
     IpAddr::V4(ip) => Some(ip.to_string()),
     _ => None,

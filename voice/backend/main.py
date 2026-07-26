@@ -126,3 +126,7 @@ async def ws_endpoint(ws: WebSocket):
         cancel(session_id)
         remove_state(session_id)
         cleanup_done()
+    except Exception:
+        cancel(session_id)
+        remove_state(session_id)
+        cleanup_done()

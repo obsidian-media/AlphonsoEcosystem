@@ -42,6 +42,10 @@ function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
+function readJsonPreserve(path) {
+  return { raw: readFileSync(path, 'utf8'), parsed: JSON.parse(readFileSync(path, 'utf8')) };
+}
+
 function getNsisArtifactPaths() {
   const conf = readJson(join(TAURI_DIR, 'tauri.conf.json'));
   const productName = conf.productName || 'Alphonso';
@@ -66,7 +70,7 @@ async function main() {
   const skipBuild = process.argv.includes('--skip-build');
   const forceBuild = process.argv.includes('--force-build');
   const tauriConfigPath = join(TAURI_DIR, 'tauri.conf.json');
-  const originalTauriConfig = readJson(tauriConfigPath);
+  const { raw: originalTauriConfigRaw, parsed: originalTauriConfig } = readJsonPreserve(tauriConfigPath);
   let tauriConfigPatched = false;
   const artifactPaths = getNsisArtifactPaths();
   const existingInstallerReady = existsSync(artifactPaths.installerPath) && existsSync(artifactPaths.signaturePath);
@@ -89,14 +93,22 @@ async function main() {
 
   try {
     if (shouldBuild) {
-      const patchedConfig = {
-        ...originalTauriConfig,
-        bundle: {
-          ...(originalTauriConfig.bundle || {}),
-          createUpdaterArtifacts: true
-        }
-      };
-      writeJson(tauriConfigPath, patchedConfig);
+      const patchedRaw = originalTauriConfigRaw.replace(
+        /("createUpdaterArtifacts"\s*:\s*)false/,
+        '$1true'
+      );
+      if (patchedRaw === originalTauriConfigRaw) {
+        const patchedConfig = {
+          ...originalTauriConfig,
+          bundle: {
+            ...(originalTauriConfig.bundle || {}),
+            createUpdaterArtifacts: true
+          }
+        };
+        writeJson(tauriConfigPath, patchedConfig);
+      } else {
+        writeFileSync(tauriConfigPath, patchedRaw);
+      }
       tauriConfigPatched = true;
 
       const verify = await run('npm.cmd', ['run', 'verify:app']);
@@ -177,7 +189,7 @@ async function main() {
     process.stdout.write(`- Base URL: ${releaseContext.baseUrl}\n`);
   } finally {
     if (tauriConfigPatched) {
-      writeJson(tauriConfigPath, originalTauriConfig);
+      writeFileSync(tauriConfigPath, originalTauriConfigRaw);
     }
   }
 }

@@ -673,6 +673,172 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     clearly historical.
   - **Done when:** Ground Truth, entry documents, and release evidence agree.
 
+### F. Cloud Voice hardening (audit-sourced)
+
+Source: a personal external audit agent ("Hermes" — not a role in this
+project's own agent roster; do not confuse with anything in
+`ALPHONSO_GROUND_TRUTH.md`) read the repo file-by-file on 2026-07-25 and
+produced `AlphonsoEcosystem_bug_audit_notes.md` (kept outside this repo, no
+files were modified by that pass). Its own follow-up "Codex verification
+addendum" (2026-07-26) already discarded several of its LOGIC-bug claims as
+not confirmed or policy-level. The three items below were independently
+re-verified against the live files in this session (not merely copied from
+either report) and are real, unfixed as of 2026-07-26.
+
+- [ ] **F1 — Fix timing-unsafe token comparison in Cloud Voice auth**
+  - **Owner:** Sentinel; **execution:** Alphonso
+  - `voice/cloud-backend/app/auth.py:9` compares the bearer token with `!=`
+    instead of a constant-time comparison
+    (`authorization.removeprefix("Bearer ").strip() != expected_token`) —
+    a real timing-attack surface on the Cloud Voice service's auth gate.
+    Notably, the equivalent Rust companion-auth path already received this
+    exact class of fix (`cf2d9ef`); this Python service did not.
+  - **Done when:** the comparison uses `hmac.compare_digest()` (or
+    equivalent constant-time check), with a regression test asserting equal-
+    length near-miss tokens are still rejected, and `pytest` for
+    `voice/cloud-backend` passes.
+
+- [ ] **F2 — Fix invalid CORS configuration in local Voice OS backend**
+  - **Owner:** Sentinel
+  - `voice/backend/main.py:27-33` configures `CORSMiddleware` with
+    `allow_origins=["*"]` and `allow_credentials=True` simultaneously —
+    invalid per the CORS spec; browsers reject the credentialed case in
+    practice today, but the config should not rely on that as the only
+    guard.
+  - **Done when:** `allow_origins` is a specific, documented local origin
+    list (matching this service's actual local-only usage — see the Port
+    map in `CLAUDE.md`), or `allow_credentials` is removed if wildcard
+    origins are genuinely required, with a comment recording which case was
+    chosen and why.
+
+- [ ] **F3 — Reduce Supabase service-role-key exposure in Cloud Voice**
+  - **Owner:** Sentinel; **review:** Maria
+  - **Same underlying gap as production-readiness item T18** (see Section G
+    below) — tracked once here, not duplicated. `voice/cloud-backend/app/supabase_auth.py`
+    sends the full-privilege Supabase service-role key as a Bearer token in
+    three separate outbound REST calls (lines 34, 51, 72), rather than a
+    scoped RPC/restricted key.
+  - **Done when:** device-enrollment and lookup calls use a restricted-scope
+    credential or a Supabase RPC function instead of the raw service-role
+    key, or the current design is reviewed and explicitly accepted with a
+    documented reason (e.g., no viable restricted-key path exists yet).
+
+### G. Carried-forward production-readiness backlog (T11–T20)
+
+Source: `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md` §6, a 20-task
+roadmap from the 2026-07-15 audit. T1–T10 are closed and already reflected
+in Ground Truth. T11–T20 were still open as of the last review and had not
+been entered into this plan's own tracked queue — recorded here now so they
+are covered by this file's evidence rules instead of living only in a dated
+assessment doc. Two are already effectively resolved by later work in this
+plan; recorded as closed-by-reference rather than re-opened or silently
+dropped.
+
+- [x] **G-T13 — Move credentials to OS-level secret storage** — **closed by
+  B3** (`os_keychain_store.rs`, 2026-07-25). No separate action needed;
+  cross-referenced here only so T13 is not mistaken for still-open.
+- [x] **G-T15 — Live-verify the in-app auto-updater against a real signed
+  release** — **duplicate of D1**, already tracked `BLOCKED` above pending
+  explicit owner authorization to publish a real public release.
+- [x] **G-T16 — Live-verify iOS companion pairing on a real device** —
+  **duplicate of D2**, already tracked `BLOCKED` above pending physical
+  device access.
+
+- [ ] **G-T11 — Harden KV/localStorage persistence with a real schema +
+  migrations**
+  - **Owner:** Alphonso
+  - No versioned schema or migration path currently exists for the
+    `alphonso_*` localStorage/SQLite keys; ad hoc shape changes rely on
+    defensive reads rather than an explicit migration step.
+  - **Done when:** a schema version is recorded per key family and a
+    migration runs (and is tested) when an older shape is detected.
+
+- [ ] **G-T12 — Review connector policy DSL default posture**
+  - **Owner:** Sentinel
+  - **Status note:** the original T12 wording assumed a fail-open default;
+    **B2 (2026-07-22) already verified `evaluateAction()`/
+    `gateConnectorAction()` are fail-closed** (deny unmatched rules, block
+    unapproved `require_consent`). Re-scoped: confirm this holds for every
+    connector risk tier (not just the paths B2's targeted tests covered) and
+    close out, rather than re-implementing a fail-closed default that may
+    already exist.
+  - **Done when:** a full-coverage pass (all connectors × all DSL rule
+    categories) confirms fail-closed behavior, or a genuine gap is found and
+    fixed.
+
+- [ ] **G-T14 — Split `lib.rs` + lint-enforce `CREATE_NO_WINDOW`**
+  - **Owner:** Alphonso
+  - **Status note:** `cf2d9ef` extracted 6 modules out of `lib.rs`, but the
+    file is still 2,206 lines (measured 2026-07-26) — larger than the
+    2,024-line figure this task was originally scoped against, not smaller.
+    No CI lint currently enforces `CREATE_NO_WINDOW` on new
+    `Command::new()`/`TokioCommand::new()` call sites (see CLAUDE.md's
+    "CREATE_NO_WINDOW on all Windows process spawns" note) — it depends on a
+    human remembering.
+  - **Done when:** `lib.rs` is reduced via further extraction, and a CI check
+    (clippy lint, grep-based check, or custom script) fails a new Windows
+    process spawn that skips the shared `no_window()` helper.
+
+- [ ] **G-T17 — Add observability to cloud sidecars (gateways, MCP server,
+  bridge)**
+  - **Owner:** Alphonso
+  - `gateway/whatsapp-cloud/`, `gateway/generic-webhook/`, `mcp-server/`, and
+    `bridge/` have no structured logging/metrics/error-tracking wired in;
+    failures are only visible via Railway's raw logs or silent failure.
+  - **Done when:** each service emits structured logs for request/response
+    and error paths, with a documented way to inspect them without shell
+    access to the host.
+
+- [ ] **G-T19 — Auto-generate the "Do Not Duplicate" map**
+  - **Owner:** Echo
+  - CLAUDE.md's "Do Not Duplicate" table is hand-maintained and already
+    large; it drifts from source the same way doc counts did before
+    `verify:docs`/`verify:skill-matrix` existed.
+  - **Done when:** a generator (similar in spirit to
+    `scripts/generate-skill-permission-matrix.mjs`) derives at least the
+    service-existence half of the table from `src/services/` + component
+    exports, with a `--check` mode wired into CI doc-freshness.
+
+- [ ] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
+  hidden features**
+  - **Owner:** Jose (budget), Echo (discoverability)
+  - No cost/token ceiling exists for Boardroom `@mention` chains or other
+    multi-agent fan-out paths beyond the existing `MAX_CHAIN_DEPTH=3` hop
+    cap; and several real, working features (Operator Dashboard, Agent
+    Pairing, Ecosystem Maturity panels) remain sunk 2+ clicks deep behind
+    generic tab labels per the 2026-07-02 discoverability audit.
+  - **Done when:** a measurable budget/ceiling exists for agent fan-out
+    costs, and the flagged low-discoverability surfaces have a nav entry or
+    equivalent promotion — or each is explicitly re-scoped with reasoning.
+
+- [ ] **G-OTHER1 — iOS companion Rust↔Swift end-to-end pairing test**
+  - Full backend + React pairing UI exist and were live-device-confirmed
+    working (see Ground Truth §11, 2026-07-25 PR #121), but no automated
+    end-to-end test exercises the real pairing handshake — still open.
+
+- [ ] **G-OTHER2 — `ios-build.yml` never runs `AlphonsoCompanionTests`**
+  - The iOS CI workflow archives and exports an IPA but has no
+    `xcodebuild test` step; all 5 existing test files under
+    `AlphonsoCompanionTests/` have never executed in CI (found 2026-07-25
+    while verifying the websocket-URL fix in PR #121).
+
+- [ ] **G-OTHER3 — `companionIntegration.test.js` asserts against fabricated
+  Tauri command names**
+  - Asserts against `get_companion_status`/`start_companion_server`, neither
+    of which is a real registered Tauri command — gives false test
+    confidence without exercising real wiring (found 2026-07-10, not yet
+    fixed).
+
+- [ ] **G-OTHER4 — Function-level coverage still low (~5.88%)**
+  - Line/statement coverage is healthy (~38%+) but function coverage is not;
+    the CI threshold was lowered to 0 to unblock builds rather than raising
+    real coverage. Real gap, not cosmetic.
+
+- [ ] **G-OTHER5 — Voice OS Python prerequisite has no auto-install path**
+  - Voice OS requires Python 3.10+ on PATH; Runtime Hub can auto-install
+    other prerequisites (Git, Ollama) via winget/brew/apt but not Python
+    itself. Still open.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
@@ -691,3 +857,4 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 |---|---|---|
 | 2026-07-21 | Created as the repository-wide remediation and truth-tracking backlog. | Initial baseline recorded above. |
 | 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |
+| 2026-07-26 | Added Section F (3 audit-sourced Cloud Voice hardening items, independently re-verified against live code, not just copied from the source audit) and Section G (production-readiness T11–T20 carried forward into this file's tracked queue, with T13/T15/T16 cross-referenced as already closed by B3/D1/D2 rather than duplicated, plus 5 other previously-untracked open items). | User request, following an external "Hermes" audit report + its own Codex verification addendum; see Section F/G entries for per-item evidence and status notes. |

@@ -12,6 +12,7 @@
  * The bridge at http://localhost:4444 connects this server to the running Alphonso frontend.
  */
 
+import crypto from 'node:crypto';
 import express from 'express';
 
 const app = express();
@@ -24,10 +25,18 @@ const MCP_SECRET = process.env.MCP_SECRET || '';
 // If MCP_SECRET is set, require Bearer token on tool call routes.
 // If MCP_SECRET is not set, restrict to 127.0.0.1 connections only.
 
+function constantTimeEqual(a, b) {
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 function authMiddleware(req, res, next) {
   if (MCP_SECRET) {
     const authHeader = req.headers.authorization || '';
-    if (!authHeader.startsWith('Bearer ') || authHeader.slice(7) !== MCP_SECRET) {
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized: invalid or missing Bearer token' });
+    }
+    const token = authHeader.slice(7);
+    if (token.length !== MCP_SECRET.length || !constantTimeEqual(token, MCP_SECRET)) {
       return res.status(401).json({ error: 'Unauthorized: invalid or missing Bearer token' });
     }
   } else {

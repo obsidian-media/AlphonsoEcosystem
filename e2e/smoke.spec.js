@@ -30,7 +30,7 @@ test.describe('Alphonso E2E smoke tests', () => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
     // Wait for ChatView textarea
-    const textarea = page.locator('textarea').last();
+    const textarea = page.getByRole('textbox').last();
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     // Type a message
@@ -42,7 +42,7 @@ test.describe('Alphonso E2E smoke tests', () => {
     await sendBtn.click();
 
     // Mock returns { response: 'Hello!', done: true } — wait for it to appear in the message list
-    await expect(page.locator('text=Hello!').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Hello!').first()).toBeVisible({ timeout: 15000 });
   });
 
   // Epic 1 Task 2: Workflow builder

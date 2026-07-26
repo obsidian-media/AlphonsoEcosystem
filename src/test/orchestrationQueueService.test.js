@@ -434,17 +434,17 @@ describe('orchestrationQueueService', () => {
   });
 
   describe('retryDeadLetter', () => {
-    it('returns 0 when no dead letter packets exist', () => {
+    it('returns 0 when no dead letter packets exist', async () => {
       seedPacket('p1', 'queued');
-      const count = retryDeadLetter();
+      const count = await retryDeadLetter();
       expect(count).toBe(0);
     });
 
-    it('replays all dead_letter packets and returns requeued count', () => {
+    it('replays all dead_letter packets and returns requeued count', async () => {
       seedPacket('p-dl-1', 'dead_letter');
       seedPacket('p-dl-2', 'dead_letter');
       seedPacket('p-ok', 'queued');
-      const count = retryDeadLetter();
+      const count = await retryDeadLetter();
       expect(count).toBe(2);
       const packets = JSON.parse(localStorage.getItem(PACKET_KEY));
       const dl1 = packets.find((p) => p.id === 'p-dl-1');
@@ -455,11 +455,11 @@ describe('orchestrationQueueService', () => {
       expect(ok.status).toBe('queued');
     });
 
-    it('handles already-replayed packets gracefully (no double replay)', () => {
+    it('handles already-replayed packets gracefully (no double replay)', async () => {
       seedPacket('p-dl-1', 'dead_letter');
-      const first = retryDeadLetter();
+      const first = await retryDeadLetter();
       expect(first).toBe(1);
-      const second = retryDeadLetter();
+      const second = await retryDeadLetter();
       expect(second).toBe(0);
     });
   });

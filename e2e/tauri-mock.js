@@ -62,7 +62,7 @@
       if (cmd && cmd.indexOf('plugin:window|') === 0) return Promise.resolve(null);
       if (cmd && cmd.indexOf('plugin:event|') === 0) return Promise.resolve(null);
       if (cmd && cmd.indexOf('plugin:resources|') === 0) return Promise.resolve(null);
-      return Promise.resolve(null);
+      return Promise.reject(new Error('Unknown invoke command: ' + cmd));
     },
     transformCallback: function (callback, once) {
       var id = callbackId++;

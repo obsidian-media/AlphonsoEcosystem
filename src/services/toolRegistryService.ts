@@ -266,7 +266,8 @@ export async function executeTool(name: string, args: ToolArgs, context: ToolCon
   switch (name) {
     case 'read_file': {
       const { readWorkspaceFile } = await import('./workspaceFileService');
-      return readWorkspaceFile({ workspaceRoot: context.workspaceRoot || '', relativePath: args.path as string }) as unknown as ToolExecutionResult;
+      const result = await readWorkspaceFile({ workspaceRoot: context.workspaceRoot || '', relativePath: args.path as string });
+      return { success: true, data: result } as ToolExecutionResult;
     }
 
     case 'write_file': {
@@ -281,12 +282,14 @@ export async function executeTool(name: string, args: ToolArgs, context: ToolCon
 
     case 'delete_file': {
       const { deleteWorkspaceFile } = await import('./workspaceFileService');
-      return deleteWorkspaceFile({ workspaceRoot: context.workspaceRoot || '', relativePath: args.path as string }) as unknown as ToolExecutionResult;
+      await deleteWorkspaceFile({ workspaceRoot: context.workspaceRoot || '', relativePath: args.path as string });
+      return { success: true } as ToolExecutionResult;
     }
 
     case 'move_file': {
       const { moveWorkspaceFile } = await import('./workspaceFileService');
-      return moveWorkspaceFile({ workspaceRoot: context.workspaceRoot || '', fromRelative: args.from as string, toRelative: args.to as string }) as unknown as ToolExecutionResult;
+      await moveWorkspaceFile({ workspaceRoot: context.workspaceRoot || '', fromRelative: args.from as string, toRelative: args.to as string });
+      return { success: true } as ToolExecutionResult;
     }
 
     case 'search_files': {

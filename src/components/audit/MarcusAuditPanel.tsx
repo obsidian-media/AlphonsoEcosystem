@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Send, Zap } from 'lucide-react';
 import { buildMarcusPublishPacket, executeMarcusPublish, MARCUS_PUBLISH_PLATFORMS } from '../../services/marcusPublishService';
+import { logApprovalEvent } from '../../services/agentAuditService';
 
 interface PlatformFields {
   caption?: string;
@@ -127,6 +128,20 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
     setApproved(false);
   };
 
+  const handleApprovalToggle = (checked: boolean) => {
+    if (checked) {
+      logApprovalEvent(
+        `marcus-publish-${platform}-${Date.now()}`,
+        'marcus',
+        `Publish to ${platform}`,
+        'approved',
+        'high',
+        0.8
+      );
+    }
+    setApproved(checked);
+  };
+
   const setField = (key: keyof PlatformFields, value: string) => setFields((prev) => ({ ...prev, [key]: value }));
 
   const handlePublish = async () => {
@@ -200,7 +215,7 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
             <FieldInput label="Image URL (optional)" value={fields.imageUrl ?? ''} onChange={(v) => setField('imageUrl', v)} placeholder="https://..." />
           </>)}
           {platform === 'youtube' && (<>
-            <FieldInput label="Local file path" value={fields.filePath ?? ''} onChange={(v) => setField('filePath', v)} placeholder="C:\Videos\clip.mp4" />
+            <FieldInput label="Local file path" value={fields.filePath ?? ''} onChange={(v) => setField('filePath', v)} placeholder="/path/to/video.mp4" />
             <FieldInput label="Title" value={fields.title ?? ''} onChange={(v) => setField('title', v)} />
             <FieldInput label="Description" value={fields.description ?? ''} onChange={(v) => setField('description', v)} multiline />
             <FieldInput label="Tags (comma-separated)" value={fields.tags ?? ''} onChange={(v) => setField('tags', v)} />
@@ -228,7 +243,7 @@ export function MarcusAuditPanel({ auditReport }: Props): React.JSX.Element {
         </div>
 
         <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 mb-4">
-          <input id="marcus-approval" type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-amber-400" />
+          <input id="marcus-approval" type="checkbox" checked={approved} onChange={(e) => handleApprovalToggle(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-amber-400" />
           <label htmlFor="marcus-approval" className="cursor-pointer text-[11px] text-amber-100/90 leading-relaxed">
             <span className="font-bold">I explicitly approve this external publish action.</span>
             {' '}Marcus will execute the distribution immediately through the {platformDef?.label} connector. This cannot be undone.

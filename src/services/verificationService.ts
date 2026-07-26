@@ -69,10 +69,10 @@ export function getVerificationLogs(): VerificationLogEntry[] {
 export function appendVerificationLog(entry: VerificationLogInput): VerificationLogEntry {
   const logs = readLogs();
   const payload: VerificationLogEntry = {
+    ...entry,
     id: `proof-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestampMs: timestampMs(),
     type: entry.type,
-    ...entry
   } as VerificationLogEntry;
   logs.push(payload);
   writeLogs(logs);

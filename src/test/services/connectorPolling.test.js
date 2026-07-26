@@ -238,8 +238,8 @@ describe('connectorPolling', () => {
     });
   });
 
-  describe('getConnectorEnvironment', () => {
-    it('returns empty object when no stored environment', async () => {
+  describe('parseInboundConnectorMessage — auth property', () => {
+    it('includes auth property in parsed message', async () => {
       const { parseInboundConnectorMessage } = await import('../../services/connectors/connectorPolling');
       const result = parseInboundConnectorMessage('telegram', 'test');
       expect(result).toHaveProperty('auth');

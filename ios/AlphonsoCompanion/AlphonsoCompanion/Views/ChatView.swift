@@ -37,7 +37,7 @@ struct ChatView: View {
                         }
                         .padding()
                     }
-                    .onChange(of: webSocketService.messages.count) { _ in
+                    .onChange(of: webSocketService.messages.count) { _, _ in
                         withAnimation {
                             proxy.scrollTo(webSocketService.messages.last?.id, anchor: .bottom)
                         }
@@ -84,7 +84,7 @@ struct ChatView: View {
                     }
                 }
             }
-            .onChange(of: webSocketService.activeCommandIDs) { _ in
+            .onChange(of: webSocketService.activeCommandIDs) { _, _ in
                 guard let activeCommandID, !webSocketService.activeCommandIDs.contains(activeCommandID) else { return }
                 self.activeCommandID = nil
             }

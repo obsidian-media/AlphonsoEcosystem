@@ -280,7 +280,7 @@ describe('parseMentions', () => {
 
       expect(results.length).toBeGreaterThan(0);
       expect(results[0].threadTopic).toBe('Q3 Pricing');
-      expect(results.some((r) => r.threadTopic === current.id)).toBe(false);
+      expect(results.some((r) => r.threadId === current.id)).toBe(false);
     });
 
     it('returns an empty array when nothing overlaps', async () => {

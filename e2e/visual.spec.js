@@ -14,9 +14,8 @@ test.describe('Visual Regression Snapshots', () => {
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
     await page.evaluate(() => document.fonts.ready);
-    // The mock resolves runtime/model checks asynchronously. Let their fixed
-    // mock state settle before taking a cross-run visual baseline.
-    await page.waitForTimeout(750);
+    // Ensure sidebar navigation is fully rendered before snapshot
+    await expect(page.getByRole('button', { name: /^Chat$/ })).toBeVisible({ timeout: 10000 });
   });
 
   test('app shell layout', async ({ page }) => {
@@ -38,7 +37,7 @@ test.describe('Visual Regression Snapshots', () => {
 
   test('settings panel renders', async ({ page }) => {
     await page.getByRole('button', { name: 'Open settings', exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.getByText('General').waitFor({ timeout: 10000 });
     await expect(page).toHaveScreenshot('settings-panel.png', {
       threshold: 0.2,
       maxDiffPixelRatio: 0.01

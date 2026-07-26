@@ -29,10 +29,11 @@ export interface StreamEvent {
 type StreamListener = (event: StreamEvent) => void;
 
 const activeStreams = new Map<string, StreamState>();
-const listeners = new Set<StreamListener>();
+const listeners = new Map<string, StreamListener>();
+const MAX_LISTENERS = 20;
 
 function notifyListeners(event: StreamEvent): void {
-  for (const fn of listeners) {
+  for (const fn of listeners.values()) {
     try { fn(event); } catch { /* ignore listener errors */ }
   }
 }
@@ -49,9 +50,15 @@ function persistStreamState(streamId: string, state: Partial<StreamState>): void
   } catch { /* ignore */ }
 }
 
-export function subscribeToStreams(fn: StreamListener): () => void {
-  listeners.add(fn);
-  return () => { listeners.delete(fn); };
+export function subscribeToStreams(fn: StreamListener, key?: string): () => void {
+  const id = key || `listener_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  if (listeners.has(id)) return () => {};
+  if (listeners.size >= MAX_LISTENERS) {
+    const firstKey = listeners.keys().next().value;
+    if (firstKey) listeners.delete(firstKey);
+  }
+  listeners.set(id, fn);
+  return () => { listeners.delete(id); };
 }
 
 export function getStreamState(streamId: string): StreamState | null {

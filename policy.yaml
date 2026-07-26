@@ -56,3 +56,21 @@ rules:
     match:
       target: "internal"
     effect: allow
+
+  - id: require_consent_connector_publish
+    description: Publishing to an external service is effectively irreversible — require explicit consent
+    match:
+      action: "external_publish"
+    effect: require_consent
+
+  - id: require_consent_connector_paid
+    description: Paid/metered connector calls incur real cost — require explicit consent
+    match:
+      action: "paid_connector_send"
+    effect: require_consent
+
+  - id: allow_connector_external_default
+    description: Low-risk catch-all for connector external actions
+    match:
+      target: "external"
+    effect: allow

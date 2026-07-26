@@ -70,7 +70,7 @@ describe('toolRegistryService', () => {
       expect(first).toHaveProperty('parameters');
     });
 
-    it('returns 22 tools', async () => {
+    it('returns 16 tools', async () => {
       const { getToolDefinitions } = await import('../../services/toolRegistryService');
       const tools = getToolDefinitions();
       expect(tools.length).toBe(16);

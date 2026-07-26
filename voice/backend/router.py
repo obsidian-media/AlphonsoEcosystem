@@ -34,7 +34,7 @@ ROUTING_PATTERNS = {
     ]
 }
 
-AGENTS = ['alphonso_core', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova']
+AGENTS = ['alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova']
 
 def detect_agent(text: str) -> str:
     """
@@ -47,7 +47,7 @@ def detect_agent(text: str) -> str:
         Agent identifier string
     """
     if not text:
-        return 'alphonso_core'
+        return 'alphonso'
     
     text_lower = text.lower()
     

@@ -10,13 +10,13 @@ test.describe('Alphonso boot sequence', () => {
     await page.addInitScript({ path: resolve(__dirname, 'tauri-mock.js') });
   });
 
-  test('shell renders within 3 seconds', async ({ page }) => {
+  test('completes boot within 8 seconds', async ({ page }) => {
     const startTime = Date.now();
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
     const elapsed = Date.now() - startTime;
     console.log(`Boot time: ${elapsed}ms`);
-    expect(elapsed).toBeLessThan(30000);
+    expect(elapsed).toBeLessThan(8000);
   });
 
   test('boot performance marks are recorded', async ({ page }) => {

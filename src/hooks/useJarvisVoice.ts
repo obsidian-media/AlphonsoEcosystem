@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { PCM_WORKLET_CODE } from './pcm-processor.worklet';
 
 import { getVoiceWebSocketUrl } from '../services/voiceOsService.js';
@@ -133,6 +133,12 @@ socket.onclose = () => {
       setVoiceState('error');
       stop();
     }
+  }, [stop]);
+
+  useEffect(() => {
+    return () => {
+      stop();
+    };
   }, [stop]);
 
   return { start, stop, reset, state: voiceState, transcript, reply, activeAgent, error, isConnected };

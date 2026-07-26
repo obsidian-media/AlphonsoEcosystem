@@ -23,10 +23,10 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 
 ## Directory Structure
 ```text
-src/                   React frontend (100% .tsx — 116 components, 0 .jsx remaining)
+src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated)
   agents/              9 agent profiles, permissions, schemas
-  components/          116 UI components (.tsx)
-  services/            172 services (policy-gated, not stubs)
+  components/          118 UI components (.tsx + .tsx subdirs)
+  services/            172 services (policy-gated, not stubs; 171/172 audited line-by-line 2026-07-26)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
@@ -56,6 +56,14 @@ ios/                   iOS companion app (SwiftUI)
   src/ollama.rs        Ollama backend
   src/memory_store.rs  Memory persistence
   src/meta_publish.rs  Meta publishing
+  src/voice_sidecar.rs Voice sidecar management
+  src/os_keychain_store.rs OS keychain credential storage
+  src/runtime_manager.rs Runtime process manager
+  src/companion_server.rs iOS companion WebSocket server
+  src/companion_discovery.rs mDNS companion discovery
+  src/companion_auth.rs Companion PIN authentication
+  src/companion_types.rs Shared companion data types
+  src/companion_router.rs Companion command routing
 scripts/               Build, release, auth, verification scripts
 e2e/                   Playwright E2E tests (smoke.spec.js, boot.spec.js)
 gateway/               WhatsApp Cloud gateway (Railway-deployed, live)

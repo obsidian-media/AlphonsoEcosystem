@@ -74,12 +74,14 @@ async function readSSEStream(
       const event = parseSSELine(trimmed);
       if (!event) continue;
       if (event.type === 'done') break;
-      if (event.type === 'content_block_delta' || event.type === 'delta') {
-        const deltaText = event.choices?.[0]?.delta?.content;
-        if (deltaText) {
-          full += deltaText;
-          onChunk?.(deltaText, full);
-        }
+      if (event.choices?.[0]?.delta?.content) {
+        const deltaText = event.choices[0].delta.content;
+        full += deltaText;
+        onChunk?.(deltaText, full);
+      } else if (event.type === 'content_block_delta' && (event.delta as { text?: string })?.text) {
+        const deltaText = (event.delta as { text: string }).text;
+        full += deltaText;
+        onChunk?.(deltaText, full);
       }
     }
   }

@@ -14,7 +14,22 @@ import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceSe
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
 
+function isAllowedUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') return false;
+    if (hostname.startsWith('10.') || hostname.startsWith('172.16.') || hostname.startsWith('192.168.')) return false;
+    if (hostname.endsWith('.local') || hostname.endsWith('.internal')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  if (!isAllowedUrl(url)) throw new Error(`Blocked fetch to disallowed URL: ${url}`);
   const DELAYS = [500, 1000, 2000];
   // Strip any AbortSignal from options — we create a fresh one per attempt below
   const { signal: _ignored, ...baseOptions } = options;

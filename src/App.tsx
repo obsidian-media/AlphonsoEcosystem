@@ -22,6 +22,36 @@ import { useAppKeyboardShortcuts } from './hooks/useAppKeyboardShortcuts';
 import { useIdleLock } from './hooks/useIdleLock';
 import { useAppShellState } from './hooks/useAppShellState';
 
+// Runtime validation helpers for Tauri event payloads — replaces bare `as` assertions
+function validateCompanionCommand(payload: unknown): {
+  commandId: string; text: string; agentId?: string; language?: string; voiceConversation?: boolean
+} | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.commandId !== 'string' || typeof p.text !== 'string') return null;
+  return {
+    commandId: p.commandId,
+    text: p.text,
+    agentId: typeof p.agentId === 'string' ? p.agentId : 'alphonso',
+    language: typeof p.language === 'string' ? p.language : 'en-US',
+    voiceConversation: typeof p.voiceConversation === 'boolean' ? p.voiceConversation : false,
+  };
+}
+
+function validateAbortCommand(payload: unknown): { commandId: string } | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.commandId !== 'string') return null;
+  return { commandId: p.commandId };
+}
+
+function validateApproveCommand(payload: unknown): { taskId: string } | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.taskId !== 'string') return null;
+  return { taskId: p.taskId };
+}
+
 import {
   VERIFICATION_LOG_CAP,
   themeClassFromSettings,
@@ -464,19 +494,12 @@ function AppShell() {
         const activeAborts = new Map<string, AbortController>();
 
         unlistenCommand = await listen('companion://command', async (event) => {
-          const {
-            commandId,
-            text,
-            agentId = 'alphonso',
-            language = 'en-US',
-            voiceConversation = false
-          } = event.payload as {
-            commandId: string;
-            text: string;
-            agentId?: string;
-            language?: string;
-            voiceConversation?: boolean;
-          };
+          const validated = validateCompanionCommand(event.payload);
+          if (!validated) {
+            console.warn('[App] Received companion://command with invalid payload, skipping');
+            return;
+          }
+          const { commandId, text, agentId, language, voiceConversation } = validated;
           const abortCtrl = new AbortController();
           activeAborts.set(commandId, abortCtrl);
           try {
@@ -570,7 +593,12 @@ function AppShell() {
 
         // abort_command: Rust emits companion://abort — cancel the pipeline for that commandId
         unlistenAbort = await listen('companion://abort', (event) => {
-          const { commandId } = event.payload as { commandId: string };
+          const validated = validateAbortCommand(event.payload);
+          if (!validated) {
+            console.warn('[App] Received companion://abort with invalid payload, skipping');
+            return;
+          }
+          const { commandId } = validated;
           activeAborts.get(commandId)?.abort();
           activeAborts.delete(commandId);
           invoke('companion_broadcast', {
@@ -581,7 +609,12 @@ function AppShell() {
 
         // Listen for approval requests from iOS — open the ApprovalModal
         unlistenApprove = await listen('companion://approve', async (event) => {
-          const { taskId } = event.payload as { taskId: string };
+          const validated = validateApproveCommand(event.payload);
+          if (!validated) {
+            console.warn('[App] Received companion://approve with invalid payload, skipping');
+            return;
+          }
+          const { taskId } = validated;
           setApprovalPending(taskId);
         });
 

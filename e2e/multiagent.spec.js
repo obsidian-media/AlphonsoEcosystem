@@ -35,12 +35,9 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     // Navigate to Chat tab
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    // Find the chat textarea
-    const textarea = page.locator('textarea').last();
+    const textarea = page.getByRole('textbox').last();
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
-    // Submit a command that the router should classify as needing Jose
-    // (a command with a connector or filesystem action keyword)
     await textarea.fill('Send a message to the Telegram channel about project status');
 
     const sendBtn = page.getByRole('button', { name: /Send message/i });
@@ -56,7 +53,7 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
   test('Activity log shows agent entry after pipeline', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.locator('textarea').last();
+    const textarea = page.getByRole('textbox').last();
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Analyze the current project for security risks');
@@ -74,7 +71,7 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
   test('orchestration summary persists after page reload', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.locator('textarea').last();
+    const textarea = page.getByRole('textbox').last();
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Run a workflow for marketing campaign');

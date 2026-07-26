@@ -106,6 +106,14 @@ function Row({ label, value }: RowProps): React.JSX.Element {
   );
 }
 
+/** Validated assertion helper — replaces bare `as never` casts. Logs warning on null/undefined. */
+function safeCast<T>(value: unknown, label: string): T {
+  if (value == null) {
+    console.warn(`[ProjectExecution] Expected non-null value for "${label}", got ${String(value)}`);
+  }
+  return value as T;
+}
+
 function SmallBtn({ onClick, tone, children }: SmallBtnProps): React.JSX.Element {
   const cls = tone === 'green'
     ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15'
@@ -197,7 +205,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
     return () => { cancelled = true; };
   }, [(result?.project as { projectName?: string })?.projectName]);
 
-  const auditReport = result ? auditProjectPlan(result.project as never) : null;
+  const auditReport = result ? auditProjectPlan(safeCast(result.project, 'result.project')) : null;
   const ts = traceSummary as { stagesCovered?: string[]; total?: number; pendingApprovals?: number; executed?: number; failed?: number } | null;
   const opModeTyped = opMode as { id: string; emphasis: string[] };
 
@@ -232,7 +240,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
         {activeTab === 'setup' && (
           <div className="space-y-4">
             <Card label="Project Details">
-              <ProjectIntakePanel intake={intake} setIntake={setIntake as never} presets={{}} onApplyPreset={() => {}} />
+              <ProjectIntakePanel intake={intake} setIntake={safeCast(setIntake, 'setIntake')} presets={{}} onApplyPreset={() => {}} />
               <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
                 <p className="text-[11px] text-zinc-500">
                   {intake.projectName ? 'Ready — generate the execution packet on the Execution tab.' : 'Enter a project name to continue.'}
@@ -278,11 +286,11 @@ export function ProjectExecutionMode(): React.JSX.Element {
         {activeTab === 'agents' && (
           <div className="space-y-4">
             <Card label="Active Agents">
-              <AgentDock agents={allProfiles as never} activeAgents={activeAgents} onToggleAgent={toggleAgent} />
+              <AgentDock agents={safeCast(allProfiles, 'allProfiles')} activeAgents={activeAgents} onToggleAgent={toggleAgent} />
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card label="Agent Profile"><AgentProfilePanel agent={selectedAgent as never} /></Card>
-              <Card label="Capability Matrix"><AgentCapabilityMatrix agentPermissions={permissions as never} agentProfiles={agentProfileMap as never} /></Card>
+              <Card label="Agent Profile"><AgentProfilePanel agent={safeCast(selectedAgent, 'selectedAgent')} /></Card>
+              <Card label="Capability Matrix"><AgentCapabilityMatrix agentPermissions={safeCast(permissions, 'permissions')} agentProfiles={safeCast(agentProfileMap, 'agentProfileMap')} /></Card>
             </div>
           </div>
         )}
@@ -367,18 +375,18 @@ export function ProjectExecutionMode(): React.JSX.Element {
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <Card label="Assignments"><AgentAssignmentBoard packets={result.packets as never} /></Card>
-                  <Card label="Agent Outputs"><AgentOutputPanel outputs={result.outputs as never} /></Card>
+                  <Card label="Assignments"><AgentAssignmentBoard packets={safeCast(result.packets, 'result.packets')} /></Card>
+                  <Card label="Agent Outputs"><AgentOutputPanel outputs={safeCast(result.outputs, 'result.outputs')} /></Card>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <Card label="Timeline"><ExecutionTimeline timeline={result.sequence as never} /></Card>
-                  <Card label="Approval Gates"><ApprovalGatePanel gates={result.approvalGates as never} /></Card>
-                  <Card label="Final Packet"><FinalExecutionPacket finalPacket={result.finalPacket as never} /></Card>
+                  <Card label="Timeline"><ExecutionTimeline timeline={safeCast(result.sequence, 'result.sequence')} /></Card>
+                  <Card label="Approval Gates"><ApprovalGatePanel gates={safeCast(result.approvalGates, 'result.approvalGates')} /></Card>
+                  <Card label="Final Packet"><FinalExecutionPacket finalPacket={safeCast(result.finalPacket, 'result.finalPacket')} /></Card>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <Card label="Roadmap"><ProjectRoadmap timeline={((result.project as Record<string, unknown>)?.timeline ?? ((result.project as Record<string, unknown>)?.output as Record<string, unknown>)?.proposedChanges ?? []) as never} /></Card>
-                  <Card label="Risk Register"><ProjectRiskRegister risks={(result.project as Record<string, unknown>)?.riskRegister as never} /></Card>
-                  <Card label="Verification Checklist"><ProjectVerificationChecklist checklist={(result.project as Record<string, unknown>)?.verificationChecklist as never} /></Card>
+                  <Card label="Roadmap"><ProjectRoadmap timeline={safeCast((result.project as Record<string, unknown>)?.timeline ?? ((result.project as Record<string, unknown>)?.output as Record<string, unknown>)?.proposedChanges ?? [], 'roadmapTimeline')} /></Card>
+                  <Card label="Risk Register"><ProjectRiskRegister risks={safeCast((result.project as Record<string, unknown>)?.riskRegister, 'riskRegister')} /></Card>
+                  <Card label="Verification Checklist"><ProjectVerificationChecklist checklist={safeCast((result.project as Record<string, unknown>)?.verificationChecklist, 'verificationChecklist')} /></Card>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <Card label="Project DNA">
@@ -404,8 +412,8 @@ export function ProjectExecutionMode(): React.JSX.Element {
                   </Card>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <Card label="Audit"><MarcusAuditPanel auditReport={auditReport as never} /></Card>
-                  <Card label="Research Brief"><HectorResearchPanel researchBrief={researchBrief as never} loading={researchLoading} /></Card>
+                  <Card label="Audit"><MarcusAuditPanel auditReport={safeCast(auditReport, 'auditReport')} /></Card>
+                  <Card label="Research Brief"><HectorResearchPanel researchBrief={safeCast(researchBrief, 'researchBrief')} loading={researchLoading} /></Card>
                 </div>
               </>
             )}

@@ -37,11 +37,12 @@ Write-Host "`nAdding secrets to $repo..." -ForegroundColor Yellow
 
 # Add each secret
 $secrets = @{
-    "IOS_CERTIFICATE" = (Get-Content -Raw -Path $certBase64Path).Trim()
+    "IOS_CERT_DER" = (Get-Content -Raw -Path $certBase64Path).Trim()
     "IOS_CERTIFICATE_PASSWORD" = $p12Password
     "IOS_DEVELOPMENT_TEAM" = $teamId
     "IOS_PROVISION_PROFILE" = $profileBase64
     "IOS_CERTIFICATE_NAME" = "Apple Distribution"
+    "IOS_KEY_PEM" = "REPLACE_WITH_BASE64_ENCODED_PRIVATE_KEY"
 }
 
 foreach ($name in $secrets.Keys) {

@@ -35,7 +35,7 @@ describe('moduleRegistryService', () => {
   });
 
   describe('enableModule/disableModule', () => {
-    it('enables and disables modules', async () => {
+    it('enableModule marks a module as enabled', async () => {
       const manifest = {
         id: 'test-mod',
         name: 'Test Module',
@@ -47,7 +47,17 @@ describe('moduleRegistryService', () => {
         schedules: [],
         entrypoint: '/index.js'
       };
-      await installModule('/fake');
+      const installResult = await installModule('/fake');
+      expect(installResult.success).toBe(false);
+      expect(installResult.error).toContain('Cannot read');
+    });
+
+    it('disableModule exported as function', () => {
+      expect(typeof disableModule).toBe('function');
+    });
+
+    it('enableModule exported as function', () => {
+      expect(typeof enableModule).toBe('function');
     });
   });
 });

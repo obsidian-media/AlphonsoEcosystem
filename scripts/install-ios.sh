@@ -46,7 +46,7 @@ xcodebuild clean build \
     -destination 'generic/platform=iOS' \
     CODE_SIGN_IDENTITY="Apple Development" \
     PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion" \
-    | xcpretty || true
+    | xcpretty
 
 APP_PATH=$(find build -name "AlphonsoCompanion.app" -type d | head -1)
 

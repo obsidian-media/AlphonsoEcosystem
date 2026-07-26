@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { PCM_WORKLET_CODE } from './pcm-processor.worklet';
 
-const WS_URL = 'ws://127.0.0.1:8765/ws';
+const WS_URL = import.meta.env.VITE_VOICE_WS_URL || 'ws://127.0.0.1:8765/ws';
 
 export interface JarvisVoiceState {
   state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
@@ -115,6 +115,12 @@ export function useJarvisVoice() {
       setVoiceState('error');
       stop();
     }
+  }, [stop]);
+
+  useEffect(() => {
+    return () => {
+      stop();
+    };
   }, [stop]);
 
   return { start, stop, reset, state: voiceState, transcript, reply, activeAgent, error, isConnected };
