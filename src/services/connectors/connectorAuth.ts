@@ -32,7 +32,7 @@ let _credCacheHydratedAt = 0;
  * Hydrates the in-memory credential cache from the OS-backed secure
  * credential store (Truth-First plan B3 — Windows Credential Manager /
  * macOS Keychain / Linux Secret Service via the Rust `keyring` crate,
- * `secure_credential_*` Tauri commands in `secure_credential_store.rs`).
+ * `secure_credential_*` Tauri commands in `os_keychain_store.rs`).
  *
  * Name kept as `...FromSqlite` for backward compatibility with existing
  * callers (`ConnectorSetupPanel.tsx`, `useBootEffects.js`,
