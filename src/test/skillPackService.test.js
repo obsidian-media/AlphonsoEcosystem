@@ -83,6 +83,86 @@ describe('installSkillPack', () => {
     expect(packs).toHaveLength(1);
     expect(packs[0].version).toBe('2.0.0');
   });
+
+  describe('regression: per-pack least-privilege enforcement (Truth-First plan C2)', () => {
+    // These exercise the exact free-form "paste a manifest" path
+    // (EcosystemHub.tsx's runInstallSkillPack) a user could use to reuse an
+    // existing taxonomy pack's id with broader permissions than that pack
+    // actually declares. Before C2's fix, a usesAgentWideTaxonomyScope bypass
+    // meant this would have silently succeeded as long as the pasted
+    // permissions stayed within the OWNING AGENT's full agent-wide list —
+    // this proves that gap is now closed for real, not just reasoned about.
+
+    it('re-installing a real Hector taxonomy pack with its own default permissions still succeeds', () => {
+      const result = installSkillPack({
+        id: 'pack.hector-api-documentation-research',
+        name: 'Hector API Documentation Research',
+        version: '1.0.0',
+        permissions: ['research', 'source_verification', 'citation_gathering'],
+        ownerAgent: 'hector',
+        category: 'agent_skill'
+      });
+      expect(result.installed).toBe(true);
+    });
+
+    it('rejects a pasted manifest that reuses an existing Hector taxonomy pack id but widens its permissions to another Hector pack\'s scope', () => {
+      const result = installSkillPack({
+        id: 'pack.hector-api-documentation-research',
+        name: 'Hector API Documentation Research (tampered)',
+        version: '1.0.0',
+        // 'campaign_planning' is valid for Hector generally (agent-wide list)
+        // but not for this specific pack's own declared scope.
+        permissions: ['campaign_planning'],
+        ownerAgent: 'hector',
+        category: 'agent_skill'
+      });
+      expect(result.installed).toBe(false);
+      expect(result.validation.valid).toBe(false);
+    });
+
+    it('re-enabling an already-installed default Echo taxonomy pack still succeeds (setSkillPackEnabled re-validates on enable)', () => {
+      installSkillPack({
+        id: 'pack.echo-decision-capture',
+        name: 'Echo Decision Capture',
+        version: '1.0.0',
+        permissions: ['memory.decisions', 'knowledge.context', 'timeline.decisions'],
+        ownerAgent: 'echo',
+        category: 'agent_skill',
+        enabled: false
+      });
+      const packs = setSkillPackEnabled('pack.echo-decision-capture', true);
+      const target = packs.find((p) => p.id === 'pack.echo-decision-capture');
+      expect(target.enabled).toBe(true);
+    });
+
+    it('blocks re-enabling a pack whose stored permissions were widened beyond its own scope by an older app version', () => {
+      // installSkillPack() already gates on validateSkillPackAgainstContract
+      // at install time (pre-existing, not part of this session's change),
+      // so a tampered manifest can't reach storage through that path anymore
+      // (proved by the two tests above). The scenario this test actually
+      // covers is different and realistic: a pack that was persisted to
+      // localStorage BEFORE this session's C2 fix, back when the
+      // usesAgentWideTaxonomyScope bypass let install-time validation pass
+      // permissions outside the pack's real scope. Simulating that by
+      // writing directly to the storage key (bypassing installSkillPack's
+      // own gate, the same way an old on-disk record would) proves
+      // setSkillPackEnabled's own re-validation-on-enable is a real second
+      // gate, not a no-op — it must independently reject stale/tampered
+      // records this fix's install-time check never had a chance to see.
+      localStorage.setItem('alphonso_skill_packs_v1', JSON.stringify([{
+        id: 'pack.echo-decision-capture',
+        name: 'Echo Decision Capture (pre-fix, over-broad)',
+        version: '1.0.0',
+        permissions: ['retention.prune'], // belongs to a different Echo pack's scope
+        ownerAgent: 'echo',
+        category: 'agent_skill',
+        enabled: false
+      }]));
+      const packs = setSkillPackEnabled('pack.echo-decision-capture', true);
+      const target = packs.find((p) => p.id === 'pack.echo-decision-capture');
+      expect(target.enabled).toBe(false);
+    });
+  });
 });
 
 describe('setSkillPackEnabled', () => {

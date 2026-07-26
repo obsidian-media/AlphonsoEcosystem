@@ -54,4 +54,60 @@ describe('crashLogService', () => {
     clearCrashLog();
     expect(durableRemove).toHaveBeenCalledWith('alphonso_crash_log_v1');
   });
+
+  // ── secret-shaped context redaction (Truth-First plan B4) ──────────────
+
+  describe('logError redacts sensitive-looking context keys before persisting', () => {
+    it('redacts a top-level key matching a sensitive pattern', () => {
+      logError(new Error('auth failed'), { apiKey: 'sk-real-secret-value', component: 'GitHub' });
+      const entries = JSON.parse(durableSet.mock.calls[0][1]);
+      expect(entries[0].context.apiKey).toBe('[REDACTED]');
+      expect(entries[0].context.component).toBe('GitHub'); // non-sensitive key untouched
+    });
+
+    it('redacts nested sensitive keys, not just top-level', () => {
+      logError(new Error('nested'), {
+        request: { headers: { Authorization: 'Bearer sk-real-secret-value' }, url: '/api/x' }
+      });
+      const entries = JSON.parse(durableSet.mock.calls[0][1]);
+      expect(entries[0].context.request.headers.Authorization).toBe('[REDACTED]');
+      expect(entries[0].context.request.url).toBe('/api/x');
+    });
+
+    it('redacts sensitive keys inside arrays of objects', () => {
+      logError(new Error('array'), {
+        attempts: [{ token: 'ghp_realtoken123' }, { token: 'ghp_anothersecret' }]
+      });
+      const entries = JSON.parse(durableSet.mock.calls[0][1]);
+      expect(entries[0].context.attempts[0].token).toBe('[REDACTED]');
+      expect(entries[0].context.attempts[1].token).toBe('[REDACTED]');
+    });
+
+    it('covers the common credential-shaped key name variants', () => {
+      logError(new Error('variants'), {
+        password: 'p',
+        SLACK_BOT_TOKEN: 't',
+        NOTION_API_KEY: 'k',
+        client_secret: 's',
+        passphrase: 'ph',
+        privateKey: 'pk'
+      });
+      const entries = JSON.parse(durableSet.mock.calls[0][1]);
+      const ctx = entries[0].context;
+      expect(ctx.password).toBe('[REDACTED]');
+      expect(ctx.SLACK_BOT_TOKEN).toBe('[REDACTED]');
+      expect(ctx.NOTION_API_KEY).toBe('[REDACTED]');
+      expect(ctx.client_secret).toBe('[REDACTED]');
+      expect(ctx.passphrase).toBe('[REDACTED]');
+      expect(ctx.privateKey).toBe('[REDACTED]');
+    });
+
+    it('does not choke on a circular context object', () => {
+      const ctx = { component: 'X' };
+      ctx.self = ctx;
+      expect(() => logError(new Error('circular'), ctx)).not.toThrow();
+      const entries = JSON.parse(durableSet.mock.calls[0][1]);
+      expect(entries[0].context.self).toBe('[CIRCULAR]');
+    });
+  });
 });

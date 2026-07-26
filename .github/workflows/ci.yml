@@ -101,9 +101,58 @@ jobs:
       # test/clippy quality gates by aborting the job before they run — which is
       # exactly what happened when `spin 0.9.8` was yanked. The gate still fails
       # the job on advisories; it just no longer masks the real quality checks.
+      #
+      # Truth-First plan B1 (2026-07-25): 17 RUSTSEC advisories are explicitly
+      # ignored below by ID, each triaged and confirmed upstream-blocked, not
+      # ignored blind. All 17 are "unmaintained"/"unsound" warnings, not
+      # exploitable CVE-severity vulnerabilities. Two independent chains:
+      #   - atk/atk-sys/gdk/gdk-sys/gdkwayland-sys/gdkx11/gdkx11-sys/gtk/
+      #     gtk-sys/gtk3-macros/proc-macro-error/glib (12 advisories): pulled
+      #     in exclusively via `libappindicator 0.9.0` <- `tray-icon 0.24.1`
+      #     <- `tauri 2.11.5`'s Linux system-tray implementation
+      #     (`cargo tree -i gtk` confirms this single path). `tray-icon` is
+      #     already at its latest crates.io release (0.24.1) and `tauri` is
+      #     already at its latest compatible 2.x release (2.11.5 — confirmed
+      #     via `cargo update -p tauri --dry-run` finding nothing newer) —
+      #     there is no available upgrade in our control that removes this
+      #     chain today.
+      #   - unic-char-property/unic-char-range/unic-common/unic-ucd-ident/
+      #     unic-ucd-version (5 advisories): pulled in via `urlpattern 0.3.0`
+      #     <- `tauri-utils 2.9.3` <- `tauri 2.11.5` (`cargo tree -i
+      #     unic-char-property` confirms). A newer `urlpattern 0.6.0` exists
+      #     upstream and likely drops these, but `tauri-utils` pins the
+      #     `0.3.x` range and only Tauri itself can move that pin — same
+      #     already-latest-compatible-version constraint as above.
+      # Ignoring by specific advisory ID (not by crate or a blanket --deny
+      # downgrade) means any NEW, different advisory against any of these
+      # same crates still fails CI immediately — this list only silences the
+      # 17 specific advisories reviewed on 2026-07-25.
+      # Re-check trigger: next `tauri`/`tray-icon` release, or in any case
+      # revisit by 2026-10-25 (3-month expiry) even if no release has
+      # landed, and re-run `cargo audit` without --ignore to see if the list
+      # can shrink.
       - name: Security audit (cargo)
         if: always()
-        run: cargo install cargo-audit && cargo audit --file src-tauri/Cargo.lock --deny warnings
+        run: |
+          cargo install cargo-audit
+          cargo audit --file src-tauri/Cargo.lock --deny warnings \
+            --ignore RUSTSEC-2024-0413 `# atk: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0416 `# atk-sys: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0412 `# gdk: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0418 `# gdk-sys: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0411 `# gdkwayland-sys: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0417 `# gdkx11: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0414 `# gdkx11-sys: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0415 `# gtk: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0420 `# gtk-sys: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0419 `# gtk3-macros: unmaintained, gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2024-0370 `# proc-macro-error: unmaintained, gtk3-tray-icon chain (via glib-macros)` \
+            --ignore RUSTSEC-2024-0429 `# glib: unsound (GH Dependabot #3), gtk3-tray-icon chain` \
+            --ignore RUSTSEC-2025-0081 `# unic-char-property: unmaintained, urlpattern/tauri-utils chain` \
+            --ignore RUSTSEC-2025-0075 `# unic-char-range: unmaintained, urlpattern/tauri-utils chain` \
+            --ignore RUSTSEC-2025-0080 `# unic-common: unmaintained, urlpattern/tauri-utils chain` \
+            --ignore RUSTSEC-2025-0100 `# unic-ucd-ident: unmaintained, urlpattern/tauri-utils chain` \
+            --ignore RUSTSEC-2025-0098 `# unic-ucd-version: unmaintained, urlpattern/tauri-utils chain`
         continue-on-error: false
 
       - name: Rust coverage (tarpaulin)
@@ -285,6 +334,9 @@ jobs:
 
       - name: Verify doc counts are fresh
         run: npm run verify:docs
+
+      - name: Verify agent skill-pack permission matrix is fresh
+        run: npm run verify:skill-matrix
 
   e2e:
     name: Playwright E2E Smoke Test

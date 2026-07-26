@@ -8,6 +8,7 @@ import {
   updateConnectorAuthProfile,
   DEFAULT_AUTH_PROFILES
 } from '../services/connectors/connectorAuth';
+import { appendConnectorAudit } from '../services/connectors/connectorRegistry.js';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -79,6 +80,28 @@ describe('saveConnectorCredential / getConnectorCredential', () => {
   it('handles empty string value gracefully', () => {
     saveConnectorCredential('qwen', 'DASHSCOPE_API_KEY', '');
     expect(getConnectorCredential('qwen', 'DASHSCOPE_API_KEY')).toBe('');
+  });
+});
+
+// ── secrets absent from logs/diagnostics (B3 done-when criterion) ────────────
+
+describe('saveConnectorCredential — never leaks the raw secret into the audit trail', () => {
+  it('does not call appendConnectorAudit at all when saving a credential', () => {
+    appendConnectorAudit.mockClear();
+    saveConnectorCredential('github', 'GITHUB_TOKEN', 'ghp_super_secret_value_12345');
+    expect(appendConnectorAudit).not.toHaveBeenCalled();
+  });
+
+  it('updateConnectorAuthProfile audits enabled/mode/allowlistCount only — never a credential value', () => {
+    appendConnectorAudit.mockClear();
+    saveConnectorCredential('github', 'GITHUB_TOKEN', 'ghp_super_secret_value_12345');
+    updateConnectorAuthProfile('github', { enabled: true, allowlist: ['owner/repo'] });
+
+    expect(appendConnectorAudit).toHaveBeenCalled();
+    for (const call of appendConnectorAudit.mock.calls) {
+      const serializedCall = JSON.stringify(call);
+      expect(serializedCall).not.toContain('ghp_super_secret_value_12345');
+    }
   });
 });
 
@@ -172,5 +195,142 @@ describe('updateConnectorAuthProfile', () => {
 
   it('handles unknown connector id without throwing', () => {
     expect(() => updateConnectorAuthProfile('brand_new_connector', { enabled: true })).not.toThrow();
+  });
+});
+
+// ── hydrateConnectorCredentialsFromSqlite — OS secure-store migration (B3) ────
+// Each test gets a fresh module instance (vi.resetModules + dynamic re-import)
+// because credential state lives in a module-level in-memory cache with no
+// exported reset — reusing the module across tests would leak state between
+// the different migration scenarios being asserted here.
+
+describe('hydrateConnectorCredentialsFromSqlite — OS secure-store migration', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.resetModules();
+  });
+
+  it('reads directly from the OS secure store when already migrated, with no migration calls', async () => {
+    const invokeMock = vi.fn(async (cmd, args) => {
+      if (cmd === 'secure_credential_get' && args.key === 'alphonso_connector_credentials_v1') {
+        return JSON.stringify({ github: { GITHUB_TOKEN: 'from-secure-store' } });
+      }
+      return null;
+    });
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    expect(mod.getConnectorCredential('github', 'GITHUB_TOKEN')).toBe('from-secure-store');
+
+    const calledCommands = invokeMock.mock.calls.map((c) => c[0]);
+    expect(calledCommands).toContain('secure_credential_get');
+    expect(calledCommands).not.toContain('secure_credential_set');
+    expect(calledCommands).not.toContain('kv_delete');
+  });
+
+  it('migrates from the legacy SQLite kv_store into the secure store, then deletes the kv copy', async () => {
+    const invokeMock = vi.fn(async (cmd, args) => {
+      if (cmd === 'secure_credential_get') return null; // not yet migrated
+      if (cmd === 'kv_get' && args.key === 'alphonso_connector_credentials_v1') {
+        return JSON.stringify({ slack: { SLACK_BOT_TOKEN: 'from-legacy-kv' } });
+      }
+      return null;
+    });
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    expect(mod.getConnectorCredential('slack', 'SLACK_BOT_TOKEN')).toBe('from-legacy-kv');
+
+    const setCall = invokeMock.mock.calls.find((c) => c[0] === 'secure_credential_set');
+    expect(setCall).toBeDefined();
+    expect(JSON.parse(setCall[1].value)).toEqual({ slack: { SLACK_BOT_TOKEN: 'from-legacy-kv' } });
+
+    const deleteCall = invokeMock.mock.calls.find((c) => c[0] === 'kv_delete');
+    expect(deleteCall).toBeDefined();
+    expect(deleteCall[1].key).toBe('alphonso_connector_credentials_v1');
+  });
+
+  it('does not delete the legacy kv_store copy if the secure-store write fails', async () => {
+    const invokeMock = vi.fn(async (cmd, args) => {
+      if (cmd === 'secure_credential_get') return null; // not yet migrated
+      if (cmd === 'kv_get' && args.key === 'alphonso_connector_credentials_v1') {
+        return JSON.stringify({ slack: { SLACK_BOT_TOKEN: 'from-legacy-kv' } });
+      }
+      if (cmd === 'secure_credential_set') throw new Error('OS secure store unavailable');
+      return null;
+    });
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    // The in-memory cache still has it for this session...
+    expect(mod.getConnectorCredential('slack', 'SLACK_BOT_TOKEN')).toBe('from-legacy-kv');
+    // ...but since the durable write failed, the legacy copy must survive so
+    // the credential isn't lost forever on next restart.
+    const deleteCall = invokeMock.mock.calls.find((c) => c[0] === 'kv_delete');
+    expect(deleteCall).toBeUndefined();
+  });
+
+  it('does not delete the legacy localStorage copy if the secure-store write fails', async () => {
+    localStorage.setItem(
+      'alphonso_connector_credentials_v1',
+      JSON.stringify({ notion: { NOTION_API_KEY: 'from-legacy-localstorage' } })
+    );
+    const invokeMock = vi.fn(async (cmd) => {
+      if (cmd === 'secure_credential_set') throw new Error('OS secure store unavailable');
+      return null; // secure store and kv both empty
+    });
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    expect(mod.getConnectorCredential('notion', 'NOTION_API_KEY')).toBe('from-legacy-localstorage');
+    expect(localStorage.getItem('alphonso_connector_credentials_v1')).not.toBeNull();
+    const deleteCall = invokeMock.mock.calls.find((c) => c[0] === 'kv_delete');
+    expect(deleteCall).toBeUndefined();
+  });
+
+  it('migrates from legacy localStorage (oldest location) when neither secure store nor kv has it', async () => {
+    localStorage.setItem(
+      'alphonso_connector_credentials_v1',
+      JSON.stringify({ notion: { NOTION_API_KEY: 'from-legacy-localstorage' } })
+    );
+    const invokeMock = vi.fn(async () => null); // secure store and kv both empty
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    expect(mod.getConnectorCredential('notion', 'NOTION_API_KEY')).toBe('from-legacy-localstorage');
+
+    const setCall = invokeMock.mock.calls.find((c) => c[0] === 'secure_credential_set');
+    expect(setCall).toBeDefined();
+    expect(JSON.parse(setCall[1].value)).toEqual({ notion: { NOTION_API_KEY: 'from-legacy-localstorage' } });
+    // Oldest location must be cleaned up so this migration only ever runs once.
+    expect(localStorage.getItem('alphonso_connector_credentials_v1')).toBeNull();
+  });
+
+  it('starts with an empty credential set when no location has anything', async () => {
+    const invokeMock = vi.fn(async () => null);
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    await mod.hydrateConnectorCredentialsFromSqlite();
+    expect(mod.getConnectorCredential('anything', 'ANYTHING')).toBe('');
+  });
+
+  it('saveConnectorCredential writes to the OS secure store, not kv_store or localStorage', async () => {
+    const invokeMock = vi.fn(async () => null);
+    vi.doMock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
+    const mod = await import('../services/connectors/connectorAuth.ts');
+
+    mod.saveConnectorCredential('deepseek', 'DEEPSEEK_API_KEY', 'sk-test');
+    expect(mod.getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY')).toBe('sk-test');
+
+    const setCall = invokeMock.mock.calls.find((c) => c[0] === 'secure_credential_set');
+    expect(setCall).toBeDefined();
+    expect(JSON.parse(setCall[1].value).deepseek.DEEPSEEK_API_KEY).toBe('sk-test');
+    expect(localStorage.getItem('alphonso_connector_credentials_v1')).toBeNull();
   });
 });

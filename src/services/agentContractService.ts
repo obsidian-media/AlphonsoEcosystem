@@ -136,7 +136,7 @@ const AGENT_SKILL_PACK_SCOPE_OVERRIDES: Record<string, string[]> = {
   'pack.echo-confidence-normalization': ['memory.confidence', 'knowledge.quality', 'retention.score'],
   'pack.echo-knowledge-indexing': ['knowledge.index', 'memory.retrieve', 'timeline.search'],
   'pack.echo-historical-context': ['knowledge.context', 'timeline.history', 'memory.context'],
-  'pack.echo-audit-trail': ['timeline.audit', 'memory.trail', 'knowledge追溯'],
+  'pack.echo-audit-trail': ['timeline.audit', 'memory.trail', 'knowledge.trace'],
   'pack.echo-memory-synthesis-advanced': ['memory.synthesize', 'knowledge.merge', 'timeline.merge'],
   'pack.echo-context-retrieval': ['memory.retrieve', 'knowledge.search', 'timeline.query'],
   'pack.echo-memory-pruning': ['retention.prune', 'memory.cleanup', 'retention.archive'],
@@ -168,7 +168,7 @@ const AGENT_SKILL_PACK_SCOPE_OVERRIDES: Record<string, string[]> = {
   'pack.nova-market-analysis': ['analysis.market', 'opportunity.segment', 'strategy.positioning'],
   'pack.nova-prioritization-matrix': ['prioritization.matrix', 'opportunity.rank', 'analysis.impact'],
   'pack.nova-risk-reward': ['opportunity.risk', 'analysis.reward', 'strategy.balance'],
-  'pack.nova-timing-analysis': ['opportunity.timing', 'analysis.window', 'strategy sequencing'],
+  'pack.nova-timing-analysis': ['opportunity.timing', 'analysis.window', 'strategy.sequencing'],
   'pack.nova-effort-estimation': ['opportunity.effort', 'analysis.complexity', 'prioritization.resource'],
   'pack.nova-strategic-alignment': ['strategy.alignment', 'opportunity.strategic', 'analysis.goals'],
   'pack.nova-growth-analysis': ['analysis.growth', 'opportunity.growth', 'strategy.scaling'],
@@ -177,31 +177,37 @@ const AGENT_SKILL_PACK_SCOPE_OVERRIDES: Record<string, string[]> = {
   'pack.nova-resource-optimization': ['strategy.resource', 'analysis.allocation', 'prioritization.capacity'],
   'pack.nova-scenario-modeling': ['analysis.scenario', 'opportunity.projection', 'strategy.modeling'],
   'pack.nova-decision-support': ['strategy.decision', 'analysis.support', 'prioritization.recommendation'],
-  'pack.nova-capability-assessment': ['analysis.capability', 'opportunity readiness', 'strategy.maturity'],
+  'pack.nova-capability-assessment': ['analysis.capability', 'opportunity.readiness', 'strategy.maturity'],
   'pack.nova-trend-forecasting': ['analysis.forecast', 'opportunity.trend', 'strategy.projection'],
-  'pack.nova-portfolio-analysis': ['analysis.portfolio', 'prioritization.balance', 'strategyportfolio'],
+  'pack.nova-portfolio-analysis': ['analysis.portfolio', 'prioritization.balance', 'strategy.portfolio'],
   'pack.nova-recommendation-engine': ['strategy.recommend', 'prioritization.engine', 'analysis.suggestion'],
   'pack.hector-market-research': ['market_research', 'source_verification', 'citation_gathering'],
   'pack.hector-competitive-analysis': ['competitive_scan', 'market_research', 'campaign_planning'],
   'pack.hector-source-verification': ['source_verification', 'citation_gathering', 'confidence_scoring'],
   'pack.hector-rss-monitoring': ['feed_monitoring', 'source_verification'],
   // Hector new packs - per-pack scope overrides
-  'pack.hector-api-documentation-research': ['research.api_docs', 'research.documentation', 'research.lookup'],
-  'pack.hector-compliance-research': ['research.compliance', 'research.regulatory', 'research.governance'],
-  'pack.hector-trend-analysis': ['market_research.trends', 'competitive_scan.trends', 'market_research.signals'],
-  'pack.hector-code-pattern-research': ['research.patterns', 'competitive_scan.code', 'research.architecture'],
-  'pack.hector-api-integration-research': ['research.integration', 'research.webhooks', 'research.auth'],
-  'pack.hector-security-research': ['research.security', 'research.vulnerabilities', 'research.hardening'],
-  'pack.hector-technical-architecture-research': ['research.architecture', 'competitive_scan.systems', 'research.design'],
-  'pack.hector-open-source-analysis': ['competitive_scan.oss', 'source_verification.licenses', 'confidence_scoring.dependency'],
-  'pack.hector-market-intelligence': ['market_research.intelligence', 'competitive_scan.positioning', 'content_strategy.market'],
-  'pack.hector-data-gathering': ['research.data', 'citation_gathering.collection', 'confidence_scoring.metrics'],
-  'pack.hector-content-research': ['content_strategy.research', 'market_research.content', 'source_verification.content'],
-  'pack.hector-documentation-audit': ['research.audit', 'source_verification.docs', 'citation_gathering.docs'],
-  'pack.hector-survey-design': ['research.survey', 'market_research.primary', 'citation_gathering.primary'],
-  'pack.hector-source-curation': ['source_verification.curation', 'citation_gathering.curation', 'feed_monitoring.curation'],
-  'pack.hector-confidence-scoring': ['confidence_scoring.claims', 'source_verification.evidence', 'citation_gathering.scoring'],
-  'pack.hector-research-briefing': ['research.briefing', 'content_strategy.briefing', 'citation_gathering.briefing'],
+  // NOTE: these must mirror each pack's actual `permissions` array in
+  // skillPackService.js exactly. Hector's taxonomy packs share a flat,
+  // un-namespaced permission vocabulary (research/source_verification/
+  // market_research/etc.) rather than per-pack dotted scopes like Miya's or
+  // Marcus's — so "narrower" here means "only this pack's 2-3 declared tags
+  // out of the agent-wide list of 10", not a deeper namespace cut.
+  'pack.hector-api-documentation-research': ['research', 'source_verification', 'citation_gathering'],
+  'pack.hector-compliance-research': ['research', 'source_verification', 'confidence_scoring'],
+  'pack.hector-trend-analysis': ['market_research', 'competitive_scan', 'citation_gathering'],
+  'pack.hector-code-pattern-research': ['research', 'competitive_scan', 'source_verification'],
+  'pack.hector-api-integration-research': ['research', 'source_verification', 'citation_gathering'],
+  'pack.hector-security-research': ['research', 'source_verification', 'confidence_scoring'],
+  'pack.hector-technical-architecture-research': ['research', 'competitive_scan', 'citation_gathering'],
+  'pack.hector-open-source-analysis': ['competitive_scan', 'source_verification', 'confidence_scoring'],
+  'pack.hector-market-intelligence': ['market_research', 'competitive_scan', 'content_strategy'],
+  'pack.hector-data-gathering': ['research', 'citation_gathering', 'confidence_scoring'],
+  'pack.hector-content-research': ['content_strategy', 'market_research', 'source_verification'],
+  'pack.hector-documentation-audit': ['research', 'source_verification', 'citation_gathering'],
+  'pack.hector-survey-design': ['research', 'market_research', 'citation_gathering'],
+  'pack.hector-source-curation': ['source_verification', 'citation_gathering', 'feed_monitoring'],
+  'pack.hector-confidence-scoring': ['confidence_scoring', 'source_verification', 'citation_gathering'],
+  'pack.hector-research-briefing': ['research', 'content_strategy', 'citation_gathering'],
   'pack.jose-task-routing': ['task_routing', 'execution_tracking'],
   'pack.jose-approval-gating': ['approval_gating', 'execution_tracking'],
   'pack.jose-cross-agent-synthesis': ['cross_agent_synthesis', 'task_routing'],
@@ -259,6 +265,41 @@ const AGENT_SKILL_PACK_SCOPE_OVERRIDES: Record<string, string[]> = {
   'pack.alphonso-error-handling': ['code.error.boundary', 'code.error.logging', 'code.error.recovery', 'code.error.monitoring']
 };
 
+// Optional per-pack DENYLIST, layered on top of the allowlist check below and
+// on top of UNIVERSAL_BLOCKED_SKILL_PERMISSIONS (which already applies to
+// every pack except Alphonso's). This exists as explicit defense-in-depth
+// for a pack whose own allowed-prefix override is broad enough that a
+// specific dangerous permission could otherwise slip through even though it
+// technically matches an allowed prefix — e.g. a hypothetical
+// 'runtime.execute_shell' matching a pack's broad 'runtime.' allowlist entry.
+//
+// As of 2026-07-25 (Truth-First plan C2), an audit of every entry in
+// AGENT_SKILL_PACK_SCOPE_OVERRIDES found none containing a permission
+// resembling execute_command/filesystem.write/external_publish/purchase —
+// every override is already narrow enough that the universal blocklist alone
+// covers it. This map is therefore empty today; it is real, wired, and
+// tested (see agentContractService.test.js), not a placeholder for a gap
+// that was actually left open.
+// Exported (unlike AGENT_SKILL_PACK_SCOPE_OVERRIDES, which stays internal)
+// specifically so its "currently empty" claim and its wiring into
+// validateSkillPackAgainstContract are both directly testable rather than
+// asserted on faith — see agentContractService.test.js.
+export const AGENT_SKILL_PACK_BLOCKED_OVERRIDES: Record<string, string[]> = {};
+
+/**
+ * Whether `packId` has its own narrower AGENT_SKILL_PACK_SCOPE_OVERRIDES
+ * entry (true) or intentionally falls back to its owning agent's full
+ * agent-wide permission list (false) — e.g. the pre-taxonomy catch-all packs
+ * like `pack.codex-professional-coding`, `pack.hector-professional-marketing`,
+ * `pack.echo-memory-synthesis`, `pack.nova-opportunity-analysis`. Exposes
+ * only membership, not the actual scope contents, so exhaustive tests can
+ * tell "should be narrow" apart from "is intentionally broad by design"
+ * without needing the full override map exported.
+ */
+export function hasSkillPackScopeOverride(packId: string): boolean {
+  return Object.prototype.hasOwnProperty.call(AGENT_SKILL_PACK_SCOPE_OVERRIDES, packId);
+}
+
 export interface SkillPermissionValidationResult {
   ok: boolean;
   reason: string | null;
@@ -276,32 +317,36 @@ export interface SkillPermissionValidationResult {
  * per-skill scoping layer on top of the original per-agent check. Omitting
  * `packId` (or passing one with no override) preserves the original
  * agent-wide behavior exactly.
+ *
+ * A permission is rejected if it fails the allowlist above, OR if it matches
+ * a per-pack entry in AGENT_SKILL_PACK_BLOCKED_OVERRIDES, OR (for non-Alphonso
+ * agents) a prefix in UNIVERSAL_BLOCKED_SKILL_PERMISSIONS — the per-pack
+ * denylist always wins even if the same permission would otherwise pass the
+ * allowlist.
  */
 export function validateSkillPackAgainstContract(agentName: string | undefined, permissions: string[] = [], packId?: string): SkillPermissionValidationResult {
   if (!agentName) {
     return { ok: true, reason: null };
   }
   const contract = AGENT_EXECUTION_CONTRACTS[agentName];
-  const overridePrefixes = packId && AGENT_SKILL_PACK_SCOPE_OVERRIDES[packId];
-  const legacyHectorPackIds = new Set([
-    'pack.hector-professional-marketing', 'pack.hector-market-research',
-    'pack.hector-competitive-analysis', 'pack.hector-source-verification',
-    'pack.hector-rss-monitoring'
-  ]);
-  const usesAgentWideTaxonomyScope =
-    (agentName === AGENTS.HECTOR && packId?.startsWith('pack.hector-') && !legacyHectorPackIds.has(packId)) ||
-    (agentName === AGENTS.ECHO && packId?.startsWith('pack.echo-')) ||
-    (agentName === AGENTS.NOVA && packId?.startsWith('pack.nova-'));
-  const allowedPrefixes = usesAgentWideTaxonomyScope
-    ? AGENT_SKILL_PERMISSION_PREFIXES[agentName]
-    : overridePrefixes || AGENT_SKILL_PERMISSION_PREFIXES[agentName];
+  const overridePrefixes = packId && hasSkillPackScopeOverride(packId)
+    ? AGENT_SKILL_PACK_SCOPE_OVERRIDES[packId]
+    : undefined;
+  const allowedPrefixes = overridePrefixes || AGENT_SKILL_PERMISSION_PREFIXES[agentName];
   if (!contract || !allowedPrefixes) {
     // Unknown agent or no declared skill-permission scope — nothing to validate against.
     return { ok: true, reason: null };
   }
 
+  const blockedPrefixes = (packId && Object.prototype.hasOwnProperty.call(AGENT_SKILL_PACK_BLOCKED_OVERRIDES, packId)
+    ? AGENT_SKILL_PACK_BLOCKED_OVERRIDES[packId]
+    : undefined) || [];
+
   const offendingPermissions = (permissions || []).filter((permission) => {
     const value = String(permission || '').toLowerCase();
+    if (startsWithAny(value, blockedPrefixes)) {
+      return true;
+    }
     if (agentName !== AGENTS.ALPHONSO && startsWithAny(value, UNIVERSAL_BLOCKED_SKILL_PERMISSIONS)) {
       return true;
     }

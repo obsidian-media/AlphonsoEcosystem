@@ -28,31 +28,81 @@ export type ConnectorCredentials = Record<string, Record<string, string>>;
 let _credCache: ConnectorCredentials | null = null;
 let _credCacheHydratedAt = 0;
 
+/**
+ * Hydrates the in-memory credential cache from the OS-backed secure
+ * credential store (Truth-First plan B3 — Windows Credential Manager /
+ * macOS Keychain / Linux Secret Service via the Rust `keyring` crate,
+ * `secure_credential_*` Tauri commands in `os_keychain_store.rs`).
+ *
+ * Name kept as `...FromSqlite` for backward compatibility with existing
+ * callers (`ConnectorSetupPanel.tsx`, `useBootEffects.js`,
+ * `useDataHydration.js`) even though credentials no longer live in SQLite —
+ * only migration *from* SQLite/localStorage still touches those stores, and
+ * only until this function's one-time migration sweep completes.
+ *
+ * Migration order, each a fallback for the one before it, each migrating
+ * forward and deleting the old copy so it only ever happens once per
+ * install: OS secure store (already-migrated state) -> legacy SQLite
+ * `kv_store` (`kv_get`, pre-B3 storage) -> legacy `localStorage`
+ * (pre-durableStore, the oldest storage location). A credential found in an
+ * older location is written into the secure store and deleted from the
+ * older location before this function returns.
+ */
 export async function hydrateConnectorCredentialsFromSqlite(force = false): Promise<void> {
   if (_credCache !== null && !force && (Date.now() - _credCacheHydratedAt) < CRED_CACHE_TTL_MS) return;
   try {
-    const json = await invoke('kv_get', { key: CREDS_KEY }) as string | null;
-    if (json) {
-      const parsed = JSON.parse(json);
+    const secureJson = await invoke('secure_credential_get', { key: CREDS_KEY }) as string | null;
+    if (secureJson) {
+      const parsed = JSON.parse(secureJson);
       if (parsed && typeof parsed === 'object') {
         _credCache = parsed;
         _credCacheHydratedAt = Date.now();
-        try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
         return;
       }
     }
+
+    // Not yet in the secure store — check the legacy SQLite kv_store (pre-B3).
+    const kvJson = await invoke('kv_get', { key: CREDS_KEY }) as string | null;
+    if (kvJson) {
+      const parsed = JSON.parse(kvJson);
+      if (parsed && typeof parsed === 'object') {
+        _credCache = parsed;
+        _credCacheHydratedAt = Date.now();
+        // Only delete the legacy copy once the secure-store write is confirmed
+        // to have succeeded — otherwise a failed write (Windows Credential
+        // Manager blob-size limit, keychain/D-Bus unavailable, etc.) would
+        // silently lose the credential forever: it only ever lived in the
+        // in-memory cache for this session, with both older copies gone.
+        const migrated = await invoke('secure_credential_set', { key: CREDS_KEY, value: kvJson })
+          .then(() => true)
+          .catch(() => false);
+        if (migrated) {
+          await invoke('kv_delete', { key: CREDS_KEY }).catch(() => {});
+          try { localStorage.removeItem(CREDS_KEY); } catch { /* localStorage unavailable */ }
+        }
+        return;
+      }
+    }
+
+    // Oldest location — legacy plain localStorage (pre-durableStore).
     const raw = localStorage.getItem(CREDS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         _credCache = parsed;
         _credCacheHydratedAt = Date.now();
-        invoke('kv_set', { key: CREDS_KEY, value: raw }).catch(() => {});
-        localStorage.removeItem(CREDS_KEY);
+        const migrated = await invoke('secure_credential_set', { key: CREDS_KEY, value: raw })
+          .then(() => true)
+          .catch(() => false);
+        if (migrated) {
+          await invoke('kv_delete', { key: CREDS_KEY }).catch(() => {});
+          localStorage.removeItem(CREDS_KEY);
+        }
       }
     }
   } catch {
-    // ignore — in-memory cache fallback already in place
+    // ignore — in-memory cache fallback already in place (e.g. running
+    // outside Tauri, where none of these invoke() calls resolve)
   }
 }
 
@@ -73,9 +123,15 @@ function writeAllCredentials(creds: ConnectorCredentials): void {
   _credCache = creds;
   _credCacheHydratedAt = Date.now();
   try {
-    invoke('kv_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch(() => {});
+    invoke('secure_credential_set', { key: CREDS_KEY, value: JSON.stringify(creds) }).catch((error) => {
+      // The in-memory cache still has this write for the rest of the current
+      // session, but nothing durable does — surface it so a failed persist
+      // (Windows Credential Manager blob-size limit, keychain/D-Bus
+      // unavailable, etc.) isn't mistaken for a successful save.
+      console.error('Failed to persist connector credentials to the OS secure store:', error);
+    });
   } catch {
-    // SQLite not available outside Tauri
+    // OS secure credential store not available outside Tauri
   }
 }
 

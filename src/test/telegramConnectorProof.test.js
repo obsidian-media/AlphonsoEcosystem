@@ -15,9 +15,14 @@ vi.mock('@tauri-apps/api/core', () => ({
         externalId: 'telegram-proof-1',
       };
     }
-    // kv_get must return null (not the generic {ok:true} below) so
-    // hydrateConnectorCredentialsFromSqlite() falls through to its localStorage
-    // fallback path instead of trying to JSON.parse a non-string truthy value.
+    // secure_credential_get and kv_get must return null (not the generic
+    // {ok:true} below). If either fell through to that default,
+    // hydrateConnectorCredentialsFromSqlite() (Truth-First B3's OS-secure-store
+    // -> legacy-SQLite -> legacy-localStorage waterfall) would try to
+    // JSON.parse({ok:true}), which throws before the localStorage fallback
+    // below ever runs — the credential cache stays uninitialized, and a later
+    // read (readAllCredentials()) lazily sets it to {} for the rest of the test.
+    if (command === 'secure_credential_get') return null;
     if (command === 'kv_get') return null;
     if (command === 'kv_set') return null;
     return { ok: true };
