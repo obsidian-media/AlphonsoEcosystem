@@ -76,7 +76,7 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     const textarea = page.getByPlaceholder(/Ask anything/i);
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
-    await textarea.fill('Run a workflow for marketing campaign');
+    await textarea.fill('Send a message to the Telegram channel about project status');
 
     const sendBtn = page.getByRole('button', { name: /Send message/i });
     await expect(sendBtn).toBeEnabled();
