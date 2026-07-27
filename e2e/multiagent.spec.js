@@ -35,35 +35,36 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     // Navigate to Chat tab
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.getByPlaceholder(/Ask anything/i);
+    const textarea = page.getByTestId('chat-compose-input');
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Send a message to the Telegram channel about project status');
 
-    const sendBtn = page.getByRole('button', { name: /Send message/i });
+    const sendBtn = page.getByTestId('chat-send-button');
     await expect(sendBtn).toBeVisible();
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
     // Jose's result card proves that the executable command entered the orchestration path.
-    await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
 
     await expect(page.getByText('Agent Activity', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-routing-explainer')).toBeVisible();
   });
 
   test('Activity log shows agent entry after pipeline', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.getByPlaceholder(/Ask anything/i);
+    const textarea = page.getByTestId('chat-compose-input');
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Analyze the current project for security risks');
 
-    const sendBtn = page.getByRole('button', { name: /Send message/i });
+    const sendBtn = page.getByTestId('chat-send-button');
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
-    await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
 
     // Navigate to Runtime / Activity tab and check for agent activity entry
     // The RightPanel should show an agent entry (e.g., "Sentinel", "Jose", or activity badge)
@@ -73,23 +74,25 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
   test('orchestration summary persists after page reload', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.getByPlaceholder(/Ask anything/i);
+    const textarea = page.getByTestId('chat-compose-input');
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Send a message to the Telegram channel about project status');
 
-    const sendBtn = page.getByRole('button', { name: /Send message/i });
+    const sendBtn = page.getByTestId('chat-send-button');
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
-    await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
 
     // Reload page
     await page.reload();
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    await expect(page.getByText('Jose merged', { exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-pipeline-result-card')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('jose-copy-summary-button')).toBeVisible();
+    await expect(page.getByTestId('jose-rerun-command-button')).toBeVisible();
   });
 
 });

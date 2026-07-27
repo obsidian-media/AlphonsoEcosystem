@@ -30,14 +30,14 @@ test.describe('Alphonso E2E smoke tests', () => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
     // Wait for ChatView textarea
-    const textarea = page.getByPlaceholder(/Ask anything/i);
+    const textarea = page.getByTestId('chat-compose-input');
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     // Type a message
     await textarea.fill('Hello Alphonso');
 
     // Send via button
-    const sendBtn = page.getByRole('button', { name: /Send message/i });
+    const sendBtn = page.getByTestId('chat-send-button');
     await expect(sendBtn).toBeVisible();
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();

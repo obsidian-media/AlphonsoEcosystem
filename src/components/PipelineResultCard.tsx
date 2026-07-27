@@ -387,10 +387,12 @@ interface PipelineResultCardProps {
   result: PipelineResult | null;
   commandText?: string;
   onRetryAgent?: (receipt: ExecutionReceipt) => void;
+  onRerunCommand?: (commandText: string) => void;
   outputFolder?: string;
 }
 
-export function PipelineResultCard({ result, commandText, onRetryAgent, outputFolder }: PipelineResultCardProps) {
+export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunCommand, outputFolder }: PipelineResultCardProps) {
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   if (!result) return null;
   const executedCount = result.executedCount || 0;
   const pendingCount = result.pendingApprovalCount || 0;
@@ -404,56 +406,106 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, outputFo
   const assignmentSummaries = userReport?.assignmentSummaries || [];
   const artifacts = assignmentSummaries.flatMap((a) => a.artifacts || []);
   const agentReports = assignmentSummaries.filter((a) => a.reportSummary);
+  const copySummary = async () => {
+    const text = commandText
+      ? `Command:\n${commandText}\n\nSummary:\n${summary}`
+      : summary;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState('copied');
+      window.setTimeout(() => setCopyState('idle'), 1400);
+    } catch {
+      setCopyState('error');
+      window.setTimeout(() => setCopyState('idle'), 1400);
+    }
+  };
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-zinc-900/80 to-zinc-950/60 shadow-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/[0.04] bg-gradient-to-r from-indigo-500/5 to-purple-500/5">
-        <div className="flex items-center gap-2">
-          <Bot className="w-4 h-4 text-indigo-400" />
-          <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-300">Jose Pipeline Result</span>
+    <div
+      className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(24,24,27,0.96),rgba(9,9,11,0.94))] shadow-[0_24px_80px_-36px_rgba(15,23,42,0.95)] backdrop-blur-xl"
+      data-testid="jose-pipeline-result-card"
+    >
+      <div className="border-b border-white/[0.05] bg-[linear-gradient(90deg,rgba(99,102,241,0.12),rgba(168,85,247,0.06))] px-4 py-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-indigo-300" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-200">Jose Pipeline Result</span>
+            </div>
+            <div className="mt-1 text-[11px] leading-relaxed text-zinc-400">
+              Persisted in this chat so you can revisit the routing result, receipts, and follow-up actions later.
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={copySummary}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-200 transition-all hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40"
+              aria-label="Copy summary"
+              data-testid="jose-copy-summary-button"
+            >
+              <Copy className="h-3 w-3" />
+              {copyState === 'copied' ? 'Copied' : copyState === 'error' ? 'Retry' : 'Copy summary'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (commandText) onRerunCommand?.(commandText); }}
+              disabled={!commandText || !onRerunCommand}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-400/20 bg-indigo-500/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-100 transition-all hover:-translate-y-0.5 hover:border-indigo-300/30 hover:bg-indigo-500/18 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40"
+              aria-label="Rerun command"
+              data-testid="jose-rerun-command-button"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Rerun
+            </button>
+          </div>
         </div>
         {commandText && (
-          <div className="text-[12px] text-zinc-300 mt-1.5 line-clamp-2">{commandText}</div>
+          <div className="mt-2 inline-flex max-w-full items-start rounded-2xl border border-white/[0.08] bg-black/20 px-3 py-2 text-[12px] leading-relaxed text-zinc-200">
+            <span className="line-clamp-2">{commandText}</span>
+          </div>
         )}
       </div>
 
-      <div className="px-4 py-3 border-b border-white/[0.04]">
-        <div className="text-[11px] text-zinc-400">{summary}</div>
+      <div className="border-b border-white/[0.05] px-4 py-3">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Summary</div>
+        <div className="mt-1.5 text-[12px] leading-relaxed text-zinc-300">{summary}</div>
         {url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 mt-1.5 transition-colors">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-indigo-400/15 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-medium text-indigo-300 transition-colors hover:bg-indigo-500/15 hover:text-indigo-200">
             <ExternalLink className="w-3 h-3" />
             View Result
           </a>
         )}
       </div>
 
-      <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-[11px] text-zinc-300 font-medium">{executedCount}</span>
-          <span className="text-[10px] text-zinc-500">executed</span>
+      <div className="grid grid-cols-1 gap-2 border-b border-white/[0.05] px-4 py-3 sm:grid-cols-3">
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/15 bg-emerald-500/8 px-3 py-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="min-w-0">
+            <div className="text-[12px] font-semibold text-zinc-100">{executedCount}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Executed</div>
+          </div>
         </div>
-        {pendingCount > 0 && (
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-[11px] text-zinc-300 font-medium">{pendingCount}</span>
-            <span className="text-[10px] text-zinc-500">pending</span>
+        <div className="flex items-center gap-2 rounded-2xl border border-amber-500/15 bg-amber-500/8 px-3 py-2">
+          <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="min-w-0">
+            <div className="text-[12px] font-semibold text-zinc-100">{pendingCount}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Pending</div>
           </div>
-        )}
-        {failedCount > 0 && (
-          <div className="flex items-center gap-1.5">
-            <XCircle className="w-3.5 h-3.5 text-red-400" />
-            <span className="text-[11px] text-zinc-300 font-medium">{failedCount}</span>
-            <span className="text-[10px] text-zinc-500">failed</span>
+        </div>
+        <div className="flex items-center gap-2 rounded-2xl border border-red-500/15 bg-red-500/8 px-3 py-2">
+          <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <div className="min-w-0">
+            <div className="text-[12px] font-semibold text-zinc-100">{failedCount}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Failed</div>
           </div>
-        )}
-        <div className="text-[10px] text-zinc-600 ml-auto">{total} total</div>
+        </div>
       </div>
 
       {receipts.length > 0 && (
-        <div className="px-4 py-3 border-b border-white/[0.04]">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Agent Activity</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <div className="border-b border-white/[0.05] px-4 py-3">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Agent Activity</div>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {receipts.map((receipt, idx) => (
               <AgentCard key={receipt.packetId || idx} receipt={receipt} onRetry={onRetryAgent} />
             ))}
@@ -462,18 +514,18 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, outputFo
       )}
 
       {artifacts.length > 0 && (
-        <div className="px-4 py-3 border-b border-white/[0.04]">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Outputs</div>
+        <div className="border-b border-white/[0.05] px-4 py-3">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Outputs</div>
           <ArtifactDisplay artifacts={artifacts} />
         </div>
       )}
 
       {artifacts.filter((a) => a.type === 'generated_images').map((imgArtifact, idx) => (
-        <div key={`gen-img-${idx}`} className="px-4 py-3 border-b border-white/[0.04]">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-2">
+        <div key={`gen-img-${idx}`} className="border-b border-white/[0.05] px-4 py-3">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-purple-300">
             Generated Images ({imgArtifact.count || (imgArtifact.images || []).length})
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {(imgArtifact.images || []).map((img, i) => (
               <GeneratedImageCard key={i} img={img} index={i} outputFolder={outputFolder || ''} />
             ))}
@@ -482,16 +534,16 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, outputFo
       ))}
 
       {agentReports.length > 0 && (
-        <div className="px-4 py-3 border-b border-white/[0.04]">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Agent Reports</div>
+        <div className="border-b border-white/[0.05] px-4 py-3">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Agent Reports</div>
           <div className="space-y-2">
             {agentReports.map((a, idx) => (
-              <div key={idx} className="p-2 rounded-lg bg-zinc-800/40 border border-white/[0.06]">
+              <div key={idx} className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className="text-[10px]">{AGENT_ICONS[a.agent] || '🤖'}</span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{a.agent}</span>
                 </div>
-                <div className="text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap">{a.reportSummary}</div>
+                <div className="text-[11px] leading-relaxed whitespace-pre-wrap text-zinc-300">{a.reportSummary}</div>
               </div>
             ))}
           </div>
@@ -499,9 +551,9 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, outputFo
       )}
 
       {result.commandId && (
-        <div className="px-4 py-2 flex items-center justify-between">
-          <span className="text-[9px] text-zinc-600 font-mono">{result.commandId}</span>
-          <span className="text-[9px] text-zinc-600">{new Date().toLocaleTimeString()}</span>
+        <div className="flex items-center justify-between px-4 py-2 text-[9px] text-zinc-600">
+          <span className="font-mono">{result.commandId}</span>
+          <span>{new Date().toLocaleTimeString()}</span>
         </div>
       )}
     </div>

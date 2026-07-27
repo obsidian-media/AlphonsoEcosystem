@@ -47,6 +47,12 @@ const RuntimeNotice = lazy(() => import('./RuntimeNotice').then((mod) => ({ defa
 const MicrophoneStatus = lazy(() => import('./MicrophoneStatus').then((mod) => ({ default: mod.MicrophoneStatus })));
 const VoiceInputButton = lazy(() => import('./VoiceInputButton').then((mod) => ({ default: mod.VoiceInputButton })));
 const SmartVoiceButton = lazy(() => import('./SmartVoiceButton').then((mod) => ({ default: mod.SmartVoiceButton })));
+const JOSE_PIPELINE_STORAGE_PREFIX = 'alphonso_jose_pipeline_v1';
+
+function getJosePipelineStorageKey(chatId: string | null): string | null {
+  if (!chatId) return null;
+  return `${JOSE_PIPELINE_STORAGE_PREFIX}_${chatId}`;
+}
 
 // D2T9: Connector degradation banner — shown when Ollama is online but connectors are unavailable
 function ConnectorDegradationBanner({ onDismiss }) {
@@ -256,6 +262,7 @@ export function ChatView({
   const [executionReceipts, setExecutionReceipts] = useState([]);
   const [pipelineResult, setPipelineResult] = useState(null);
   const [pipelineCommandText, setPipelineCommandText] = useState('');
+  const [pipelineStateChatId, setPipelineStateChatId] = useState<string | null>(null);
   const [liveProgress, setLiveProgress] = useState(null);
   const [streamingText, setStreamingText] = useState('');
   const [streamingTokens, setStreamingTokens] = useState(0);
@@ -336,7 +343,14 @@ export function ChatView({
     new_chat: () => {
       setMessages([]);
       setPipelineResult(null);
+      setPipelineCommandText('');
+      setExecutionReceipts([]);
+      setPipelineStateChatId(null);
       setLiveProgress(null);
+      const pipelineKey = getJosePipelineStorageKey(activeChatId);
+      if (pipelineKey) {
+        try { localStorage.removeItem(pipelineKey); } catch { /* storage */ }
+      }
     },
     focus_input: () => inputRef.current?.focus(),
     abort_generation: handleAbortStream,
@@ -437,6 +451,37 @@ export function ChatView({
     void load();
     setMessageWindowStart(0);
     return () => { cancelled = true; };
+  }, [activeChatId]);
+
+  useEffect(() => {
+    const pipelineKey = getJosePipelineStorageKey(activeChatId);
+    if (!pipelineKey) {
+      setExecutionReceipts([]);
+      setPipelineResult(null);
+      setPipelineCommandText('');
+      setPipelineStateChatId(null);
+      return;
+    }
+
+    try {
+      const stored = getStorage(pipelineKey, null);
+      if (stored && typeof stored === 'object') {
+        setPipelineResult((stored as { pipelineResult?: unknown }).pipelineResult || null);
+        setPipelineCommandText(typeof (stored as { pipelineCommandText?: unknown }).pipelineCommandText === 'string'
+          ? (stored as { pipelineCommandText: string }).pipelineCommandText
+          : '');
+        setExecutionReceipts(Array.isArray((stored as { executionReceipts?: unknown }).executionReceipts)
+          ? (stored as { executionReceipts: unknown[] }).executionReceipts
+          : []);
+        setPipelineStateChatId(activeChatId);
+        return;
+      }
+    } catch { /* storage */ }
+
+    setExecutionReceipts([]);
+    setPipelineResult(null);
+    setPipelineCommandText('');
+    setPipelineStateChatId(null);
   }, [activeChatId]);
 
   useEffect(() => {
@@ -543,9 +588,9 @@ export function ChatView({
         setStreamingTokens(0);
         setStreamingStartTime(null);
 
-        setPipelineResult(result);
-        setPipelineCommandText(cleanInput);
-        setLiveProgress(null);
+      setPipelineResult(result);
+      setPipelineCommandText(cleanInput);
+      setLiveProgress(null);
 
         const command = result?.command || {};
         const userReport = command?.userReport || null;
@@ -603,10 +648,33 @@ export function ChatView({
         if (result?.commandId) {
           const receipts = listOrchestrationReceipts({ commandId: result.commandId });
           setExecutionReceipts(receipts);
+          const pipelineKey = getJosePipelineStorageKey(activeChatId);
+          if (pipelineKey) {
+            try {
+              localStorage.setItem(pipelineKey, JSON.stringify({
+                pipelineResult: result,
+                pipelineCommandText: cleanInput,
+                executionReceipts: receipts
+              }));
+            } catch { /* storage */ }
+          }
+          setPipelineStateChatId(activeChatId);
           const hectorReceipt = receipts.find((r) => r.agent === 'hector');
           if (hectorReceipt?.details?.sources?.length) {
             setHectorBriefing({ sources: hectorReceipt.details.sources });
           }
+        } else {
+          const pipelineKey = getJosePipelineStorageKey(activeChatId);
+          if (pipelineKey) {
+            try {
+              localStorage.setItem(pipelineKey, JSON.stringify({
+                pipelineResult: result,
+                pipelineCommandText: cleanInput,
+                executionReceipts: []
+              }));
+            } catch { /* storage */ }
+          }
+          setPipelineStateChatId(activeChatId);
         }
 
         onJoseExecutionState?.(
@@ -766,8 +834,13 @@ export function ChatView({
     setExecutionReceipts([]);
     setPipelineResult(null);
     setPipelineCommandText('');
+    setPipelineStateChatId(null);
     setLiveProgress(null);
     localStorage.removeItem(`alphonso_messages_${activeChatId}`);
+    const pipelineKey = getJosePipelineStorageKey(activeChatId);
+    if (pipelineKey) {
+      try { localStorage.removeItem(pipelineKey); } catch { /* storage */ }
+    }
     void deleteChatMessages(activeChatId);
   };
 
@@ -1130,19 +1203,20 @@ export function ChatView({
                 </div>
               )}
             {/* ── Inline Jose pipeline results — everything in one place in the chat ── */}
-            {isLastAssistantMessage && !isGenerating && pipelineResult && (
+            {isLastAssistantMessage && !isGenerating && pipelineResult && pipelineStateChatId === activeChatId && (
               <div className="w-full mt-2">
                 <PipelineResultCard
                   result={pipelineResult}
                   commandText={pipelineCommandText}
                   outputFolder={settings.outputFolder as string || ''}
+                  onRerunCommand={(command) => handleSend(command)}
                   onRetryAgent={(receipt) => {
                     setMessages((current) => [...current, { id: nextMsgId(), role: 'user', content: `/jose retry ${receipt.agent} for: ${pipelineCommandText}` }]);
                   }}
                 />
               </div>
             )}
-            {isLastAssistantMessage && executionReceipts.length > 0 && !isGenerating && !pipelineResult && (
+            {isLastAssistantMessage && executionReceipts.length > 0 && !isGenerating && !pipelineResult && pipelineStateChatId === activeChatId && (
               <div className="w-full mt-2 border border-[var(--border)] rounded-xl bg-[var(--surface-0)] p-3 space-y-2">
                 <div className="text-2xs font-bold uppercase tracking-widest text-[var(--text-3)]">
                   Execution Receipts ({executionReceipts.length})
@@ -1300,7 +1374,19 @@ export function ChatView({
             }}
             placeholder="Ask anything… or try: 'run workflow [name]', 'generate an image of…', 'implement a function that…'"
             className={`w-full bg-transparent text-[var(--text-1)] placeholder:text-[var(--text-4)] px-4 pt-4 pb-2 focus:outline-none text-[13px] resize-none scroll-m-0 ${compactChat ? 'min-h-[56px]' : 'min-h-[80px]'}`}
+            data-testid="chat-compose-input"
           />
+          <div className="px-4 pb-2">
+            <div
+              className="flex items-start gap-2 rounded-xl border border-[var(--accent-border)]/30 bg-[var(--accent-dim)]/10 px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]"
+              data-testid="jose-routing-explainer"
+            >
+              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
+              <span>
+                Workflow-style prompts route through Jose automatically. The result card stays attached to this chat so you can copy the summary, review receipts, or rerun the command without hunting through logs.
+              </span>
+            </div>
+          </div>
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 pb-1">
               {attachedFiles.map((f, i) => (
@@ -1355,6 +1441,7 @@ export function ChatView({
                   : 'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)] shadow-sm'
               }`}
               aria-label="Send message"
+              data-testid="chat-send-button"
             >
               {isGenerating ? 'Generating…' : 'Send'}
               <Send className="w-3 h-3" />

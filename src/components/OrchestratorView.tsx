@@ -648,6 +648,16 @@ export function OrchestratorView({
             </button>
           </div>
         </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl border border-white/[0.06] bg-gradient-to-r from-white/[0.03] to-white/[0.015] p-3 sm:grid-cols-4">
+          <Metric label="Packets" value={packets.length} tone="amber" />
+          <Metric label="Pending" value={approvalQueue.length} tone={approvalQueue.length > 0 ? 'amber' : 'zinc'} />
+          <Metric label="Dead letters" value={deadLetters.length} tone={deadLetters.length > 0 ? 'red' : 'zinc'} />
+          <Metric
+            label="Queue pressure"
+            value={(queueSnapshot.queued || 0) + (queueSnapshot.executing || 0) + (queueSnapshot.pendingApproval || 0)}
+            tone="fuchsia"
+          />
+        </div>
       </header>
 
       {/* Tabs */}
