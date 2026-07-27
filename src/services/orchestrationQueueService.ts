@@ -210,7 +210,7 @@ export function getOldestDeadLetterTimestamp(): string | null {
   return oldest.createdAtMs ? new Date(Number(oldest.createdAtMs)).toISOString() : null;
 }
 
-export function retryDeadLetter(): number {
+export async function retryDeadLetter(): Promise<number> {
   const packets = listAgentPackets();
   const deadLetterPackets = packets.filter((p: any) => p.status === 'dead_letter');
   let requeued = 0;

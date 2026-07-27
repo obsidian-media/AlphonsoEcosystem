@@ -77,9 +77,10 @@ describe('marcusAuditService', () => {
   });
 
   describe('auditSecurityModel', () => {
-    it('delegates to auditCodeProposal', () => {
+    it('passes projectId through to auditCodeProposal', () => {
       const result = auditSecurityModel({ projectId: 'test' });
       expect(result.agentId).toBe('marcus');
+      expect(result).toHaveProperty('projectId', 'test');
     });
   });
 

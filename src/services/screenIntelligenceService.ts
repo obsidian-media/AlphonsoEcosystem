@@ -119,11 +119,20 @@ function similarityScore(signatureA: string | null, signatureB: string): number 
   return same / (signatureA.length / 2);
 }
 
+let _audioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!_audioCtx) {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (AudioCtx) _audioCtx = new AudioCtx();
+  }
+  return _audioCtx!;
+}
+
 function beepAlert(): void {
   try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.type = 'triangle';

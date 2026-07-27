@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('./runtimeLedgerService', () => ({
+vi.mock('../../services/runtimeLedgerService', () => ({
   persistScopeRows: vi.fn()
 }));
 
-vi.mock('./trustModel', () => ({
+vi.mock('../../services/trustModel', () => ({
   TRUST_STATES: { VERIFIED: 'verified', UNVERIFIED: 'unverified', TEMPORARY: 'temporary' },
   timestampMs: () => Date.now()
 }));

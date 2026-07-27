@@ -14,7 +14,7 @@ assert.equal(
   5,
   'all CI Node setup steps must use Node 22',
 );
-assert.match(groundTruth, /\| Version \| 2\.6\.0 \|/, 'ground truth must name the current version');
+assert.match(groundTruth, /\| Version \| 2\.6\.1 \|/, 'ground truth must name the current version');
 assert.match(groundTruth, /Vite 8/, 'ground truth must name the installed Vite major version');
 assert.doesNotMatch(groundTruth, /0 subdirectory `\.jsx`/, 'ground truth must not claim production JSX is gone');
 assert.match(architecture, /Vite 8/, 'architecture must name the installed Vite major version');

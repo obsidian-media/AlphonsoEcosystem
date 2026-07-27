@@ -336,7 +336,7 @@ async function executeTesting(packet) {
     `- Stage: ${packet.payload?.stage || 'testing'}`,
     `- Recent changes:`,
     recentChanges,
-    `- Run: \`npm run test\` (${952} tests across 72 files)`,
+    `- Run: \`npm run test\``,
     `- Lint: \`npm run lint\``,
     `- Verify: \`npm run verify:app\``
   ].join('\n');
@@ -889,7 +889,7 @@ function generateRunId() {
 
 function hasRealConnectors(connectorRequirements) {
   if (!Array.isArray(connectorRequirements)) return false;
-  return connectorRequirements.length > 0 && !connectorRequirements.includes('none_required') && !connectorRequirements.includes('depends_on_automation_target');
+  return connectorRequirements.filter(c => c !== 'none_required' && c !== 'depends_on_automation_target').length > 0;
 }
 
 function buildStages(operation) {

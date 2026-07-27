@@ -52,18 +52,9 @@ describe('iOS Companion Integration', () => {
     expect(parsed.params.pin).toBe('123456');
   });
 
-  it('mDNS service type matches Rust discovery', () => {
+  it('mDNS service type format is valid', () => {
     const serviceType = '_alphonso._tcp';
-    const expected = '_alphonso._tcp';
-    expect(serviceType).toBe(expected);
-  });
-
-  it('WebSocket connection format matches Rust server', () => {
-    const host = '192.168.1.100';
-    const port = 8765;
-    const wsUrl = `ws://${host}:${port}`;
-    expect(wsUrl).toContain('ws://');
-    expect(wsUrl).toContain('8765');
+    expect(serviceType).toBe('_alphonso._tcp');
   });
 
   it('send_command JSON format is valid', () => {

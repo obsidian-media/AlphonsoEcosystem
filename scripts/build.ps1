@@ -10,7 +10,7 @@ if (-not (Test-Path $keyFile)) {
 }
 
 $env:TAURI_SIGNING_PRIVATE_KEY = (Get-Content $keyFile -Raw).Trim()
-$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = if ($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) { $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD } else { $null }
 
 Write-Host "Signing key loaded. Building Alphonso..." -ForegroundColor Cyan
 npm run tauri build

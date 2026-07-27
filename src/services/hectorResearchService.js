@@ -14,7 +14,27 @@ import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceSe
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
 
+function isAllowedUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === 'localhost') return false;
+    if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (/^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (hostname.endsWith('.local') || hostname.endsWith('.internal')) return false;
+    if (/^\[(:?fe80|::1|fc00|fd00)/.test(hostname)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  if (!isAllowedUrl(url)) throw new Error(`Blocked fetch to disallowed URL: ${url}`);
   const DELAYS = [500, 1000, 2000];
   // Strip any AbortSignal from options — we create a fresh one per attempt below
   const { signal: _ignored, ...baseOptions } = options;

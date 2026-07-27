@@ -2,9 +2,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PROJECT_ROOT = process.cwd();
+const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
+const version = pkg.version;
 const RC0_DIR = join(PROJECT_ROOT, 'release', 'rc0');
 const TAURI_CONFIG_PATH = join(PROJECT_ROOT, 'src-tauri', 'tauri.conf.json');
-const INSTALLER_PATH = join(PROJECT_ROOT, 'src-tauri', 'target', 'release', 'bundle', 'nsis', 'Alphonso_0.1.0_x64-setup.exe');
+const INSTALLER_PATH = join(PROJECT_ROOT, 'src-tauri', 'target', 'release', 'bundle', 'nsis', `Alphonso_${version}_x64-setup.exe`);
 const SIGNATURE_PATH = `${INSTALLER_PATH}.sig`;
 const LATEST_JSON_PATH = join(PROJECT_ROOT, 'release', 'updater', 'windows-x86_64', 'latest.json');
 

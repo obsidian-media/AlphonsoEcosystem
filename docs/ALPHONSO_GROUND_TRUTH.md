@@ -2075,4 +2075,37 @@ Both B1 and B3/B4 changes were followed by a full local re-verification each tim
 
 **What's still genuinely open after this pass:** D1 and D2 (blocked on owner decision / physical hardware, as above); E2 (generated release evidence) and E3 (stale-doc reconciliation) were not in scope for this pass (user asked for A, B, D specifically); C2's `licenseService.ts`/other-non-connector-secret scope was explicitly not extended to (documented in the C2/C3 evidence as a scope decision, not an oversight); the review-requirement gap B4 found is a named, un-actioned recommendation, not a fix.
 
+## 11.19 Full-repo bug audit + 134-finding fix pass (2026-07-26)
+
+User requested a full line-by-line bug audit of the entire repo, then a coordinated fix pass. 6 parallel subagents audited ~420 files across 6 groups:
+- **G1** (Backend core — Rust/Python/Gateway): 67 files, 100% coverage — 15 findings
+- **G2** (Frontend services — 172 services, agents, hooks, lib, contexts, types): 171/172 services read line-by-line (99.4%) — 23 findings across initial + follow-up pass. chromaDbService.ts reviewed clean.
+- **G3** (UI/components/iOS Swift): 52 files, 100% coverage — 16 findings
+- **G4** (Backend/service tests): 65 files, 100% coverage — 21 findings
+- **G5** (UI/e2e tests): 48 files, 100% coverage — 17 findings
+- **G6** (Config/CI/scripts): ~60 files, 100% coverage — 40 findings
+
+**Total: 134 verified findings** — see `audits/2026-07-26_FullBugAudit_Audit.md` for complete severity breakdown (the summary counts in the Ground Truth doc should be verified against that register; see the audit doc for all F-C-001 through F-C-006 critical findings and the full severity distribution). Full reports in `audits/2026-07-26_FullBugAudit_Audit.md`, `audits/2026-07-26_Alphonso_Group1_BackendCore_Audit.md`, `audits/2026-07-26_G2FrontendBusinessLogic_BugAudit.md`.
+
+**Fix pass (same session):** 5 specialized subagents dispatched in parallel:
+- **SA1 (G4 tests)**: 12/12 test defects fixed — mock paths, missing vi import, tautological assertions, async mismatch
+- **SA2 (G5 E2E/UI tests)**: 17/17 findings fixed — conditional guards removed, brittle selectors replaced, dev paths eliminated
+- **SA3 (Code bugs)**: 16/18 Critical/High/Medium bugs fixed — agentBrainService command injection RCE patched, ChatGPT streaming handles both OpenAI+Anthropic, CSP hardened, 12 medium bugs (race conditions, resource leaks, type casts, spread order, etc.)
+- **SA4 (CI/Config)**: 19/20 findings fixed — 100+ actions pinned to SHAs, iOS cert pipeline aligned, Dockerfiles non-root, policy.yaml synced, 11 missing env vars added
+- **SA5 (iOS/Rust)**: 15/15 findings fixed — .onChange modernized, timing-safe comparisons, VAD dedup, WebSocket exception handling
+
+**Notable corrections from audit:**
+- `parallelExecutionService.ts` — was already clean (no race condition in current code)
+- `searchService.ts` — false positive for SSRF (only does local memory search)
+- Real SSRF risk was in `hectorResearchService.js` — now has isAllowedUrl() validation guard
+
+**Verification after fixes:**
+- ESLint: clean (exit 0)
+- Build: successful
+- Tests: count per CI run (`npm test` — 3,758 tests across 255 files per package.json); see CI run results for exact pass/fail counts
+- 79 files modified, +3,486 / -340 lines
+- Branch `fix/audit-134-bugfixes` → PR #124
+
+**Still open after this pass (tracked in TRUTH_FIRST_EXECUTION_PLAN.md):** F2 (CORS config in voice backend), F3 (Supabase service-role-key exposure), G-T11–G-T20 production-readiness backlog, D1/D2 (blocked on owner/hardware), voice Python auto-install, iOS CI test step, function-level coverage gap.
+
 

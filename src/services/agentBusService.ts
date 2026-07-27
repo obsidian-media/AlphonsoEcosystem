@@ -316,7 +316,7 @@ export function sendAgentMessage(fromAgent: string, toAgent: string, message: st
   const key = _msgKey(toAgent);
   let ring: AgentMessage[] = [];
   try {
-    const raw = localStorage.getItem(key);
+    const raw = durableGet(key);
     ring = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(ring)) ring = [];
   } catch { ring = []; }
@@ -331,12 +331,12 @@ export function sendAgentMessage(fromAgent: string, toAgent: string, message: st
     read: false,
   });
 
-  localStorage.setItem(key, JSON.stringify(ring.slice(-MSG_RING_SIZE)));
+  durableSet(key, JSON.stringify(ring.slice(-MSG_RING_SIZE)));
 }
 
 export function getAgentMessages(toAgent: string): AgentMessage[] {
   try {
-    const raw = localStorage.getItem(_msgKey(toAgent));
+    const raw = durableGet(_msgKey(toAgent));
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -345,7 +345,7 @@ export function getAgentMessages(toAgent: string): AgentMessage[] {
 }
 
 export function clearAgentMessages(toAgent: string): void {
-  localStorage.removeItem(_msgKey(toAgent));
+  durableSet(_msgKey(toAgent), '[]');
 }
 
 const _subscriptions = new Map<string, ReturnType<typeof setInterval>>();

@@ -87,7 +87,7 @@ async function readProjectContext(projectDir) {
         const relativePath = filePath.replace(projectDir, '').replace(/^[/\\]+/, '');
         const readResult = await invoke('execute_command_verified', {
           program: 'node',
-          args: ['-e', `const fs=require("fs");const c=fs.readFileSync("${relativePath.replace(/\\/g, '/')}","utf8");console.log(c.split("\\n").slice(0,500).join("\\n"))`],
+          args: ['-e', 'const fs=require("fs");const p=process.argv[1];const c=fs.readFileSync(p,"utf8");console.log(c.split("\\n").slice(0,500).join("\\n"))', relativePath.replace(/\\/g, '/')],
           cwd: projectDir
         });
         if (readResult?.success && readResult?.stdout) {

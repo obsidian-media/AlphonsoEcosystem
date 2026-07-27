@@ -103,6 +103,16 @@ for (const doc of docsToUpdate) {
   }
 }
 
+// Regenerate package-lock.json
+import { execSync } from 'child_process';
+try {
+  execSync('npm install --package-lock-only', { stdio: 'inherit', cwd: ROOT });
+  console.log('✓ Regenerated package-lock.json');
+} catch {
+  console.error('? Failed to regenerate package-lock.json');
+  throw new Error('npm install --package-lock-only failed');
+}
+
 console.log(`\nVersion bumped: ${currentVersion} → ${newVersion}`);
 console.log('\nNext steps:');
 console.log('  1. Review changes: git diff');

@@ -37,12 +37,24 @@ Write-Host "`nAdding secrets to $repo..." -ForegroundColor Yellow
 
 # Add each secret
 $secrets = @{
-    "IOS_CERTIFICATE" = (Get-Content -Raw -Path $certBase64Path).Trim()
+    "IOS_CERT_DER" = (Get-Content -Raw -Path $certBase64Path).Trim()
     "IOS_CERTIFICATE_PASSWORD" = $p12Password
-    "IOS_DEVELOPMENT_TEAM" = $teamId
-    "IOS_PROVISION_PROFILE" = $profileBase64
+    "APPLE_TEAM_ID" = $teamId
+    "IOS_PROVISIONING_PROFILE" = $profileBase64
     "IOS_CERTIFICATE_NAME" = "Apple Distribution"
 }
+
+if (-not $certBase64Path -or -not (Test-Path $certBase64Path)) {
+    Write-Host "! ERROR: IOS_KEY_PEM source path is missing or file does not exist. Aborting secret setup." -ForegroundColor Red
+    exit 1
+}
+
+$keyPem = Get-Content -Raw -Path $certBase64Path
+if ($keyPem -match "REPLACE_WITH_BASE64_ENCODED_PRIVATE_KEY") {
+    Write-Host "! ERROR: IOS_KEY_PEM value is still the placeholder REPLACE_WITH_BASE64_ENCODED_PRIVATE_KEY. Provide a real base64-encoded private key file. Aborting secret setup." -ForegroundColor Red
+    exit 1
+}
+$secrets["IOS_KEY_PEM"] = $keyPem.Trim()
 
 foreach ($name in $secrets.Keys) {
     Write-Host "  Setting $name..." -ForegroundColor Gray

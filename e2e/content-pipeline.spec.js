@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const OUTPUT_PATH = 'D:\\AgentDevDev\\phonso';
+const OUTPUT_PATH = resolve(__dirname, '..');
 
 test.describe('Content Studio pipeline E2E', () => {
   test.beforeEach(async ({ page }) => {

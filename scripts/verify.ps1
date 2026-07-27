@@ -72,8 +72,18 @@ elseif (Test-Path (Join-Path $RepoRoot 'yarn.lock')) { $PM = 'yarn' }
 elseif (Test-Path (Join-Path $RepoRoot 'package-lock.json')) { $PM = 'npm' }
 
 function RunTimed($secs, $label, $cmd) {
-  $p = Start-Process -NoNewWindow -PassThru -Wait $cmd[0] $cmd[1..($cmd.Count-1)]
-  if ($p.ExitCode -eq 124) { Err $label "timed out after ${secs}s (likely network/install hang)" }
+  $timeoutSec = $secs
+  $p = Start-Process -NoNewWindow -PassThru $cmd[0] $cmd[1..($cmd.Count-1)]
+  $waited = 0
+  while (-not $p.WaitForExit(1000)) {
+    $waited += 1
+    if ($waited -ge $timeoutSec) {
+      $p.Kill()
+      Err $label "timed out after ${timeoutSec}s (killed)"
+      return
+    }
+  }
+  if ($p.ExitCode -eq 124) { Err $label "timed out after ${timeoutSec}s" }
   elseif ($p.ExitCode -ne 0) { Err $label "failed (rc=$($p.ExitCode))" }
   else { Notice $label "ok" }
 }

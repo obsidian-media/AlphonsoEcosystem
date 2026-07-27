@@ -2,6 +2,7 @@
 # install-ios.sh — Build and install Alphonso Companion on iPhone
 # Run this on a Mac with Xcode 15+ installed
 set -e
+set -o pipefail
 
 echo "🔧 Alphonso iOS Companion — Build & Install"
 echo "============================================"
@@ -46,7 +47,7 @@ xcodebuild clean build \
     -destination 'generic/platform=iOS' \
     CODE_SIGN_IDENTITY="Apple Development" \
     PRODUCT_BUNDLE_IDENTIFIER="com.alphonso.companion" \
-    | xcpretty || true
+    | xcpretty
 
 APP_PATH=$(find build -name "AlphonsoCompanion.app" -type d | head -1)
 

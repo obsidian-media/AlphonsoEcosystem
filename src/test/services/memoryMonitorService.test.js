@@ -52,7 +52,22 @@ describe('memoryMonitorService', () => {
 
     it('filters to only alphonso_ prefixed keys', async () => {
       const { getAlphonsoKeys } = await import('../../services/memoryMonitorService');
-      expect(typeof getAlphonsoKeys).toBe('function');
+      localStorageMock.getItem.mockImplementation((k) => {
+        const store = {
+          'alphonso_chat_v1': JSON.stringify({ messages: [] }),
+          'alphonso_config_v2': '{"theme":"dark"}',
+          'other_key': 'should be filtered',
+          'another_app_data': 'nope'
+        };
+        return store[k] ?? null;
+      });
+      localStorageMock.key.mockImplementation((i) => [
+        'alphonso_chat_v1', 'other_key', 'alphonso_config_v2', 'another_app_data'
+      ][i]);
+      localStorageMock.length = 4;
+      const result = getAlphonsoKeys();
+      expect(result.length).toBe(2);
+      expect(result.map(r => r.key)).toEqual(expect.arrayContaining(['alphonso_chat_v1', 'alphonso_config_v2']));
     });
   });
 

@@ -1,7 +1,10 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkDesktopPreflight } from './verify-desktop-preflight.mjs';
+
+const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
+const version = pkg.version;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -15,7 +18,7 @@ const NSIS_INSTALLER_PATH = join(
   'release',
   'bundle',
   'nsis',
-  'Alphonso_0.1.0_x64-setup.exe'
+  `Alphonso_${version}_x64-setup.exe`
 );
 const MSI_INSTALLER_PATH = join(
   PROJECT_ROOT,
@@ -24,7 +27,7 @@ const MSI_INSTALLER_PATH = join(
   'release',
   'bundle',
   'msi',
-  'Alphonso_0.1.0_x64_en-US.msi'
+  `Alphonso_${version}_x64_en-US.msi`
 );
 
 const isWindows = process.platform === 'win32';

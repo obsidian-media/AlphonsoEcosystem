@@ -33,8 +33,7 @@ function isRequestAuthorized(request, url, expectedToken) {
   const auth = String(request.headers['authorization'] || '');
   const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
   const headerToken = String(request.headers['x-webhook-token'] || '');
-  const query = url.searchParams.get('token') || '';
-  return constantTimeEqual(bearer, expectedToken) || constantTimeEqual(headerToken, expectedToken) || constantTimeEqual(query, expectedToken);
+  return constantTimeEqual(bearer, expectedToken) || constantTimeEqual(headerToken, expectedToken);
 }
 
 function safeLog(message, details = {}) {

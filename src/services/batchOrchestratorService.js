@@ -324,9 +324,13 @@ export async function generateBatch(goalId, endpoint) {
   allBatches.push(batch);
   writeBatches(allBatches);
 
-  goal.currentBatchNumber = batchNumber;
-  goal.totalTasksCreated += batch.tasks.length;
-  writeGoals(goals);
+  const freshGoals = readGoals();
+  const freshGoal = freshGoals.find((g) => g.id === goalId);
+  if (freshGoal) {
+    freshGoal.currentBatchNumber = batchNumber;
+    freshGoal.totalTasksCreated += batch.tasks.length;
+  }
+  writeGoals(freshGoals);
 
   dispatchBoardroomEvent();
   return batch;
