@@ -33,7 +33,7 @@ test.describe('Alphonso E2E - Policy Gate', () => {
   });
 
   test('approvals panel accessible from sidebar', async ({ page }) => {
-    const approvalBtn = page.getByRole('button', { name: /^Orchestrator$/ });
+    const approvalBtn = page.locator('aside').getByRole('button', { name: /^Orchestrator$/ });
     await expect(approvalBtn).toBeVisible({ timeout: 10000 });
     await approvalBtn.click();
     await expect(page.locator('body')).toBeVisible();

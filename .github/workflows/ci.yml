@@ -67,6 +67,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # stable
         with:
+          toolchain: stable
           targets: x86_64-unknown-linux-gnu
           components: clippy, rustfmt
 
@@ -178,6 +179,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # stable
         with:
+          toolchain: stable
           targets: x86_64-pc-windows-msvc
 
       - name: Rust cache
@@ -216,6 +218,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # stable
         with:
+          toolchain: stable
           targets: aarch64-apple-darwin
 
       - name: Rust cache
@@ -254,6 +257,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # stable
         with:
+          toolchain: stable
           targets: x86_64-unknown-linux-gnu
 
       - name: Rust cache

@@ -35,13 +35,14 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
     // Navigate to Chat tab
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.getByRole('textbox').last();
+    const textarea = page.getByPlaceholder(/Ask anything/i);
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Send a message to the Telegram channel about project status');
 
     const sendBtn = page.getByRole('button', { name: /Send message/i });
     await expect(sendBtn).toBeVisible();
+    await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
     // Jose's result card proves that the executable command entered the orchestration path.
@@ -53,12 +54,13 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
   test('Activity log shows agent entry after pipeline', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.getByRole('textbox').last();
+    const textarea = page.getByPlaceholder(/Ask anything/i);
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Analyze the current project for security risks');
 
     const sendBtn = page.getByRole('button', { name: /Send message/i });
+    await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
     await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });
@@ -71,12 +73,13 @@ test.describe('Multi-Agent Orchestration Pipeline', () => {
   test('orchestration summary persists after page reload', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
-    const textarea = page.getByRole('textbox').last();
+    const textarea = page.getByPlaceholder(/Ask anything/i);
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     await textarea.fill('Run a workflow for marketing campaign');
 
     const sendBtn = page.getByRole('button', { name: /Send message/i });
+    await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
     await expect(page.getByText('Jose Pipeline Result', { exact: false })).toBeVisible({ timeout: 15000 });

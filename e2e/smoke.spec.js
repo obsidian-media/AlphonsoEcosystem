@@ -30,7 +30,7 @@ test.describe('Alphonso E2E smoke tests', () => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
 
     // Wait for ChatView textarea
-    const textarea = page.getByRole('textbox').last();
+    const textarea = page.getByPlaceholder(/Ask anything/i);
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
     // Type a message
@@ -39,6 +39,7 @@ test.describe('Alphonso E2E smoke tests', () => {
     // Send via button
     const sendBtn = page.getByRole('button', { name: /Send message/i });
     await expect(sendBtn).toBeVisible();
+    await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
     // Mock returns { response: 'Hello!', done: true } — wait for it to appear in the message list
