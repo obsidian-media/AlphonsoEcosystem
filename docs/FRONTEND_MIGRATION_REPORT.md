@@ -117,7 +117,7 @@ Migrate services in this order — simplest/most isolated first, most complex la
 | 12 | `orchestrationReceiptService.js` / `orchestrationQueueService.js` | Moderate, use serviceScopes |
 | 13 | `verificationService.js` | Uses Tauri invoke — needs type stubs |
 | 14 | `connectorRegistryService.js` | Large (45 KB) — migrate last in registry group |
-| 15 | `joseCommandRouterService.js` / `joseExecutionEngineService.js` | Largest files, heavy Tauri usage — migrate last |
+| 15 | `joseCommandRouterService.js` / `joseExecutionEngineService.ts` | Largest files, heavy Tauri usage — migrate last |
 
 ---
 
@@ -183,3 +183,4 @@ Expected initial output: zero errors (since `checkJs: false` and only `memorySer
 | `src/services/memoryService.ts` | Created (TypeScript migration) |
 | `src/services/memoryService.js.bak` | Created (backup of original) |
 | `docs/FRONTEND_MIGRATION_REPORT.md` | Created (this file) |
+

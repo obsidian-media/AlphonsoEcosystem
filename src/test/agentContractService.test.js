@@ -426,7 +426,7 @@ describe('agentContractService', () => {
     // the original 4 legacy Hector packs) silently fell back to the full
     // agent-wide permission list regardless of any AGENT_SKILL_PACK_SCOPE_OVERRIDES
     // entry defined for them, because those override entries didn't actually
-    // match the packs' real declared permissions in skillPackService.js. Both
+    // match the packs' real declared permissions in skillPackService.ts. Both
     // the fallback bypass and the mismatched override strings are fixed —
     // these tests prove the override is now genuinely enforced per pack.
 
@@ -553,3 +553,4 @@ describe('agentContractService', () => {
     });
   });
 });
+

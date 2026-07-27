@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
  * C3 — Generate a permission matrix from source and let CI enforce it.
  *
  * This does not hand-maintain a duplicate list of agents/packs/permissions —
- * it walks the real registries (`listSkillPacks()` from skillPackService.js,
+ * it walks the real registries (`listSkillPacks()` from skillPackService.ts,
  * `AGENT_EXECUTION_CONTRACTS`/`validateSkillPackAgainstContract` from
  * agentContractService.ts) so drift between the two files fails this test
  * immediately instead of silently accumulating. Runs as part of `npm test`,
@@ -253,3 +253,4 @@ describe('skill-pack / agent-contract matrix (C3)', () => {
     expect(novaResult.ok).toBe(false);
   });
 });
+

@@ -72,7 +72,7 @@ engineering patterns below.
 ### 3.1 Loop-guard + context/token budget per agent execution — HIGH priority
 **Source pattern:** OpenFang `openfang-runtime/loop_guard.rs`, `context_budget.rs`,
 `context_overflow.rs`.
-**Current gap:** `joseExecutionEngineService.js` → `runJoseCommandExecutionPipeline`
+**Current gap:** `joseExecutionEngineService.ts` → `runJoseCommandExecutionPipeline`
 (lines 1156–1639, a ~480-line pipeline) has a dead-letter queue for failures but no
 hard ceiling on runaway loops or context/token blowout during a single agent run.
 **Plan:** Add a per-execution budget tracker (max iterations, max token spend, max
@@ -98,7 +98,7 @@ against a malicious or buggy plugin/tool call.
 ### 3.3 Crash recovery / session repair pattern — MEDIUM priority
 **Source pattern:** OpenFang `session_repair.rs`, `graceful_shutdown.rs`, `retry.rs`.
 **Current gap:** Alphonso's DLQ (`persistJoseExecutionDlq` etc. in
-`joseExecutionEngineService.js`) captures failed executions but has no formal contract
+`joseExecutionEngineService.ts`) captures failed executions but has no formal contract
 for resuming/repairing in-flight work after an app crash or forced restart.
 **Plan:** Define an explicit "in-flight execution" checkpoint record (leveraging the
 existing `orchestrationQueueService.ts` transition ledger) that on next app boot is
@@ -145,7 +145,7 @@ scheduled scans) trustworthy for genuinely unattended operation.
 
 ## 4. Skills-by-default: default capability loadouts per agent
 
-**This is largely already built.** `src/services/skillPackService.js` already
+**This is largely already built.** `src/services/skillPackService.ts` already
 implements:
 - Versioned, permission-scoped "skill packs" (`listSkillPacks`, `installSkillPack`,
   `setSkillPackEnabled`, `uninstallSkillPack`), persisted + audited
@@ -158,7 +158,7 @@ implements:
   skills.sh (TDD, systematic-debugging, writing-plans, parallel-agent dispatch, etc.)
   applied across agents via `category: 'agent_workflow'`.
 - `loadAgentSkillGuidance(agentName)` — already **wired into
-  `joseExecutionEngineService.js`** — returns active skill guidance + recommended
+  `joseExecutionEngineService.ts`** — returns active skill guidance + recommended
   steps for a given agent at execution time.
 
 **What's missing (this sprint's actual work):**
@@ -176,7 +176,7 @@ implements:
    `sentinelSecurityService.js`'s scan capability, `pack.echo-memory-synthesis`
    wrapping `echoMemoryService.js`).
 3. **Module system convergence.** `modules/` (TOML manifests, e.g.
-   `alphonso.researcher.web_monitor`) and `skillPackService.js` (JSON packs in
+   `alphonso.researcher.web_monitor`) and `skillPackService.ts` (JSON packs in
    localStorage) are two parallel capability-packaging systems today. This sprint
    does NOT merge them (too risky for one sprint) but documents the distinction
    clearly: `modules/` = installable capability packages with tool entrypoints;
@@ -227,9 +227,9 @@ first new connector (Discord) — all without breaking the existing 3,174+ test 
 |---|---|---|---|---|
 | 1 | Add SHALAUDE `LICENSE` file | `LICENSE` | — | ✅ Done |
 | 2 | Write this roadmap doc | `ALPHONSOTOTHEMOON.md` | — | ✅ Done |
-| 3 | Cross-check skill pack permissions against agent contracts | `agentContractService.ts`, `skillPackService.js` | — | ✅ Done |
-| 4 | Add default skill packs for Alphonso, Marcus, Echo, Sentinel, Nova | `skillPackService.js` | — | ✅ Done |
-| 5 | Add per-execution loop-guard + token/time budget | `joseExecutionEngineService.js`, `agentContractService.ts` | — | ✅ Done |
+| 3 | Cross-check skill pack permissions against agent contracts | `agentContractService.ts`, `skillPackService.ts` | — | ✅ Done |
+| 4 | Add default skill packs for Alphonso, Marcus, Echo, Sentinel, Nova | `skillPackService.ts` | — | ✅ Done |
+| 5 | Add per-execution loop-guard + token/time budget | `joseExecutionEngineService.ts`, `agentContractService.ts` | — | ✅ Done |
 | 6 | Add resumable-execution checkpoint on top of existing DLQ | `orchestrationQueueService.ts`, `App.tsx` | — | ✅ Done (Sprint 2) |
 | 7 | Discord connector (credential UI + service + policy gate) | `src/services/connectors/discordConnector.ts` (new), `ConnectorSetupPanel.tsx`, `connectorRegistry.js`, `policyEnforcementService.ts` | — | ✅ Done (Sprint 2) |
 | 8 | Generic inbound webhook connector | `gateway/generic-webhook/` (new), `genericWebhookService.js` (new), `ConnectorSetupPanel.tsx`, `App.tsx` | — | ✅ Done (Sprint 2) |
@@ -260,18 +260,18 @@ into Sprint 2+ — not dropped.
 ## 8. Running log
 
 - **2026-07-02** — Compared AlphonsoEcosystem against OpenFang and LibreFang.
-  Confirmed skill-pack infrastructure already ~70% built (`skillPackService.js` +
-  `loadAgentSkillGuidance` already wired into `joseExecutionEngineService.js`).
+  Confirmed skill-pack infrastructure already ~70% built (`skillPackService.ts` +
+  `loadAgentSkillGuidance` already wired into `joseExecutionEngineService.ts`).
   Confirmed no LICENSE existed (`licenseInfo: null` on GitHub). Added SHALAUDE
   license. Created this roadmap. Starting Sprint 1 build.
 - **2026-07-02 (Sprint 1 close)** — Shipped items 1–5, 9, 10:
   - `validateSkillPackAgainstContract()` added to `agentContractService.ts`,
-    wired into `skillPackService.js` `installSkillPack`/`setSkillPackEnabled`.
+    wired into `skillPackService.ts` `installSkillPack`/`setSkillPackEnabled`.
   - Default `agent_skill` packs added for Alphonso, Marcus, Echo, Sentinel, Nova
     (all 9 agents now have one).
   - `PIPELINE_MAX_ASSIGNMENTS` (50) / `PIPELINE_MAX_DURATION_MS` (5 min)
     loop-guard added to `runJoseCommandExecutionPipeline` in
-    `joseExecutionEngineService.js`; breach returns `budget_exceeded` +
+    `joseExecutionEngineService.ts`; breach returns `budget_exceeded` +
     appends a `pipeline_budget_exceeded` receipt.
   - `CLAUDE.md` Do-Not-Duplicate table + Real Gaps section updated same-pass.
   - Verification: targeted tests for all touched files passed 100%
@@ -397,7 +397,7 @@ into Sprint 2+ — not dropped.
 - **2026-07-02 (Sprint 3, skill-library-depth half, v2.5.4)** — User
   selected this half of Sprint 3 to execute next (the other half,
   discoverability audit, remains seeded/open). Shipped:
-  - Read `skillPackService.js`, `agentContractService.ts`, and all three
+  - Read `skillPackService.ts`, `agentContractService.ts`, and all three
     agent profile files (`miyaProfile.js`, `hectorProfile.js`,
     `joseProfile.js`) plus their referencing tests
     (`agentSkills.test.js`) before changing anything, to avoid breaking the
@@ -1078,7 +1078,7 @@ a full rebuild):
 - Taxonomy depth for the remaining 6 agents (Alphonso, Maria, Marcus, Echo,
   Sentinel, Nova each still have one default pack).
 - Module-system convergence between `modules/` TOML manifests and
-  `skillPackService.js` packs (§4.3) — not attempted this pass.
+  `skillPackService.ts` packs (§4.3) — not attempted this pass.
 - A genuine skill-marketplace model — the recommendation to start with
   curated packs rather than a marketplace was followed as-is.
 - The **discoverability-audit half** of Sprint 3 (Coach Mode / Boardroom /
@@ -1100,7 +1100,7 @@ creative pack handling everything shallowly.
   creative-image, ui-ux-design, brand-identity, motion-graphics — instead
   of one `pack.miya-*` catch-all).
 - Decide sourcing: hand-author packs (mirrors the existing `SKILL_WORKFLOW_GUIDANCE`
-  map in `skillPackService.js`), or build an import path from an external
+  map in `skillPackService.ts`), or build an import path from an external
   skill catalog (the `pack.workflow.find-skills` pack already references
   skills.sh — worth checking if that integration is real or aspirational).
 - Extend `validateSkillPackAgainstContract()` (Sprint 1) to scale — right
@@ -1381,7 +1381,7 @@ Carried forward from Sprint 2's original backlog:
 - Scheduler heartbeat/liveness supervision (§3.5)
 - Email connector — SMTP send / IMAP poll (§5)
 - Module-system convergence evaluation: `modules/` TOML packages vs.
-  `skillPackService.js` packs (§4.3) — directly relevant to Sprint 3 above,
+  `skillPackService.ts` packs (§4.3) — directly relevant to Sprint 3 above,
   should probably be resolved before or alongside Sprint 3, not after
 - EULA + trademark work, once external distribution is actually planned (§1)
 - ~~Fix `ConnectorSetupPanel.test.jsx`'s `connectorAuth` mock gap~~ —
@@ -1392,3 +1392,4 @@ Carried forward from Sprint 2's original backlog:
 - Credential storage: OS-level secret storage (e.g. Windows Credential
   Manager via a Tauri plugin) vs. current localStorage/SQLite dual-write
   — recommended in Sprint 4, not implemented, carried forward here
+

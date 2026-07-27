@@ -76,7 +76,7 @@ Key services that past audits missed or underestimated:
 - `orchestrationReceiptService.js` — receipt events across all flows: assignment creation, policy blocks, retries, dead-letter, merge/confirm, pipeline completion
 - `orchestrationGovernanceService.js` — governance layer over orchestration
 - `joseCommandRouterService.js` — Jose intake, decomposition, routing
-- `joseExecutionEngineService.js` — Jose execution engine
+- `joseExecutionEngineService.ts` — Jose execution engine
 - `packetExecutionService.js` — packet-level execution
 
 ### Policy & Approval (fully implemented, fail-closed)
@@ -176,7 +176,7 @@ Key services that past audits missed or underestimated:
 - `recoveryService.js`, `runtimeLedgerService.js`
 - `screenIntelligenceService.js`, `voiceService.js`
 - `chatPersistenceService.js`, `notificationService.js`
-- `coachModeService.js`, `skillPackService.js`
+- `coachModeService.js`, `skillPackService.ts`
 - `localMarketplaceService.js`, `resourceCostService.js`
 - `devPacketService.js`, `serviceScopes.js`
 - `agentAvatarService.js`, `agentVisualService.js`
@@ -799,7 +799,7 @@ Before writing any new service or feature, verify it does not already exist:
 - **WhatsApp companion bot commands** → `src/services/whatsappCompanionService.ts` (added 2026-07-10) — `/status`, `/queue`, `/approve`, `/reject`, `/agents`, `/report`, `/ping`, `/help`, `/ask`, real Jose routing for free text. Owner-pairing gated on `WHATSAPP_ALLOWED_NUMBERS` credential (mirrors Telegram's `TELEGRAM_ALLOWED_CHAT_IDS` pattern). Auto-starts at boot in `useBootEffects.js` if `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_CLOUD_GATEWAY_DRAIN_URL` are both set. Do NOT recreate — this did not exist before 2026-07-10; WhatsApp previously had zero command handling.
 - **KV store Rust module** → `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `kv_delete`, `save_settings`, `load_settings`, `ensure_kv_table`. `kv_delete` issues `DELETE FROM kv_store WHERE key = ?`. Do not re-add to `lib.rs`.
 - **Multi-turn Ollama chat** → `src/lib/ollama.js` — `generateOllamaChatStream` uses `/api/chat` endpoint with full `messages` array. `ChatView.jsx` captures history snapshot before state updates and passes it. Do not recreate.
-- **appendAgentActivity wiring** → wired in `joseExecutionEngineService.js` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Both import from `../components/AgentActivityLog`.
+- **appendAgentActivity wiring** → wired in `joseExecutionEngineService.ts` (`executeAssignment`) and `connectorRegistryService.js` (`appendConnectorAudit`). Both import from `../components/AgentActivityLog`.
 - **Playwright browser installed** → `@playwright/test@1.60.0` + Chromium installed. `npm run test:e2e` is ready to run (needs dev server + Ollama).
 - **Playwright config** → `playwright.config.js` at project root; tests in `e2e/`. Do not create another E2E config.
 - **`.npmrc`** — `legacy-peer-deps=true` already set at project root. Do not remove.
@@ -920,7 +920,7 @@ the ground-truth summary of what actually changed.
 - **Skill pack ↔ agent contract enforcement**: `validateSkillPackAgainstContract()`
   in `src/services/agentContractService.ts` cross-checks a skill pack's declared
   `permissions` against its owning agent's `AGENT_EXECUTION_CONTRACTS` entry.
-  Wired into `installSkillPack`/`setSkillPackEnabled` in `skillPackService.js` —
+  Wired into `installSkillPack`/`setSkillPackEnabled` in `skillPackService.ts` —
   a pack whose permissions exceed its agent's contract is rejected (install) or
   refused (enable), with an `install_blocked`/`enable_blocked` audit entry.
 - **Default skill packs for all 9 agents**: previously only Jose, Hector, Miya,
@@ -952,7 +952,7 @@ the ground-truth summary of what actually changed.
   workflow guidance, example tasks, and per-pack scope overrides. See
   `docs/JOSE_SKILLS.md` for full documentation.
 - **Pipeline loop-guard / execution budget**: `runJoseCommandExecutionPipeline`
-  in `joseExecutionEngineService.js` now hard-stops at `PIPELINE_MAX_ASSIGNMENTS`
+  in `joseExecutionEngineService.ts` now hard-stops at `PIPELINE_MAX_ASSIGNMENTS`
   (50) or `PIPELINE_MAX_DURATION_MS` (5 minutes), whichever comes first. On
   breach it returns `{ ok: false, reason: 'budget_exceeded' }` and appends a
   `pipeline_budget_exceeded` orchestration receipt — this did not exist before;
@@ -1059,7 +1059,7 @@ Full context lives in `ALPHONSOTOTHEMOON.md` at repo root. Scoped to the 3
 highest-traffic agents per the roadmap's own v1 recommendation — not a
 big-bang rebuild of all 9 agents' skill systems.
 
-- **Miya** (`src/services/skillPackService.js`): kept
+- **Miya** (`src/services/skillPackService.ts`): kept
   `pack.miya-runway-video-generation`; added `pack.miya-creative-image`,
   `pack.miya-ui-ux-design`, `pack.miya-brand-identity`,
   `pack.miya-motion-graphics`. `miyaProfile.js`'s `skillPackIds`/`skillFocus`
@@ -1085,7 +1085,7 @@ big-bang rebuild of all 9 agents' skill systems.
   agent-wide contract allows it (for her separate video pack). Packs with
   no override entry, or callers that omit `packId`, get the exact original
   agent-wide behavior — fully backward compatible.
-  `skillPackService.js`'s `installSkillPack`/`setSkillPackEnabled` updated
+  `skillPackService.ts`'s `installSkillPack`/`setSkillPackEnabled` updated
   to pass `manifest.id`/`target.id` through so the narrower check actually
   applies at install/enable time.
 - **UI**: `src/components/EcosystemHub.tsx`'s Skills tab now groups packs by
@@ -1103,7 +1103,7 @@ big-bang rebuild of all 9 agents' skill systems.
 - Explicitly deferred (per the roadmap's own scope note, not dropped):
   taxonomy depth for the other 6 agents (Alphonso, Maria, Marcus, Echo,
   Sentinel, Nova keep one default pack each), module-system convergence
-  between `modules/` TOML manifests and `skillPackService.js` packs, and a
+  between `modules/` TOML manifests and `skillPackService.ts` packs, and a
   full skill-marketplace model.
 
 ## 11.9 ALPHONSOTOTHEMOON Sprint 3: discoverability audit (2026-07-02, v2.5.5)
@@ -2034,7 +2034,7 @@ User asked to proceed with T4 and to make sure the repo-root audit doc `14.07.20
 
 User asked to close the Truth-First Execution Plan's C section (C2/C3), then — after being asked directly what corners had been cut — asked for every gap in that work to be closed truthfully, with no faked completions. Both passes are recorded here together since the second pass materially changed what C2/C3 actually verify, not just how they're worded.
 
-**First pass — C2 (`src/services/agentContractService.ts`):** `validateSkillPackAgainstContract()` had a `usesAgentWideTaxonomyScope` bypass forcing every Hector (except 5 packs in a `legacyHectorPackIds` set — of which only 4 had a working override entry; the 5th, `pack.hector-professional-marketing`, has none and was already falling back to the agent-wide list regardless), Echo, and Nova taxonomy pack back onto the full agent-wide permission list, silently ignoring the per-pack `AGENT_SKILL_PACK_SCOPE_OVERRIDES` entries defined for them. Root cause: those override entries didn't match the packs' real declared `permissions` in `skillPackService.js` — Hector's 16 new-taxonomy overrides were entirely fictional dotted-namespace strings that were never real permissions anywhere in the codebase; Echo/Nova had 4 corrupted entries (a mangled `knowledge追溯`, three missing-dot typos). Fixed all 20 mismatches against the real source and removed the bypass.
+**First pass — C2 (`src/services/agentContractService.ts`):** `validateSkillPackAgainstContract()` had a `usesAgentWideTaxonomyScope` bypass forcing every Hector (except 5 packs in a `legacyHectorPackIds` set — of which only 4 had a working override entry; the 5th, `pack.hector-professional-marketing`, has none and was already falling back to the agent-wide list regardless), Echo, and Nova taxonomy pack back onto the full agent-wide permission list, silently ignoring the per-pack `AGENT_SKILL_PACK_SCOPE_OVERRIDES` entries defined for them. Root cause: those override entries didn't match the packs' real declared `permissions` in `skillPackService.ts` — Hector's 16 new-taxonomy overrides were entirely fictional dotted-namespace strings that were never real permissions anywhere in the codebase; Echo/Nova had 4 corrupted entries (a mangled `knowledge追溯`, three missing-dot typos). Fixed all 20 mismatches against the real source and removed the bypass.
 
 **First-pass gaps, found only when directly asked to self-audit (not caught before that point):** a factual error in the plan doc (said "4 legacy packs", the code's set actually has 5); the `--check` doc-freshness failure path was claimed working but never actually exercised; the full `npm test` suite was never run, only narrow hand-picked file lists; the `ci.yml` YAML edit was never validated; C2 was marked fully done despite its own stated scope (owner, shared status, allowed *and blocked* prefixes, documentation) being only partially addressed; the negative-authorization tests covered 6 hand-picked packs, not "each pack" as the task literally requires; `installSkillPack`/`setSkillPackEnabled` were never traced for regression risk; this file was never updated. Also, mid-verification, a mistake was made and caught: reproducing the `--check` failure path corrupted `docs/AGENT_SKILL_PERMISSION_MATRIX.md` on disk and a badly-written restore command silently failed, leaving the corrupted file sitting for a few tool calls until the mistake was noticed and fixed by regenerating from source.
 
@@ -2045,7 +2045,7 @@ User asked to close the Truth-First Execution Plan's C section (C2/C3), then —
 - Ran the real `npm test` (not a narrow selection) twice this session: 255 files / 3,742 tests passing, then 255 files / 3,746 tests passing after the later C2/C5 test additions — 0 failures both times.
 - Closed C2's actually-incomplete scope: audited every override entry for anything resembling `execute_command`/`filesystem.write`/`external_publish`/`purchase` (zero matches — no pack needs a per-pack block today) and implemented a real, wired, tested `AGENT_SKILL_PACK_BLOCKED_OVERRIDES` denylist mechanism anyway, checked ahead of the allowlist and applying even to Alphonso (who is otherwise exempt from the universal blocklist). "Shared status" already existed semantically (an unowned `agent_workflow`-category pack is inherently shared/unscoped) but was undocumented — the C3 matrix generator now has a dedicated "Shared packs" section for all 20 `AGENT_WORKFLOW_SKILL_DEFS` packs plus a per-pack "Blocked (per-pack)" column in the exclusive-packs section.
 - Replaced the 6-pack sample negative-authorization test with a genuinely exhaustive, data-driven one in `src/test/services/skillPackContractMatrix.test.ts` that iterates every real pack pair sharing an owner. Writing it surfaced two real bugs in the test itself, both caught by running it and reading the failure rather than trusting the first draft: (1) it initially asserted rejection even for the 10 intentional catch-all packs that have no override by design — fixed by adding a new minimal exported accessor `hasSkillPackScopeOverride()` (membership only, not contents) and skipping those correctly; (2) a "covered by own broader scope" heuristic truncated every permission to its top-level namespace (`code.review` → `code.`) and treated any two packs sharing that namespace as mutually covered, which would have silently skipped roughly half of all real candidate checks across every Alphonso pack sharing the `code.` namespace — replaced with an exact literal-prefix check matching production's real `startsWithAny` semantics, plus the one genuine documented exception (`pack.miya-creative-image`). Final verified coverage: 166 total `agent_skill` packs, 156 with an override, 10 correctly-excluded catch-all packs, 112 legitimate literal-prefix-overlap skips, and 6,127 real negative assertions actually executed and passing.
-- Traced `installSkillPack`/`setSkillPackEnabled` in `skillPackService.js` directly instead of inferring safety from the integration suite passing. Finding: `installSkillPack` already gated on `validateSkillPackAgainstContract` at install time before this session (pre-existing), so the free-form "paste a manifest" path in `EcosystemHub.tsx` was already narrower-risk than assumed — a tampered manifest reusing an existing pack id with widened permissions is rejected at install time. `setSkillPackEnabled`'s own independent re-validation-on-enable is a real second gate specifically for records persisted *before* this fix existed; proved directly by seeding a tampered record straight into the `localStorage` key (bypassing `installSkillPack`'s gate, the way a stale on-disk record would) and confirming re-enabling it is blocked. Added 4 regression tests to `skillPackService.test.js` covering both the blocked-at-install and blocked-at-enable cases.
+- Traced `installSkillPack`/`setSkillPackEnabled` in `skillPackService.ts` directly instead of inferring safety from the integration suite passing. Finding: `installSkillPack` already gated on `validateSkillPackAgainstContract` at install time before this session (pre-existing), so the free-form "paste a manifest" path in `EcosystemHub.tsx` was already narrower-risk than assumed — a tampered manifest reusing an existing pack id with widened permissions is rejected at install time. `setSkillPackEnabled`'s own independent re-validation-on-enable is a real second gate specifically for records persisted *before* this fix existed; proved directly by seeding a tampered record straight into the `localStorage` key (bypassing `installSkillPack`'s gate, the way a stale on-disk record would) and confirming re-enabling it is blocked. Added 4 regression tests to `skillPackService.test.js` covering both the blocked-at-install and blocked-at-enable cases.
 - This section.
 
 Full detail, exact evidence, and the corrected/superseded numbers for both passes are in `docs/TRUTH_FIRST_EXECUTION_PLAN.md`'s C2/C3 entries — this section is a summary, that file is the primary record.
@@ -2107,5 +2107,6 @@ User requested a full line-by-line bug audit of the entire repo, then a coordina
 - Branch `fix/audit-134-bugfixes` → PR #124
 
 **Still open after this pass (tracked in TRUTH_FIRST_EXECUTION_PLAN.md):** F2 (CORS config in voice backend), F3 (Supabase service-role-key exposure), G-T11–G-T20 production-readiness backlog, D1/D2 (blocked on owner/hardware), voice Python auto-install, iOS CI test step, function-level coverage gap.
+
 
 

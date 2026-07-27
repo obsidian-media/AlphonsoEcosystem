@@ -798,7 +798,7 @@ src-tauri/
 
 Key Services:
   joseCommandRouterService.js      Command parsing & decomposition
-  joseExecutionEngineService.js    Wave execution engine
+  joseExecutionEngineService.ts    Wave execution engine
   batchOrchestratorService.js      Boardroom batch planning + auto-execution
   parallelExecutionService.ts      Parallel task execution with retry
   cacheService.ts                  Memory caching with TTL and LRU
@@ -813,3 +813,4 @@ Key Services:
   connector_commands.rs            Rust: connector_github_action (5 actions via GitHub REST API v3)
   connector_commands.rs            Rust: connector_slack_send (chat.postMessage via Slack Web API)
 ```
+

@@ -481,7 +481,7 @@ The following patterns are consistently well-implemented across all services rea
 | selfDevelopmentService.ts | 417 | REVIEWED OK |
 | serviceScopes.ts | 84 | REVIEWED OK |
 | sessionIntelligenceService.ts | 119 | REVIEWED OK |
-| skillPackService.js | ~2900 | REVIEWED OK |
+| skillPackService.ts | ~2900 | REVIEWED OK |
 | sourceConfidenceService.ts | 82 | REVIEWED OK |
 | systemHealth/systemHealthService.js | 50 | REVIEWED OK |
 | telegramBrowserConnector.ts | 330 | REVIEWED OK |
@@ -632,3 +632,4 @@ No secrets logged. No credential exposure. All connectors policy-gated. Policy e
 9. **Fix F-G2-019** (workflowGovernanceService.ts duplicate) — clean up copy-paste artifact.
 10. **Fix F-G2-015** (verificationService.ts spread order) — prevent accidental field override.
 11. **Fix F-G2-016** (workflowExecutionService.js stale count) — update from 952 to 3,758.
+

@@ -122,9 +122,10 @@ Hector's research outputs feed into:
 
 | File | Purpose |
 |------|---------|
-| `src/services/skillPackService.js` | Pack definitions and workflow guidance |
+| `src/services/skillPackService.ts` | Pack definitions and workflow guidance |
 | `src/services/agentContractService.ts` | Scope overrides and contract validation |
 | `src/agents/hector/hectorProfile.js` | Agent profile with skillPackIds |
 | `src/agents/hector/hectorPermissions.js` | Agent permissions |
 | `src/test/hectorSkillPacks.test.js` | Unit tests |
 | `src/test/hectorSkillIntegration.test.js` | Integration tests |
+

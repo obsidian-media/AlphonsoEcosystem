@@ -420,14 +420,14 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     back onto the full agent-wide permission list, ignoring the per-pack
     `AGENT_SKILL_PACK_SCOPE_OVERRIDES` entries defined for them. Root cause:
     those override entries didn't actually match the packs' real declared
-    `permissions` in `skillPackService.js` (Hector's 16 new-taxonomy overrides
+    `permissions` in `skillPackService.ts` (Hector's 16 new-taxonomy overrides
     were entirely fictional dotted-namespace strings; Echo/Nova had 4
     corrupted entries — a mangled `knowledge追溯`, and three missing-dot typos
     `strategy sequencing`/`opportunity readiness`/`strategyportfolio`) — so the
     bypass was effectively there to paper over broken overrides rather than an
     intentional design choice. Fixed by correcting all 20 mismatched override
     entries against the real source (cross-checked programmatically: 156
-    override entries diffed against `skillPackService.js`, 1 mismatch
+    override entries diffed against `skillPackService.ts`, 1 mismatch
     remaining is an intentional broader prefix, not a bug) and removing the
     bypass entirely. 11 new positive/negative tests in
     `agentContractService.test.js` prove per-pack scoping now holds (e.g. a
@@ -502,7 +502,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     (`npm test`, 313s, run in full — not a narrow file selection); `npx tsc
     --noEmit` clean.
   - **Regression-risk trace (2026-07-25):** read `installSkillPack`/
-    `setSkillPackEnabled` in `skillPackService.js` directly rather than
+    `setSkillPackEnabled` in `skillPackService.ts` directly rather than
     inferring safety from the integration suite passing. Finding:
     `installSkillPack` already gated on `validateSkillPackAgainstContract` at
     install time before this session (pre-existing, not part of this
@@ -522,7 +522,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
   - Generate human-readable agent/pack/permission documentation from the
     registry so code and docs cannot drift.
   - **Evidence (2026-07-25):** `scripts/generate-skill-permission-matrix.mjs`
-    statically parses `skillPackService.js` + `agentContractService.ts` and
+    statically parses `skillPackService.ts` + `agentContractService.ts` and
     writes `docs/AGENT_SKILL_PERMISSION_MATRIX.md` — 166 exclusive
     `agent_skill` packs grouped by owning agent (flagging any
     unowned/unknown-owner/undocumented pack inline, with a per-pack "Blocked
@@ -866,3 +866,5 @@ dropped.
 | 2026-07-25 | Closed C2 and C3 — per-pack least-privilege enforcement fixed and verified; generated permission matrix + CI-enforced contract regression test added. | See C2/C3 evidence above; `agentContractService.ts`, `docs/AGENT_SKILL_PERMISSION_MATRIX.md`, `scripts/generate-skill-permission-matrix.mjs`, `src/test/services/skillPackContractMatrix.test.ts`. |
 | 2026-07-26 (Part 1) | Added Section F (3 audit-sourced Cloud Voice hardening items, independently re-verified against live code, not just copied from the source audit) and Section G (production-readiness T11–T20 carried forward into this file's tracked queue, with T13/T15/T16 cross-referenced as already closed by B3/D1/D2 rather than duplicated, plus 5 other previously-untracked open items). | User request, following an external "Hermes" audit report + its own Codex verification addendum; see Section F/G entries for per-item evidence and status notes. |
 | 2026-07-26 (Part 2) | **Closed F1** (timing-safe auth in cloud voice), **G-OTHER3** (companionIntegration tests fixed). PR #124 opened against `fix/audit-134-bugfixes` with 79 files changed across all layers (134 findings fixed from the full-repo bug audit). | PR #124: 3,486 insertions / 340 deletions. Full audit report in `audits/2026-07-26_FullBugAudit_Audit.md`. |
+| 2026-07-27 | Migrated `skillPackService` and `joseExecutionEngineService` from `.js` to `.ts`; split skill-pack content into registry/content/guidance modules and verified the affected test sets plus full Vitest, lint, and typecheck. | This session's code changes and verification output. |
+

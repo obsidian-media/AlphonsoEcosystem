@@ -116,7 +116,7 @@ All packs are validated against Jose's execution contract:
 
 ### Skill Pack Service
 
-Packs are registered in `skillPackService.js` and loaded via `loadAgentSkillGuidance('jose')`. The guidance system returns:
+Packs are registered in `skillPackService.ts` and loaded via `loadAgentSkillGuidance('jose')`. The guidance system returns:
 - `activeSkills` — list of pack IDs
 - `guidance` — structured guidance objects
 - `recommendedSteps` — deduplicated step list (capped at 8)
@@ -134,9 +134,10 @@ Jose uses his skill packs to understand capabilities when routing tasks. The `sk
 
 | File | Purpose |
 |------|---------|
-| `src/services/skillPackService.js` | Pack definitions and workflow guidance |
+| `src/services/skillPackService.ts` | Pack definitions and workflow guidance |
 | `src/services/agentContractService.ts` | Scope overrides and contract validation |
 | `src/agents/jose/joseProfile.js` | Agent profile with skillPackIds |
 | `src/agents/jose/josePermissions.js` | Agent permissions |
 | `src/test/joseSkillPacks.test.js` | Unit tests |
 | `src/test/joseSkillIntegration.test.js` | Integration tests |
+

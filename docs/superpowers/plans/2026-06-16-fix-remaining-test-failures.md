@@ -227,7 +227,7 @@ git commit -m "fix: add resetDurableCache() to prevent module state leak between
 **Investigation needed:** These are complex multi-agent orchestration tests. Need to read the service code and test expectations to determine if the bugs are in the service logic or if they're downstream effects of the async `cached()` issue (if the execution engine depends on `getRuntimePolicySettings()`).
 
 **Files:**
-- To investigate: `src/services/joseExecutionEngineService.js`
+- To investigate: `src/services/joseExecutionEngineService.ts`
 - To investigate: `src/services/joseCommandRouterService.ts` (if it uses getRuntimePolicySettings)
 - To investigate: test files
 
@@ -291,3 +291,4 @@ Phase 5 — Complex
 ├── Task 8: Notion Sync
 ├── Task 9: Single-file fixes
 ```
+

@@ -7,7 +7,7 @@
  *
  * Statically parses the two real source-of-truth files (not a hand-typed
  * copy) and writes docs/AGENT_SKILL_PERMISSION_MATRIX.md:
- *   - src/services/skillPackService.js   (BASE_PACKS — id/name/permissions/ownerAgent)
+ *   - src/services/skillPackService.ts   (BASE_PACKS — id/name/permissions/ownerAgent)
  *   - src/services/agentContractService.ts (AGENT_EXECUTION_CONTRACTS,
  *     AGENT_SKILL_PACK_SCOPE_OVERRIDES)
  *
@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const PROJECT_ROOT = resolve(dirname(__filename), '..');
-const SKILL_PACK_SERVICE_PATH = join(PROJECT_ROOT, 'src/services/skillPackService.js');
+const SKILL_PACK_SERVICE_PATH = join(PROJECT_ROOT, 'src/services/skillPackService.ts');
 const AGENT_CONTRACT_SERVICE_PATH = join(PROJECT_ROOT, 'src/services/agentContractService.ts');
 const OUTPUT_PATH = join(PROJECT_ROOT, 'docs/AGENT_SKILL_PERMISSION_MATRIX.md');
 
@@ -172,7 +172,7 @@ function buildMatrix() {
   if (accountedFor !== totalPackIdOccurrences) {
     throw new Error(
       `generate-skill-permission-matrix: found ${totalPackIdOccurrences} ` +
-      `'id: pack.*' occurrences in skillPackService.js but only accounted ` +
+      `'id: pack.*' occurrences in skillPackService.ts but only accounted ` +
       `for ${accountedFor} via extractPacks + extractWorkflowPacks — one of ` +
       'those regexes is silently missing real packs. Fix the regex rather ' +
       'than publishing an incomplete matrix.'
@@ -193,14 +193,14 @@ function buildMatrix() {
   lines.push('**Generated file — do not hand-edit.**');
   lines.push('');
   lines.push('Regenerate with `node scripts/generate-skill-permission-matrix.mjs` after');
-  lines.push('changing `src/services/skillPackService.js` or');
+  lines.push('changing `src/services/skillPackService.ts` or');
   lines.push('`src/services/agentContractService.ts`. Correctness (every pack owned,');
   lines.push('documented, and within its own contract) is enforced independently by');
   lines.push('`src/test/services/skillPackContractMatrix.test.ts`, which runs under');
   lines.push('`npm test` and therefore gates CI — this doc is the human-readable view of');
   lines.push('the same source of truth, not a separate claim.');
   lines.push('');
-  lines.push(`Source of truth: \`src/services/skillPackService.js\` (packs) +`);
+  lines.push(`Source of truth: \`src/services/skillPackService.ts\` (packs) +`);
   lines.push('`src/services/agentContractService.ts` (contracts + per-pack scope overrides).');
   lines.push('');
   lines.push('**Shared status.** A pack is either exclusive (owned by exactly one agent,');
@@ -274,3 +274,4 @@ if (checkMode) {
   writeFileSync(OUTPUT_PATH, content, 'utf8');
   console.log(`Wrote ${OUTPUT_PATH}`);
 }
+

@@ -191,7 +191,7 @@ export function runCoachDetectors(): CoachSignal | null {
 |---|---|
 | `src/services/coachEngineService.ts` | Add `detectAgentWhiplash`, `detectBoardroomHedgePileup`, `detectUnusedSurfaceArea`, `detectLicenseWall`; extend `DETECTORS` array |
 | `src/services/licenseService.ts` (or a new small companion service) | Add the denial-logging prerequisite from §9.4 |
-| `src/services/skillPackService.js` | Optional: add "last invoked at" tracking if building the skill-pack half of §9.3 |
+| `src/services/skillPackService.ts` | Optional: add "last invoked at" tracking if building the skill-pack half of §9.3 |
 | `src/test/services/coachEngineService.test.js` | Add fire/silent tests for the 4 new detectors |
 
 ### Phase 3 (§10)
@@ -244,7 +244,7 @@ export function runCoachDetectors(): CoachSignal | null {
 These were "ideas" in the original brainstorm. They are now grounded in real, verified code — same rigor as §3. Build after Phase 1 is merged.
 
 ### 9.1 `agent_whiplash`
-- **Data source:** task-type → agent assignment history. **Not yet grounded in an existing store** — before writing new tracking, check `joseExecutionEngineService.js`'s assignment records and `agentBusService`'s packet history for whether action-type + assigned-agent is already recorded per packet (it likely is, since routing decisions have to be persisted somewhere for the orchestration queue to work at all — confirm the exact field name before assuming a shape).
+- **Data source:** task-type → agent assignment history. **Not yet grounded in an existing store** — before writing new tracking, check `joseExecutionEngineService.ts`'s assignment records and `agentBusService`'s packet history for whether action-type + assigned-agent is already recorded per packet (it likely is, since routing decisions have to be persisted somewhere for the orchestration queue to work at all — confirm the exact field name before assuming a shape).
 - **Logic:** In the last 10 packets sharing the same normalized `actionType`, if the assigned `agent` changes ≥ 3 times (A→B→A or similar oscillation, not just "3 different agents ever") within a short window (e.g. last hour), fire.
 - **Message (neutral):** `"'{actionType}' has bounced between {agentList} a few times recently. Might be worth deciding which agent should own this task type."`
 
@@ -254,7 +254,7 @@ These were "ideas" in the original brainstorm. They are now grounded in real, ve
 - **Message (warning):** `"{N} agents have flagged low confidence in the same Boardroom thread. This might genuinely need your judgment call rather than another agent's guess."`
 
 ### 9.3 `unused_surface_area` — "You built it, you never used it"
-- **Data source:** `getConnectorAuditLog()` / `getLastEntryForConnector(connectorId)` from `connectorAuditLogService.ts` (confirmed real, tracks per-connector call attempts with `ok`/`latencyMs`/`errorCode`) cross-referenced with `connectorRegistryService.ts`'s "configured" connectors (from `envPresence`/`status`). Skill-pack usage tracking was **not found** in `skillPackService.js` during this planning pass — if you want the skill-pack half of this trigger, you'll need to add a lightweight "last invoked at" timestamp to skill-pack records first (a Phase-0-shaped prerequisite); the connector half needs no new instrumentation and can ship alone if the skill-pack half is deferred further.
+- **Data source:** `getConnectorAuditLog()` / `getLastEntryForConnector(connectorId)` from `connectorAuditLogService.ts` (confirmed real, tracks per-connector call attempts with `ok`/`latencyMs`/`errorCode`) cross-referenced with `connectorRegistryService.ts`'s "configured" connectors (from `envPresence`/`status`). Skill-pack usage tracking was **not found** in `skillPackService.ts` during this planning pass — if you want the skill-pack half of this trigger, you'll need to add a lightweight "last invoked at" timestamp to skill-pack records first (a Phase-0-shaped prerequisite); the connector half needs no new instrumentation and can ship alone if the skill-pack half is deferred further.
 - **Logic (connector half):** A connector is "configured" (has required env present / `status === 'configured'`) but `getLastEntryForConnector(connectorId)` is `null` or older than N days (suggest 14).
 - **Message (neutral):** `"{connectorName} has credentials saved but hasn't been used in {days} days. Worth trying it, or is it safe to disable?"`
 
@@ -321,3 +321,4 @@ Coach Mode currently has zero user configurability and zero record of what it's 
 | 5 | Settings + history panel | Phase 1 minimum, ideally all prior phases | Yes — new capped history log (reuse `agentAuditService.ts`'s shape) |
 
 Phases 0–1 are the minimum viable version of "Coach Mode actually coaches." Phases 2–5 are what makes it complete — this is the honest answer to "is the doc comprehensive": it is now; it wasn't in the original v1-only draft.
+
