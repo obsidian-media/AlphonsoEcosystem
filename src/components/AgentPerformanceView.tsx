@@ -61,8 +61,8 @@ export function AgentPerformanceView({ receipts = [] }: AgentPerformanceViewProp
     downloadBlob(JSON.stringify(receipts, null, 2), 'agent-performance.json', 'application/json');
   }
 
-  function handleRetryAll() {
-    const count = retryDeadLetter();
+  async function handleRetryAll() {
+    const count = await retryDeadLetter();
     setRetryMsg(`Requeued ${count} packet${count !== 1 ? 's' : ''}`);
     window.dispatchEvent(new CustomEvent('alphonso:toast', {
       detail: { type: 'info', message: `Dead-letter retry: ${count} packet(s) requeued` }
