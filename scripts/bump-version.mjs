@@ -109,7 +109,8 @@ try {
   execSync('npm install --package-lock-only', { stdio: 'inherit', cwd: ROOT });
   console.log('✓ Regenerated package-lock.json');
 } catch {
-  console.log('⚠ Could not regenerate package-lock.json (npm may not be available)');
+  console.error('? Failed to regenerate package-lock.json');
+  throw new Error('npm install --package-lock-only failed');
 }
 
 console.log(`\nVersion bumped: ${currentVersion} → ${newVersion}`);

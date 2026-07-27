@@ -210,20 +210,12 @@ export function getOldestDeadLetterTimestamp(): string | null {
   return oldest.createdAtMs ? new Date(Number(oldest.createdAtMs)).toISOString() : null;
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export async function retryDeadLetter(): Promise<number> {
   const packets = listAgentPackets();
   const deadLetterPackets = packets.filter((p: any) => p.status === 'dead_letter');
   let requeued = 0;
-  for (let i = 0; i < deadLetterPackets.length; i++) {
-    if (i > 0) {
-      const backoffMs = Math.min(1000 * Math.pow(2, i), 30000) + Math.random() * 1000;
-      await delay(backoffMs);
-    }
-    const result = replayPacketFromDeadLetter(deadLetterPackets[i].id, 'Bulk dead-letter retry requested.');
+  for (const packet of deadLetterPackets) {
+    const result = replayPacketFromDeadLetter(packet.id, 'Bulk dead-letter retry requested.');
     if (result.ok) requeued++;
   }
   return requeued;

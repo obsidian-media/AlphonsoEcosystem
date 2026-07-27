@@ -2,6 +2,7 @@
 # install-ios.sh — Build and install Alphonso Companion on iPhone
 # Run this on a Mac with Xcode 15+ installed
 set -e
+set -o pipefail
 
 echo "🔧 Alphonso iOS Companion — Build & Install"
 echo "============================================"

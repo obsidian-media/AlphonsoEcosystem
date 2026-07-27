@@ -15,7 +15,6 @@ test.describe('Alphonso boot sequence', () => {
     await page.goto('/');
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
     const elapsed = Date.now() - startTime;
-    console.log(`Boot time: ${elapsed}ms`);
     expect(elapsed).toBeLessThan(8000);
   });
 

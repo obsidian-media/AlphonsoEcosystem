@@ -52,13 +52,14 @@ function persistStreamState(streamId: string, state: Partial<StreamState>): void
 
 export function subscribeToStreams(fn: StreamListener, key?: string): () => void {
   const id = key || `listener_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  if (listeners.has(id)) return () => {};
-  if (listeners.size >= MAX_LISTENERS) {
+  if (!listeners.has(id) && listeners.size >= MAX_LISTENERS) {
     const firstKey = listeners.keys().next().value;
-    if (firstKey) listeners.delete(firstKey);
+    if (firstKey !== undefined) listeners.delete(firstKey);
   }
   listeners.set(id, fn);
-  return () => { listeners.delete(id); };
+  return () => {
+    if (listeners.get(id) === fn) listeners.delete(id);
+  };
 }
 
 export function getStreamState(streamId: string): StreamState | null {

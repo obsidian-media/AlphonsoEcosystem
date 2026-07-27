@@ -36,8 +36,8 @@ jobs:
       - name: Deploy dry-run (vercel)
         run: |
           if command -v vercel &> /dev/null; then
-            vercel build --dry-run 2>/dev/null || echo "::notice::Vercel dry-run failed (non-blocking)"
+            vercel build --dry-run
           else
             echo "::notice::vercel CLI not installed, skipping deploy-dry"
-            exit 78
+            exit 0
           fi

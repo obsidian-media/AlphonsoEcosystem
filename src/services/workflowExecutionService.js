@@ -336,7 +336,7 @@ async function executeTesting(packet) {
     `- Stage: ${packet.payload?.stage || 'testing'}`,
     `- Recent changes:`,
     recentChanges,
-    `- Run: \`npm run test\` (${3758} tests across 255 files)`,
+    `- Run: \`npm run test\``,
     `- Lint: \`npm run lint\``,
     `- Verify: \`npm run verify:app\``
   ].join('\n');

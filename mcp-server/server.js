@@ -26,7 +26,10 @@ const MCP_SECRET = process.env.MCP_SECRET || '';
 // If MCP_SECRET is not set, restrict to 127.0.0.1 connections only.
 
 function constantTimeEqual(a, b) {
-  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 function authMiddleware(req, res, next) {

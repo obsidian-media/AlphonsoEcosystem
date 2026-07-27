@@ -54,16 +54,7 @@ describe('iOS Companion Integration', () => {
 
   it('mDNS service type format is valid', () => {
     const serviceType = '_alphonso._tcp';
-    expect(typeof serviceType).toBe('string');
-    expect(serviceType.startsWith('_')).toBe(true);
-    expect(serviceType.endsWith('._tcp')).toBe(true);
-  });
-
-  it('starts companion server and returns port', async () => {
-    invoke.mockResolvedValue({ port: 8765 });
-    const result = await invoke('start_companion_server');
-    expect(result.port).toBe(8765);
-    expect(invoke).toHaveBeenCalledWith('start_companion_server');
+    expect(serviceType).toBe('_alphonso._tcp');
   });
 
   it('send_command JSON format is valid', () => {

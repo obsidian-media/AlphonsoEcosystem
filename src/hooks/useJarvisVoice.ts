@@ -26,7 +26,10 @@ export function useJarvisVoice() {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  const isDisposed = useRef(false);
+
   const stop = useCallback(() => {
+    isDisposed.current = true;
     workletNode.current?.disconnect();
     workletNode.current = null;
 
@@ -54,32 +57,38 @@ export function useJarvisVoice() {
   }, []);
 
   const start = useCallback(async () => {
+    isDisposed.current = false;
     try {
       const socket = new WebSocket(WS_URL);
+      if (isDisposed.current) return;
       socket.binaryType = 'arraybuffer';
       ws.current = socket;
 
-      socket.onopen = () => setIsConnected(true);
-socket.onclose = () => {
-         setIsConnected(false);
-         setVoiceState('idle');
-         window.dispatchEvent(new CustomEvent('alphonso:toast', {
-           detail: { type: 'info', message: 'Voice OS disconnected. Start it from Runtimes tab to use voice.' }
-         }));
-       };
-       socket.onerror = () => {
-         setError('WebSocket connection failed');
-         setVoiceState('error');
-         window.dispatchEvent(new CustomEvent('alphonso:toast', {
-           detail: { type: 'error', message: 'Voice OS not running — start it from Runtime Manager to use voice.' }
-         }));
-       };
+      socket.onopen = () => { if (!isDisposed.current) setIsConnected(true); };
+      socket.onclose = () => {
+        if (isDisposed.current) return;
+        setIsConnected(false);
+        setVoiceState('idle');
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { type: 'info', message: 'Voice OS disconnected. Start it from Runtimes tab to use voice.' }
+        }));
+      };
+      socket.onerror = () => {
+        if (isDisposed.current) return;
+        setError('WebSocket connection failed');
+        setVoiceState('error');
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { type: 'error', message: 'Voice OS not running - start it from Runtime Manager to use voice.' }
+        }));
+      };
 
       socket.onmessage = (e: MessageEvent) => {
+        if (isDisposed.current) return;
         if (e.data instanceof ArrayBuffer) {
           // TTS audio: decode WAV bytes and play through speakers
           const playCtx = audioCtx.current ?? new AudioContext();
           playCtx.decodeAudioData(e.data.slice(0)).then(buf => {
+            if (isDisposed.current) return;
             const src = playCtx.createBufferSource();
             src.buffer = buf;
             src.connect(playCtx.destination);
@@ -89,6 +98,7 @@ socket.onclose = () => {
         }
         if (typeof e.data === 'string') {
           const msg = JSON.parse(e.data);
+          if (isDisposed.current) return;
           if (msg.type === 'stt') setTranscript(msg.text);
           if (msg.type === 'llm') setReply(prev => prev + msg.text);
           if (msg.type === 'state') setVoiceState(msg.value);
@@ -102,9 +112,11 @@ socket.onclose = () => {
 
       // AudioWorklet setup
       const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (isDisposed.current) { mediaStream.getTracks().forEach(t => t.stop()); return; }
       stream.current = mediaStream;
 
       const ctx = new AudioContext({ sampleRate: 16000 });
+      if (isDisposed.current) { ctx.close(); mediaStream.getTracks().forEach(t => t.stop()); return; }
       audioCtx.current = ctx;
 
       // Register worklet from blob URL
@@ -113,11 +125,15 @@ socket.onclose = () => {
       await ctx.audioWorklet.addModule(blobUrl);
       URL.revokeObjectURL(blobUrl);
 
+      if (isDisposed.current) { ctx.close(); return; }
+
       const src = ctx.createMediaStreamSource(mediaStream);
       const node = new AudioWorkletNode(ctx, 'pcm-processor');
+      if (isDisposed.current) { node.disconnect(); return; }
       workletNode.current = node;
 
       node.port.onmessage = (evt: MessageEvent<ArrayBuffer>) => {
+        if (isDisposed.current) return;
         if (socket.readyState === WebSocket.OPEN) {
           socket.send(evt.data);
         }
@@ -126,8 +142,10 @@ socket.onclose = () => {
       src.connect(node);
       // Don't connect to destination (avoids echo)
 
+      if (isDisposed.current) return;
       setVoiceState('listening');
     } catch (err) {
+      if (isDisposed.current) return;
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
       setVoiceState('error');

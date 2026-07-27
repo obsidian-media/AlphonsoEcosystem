@@ -51,7 +51,7 @@ fn local_ip() -> Option<String> {
   use std::net::{IpAddr, UdpSocket};
   let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
   if socket.connect("8.8.8.8:80").is_err() {
-    // Fallback: bind a TCP listener and inspect the local address without
+    // Fallback: bind a UDP socket and inspect the local address without
     // connecting to an external host. Works on all platforms and handles
     // air-gapped / no-default-route scenarios gracefully.
     drop(socket);

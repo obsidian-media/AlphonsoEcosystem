@@ -159,9 +159,9 @@ function _save(schedules: Schedule[]): void {
   } catch { /* ignore */ }
 }
 
-export function createSchedule({ name, commandText, presetId = 'hourly', intervalMs, agentId = 'jose', cron }: { name: string; commandText: string; presetId?: string; intervalMs?: number; agentId?: string; cron?: string }): Schedule | null {
+export function createSchedule({ name, commandText, presetId = 'hourly', intervalMs, agentId = 'jose', cron }: { name: string; commandText: string; presetId?: string; intervalMs?: number; agentId?: string; cron?: string }): Schedule | { success: false; error: string } {
   if (cron !== undefined && !validateCronExpression(cron)) {
-    return null;
+    return { success: false, error: 'Invalid cron expression: must have 5 fields (minute hour day month weekday)' };
   }
   const preset = SCHEDULE_PRESETS.find((p) => p.id === presetId) || SCHEDULE_PRESETS[1];
   const resolvedCron = cron || preset.cron || null;

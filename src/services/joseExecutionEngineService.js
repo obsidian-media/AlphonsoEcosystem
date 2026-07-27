@@ -304,7 +304,7 @@ function _recordEscalationFailure(commandText) {
   _escalationFailCounts.set(key, current);
   if (_escalationFailCounts.size > MAX_ESCALATION_FAIL_COUNTS) {
     const firstKey = _escalationFailCounts.keys().next().value;
-    if (firstKey) _escalationFailCounts.delete(firstKey);
+    if (firstKey !== undefined) _escalationFailCounts.delete(firstKey);
   }
   if (current >= ESCALATION_THRESHOLD) {
     const entry = { commandText: key, failCount: current, escalatedAt: Date.now() };

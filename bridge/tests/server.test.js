@@ -1,16 +1,19 @@
+/* global process */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mockApp } from './__mocks__/express.js';
-import '../server.js';
 
 vi.mock('node:child_process', () => ({ exec: vi.fn() }));
 
 vi.mock('node:fs', () => ({ readFileSync: vi.fn(), existsSync: vi.fn() }));
 
 describe('MCP Bridge Server', () => {
-  beforeEach(() => {
+  let serverModule: any;
+
+  beforeEach(async () => {
     process.env.OLLAMA_BASE = 'http://localhost:11434';
     process.env.OLLAMA_MODEL = 'llama3.2';
     process.env.ALPHONSO_BRIDGE_PORT = '4444';
+    serverModule = await import('../server.js');
   });
 
   afterEach(() => {
