@@ -1,0 +1,63 @@
+Alphonso — Third-Party Notices
+================================
+
+This project is proprietary software licensed under the SHALAUDE License
+(see LICENSE). It incorporates open-source components distributed under
+their own licenses (primarily MIT and Apache-2.0). Those components remain
+governed by their original licenses; nothing in LICENSE restricts the
+rights granted by these upstream licenses to their respective works.
+
+This file lists the major direct runtime/build dependencies as of v2.6.1.
+It is not an exhaustive transitive dependency list — the full, authoritative
+manifests are:
+  - package.json / package-lock.json  (JavaScript/TypeScript, npm)
+  - src-tauri/Cargo.toml / Cargo.lock  (Rust, cargo)
+  - voice/backend/requirements.txt, voice/cloud-backend/requirements.txt (Python, pip)
+Each dependency's license can be regenerated at any time via standard
+tooling (e.g. `npx license-checker`, `cargo license`, `pip-licenses`).
+
+JavaScript / TypeScript (npm) — primary runtime dependencies
+--------------------------------------------------------------
+  React, React DOM                         MIT   Meta Platforms, Inc.
+  Framer Motion                            MIT   Framer
+  Lucide React                             ISC   Lucide Contributors
+  qrcode.react                             MIT   Contributors
+  Fontsource (Inter, Plus Jakarta Sans)    OFL-1.1  Fontsource / respective font authors
+  @tauri-apps/api, plugin-process,
+    plugin-updater, plugin-dialog,
+    plugin-opener, plugin-notification,
+    plugin-global-shortcut, plugin-log      MIT/Apache-2.0  Tauri Programme within The Commons Conservancy
+
+Rust (cargo) — primary direct dependencies
+--------------------------------------------------------------
+  tauri, tauri-build                       MIT/Apache-2.0  Tauri Programme within The Commons Conservancy
+  serde, serde_json                        MIT/Apache-2.0  Serde contributors
+  tokio, tokio-tungstenite, futures-util    MIT   Tokio contributors
+  reqwest                                  MIT/Apache-2.0  seanmonstar and contributors
+  rusqlite                                 MIT   rusqlite contributors
+  sha2, hmac, subtle, base64, uuid, rand    MIT/Apache-2.0  RustCrypto / rust-random contributors
+  mdns-sd, hostname                        MIT/Apache-2.0  Contributors
+  keyring                                  MIT/Apache-2.0  hwchen and contributors
+  arboard                                  MIT/Apache-2.0  1Password / contributors
+  dotenvy                                  MIT   dotenvy contributors
+  log                                      MIT/Apache-2.0  rust-lang contributors
+
+Python (pip) — voice pipeline
+--------------------------------------------------------------
+  FastAPI                                  MIT   Sebastián Ramírez and contributors
+  uvicorn                                  BSD-3-Clause  Encode OSS Ltd.
+  httpx                                    BSD-3-Clause  Encode OSS Ltd.
+  pydantic                                 MIT   Pydantic Services Inc.
+  faster-whisper, webrtcvad, piper-tts and
+    related voice-pipeline libraries        MIT/Apache-2.0/BSD  respective authors — see
+    voice/backend/requirements.txt for the current pinned list
+
+Fonts
+--------------------------------------------------------------
+  Inter                                    OFL-1.1  The Inter Project Authors
+  Plus Jakarta Sans                        OFL-1.1  Tokotype
+  JetBrains Mono                           OFL-1.1  JetBrains s.r.o.
+
+--------------------------------------------------------------
+This NOTICE file is maintained on a best-effort basis. If you believe an
+attribution is missing or incorrect, please open an issue.
