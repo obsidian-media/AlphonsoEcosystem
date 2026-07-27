@@ -685,7 +685,7 @@ not confirmed or policy-level. The three items below were independently
 re-verified against the live files in this session (not merely copied from
 either report) and are real, unfixed as of 2026-07-26.
 
-- [x] **F1 — Fix timing-unsafe token comparison in Cloud Voice auth**
+- [ ] **F1 — Fix timing-unsafe token comparison in Cloud Voice auth**
   - **Owner:** Sentinel; **execution:** Alphonso
   - `voice/cloud-backend/app/auth.py:9` compares the bearer token with `!=`
     instead of a constant-time comparison
@@ -693,7 +693,11 @@ either report) and are real, unfixed as of 2026-07-26.
     a real timing-attack surface on the Cloud Voice service's auth gate.
     Notably, the equivalent Rust companion-auth path already received this
     exact class of fix (`cf2d9ef`); this Python service did not.
-  - **Closed 2026-07-26** by PR #124: replaced with `secrets.compare_digest()`.
+  - **Code change closed 2026-07-26 by PR #124:** replaced with
+    `secrets.compare_digest()`. Pending: regression test asserting
+    equal-length near-miss tokens are still rejected, and `pytest` for
+    `voice/cloud-backend` passes (evidence unavailable in this session;
+    pytest runs OOM on this machine).
   - **Done when:** the comparison uses `hmac.compare_digest()` (or
     equivalent constant-time check), with a regression test asserting equal-
     length near-miss tokens are still rejected, and `pytest` for
@@ -738,10 +742,10 @@ dropped.
 - [x] **G-T13 — Move credentials to OS-level secret storage** — **closed by
   B3** (`os_keychain_store.rs`, 2026-07-25). No separate action needed;
   cross-referenced here only so T13 is not mistaken for still-open.
-- [x] **G-T15 — Live-verify the in-app auto-updater against a real signed
+- [ ] **G-T15 — Live-verify the in-app auto-updater against a real signed
   release** — **duplicate of D1**, already tracked `BLOCKED` above pending
   explicit owner authorization to publish a real public release.
-- [x] **G-T16 — Live-verify iOS companion pairing on a real device** —
+- [ ] **G-T16 — Live-verify iOS companion pairing on a real device** —
   **duplicate of D2**, already tracked `BLOCKED` above pending physical
   device access.
 

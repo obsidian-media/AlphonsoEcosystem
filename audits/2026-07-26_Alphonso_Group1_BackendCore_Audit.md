@@ -58,7 +58,7 @@
 
 ### [F-G1-004] `tauri.conf.json` CSP allows `'unsafe-inline'` for script-src and style-src
 - **File:** `src-tauri/tauri.conf.json:36`
-  ```
+  ```json
   script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'
   ```
 - **Severity:** Medium

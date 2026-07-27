@@ -90,7 +90,7 @@
 | F-H-011 | moduleRegistryService enable/disable untested | G4-010 | `moduleRegistryService.test.js:37-52` | `enableModule`/`disableModule` could be broken, CI passes |
 | F-H-012 | marcusAuditService "delegates to auditCodeProposal" doesn't verify delegation | G4-011 | `marcusAuditService.test.js:80-83` | Refactored without delegation, test still passes |
 | F-H-013 | All third-party GitHub Actions pinned to mutable tags | G6-002 | All 4 workflow files — `actions/checkout@v7`, `dtolnay/rust-toolchain@stable`, `softprops/action-gh-release@v2` | 100+ supply-chain RCE vectors across CI/CD |
-| F-H-014 | xcodebuild failures masked by `|| true` | G6-004 | `scripts/install-ios.sh:42-49` | Build errors silently swallowed |
+| F-H-014 | xcodebuild failures masked by `\|\| true` | G6-004 | `scripts/install-ios.sh:42-49` | Build errors silently swallowed |
 | F-H-015 | Hardcoded "0.1.0" version in verify scripts | G6-005 | `scripts/verify-desktop.mjs:18,27` — `Alphonso_0.1.0_x64-setup.exe` vs real `2.6.1` | `verify:desktop` structurally broken on every release |
 | F-H-016 | Orphan runtime-contract test with stale version | G6-006 | `scripts/test-runtime-contract.mjs:17` asserts `2.6.0`; not wired into `package.json` | Contract test would fail if run, but never runs |
 | F-H-017 | Supabase missing INSERT policy for voice_devices | G6-014 | `supabase/migrations/20260713214554_cloud_voice_devices.sql:14-21` (SELECT/UPDATE only) | Users cannot enroll devices via RLS. Also deduped G1-013. |

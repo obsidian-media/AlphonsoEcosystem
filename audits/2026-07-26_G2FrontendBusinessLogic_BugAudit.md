@@ -39,7 +39,7 @@
 **Severity**: HIGH
 **Category**: Race condition / data loss
 
-```
+```js
 createGoal() {
   const goals = readGoals();    // Read entire state
   goals.push(newGoal);          // Mutate
@@ -147,7 +147,7 @@ const raw = durableGet(PACKET_KEY);
 
 `readSSEStream` checks `event.type === 'content_block_delta' || event.type === 'delta'` before reading `event.choices?.[0]?.delta?.content`. This condition matches the **Anthropic/Claude** event format (`content_block_delta`), not the **OpenAI** event format. OpenAI SSE streaming events have NO `type` field — they use `choices[0].delta.content` directly. The condition never matches for OpenAI responses, so `deltaText` is never extracted and the streaming callback is never called. Streaming silently produces zero content.
 
-```
+```json
 // OpenAI streaming event:
 { "choices": [{ "delta": { "content": "Hello" }, "index": 0 }] }  // no "type" field
 // Claude streaming event:
@@ -336,7 +336,7 @@ However, `streamingService.ts` (`_chunkListeners` array) and `eventsService.ts` 
 
 These files were sampled via grep for security-relevant patterns (`apiKey`, `secret`, `token`, `localStorage`, `unbounded`) but not read line-by-line. They are predominantly re-export wrappers or thin delegation layers:
 
-```
+```text
 agentBrainService.js* (large - 1003 lines, sampled for security patterns)
 agentMetricsService.ts, agentOutputStoreService.ts, agentPairing*.ts
 agentPerformanceService.ts, agentVisualService.ts
