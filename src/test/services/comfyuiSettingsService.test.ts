@@ -22,6 +22,9 @@ describe('comfyuiSettingsService', () => {
       if (path === 'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
       if (path === 'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
       if (path === 'D:\\Comfy-Desktop\\main.py') return [{ exists: false, is_dir: false }];
+      if (path === 'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
+      if (path === 'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
+      if (path === 'C:\\Comfy-Desktop\\main.py') return [{ exists: false, is_dir: false }];
       if (path === 'D:\\Alphonso\\runtimes\\comfyui\\main.py') return [{ exists: true, is_dir: false }];
       return [{ exists: false, is_dir: false }];
     });
@@ -49,6 +52,12 @@ describe('comfyuiSettingsService', () => {
     const { resolveComfyuiDirectory } = await import('../../services/comfyuiSettingsService');
     const result = await resolveComfyuiDirectory('D:\\Comfy-Desktop');
     expect(result).toBe('D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI');
+  });
+
+  it('normalizes the C:\\Comfy-Desktop container to the nested ComfyUI runtime root', async () => {
+    const { resolveComfyuiDirectory } = await import('../../services/comfyuiSettingsService');
+    const result = await resolveComfyuiDirectory('C:\\Comfy-Desktop');
+    expect(result).toBe('C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI');
   });
 
   it('returns empty string when no runtime directory is available', async () => {

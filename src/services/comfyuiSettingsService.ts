@@ -18,7 +18,7 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-async function normalizeComfyuiRoot(basePath: string): Promise<string> {
+async function normalizeComfyuiRoot(basePath: string | null | undefined): Promise<string> {
   const trimmed = String(basePath || '').trim().replace(/[\\/]+$/, '');
   if (!trimmed) return '';
 
@@ -48,7 +48,9 @@ export async function resolveComfyuiDirectory(currentDir: string | null | undefi
 
   candidates.push(
     'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
-    'D:\\Comfy-Desktop'
+    'D:\\Comfy-Desktop',
+    'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
+    'C:\\Comfy-Desktop'
   );
 
   for (const candidate of candidates) {

@@ -18,7 +18,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 ## Project Identity
 - **App**: Alphonso — local-first AI desktop companion
 - **Stack**: Tauri v2 (Rust backend) + React 18 (Vite 8, Tailwind 3) + Ollama (local LLM)
-- **Version**: 2.6.1 (security hardened, 263 test files, 3,795 tests, 173 services)
+- **Version**: 2.6.1 (security hardened, 263 test files, 3,758 tests, 185 services)
 - **Target**: v2.5.0 = security hardening complete, test coverage expanded, all connectors policy-gated
 
 ## Directory Structure
@@ -26,11 +26,11 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated)
   agents/              9 agent profiles, permissions, schemas
   components/          118 UI components (.tsx + .tsx subdirs)
-  services/            173 services (policy-gated, not stubs; 173/173 audited line-by-line 2026-07-28)
+  services/            185 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)
-  test/                263 test files, 3,795 tests (Vitest; see ground truth for current verification status)
+  test/                263 test files, 3,758 tests (Vitest; see ground truth for current verification status)
 ios/                   iOS companion app (SwiftUI)
   AlphonsoCompanion/
     AlphonsoCompanionApp.swift    — @main entry point
@@ -73,7 +73,7 @@ gateway/               WhatsApp Cloud gateway (Railway-deployed, live)
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 3,795 tests (263 files; verified 2026-07-28)
+npm run test             # 3,758 tests (263 files; verified 2026-07-28)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
@@ -82,7 +82,7 @@ npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
 
 # From src-tauri/
 cargo check              # Verify Rust compiles
-cargo test                # 112 Rust `#[test]`-attributed unit tests (across 26 modules; cargo test itself reports slightly more passing due to a handful of #[tokio::test] async tests this static count doesn't match)
+cargo test                # 117 Rust `#[test]`-attributed unit tests (across 26 modules; cargo test itself reports slightly more passing due to a handful of #[tokio::test] async tests this static count doesn't match)
 cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 ```
 
@@ -111,7 +111,7 @@ cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 - Window close now calls `std::process::exit(0)` to prevent WebView2 zombie process leak
 
 ## Do Not Duplicate
-Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 173 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` "Do Not Duplicate" table at project root. 185 services already exist.
 
 ## Truth Source
 `docs/ALPHONSO_GROUND_TRUTH.md` is the single source of truth. If any other document conflicts, trust the ground truth file.

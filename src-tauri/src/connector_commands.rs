@@ -1811,7 +1811,33 @@ pub(crate) async fn connector_get_comfyui_history(
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::ffi::OsString;
   use std::sync::{Mutex, OnceLock};
+
+  struct EnvSnapshot {
+    entries: Vec<(String, Option<OsString>)>,
+  }
+
+  impl EnvSnapshot {
+    fn capture(keys: &[&str]) -> Self {
+      let entries = keys
+        .iter()
+        .map(|key| ((*key).to_string(), std::env::var_os(key)))
+        .collect();
+      Self { entries }
+    }
+  }
+
+  impl Drop for EnvSnapshot {
+    fn drop(&mut self) {
+      for (key, value) in self.entries.iter().rev() {
+        match value {
+          Some(existing) => std::env::set_var(key, existing),
+          None => std::env::remove_var(key),
+        }
+      }
+    }
+  }
 
   fn env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -2066,6 +2092,7 @@ mod tests {
   #[test]
   fn connector_clickup_send_rejects_missing_key() {
     run_with_env(|runtime| {
+      let _env = EnvSnapshot::capture(&["CLICKUP_API_KEY", "CLICKUP_LIST_ID"]);
       std::env::remove_var("CLICKUP_API_KEY");
       std::env::remove_var("CLICKUP_LIST_ID");
       let result = runtime
@@ -2087,6 +2114,7 @@ mod tests {
   #[test]
   fn connector_clickup_send_rejects_missing_list_id() {
     run_with_env(|runtime| {
+      let _env = EnvSnapshot::capture(&["CLICKUP_API_KEY", "CLICKUP_LIST_ID"]);
       std::env::set_var("CLICKUP_API_KEY", "test-token");
       std::env::remove_var("CLICKUP_LIST_ID");
       let result = runtime
@@ -2110,6 +2138,7 @@ mod tests {
   #[test]
   fn connector_clickup_send_rejects_empty_title() {
     run_with_env(|runtime| {
+      let _env = EnvSnapshot::capture(&["CLICKUP_API_KEY", "CLICKUP_LIST_ID"]);
       std::env::set_var("CLICKUP_API_KEY", "test-token");
       std::env::set_var("CLICKUP_LIST_ID", "list-123");
       let result = runtime
