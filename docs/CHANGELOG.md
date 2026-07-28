@@ -8,6 +8,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [2.6.1] — 2026-07-22 (product readiness and review follow-up)
 
+- **ComfyUI desktop recovery:** Alphonso now auto-resolves the real ComfyUI
+  install directory and bundled venv Python from Settings when the saved values
+  are empty or still at the generic `python` placeholder. The Rust launcher now
+  writes a temporary `--extra-model-paths-config` for the sibling
+  `ComfyUI-Shared\models\...` tree before starting ComfyUI, so shared desktop
+  checkpoints become visible to `CheckpointLoaderSimple` instead of appearing as
+  an empty model list. Live runtime proof on 2026-07-28: ComfyUI `0.20.1` on
+  `http://127.0.0.1:8188` completed prompt
+  `32eeefec-624c-4fae-9efd-14f64a166e31` and returned
+  `ALPHONSO_8188_SMOKE_00001_.png` using
+  `DreamShaper_8_pruned.safetensors`. Added focused regressions for path
+  discovery and checkpoint selection (`comfyuiSettingsService` 8/8,
+  `connectorImageGenerators` 22/22).
+
 - **Voice console:** replaced the single opaque start/stop card with local
   runtime, Python, and WebSocket readiness checks; added refreshable state and
   a clear local start/stop path. Cloud Voice is explicitly shown as pending

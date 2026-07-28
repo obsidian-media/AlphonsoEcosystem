@@ -77,6 +77,7 @@ export async function generateSdWebUiImage({
 
 const DEFAULT_COMFYUI_ENDPOINT = 'http://127.0.0.1:8188';
 const DEFAULT_COMFYUI_CHECKPOINT = 'v1-5-pruned-emaonly-fp16.safetensors';
+const FALLBACK_COMFYUI_CHECKPOINT = 'DreamShaper_8_pruned.safetensors';
 
 function getComfyUiEndpoint() {
   try {
@@ -92,8 +93,27 @@ function createComfyClientId() {
   return `alphonso-miya-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+async function resolveComfyUiCheckpoint() {
+  const endpoint = getComfyUiEndpoint();
+  try {
+    const response = await fetch(`${endpoint}/object_info/CheckpointLoaderSimple`);
+    const body = await response.json().catch(() => ({}));
+    const configured = localStorage.getItem('alphonso_comfyui_checkpoint_v1') || '';
+    const choices = body?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0];
+    const available = Array.isArray(choices) ? choices.filter((item) => typeof item === 'string' && item.trim()) : [];
+    if (!available.length) return configured || FALLBACK_COMFYUI_CHECKPOINT;
+    if (configured && available.includes(configured)) return configured;
+    if (available.includes(DEFAULT_COMFYUI_CHECKPOINT)) return DEFAULT_COMFYUI_CHECKPOINT;
+    if (available.includes(FALLBACK_COMFYUI_CHECKPOINT)) return FALLBACK_COMFYUI_CHECKPOINT;
+    return available[0];
+  } catch {
+    return FALLBACK_COMFYUI_CHECKPOINT;
+  }
+}
+
 function createMiyaSd15ComfyWorkflow({
   prompt,
+  checkpoint = DEFAULT_COMFYUI_CHECKPOINT,
   negativePrompt = '',
   width = 512,
   height = 512,
@@ -103,7 +123,7 @@ function createMiyaSd15ComfyWorkflow({
 }) {
   return {
     3: { class_type: 'KSampler', inputs: { seed, steps, cfg: cfgScale, sampler_name: 'euler', scheduler: 'normal', denoise: 1, model: ['4', 0], positive: ['6', 0], negative: ['7', 0], latent_image: ['5', 0] } },
-    4: { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: DEFAULT_COMFYUI_CHECKPOINT } },
+    4: { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: checkpoint } },
     5: { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } },
     6: { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['4', 1] } },
     7: { class_type: 'CLIPTextEncode', inputs: { text: negativePrompt || 'blurry, low quality, distorted text, watermark, logo artifacts, bad anatomy', clip: ['4', 1] } },
@@ -216,8 +236,10 @@ export async function generateComfyUiImage({
     return { ok: false, connectorId: 'comfyui_video', blocked: true, trust: gate.verificationState || TRUST_STATES.PENDING, error: gate.reason || 'ComfyUI policy gate blocked the action.' };
   }
   let workflow;
+  let checkpoint;
   try {
-    workflow = createMiyaSd15ComfyWorkflow({ prompt, negativePrompt, width, height, steps, cfgScale });
+    checkpoint = await resolveComfyUiCheckpoint();
+    workflow = createMiyaSd15ComfyWorkflow({ prompt, checkpoint, negativePrompt, width, height, steps, cfgScale });
   } catch (error) {
     const errMsg = String(error || '');
     recordConnectorFailure('comfyui_video', 'local_image_generation');
@@ -252,7 +274,7 @@ export async function generateComfyUiImage({
   } else {
     recordConnectorFailure('comfyui_video', 'local_image_generation');
   }
-  const finalResult = { ...result, provider: 'comfyui', checkpoint: DEFAULT_COMFYUI_CHECKPOINT, prompt, width, height, steps, cfgScale };
+  const finalResult = { ...result, provider: 'comfyui', checkpoint: checkpoint || FALLBACK_COMFYUI_CHECKPOINT, prompt, width, height, steps, cfgScale };
   appendConnectorAudit('comfyui_video', finalResult?.ok ? 'image_generation_success' : 'image_generation_failed', {
     provider: 'comfyui', jobId: finalResult?.jobId || queued.promptId,
     outputCount: Array.isArray(finalResult?.outputPaths) ? finalResult.outputPaths.length : 0,

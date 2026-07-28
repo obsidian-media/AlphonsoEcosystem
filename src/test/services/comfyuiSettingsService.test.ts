@@ -19,14 +19,21 @@ describe('comfyuiSettingsService', () => {
     mockInvoke.mockImplementation(async (_cmd: string, args: { paths?: string[] }) => {
       const path = String(args?.paths?.[0] || '');
       if (path === 'D:\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
+      if (path === 'D:\\ComfyUI\\.venv\\Scripts\\python.exe') return [{ exists: true, is_dir: false }];
       if (path === 'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
       if (path === 'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
+      if (path === 'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\.venv\\Scripts\\python.exe') return [{ exists: true, is_dir: false }];
       if (path === 'D:\\Comfy-Desktop\\main.py') return [{ exists: false, is_dir: false }];
+      if (path === 'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
+      if (path === 'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
+      if (path === 'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\.venv\\Scripts\\python.exe') return [{ exists: true, is_dir: false }];
       if (path === 'C:\\Comfy-Desktop\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
       if (path === 'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
       if (path === 'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
       if (path === 'C:\\Comfy-Desktop\\main.py') return [{ exists: false, is_dir: false }];
       if (path === 'D:\\Alphonso\\runtimes\\comfyui\\main.py') return [{ exists: true, is_dir: false }];
+      if (path === 'D:\\Alphonso\\runtimes\\comfyui\\.venv\\Scripts\\python.exe') return [{ exists: true, is_dir: false }];
+      if (path === 'C:\\Custom\\python.exe') return [{ exists: true, is_dir: false }];
       return [{ exists: false, is_dir: false }];
     });
   });
@@ -70,5 +77,29 @@ describe('comfyuiSettingsService', () => {
     const { resolveComfyuiDirectory } = await import('../../services/comfyuiSettingsService');
     const result = await resolveComfyuiDirectory(null);
     expect(result).toBe('');
+  });
+
+  it('falls back to the Shaya install path when that is the discoverable runtime root', async () => {
+    mockInvoke.mockImplementation(async (_cmd: string, args: { paths?: string[] }) => {
+      const path = String(args?.paths?.[0] || '');
+      if (path === 'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
+      if (path === 'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
+      return [{ exists: false, is_dir: false }];
+    });
+    const { resolveComfyuiDirectory } = await import('../../services/comfyuiSettingsService');
+    const result = await resolveComfyuiDirectory('');
+    expect(result).toBe('C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\ComfyUI');
+  });
+
+  it('resolves the bundled ComfyUI python from the discovered runtime directory', async () => {
+    const { resolveComfyuiPython } = await import('../../services/comfyuiSettingsService');
+    const result = await resolveComfyuiPython('python', 'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI');
+    expect(result).toBe('D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\.venv\\Scripts\\python.exe');
+  });
+
+  it('keeps an explicit custom python path when it already exists', async () => {
+    const { resolveComfyuiPython } = await import('../../services/comfyuiSettingsService');
+    const result = await resolveComfyuiPython('C:\\Custom\\python.exe', 'D:\\ComfyUI');
+    expect(result).toBe('C:\\Custom\\python.exe');
   });
 });

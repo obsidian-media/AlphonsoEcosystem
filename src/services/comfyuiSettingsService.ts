@@ -30,6 +30,24 @@ async function normalizeComfyuiRoot(basePath: string | null | undefined): Promis
   return '';
 }
 
+async function normalizeComfyuiPython(
+  currentPython: string | null | undefined,
+  comfyuiDir: string | null | undefined
+): Promise<string> {
+  const trimmedPython = String(currentPython || '').trim();
+  if (trimmedPython && trimmedPython.toLowerCase() !== 'python' && await pathExists(trimmedPython)) {
+    return trimmedPython;
+  }
+
+  const resolvedDir = await normalizeComfyuiRoot(comfyuiDir);
+  if (!resolvedDir) return '';
+
+  const bundledPython = `${resolvedDir}\\.venv\\Scripts\\python.exe`;
+  if (await pathExists(bundledPython)) return bundledPython;
+
+  return trimmedPython && trimmedPython.toLowerCase() !== 'python' ? trimmedPython : '';
+}
+
 export async function resolveComfyuiDirectory(currentDir: string | null | undefined): Promise<string> {
   const currentResolved = await normalizeComfyuiRoot(currentDir);
   if (currentResolved) return currentResolved;
@@ -49,6 +67,7 @@ export async function resolveComfyuiDirectory(currentDir: string | null | undefi
   candidates.push(
     'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
     'D:\\Comfy-Desktop',
+    'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI',
     'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
     'C:\\Comfy-Desktop'
   );
@@ -61,4 +80,11 @@ export async function resolveComfyuiDirectory(currentDir: string | null | undefi
   }
 
   return '';
+}
+
+export async function resolveComfyuiPython(
+  currentPython: string | null | undefined,
+  comfyuiDir: string | null | undefined
+): Promise<string> {
+  return normalizeComfyuiPython(currentPython, comfyuiDir);
 }

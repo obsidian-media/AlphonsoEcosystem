@@ -26,6 +26,7 @@ describe('connectorImageGenerators', () => {
     setItem: vi.fn()
   };
   vi.stubGlobal('localStorage', localStorageMock);
+  vi.stubGlobal('fetch', vi.fn());
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,6 +61,57 @@ describe('connectorImageGenerators', () => {
     it('creates workflow with default parameters', async () => {
       const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
       expect(typeof generateComfyUiImage).toBe('function');
+    });
+
+    it('uses an available ComfyUI checkpoint from the live object_info payload', async () => {
+      fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            CheckpointLoaderSimple: {
+              input: {
+                required: {
+                  ckpt_name: [[
+                    'DreamShaper_8_pruned.safetensors',
+                    'another-model.safetensors'
+                  ]]
+                }
+              }
+            }
+          })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ prompt_id: 'prompt-123', node_errors: {} })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            'prompt-123': {
+              outputs: {
+                9: {
+                  images: [{ filename: 'ALPHONSO_MIYA_00001_.png', subfolder: '', type: 'output' }]
+                }
+              }
+            }
+          })
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          blob: async () => new Blob([])
+        });
+
+      const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
+      const result = await generateComfyUiImage({ prompt: 'test prompt', steps: 1 });
+
+      expect(result.ok).toBe(true);
+      expect(result.checkpoint).toBe('DreamShaper_8_pruned.safetensors');
+      expect(fetch).toHaveBeenNthCalledWith(
+        1,
+        'http://127.0.0.1:8188/object_info/CheckpointLoaderSimple'
+      );
+      const queuedPayload = JSON.parse(fetch.mock.calls[1][1].body);
+      expect(queuedPayload.prompt['4'].inputs.ckpt_name).toBe('DreamShaper_8_pruned.safetensors');
     });
   });
 

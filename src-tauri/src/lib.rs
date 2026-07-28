@@ -301,6 +301,52 @@ struct ServiceLaunchProof {
   launched_at_ms: u64,
 }
 
+fn comfyui_shared_root(dir: &Path) -> Option<PathBuf> {
+  let desktop_root = dir.parent()?.parent()?.parent()?;
+  let shared = desktop_root.join("ComfyUI-Shared");
+  shared.exists().then_some(shared)
+}
+
+fn write_comfyui_extra_model_paths_config(shared_root: &Path) -> Result<PathBuf, String> {
+  let models_root = shared_root.join("models");
+  let yaml = format!(
+    concat!(
+      "alphonso:\n",
+      "  checkpoints: {}\n",
+      "  classifiers: {}\n",
+      "  clip_vision: {}\n",
+      "  configs: {}\n",
+      "  controlnet: {}\n",
+      "  diffusion_models: {}\n",
+      "  embeddings: {}\n",
+      "  hypernetworks: {}\n",
+      "  loras: {}\n",
+      "  upscale_models: {}\n",
+      "  vae: {}\n",
+      "  vae_approx: {}\n",
+      "  clip: {}\n",
+      "  unet: {}\n"
+    ),
+    models_root.join("checkpoints").display(),
+    models_root.join("classifiers").display(),
+    models_root.join("clip_vision").display(),
+    models_root.join("configs").display(),
+    models_root.join("controlnet").display(),
+    models_root.join("diffusion_models").display(),
+    models_root.join("embeddings").display(),
+    models_root.join("hypernetworks").display(),
+    models_root.join("loras").display(),
+    models_root.join("upscale_models").display(),
+    models_root.join("vae").display(),
+    models_root.join("vae_approx").display(),
+    models_root.join("clip").display(),
+    models_root.join("unet").display()
+  );
+  let path = std::env::temp_dir().join("alphonso-comfyui-extra-model-paths.yaml");
+  fs::write(&path, yaml).map_err(|e| e.to_string())?;
+  Ok(path)
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SaveImageProof {
@@ -1484,20 +1530,51 @@ async fn launch_comfyui(
       launched_at_ms: now_ms(),
     });
   }
-  let py = if python_exe.trim().is_empty() {
+  let bundled_python = if cfg!(target_os = "windows") {
+    Path::new(&dir)
+      .join(".venv")
+      .join("Scripts")
+      .join("python.exe")
+  } else {
+    Path::new(&dir).join(".venv").join("bin").join("python3")
+  };
+  let py = if bundled_python.exists() {
+    bundled_python.to_string_lossy().to_string()
+  } else if python_exe.trim().is_empty() {
     "python".to_string()
   } else {
     python_exe.trim().to_string()
   };
-  if !allowed_program(&py) {
+  let py_path = Path::new(&py);
+  if py_path != bundled_python.as_path() && !allowed_program(&py) {
     return Err(format!(
-      "'{}' is not allowed by Alphonso supervised command policy. Use python or python3.",
+      "'{}' is not allowed by Alphonso supervised command policy. Use python, python3, or the bundled ComfyUI venv interpreter.",
       py
     ));
   }
   use std::process::Command;
   let mut comfy_cmd = Command::new(&py);
-  comfy_cmd.arg("main.py").current_dir(&dir);
+  comfy_cmd
+    .arg("main.py")
+    .arg("--port")
+    .arg("8188")
+    .arg("--listen")
+    .arg("127.0.0.1");
+  if let Some(shared_root) = comfyui_shared_root(Path::new(&dir)) {
+    let extra_model_paths = write_comfyui_extra_model_paths_config(&shared_root)?;
+    comfy_cmd
+      .arg("--extra-model-paths-config")
+      .arg(extra_model_paths);
+    let input_dir = shared_root.join("input");
+    if input_dir.exists() {
+      comfy_cmd.arg("--input-directory").arg(input_dir);
+    }
+    let output_dir = shared_root.join("output");
+    if output_dir.exists() {
+      comfy_cmd.arg("--output-directory").arg(output_dir);
+    }
+  }
+  comfy_cmd.current_dir(&dir);
   utils::no_window(&mut comfy_cmd);
   comfy_cmd.spawn().map_err(|e| {
     format!(
