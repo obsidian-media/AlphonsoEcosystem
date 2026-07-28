@@ -43,6 +43,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 | Rust quality after lock refresh | Verified (Windows) | `cargo check`, 108 Rust tests, and `cargo clippy -- -D warnings` passed for `x86_64-pc-windows-msvc` on 2026-07-22. |
 | Dependency advisories | Partial | npm audit reports 0; pytest advisory remediated. One Linux GTK/WebKit `glib` advisory remains. |
 | Playwright E2E | Verified | Preview-backed suite: 26 tests / 7 specs passed in 17.4s with retries disabled (2026-07-22). |
+| Current repo totals | Verified (local) | 263 test files / 3,795 tests / 173 services / 24 connectors after the 2026-07-28 ComfyUI + runtime/connector smoke pass. |
 
 ## Work queue
 
