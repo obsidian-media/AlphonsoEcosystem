@@ -150,7 +150,7 @@ The content-pipeline E2E run against the Alphonso preview app passed after rerou
 
 ### Limitation
 
-The Rust `cargo test` step for the newly added backend assertions was not re-run to completion in this environment because a dependent file lock was held by another process in the shared workspace. The code changes are in place, but the verification is still pending on a clean lock state.
+The Rust `cargo test` step for the newly added backend assertions did not reach a clean pass in this environment. The first retry was blocked by a dependent process holding the voice runtime files open; after that process was stopped, a lower-memory retry progressed further but hit paging pressure and then an application-control policy block on Cargo's `icu_properties_data` build script. The code changes are in place, but verification is still pending on a host that allows the build script to run and has enough paging capacity.
 
 ---
 
@@ -163,12 +163,12 @@ The Rust `cargo test` step for the newly added backend assertions was not re-run
 - **Impact:** the ComfyUI launcher cannot start a local ComfyUI install until the user configures a valid directory path
 - **Status:** expected configuration state, not a code defect
 
-### [F-2026-07-28-002] Rust test verification remains blocked by a lock contention outside this repo
+### [F-2026-07-28-002] Rust test verification remains blocked by host-environment limits outside this repo
 
-- **Evidence:** `cargo test` for the new Rust assertions could not complete because a dependent process held a file lock in the shared backend environment
+- **Evidence:** `cargo test` for the new Rust assertions first hit a shared voice-backend file lock, then a paging-file exhaustion error, then an application-control policy block on a Cargo build script
 - **Severity:** Low
 - **Impact:** the new Rust guards are committed, but their execution result is not yet recorded
-- **Status:** deferred for re-run once the lock clears
+- **Status:** deferred for re-run on a host that permits the build script and has enough paging capacity
 
 ---
 
@@ -181,4 +181,4 @@ The connector/runtime sweep is materially improved:
 - targeted smoke coverage was added for previously untested connectors
 - the UI smoke path and the content pipeline were exercised successfully
 
-The only unresolved verifier is the Rust test rerun, which is blocked by environment lock contention rather than a code error.
+The only unresolved verifier is the Rust test rerun, which is blocked by host-environment limits rather than a code error.
