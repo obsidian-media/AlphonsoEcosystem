@@ -108,7 +108,8 @@ describe('connectorImageGenerators', () => {
       expect(result.checkpoint).toBe('DreamShaper_8_pruned.safetensors');
       expect(fetch).toHaveBeenNthCalledWith(
         1,
-        'http://127.0.0.1:8188/object_info/CheckpointLoaderSimple'
+        'http://127.0.0.1:8188/object_info/CheckpointLoaderSimple',
+        expect.objectContaining({ signal: expect.any(Object) })
       );
       const queuedPayload = JSON.parse(fetch.mock.calls[1][1].body);
       expect(queuedPayload.prompt['4'].inputs.ckpt_name).toBe('DreamShaper_8_pruned.safetensors');

@@ -16,7 +16,11 @@ describe('comfyuiSettingsService', () => {
     vi.clearAllMocks();
     mockGetAllStatus.mockReset();
     mockGetAllStatus.mockResolvedValue([]);
-    mockInvoke.mockImplementation(async (_cmd: string, args: { paths?: string[] }) => {
+    mockInvoke.mockImplementation(async (cmd: string, args: { paths?: string[]; name?: string }) => {
+      if (cmd === 'read_runtime_env_value') {
+        if (args?.name === 'USERPROFILE') return { present: true, value: 'C:\\Users\\Shaya' };
+        return { present: false, value: null };
+      }
       const path = String(args?.paths?.[0] || '');
       if (path === 'D:\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
       if (path === 'D:\\ComfyUI\\.venv\\Scripts\\python.exe') return [{ exists: true, is_dir: false }];
@@ -80,7 +84,10 @@ describe('comfyuiSettingsService', () => {
   });
 
   it('falls back to the Shaya install path when that is the discoverable runtime root', async () => {
-    mockInvoke.mockImplementation(async (_cmd: string, args: { paths?: string[] }) => {
+    mockInvoke.mockImplementation(async (cmd: string, args: { paths?: string[]; name?: string }) => {
+      if (cmd === 'read_runtime_env_value') {
+        return { present: true, value: 'C:\\Users\\Shaya' };
+      }
       const path = String(args?.paths?.[0] || '');
       if (path === 'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\main.py') return [{ exists: false, is_dir: false }];
       if (path === 'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\ComfyUI\\main.py') return [{ exists: true, is_dir: false }];
@@ -89,6 +96,16 @@ describe('comfyuiSettingsService', () => {
     const { resolveComfyuiDirectory } = await import('../../services/comfyuiSettingsService');
     const result = await resolveComfyuiDirectory('');
     expect(result).toBe('C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI\\ComfyUI');
+  });
+
+  it('skips the user-profile fallback when USERPROFILE is unavailable', async () => {
+    mockInvoke.mockImplementation(async (cmd: string, args: { paths?: string[]; name?: string }) => {
+      if (cmd === 'read_runtime_env_value') return { present: false, value: null };
+      return [{ exists: false, is_dir: false }];
+    });
+    const { resolveComfyuiDirectory } = await import('../../services/comfyuiSettingsService');
+    const result = await resolveComfyuiDirectory('');
+    expect(result).toBe('');
   });
 
   it('resolves the bundled ComfyUI python from the discovered runtime directory', async () => {

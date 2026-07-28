@@ -1546,7 +1546,11 @@ async fn launch_comfyui(
     python_exe.trim().to_string()
   };
   let py_path = Path::new(&py);
-  if py_path != bundled_python.as_path() && !allowed_program(&py) {
+  let py_name = py_path
+    .file_name()
+    .and_then(|name| name.to_str())
+    .unwrap_or(py.as_str());
+  if py_path != bundled_python.as_path() && !allowed_program(py_name) {
     return Err(format!(
       "'{}' is not allowed by Alphonso supervised command policy. Use python, python3, or the bundled ComfyUI venv interpreter.",
       py

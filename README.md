@@ -286,7 +286,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │                  React 18 (Vite 8, Tailwind 3)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
-│  │  9 Agents     │  │  114 UI          │  │  131+ Services     │  │
+│  │  9 Agents     │  │  118 UI          │  │  185 Services      │  │
 │  │  (profiles,   │  │  Components     │  │  (policy-gated,    │  │
 │  │   contracts)  │  │  14 Hooks       │  │   orchestrated)    │  │
 │  └──────┬────────┘  └─────────────────┘  └──────────┬─────────┘  │
@@ -305,7 +305,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~2,136 lines · 108 Tauri commands · 26 modules   │    │
+│  │  lib.rs ~2,140 lines · 108 Tauri commands · 26 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │

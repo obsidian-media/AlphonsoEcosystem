@@ -6,6 +6,11 @@ interface PathProof {
   is_dir: boolean;
 }
 
+interface RuntimeEnvValueProof {
+  present: boolean;
+  value?: string | null;
+}
+
 async function pathExists(path: string): Promise<boolean> {
   const trimmed = String(path || '').trim();
   if (!trimmed) return false;
@@ -15,6 +20,16 @@ async function pathExists(path: string): Promise<boolean> {
     return Boolean(proof?.exists);
   } catch {
     return false;
+  }
+}
+
+async function resolveWindowsUserProfile(): Promise<string> {
+  try {
+    const result = await invoke<RuntimeEnvValueProof>('read_runtime_env_value', { name: 'USERPROFILE' });
+    const value = String(result?.value || '').trim().replace(/[\\/]+$/, '');
+    return result?.present && value ? value : '';
+  } catch {
+    return '';
   }
 }
 
@@ -53,6 +68,7 @@ export async function resolveComfyuiDirectory(currentDir: string | null | undefi
   if (currentResolved) return currentResolved;
 
   const candidates: string[] = [];
+  const windowsUserProfile = await resolveWindowsUserProfile();
 
   try {
     const tools = await getAllStatus();
@@ -67,10 +83,13 @@ export async function resolveComfyuiDirectory(currentDir: string | null | undefi
   candidates.push(
     'D:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
     'D:\\Comfy-Desktop',
-    'C:\\Users\\Shaya\\ComfyUI-Installs\\ComfyUI',
     'C:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI',
     'C:\\Comfy-Desktop'
   );
+
+  if (windowsUserProfile) {
+    candidates.push(`${windowsUserProfile}\\ComfyUI-Installs\\ComfyUI`);
+  }
 
   for (const candidate of candidates) {
     const resolved = await normalizeComfyuiRoot(candidate);

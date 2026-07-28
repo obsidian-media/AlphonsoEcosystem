@@ -95,8 +95,10 @@ function createComfyClientId() {
 
 async function resolveComfyUiCheckpoint() {
   const endpoint = getComfyUiEndpoint();
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
   try {
-    const response = await fetch(`${endpoint}/object_info/CheckpointLoaderSimple`);
+    const response = await fetch(`${endpoint}/object_info/CheckpointLoaderSimple`, controller ? { signal: controller.signal } : undefined);
     const body = await response.json().catch(() => ({}));
     const configured = localStorage.getItem('alphonso_comfyui_checkpoint_v1') || '';
     const choices = body?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0];
@@ -108,6 +110,8 @@ async function resolveComfyUiCheckpoint() {
     return available[0];
   } catch {
     return FALLBACK_COMFYUI_CHECKPOINT;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 

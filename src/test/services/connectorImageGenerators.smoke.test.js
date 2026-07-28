@@ -134,6 +134,18 @@ describe('connectorImageGenerators smoke paths', () => {
     global.fetch = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
+        json: async () => ({
+          CheckpointLoaderSimple: {
+            input: {
+              required: {
+                ckpt_name: [['DreamShaper_8_pruned.safetensors']],
+              },
+            },
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
         json: async () => ({ prompt_id: 'generated-1' }),
       })
       .mockResolvedValueOnce({
@@ -162,5 +174,10 @@ describe('connectorImageGenerators smoke paths', () => {
     expect(result.ok).toBe(true);
     expect(result.prompt).toBe('sunset over a bay');
     expect(result.outputPaths).toContain('final.png');
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      'http://127.0.0.1:8188/object_info/CheckpointLoaderSimple',
+      expect.objectContaining({ signal: expect.any(Object) })
+    );
   });
 });
