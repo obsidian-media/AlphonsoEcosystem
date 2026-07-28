@@ -2062,4 +2062,68 @@ mod tests {
         .contains("SLACK_BOT_TOKEN is not configured"));
     });
   }
+
+  #[test]
+  fn connector_clickup_send_rejects_missing_key() {
+    run_with_env(|runtime| {
+      std::env::remove_var("CLICKUP_API_KEY");
+      std::env::remove_var("CLICKUP_LIST_ID");
+      let result = runtime
+        .block_on(connector_send_clickup(
+          "Task title".to_string(),
+          "Task content".to_string(),
+          None,
+        ))
+        .unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "unverified");
+      assert!(result
+        .error
+        .unwrap()
+        .contains("CLICKUP_API_KEY is not configured"));
+    });
+  }
+
+  #[test]
+  fn connector_clickup_send_rejects_missing_list_id() {
+    run_with_env(|runtime| {
+      std::env::set_var("CLICKUP_API_KEY", "test-token");
+      std::env::remove_var("CLICKUP_LIST_ID");
+      let result = runtime
+        .block_on(connector_send_clickup(
+          "Task title".to_string(),
+          "Task content".to_string(),
+          None,
+        ))
+        .unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "unverified");
+      assert!(result
+        .error
+        .unwrap()
+        .contains("CLICKUP_LIST_ID is missing"));
+      std::env::remove_var("CLICKUP_API_KEY");
+      std::env::remove_var("CLICKUP_LIST_ID");
+    });
+  }
+
+  #[test]
+  fn connector_clickup_send_rejects_empty_title() {
+    run_with_env(|runtime| {
+      std::env::set_var("CLICKUP_API_KEY", "test-token");
+      std::env::set_var("CLICKUP_LIST_ID", "list-123");
+      let result = runtime
+        .block_on(connector_send_clickup(
+          "   ".to_string(),
+          "Task content".to_string(),
+          None,
+        ))
+        .unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      assert!(result.error.unwrap().contains("title is required"));
+      std::env::remove_var("CLICKUP_API_KEY");
+      std::env::remove_var("CLICKUP_LIST_ID");
+    });
+  }
 }
