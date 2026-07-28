@@ -2126,10 +2126,7 @@ mod tests {
         .unwrap();
       assert!(!result.ok);
       assert_eq!(result.trust, "unverified");
-      assert!(result
-        .error
-        .unwrap()
-        .contains("CLICKUP_LIST_ID is missing"));
+      assert!(result.error.unwrap().contains("CLICKUP_LIST_ID is missing"));
       std::env::remove_var("CLICKUP_API_KEY");
       std::env::remove_var("CLICKUP_LIST_ID");
     });

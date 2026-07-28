@@ -267,13 +267,25 @@ mod tests {
   #[test]
   fn mime_for_video_path_maps_known_extensions() {
     assert_eq!(mime_for_video_path(Path::new("clip.mp4")), "video/mp4");
-    assert_eq!(mime_for_video_path(Path::new("clip.MOV")), "video/quicktime");
-    assert_eq!(mime_for_video_path(Path::new("clip.mkv")), "video/x-matroska");
-    assert_eq!(mime_for_video_path(Path::new("clip.avi")), "video/x-msvideo");
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.MOV")),
+      "video/quicktime"
+    );
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.mkv")),
+      "video/x-matroska"
+    );
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.avi")),
+      "video/x-msvideo"
+    );
     assert_eq!(mime_for_video_path(Path::new("clip.mpeg")), "video/mpeg");
     assert_eq!(mime_for_video_path(Path::new("clip.mpg")), "video/mpeg");
     assert_eq!(mime_for_video_path(Path::new("clip.webm")), "video/webm");
-    assert_eq!(mime_for_video_path(Path::new("clip.bin")), "application/octet-stream");
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.bin")),
+      "application/octet-stream"
+    );
   }
 
   #[test]
