@@ -17,6 +17,7 @@ import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioSta
 import { listPlugins, togglePlugin } from '../services/pluginRegistryService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate, type BackupSizeEstimate } from '../services/backupService';
 import { getAccBridgeConfig, updateAccBridgeConfig } from '../services/agentWorkshop/accBridgeService';
+import { resolveComfyuiDirectory } from '../services/comfyuiSettingsService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
@@ -589,6 +590,24 @@ export function SettingsView({
 
   // Local services state
   const [launchStatus, setLaunchStatus] = useState<LaunchStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function seedComfyUIDirectory() {
+      if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) return;
+      if (settings.comfyuiDir) return;
+      const resolvedDir = await resolveComfyuiDirectory(settings.comfyuiDir);
+      if (!cancelled && resolvedDir && !settings.comfyuiDir) {
+        setSettings((prev) => (prev.comfyuiDir ? prev : { ...prev, comfyuiDir: resolvedDir }));
+      }
+    }
+
+    seedComfyUIDirectory();
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.comfyuiDir, setSettings]);
 
   const handlePickOutputFolder = async () => {
     try {

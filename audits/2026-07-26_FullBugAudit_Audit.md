@@ -131,7 +131,7 @@
 | F-M-023 | Web Monitor module references `ui/panel.jsx` that doesn't exist | G6-029 | Module load failure at runtime |
 | F-M-024 | bridge and mcp-server lack package-lock.json | G6-020 | Non-reproducible npm installs |
 | F-M-025 | Build.ps1 sets TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" | G6-023 | Production updater keys effectively passwordless |
-| F-M-026 | Unbounded escalation fail counts Map in joseExecutionEngineService | G2b-002 | `joseExecutionEngineService.js:295-298` — `_escalationFailCounts` Map grows with no eviction | Memory pressure under sustained use |
+| F-M-026 | Unbounded escalation fail counts Map in joseExecutionEngineService | G2b-002 | `joseExecutionEngineService.ts:295-298` — `_escalationFailCounts` Map grows with no eviction | Memory pressure under sustained use |
 | F-M-027 | Type inconsistency in joseSchedulerService return path | G2b-003 | `joseSchedulerService.ts:254` — error path returns `{ success: false, error }` not `Schedule` type | Callers cannot safely type-check return |
 | F-M-028 | SearchService SSRF risk — URLs fetched without allowlist | G2b-B | `src/services/searchService.ts` — URLs from user input passed directly to fetch | Potential SSRF if user provides internal URLs |
 | F-M-029 | orchestrationQueueService dead-letter replay lacks rate limit | G2b-B | `src/services/orchestrationQueueService.ts` — replayed messages retry with no backoff | Retry storm on persistent failures |
@@ -201,3 +201,4 @@ G2-004 (silent approval path in connectorOutbound.js — dual success/ok/blocked
 The audit is **essentially complete** — 171/172 service files (99.4%) read line-by-line; only `chromaDbService.ts` was reviewed clean. The security policy layer (policyEnforcementService, policyDslService, agentContractService, connectorGate) is **confirmed solid** — fail-closed, default-deny, defense-in-depth. The most impactful bugs are: a command injection RCE in agentBrainService, completely broken ChatGPT streaming, data-loss races in parallel/batch orchestration, critical test defects that mask real regressions, supply-chain CI risks, an unenforced deploy-dry gate, and a CSP that allows XSS to escalate to filesystem access in the Tauri WebView.
 
 All findings are backed by specific source code evidence at the cited line numbers.
+

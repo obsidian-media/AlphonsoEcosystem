@@ -124,7 +124,7 @@ All packs include structured workflow guidance, example tasks, and per-pack scop
 - Documentation: Documentation Audit, Research Briefing
 
 Files changed:
-- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
 - `src/services/agentContractService.ts` — 16 scope overrides
 - `src/agents/hector/hectorProfile.js` — updated `skillPackIds` (23 total)
 - `src/test/hectorSkillPacks.test.js` — new unit tests
@@ -140,7 +140,7 @@ Files changed:
 - Visual: Social Media Design, Illustration Style, User Research
 
 Files changed:
-- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
 - `src/services/agentContractService.ts` — 16 scope overrides
 - `src/agents/miya/miyaProfile.js` — updated `skillPackIds` (21 total)
 - `src/test/miyaSkillPacks.test.js` — new unit tests
@@ -156,7 +156,7 @@ Files changed:
 - Risk: Risk Detection, Asset Distribution
 
 Files changed:
-- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
 - `src/services/agentContractService.ts` — 16 scope overrides
 - `src/agents/marcus/marcusProfile.js` — updated `skillPackIds` (20 total)
 - `src/test/marcusSkillPacks.test.js` — new unit tests
@@ -171,7 +171,7 @@ Files changed:
 - Memory: Memory Synthesis Advanced, Memory Validation, Memory Reporting, Preference Learning
 
 Files changed:
-- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
 - `src/services/agentContractService.ts` — 16 scope overrides
 - `src/agents/echo/echoProfile.js` — updated `skillPackIds` (19 total)
 - `src/test/echoSkillPacks.test.js` — new unit tests
@@ -185,7 +185,7 @@ Files changed:
 - Reporting: Risk Scoring, Security Reporting
 
 Files changed:
-- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
 - `src/services/agentContractService.ts` — 16 scope overrides
 - `src/agents/sentinel/sentinelProfile.js` — updated `skillPackIds` (19 total)
 - `src/test/sentinelSkillPacks.test.js` — new unit tests
@@ -200,7 +200,7 @@ Files changed:
 - Modeling: Scenario Modeling, Trend Forecasting
 
 Files changed:
-- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
 - `src/services/agentContractService.ts` — 16 scope overrides
 - `src/agents/nova/novaProfile.js` — updated `skillPackIds` (19 total)
 - `src/test/novaSkillPacks.test.js` — new unit tests
@@ -220,7 +220,7 @@ All packs include:
 - Dedicated documentation (`docs/ALPHONSO_SKILLS.md`)
 
 Files changed:
-- `src/services/skillPackService.js` — 16 new packs in `BASE_PACKS` + 16 guidance entries
+- `src/services/skillPackService.ts` — 16 new packs in `BASE_PACKS` + 16 guidance entries
 - `src/services/agentContractService.ts` — 16 scope overrides
 - `src/agents/alphonso/alphonsoProfile.js` — updated `skillPackIds` (18 total)
 - `src/test/alphonsoSkillPacks.test.js` — new unit tests
@@ -805,7 +805,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
     `pack.jose-cross-agent-synthesis`, `pack.jose-pipeline-governance` (new
     — the governance pack describes the Sprint 1 loop-guard already shipped
     in `runJoseCommandExecutionPipeline`).
-  - `SKILL_WORKFLOW_GUIDANCE` in `skillPackService.js` was extended with
+  - `SKILL_WORKFLOW_GUIDANCE` in `skillPackService.ts` was extended with
     real guidance/steps for all 12 new packs so `loadAgentSkillGuidance()`
     returns actual content, not just a generic permissions fallback.
 - **Per-skill contract scoping.** `validateSkillPackAgainstContract()` in
@@ -817,7 +817,7 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
   agent-wide contract permits it for her video-generation pack. Packs with
   no override fall back to the original agent-wide check — fully backward
   compatible, no behavior change for existing packs.
-  `skillPackService.js`'s `installSkillPack`/`setSkillPackEnabled` now pass
+  `skillPackService.ts`'s `installSkillPack`/`setSkillPackEnabled` now pass
   the pack ID through so the narrower check actually applies.
 - **UI**: the Skills tab in `EcosystemHub.tsx` now groups packs by
   `ownerAgent` (falling back to "Agent Workflows" / "General" for
@@ -980,14 +980,14 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
   rejected (a full Rust kernel rewrite; the "autonomous, minimal human-in-loop"
   posture, which conflicts with Alphonso's approval-gated design).
 - `agentContractService.ts` — added `validateSkillPackAgainstContract(agentName, permissions)`.
-  Wired into `skillPackService.js` `installSkillPack`/`setSkillPackEnabled` so a
+  Wired into `skillPackService.ts` `installSkillPack`/`setSkillPackEnabled` so a
   skill pack can no longer grant an agent capabilities outside its execution contract.
-- `skillPackService.js` — added default `agent_skill` category packs for the 5 agents
+- `skillPackService.ts` — added default `agent_skill` category packs for the 5 agents
   that lacked one: Alphonso (`pack.alphonso-runtime-operations`), Marcus
   (`pack.marcus-distribution-execution`), Echo (`pack.echo-memory-synthesis`),
   Sentinel (`pack.sentinel-vuln-scan`), Nova (`pack.nova-opportunity-analysis`).
   All 9 agents now carry a default skill pack.
-- `joseExecutionEngineService.js` — added a loop-guard / execution budget to
+- `joseExecutionEngineService.ts` — added a loop-guard / execution budget to
   `runJoseCommandExecutionPipeline`: `PIPELINE_MAX_ASSIGNMENTS` (50) and
   `PIPELINE_MAX_DURATION_MS` (5 minutes) hard-stop a single pipeline run, emitting
   a `pipeline_budget_exceeded` orchestration receipt on breach instead of allowing
@@ -2017,8 +2017,8 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 ## [2.0.4] - 2026-06-21 — Phase 1: Sentinel & Nova Full Runtimes
 
 ### Added
-- **Sentinel Security Monitor runtime** — `src/services/sentinelSecurityService.js` — Full two-layer threat detection: deterministic scan (credential pattern matching, destructive commands, code execution risk, privilege escalation, unverified URLs, prior agent failure analysis) + Ollama deep threat analysis with JSON schema output. Deterministic blocking overrides Ollama leniency. Memory persistence, session event logging, orchestration receipt. Returns `SENTINEL_ALERT_SCHEMA` shape (`alertId`, `scope`, `severity`, `findings[]`, `requiresApproval`, `recommendedAction`, `detectedAtMs`). Wired into `joseExecutionEngineService.js` `executeSentinelAssignment()` (replaced 85-line stub).
-- **Nova Opportunity Analyst runtime** — `src/services/novaAnalysisService.js` — Full four-dimension opportunity scoring (valueScore/riskScore/timingScore/effortScore) + Ollama strategic analysis with prioritization and recommendation. Integrates with existing `novaFeedbackService` for decomposition hints and score storage. Memory persistence, session events, orchestration receipt. Returns `NOVA_OPPORTUNITY_SCHEMA` shape (`opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`). Wired into `joseExecutionEngineService.js` `executeNovaAssignment()` (replaced 132-line stub).
+- **Sentinel Security Monitor runtime** — `src/services/sentinelSecurityService.js` — Full two-layer threat detection: deterministic scan (credential pattern matching, destructive commands, code execution risk, privilege escalation, unverified URLs, prior agent failure analysis) + Ollama deep threat analysis with JSON schema output. Deterministic blocking overrides Ollama leniency. Memory persistence, session event logging, orchestration receipt. Returns `SENTINEL_ALERT_SCHEMA` shape (`alertId`, `scope`, `severity`, `findings[]`, `requiresApproval`, `recommendedAction`, `detectedAtMs`). Wired into `joseExecutionEngineService.ts` `executeSentinelAssignment()` (replaced 85-line stub).
+- **Nova Opportunity Analyst runtime** — `src/services/novaAnalysisService.js` — Full four-dimension opportunity scoring (valueScore/riskScore/timingScore/effortScore) + Ollama strategic analysis with prioritization and recommendation. Integrates with existing `novaFeedbackService` for decomposition hints and score storage. Memory persistence, session events, orchestration receipt. Returns `NOVA_OPPORTUNITY_SCHEMA` shape (`opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`). Wired into `joseExecutionEngineService.ts` `executeNovaAssignment()` (replaced 132-line stub).
 - **2 new test files** — `sentinelSecurityService.test.js` (33 tests), `novaAnalysisService.test.js` (36 tests). Total: 86 files / 1260 tests.
 
 ### Changed
@@ -2036,9 +2036,9 @@ Full write-up in `ALPHONSOTOTHEMOON.md`. Summary, all verified live via Playwrig
 ## [2.0.3] - 2026-06-21 — Phase 3: Agent Runtimes + Connector Credential UI
 
 ### Added
-- **Maria Governance Auditor runtime** — `src/services/mariaAuditService.js` — Ollama-powered governance audit engine: JSON risk assessment (riskLevel/approvalRequired/policyFindings[]/complianceNotes[]/summary), deterministic fallback via `marcusAuditService.generateRiskScore()`, memory persistence, session event logging, orchestration receipt. Wired into `joseExecutionEngineService.js` `executeMariaAssignment()`.
-- **Echo Knowledge Historian runtime** — `src/services/echoMemoryService.js` — Ollama-powered memory synthesis engine: retention classification (permanent/standard_180d/ephemeral_7d based on content patterns), category classification (project/timeline/preference/orchestration), confidence normalization across TRUST_STATES ranking, memory persistence. Wired into `joseExecutionEngineService.js` `executeEchoAssignment()`.
-- **Marcus Distribution Executor runtime** — `src/services/marcusExecutionService.js` — Full distribution engine with Maria governance gate: blocks on critical/high risk when `approvalRequired`, GitHub release/issue actions via `githubConnector.js`, Slack messaging via `slackConnector.js`, multi-platform publish via `marcusPublishService`, audit schema recording. Wired into `joseExecutionEngineService.js` `executeMarcusAssignment()`.
+- **Maria Governance Auditor runtime** — `src/services/mariaAuditService.js` — Ollama-powered governance audit engine: JSON risk assessment (riskLevel/approvalRequired/policyFindings[]/complianceNotes[]/summary), deterministic fallback via `marcusAuditService.generateRiskScore()`, memory persistence, session event logging, orchestration receipt. Wired into `joseExecutionEngineService.ts` `executeMariaAssignment()`.
+- **Echo Knowledge Historian runtime** — `src/services/echoMemoryService.js` — Ollama-powered memory synthesis engine: retention classification (permanent/standard_180d/ephemeral_7d based on content patterns), category classification (project/timeline/preference/orchestration), confidence normalization across TRUST_STATES ranking, memory persistence. Wired into `joseExecutionEngineService.ts` `executeEchoAssignment()`.
+- **Marcus Distribution Executor runtime** — `src/services/marcusExecutionService.js` — Full distribution engine with Maria governance gate: blocks on critical/high risk when `approvalRequired`, GitHub release/issue actions via `githubConnector.js`, Slack messaging via `slackConnector.js`, multi-platform publish via `marcusPublishService`, audit schema recording. Wired into `joseExecutionEngineService.ts` `executeMarcusAssignment()`.
 - **Connector credential UI** — `ConnectorSetupPanel.jsx` now has credential input panels for all 9 API-key connectors: GitHub (token), Slack (bot token), Claude/Anthropic (API key), ChatGPT/OpenAI (API key), Notion (API key + optional page ID), ClickUp (API key + optional list ID), WhatsApp Cloud (access token + phone number ID + verify token), YouTube OAuth (client ID + client secret + refresh token + channel ID), Qwen/DashScope (API key). All use `saveConnectorCredential()` + `updateConnectorAuthProfile()` — credentials stored locally, connector enabled on save.
 - **`CredentialSection` component** — reusable credential panel sub-component in `ConnectorSetupPanel.jsx` handling label/password/text field layout, save button, and hint text.
 - **3 new test files** — `mariaAuditService.test.js` (33 tests), `echoMemoryService.test.js` (35 tests), `marcusExecutionService.test.js` (23 tests). Total: 84 files / 1191 tests.
@@ -2318,3 +2318,4 @@ Initial production-ready baseline. Summary from `docs/ALPHONSO_PRODUCTION_COMPLE
 - Ollama local inference (`llama3.2:3b` default)
 - Windows NSIS + MSI installer
 - All `.jsx` (no TypeScript migration)
+

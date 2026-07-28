@@ -52,6 +52,9 @@ import { parseJsonResponse } from '../lib/jsonUtils';
 import { executeParallel } from './parallelExecutionService';
 import { agentCache } from './cacheService';
 
+// This pipeline still crosses a few dynamic JS-era payload boundaries.
+// Keep the `any` usage below scoped to those runtime edges so behavior stays unchanged.
+
 // Loop-guard / execution budget ceilings for a single pipeline run.
 // See ALPHONSOTOTHEMOON.md §3.1 — prevents a malformed command graph or a
 // stuck agent from spinning unbounded iterations or wall-clock time.
@@ -149,7 +152,7 @@ function checkSentinelGate(commandId, assignment) {
   return blockResult;
 }
 
-export function draftPrompt(agent, task, context = {}) {
+export function draftPrompt(agent, task, context: any = {}) {
   const taskText = String(task || '').trim();
   const contextSnippet = String(context?.snippet || '').trim();
   const skillGuidance = loadAgentSkillGuidance(agent);
@@ -238,7 +241,7 @@ export function draftPrompt(agent, task, context = {}) {
 
 export { parseJsonResponse };
 
-export function retrieveRelevantContext(text, memoryItems = []) {
+export function retrieveRelevantContext(text, memoryItems: any[] = []) {
   const query = String(text || '').toLowerCase().trim();
   if (!query || !Array.isArray(memoryItems) || memoryItems.length === 0) {
     return { snippet: '', items: [] };
@@ -298,7 +301,7 @@ const MAX_ESCALATION_LOG = 50;
 const MAX_ESCALATION_FAIL_COUNTS = 200;
 const ESCALATION_THRESHOLD = 2;
 
-function _recordEscalationFailure(commandText) {
+function _recordEscalationFailure(commandText: any) {
   const key = String(commandText || '').slice(0, 200);
   const current = (_escalationFailCounts.get(key) || 0) + 1;
   _escalationFailCounts.set(key, current);
@@ -320,7 +323,7 @@ function _recordEscalationFailure(commandText) {
   }
 }
 
-function _resetEscalationCount(commandText) {
+function _resetEscalationCount(commandText: any) {
   _escalationFailCounts.delete(String(commandText || '').slice(0, 200));
 }
 
@@ -341,7 +344,7 @@ function readJoseExecutionDlq() {
   }
 }
 
-function normalizeJoseExecutionDlqEntry(entry = {}) {
+function normalizeJoseExecutionDlqEntry(entry: any = {}) {
   const timestamp = Number(entry.timestamp || entry.timestampMs || timestampMs());
   return {
     taskId: String(entry.taskId || '').trim(),
@@ -359,7 +362,7 @@ function normalizeJoseExecutionDlqEntry(entry = {}) {
   };
 }
 
-function persistJoseExecutionDlq(nextRows) {
+function persistJoseExecutionDlq(nextRows: any[]) {
   const rows = nextRows.map((entry) => normalizeJoseExecutionDlqEntry(entry)).filter((entry) => entry.taskId);
   joseExecutionDlq = rows.slice(-MAX_DLQ_ENTRIES);
   try {
@@ -372,7 +375,7 @@ function persistJoseExecutionDlq(nextRows) {
   } catch {
     // Keep the in-memory DLQ available even if localStorage is unavailable.
   }
-  void persistScopeRows(JOSE_EXECUTION_DLQ_SCOPE, joseExecutionDlq, (row) => ({
+  void persistScopeRows(JOSE_EXECUTION_DLQ_SCOPE, joseExecutionDlq, (row: any) => ({
     id: row.taskId,
     data: row,
     status: 'dead_letter',
@@ -382,7 +385,7 @@ function persistJoseExecutionDlq(nextRows) {
   }));
 }
 
-function upsertJoseExecutionDlqEntry(entry) {
+function upsertJoseExecutionDlqEntry(entry: any) {
   const normalized = normalizeJoseExecutionDlqEntry(entry);
   if (!normalized.taskId) return null;
   const next = joseExecutionDlq.filter((row) => row.taskId !== normalized.taskId);
@@ -391,26 +394,26 @@ function upsertJoseExecutionDlqEntry(entry) {
   return normalized;
 }
 
-function removeJoseExecutionDlqEntry(taskId) {
+function removeJoseExecutionDlqEntry(taskId: any) {
   const next = joseExecutionDlq.filter((row) => row.taskId !== taskId);
   if (next.length !== joseExecutionDlq.length) {
     persistJoseExecutionDlq(next);
   }
 }
 
-function delay(ms) {
+function delay(ms: any) {
   return new Promise((resolve) => globalThis.setTimeout(resolve, ms));
 }
 
-function getExecutionInstruction(commandText, assignment) {
+function getExecutionInstruction(commandText: any, assignment: any) {
   return String(assignment?.commandPreview || assignment?.title || commandText || '').trim() || 'Jose execution task';
 }
 
-function isRetryableTaskFailure(result) {
+function isRetryableTaskFailure(result: any) {
   return result?.resultState === 'failed' || result?.ok === false;
 }
 
-async function executeAssignmentWithRetries(packet, assignment, commandText, options = {}) {
+async function executeAssignmentWithRetries(packet: any, assignment: any, commandText: any, options: any = {}) {
   const taskId = packet?.id || assignment?.packetId || `task-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   const instruction = getExecutionInstruction(commandText, assignment);
   let lastError = null;
@@ -464,7 +467,7 @@ async function executeAssignmentWithRetries(packet, assignment, commandText, opt
   };
 }
 
-function buildMiyaFallbackPackage(commandText, assignment) {
+function buildMiyaFallbackPackage(commandText: any, assignment: any) {
   const topic = String(commandText || '').trim();
   const title = topic.slice(0, 120) || 'Untitled creative package';
   const hook = `Hook: ${title}`;
@@ -484,7 +487,7 @@ function buildMiyaFallbackPackage(commandText, assignment) {
   };
 }
 
-async function executeImageGeneration(prompts, options = {}) {
+async function executeImageGeneration(prompts: any, options: any = {}) {
   const results = [];
   const promptList = Array.isArray(prompts) ? prompts.slice(0, 3) : [];
   if (promptList.length === 0) return results;
@@ -548,7 +551,7 @@ async function executeImageGeneration(prompts, options = {}) {
   return results;
 }
 
-async function buildMiyaPackage(commandText, assignment, options = {}) {
+async function buildMiyaPackage(commandText: any, assignment: any, options: any = {}) {
   const fallback = buildMiyaFallbackPackage(commandText, assignment);
   if (options.draftDisabled) return fallback;
 
@@ -578,7 +581,7 @@ async function buildMiyaPackage(commandText, assignment, options = {}) {
   return fallback;
 }
 
-async function executeAlphonsoAssignment(commandText, assignment, options = {}) {
+async function executeAlphonsoAssignment(commandText: any, assignment: any, options: any = {}) {
   const miyaContext = options.priorOutputs?.miya;
   const lower = String(commandText || '').toLowerCase();
   const artifacts = [];
@@ -616,7 +619,7 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
         for (const cmd of scaffoldResult.commands || []) {
           options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${cmd.program} ${cmd.args.join(' ')}` });
           const execProof = await verifyCommandExecution(cmd.program, cmd.args, projectDir);
-          const payload = execProof?.payload || {};
+          const payload: any = execProof?.payload || {};
           results.push(`Scaffold install: ${cmd.program} ${cmd.args.join(' ')} — exit ${payload.exitCode ?? '?'}`);
         }
       }
@@ -640,7 +643,7 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
 
   // 4. Execute direct commands when build/test/install/run intent detected
   if (hasCodeContext) {
-    let program = 'npm';
+    const program = 'npm';
     let args = ['run', 'build'];
     let intentLabel = 'build';
 
@@ -664,7 +667,7 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
     options.onProgress?.({ stage: 'executing_command', agent: 'alphonso', detail: `Running ${intentLabel}: ${program} ${args.join(' ')}` });
 
     const executionProof = await verifyCommandExecution(program, args, projectDir);
-    const payload = executionProof?.payload || {};
+    const payload: any = executionProof?.payload || {};
     const exitCode = payload.exitCode ?? null;
     const stdout = payload.stdout || '';
     const stderr = payload.stderr || '';
@@ -688,8 +691,8 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
   }
 
   // 5. Always verify runtime state
-  const runtimeProof = await verifyOllamaRuntimeProof(options.endpoint);
-  const processProof = await verifyProcessProof(['ollama']);
+  const runtimeProof: any = await verifyOllamaRuntimeProof(options.endpoint);
+  const processProof: any = await verifyProcessProof(['ollama']);
   const runtimeReachable = runtimeProof?.payload?.reachable === true;
   const processRunning = Array.isArray(processProof?.payload)
     ? processProof.payload.some((item) => item?.running)
@@ -740,7 +743,7 @@ async function executeAlphonsoAssignment(commandText, assignment, options = {}) 
   };
 }
 
-async function executeMiyaAssignment(commandText, assignment, options = {}) {
+async function executeMiyaAssignment(commandText: any, assignment: any, options: any = {}) {
   if (isContentCatalystRequest(commandText)) {
     options.onProgress?.({ stage: 'content_catalyst', agent: 'miya', detail: 'Running full content pipeline' });
     try {
@@ -861,7 +864,7 @@ async function executeMiyaAssignment(commandText, assignment, options = {}) {
   };
 }
 
-async function executeHectorAssignment(commandText, assignment, options = {}) {
+async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
   const action = String(assignment?.actionType || '').toLowerCase();
   if (action.includes('external_publish_handoff')) {
     return {
@@ -910,7 +913,7 @@ async function executeHectorAssignment(commandText, assignment, options = {}) {
   };
 }
 
-async function executeJoseAssignment(commandText, assignment) {
+async function executeJoseAssignment(commandText: any, assignment: any) {
   return {
     summary: `Jose completed orchestration review for "${commandText}".`,
     resultState: 'completed',
@@ -921,27 +924,27 @@ async function executeJoseAssignment(commandText, assignment) {
   };
 }
 
-async function executeMariaAssignment(commandText, assignment, options = {}) {
+async function executeMariaAssignment(commandText: any, assignment: any, options: any = {}) {
   return runMariaGovernanceAudit(commandText, assignment, options);
 }
 
-async function executeEchoAssignment(commandText, assignment, options = {}) {
+async function executeEchoAssignment(commandText: any, assignment: any, options: any = {}) {
   return runEchoPreservation(commandText, assignment, options.priorOutputs || {}, options);
 }
 
-async function executeSentinelAssignment(commandText, assignment, options = {}) {
+async function executeSentinelAssignment(commandText: any, assignment: any, options: any = {}) {
   return runSentinelSecurityScan(commandText, assignment, options);
 }
 
-async function executeNovaAssignment(commandText, assignment, options = {}) {
+async function executeNovaAssignment(commandText: any, assignment: any, options: any = {}) {
   return runNovaAnalysis(commandText, assignment, options.priorOutputs || {}, options);
 }
 
-async function executeMarcusAssignment(commandText, assignment, options = {}) {
+async function executeMarcusAssignment(commandText: any, assignment: any, options: any = {}) {
   return runMarcusDistribution(commandText, assignment, options.priorOutputs || {}, options);
 }
 
-async function executeBoardroomPlanning(assignment, commandText, options = {}) {
+async function executeBoardroomPlanning(assignment: any, commandText: any, options: any = {}) {
   const goalText = String(commandText || '')
     .replace(/^(\/jose\s+|ask\s+jose\s+|jose:\s*)/i, '')
     .replace(/\b(plan|roadmap|batch|boardroom|decompose|break down|milestones|sprint|backlog)\b/gi, '')
@@ -1013,7 +1016,7 @@ async function executeBoardroomPlanning(assignment, commandText, options = {}) {
   };
 }
 
-async function executeBoardroomBatch(assignment, commandText, options = {}) {
+async function executeBoardroomBatch(assignment: any, commandText: any, options: any = {}) {
   const activeGoal = getActiveGoal();
   if (!activeGoal) {
     return {
@@ -1073,7 +1076,7 @@ async function executeBoardroomBatch(assignment, commandText, options = {}) {
   }
 }
 
-async function executeBoardroomAdvance(assignment, commandText, options = {}) {
+async function executeBoardroomAdvance(assignment: any, commandText: any, options: any = {}) {
   const activeGoal = getActiveGoal();
   if (!activeGoal) {
     return {
@@ -1117,7 +1120,7 @@ async function executeBoardroomAdvance(assignment, commandText, options = {}) {
   }
 }
 
-async function executeAssignment(packet, assignment, commandText, options = {}) {
+async function executeAssignment(packet: any, assignment: any, commandText: any, options: any = {}) {
   appendAgentActivity({ agent: assignment?.agent || 'jose', action: 'execute', detail: (commandText || '').slice(0, 80) });
   if (assignment?.actionType === 'boardroom_planning') {
     return executeBoardroomPlanning(assignment, commandText, options);
@@ -1155,7 +1158,7 @@ async function executeAssignment(packet, assignment, commandText, options = {}) 
   return executeJoseAssignment(commandText, assignment);
 }
 
-async function checkOllamaAvailable(endpoint) {
+async function checkOllamaAvailable(endpoint: any) {
   try {
     const { models } = await fetchOllamaModels(endpoint);
     return Array.isArray(models) && models.length > 0;
@@ -1228,7 +1231,7 @@ export async function runJoseCommandExecutionPipeline({
   const memoryItems = listMemoryItems();
   const retrievedContext = retrieveRelevantContext(commandText, memoryItems);
 
-  const command = await createJoseCommandRoute({ commandText, source, zeroCostMode });
+  const command: any = await createJoseCommandRoute({ commandText, source, zeroCostMode });
   if (!command) {
     return {
       ok: false,
@@ -1247,7 +1250,7 @@ export async function runJoseCommandExecutionPipeline({
 
   const novaHints = getDecompositionHints(command.id);
 
-  const { waves, assignmentMap } = buildExecutionPlan(command.assignments || []);
+  const { waves, assignmentMap }: any = buildExecutionPlan(command.assignments || []);
 
   // Loop-guard + budget: hard ceiling on a single pipeline run so a malformed
   // command graph or a stuck agent can never spin unbounded iterations or
@@ -1258,7 +1261,7 @@ export async function runJoseCommandExecutionPipeline({
 
   waveLoop:
   for (const [waveIndex, wave] of waves.entries()) {
-    const waveAssignments = wave.map((agent) => assignmentMap[agent]).filter(Boolean);
+    const waveAssignments: any[] = wave.map((agent) => assignmentMap[agent]).filter(Boolean);
     onProgress?.({ stage: 'wave_start', wave: waveIndex, agents: wave, commandId: command.id });
     for (const assignment of waveAssignments) {
       if (processedAssignmentCount >= PIPELINE_MAX_ASSIGNMENTS || (timestampMs() - pipelineStartMs) >= PIPELINE_MAX_DURATION_MS) {
@@ -1267,7 +1270,7 @@ export async function runJoseCommandExecutionPipeline({
       }
       processedAssignmentCount += 1;
 
-      const packet = getPacketById(assignment.packetId);
+      const packet: any = getPacketById(assignment.packetId);
       if (!packet) {
         failedCount += 1;
         continue;
@@ -1495,7 +1498,7 @@ export async function runJoseCommandExecutionPipeline({
       }
 
       const priorOutputs = getPriorOutputs(command.id, assignment.agent);
-      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory });
+      const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, { endpoint, draftDisabled, retrievedContext, priorOutputs, onProgress, onToken, conversationHistory });
 
       if (!taskResult.ok) {
         failedCount += 1;
@@ -1544,7 +1547,7 @@ export async function runJoseCommandExecutionPipeline({
         continue;
       }
 
-      const result = taskResult.result;
+      const result: any = taskResult.result;
       setAgentOutput(command.id, assignment.agent, {
         summary: result.summary,
         resultState: result.resultState || 'pending_review',
@@ -1707,7 +1710,7 @@ export async function retryDLQ(taskId) {
     return { ok: false, reason: 'DLQ entry not found.' };
   }
 
-  const packet = getPacketById(entry.packetId);
+  const packet: any = getPacketById(entry.packetId);
   if (!packet) {
     return { ok: false, reason: 'Packet not found for DLQ entry.' };
   }
@@ -1748,7 +1751,7 @@ export async function retryDLQ(taskId) {
   }
 
   const draftDisabledRetry = !(await checkOllamaAvailable(entry.endpoint || undefined));
-  const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, {
+  const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, {
     endpoint: entry.endpoint || undefined,
     draftDisabled: draftDisabledRetry
   });
@@ -1807,7 +1810,7 @@ export async function retryDLQ(taskId) {
   }
 
   removeJoseExecutionDlqEntry(taskId);
-  const result = taskResult.result;
+  const result: any = taskResult.result;
   createAgentReportToJose({
     packetId: packet.id,
     reportingAgent: assignment.agent,
@@ -1861,14 +1864,14 @@ export async function retryDLQ(taskId) {
  * @param {{ endpoint?: string, onProgress?: Function, onToken?: Function, conversationHistory?: any[] }} options
  * @returns {Promise<{ ok: boolean, summary: string, results: object[] }>}
  */
-export async function executeApprovedPackets(packetIds, options = {}) {
+export async function executeApprovedPackets(packetIds: any, options: any = {}) {
   const { endpoint, onProgress, onToken, conversationHistory } = options;
   const results = [];
   let succeeded = 0;
   let failed = 0;
 
   for (const packetId of packetIds) {
-    const packet = getPacketById(packetId);
+    const packet: any = getPacketById(packetId);
     if (!packet) {
       results.push({ packetId, ok: false, error: 'Packet not found' });
       failed += 1;
@@ -1893,7 +1896,7 @@ export async function executeApprovedPackets(packetIds, options = {}) {
     const draftDisabled = !(await checkOllamaAvailable(endpoint));
 
     try {
-      const taskResult = await executeAssignmentWithRetries(packet, assignment, commandText, {
+      const taskResult: any = await executeAssignmentWithRetries(packet, assignment, commandText, {
         endpoint,
         draftDisabled,
         onProgress,
@@ -1933,3 +1936,4 @@ export async function executeApprovedPackets(packetIds, options = {}) {
 
   return { ok: failed === 0, summary, results };
 }
+

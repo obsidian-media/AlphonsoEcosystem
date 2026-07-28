@@ -67,7 +67,7 @@ Shayan (user input or Telegram/WhatsApp inbound)
   → Decomposition into sub-packets
   → Agent assignment (agentContractService.js checks per-agent allowed/blocked actions)
   → orchestrationQueueService.js: new → pending_approval → queued → reported_to_jose
-  → Execution (packetExecutionService.js → joseExecutionEngineService.js)
+  → Execution (packetExecutionService.js → joseExecutionEngineService.ts)
   → Approval gate if risky (policyEnforcementService.js, ApprovalModal UI)
   → Jose merge + confirm
   → Report to user (chat UI + optional Telegram/WhatsApp reply)
@@ -115,7 +115,7 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 - `orchestrationReceiptService.js` — receipt events across all pipeline phases
 - `orchestrationGovernanceService.js` — governance layer over orchestration
 - `joseCommandRouterService.js` — Jose intake, decomposition, routing
-- `joseExecutionEngineService.js` — Jose execution engine
+- `joseExecutionEngineService.ts` — Jose execution engine
 - `packetExecutionService.js` — packet-level execution
 
 ### Policy & Approval (fail-closed)
@@ -166,7 +166,7 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 - `recoveryService.js`, `runtimeLedgerService.js`
 - `screenIntelligenceService.js`, `voiceService.js`
 - `chatPersistenceService.js`, `notificationService.js`
-- `coachModeService.js`, `skillPackService.js`
+- `coachModeService.js`, `skillPackService.ts`
 - `localMarketplaceService.js`, `resourceCostService.js`
 - `agentAvatarService.js`, `agentVisualService.js`
 
@@ -220,3 +220,4 @@ SQLite runs in WAL mode (`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;`) 
 - GitHub connector tests: 20 tests in `githubConnector.test.js`; Slack connector tests: 16 tests in `slackConnector.test.js`
 - `src-tauri/rustfmt.toml` added — `cargo fmt --check` now passes in CI; `cargo clippy -- -D warnings` clean (verified 2026-07-08)
 - **Last audited:** 2026-07-08 — see `docs/AUDIT_REPORT_2026-07-08.md`. AGENTS.md regenerated from ground truth; do not trust older counts.
+

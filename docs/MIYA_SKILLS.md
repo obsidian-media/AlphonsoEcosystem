@@ -104,9 +104,10 @@ All packs are validated against Miya's execution contract:
 
 | File | Purpose |
 |------|---------|
-| `src/services/skillPackService.js` | Pack definitions and workflow guidance |
+| `src/services/skillPackService.ts` | Pack definitions and workflow guidance |
 | `src/services/agentContractService.ts` | Scope overrides and contract validation |
 | `src/agents/miya/miyaProfile.js` | Agent profile with skillPackIds |
 | `src/agents/miya/miyaPermissions.js` | Agent permissions |
 | `src/test/miyaSkillPacks.test.js` | Unit tests |
 | `src/test/miyaSkillIntegration.test.js` | Integration tests |
+

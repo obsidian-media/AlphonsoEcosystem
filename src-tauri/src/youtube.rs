@@ -227,3 +227,89 @@ pub(crate) async fn connector_upload_youtube(
     error: None,
   })
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::ffi::OsString;
+  use std::sync::{Mutex, OnceLock};
+
+  struct EnvSnapshot {
+    entries: Vec<(String, Option<OsString>)>,
+  }
+
+  impl EnvSnapshot {
+    fn capture(keys: &[&str]) -> Self {
+      let entries = keys
+        .iter()
+        .map(|key| ((*key).to_string(), std::env::var_os(key)))
+        .collect();
+      Self { entries }
+    }
+  }
+
+  impl Drop for EnvSnapshot {
+    fn drop(&mut self) {
+      for (key, value) in self.entries.iter().rev() {
+        match value {
+          Some(existing) => std::env::set_var(key, existing),
+          None => std::env::remove_var(key),
+        }
+      }
+    }
+  }
+
+  fn env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+  }
+
+  #[test]
+  fn mime_for_video_path_maps_known_extensions() {
+    assert_eq!(mime_for_video_path(Path::new("clip.mp4")), "video/mp4");
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.MOV")),
+      "video/quicktime"
+    );
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.mkv")),
+      "video/x-matroska"
+    );
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.avi")),
+      "video/x-msvideo"
+    );
+    assert_eq!(mime_for_video_path(Path::new("clip.mpeg")), "video/mpeg");
+    assert_eq!(mime_for_video_path(Path::new("clip.mpg")), "video/mpeg");
+    assert_eq!(mime_for_video_path(Path::new("clip.webm")), "video/webm");
+    assert_eq!(
+      mime_for_video_path(Path::new("clip.bin")),
+      "application/octet-stream"
+    );
+  }
+
+  #[test]
+  fn youtube_access_token_rejects_missing_credentials() {
+    let _guard = env_lock().lock().unwrap();
+    let _env = EnvSnapshot::capture(&[
+      "YOUTUBE_CLIENT_ID",
+      "YOUTUBE_CLIENT_SECRET",
+      "YOUTUBE_REFRESH_TOKEN",
+    ]);
+    std::env::remove_var("YOUTUBE_CLIENT_ID");
+    std::env::remove_var("YOUTUBE_CLIENT_SECRET");
+    std::env::remove_var("YOUTUBE_REFRESH_TOKEN");
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+      .enable_all()
+      .build()
+      .unwrap();
+    let result = runtime.block_on(youtube_access_token());
+
+    assert!(result.is_err());
+    assert!(result
+      .err()
+      .unwrap()
+      .contains("YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, or YOUTUBE_REFRESH_TOKEN is missing"));
+  }
+}

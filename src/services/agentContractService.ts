@@ -68,7 +68,7 @@ export const AGENT_EXECUTION_CONTRACTS: Record<string, AgentExecutionContract> =
 
 // Permission-tag prefixes each agent's skill packs are allowed to carry.
 // Distinct from allowedActionPrefixes above: those gate orchestration action
-// packets, this gates skill-pack permissions declared in skillPackService.js.
+// packets, this gates skill-pack permissions declared in skillPackService.ts.
 const AGENT_SKILL_PERMISSION_PREFIXES: Record<string, string[]> = {
   [AGENTS.JOSE]: ['task_routing', 'approval_gating', 'cross_agent_synthesis', 'execution_tracking', 'workflows.', 'runtime.read'],
   [AGENTS.ALPHONSO]: ['workflows.', 'runtime.', 'code.', 'local_operation', 'verification_', 'execute_command', 'filesystem_'],
@@ -187,7 +187,7 @@ const AGENT_SKILL_PACK_SCOPE_OVERRIDES: Record<string, string[]> = {
   'pack.hector-rss-monitoring': ['feed_monitoring', 'source_verification'],
   // Hector new packs - per-pack scope overrides
   // NOTE: these must mirror each pack's actual `permissions` array in
-  // skillPackService.js exactly. Hector's taxonomy packs share a flat,
+  // skillPackService.ts exactly. Hector's taxonomy packs share a flat,
   // un-namespaced permission vocabulary (research/source_verification/
   // market_research/etc.) rather than per-pack dotted scopes like Miya's or
   // Marcus's — so "narrower" here means "only this pack's 2-3 declared tags
@@ -413,3 +413,4 @@ export function validateAgentExecutionContract(packet: AgentContractPacket): Con
   }
   return { ok: true, reason: null };
 }
+

@@ -3,14 +3,16 @@
 **Generated file — do not hand-edit.**
 
 Regenerate with `node scripts/generate-skill-permission-matrix.mjs` after
-changing `src/services/skillPackService.js` or
+changing `src/services/skillPackContent*.ts`,
+`src/services/skillPackWorkflowData.ts`, or
 `src/services/agentContractService.ts`. Correctness (every pack owned,
 documented, and within its own contract) is enforced independently by
 `src/test/services/skillPackContractMatrix.test.ts`, which runs under
 `npm test` and therefore gates CI — this doc is the human-readable view of
 the same source of truth, not a separate claim.
 
-Source of truth: `src/services/skillPackService.js` (packs) +
+Source of truth: `src/services/skillPackContent*.ts` (packs) +
+`src/services/skillPackWorkflowData.ts` (workflow packs) +
 `src/services/agentContractService.ts` (contracts + per-pack scope overrides).
 
 **Shared status.** A pack is either exclusive (owned by exactly one agent,

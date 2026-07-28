@@ -1811,7 +1811,33 @@ pub(crate) async fn connector_get_comfyui_history(
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::ffi::OsString;
   use std::sync::{Mutex, OnceLock};
+
+  struct EnvSnapshot {
+    entries: Vec<(String, Option<OsString>)>,
+  }
+
+  impl EnvSnapshot {
+    fn capture(keys: &[&str]) -> Self {
+      let entries = keys
+        .iter()
+        .map(|key| ((*key).to_string(), std::env::var_os(key)))
+        .collect();
+      Self { entries }
+    }
+  }
+
+  impl Drop for EnvSnapshot {
+    fn drop(&mut self) {
+      for (key, value) in self.entries.iter().rev() {
+        match value {
+          Some(existing) => std::env::set_var(key, existing),
+          None => std::env::remove_var(key),
+        }
+      }
+    }
+  }
 
   fn env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -2060,6 +2086,70 @@ mod tests {
         .error
         .unwrap()
         .contains("SLACK_BOT_TOKEN is not configured"));
+    });
+  }
+
+  #[test]
+  fn connector_clickup_send_rejects_missing_key() {
+    run_with_env(|runtime| {
+      let _env = EnvSnapshot::capture(&["CLICKUP_API_KEY", "CLICKUP_LIST_ID"]);
+      std::env::remove_var("CLICKUP_API_KEY");
+      std::env::remove_var("CLICKUP_LIST_ID");
+      let result = runtime
+        .block_on(connector_send_clickup(
+          "Task title".to_string(),
+          "Task content".to_string(),
+          None,
+        ))
+        .unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "unverified");
+      assert!(result
+        .error
+        .unwrap()
+        .contains("CLICKUP_API_KEY is not configured"));
+    });
+  }
+
+  #[test]
+  fn connector_clickup_send_rejects_missing_list_id() {
+    run_with_env(|runtime| {
+      let _env = EnvSnapshot::capture(&["CLICKUP_API_KEY", "CLICKUP_LIST_ID"]);
+      std::env::set_var("CLICKUP_API_KEY", "test-token");
+      std::env::remove_var("CLICKUP_LIST_ID");
+      let result = runtime
+        .block_on(connector_send_clickup(
+          "Task title".to_string(),
+          "Task content".to_string(),
+          None,
+        ))
+        .unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "unverified");
+      assert!(result.error.unwrap().contains("CLICKUP_LIST_ID is missing"));
+      std::env::remove_var("CLICKUP_API_KEY");
+      std::env::remove_var("CLICKUP_LIST_ID");
+    });
+  }
+
+  #[test]
+  fn connector_clickup_send_rejects_empty_title() {
+    run_with_env(|runtime| {
+      let _env = EnvSnapshot::capture(&["CLICKUP_API_KEY", "CLICKUP_LIST_ID"]);
+      std::env::set_var("CLICKUP_API_KEY", "test-token");
+      std::env::set_var("CLICKUP_LIST_ID", "list-123");
+      let result = runtime
+        .block_on(connector_send_clickup(
+          "   ".to_string(),
+          "Task content".to_string(),
+          None,
+        ))
+        .unwrap();
+      assert!(!result.ok);
+      assert_eq!(result.trust, "failed");
+      assert!(result.error.unwrap().contains("title is required"));
+      std::env::remove_var("CLICKUP_API_KEY");
+      std::env::remove_var("CLICKUP_LIST_ID");
     });
   }
 }

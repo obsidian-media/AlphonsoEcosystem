@@ -5,9 +5,10 @@
  * Truth-First Execution Plan, task C3: "Generate human-readable agent/pack/
  * permission documentation from the registry so code and docs cannot drift."
  *
- * Statically parses the two real source-of-truth files (not a hand-typed
- * copy) and writes docs/AGENT_SKILL_PERMISSION_MATRIX.md:
- *   - src/services/skillPackService.js   (BASE_PACKS — id/name/permissions/ownerAgent)
+ * Statically parses the real source-of-truth files (not a hand-typed copy)
+ * and writes docs/AGENT_SKILL_PERMISSION_MATRIX.md:
+ *   - src/services/skillPackContent*.ts   (BASE_PACKS — id/name/permissions/ownerAgent)
+ *   - src/services/skillPackWorkflowData.ts (AGENT_WORKFLOW_SKILL_DEFS)
  *   - src/services/agentContractService.ts (AGENT_EXECUTION_CONTRACTS,
  *     AGENT_SKILL_PACK_SCOPE_OVERRIDES)
  *
@@ -28,7 +29,19 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const PROJECT_ROOT = resolve(dirname(__filename), '..');
-const SKILL_PACK_SERVICE_PATH = join(PROJECT_ROOT, 'src/services/skillPackService.js');
+const SKILL_PACK_CONTENT_PATHS = [
+  ['src/services/skillPackContentCore.ts', 'CORE_BASE_PACKS'],
+  ['src/services/skillPackContentJose.ts', 'JOSE_BASE_PACKS'],
+  ['src/services/skillPackContentMaria.ts', 'MARIA_BASE_PACKS'],
+  ['src/services/skillPackContentMarcus.ts', 'MARCUS_BASE_PACKS'],
+  ['src/services/skillPackContentEcho.ts', 'ECHO_BASE_PACKS'],
+  ['src/services/skillPackContentSentinel.ts', 'SENTINEL_BASE_PACKS'],
+  ['src/services/skillPackContentNova.ts', 'NOVA_BASE_PACKS']
+].map(([relativePath, exportName]) => ({
+  path: join(PROJECT_ROOT, relativePath),
+  exportName
+}));
+const WORKFLOW_PACKS_PATH = join(PROJECT_ROOT, 'src/services/skillPackWorkflowData.ts');
 const AGENT_CONTRACT_SERVICE_PATH = join(PROJECT_ROOT, 'src/services/agentContractService.ts');
 const OUTPUT_PATH = join(PROJECT_ROOT, 'docs/AGENT_SKILL_PERMISSION_MATRIX.md');
 
@@ -40,9 +53,9 @@ function parseStringArray(raw) {
     .map((s) => s.replace(/^['"]/, '').replace(/['"]$/, ''));
 }
 
-function extractPacks(source) {
+function extractPacks(source, exportName) {
   // Matches each `{ id: 'pack.x', ... permissions: [...], ... ownerAgent: 'y', ... }`
-  // block in BASE_PACKS / AGENT_WORKFLOW_SKILL_DEFS array-literal order.
+  // block in the selected array-literal order.
   //
   // Uses [^{}]* (not [\s\S]*) between fields so each lazy scan is bounded to
   // the current object's own braces and can never cross into a sibling pack.
@@ -52,10 +65,20 @@ function extractPacks(source) {
   // silently dropping the pack in between from the generated doc entirely.
   // Caught by the pack-count cross-check in buildMatrix() below, which found
   // pack.developer-core and pack.codex-professional-coding missing.
-  const packRe = /\{\s*id:\s*['"]([^'"]+)['"][^{}]*?name:\s*['"]([^'"]+)['"][^{}]*?permissions:\s*\[([^\]]*)\][^{}]*?category:\s*['"]([^'"]+)['"](?:[^{}]*?ownerAgent:\s*['"]([^'"]+)['"])?[^{}]*?\n\s{2}\}/g;
+  const packRe = new RegExp(
+    String.raw`\{\s*id:\s*['"]([^'"]+)['"][^{}]*?name:\s*['"]([^'"]+)['"][^{}]*?permissions:\s*\[([^\]]*)\][^{}]*?category:\s*['"]([^'"]+)['"](?:[^{}]*?ownerAgent:\s*['"]([^'"]+)['"])?[^{}]*?\n\s{2}\}`,
+    'g'
+  );
+  const block = source.match(new RegExp(`export const ${exportName}\\s*=\\s*\\[([\\s\\S]*?)\\n\\];`));
+  if (!block) {
+    throw new Error(
+      `generate-skill-permission-matrix: ${exportName} block regex found no match in source — ` +
+      'source shape likely changed. Fix the regex rather than silently publishing zero packs.'
+    );
+  }
   const packs = [];
   let m;
-  while ((m = packRe.exec(source))) {
+  while ((m = packRe.exec(block[1]))) {
     packs.push({
       id: m[1],
       name: m[2],
@@ -108,7 +131,7 @@ function extractWorkflowPacks(source) {
   // skill.name rather than string literals, so extractPacks' literal-string
   // regex can't and shouldn't match them — they're captured here instead,
   // directly from their own literal source shape).
-  const block = source.match(/const AGENT_WORKFLOW_SKILL_DEFS\s*=\s*\[([\s\S]*?)\n\];/);
+  const block = source.match(/export const AGENT_WORKFLOW_SKILL_DEFS\s*=\s*\[([\s\S]*?)\n\];/);
   if (!block) return [];
   const packRe = /\{\s*id:\s*['"]([^'"]+)['"],\s*name:\s*['"]([^'"]+)['"],\s*description:\s*['"]([^'"]*)['"],\s*permissions:\s*\[([^\]]*)\]\s*\}/g;
   const packs = [];
@@ -151,12 +174,17 @@ function extractBlockedOverrides(source) {
 }
 
 function buildMatrix() {
-  const skillPackSource = readFileSync(SKILL_PACK_SERVICE_PATH, 'utf8');
+  const packSources = SKILL_PACK_CONTENT_PATHS.map(({ path, exportName }) => ({
+    source: readFileSync(path, 'utf8'),
+    exportName,
+    path
+  }));
+  const workflowSource = readFileSync(WORKFLOW_PACKS_PATH, 'utf8');
   const contractSource = readFileSync(AGENT_CONTRACT_SERVICE_PATH, 'utf8');
 
-  const allExtractedPacks = extractPacks(skillPackSource);
+  const allExtractedPacks = packSources.flatMap(({ source, exportName }) => extractPacks(source, exportName));
   const packs = allExtractedPacks.filter((p) => p.category === 'agent_skill');
-  const workflowPacks = extractWorkflowPacks(skillPackSource);
+  const workflowPacks = extractWorkflowPacks(workflowSource);
   const agents = extractContractAgents(contractSource);
   const overrideIds = extractOverrideIds(contractSource);
   const blockedOverrides = extractBlockedOverrides(contractSource);
@@ -167,12 +195,17 @@ function buildMatrix() {
   // match, one of those regexes silently missed real packs rather than the
   // source genuinely having fewer packs, and a doc silently missing packs is
   // worse than a loud failure.
-  const totalPackIdOccurrences = (skillPackSource.match(/id:\s*['"]pack\.[^'"]+['"]/g) || []).length;
+  const totalPackIdOccurrences = [
+    ...packSources.map(({ source }) => source),
+    workflowSource
+  ]
+    .map((source) => source.match(/id:\s*['"]pack\.[^'"]+['"]/g) || [])
+    .flat().length;
   const accountedFor = allExtractedPacks.length + workflowPacks.length;
   if (accountedFor !== totalPackIdOccurrences) {
     throw new Error(
       `generate-skill-permission-matrix: found ${totalPackIdOccurrences} ` +
-      `'id: pack.*' occurrences in skillPackService.js but only accounted ` +
+      `'id: pack.*' occurrences in the skill-pack source modules but only accounted ` +
       `for ${accountedFor} via extractPacks + extractWorkflowPacks — one of ` +
       'those regexes is silently missing real packs. Fix the regex rather ' +
       'than publishing an incomplete matrix.'
@@ -193,14 +226,16 @@ function buildMatrix() {
   lines.push('**Generated file — do not hand-edit.**');
   lines.push('');
   lines.push('Regenerate with `node scripts/generate-skill-permission-matrix.mjs` after');
-  lines.push('changing `src/services/skillPackService.js` or');
+  lines.push('changing `src/services/skillPackContent*.ts`,');
+  lines.push('`src/services/skillPackWorkflowData.ts`, or');
   lines.push('`src/services/agentContractService.ts`. Correctness (every pack owned,');
   lines.push('documented, and within its own contract) is enforced independently by');
   lines.push('`src/test/services/skillPackContractMatrix.test.ts`, which runs under');
   lines.push('`npm test` and therefore gates CI — this doc is the human-readable view of');
   lines.push('the same source of truth, not a separate claim.');
   lines.push('');
-  lines.push(`Source of truth: \`src/services/skillPackService.js\` (packs) +`);
+  lines.push('Source of truth: `src/services/skillPackContent*.ts` (packs) +');
+  lines.push('`src/services/skillPackWorkflowData.ts` (workflow packs) +');
   lines.push('`src/services/agentContractService.ts` (contracts + per-pack scope overrides).');
   lines.push('');
   lines.push('**Shared status.** A pack is either exclusive (owned by exactly one agent,');
@@ -274,3 +309,4 @@ if (checkMode) {
   writeFileSync(OUTPUT_PATH, content, 'utf8');
   console.log(`Wrote ${OUTPUT_PATH}`);
 }
+

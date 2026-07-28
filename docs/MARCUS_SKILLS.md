@@ -78,7 +78,8 @@ All Marcus skill pack permissions use the agent's allowed prefixes:
 
 | File | Purpose |
 |------|---------|
-| `src/services/skillPackService.js` | Pack definitions and workflow guidance |
+| `src/services/skillPackService.ts` | Pack definitions and workflow guidance |
 | `src/services/agentContractService.ts` | Scope overrides and contract validation |
 | `src/agents/marcus/marcusProfile.js` | Agent profile with skillPackIds |
 | `src/agents/marcus/marcusPermissions.js` | Agent permissions |
+

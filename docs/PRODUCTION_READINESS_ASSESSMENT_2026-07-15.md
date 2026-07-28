@@ -399,7 +399,7 @@ Sequenced so an engineer can execute top-to-bottom. Each task: Priority · Categ
 - **Problem:** Chained generation has count/time budgets but no token budget; flagship features are hidden.
 - **Root cause:** Budget guards are coarse; nav placement debt.
 - **Plan:** Add a per-request token/cost ceiling to the Jose pipeline and Boardroom chaining; give Operator Dashboard a sidebar entry and Coach Mode a visual distinction; follow up the "output lands somewhere unknown" user report.
-- **Files:** `joseExecutionEngineService.js`, `boardroomFacilitatorService.ts`, `Sidebar.tsx`, `App.tsx`.
+- **Files:** `joseExecutionEngineService.ts`, `boardroomFacilitatorService.ts`, `Sidebar.tsx`, `App.tsx`.
 - **Dependencies:** none.
 - **Complexity:** Medium.
 - **DoD:** A runaway multi-agent request is bounded by tokens; both features are discoverable from the primary nav.
@@ -431,3 +431,4 @@ Sequenced so an engineer can execute top-to-bottom. Each task: Priority · Categ
 Alphonso is a **large, ambitious, and genuinely well-engineered** local-first AI desktop app whose prior audit graded it "good health" **without checking whether it builds** — and it doesn't: CI is red on `main` and has been for 8+ runs, the Rust quality gate hasn't actually run, E2E is broken, the licensing paywall is a client-side regex anyone can forge, and the mobile-companion PIN has no brute-force protection. None of these are visible from the static read the prior report performed, which is exactly why a "production-readiness" verdict must be grounded in the build and the running system, not the file tree.
 
 **Overall production readiness: 4/10 today.** The path to 8/10 is short and well-defined: turn CI honestly green, protect `main`, make the paywall and PIN real, and live-verify the updater and pairing. The underlying codebase can support production; the operational and trust layer around it currently cannot. Fix the build and the two auth gaps first — everything else is genuinely deferrable.
+

@@ -22,10 +22,11 @@ Shayan -> Jose intake -> Jose decomposition/routing -> agents report back -> Jos
 - Jose command decomposition maps intents to governed agent assignments:
   - `src/services/joseCommandRouterService.js`
 - Jose execution pipeline enforces approval and policy gates before execution:
-  - `src/services/joseExecutionEngineService.js`
+  - `src/services/joseExecutionEngineService.ts`
 
 ## Approval policy
 - High-risk or external actions require approval.
 - Zero-cost mode blocks paid/metered connector routes unless explicit override.
 - Connector allowlist/auth profile gates route/send permissions.
+
 

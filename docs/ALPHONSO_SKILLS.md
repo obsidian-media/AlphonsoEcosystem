@@ -100,7 +100,7 @@ All packs are validated against Alphonso's execution contract:
 
 ### Skill Pack Service
 
-Packs are registered in `skillPackService.js` and loaded via `loadAgentSkillGuidance('alphonso')`. The guidance system returns:
+Packs are registered in `skillPackService.ts` and loaded via `loadAgentSkillGuidance('alphonso')`. The guidance system returns:
 - `activeSkills` — list of pack IDs
 - `guidance` — structured guidance objects
 - `recommendedSteps` — deduplicated step list (capped at 8)
@@ -118,9 +118,10 @@ Jose uses Alphonso's skill packs to understand capabilities when routing tasks. 
 
 | File | Purpose |
 |------|---------|
-| `src/services/skillPackService.js` | Pack definitions and workflow guidance |
+| `src/services/skillPackService.ts` | Pack definitions and workflow guidance |
 | `src/services/agentContractService.ts` | Scope overrides and contract validation |
 | `src/agents/alphonso/alphonsoProfile.js` | Agent profile with skillPackIds |
 | `src/agents/alphonso/alphonsoPermissions.js` | Agent permissions |
 | `src/test/alphonsoSkillPacks.test.js` | Unit tests |
 | `src/test/alphonsoSkillIntegration.test.js` | Integration tests |
+

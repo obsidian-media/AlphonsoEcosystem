@@ -115,9 +115,10 @@ All packs are validated against Maria's execution contract:
 
 | File | Purpose |
 |------|---------|
-| `src/services/skillPackService.js` | Pack definitions and workflow guidance |
+| `src/services/skillPackService.ts` | Pack definitions and workflow guidance |
 | `src/services/agentContractService.ts` | Scope overrides and contract validation |
 | `src/agents/maria/mariaProfile.js` | Agent profile with skillPackIds |
 | `src/agents/maria/mariaPermissions.js` | Agent permissions |
 | `src/test/mariaSkillPacks.test.js` | Unit tests |
 | `src/test/mariaSkillIntegration.test.js` | Integration tests |
+
