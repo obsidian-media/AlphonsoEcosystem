@@ -5,6 +5,7 @@ pub(crate) const ALPHONSO_RUNTIME_ENV_NAMES: &[&str] = &[
   "ALPHONSO_SELFDEV_EXIT_ON_COMPLETE",
   "ALPHONSO_WORKSPACE_ROOT",
   "ALPHONSO_PROOF_OUTPUT_DIR",
+  "USERPROFILE",
 ];
 
 pub(crate) fn allowed_program(program: &str) -> bool {

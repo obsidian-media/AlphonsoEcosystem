@@ -43,7 +43,7 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
 | Rust quality after lock refresh | Verified (Windows) | `cargo check`, 108 Rust tests, and `cargo clippy -- -D warnings` passed for `x86_64-pc-windows-msvc` on 2026-07-22. |
 | Dependency advisories | Partial | npm audit reports 0; pytest advisory remediated. One Linux GTK/WebKit `glib` advisory remains. |
 | Playwright E2E | Verified | Preview-backed suite: 26 tests / 7 specs passed in 17.4s with retries disabled (2026-07-22). |
-| Current repo totals | Verified (local) | 263 test files / 3,758 tests / 185 services / 24 connectors after the 2026-07-28 ComfyUI + runtime/connector smoke pass. |
+| Current repo totals | Verified (local) | 263 test files / 3,758 tests / 185 services / 24 connectors after the 2026-07-28 ComfyUI + runtime/connector smoke pass. Strongest new runtime evidence: live ComfyUI `0.20.1` on `127.0.0.1:8188` completed prompt `32eeefec-624c-4fae-9efd-14f64a166e31` successfully with output `ALPHONSO_8188_SMOKE_00001_.png`; focused regressions passed for `comfyuiSettingsService` (8/8) and `connectorImageGenerators` (22/22). |
 
 ## Work queue
 

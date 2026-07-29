@@ -17,7 +17,7 @@ import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioSta
 import { listPlugins, togglePlugin } from '../services/pluginRegistryService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate, type BackupSizeEstimate } from '../services/backupService';
 import { getAccBridgeConfig, updateAccBridgeConfig } from '../services/agentWorkshop/accBridgeService';
-import { resolveComfyuiDirectory } from '../services/comfyuiSettingsService';
+import { resolveComfyuiDirectory, resolveComfyuiPython } from '../services/comfyuiSettingsService';
 import { AgentMetricsPanel } from './AgentMetricsPanel';
 import { listMemoryItems } from '../services/memoryService';
 import { WorkspaceExportImportView } from './WorkspaceExportImportView';
@@ -594,20 +594,31 @@ export function SettingsView({
   useEffect(() => {
     let cancelled = false;
 
-    async function seedComfyUIDirectory() {
+    async function seedComfyUISettings() {
       if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) return;
-      if (settings.comfyuiDir) return;
       const resolvedDir = await resolveComfyuiDirectory(settings.comfyuiDir);
-      if (!cancelled && resolvedDir && !settings.comfyuiDir) {
-        setSettings((prev) => (prev.comfyuiDir ? prev : { ...prev, comfyuiDir: resolvedDir }));
+      const resolvedPython = await resolveComfyuiPython(settings.comfyuiPython, resolvedDir || settings.comfyuiDir);
+      if (!cancelled && (resolvedDir || resolvedPython)) {
+        setSettings((prev) => {
+          const nextDir = prev.comfyuiDir || resolvedDir || '';
+          const nextPython = (
+            prev.comfyuiPython &&
+            prev.comfyuiPython.trim() &&
+            prev.comfyuiPython.trim().toLowerCase() !== 'python'
+          )
+            ? prev.comfyuiPython
+            : (resolvedPython || prev.comfyuiPython);
+          if (nextDir === prev.comfyuiDir && nextPython === prev.comfyuiPython) return prev;
+          return { ...prev, comfyuiDir: nextDir, comfyuiPython: nextPython };
+        });
       }
     }
 
-    seedComfyUIDirectory();
+    seedComfyUISettings();
     return () => {
       cancelled = true;
     };
-  }, [settings.comfyuiDir, setSettings]);
+  }, [settings.comfyuiDir, settings.comfyuiPython, setSettings]);
 
   const handlePickOutputFolder = async () => {
     try {
