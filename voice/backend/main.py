@@ -26,8 +26,11 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
+    # Voice OS does not use browser cookies or HTTP authentication. WebSocket
+    # authorization is handled separately, so wildcard origins are safe only
+    # with credentials disabled.
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

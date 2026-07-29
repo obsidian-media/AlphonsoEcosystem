@@ -12,7 +12,7 @@ from app.main import app
 
 ENV = {
     "SUPABASE_URL": "https://example.supabase.co",
-    "SUPABASE_SERVICE_ROLE_KEY": "service-role-key",
+    "SUPABASE_ANON_KEY": "publishable-key",
     "NVIDIA_API_KEY": "nvidia-key",
     "NVIDIA_NIM_MODEL": "nvidia/nemotron-mini-4b-instruct",
     "NVIDIA_TTS_MAGPIE_URL": "https://example.test/magpie",

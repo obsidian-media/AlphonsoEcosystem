@@ -704,30 +704,40 @@ either report) and are real, unfixed as of 2026-07-26.
     length near-miss tokens are still rejected, and `pytest` for
     `voice/cloud-backend` passes.
 
-- [ ] **F2 — Fix invalid CORS configuration in local Voice OS backend**
+- [~] **F2 — Fix invalid CORS configuration in local Voice OS backend**
   - **Owner:** Sentinel
   - `voice/backend/main.py:27-33` configures `CORSMiddleware` with
     `allow_origins=["*"]` and `allow_credentials=True` simultaneously —
     invalid per the CORS spec; browsers reject the credentialed case in
     practice today, but the config should not rely on that as the only
     guard.
-  - **Done when:** `allow_origins` is a specific, documented local origin
-    list (matching this service's actual local-only usage — see the Port
-    map in `CLAUDE.md`), or `allow_credentials` is removed if wildcard
-    origins are genuinely required, with a comment recording which case was
-    chosen and why.
+- **Done when:** `allow_origins` is a specific, documented local origin
+  list (matching this service's actual local-only usage — see the Port
+  map in `CLAUDE.md`), or `allow_credentials` is removed if wildcard
+  origins are genuinely required, with a comment recording which case was
+  chosen and why.
+  - **Implementation (2026-07-29):** wildcard origins were retained for the
+    local no-cookie Voice OS client and `allow_credentials` was set to false,
+    with a regression test added. Verification remains in progress because
+    this host cannot collect the local Voice test module without its declared
+    `webrtcvad` dependency.
 
-- [ ] **F3 — Reduce Supabase service-role-key exposure in Cloud Voice**
+- [~] **F3 — Reduce Supabase service-role-key exposure in Cloud Voice**
   - **Owner:** Sentinel; **review:** Maria
   - **Same underlying gap as production-readiness item T18** (see Section G
     below) — tracked once here, not duplicated. `voice/cloud-backend/app/supabase_auth.py`
     sends the full-privilege Supabase service-role key as a Bearer token in
     three separate outbound REST calls (lines 34, 51, 72), rather than a
     scoped RPC/restricted key.
-  - **Done when:** device-enrollment and lookup calls use a restricted-scope
-    credential or a Supabase RPC function instead of the raw service-role
-    key, or the current design is reviewed and explicitly accepted with a
-    documented reason (e.g., no viable restricted-key path exists yet).
+- **Done when:** device-enrollment and lookup calls use a restricted-scope
+  credential or a Supabase RPC function instead of the raw service-role
+  key, or the current design is reviewed and explicitly accepted with a
+  documented reason (e.g., no viable restricted-key path exists yet).
+  - **Implementation (2026-07-29):** Cloud Voice now uses `SUPABASE_ANON_KEY`
+    plus the authenticated user's JWT for `/auth` and `voice_devices` calls,
+    allowing the existing RLS policies to enforce ownership. The Cloud Voice
+    test suite passed (13 tests). This remains in progress until the Railway
+    variable is changed and the RLS-backed flow is verified against Supabase.
 
 ### G. Carried-forward production-readiness backlog (T11–T20)
 
@@ -868,4 +878,5 @@ dropped.
 | 2026-07-26 (Part 1) | Added Section F (3 audit-sourced Cloud Voice hardening items, independently re-verified against live code, not just copied from the source audit) and Section G (production-readiness T11–T20 carried forward into this file's tracked queue, with T13/T15/T16 cross-referenced as already closed by B3/D1/D2 rather than duplicated, plus 5 other previously-untracked open items). | User request, following an external "Hermes" audit report + its own Codex verification addendum; see Section F/G entries for per-item evidence and status notes. |
 | 2026-07-26 (Part 2) | **Closed F1** (timing-safe auth in cloud voice), **G-OTHER3** (companionIntegration tests fixed). PR #124 opened against `fix/audit-134-bugfixes` with 79 files changed across all layers (134 findings fixed from the full-repo bug audit). | PR #124: 3,486 insertions / 340 deletions. Full audit report in `audits/2026-07-26_FullBugAudit_Audit.md`. |
 | 2026-07-27 | Migrated `skillPackService` and `joseExecutionEngineService` from `.js` to `.ts`; split skill-pack content into registry/content/guidance modules and verified the affected test sets plus full Vitest, lint, and typecheck. | This session's code changes and verification output. |
+| 2026-07-29 | Codex completed a fresh risk-based all-angle audit after a full codebase-memory reindex. | `audits/2026-07-29_Codex_AllAngle_Audit.md`; lint passed; the full PowerShell verifier timed out in fallback secret scanning, so no release-readiness claim was made. |
 

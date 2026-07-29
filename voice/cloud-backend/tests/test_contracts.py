@@ -7,6 +7,7 @@ from pydantic import ValidationError
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.config import Settings
+from app.supabase_auth import _user_headers
 from app.contracts import VoiceRequest
 
 
@@ -38,3 +39,10 @@ def test_missing_service_key_is_not_ready(monkeypatch):
     monkeypatch.delenv("VOICE_CLOUD_API_KEY", raising=False)
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
     assert Settings.from_env().is_ready is False
+
+
+def test_device_registry_uses_user_jwt_with_publishable_key():
+    assert _user_headers("publishable-key", "user-access-token") == {
+        "apikey": "publishable-key",
+        "Authorization": "Bearer user-access-token",
+    }

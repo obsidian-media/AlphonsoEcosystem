@@ -20,9 +20,10 @@ Set these Railway variables in the Cloud Voice service only:
   private Piper service.
 - `PIPER_FARSI_DEFAULT_VOICE`: `mana` by default; `manta` is also supported.
 - `SUPABASE_URL`: Supabase project URL.
-- `SUPABASE_SERVICE_ROLE_KEY`: server-only Supabase key used to validate the
-  signed-in user and enforce enrolled-device access. Set this on Cloud Voice
-  only, never as a shared Railway variable.
+- `SUPABASE_ANON_KEY`: Supabase publishable/anonymous key. Cloud Voice pairs it
+  with the authenticated user's JWT, so the existing `voice_devices` RLS
+  policies enforce enrollment and lookup ownership. Do not configure a
+  service-role key for this service.
 
 Do not commit these values. The iOS app must not ask a user for a Cloud Voice
 URL, NVIDIA key, Piper token, or `VOICE_CLOUD_API_KEY`. Cloud Voice currently

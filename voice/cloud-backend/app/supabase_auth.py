@@ -12,6 +12,12 @@ from app.config import Settings
 @dataclass(frozen=True)
 class SupabaseUser:
     id: str
+    access_token: str
+
+
+def _user_headers(anon_key: str, access_token: str) -> dict[str, str]:
+    """Use the user's JWT so Supabase RLS enforces device ownership."""
+    return {"apikey": anon_key, "Authorization": f"Bearer {access_token}"}
 
 
 def _bearer_token(authorization: str | None) -> str:
@@ -26,19 +32,19 @@ class SupabaseDeviceRegistry:
 
     async def user_from_authorization(self, authorization: str | None) -> SupabaseUser:
         token = _bearer_token(authorization)
-        if not self.settings.supabase_url or not self.settings.supabase_service_role_key:
+        if not self.settings.supabase_url or not self.settings.supabase_anon_key:
             raise HTTPException(status_code=503, detail="Cloud device enrollment is not configured")
         async with httpx.AsyncClient(timeout=self.settings.request_timeout_seconds) as client:
             response = await client.get(
                 f"{self.settings.supabase_url}/auth/v1/user",
-                headers={"apikey": self.settings.supabase_service_role_key, "Authorization": f"Bearer {token}"},
+                headers=_user_headers(self.settings.supabase_anon_key, token),
             )
         if response.status_code != 200:
             raise HTTPException(status_code=401, detail="Invalid or expired user access token")
         user_id = response.json().get("id")
         if not user_id:
             raise HTTPException(status_code=401, detail="User identity is missing")
-        return SupabaseUser(id=str(user_id))
+        return SupabaseUser(id=str(user_id), access_token=token)
 
     async def enroll(self, user: SupabaseUser, device_id: str, display_name: str) -> None:
         UUID(device_id)
@@ -47,8 +53,7 @@ class SupabaseDeviceRegistry:
             response = await client.post(
                 f"{self.settings.supabase_url}/rest/v1/voice_devices?on_conflict=user_id,device_id",
                 headers={
-                    "apikey": self.settings.supabase_service_role_key,
-                    "Authorization": f"Bearer {self.settings.supabase_service_role_key}",
+                    **_user_headers(self.settings.supabase_anon_key, user.access_token),
                     "Content-Type": "application/json",
                     "Prefer": "resolution=merge-duplicates",
                 },
@@ -69,7 +74,7 @@ class SupabaseDeviceRegistry:
             response = await client.get(
                 f"{self.settings.supabase_url}/rest/v1/voice_devices",
                 params={"select": "id", "user_id": f"eq.{user.id}", "device_id": f"eq.{device_id}", "revoked_at": "is.null", "limit": "1"},
-                headers={"apikey": self.settings.supabase_service_role_key, "Authorization": f"Bearer {self.settings.supabase_service_role_key}"},
+                headers=_user_headers(self.settings.supabase_anon_key, user.access_token),
             )
         if response.status_code != 200 or not response.json():
             raise HTTPException(status_code=403, detail="This device is not enrolled for Cloud Voice")
