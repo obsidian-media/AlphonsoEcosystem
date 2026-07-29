@@ -6,8 +6,6 @@ root set to `voice/cloud-backend`. Railway reads the service-local
 
 Set these Railway variables in the Cloud Voice service only:
 
-- `VOICE_CLOUD_API_KEY`: the server-side Cloud Voice bearer token. Do not copy
-  this token into an iPhone build, a repository, or any user-facing field.
 - `NVIDIA_API_KEY`: the NVIDIA Build API key.
 - `NVIDIA_NIM_BASE_URL`: `https://integrate.api.nvidia.com/v1`.
 - `NVIDIA_NIM_MODEL`: the selected NVIDIA NIM chat model.
@@ -26,10 +24,9 @@ Set these Railway variables in the Cloud Voice service only:
   service-role key for this service.
 
 Do not commit these values. The iOS app must not ask a user for a Cloud Voice
-URL, NVIDIA key, Piper token, or `VOICE_CLOUD_API_KEY`. Cloud Voice currently
-requires a bearer token, but the existing local PIN pairing does **not** issue
-or validate a durable per-device cloud credential. Treat cloud access from an
-unpaired iPhone as blocked until a device-enrollment service is implemented.
+URL, NVIDIA key, or Piper token. Cloud Voice authorizes each request through
+the Supabase user session and active enrolled-device record; do not introduce a
+second shared bearer token without a client-safe issuance and rotation design.
 
 ## Supabase device enrollment
 

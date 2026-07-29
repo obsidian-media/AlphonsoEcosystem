@@ -1,4 +1,5 @@
 import asyncio
+import importlib.util
 import json
 from contextlib import asynccontextmanager
 
@@ -55,8 +56,8 @@ async def health():
         pass
     return {
         "status": "ok",
-        "stt": True,
-        "tts": tts_ok,
+        "stt": importlib.util.find_spec("faster_whisper") is not None,
+        "tts": tts_ok and importlib.util.find_spec("piper") is not None,
         "ollama": {"url": local_ollama_url(), "reachable": ollama_reachable},
     }
 

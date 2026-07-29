@@ -35,8 +35,7 @@ def test_request_rejects_unknown_agent_and_language():
         VoiceRequest(session_id="s", text="hello", language="it-IT", agent_id="unknown")
 
 
-def test_missing_service_key_is_not_ready(monkeypatch):
-    monkeypatch.delenv("VOICE_CLOUD_API_KEY", raising=False)
+def test_missing_required_provider_configuration_is_not_ready(monkeypatch):
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
     assert Settings.from_env().is_ready is False
 

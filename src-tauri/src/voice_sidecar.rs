@@ -3,6 +3,10 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{Manager, State};
 
+const VOICE_HEALTH_URL: &str = "http://127.0.0.1:8766/health";
+const VOICE_STARTUP_ATTEMPTS: usize = 25;
+const VOICE_STARTUP_RETRY_DELAY_MS: u64 = 200;
+
 pub struct VoiceSidecar(pub Mutex<Option<Child>>);
 
 /// Resolve which Python interpreter to launch Voice OS with.
@@ -53,53 +57,74 @@ pub async fn voice_start(
   app: tauri::AppHandle,
   state: State<'_, VoiceSidecar>,
 ) -> Result<String, String> {
+  {
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    if guard.is_some() {
+      return Ok("already_running".into());
+    }
+    // Resolve voice/backend relative to the app resource directory so it works in production installs
+    let backend_path = app
+      .path()
+      .resource_dir()
+      .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
+      .join("voice")
+      .join("backend");
+    let python_bin = resolve_voice_python(&backend_path, &crate::runtime_manager::runtimes_dir());
+    let mut cmd = Command::new(&python_bin);
+    cmd
+      .args([
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8766",
+        "--app-dir",
+      ])
+      .arg(&backend_path)
+      .stdout(Stdio::piped())
+      .stderr(Stdio::piped());
+    crate::utils::no_window(&mut cmd);
+    let mut child = cmd
+      .spawn()
+      .map_err(|e| format!("Failed to start voice server: {e}"))?;
+    if let Some(stdout) = child.stdout.take() {
+      std::thread::spawn(move || {
+        for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+          log::info!("[voice-os] {}", line);
+        }
+      });
+    }
+    if let Some(stderr) = child.stderr.take() {
+      std::thread::spawn(move || {
+        for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+          log::warn!("[voice-os] {}", line);
+        }
+      });
+    }
+    *guard = Some(child);
+  }
+
+  for _ in 0..VOICE_STARTUP_ATTEMPTS {
+    let ready = reqwest::get(VOICE_HEALTH_URL)
+      .await
+      .map(|response| response.status().is_success())
+      .unwrap_or(false);
+    if ready {
+      return Ok("started".into());
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(
+      VOICE_STARTUP_RETRY_DELAY_MS,
+    ))
+    .await;
+  }
+
   let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-  if guard.is_some() {
-    return Ok("already_running".into());
+  if let Some(mut child) = guard.take() {
+    let _ = child.kill();
   }
-  // Resolve voice/backend relative to the app resource directory so it works in production installs
-  let backend_path = app
-    .path()
-    .resource_dir()
-    .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
-    .join("voice")
-    .join("backend");
-  let python_bin = resolve_voice_python(&backend_path, &crate::runtime_manager::runtimes_dir());
-  let mut cmd = Command::new(&python_bin);
-  cmd
-    .args([
-      "-m",
-      "uvicorn",
-      "main:app",
-      "--host",
-      "127.0.0.1",
-      "--port",
-      "8766",
-      "--app-dir",
-    ])
-    .arg(&backend_path)
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped());
-  crate::utils::no_window(&mut cmd);
-  let mut child = cmd
-    .spawn()
-    .map_err(|e| format!("Failed to start voice server: {e}"))?;
-  if let Some(stdout) = child.stdout.take() {
-    std::thread::spawn(move || {
-      for line in BufReader::new(stdout).lines().map_while(Result::ok) {
-        log::info!("[voice-os] {}", line);
-      }
-    });
-  }
-  if let Some(stderr) = child.stderr.take() {
-    std::thread::spawn(move || {
-      for line in BufReader::new(stderr).lines().map_while(Result::ok) {
-        log::warn!("[voice-os] {}", line);
-      }
-    });
-  }
-  *guard = Some(child);
-  Ok("started".into())
+  Err("Voice server did not become ready within 5 seconds. Check Python, Voice OS dependencies, and the local port 8766.".into())
 }
 
 #[tauri::command]

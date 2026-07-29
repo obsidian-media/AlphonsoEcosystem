@@ -857,6 +857,37 @@ dropped.
     other prerequisites (Git, Ollama) via winget/brew/apt but not Python
     itself. Still open.
 
+### H. Voice operationalization (Windows-executable)
+
+- [~] **H1 — Make Local Voice readiness and sidecar failures diagnosable**
+  - **Owner:** Alphonso; **execution:** Codex
+  - Verify prerequisite detection, sidecar lifecycle, local pipeline failure
+    handling, and focused regression coverage without requiring audio hardware.
+  - **Done when:** Windows-local commands provide actionable readiness evidence,
+    focused tests cover missing prerequisites and lifecycle failures, and any
+    unavailable hardware/live-model evidence is explicitly deferred.
+  - **Evidence (2026-07-29):** `cargo test voice_sidecar --lib` passed 3/3 on
+    Windows after a native compile; direct Vitest passed 9/9 for
+    `voiceOsService`. Startup now waits for loopback health and fails cleanly
+    instead of reporting a spawned process as ready. The local Python Voice
+    suite remains blocked by its missing `webrtcvad` dependency; hardware/model
+    inference is not claimed. See
+    `audits/2026-07-29_Codex_VoiceOperationalization_Audit.md`.
+
+- [~] **H2 — Make Cloud Voice contracts portable and resilient**
+  - **Owner:** Sentinel; **execution:** Codex
+  - Complete provider-neutral configuration, authentication/error contract
+    tests, and redacted diagnostics without deploying or invoking paid APIs.
+  - **Done when:** tests prove safe behavior for enrollment/session/device and
+    provider failures; deployment/live-provider verification remains separately
+    recorded as blocked until explicitly authorized.
+  - **Evidence (2026-07-29):** removed the unused `VOICE_CLOUD_API_KEY`
+    readiness requirement, retaining the actual Supabase JWT + enrolled-device
+    authorization model. Isolated Cloud Voice tests passed 16/16, including
+    safe unavailable/rate-limit responses. Live configuration and provider
+    calls remain unverified. See
+    `audits/2026-07-29_Codex_VoiceOperationalization_Audit.md`.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped

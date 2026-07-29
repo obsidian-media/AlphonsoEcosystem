@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Settings:
-    voice_cloud_api_key: str
     nvidia_api_key: str
     nim_base_url: str
     nim_model: str
@@ -24,7 +23,6 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
-            voice_cloud_api_key=os.environ.get("VOICE_CLOUD_API_KEY", "").strip(),
             nvidia_api_key=os.environ.get("NVIDIA_API_KEY", "").strip(),
             nim_base_url=os.environ.get("NVIDIA_NIM_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/"),
             nim_model=os.environ.get("NVIDIA_NIM_MODEL", "").strip(),

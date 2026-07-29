@@ -31,3 +31,5 @@ def test_local_health_reports_ollama_configuration():
     assert "ollama" in payload
     assert "url" in payload["ollama"]
     assert "reachable" in payload["ollama"]
+    assert isinstance(payload["stt"], bool)
+    assert isinstance(payload["tts"], bool)
