@@ -69,7 +69,8 @@ pub async fn voice_start(
       .map_err(|e| format!("Failed to resolve resource dir: {e}"))?
       .join("voice")
       .join("backend");
-    let python_bin = resolve_voice_python(&backend_path, &crate::runtime_manager::runtimes_dir());
+    let runtimes_dir = crate::runtime_manager::runtimes_dir();
+    let python_bin = resolve_voice_python(&backend_path, &runtimes_dir);
     let mut cmd = Command::new(&python_bin);
     cmd
       .args([
@@ -83,6 +84,7 @@ pub async fn voice_start(
         "--app-dir",
       ])
       .arg(&backend_path)
+      .env("VOICE_PIPER_MODEL_DIR", runtimes_dir.join("voice-os"))
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
     crate::utils::no_window(&mut cmd);

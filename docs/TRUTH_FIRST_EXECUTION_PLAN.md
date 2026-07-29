@@ -866,12 +866,19 @@ dropped.
   - **Done when:** Windows-local commands provide actionable readiness evidence,
     focused tests cover missing prerequisites and lifecycle failures, and any
     unavailable hardware/live-model evidence is explicitly deferred.
-  - **Evidence (2026-07-29):** `cargo test voice_sidecar --lib` passed 3/3 on
-    Windows after a native compile; direct Vitest passed 9/9 for
-    `voiceOsService`. Startup now waits for loopback health and fails cleanly
-    instead of reporting a spawned process as ready. The local Python Voice
-    suite remains blocked by its missing `webrtcvad` dependency; hardware/model
-    inference is not claimed. See
+  - **Evidence (2026-07-29):** direct Vitest passed 9/9 for `voiceOsService`.
+    In a clean Windows Python 3.11 venv, the complete pinned local Voice
+    dependency set installed successfully (including `webrtcvad`), and
+    `pytest voice/backend/tests -q` passed 37/37. Piper `1.5.0` downloaded its
+    Windows voice model successfully and produced a real 63,020-byte WAV.
+    Runtime Hub now installs the same pinned dependencies and model into its
+    managed directory; both launch paths use port 8766 and that model path.
+    Startup waits for loopback health and fails cleanly rather than reporting a
+    spawned process as ready. The immediately preceding sidecar Rust test pass
+    was 3/3; a new post-change compile attempt exceeded this host's five-minute
+    time budget while compiling native dependencies, so the changed Rust launch
+    path is not yet re-verified. Microphone/Ollama/playback hardware evidence
+    is separately not claimed. See
     `audits/2026-07-29_Codex_VoiceOperationalization_Audit.md`.
 
 - [~] **H2 — Make Cloud Voice contracts portable and resilient**
@@ -910,4 +917,5 @@ dropped.
 | 2026-07-26 (Part 2) | **Closed F1** (timing-safe auth in cloud voice), **G-OTHER3** (companionIntegration tests fixed). PR #124 opened against `fix/audit-134-bugfixes` with 79 files changed across all layers (134 findings fixed from the full-repo bug audit). | PR #124: 3,486 insertions / 340 deletions. Full audit report in `audits/2026-07-26_FullBugAudit_Audit.md`. |
 | 2026-07-27 | Migrated `skillPackService` and `joseExecutionEngineService` from `.js` to `.ts`; split skill-pack content into registry/content/guidance modules and verified the affected test sets plus full Vitest, lint, and typecheck. | This session's code changes and verification output. |
 | 2026-07-29 | Codex completed a fresh risk-based all-angle audit after a full codebase-memory reindex. | `audits/2026-07-29_Codex_AllAngle_Audit.md`; lint passed; the full PowerShell verifier timed out in fallback secret scanning, so no release-readiness claim was made. |
+| 2026-07-29 | Codex resolved the Local Voice dependency/model/runtime-path deferrals and added a focused Vitest command. | Windows clean-venv install; `pytest voice/backend/tests -q` 37/37; Piper real WAV synthesis; pending only fresh Rust compile and hardware/Ollama/playback evidence. |
 

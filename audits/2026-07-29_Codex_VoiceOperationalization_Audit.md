@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-29
 **Scope:** Windows-executable Local Voice lifecycle and Cloud Voice contract hardening.
-**Status:** PARTIAL — code-level and isolated regression verification completed; hardware, live-model, and deployed-cloud validation remain unverified.
+**Status:** PARTIAL — Local Windows dependency, model, and synthesis evidence is complete; hardware/Ollama playback and deployed-cloud validation remain unverified.
 
 ## Completed
 
@@ -18,6 +18,12 @@
   enrolled device record.
 - Cloud Voice regression coverage now proves safe `503` provider-unavailable
   and `429` rate-limit responses without provider-detail leakage.
+- Local Voice now pins a Windows-installable Piper release, includes the
+  dependency `faster-whisper` imports but does not declare, and uses Piper's
+  current API. Runtime Hub installs the same pinned dependency set, downloads
+  the Piper model into its managed directory, and both desktop launch paths
+  pass that directory to the backend. The Runtime Manager start path now uses
+  the correct port (`8766`) and Uvicorn application startup.
 
 ## Verification
 
@@ -26,13 +32,16 @@
 | `npx vitest run src/test/services/voiceOsService.test.js` | PASS — 1 file, 9 tests. |
 | `python -m pytest tests -q` in `voice/cloud-backend` | PASS — 16 tests. |
 | `cargo fmt --all` then `cargo test voice_sidecar --lib` in `src-tauri` | PASS — 3 sidecar tests, Windows native compile completed. |
-| `python -m pytest voice/cloud-backend/tests voice/backend/tests -q` | BLOCKED — local Voice test collection lacks the declared `webrtcvad` dependency. |
+| Clean Windows Python 3.11 venv: install `voice/backend/requirements.txt` | PASS — all packages, including `webrtcvad`, installed. |
+| `python -m pytest voice/backend/tests -q` | PASS — 37 tests. |
+| Piper `en_US-lessac-medium` real synthesis | PASS — downloaded successfully; produced a 63,020-byte WAV. |
+| Post-change `cargo test voice_sidecar --lib` | INCONCLUSIVE — native compile exceeded the five-minute command budget without an error diagnostic. |
 
 ## Not verified / blocked
 
-- Local microphone capture, Whisper model loading, Piper model availability,
-  Ollama response, and audio playback require a prepared local Voice Python
-  environment and hardware/runtime evidence.
+- Local microphone capture, Whisper model loading, Ollama response, and audio
+  playback require hardware/runtime evidence. Piper model availability and
+  synthesis are verified in an isolated Windows venv.
 - Live Supabase enrollment, NVIDIA/Piper calls, deployed Cloud Voice health,
   and iPhone playback were intentionally not invoked; they require external
   configuration, credentials, or device access.
