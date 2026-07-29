@@ -895,6 +895,25 @@ dropped.
     calls remain unverified. See
     `audits/2026-07-29_Codex_VoiceOperationalization_Audit.md`.
 
+- [~] **H3 — Migrate Cloud Voice compute from Railway to AWS**
+  - **Owner:** Alphonso; **execution:** Codex
+  - Move only `voice/cloud-backend` in the first phase, preserving Supabase,
+    NVIDIA NIM, and the Farsi Piper endpoint until Cloud Voice compute is
+    proven stable on AWS.
+  - **Done when:** a least-privilege deployment identity publishes an immutable
+    ECR image; an ECS/Fargate service behind HTTPS passes `/ready`, real-device
+    enrollment, English/Farsi voice acceptance, rollback, and observability
+    checks; Railway remains available until the documented rollback window ends.
+  - **Evidence (2026-07-29):** authenticated host account `892748149559`
+    inventory found no ECS clusters or ECR repositories in `ca-central-1` or
+    `us-east-1`. Added `voice/cloud-backend/Dockerfile`, `.dockerignore`,
+    `docs/deployment/AWS_VOICE_MIGRATION.md`, and
+    `audits/2026-07-29_Codex_AWSVoiceMigration_Audit.md`. No cloud resources,
+    secrets, DNS, or Railway configuration were changed. Actual provisioning is
+    awaiting target-region/network/certificate/secret decisions and explicit
+    billable-resource approval. Docker is absent from this Windows host, so the
+    image build is not yet locally verified.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
