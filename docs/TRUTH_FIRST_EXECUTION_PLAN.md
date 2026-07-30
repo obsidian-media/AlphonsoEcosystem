@@ -904,15 +904,17 @@ dropped.
     ECR image; an ECS/Fargate service behind HTTPS passes `/ready`, real-device
     enrollment, English/Farsi voice acceptance, rollback, and observability
     checks; Railway remains available until the documented rollback window ends.
-  - **Evidence (2026-07-29):** authenticated host account `892748149559`
+  - **Evidence (2026-07-30):** authenticated host account `892748149559`
     inventory found no ECS clusters or ECR repositories in `ca-central-1` or
     `us-east-1`. Added `voice/cloud-backend/Dockerfile`, `.dockerignore`,
     `docs/deployment/AWS_VOICE_MIGRATION.md`, and
-    `audits/2026-07-29_Codex_AWSVoiceMigration_Audit.md`. No cloud resources,
-    secrets, DNS, or Railway configuration were changed. Actual provisioning is
-    awaiting target-region/network/certificate/secret decisions and explicit
-    billable-resource approval. Docker is absent from this Windows host, so the
-    image build is not yet locally verified.
+    `audits/2026-07-29_Codex_AWSVoiceMigration_Audit.md`. With owner approval,
+    created the immutable ECR repository, pending ACM certificate, ECS cluster,
+    ECS-only roles, 30-day log group, isolated ALB/task security groups, and a
+    no-target `/ready` IP target group in `ca-central-1`. The validation CNAME
+    resolves publicly but ACM has not yet issued the certificate. No ALB, task,
+    service, secret, DNS, or Railway change exists yet. Docker is absent from
+    this Windows host, so the image build is not yet locally verified.
 
 ## Operating procedure for every task
 
