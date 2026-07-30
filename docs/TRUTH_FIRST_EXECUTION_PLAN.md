@@ -911,10 +911,13 @@ dropped.
     `audits/2026-07-29_Codex_AWSVoiceMigration_Audit.md`. With owner approval,
     created the immutable ECR repository, pending ACM certificate, ECS cluster,
     ECS-only roles, 30-day log group, isolated ALB/task security groups, and a
-    no-target `/ready` IP target group in `ca-central-1`. The validation CNAME
-    resolves publicly but ACM has not yet issued the certificate. No ALB, task,
-    service, secret, DNS, or Railway change exists yet. Docker is absent from
-    this Windows host, so the image build is not yet locally verified.
+    `/ready` IP target group in `ca-central-1`. ACM issued the certificate and
+    an HTTPS ALB is active with an HTTP-to-HTTPS redirect; the `voice` CNAME in
+    Alibaba Cloud remains to be added. No task, service, secret, or Railway
+    change exists yet. Owner restricted spending to free-trial credit: the
+    remaining plan uses no NAT Gateway and one smallest Fargate task only when
+    image and secrets are ready. Docker is absent from this Windows host, so
+    the image build is not yet locally verified.
 
 ## Operating procedure for every task
 

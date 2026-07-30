@@ -40,13 +40,26 @@
   `arn:aws:elasticloadbalancing:ca-central-1:892748149559:targetgroup/alphonso-cloud-voice/bb4d20c36fce8ec4`
   on port 8080, with `/ready` health checks. It has no registered targets.
 - Confirmed the ACM validation CNAME resolves publicly to the requested AWS
-  target. ACM remained `PENDING_VALIDATION` after two post-propagation checks;
-  no load balancer was created before certificate issuance.
+  target. ACM subsequently issued the certificate, valid through 2027-02-12.
+- Created internet-facing Application Load Balancer
+  `alphonso-cloud-voice-1113067864.ca-central-1.elb.amazonaws.com` with HTTPS
+  forwarding on 443 and HTTP-to-HTTPS redirect on 80. Alibaba Cloud DNS still
+  needs a `voice` CNAME to that load-balancer hostname.
 
 ## Not performed
 
-- No ALB, ECS service/task, Secrets Manager secret, DNS record, or Railway
-  setting was created, modified, or deleted.
+- No ECS service/task, Secrets Manager secret, DNS record, or Railway setting
+  was created, modified, or deleted.
+
+## Credit-constrained operation
+
+- Owner specified that the migration must use free-trial credit only. The first
+  service will therefore use one smallest valid Fargate task, public-subnet
+  egress secured by security group (no NAT Gateway), 30-day log retention, and
+  no additional managed services unless essential.
+- A read-only Cost Explorer query was denied because Cost Explorer is not
+  enabled on the account. It was not enabled by this work. The ALB is the only
+  currently active recurring-cost resource; no Fargate task has started.
 - No secret was read, copied, or written.
 - No paid AWS service was started.
 
