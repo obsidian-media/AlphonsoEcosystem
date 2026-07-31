@@ -4,6 +4,20 @@ This is the deployment how-to for moving **only** `voice/cloud-backend` from
 Railway to AWS. It does not move Supabase, NVIDIA NIM, or the Farsi Piper
 service in the first phase.
 
+## Current staging status (2026-07-31)
+
+The credit-constrained AWS staging service is live at
+`https://voice.obsidianmedia.online`: one 0.5 vCPU / 1 GB Fargate task is
+running behind the HTTPS ALB. It uses immutable ECR image
+`sha-db692db7ef55` (digest
+`sha256:01726919ae85acb82e20da2a6b11b52ea389e6ac621248a8fbb0eb582bd75ebd`),
+task definition `alphonso-cloud-voice:1`, and ALB `/ready` health checks.
+Both public `/health` and `/ready` returned successful responses; readiness
+reported NVIDIA NIM, Supabase enrollment, Magpie, and Farsi Piper configured.
+This is not cutover: Railway remains the rollback target until authenticated
+real-device English/Farsi voice acceptance and rollback/observability checks
+are recorded.
+
 ## Target architecture
 
 ```text

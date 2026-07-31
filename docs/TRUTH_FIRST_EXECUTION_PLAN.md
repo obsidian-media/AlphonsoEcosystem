@@ -923,8 +923,17 @@ dropped.
     and Piper secrets. The initial production image build caught an existing
     `groupadd voice` incompatibility with `python:3.11-slim`; after the
     idempotent account-creation correction, a local image build passed, ran as
-    UID 999, and returned `/health` status `ok`. Commit/push the corrected
-    source and create the smallest service next; Railway remains untouched.
+    UID 999, and returned `/health` status `ok`. **Staging evidence
+    (2026-07-31):** committed source `db692db7ef55` was published as immutable
+    ECR image `sha-db692db7ef55` (digest
+    `sha256:01726919ae85acb82e20da2a6b11b52ea389e6ac621248a8fbb0eb582bd75ebd`).
+    ECS task definition `alphonso-cloud-voice:1` and `cloud-voice-staging`
+    started one 0.5 vCPU / 1 GB Fargate task with deployment circuit-breaker
+    rollback. ECS showed `RUNNING`, the ALB target showed `healthy`, and
+    `https://voice.obsidianmedia.online/health` plus `/ready` returned success
+    (NIM, Supabase enrollment, Magpie, and Farsi Piper true). Railway remains
+    unchanged; H3 is still in progress pending real-device voice acceptance,
+    rollback/observability verification, and least-privilege deploy identity.
 
 ## Operating procedure for every task
 

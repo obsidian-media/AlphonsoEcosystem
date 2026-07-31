@@ -99,9 +99,16 @@
 
 ## Remaining deployment blockers
 
-- The corrected Dockerfile must be committed so the immutable ECR tag exactly
-  identifies reviewed source, then pushed and deployed as one smallest Fargate
-  task. No task/service has yet been created at this audit point.
+- **Staging deployment verified (2026-07-31):** committed Dockerfile source
+  `db692db7ef55` was pushed to ECR as immutable
+  `sha-db692db7ef55` (digest
+  `sha256:01726919ae85acb82e20da2a6b11b52ea389e6ac621248a8fbb0eb582bd75ebd`).
+  ECS task definition `alphonso-cloud-voice:1` and service
+  `cloud-voice-staging` use one 0.5 vCPU / 1 GB Fargate task, public-subnet
+  egress without NAT, circuit-breaker rollback, and ALB-only inbound traffic.
+  The task reached `RUNNING`, its target reached `healthy`, and public HTTPS
+  `/health` and `/ready` returned success with NIM, Supabase enrollment,
+  Magpie, and Farsi Piper readiness all true.
 - Live `/ready`, real iPhone enrollment, English/Farsi synthesis, rollback,
   and least-privilege CI deployment identity remain required before H3 can be
   marked complete. Railway remains unchanged as rollback.
@@ -110,6 +117,7 @@
 
 The region, default-VPC subnets, hostname, certificate, and billable-resource
 approval are resolved: `ca-central-1`, `voice.obsidianmedia.online`, and the
-issued ACM certificate. Remaining prerequisites are an image build/push,
-Secrets Manager values, an ECS task definition/service, and real-device
-acceptance before endpoint cutover.
+issued ACM certificate. The image, Secrets Manager values, task definition,
+and staging service are now provisioned. Real-device acceptance, rollback
+exercise, observability alarms, and a least-privilege deployment identity are
+still required before endpoint cutover.

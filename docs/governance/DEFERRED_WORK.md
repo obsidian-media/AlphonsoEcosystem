@@ -7,6 +7,14 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-07-31] AWS Cloud Voice endpoint cutover: **in progress, not cut over.**
+  AWS staging at `https://voice.obsidianmedia.online` has one healthy Fargate
+  task and successful public `/health` + `/ready`, but authenticated iPhone
+  enrollment, English/Farsi voice acceptance, a rollback exercise, CloudWatch
+  alarm verification, and a least-privilege deployment identity are still
+  required. Railway `precious-enjoyment` remains the rollback service. Status:
+  pending real-device and operational verification.
+
 - [2026-07-31] AWS Cloud Voice staging image/service: **resolved for the
   current host.** Docker Desktop 29.6.2 was installed and its Linux engine
   answered the Docker client after launch. The actual program location is
