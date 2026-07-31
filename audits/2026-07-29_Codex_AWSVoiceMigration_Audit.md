@@ -61,11 +61,13 @@
   enabled on the account. It was not enabled by this work. The ALB is the only
   currently active recurring-cost resource; no Fargate task has started.
 - No secret was read, copied, or written.
-- No paid AWS service was started.
+- The HTTPS ALB is a live recurring-cost resource. No ECS Fargate compute,
+  NAT Gateway, or other workload resource has started.
 
 ## Blocking decisions
 
-Actual provisioning requires the target region, VPC/subnet strategy, hostname
-and ACM certificate, secret source, and explicit billable-resource approval.
-The recommended first deployment region is `ca-central-1` for proximity to the
-current Toronto environment; `us-east-1` remains a valid lower-cost alternative.
+The region, default-VPC subnets, hostname, certificate, and billable-resource
+approval are resolved: `ca-central-1`, `voice.obsidianmedia.online`, and the
+issued ACM certificate. Remaining prerequisites are an image build/push,
+Secrets Manager values, an ECS task definition/service, and real-device
+acceptance before endpoint cutover.
