@@ -8,7 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN groupadd --system voice && useradd --system --gid voice --home-dir /app voice
+# Debian's slim image may already provide the `voice` system group.  Support
+# either base-image state while retaining a non-root runtime account.
+RUN getent group voice >/dev/null || groupadd --system voice; \
+    id -u voice >/dev/null 2>&1 || useradd --system --gid voice --home-dir /app voice
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --requirement requirements.txt

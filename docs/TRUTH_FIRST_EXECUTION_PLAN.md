@@ -916,8 +916,15 @@ dropped.
     Alibaba Cloud remains to be added. No task, service, secret, or Railway
     change exists yet. Owner restricted spending to free-trial credit: the
     remaining plan uses no NAT Gateway and one smallest Fargate task only when
-    image and secrets are ready. Docker is absent from this Windows host, so
-    the image build is not yet locally verified.
+    image and secrets are ready. **Update 2026-07-31:** Docker Desktop 29.6.2
+    is now engine-verified on the Windows host (installed under `C:\Program
+    Files\Docker`, not the requested D: path). The publishable Supabase key is
+    stored as an AWS secret and the execution role can read only it, NVIDIA,
+    and Piper secrets. The initial production image build caught an existing
+    `groupadd voice` incompatibility with `python:3.11-slim`; after the
+    idempotent account-creation correction, a local image build passed, ran as
+    UID 999, and returned `/health` status `ok`. Commit/push the corrected
+    source and create the smallest service next; Railway remains untouched.
 
 ## Operating procedure for every task
 

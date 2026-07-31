@@ -79,18 +79,32 @@
   anonymous key plus the caller's JWT/RLS path and must not regress to the
   service-role design.
 
-## Current blockers
+## Progress update (2026-07-31)
 
-- Docker Desktop installer was downloaded to `D:\AgentDevWork\docker`; WSL
-  2.7.3 satisfies Docker's requirement. Its requested custom all-users D:
-  installation relaunches for Windows UAC elevation; automated elevation did
-  not complete. Docker is not installed or daemon-verified yet.
-- The `SUPABASE_ANON_KEY` must be obtained from the Supabase project API
-  settings and written to AWS Secrets Manager without putting it in source,
-  shell history, or chat.
-- Until those two inputs exist, no image can be pushed and no ECS service can
-  become `/ready`; keeping it unstarted avoids consuming Fargate credit on a
-  known-unready workload.
+- Docker Desktop 29.6.2 is installed and its Linux engine was verified with
+  `docker version`. The actual binary location is `C:\Program Files\Docker`,
+  rather than the requested D: path. Docker's helper directory must be on
+  `PATH` for the current shell because `docker-credential-desktop.exe` is not
+  otherwise discovered.
+- The owner-provided Supabase publishable key was saved directly as
+  `alphonso/cloud-voice/supabase-anon-key`. The ECS execution role's existing
+  inline policy now allows `GetSecretValue` for that secret plus the NVIDIA
+  and Piper secrets only. Values were not printed, committed, or copied from
+  Railway's service-role configuration.
+- The first real Docker build exposed an image portability defect: the current
+  `python:3.11-slim` base already includes a `voice` group, causing an
+  unconditional `groupadd` to fail. `voice/cloud-backend/Dockerfile` now
+  creates the group and account only if absent. A local build passed; the
+  container ran as UID 999 and `/health` returned `{"status":"ok"}`.
+
+## Remaining deployment blockers
+
+- The corrected Dockerfile must be committed so the immutable ECR tag exactly
+  identifies reviewed source, then pushed and deployed as one smallest Fargate
+  task. No task/service has yet been created at this audit point.
+- Live `/ready`, real iPhone enrollment, English/Farsi synthesis, rollback,
+  and least-privilege CI deployment identity remain required before H3 can be
+  marked complete. Railway remains unchanged as rollback.
 
 ## Blocking decisions
 
