@@ -6,6 +6,22 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 - `[DATE] <scope>: <what> — <why deferred> — <resume hint> — <status>`
 
 ## Items
+
+- [2026-07-31] AWS Cloud Voice staging image/service: Docker Desktop is not
+  installed yet. The requested `D:\AgentDevWork\docker` custom all-users
+  install requires a Windows UAC approval; an automated elevated attempt did
+  not complete. Resume hint: run the downloaded official installer as
+  administrator, retaining `--installation-dir=D:\AgentDevWork\docker` and
+  `--wsl-default-data-root=D:\AgentDevWork\docker\wsl-data`, then accept the
+  Docker Desktop subscription agreement on first launch. Status: blocked on
+  local administrator interaction.
+- [2026-07-31] AWS Cloud Voice Supabase configuration: the live Railway Cloud
+  Voice service has `SUPABASE_SERVICE_ROLE_KEY` but no `SUPABASE_ANON_KEY`.
+  The hardened AWS code intentionally requires the anonymous key with user
+  JWT/RLS and must not import the service-role secret. Resume hint: retrieve
+  the anonymous/publishable key from Supabase project API settings and add it
+  to AWS Secrets Manager through a secure operator flow. Status: blocked on
+  external credential access.
 - [2026-07-29] Local Voice Python regression suite: **resolved.** A clean Windows Python 3.11 venv installed every pinned dependency, including `webrtcvad`; `pytest voice/backend/tests -q` passed 37/37. Piper's model downloaded and real synthesis returned a 63,020-byte WAV. Runtime Hub now installs the same pinned set and its model into the launch-visible directory. Remaining work is fresh Rust compilation plus microphone/Ollama/playback validation, recorded in H1 rather than deferred as a dependency issue. Status: closed.
 - [2026-07-29] Focused npm Voice test invocation: **resolved.** Added `npm run test:file -- <path>`, which calls Vitest directly instead of the repository-wide programmatic runner that does not honor a focused file filter. Status: closed.
 - [2026-07-29] `scripts/verify.ps1` fallback secret-scan: the required verifier timed out after 600 seconds in `== secret-scan ==` before reaching build/test/deploy stages when `gitleaks` was unavailable. The fallback has now been changed to Git-native tracked-file searches; its content scan completes in ~22 seconds and the script passes PowerShell syntax parsing. Resume hint: rerun `pwsh -File scripts/verify.ps1` to completion after this change and add a timing/exclusion regression test. Status: in progress.

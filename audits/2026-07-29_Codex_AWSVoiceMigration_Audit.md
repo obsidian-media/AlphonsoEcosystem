@@ -64,6 +64,34 @@
 - The HTTPS ALB is a live recurring-cost resource. No ECS Fargate compute,
   NAT Gateway, or other workload resource has started.
 
+## Railway migration evidence (2026-07-31)
+
+- Railway Cloud Voice was identified as production service `precious-enjoyment`
+  in project `Alphonso`; its `/health` and `/ready` endpoints both returned
+  HTTP 200. The Railway Farsi Piper `/health` endpoint also returned HTTP 200.
+  Railway is therefore retained as the working rollback target.
+- Copied `NVIDIA_API_KEY` and `PIPER_SERVICE_TOKEN` directly from that Railway
+  service to two AWS Secrets Manager entries. Values were never displayed.
+  The ECS execution role has an inline policy allowing `GetSecretValue` for
+  those two entries only.
+- The Railway service contains a deprecated Supabase service-role key, but no
+  `SUPABASE_ANON_KEY`. The AWS-targeted hardened Cloud Voice code requires the
+  anonymous key plus the caller's JWT/RLS path and must not regress to the
+  service-role design.
+
+## Current blockers
+
+- Docker Desktop installer was downloaded to `D:\AgentDevWork\docker`; WSL
+  2.7.3 satisfies Docker's requirement. Its requested custom all-users D:
+  installation relaunches for Windows UAC elevation; automated elevation did
+  not complete. Docker is not installed or daemon-verified yet.
+- The `SUPABASE_ANON_KEY` must be obtained from the Supabase project API
+  settings and written to AWS Secrets Manager without putting it in source,
+  shell history, or chat.
+- Until those two inputs exist, no image can be pushed and no ECS service can
+  become `/ready`; keeping it unstarted avoids consuming Fargate credit on a
+  known-unready workload.
+
 ## Blocking decisions
 
 The region, default-VPC subnets, hostname, certificate, and billable-resource
