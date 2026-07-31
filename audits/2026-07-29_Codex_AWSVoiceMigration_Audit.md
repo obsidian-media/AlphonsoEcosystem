@@ -111,7 +111,12 @@
   Magpie, and Farsi Piper readiness all true.
 - Live `/ready`, real iPhone enrollment, English/Farsi synthesis, rollback,
   and least-privilege CI deployment identity remain required before H3 can be
-  marked complete. Railway remains unchanged as rollback.
+  marked complete. `AlphonsoCloudVoiceDeployRole` was created with repository,
+  ECS, pass-role, and deployment-health permissions scoped to Cloud Voice, but
+  its validation showed that AWS root cannot assume roles. A non-root
+  IAM/Identity Center principal must be established and permitted to assume it;
+  no new long-lived credential was created or exposed. Railway remains
+  unchanged as rollback.
 
 ## Blocking decisions
 

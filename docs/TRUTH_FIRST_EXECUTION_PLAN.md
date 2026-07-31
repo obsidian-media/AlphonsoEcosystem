@@ -934,6 +934,11 @@ dropped.
     (NIM, Supabase enrollment, Magpie, and Farsi Piper true). Railway remains
     unchanged; H3 is still in progress pending real-device voice acceptance,
     rollback/observability verification, and least-privilege deploy identity.
+    `AlphonsoCloudVoiceDeployRole` was created with Cloud-Voice-scoped ECR,
+    ECS, pass-role, and health-read permissions, but AWS rejected root's
+    `AssumeRole` attempt (root accounts cannot assume roles). A non-root
+    IAM/Identity Center principal must be authorized to assume this role;
+    intentionally no long-lived access key was created or printed.
 
 ## Operating procedure for every task
 

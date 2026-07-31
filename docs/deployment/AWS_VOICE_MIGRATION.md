@@ -43,6 +43,12 @@ Its target group must use the `ip` target type and `/ready` health path.
 - Do not put any secret in Git, task-definition environment literals, build
   logs, or shell history.
 - Do not use the account root identity for ongoing image pushes or deploys.
+- The current account uses root CLI credentials, which AWS does not permit to
+  assume IAM roles. `AlphonsoCloudVoiceDeployRole` exists with Cloud-Voice-only
+  permissions, but it becomes usable only after the owner creates or selects a
+  non-root IAM/Identity Center principal and grants that principal permission
+  to assume the role. Do not create or paste a long-lived access key into this
+  repository or task definition.
   Bootstrap a least-privilege CI/deployer role first.
 
 ## Required deployment inputs

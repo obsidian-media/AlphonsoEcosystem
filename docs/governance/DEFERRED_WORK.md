@@ -15,6 +15,15 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   required. Railway `precious-enjoyment` remains the rollback service. Status:
   pending real-device and operational verification.
 
+- [2026-07-31] AWS Cloud Voice least-privilege deployment identity: role
+  `AlphonsoCloudVoiceDeployRole` exists and is restricted to the Cloud Voice
+  ECR/ECS/health surface, but root CLI credentials cannot assume it (AWS
+  rejected the validation attempt). Resume hint: establish a non-root IAM or
+  IAM Identity Center principal, allow it `sts:AssumeRole` for this role, then
+  configure the AWS CLI profile and verify `sts get-caller-identity` through
+  the role. Do not store a long-lived key in the repository. Status: blocked
+  on owner identity setup.
+
 - [2026-07-31] AWS Cloud Voice staging image/service: **resolved for the
   current host.** Docker Desktop 29.6.2 was installed and its Linux engine
   answered the Docker client after launch. The actual program location is
