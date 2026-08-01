@@ -897,6 +897,12 @@ dropped.
     reachable. Corrected source health reporting to inspect the configured
     runtime model path rather than the bundled backend path; real microphone,
     English/Farsi turn, and playback acceptance remain outstanding.
+  - **Free-tier Auth remediation (2026-08-01):** Supabase rejected hosted email
+    template changes on its Free/default-email tier. The iOS companion now uses
+    the supported magic-link callback flow (`alphonso://auth/callback`) instead
+    of requiring an OTP template; that callback has been added to the live
+    Auth redirect allow-list. A new signed TestFlight build and device test are
+    required.
   - **Storage relocation (2026-08-01):** moved the managed Voice OS runtime
     and complete Hugging Face model hub from C: to
     `D:\\AgentDevWork\\AlphonsoData`; junctions preserve both original paths.
