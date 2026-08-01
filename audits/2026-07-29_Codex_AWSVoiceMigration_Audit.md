@@ -156,3 +156,18 @@ still required before endpoint cutover.
   All Meta environment tests now share a mutex and restore the caller's
   original variable value with RAII. A final CI run must pass the complete Rust
   suite before the Windows installer artifact can be considered built.
+
+## Final build evidence (2026-08-01)
+
+- GitHub Actions run `30718886085` passed from commit `2c89cbb6ea20a1c39aaef86d1f360083f5064529`.
+  It successfully archived, exported, and uploaded the signed iOS companion to
+  TestFlight, with retained artifact `AlphonsoCompanion-111` (17,516,040 bytes).
+- GitHub Actions run `30718886862` passed from the same commit. Its complete
+  CI matrix passed, including Rust tests, Clippy, Cargo audit, the iOS simulator
+  build, and the Windows Tauri packaging job. The retained Windows NSIS
+  installer artifact is
+  `Alphonso-2c89cbb6ea20a1c39aaef86d1f360083f5064529-x64-setup` (6,980,922
+  bytes).
+- The source/build delivery is complete. Cloud Voice remains **PARTIAL** until
+  the paired iPhone completes real-device enrollment and English plus Farsi
+  voice acceptance against the AWS endpoint.

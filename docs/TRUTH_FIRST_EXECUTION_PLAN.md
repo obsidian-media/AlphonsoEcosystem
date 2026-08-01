@@ -960,6 +960,14 @@ dropped.
     environment variables without serialization or restoration. The tests now
     use a shared mutex and RAII restoration; the Windows installer workflow is
     being rerun as the required verification.
+  - **Build evidence (2026-08-01):** GitHub Actions run
+    `30718886085` passed from commit `2c89cbb6`, archived and exported the
+    signed iOS companion, uploaded it to TestFlight, and retained the
+    `AlphonsoCompanion-111` IPA artifact. GitHub Actions run `30718886862`
+    passed every CI job from the same commit, including Rust tests, Clippy,
+    Cargo audit, iOS simulator build, and Windows Tauri packaging; it retained
+    `Alphonso-2c89cbb6ea20a1c39aaef86d1f360083f5064529-x64-setup`. This proves
+    build/package integrity, not paired-device English/Farsi acceptance.
 
 ## Operating procedure for every task
 
