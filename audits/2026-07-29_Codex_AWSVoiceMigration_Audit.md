@@ -138,3 +138,15 @@ still required before endpoint cutover.
 - This remains an acceptance-build change until the GitHub-hosted signed iOS
   workflow uploads a build and the paired iPhone proves enrollment plus English
   and Farsi voice turns. Railway is not modified by this change.
+
+## CI dependency remediation (2026-08-01)
+
+- The manually dispatched Windows installer CI run initially did not package
+  because Cargo audit found new `RUSTSEC-2026-0221` against transitive
+  `event-listener` 5.4.1. Rust tests, formatting, and Clippy had passed.
+- Dependency tracing found the event-listener path through `zbus` to Tauri's
+  notification and opener plugins. `cargo update -p event-listener --dry-run`
+  found compatible patched version 5.4.2; `Cargo.lock` was updated to it rather
+  than suppressing the advisory. The exact CI audit command subsequently
+  passed locally. A fresh GitHub workflow run is required for the Windows
+  installer artifact.

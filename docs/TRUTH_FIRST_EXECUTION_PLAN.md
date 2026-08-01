@@ -222,6 +222,14 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     Verified locally with the exact CI command before committing: 17 findings
     → 0, exit 0, `cargo audit --file src-tauri/Cargo.lock --deny warnings`
     plus all 17 `--ignore` flags.
+  - **Follow-up (2026-08-01):** CI surfaced new unsound advisory
+    `RUSTSEC-2026-0221` for `event-listener` 5.4.1, introduced after the prior
+    review. Dependency tracing identified the path through
+    `async-broadcast`/`async-lock`/`zbus` to Tauri notification and opener
+    plugins. A compatible patched `event-listener` 5.4.2 was available, so
+    `Cargo.lock` was updated rather than adding an exception. The exact CI
+    audit command passed locally afterward with the existing 17 scoped legacy
+    ignores and no ignore for the new advisory.
 
 - [x] **B2 — Verify connector DSL default-deny behavior**
   - **Owner:** Sentinel; **review:** Maria
