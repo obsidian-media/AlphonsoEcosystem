@@ -897,6 +897,10 @@ dropped.
     reachable. Corrected source health reporting to inspect the configured
     runtime model path rather than the bundled backend path; real microphone,
     English/Farsi turn, and playback acceptance remain outstanding.
+  - **Storage relocation (2026-08-01):** moved the managed Voice OS runtime
+    and complete Hugging Face model hub from C: to
+    `D:\\AgentDevWork\\AlphonsoData`; junctions preserve both original paths.
+    Alphonso restarted successfully and port `8766` remained healthy.
 
 - [~] **H2 — Make Cloud Voice contracts portable and resilient**
   - **Owner:** Sentinel; **execution:** Codex

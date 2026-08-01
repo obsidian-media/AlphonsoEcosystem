@@ -17,6 +17,10 @@
 - Fixed source health reporting so `tts` checks `VOICE_PIPER_MODEL_DIR`, which
   is where the production sidecar stores the Piper model. The already-built
   installer retains the old status field, but the runtime itself is healthy.
+- Relocated the managed Voice OS runtime and all Hugging Face hub models to
+  `D:\\AgentDevWork\\AlphonsoData` at the owner's request. Windows junctions at
+  the original C: paths retain application compatibility; after each move, the
+  desktop app restarted and its Voice OS health endpoint remained available.
 
 ## Completed
 
