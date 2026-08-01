@@ -150,3 +150,9 @@ still required before endpoint cutover.
   than suppressing the advisory. The exact CI audit command subsequently
   passed locally. A fresh GitHub workflow run is required for the Windows
   installer artifact.
+- The rerun cleared Cargo audit, then failed in an unrelated existing test:
+  `meta_appsecret_proof_returns_none_without_secret`. The cause was a
+  process-global `META_APP_SECRET` mutation racing the parallel HMAC test.
+  All Meta environment tests now share a mutex and restore the caller's
+  original variable value with RAII. A final CI run must pass the complete Rust
+  suite before the Windows installer artifact can be considered built.

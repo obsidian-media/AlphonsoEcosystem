@@ -954,6 +954,12 @@ dropped.
     The GitHub Actions iOS/TestFlight and Windows installer builds are required
     verification for this source change; real-device enrollment and both voice
     languages remain the acceptance gate.
+  - **CI follow-up (2026-08-01):** the dependency remediation cleared Cargo
+    audit in GitHub Actions, but the full Rust suite exposed a pre-existing
+    parallel-test race: Meta configuration tests mutated process-global
+    environment variables without serialization or restoration. The tests now
+    use a shared mutex and RAII restoration; the Windows installer workflow is
+    being rerun as the required verification.
 
 ## Operating procedure for every task
 
