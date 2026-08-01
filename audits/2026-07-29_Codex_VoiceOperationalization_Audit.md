@@ -4,6 +4,20 @@
 **Scope:** Windows-executable Local Voice lifecycle and Cloud Voice contract hardening.
 **Status:** PARTIAL — Local Windows dependency, model, and synthesis evidence is complete; hardware/Ollama playback and deployed-cloud validation remain unverified.
 
+## Windows runtime repair (2026-08-01)
+
+- The installed desktop application repeatedly reported `Voice OS offline —
+  restarting...`. Investigation found no Voice OS managed venv or Piper model
+  in `%APPDATA%\\Alphonso\\runtimes\\voice-os`; the sidecar consequently used an
+  unrelated Python environment and exited.
+- Installed the pinned backend requirements and Piper `en_US-lessac-medium`
+  model in the managed runtime directory, then warmed the local Whisper cache.
+  After restarting the desktop application, `http://127.0.0.1:8766/health`
+  returned HTTP 200, with STT available and local Ollama reachable.
+- Fixed source health reporting so `tts` checks `VOICE_PIPER_MODEL_DIR`, which
+  is where the production sidecar stores the Piper model. The already-built
+  installer retains the old status field, but the runtime itself is healthy.
+
 ## Completed
 
 - Local Voice sidecar startup now waits up to five seconds for

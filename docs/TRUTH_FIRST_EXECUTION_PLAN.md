@@ -888,6 +888,15 @@ dropped.
     path is not yet re-verified. Microphone/Ollama/playback hardware evidence
     is separately not claimed. See
     `audits/2026-07-29_Codex_VoiceOperationalization_Audit.md`.
+  - **Windows runtime repair (2026-08-01):** the installed desktop application
+    showed `Voice OS offline — restarting...` because its managed `voice-os`
+    venv and Piper model were absent; it fell back to an unrelated Python
+    environment. Installed the pinned runtime to `%APPDATA%\\Alphonso\\runtimes\\voice-os`,
+    warmed the Whisper cache, and restarted the application. Its port `8766`
+    health endpoint then returned HTTP 200 with STT available and Ollama
+    reachable. Corrected source health reporting to inspect the configured
+    runtime model path rather than the bundled backend path; real microphone,
+    English/Farsi turn, and playback acceptance remain outstanding.
 
 - [~] **H2 — Make Cloud Voice contracts portable and resilient**
   - **Owner:** Sentinel; **execution:** Codex
