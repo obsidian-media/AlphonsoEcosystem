@@ -126,3 +126,15 @@ issued ACM certificate. The image, Secrets Manager values, task definition,
 and staging service are now provisioned. Real-device acceptance, rollback
 exercise, observability alarms, and a least-privilege deployment identity are
 still required before endpoint cutover.
+
+## iOS AWS test-build preparation (2026-08-01)
+
+- Changed the bundled iOS `CloudVoiceEndpoint` to the live AWS HTTPS endpoint
+  `https://voice.obsidianmedia.online/v1/voice/respond`.
+- Corrected endpoint precedence in `VoiceCloudService`: a valid endpoint
+  selected in Settings and persisted in `UserDefaults` now wins over the bundle
+  value. Previously, the bundle value always won, making a Railway rollback
+  setting ineffective after relaunch.
+- This remains an acceptance-build change until the GitHub-hosted signed iOS
+  workflow uploads a build and the paired iPhone proves enrollment plus English
+  and Farsi voice turns. Railway is not modified by this change.

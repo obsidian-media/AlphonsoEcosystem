@@ -939,6 +939,13 @@ dropped.
     `AssumeRole` attempt (root accounts cannot assume roles). A non-root
     IAM/Identity Center principal must be authorized to assume this role;
     intentionally no long-lived access key was created or printed.
+  - **iOS AWS acceptance build (2026-08-01):** the bundled Cloud Voice endpoint
+    now targets `https://voice.obsidianmedia.online/v1/voice/respond`. A stored
+    valid HTTPS endpoint now takes precedence over the bundle value, fixing the
+    pre-existing rollback defect where Settings changes were ignored on launch.
+    The GitHub Actions iOS/TestFlight and Windows installer builds are required
+    verification for this source change; real-device enrollment and both voice
+    languages remain the acceptance gate.
 
 ## Operating procedure for every task
 

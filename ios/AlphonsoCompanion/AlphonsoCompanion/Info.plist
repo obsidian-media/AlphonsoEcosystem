@@ -55,7 +55,7 @@
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Alphonso uses speech recognition to transcribe your voice.</string>
 	<key>CloudVoiceEndpoint</key>
-	<string>https://precious-enjoyment-production-d2af.up.railway.app/v1/voice/respond</string>
+	<string>https://voice.obsidianmedia.online/v1/voice/respond</string>
 	<key>SupabaseURL</key>
 	<string>https://ywavjlmjbxuslbxactsx.supabase.co</string>
 	<key>SupabasePublishableKey</key>

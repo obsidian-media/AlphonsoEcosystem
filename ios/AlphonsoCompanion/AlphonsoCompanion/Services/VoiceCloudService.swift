@@ -89,7 +89,9 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
 
     override init() {
         let bundledEndpoint = Bundle.main.object(forInfoDictionaryKey: "CloudVoiceEndpoint") as? String
-        let storedEndpoint = bundledEndpoint ?? UserDefaults.standard.string(forKey: endpointKey) ?? ""
+        // A user-selected endpoint must take precedence so a tested Railway
+        // rollback remains possible without another signed iOS build.
+        let storedEndpoint = UserDefaults.standard.string(forKey: endpointKey) ?? bundledEndpoint ?? ""
         let securedKey = Self.loadAPIKey(account: apiKeyAccount)
         let legacyKey = UserDefaults.standard.string(forKey: legacyAPIKeyKey)
         let storedAPIKey = securedKey ?? legacyKey ?? ""
