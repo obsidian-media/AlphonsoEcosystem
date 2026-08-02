@@ -7,6 +7,13 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-02] Voice runtime and temporary Cloud Voice bypass: **open.**
+  Ollama cold-load remains unverified after the five-minute timeout fix, and
+  Voice OS health can disagree with its watchdog toast. Cloud Voice runs with
+  temporary owner-only bypass enabled and must be rolled back before broader
+  use. Resume from
+  `docs/handoffs/2026-08-02_Codex_VoiceRuntimeAndCloudVoice_Handoff.md`.
+
 - [2026-07-31] AWS Cloud Voice endpoint cutover: **in progress, not cut over.**
   AWS staging at `https://voice.obsidianmedia.online` has one healthy Fargate
   task and successful public `/health` + `/ready`, but authenticated iPhone
