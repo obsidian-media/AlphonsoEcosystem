@@ -92,6 +92,7 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
 
     private var supabaseURL: String { Bundle.main.object(forInfoDictionaryKey: "SupabaseURL") as? String ?? "" }
     private var supabasePublishableKey: String { Bundle.main.object(forInfoDictionaryKey: "SupabasePublishableKey") as? String ?? "" }
+    private var ownerTestingBypass: Bool { Bundle.main.object(forInfoDictionaryKey: "CloudVoiceOwnerTestingBypass") as? Bool ?? false }
 
     override init() {
         let bundledEndpoint = Bundle.main.object(forInfoDictionaryKey: "CloudVoiceEndpoint") as? String
@@ -165,7 +166,9 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         request.httpMethod = "POST"
         request.timeoutInterval = 75
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(try await validAccessToken())", forHTTPHeaderField: "Authorization")
+        if !ownerTestingBypass {
+            request.setValue("Bearer \(try await validAccessToken())", forHTTPHeaderField: "Authorization")
+        }
         request.setValue(try deviceID(), forHTTPHeaderField: "X-Alphonso-Device-Id")
 
         let payload: [String: Any] = [

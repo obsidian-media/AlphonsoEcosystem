@@ -35,6 +35,11 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   Voice testing proceeds. Re-enable only after explicitly requested, then
   validate the magic-link callback, device enrollment, English/Farsi turns,
   and rollback path. Status: deferred.
+- [2026-08-01] Cloud Voice owner-only testing bypass: **temporary.** Enable
+  `VOICE_ALLOW_OWNER_TESTING_BYPASS=true` only for the owner's short test
+  window; it bypasses Supabase device enforcement and must be reset to `false`
+  before any broader use. Restore the iOS sign-in UI and validate enrollment,
+  English/Farsi, and rollback before closing. Status: deferred.
 - [2026-07-31] AWS Cloud Voice Supabase configuration: **resolved.** The
   owner supplied the publishable/anonymous key and it was placed directly in
   AWS Secrets Manager as `alphonso/cloud-voice/supabase-anon-key`; the ECS

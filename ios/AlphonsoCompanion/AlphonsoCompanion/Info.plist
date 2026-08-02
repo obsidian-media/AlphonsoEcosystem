@@ -62,5 +62,7 @@
 	<string>https://ywavjlmjbxuslbxactsx.supabase.co</string>
 	<key>SupabasePublishableKey</key>
 	<string>sb_publishable__PzRloOOxtW8nQjfysRm0w_5oHkuERj</string>
+	<key>CloudVoiceOwnerTestingBypass</key>
+	<true/>
 </dict>
 </plist>

@@ -19,6 +19,7 @@ class Settings:
     request_timeout_seconds: float
     supabase_url: str
     supabase_anon_key: str
+    allow_owner_testing_bypass: bool
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -36,6 +37,7 @@ class Settings:
             request_timeout_seconds=float(os.environ.get("VOICE_CLOUD_TIMEOUT_SECONDS", "60")),
             supabase_url=os.environ.get("SUPABASE_URL", "").rstrip("/"),
             supabase_anon_key=os.environ.get("SUPABASE_ANON_KEY", "").strip(),
+            allow_owner_testing_bypass=os.environ.get("VOICE_ALLOW_OWNER_TESTING_BYPASS", "false").strip().lower() == "true",
         )
 
     @property
