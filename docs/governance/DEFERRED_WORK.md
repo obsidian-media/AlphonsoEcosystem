@@ -30,6 +30,11 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   `C:\Program Files\Docker`, not the requested `D:\AgentDevWork\docker`;
   relocating Docker Desktop/data remains an owner decision and is not needed
   to build or deploy Cloud Voice. Status: closed.
+- [2026-08-01] Cloud Voice/Supabase Auth: **paused by owner request.** The
+  iOS Cloud Voice selector and sign-in UI are intentionally hidden while Local
+  Voice testing proceeds. Re-enable only after explicitly requested, then
+  validate the magic-link callback, device enrollment, English/Farsi turns,
+  and rollback path. Status: deferred.
 - [2026-07-31] AWS Cloud Voice Supabase configuration: **resolved.** The
   owner supplied the publishable/anonymous key and it was placed directly in
   AWS Secrets Manager as `alphonso/cloud-voice/supabase-anon-key`; the ECS

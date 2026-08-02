@@ -6,6 +6,7 @@ struct VoiceView: View {
     @StateObject private var viewModel = VoiceSessionViewModel()
     @State private var cloudEmail = ""
     @State private var cloudOTP = ""
+    private let cloudVoicePaused = true
 
     var body: some View {
         NavigationStack {
@@ -17,7 +18,7 @@ struct VoiceView: View {
                         get: { viewModel.mode },
                         set: { viewModel.selectMode($0) }
                     )) {
-                        ForEach(VoiceMode.allCases) { mode in
+                        ForEach(VoiceMode.allCases.filter { !cloudVoicePaused || $0 != .cloud }) { mode in
                             Label(mode.title, systemImage: mode.systemImage)
                                 .tag(mode)
                         }
@@ -43,7 +44,7 @@ struct VoiceView: View {
                     .background(.thinMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-                    if viewModel.mode == .cloud {
+                    if !cloudVoicePaused && viewModel.mode == .cloud {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Cloud backend")
                                 .font(.headline)
