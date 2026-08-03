@@ -5,7 +5,7 @@ from router import detect_agent, AGENTS
 
 
 def test_all_agents_defined():
-    expected = {"alphonso_core", "jose", "hector", "miya", "maria", "marcus", "echo", "sentinel", "nova"}
+    expected = {"alphonso", "jose", "hector", "miya", "maria", "marcus", "echo", "sentinel", "nova"}
     assert set(AGENTS) == expected
 
 

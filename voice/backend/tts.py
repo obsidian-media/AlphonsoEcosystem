@@ -1,38 +1,37 @@
 import asyncio
 import io
+import logging
+import os
 import wave
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 _executor = ThreadPoolExecutor(max_workers=2)
+_VOICE_MODEL = "en_US-lessac-medium.onnx"
+
+
+def _model_path() -> Path:
+    """Use the Runtime Hub model directory when present, otherwise bundled assets."""
+    model_dir = Path(os.environ.get("VOICE_PIPER_MODEL_DIR", Path(__file__).parent))
+    return model_dir / _VOICE_MODEL
 
 
 @lru_cache(maxsize=1)
 def _load_piper():
     from piper import PiperVoice
-    from pathlib import Path
-    import logging
 
-    model_path = Path(__file__).parent / "en_US-lessac-medium.onnx"
+    model_path = _model_path()
     if not model_path.exists():
-        try:
-            import piper
-            logging.warning("Piper voice model not found — downloading en_US-lessac-medium (first run only)...")
-            piper.download_model("en_US-lessac-medium", download_dir=str(Path(__file__).parent))
-        except Exception as error:
-            logging.error(
-                "Failed to auto-download Piper voice model: %s. "
-                "Voice replies will be silent (STT/routing still work). "
-                "Run manually: python -c \"import piper; piper.download_model('en_US-lessac-medium')\"",
-                error,
-            )
-            return None
-
-    if not model_path.exists():
-        logging.error("Piper voice model still missing after download attempt — voice replies will be silent.")
+        logging.error(
+            "Piper voice model is missing — voice replies will be silent. "
+            "Provision it explicitly with: python -m piper.download_voices "
+            "--data-dir %s en_US-lessac-medium",
+            model_path.parent,
+        )
         return None
 
-    return PiperVoice.load("en_US-lessac-medium")
+    return PiperVoice.load(str(model_path))
 
 
 def _synthesize_sync(text: str) -> bytes:
@@ -44,7 +43,7 @@ def _synthesize_sync(text: str) -> bytes:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(voice.config.sample_rate)
-        voice.synthesize(text, wf)
+        voice.synthesize_wav(text, wf)
     return buf.getvalue()
 
 

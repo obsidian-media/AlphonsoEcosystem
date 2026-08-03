@@ -312,7 +312,10 @@ final class VoiceSessionViewModel: ObservableObject {
         }
     }
 
-    var cloudReady: Bool { cloudAuthStatus == "Cloud Voice account connected" && !cloudEndpoint.isEmpty }
+    var cloudReady: Bool {
+        let bypass = Bundle.main.object(forInfoDictionaryKey: "CloudVoiceOwnerTestingBypass") as? Bool ?? false
+        return (bypass || cloudAuthStatus == "Cloud Voice account connected") && !cloudEndpoint.isEmpty
+    }
 
     func prepareForVoiceSession() {
         audioService.requestPermissions { [weak self] granted in

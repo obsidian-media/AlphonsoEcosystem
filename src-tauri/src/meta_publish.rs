@@ -616,43 +616,79 @@ pub(crate) async fn meta_publish_content(
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::ffi::OsString;
+  use std::sync::{Mutex, MutexGuard};
+
+  // Environment variables are process-global, while Rust unit tests execute in
+  // parallel. Keep the Meta configuration tests serial and always put a
+  // pre-existing value back, so one test cannot affect another test or the
+  // developer's shell configuration.
+  static META_ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+  struct EnvVarRestore {
+    key: &'static str,
+    original: Option<OsString>,
+  }
+
+  impl Drop for EnvVarRestore {
+    fn drop(&mut self) {
+      match &self.original {
+        Some(value) => std::env::set_var(self.key, value),
+        None => std::env::remove_var(self.key),
+      }
+    }
+  }
+
+  fn set_meta_env(
+    key: &'static str,
+    value: Option<&str>,
+  ) -> (MutexGuard<'static, ()>, EnvVarRestore) {
+    let lock = META_ENV_TEST_LOCK
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let restore = EnvVarRestore {
+      key,
+      original: std::env::var_os(key),
+    };
+    match value {
+      Some(value) => std::env::set_var(key, value),
+      None => std::env::remove_var(key),
+    }
+    (lock, restore)
+  }
 
   #[test]
   fn meta_graph_api_version_defaults_when_unset() {
-    // SAFETY: env manipulation in tests; safe because tests run in isolation
-    std::env::remove_var("META_GRAPH_API_VERSION");
+    let (_lock, _restore) = set_meta_env("META_GRAPH_API_VERSION", None);
     assert_eq!(meta_graph_api_version(), "v20.0");
   }
 
   #[test]
   fn meta_graph_api_version_strips_leading_slash() {
-    std::env::set_var("META_GRAPH_API_VERSION", "/v19.0");
+    let (_lock, _restore) = set_meta_env("META_GRAPH_API_VERSION", Some("/v19.0"));
     assert_eq!(meta_graph_api_version(), "v19.0");
-    std::env::remove_var("META_GRAPH_API_VERSION");
   }
 
   #[test]
   fn meta_graph_api_version_treats_empty_as_default() {
-    std::env::set_var("META_GRAPH_API_VERSION", "   ");
+    let (_lock, _restore) = set_meta_env("META_GRAPH_API_VERSION", Some("   "));
     assert_eq!(meta_graph_api_version(), "v20.0");
-    std::env::remove_var("META_GRAPH_API_VERSION");
   }
 
   #[test]
   fn meta_appsecret_proof_returns_none_without_secret() {
-    std::env::remove_var("META_APP_SECRET");
+    let (_lock, _restore) = set_meta_env("META_APP_SECRET", None);
     assert!(meta_appsecret_proof("any_token").is_none());
   }
 
   #[test]
   fn meta_appsecret_proof_returns_hex_hmac_when_secret_set() {
-    std::env::set_var("META_APP_SECRET", "secret123");
+    let (_lock, _restore) = set_meta_env("META_APP_SECRET", Some("secret123"));
     let proof = meta_appsecret_proof("access_token");
     assert!(proof.is_some());
     let value = proof.unwrap();
     assert_eq!(value.len(), 64, "HMAC-SHA256 hex must be 64 chars");
     assert!(value.chars().all(|c| c.is_ascii_hexdigit()));
-    std::env::remove_var("META_APP_SECRET");
   }
 
   #[test]

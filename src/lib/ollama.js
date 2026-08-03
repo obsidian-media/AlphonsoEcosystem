@@ -313,7 +313,7 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
   const baseUrl = normalizeEndpoint(endpoint);
   const controller = new AbortController();
   const mergedSignal = signal || controller.signal;
-  const timeoutId = window.setTimeout(() => controller.abort(), 90000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 300000);
 
   try {
     const response = await fetch(`${baseUrl}/api/generate`, {
@@ -375,7 +375,7 @@ export async function generateOllamaStream({ endpoint, model, prompt, onToken, s
 async function executeChatStream({ endpoint, model, messages, onToken, signal }) {
   const controller = new AbortController();
   const mergedSignal = signal || controller.signal;
-  const timeoutId = window.setTimeout(() => controller.abort(), 90000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 300000);
 
   try {
     const response = await fetch(`${endpoint}/api/chat`, {

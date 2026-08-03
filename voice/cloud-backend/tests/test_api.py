@@ -8,11 +8,12 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from app.main import app
+from app.nvidia import NvidiaError, NvidiaRateLimitError
 
 
 ENV = {
     "SUPABASE_URL": "https://example.supabase.co",
-    "SUPABASE_SERVICE_ROLE_KEY": "service-role-key",
+    "SUPABASE_ANON_KEY": "publishable-key",
     "NVIDIA_API_KEY": "nvidia-key",
     "NVIDIA_NIM_MODEL": "nvidia/nemotron-mini-4b-instruct",
     "NVIDIA_TTS_MAGPIE_URL": "https://example.test/magpie",
@@ -23,6 +24,14 @@ ENV = {
 def test_ready_fails_without_configuration(monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     assert TestClient(app).get("/ready").status_code == 503
+
+
+def test_ready_uses_only_the_active_cloud_voice_dependencies():
+    with patch.dict(os.environ, ENV, clear=False):
+        response = TestClient(app).get("/ready")
+
+    assert response.status_code == 200
+    assert response.json()["device_enrollment"] is True
 
 
 def test_voice_requires_user_token():
@@ -63,3 +72,31 @@ def test_farsi_voice_uses_selected_piper_voice():
     assert response.status_code == 200
     assert response.json()["tts_provider"] == "piper"
     synthesize.assert_awaited_once_with("سلام", "manta")
+
+
+def test_voice_returns_safe_unavailable_error_when_provider_fails():
+    with patch.dict(os.environ, ENV, clear=False), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(side_effect=NvidiaError())), \
+         patch("app.main.SupabaseDeviceRegistry.require_active_device", new=AsyncMock()):
+        response = TestClient(app).post(
+            "/v1/voice/respond",
+            headers={"Authorization": "Bearer user-access-token", "X-Alphonso-Device-Id": "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"},
+            json={"session_id": "s", "text": "hello"},
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "NVIDIA voice provider is unavailable"
+
+
+def test_voice_returns_rate_limit_error_without_provider_details():
+    with patch.dict(os.environ, ENV, clear=False), \
+         patch("app.main.NvidiaClient.complete", new=AsyncMock(side_effect=NvidiaRateLimitError())), \
+         patch("app.main.SupabaseDeviceRegistry.require_active_device", new=AsyncMock()):
+        response = TestClient(app).post(
+            "/v1/voice/respond",
+            headers={"Authorization": "Bearer user-access-token", "X-Alphonso-Device-Id": "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"},
+            json={"session_id": "s", "text": "hello"},
+        )
+
+    assert response.status_code == 429
+    assert response.json()["detail"] == "NVIDIA voice provider is rate limited"

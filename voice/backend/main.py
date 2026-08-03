@@ -1,4 +1,5 @@
 import asyncio
+import importlib.util
 import json
 from contextlib import asynccontextmanager
 
@@ -10,7 +11,7 @@ from pipeline import local_ollama_url, run_pipeline
 from session import register, cancel, cleanup_done
 from state import get_state, set_state, remove_state
 from stt import _load_model as load_stt
-from tts import _load_piper as load_tts
+from tts import _load_piper as load_tts, _model_path as tts_model_path
 
 
 @asynccontextmanager
@@ -26,8 +27,11 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
+    # Voice OS does not use browser cookies or HTTP authentication. WebSocket
+    # authorization is handled separately, so wildcard origins are safe only
+    # with credentials disabled.
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -35,12 +39,12 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
+    # The production sidecar stores Piper under VOICE_PIPER_MODEL_DIR (the
+    # Runtime Hub directory), not next to this bundled backend. Report the
+    # actual model location so desktop health reflects a usable local TTS.
     tts_ok = False
     try:
-        import os
-        from pathlib import Path
-        model_path = Path(__file__).parent / "en_US-lessac-medium.onnx"
-        tts_ok = model_path.exists()
+        tts_ok = tts_model_path().exists()
     except Exception:
         pass
     ollama_reachable = False
@@ -52,8 +56,8 @@ async def health():
         pass
     return {
         "status": "ok",
-        "stt": True,
-        "tts": tts_ok,
+        "stt": importlib.util.find_spec("faster_whisper") is not None,
+        "tts": tts_ok and importlib.util.find_spec("piper") is not None,
         "ollama": {"url": local_ollama_url(), "reachable": ollama_reachable},
     }
 

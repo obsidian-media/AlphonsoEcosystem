@@ -222,6 +222,14 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
     Verified locally with the exact CI command before committing: 17 findings
     → 0, exit 0, `cargo audit --file src-tauri/Cargo.lock --deny warnings`
     plus all 17 `--ignore` flags.
+  - **Follow-up (2026-08-01):** CI surfaced new unsound advisory
+    `RUSTSEC-2026-0221` for `event-listener` 5.4.1, introduced after the prior
+    review. Dependency tracing identified the path through
+    `async-broadcast`/`async-lock`/`zbus` to Tauri notification and opener
+    plugins. A compatible patched `event-listener` 5.4.2 was available, so
+    `Cargo.lock` was updated rather than adding an exception. The exact CI
+    audit command passed locally afterward with the existing 17 scoped legacy
+    ignores and no ignore for the new advisory.
 
 - [x] **B2 — Verify connector DSL default-deny behavior**
   - **Owner:** Sentinel; **review:** Maria
@@ -704,30 +712,40 @@ either report) and are real, unfixed as of 2026-07-26.
     length near-miss tokens are still rejected, and `pytest` for
     `voice/cloud-backend` passes.
 
-- [ ] **F2 — Fix invalid CORS configuration in local Voice OS backend**
+- [~] **F2 — Fix invalid CORS configuration in local Voice OS backend**
   - **Owner:** Sentinel
   - `voice/backend/main.py:27-33` configures `CORSMiddleware` with
     `allow_origins=["*"]` and `allow_credentials=True` simultaneously —
     invalid per the CORS spec; browsers reject the credentialed case in
     practice today, but the config should not rely on that as the only
     guard.
-  - **Done when:** `allow_origins` is a specific, documented local origin
-    list (matching this service's actual local-only usage — see the Port
-    map in `CLAUDE.md`), or `allow_credentials` is removed if wildcard
-    origins are genuinely required, with a comment recording which case was
-    chosen and why.
+- **Done when:** `allow_origins` is a specific, documented local origin
+  list (matching this service's actual local-only usage — see the Port
+  map in `CLAUDE.md`), or `allow_credentials` is removed if wildcard
+  origins are genuinely required, with a comment recording which case was
+  chosen and why.
+  - **Implementation (2026-07-29):** wildcard origins were retained for the
+    local no-cookie Voice OS client and `allow_credentials` was set to false,
+    with a regression test added. Verification remains in progress because
+    this host cannot collect the local Voice test module without its declared
+    `webrtcvad` dependency.
 
-- [ ] **F3 — Reduce Supabase service-role-key exposure in Cloud Voice**
+- [~] **F3 — Reduce Supabase service-role-key exposure in Cloud Voice**
   - **Owner:** Sentinel; **review:** Maria
   - **Same underlying gap as production-readiness item T18** (see Section G
     below) — tracked once here, not duplicated. `voice/cloud-backend/app/supabase_auth.py`
     sends the full-privilege Supabase service-role key as a Bearer token in
     three separate outbound REST calls (lines 34, 51, 72), rather than a
     scoped RPC/restricted key.
-  - **Done when:** device-enrollment and lookup calls use a restricted-scope
-    credential or a Supabase RPC function instead of the raw service-role
-    key, or the current design is reviewed and explicitly accepted with a
-    documented reason (e.g., no viable restricted-key path exists yet).
+- **Done when:** device-enrollment and lookup calls use a restricted-scope
+  credential or a Supabase RPC function instead of the raw service-role
+  key, or the current design is reviewed and explicitly accepted with a
+  documented reason (e.g., no viable restricted-key path exists yet).
+  - **Implementation (2026-07-29):** Cloud Voice now uses `SUPABASE_ANON_KEY`
+    plus the authenticated user's JWT for `/auth` and `voice_devices` calls,
+    allowing the existing RLS policies to enforce ownership. The Cloud Voice
+    test suite passed (13 tests). This remains in progress until the Railway
+    variable is changed and the RLS-backed flow is verified against Supabase.
 
 ### G. Carried-forward production-readiness backlog (T11–T20)
 
@@ -847,6 +865,129 @@ dropped.
     other prerequisites (Git, Ollama) via winget/brew/apt but not Python
     itself. Still open.
 
+### H. Voice operationalization (Windows-executable)
+
+- [~] **H1 — Make Local Voice readiness and sidecar failures diagnosable**
+  - **Owner:** Alphonso; **execution:** Codex
+  - Verify prerequisite detection, sidecar lifecycle, local pipeline failure
+    handling, and focused regression coverage without requiring audio hardware.
+  - **Done when:** Windows-local commands provide actionable readiness evidence,
+    focused tests cover missing prerequisites and lifecycle failures, and any
+    unavailable hardware/live-model evidence is explicitly deferred.
+  - **Evidence (2026-07-29):** direct Vitest passed 9/9 for `voiceOsService`.
+    In a clean Windows Python 3.11 venv, the complete pinned local Voice
+    dependency set installed successfully (including `webrtcvad`), and
+    `pytest voice/backend/tests -q` passed 37/37. Piper `1.5.0` downloaded its
+    Windows voice model successfully and produced a real 63,020-byte WAV.
+    Runtime Hub now installs the same pinned dependencies and model into its
+    managed directory; both launch paths use port 8766 and that model path.
+    Startup waits for loopback health and fails cleanly rather than reporting a
+    spawned process as ready. The immediately preceding sidecar Rust test pass
+    was 3/3; a new post-change compile attempt exceeded this host's five-minute
+    time budget while compiling native dependencies, so the changed Rust launch
+    path is not yet re-verified. Microphone/Ollama/playback hardware evidence
+    is separately not claimed. See
+    `audits/2026-07-29_Codex_VoiceOperationalization_Audit.md`.
+  - **Windows runtime repair (2026-08-01):** the installed desktop application
+    showed `Voice OS offline — restarting...` because its managed `voice-os`
+    venv and Piper model were absent; it fell back to an unrelated Python
+    environment. Installed the pinned runtime to `%APPDATA%\\Alphonso\\runtimes\\voice-os`,
+    warmed the Whisper cache, and restarted the application. Its port `8766`
+    health endpoint then returned HTTP 200 with STT available and Ollama
+    reachable. Corrected source health reporting to inspect the configured
+    runtime model path rather than the bundled backend path; real microphone,
+    English/Farsi turn, and playback acceptance remain outstanding.
+  - **Free-tier Auth remediation (2026-08-01):** Supabase rejected hosted email
+    template changes on its Free/default-email tier. The iOS companion now uses
+    the supported magic-link callback flow (`alphonso://auth/callback`) instead
+    of requiring an OTP template; that callback has been added to the live
+    Auth redirect allow-list. A new signed TestFlight build and device test are
+    required.
+  - **Storage relocation (2026-08-01):** moved the managed Voice OS runtime
+    and complete Hugging Face model hub from C: to
+    `D:\\AgentDevWork\\AlphonsoData`; junctions preserve both original paths.
+    Alphonso restarted successfully and port `8766` remained healthy.
+
+- [~] **H2 — Make Cloud Voice contracts portable and resilient**
+  - **Owner:** Sentinel; **execution:** Codex
+  - Complete provider-neutral configuration, authentication/error contract
+    tests, and redacted diagnostics without deploying or invoking paid APIs.
+  - **Done when:** tests prove safe behavior for enrollment/session/device and
+    provider failures; deployment/live-provider verification remains separately
+    recorded as blocked until explicitly authorized.
+  - **Evidence (2026-07-29):** removed the unused `VOICE_CLOUD_API_KEY`
+    readiness requirement, retaining the actual Supabase JWT + enrolled-device
+    authorization model. Isolated Cloud Voice tests passed 16/16, including
+    safe unavailable/rate-limit responses. Live configuration and provider
+    calls remain unverified. See
+    `audits/2026-07-29_Codex_VoiceOperationalization_Audit.md`.
+
+- [~] **H3 — Migrate Cloud Voice compute from Railway to AWS**
+  - **Owner:** Alphonso; **execution:** Codex
+  - Move only `voice/cloud-backend` in the first phase, preserving Supabase,
+    NVIDIA NIM, and the Farsi Piper endpoint until Cloud Voice compute is
+    proven stable on AWS.
+  - **Done when:** a least-privilege deployment identity publishes an immutable
+    ECR image; an ECS/Fargate service behind HTTPS passes `/ready`, real-device
+    enrollment, English/Farsi voice acceptance, rollback, and observability
+    checks; Railway remains available until the documented rollback window ends.
+  - **Evidence (2026-07-30):** authenticated host account `892748149559`
+    inventory found no ECS clusters or ECR repositories in `ca-central-1` or
+    `us-east-1`. Added `voice/cloud-backend/Dockerfile`, `.dockerignore`,
+    `docs/deployment/AWS_VOICE_MIGRATION.md`, and
+    `audits/2026-07-29_Codex_AWSVoiceMigration_Audit.md`. With owner approval,
+    created the immutable ECR repository, pending ACM certificate, ECS cluster,
+    ECS-only roles, 30-day log group, isolated ALB/task security groups, and a
+    `/ready` IP target group in `ca-central-1`. ACM issued the certificate and
+    an HTTPS ALB is active with an HTTP-to-HTTPS redirect; the `voice` CNAME in
+    Alibaba Cloud remains to be added. No task, service, secret, or Railway
+    change exists yet. Owner restricted spending to free-trial credit: the
+    remaining plan uses no NAT Gateway and one smallest Fargate task only when
+    image and secrets are ready. **Update 2026-07-31:** Docker Desktop 29.6.2
+    is now engine-verified on the Windows host (installed under `C:\Program
+    Files\Docker`, not the requested D: path). The publishable Supabase key is
+    stored as an AWS secret and the execution role can read only it, NVIDIA,
+    and Piper secrets. The initial production image build caught an existing
+    `groupadd voice` incompatibility with `python:3.11-slim`; after the
+    idempotent account-creation correction, a local image build passed, ran as
+    UID 999, and returned `/health` status `ok`. **Staging evidence
+    (2026-07-31):** committed source `db692db7ef55` was published as immutable
+    ECR image `sha-db692db7ef55` (digest
+    `sha256:01726919ae85acb82e20da2a6b11b52ea389e6ac621248a8fbb0eb582bd75ebd`).
+    ECS task definition `alphonso-cloud-voice:1` and `cloud-voice-staging`
+    started one 0.5 vCPU / 1 GB Fargate task with deployment circuit-breaker
+    rollback. ECS showed `RUNNING`, the ALB target showed `healthy`, and
+    `https://voice.obsidianmedia.online/health` plus `/ready` returned success
+    (NIM, Supabase enrollment, Magpie, and Farsi Piper true). Railway remains
+    unchanged; H3 is still in progress pending real-device voice acceptance,
+    rollback/observability verification, and least-privilege deploy identity.
+    `AlphonsoCloudVoiceDeployRole` was created with Cloud-Voice-scoped ECR,
+    ECS, pass-role, and health-read permissions, but AWS rejected root's
+    `AssumeRole` attempt (root accounts cannot assume roles). A non-root
+    IAM/Identity Center principal must be authorized to assume this role;
+    intentionally no long-lived access key was created or printed.
+  - **iOS AWS acceptance build (2026-08-01):** the bundled Cloud Voice endpoint
+    now targets `https://voice.obsidianmedia.online/v1/voice/respond`. A stored
+    valid HTTPS endpoint now takes precedence over the bundle value, fixing the
+    pre-existing rollback defect where Settings changes were ignored on launch.
+    The GitHub Actions iOS/TestFlight and Windows installer builds are required
+    verification for this source change; real-device enrollment and both voice
+    languages remain the acceptance gate.
+  - **CI follow-up (2026-08-01):** the dependency remediation cleared Cargo
+    audit in GitHub Actions, but the full Rust suite exposed a pre-existing
+    parallel-test race: Meta configuration tests mutated process-global
+    environment variables without serialization or restoration. The tests now
+    use a shared mutex and RAII restoration; the Windows installer workflow is
+    being rerun as the required verification.
+  - **Build evidence (2026-08-01):** GitHub Actions run
+    `30718886085` passed from commit `2c89cbb6`, archived and exported the
+    signed iOS companion, uploaded it to TestFlight, and retained the
+    `AlphonsoCompanion-111` IPA artifact. GitHub Actions run `30718886862`
+    passed every CI job from the same commit, including Rust tests, Clippy,
+    Cargo audit, iOS simulator build, and Windows Tauri packaging; it retained
+    `Alphonso-2c89cbb6ea20a1c39aaef86d1f360083f5064529-x64-setup`. This proves
+    build/package integrity, not paired-device English/Farsi acceptance.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
@@ -868,4 +1009,6 @@ dropped.
 | 2026-07-26 (Part 1) | Added Section F (3 audit-sourced Cloud Voice hardening items, independently re-verified against live code, not just copied from the source audit) and Section G (production-readiness T11–T20 carried forward into this file's tracked queue, with T13/T15/T16 cross-referenced as already closed by B3/D1/D2 rather than duplicated, plus 5 other previously-untracked open items). | User request, following an external "Hermes" audit report + its own Codex verification addendum; see Section F/G entries for per-item evidence and status notes. |
 | 2026-07-26 (Part 2) | **Closed F1** (timing-safe auth in cloud voice), **G-OTHER3** (companionIntegration tests fixed). PR #124 opened against `fix/audit-134-bugfixes` with 79 files changed across all layers (134 findings fixed from the full-repo bug audit). | PR #124: 3,486 insertions / 340 deletions. Full audit report in `audits/2026-07-26_FullBugAudit_Audit.md`. |
 | 2026-07-27 | Migrated `skillPackService` and `joseExecutionEngineService` from `.js` to `.ts`; split skill-pack content into registry/content/guidance modules and verified the affected test sets plus full Vitest, lint, and typecheck. | This session's code changes and verification output. |
+| 2026-07-29 | Codex completed a fresh risk-based all-angle audit after a full codebase-memory reindex. | `audits/2026-07-29_Codex_AllAngle_Audit.md`; lint passed; the full PowerShell verifier timed out in fallback secret scanning, so no release-readiness claim was made. |
+| 2026-07-29 | Codex resolved the Local Voice dependency/model/runtime-path deferrals and added a focused Vitest command. | Windows clean-venv install; `pytest voice/backend/tests -q` 37/37; Piper real WAV synthesis; pending only fresh Rust compile and hardware/Ollama/playback evidence. |
 

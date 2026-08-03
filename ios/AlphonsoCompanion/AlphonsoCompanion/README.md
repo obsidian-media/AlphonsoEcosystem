@@ -43,9 +43,9 @@ AlphonsoCompanion/
 - `AlphonsoCompanionTests` contains unit coverage for the connection state machine.
 - `VoiceSessionViewModelTests` covers voice state transitions, Cloud Voice enrollment gating, and concurrent-send protection.
 - `AlphonsoCompanionUITests` contains the launch smoke test for the mobile shell.
-- The Voice tab is split into `Local` and `Cloud` modes so local speech capture and Railway-backed cloud speech can diverge cleanly.
+- The Voice tab is split into `Local` and `Cloud` modes so local speech capture and AWS Cloud Voice can diverge cleanly. The bundled Cloud endpoint is `voice.obsidianmedia.online`; a user-selected valid HTTPS endpoint takes precedence to enable Railway rollback during the migration window.
 - Voice is push-to-talk. Each turn carries the selected one of nine agents and a language. Local conversational turns are answered by the selected persona through desktop Ollama; non-voice companion commands stay on the policy-gated Jose pipeline.
-- Cloud mode sends `agent_id`, language, and response-voice selection to `POST /v1/voice/respond`. English uses NVIDIA TTS; Persian/Farsi (`fa-IR`) uses Railway-hosted Piper with `Mana` or `Manta`.
+- Cloud mode sends `agent_id`, language, and response-voice selection to `POST /v1/voice/respond`. English uses NVIDIA TTS; Persian/Farsi (`fa-IR`) uses Railway-hosted Piper with `Mana` or `Manta` while only Cloud Voice compute is migrated to AWS.
 - Cloud playback failures preserve the reply as text and offer a retry; the UI does not imply that a failed reply was spoken.
 - Cloud Voice cannot start recording or send a turn until the user has completed email sign-in and this iPhone is enrolled. The app exposes that state, prevents duplicate enrollment requests, and allows the user to sign out safely.
 - Chat keeps one desktop request active at a time and turns the send control into **Stop response** while that request runs. The stop action calls the companion abort command; it is not a simulated cancellation.

@@ -48,6 +48,12 @@ private struct SupabaseSession: Codable {
         case expiresAt = "expires_at"
     }
 
+    init(accessToken: String, refreshToken: String, expiresAt: Date) {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.expiresAt = expiresAt
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         accessToken = try container.decode(String.self, forKey: .accessToken)
@@ -86,10 +92,13 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
 
     private var supabaseURL: String { Bundle.main.object(forInfoDictionaryKey: "SupabaseURL") as? String ?? "" }
     private var supabasePublishableKey: String { Bundle.main.object(forInfoDictionaryKey: "SupabasePublishableKey") as? String ?? "" }
+    private var ownerTestingBypass: Bool { Bundle.main.object(forInfoDictionaryKey: "CloudVoiceOwnerTestingBypass") as? Bool ?? false }
 
     override init() {
         let bundledEndpoint = Bundle.main.object(forInfoDictionaryKey: "CloudVoiceEndpoint") as? String
-        let storedEndpoint = bundledEndpoint ?? UserDefaults.standard.string(forKey: endpointKey) ?? ""
+        // A user-selected endpoint must take precedence so a tested Railway
+        // rollback remains possible without another signed iOS build.
+        let storedEndpoint = UserDefaults.standard.string(forKey: endpointKey) ?? bundledEndpoint ?? ""
         let securedKey = Self.loadAPIKey(account: apiKeyAccount)
         let legacyKey = UserDefaults.standard.string(forKey: legacyAPIKeyKey)
         let storedAPIKey = securedKey ?? legacyKey ?? ""
@@ -157,7 +166,9 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         request.httpMethod = "POST"
         request.timeoutInterval = 75
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(try await validAccessToken())", forHTTPHeaderField: "Authorization")
+        if !ownerTestingBypass {
+            request.setValue("Bearer \(try await validAccessToken())", forHTTPHeaderField: "Authorization")
+        }
         request.setValue(try deviceID(), forHTTPHeaderField: "X-Alphonso-Device-Id")
 
         let payload: [String: Any] = [
@@ -205,13 +216,37 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabasePublishableKey, forHTTPHeaderField: "apikey")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["email": email, "create_user": true])
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "email": email,
+            "create_user": true,
+            "email_redirect_to": "alphonso://auth/callback"
+        ])
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw VoiceCloudError.authFailed }
         guard (200...299).contains(http.statusCode) else {
             throw VoiceCloudError.server(status: http.statusCode, message: Self.serverMessage(from: data))
         }
         authenticationStatus = "Check your email for the sign-in code"
+    }
+
+    func completeMagicLink(_ url: URL) async throws {
+        guard url.scheme == "alphonso", url.host == "auth", url.path == "/callback",
+              let fragment = URLComponents(url: url, resolvingAgainstBaseURL: false)?.fragment,
+              let components = URLComponents(string: "?\(fragment)") else {
+            throw VoiceCloudError.authFailed
+        }
+        let values = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+        guard let accessToken = values["access_token"],
+              let refreshToken = values["refresh_token"],
+              !accessToken.isEmpty, !refreshToken.isEmpty else {
+            throw VoiceCloudError.authFailed
+        }
+        let expiresAt = Double(values["expires_at"] ?? "") ?? Date().addingTimeInterval(Double(values["expires_in"] ?? "3600") ?? 3600).timeIntervalSince1970
+        let session = SupabaseSession(accessToken: accessToken, refreshToken: refreshToken, expiresAt: Date(timeIntervalSince1970: expiresAt))
+        try Self.saveSession(session, account: sessionAccount)
+        try await enrollCurrentDevice(accessToken: session.accessToken)
+        authenticationStatus = "Cloud Voice account connected"
+        statusMessage = authenticationStatus
     }
 
     func verifyEmailOTP(email: String, code: String) async throws {

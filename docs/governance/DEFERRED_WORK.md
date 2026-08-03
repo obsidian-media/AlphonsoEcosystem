@@ -6,6 +6,55 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 - `[DATE] <scope>: <what> — <why deferred> — <resume hint> — <status>`
 
 ## Items
+
+- [2026-08-02] Voice runtime and temporary Cloud Voice bypass: **open.**
+  Ollama cold-load remains unverified after the five-minute timeout fix, and
+  Voice OS health can disagree with its watchdog toast. Cloud Voice runs with
+  temporary owner-only bypass enabled and must be rolled back before broader
+  use. Resume from
+  `docs/handoffs/2026-08-02_Codex_VoiceRuntimeAndCloudVoice_Handoff.md`.
+
+- [2026-07-31] AWS Cloud Voice endpoint cutover: **in progress, not cut over.**
+  AWS staging at `https://voice.obsidianmedia.online` has one healthy Fargate
+  task and successful public `/health` + `/ready`, but authenticated iPhone
+  enrollment, English/Farsi voice acceptance, a rollback exercise, CloudWatch
+  alarm verification, and a least-privilege deployment identity are still
+  required. Railway `precious-enjoyment` remains the rollback service. Status:
+  pending real-device and operational verification.
+
+- [2026-07-31] AWS Cloud Voice least-privilege deployment identity: role
+  `AlphonsoCloudVoiceDeployRole` exists and is restricted to the Cloud Voice
+  ECR/ECS/health surface, but root CLI credentials cannot assume it (AWS
+  rejected the validation attempt). Resume hint: establish a non-root IAM or
+  IAM Identity Center principal, allow it `sts:AssumeRole` for this role, then
+  configure the AWS CLI profile and verify `sts get-caller-identity` through
+  the role. Do not store a long-lived key in the repository. Status: blocked
+  on owner identity setup.
+
+- [2026-07-31] AWS Cloud Voice staging image/service: **resolved for the
+  current host.** Docker Desktop 29.6.2 was installed and its Linux engine
+  answered the Docker client after launch. The actual program location is
+  `C:\Program Files\Docker`, not the requested `D:\AgentDevWork\docker`;
+  relocating Docker Desktop/data remains an owner decision and is not needed
+  to build or deploy Cloud Voice. Status: closed.
+- [2026-08-01] Cloud Voice/Supabase Auth: **paused by owner request.** The
+  iOS Cloud Voice selector and sign-in UI are intentionally hidden while Local
+  Voice testing proceeds. Re-enable only after explicitly requested, then
+  validate the magic-link callback, device enrollment, English/Farsi turns,
+  and rollback path. Status: deferred.
+- [2026-08-01] Cloud Voice owner-only testing bypass: **temporary.** Enable
+  `VOICE_ALLOW_OWNER_TESTING_BYPASS=true` only for the owner's short test
+  window; it bypasses Supabase device enforcement and must be reset to `false`
+  before any broader use. Restore the iOS sign-in UI and validate enrollment,
+  English/Farsi, and rollback before closing. Status: deferred.
+- [2026-07-31] AWS Cloud Voice Supabase configuration: **resolved.** The
+  owner supplied the publishable/anonymous key and it was placed directly in
+  AWS Secrets Manager as `alphonso/cloud-voice/supabase-anon-key`; the ECS
+  execution role received `GetSecretValue` for that exact entry only. The old
+  Railway service-role secret was not copied. Status: closed.
+- [2026-07-29] Local Voice Python regression suite: **resolved.** A clean Windows Python 3.11 venv installed every pinned dependency, including `webrtcvad`; `pytest voice/backend/tests -q` passed 37/37. Piper's model downloaded and real synthesis returned a 63,020-byte WAV. Runtime Hub now installs the same pinned set and its model into the launch-visible directory. Remaining work is fresh Rust compilation plus microphone/Ollama/playback validation, recorded in H1 rather than deferred as a dependency issue. Status: closed.
+- [2026-07-29] Focused npm Voice test invocation: **resolved.** Added `npm run test:file -- <path>`, which calls Vitest directly instead of the repository-wide programmatic runner that does not honor a focused file filter. Status: closed.
+- [2026-07-29] `scripts/verify.ps1` fallback secret-scan: the required verifier timed out after 600 seconds in `== secret-scan ==` before reaching build/test/deploy stages when `gitleaks` was unavailable. The fallback has now been changed to Git-native tracked-file searches; its content scan completes in ~22 seconds and the script passes PowerShell syntax parsing. Resume hint: rerun `pwsh -File scripts/verify.ps1` to completion after this change and add a timing/exclusion regression test. Status: in progress.
 - [2026-07-28] `src-tauri/src/connector_commands.rs` and `src-tauri/src/youtube.rs` added new ClickUp / YouTube argument-validation tests: the first `cargo test` retry was blocked by a shared backend process holding the voice runtime files open; after stopping that process, a lower-memory retry progressed further but then hit paging pressure and an application-control policy block on Cargo's `icu_properties_data` build script (`os error 4551`). Resume hint: rerun `cargo test` from a clean host with sufficient pagefile / relaxed application-control policy and confirm the new tests pass. Status: open, verification deferred.
 - [2026-07-24] docs/AGENTS.md content-loss regression: the governance bootstrap (commit 46a1eb0) overwrote AGENTS.md's real architecture/version/test-count content with a 14-line governance-pointer stub, silently breaking 9/12 `verify-doc-counts.mjs` checks (a required CI check). Restored + fixed same session (commit 0923c90) — recorded here per R11 for visibility, not because it's still open. Resume hint: none needed, closed.
 - [2026-07-24] Production-readiness T19 (auto-generate "Do Not Duplicate" map): only the numeric doc-drift half was closed this pass (AGENTS.md/README.md counts fixed, verify-doc-counts.mjs green). Full auto-generation of the ~230-row Do Not Duplicate table from the source tree (replacing hand-typed prose descriptions in CLAUDE.md) was not attempted — it needs a semantic description per service/component that isn't derivable from file structure alone. Resume hint: consider a hybrid — auto-generate the file-path column, keep descriptions hand-maintained, and add a CI check that flags any service/component file with no corresponding table row. Status: partial, open.

@@ -46,7 +46,7 @@ export async function startVoiceWatchdog() {
             : 'Voice OS offline — restarting...' }
         }));
         if (_watchdogFailures < WATCHDOG_MAX_FAILURES) {
-          try { await startVoiceServer(); _watchdogFailures = 0; } catch { /* non-blocking */ }
+          try { await startVoiceServer(); } catch { /* non-blocking */ }
         }
       } else {
         _watchdogFailures = 0; // reset on healthy status
@@ -57,7 +57,7 @@ export async function startVoiceWatchdog() {
         window.dispatchEvent(new CustomEvent('alphonso:toast', {
           detail: { type: 'error', message: 'Voice OS offline — restarting...' }
         }));
-        try { await startVoiceServer(); _watchdogFailures = 0; } catch { /* non-blocking */ }
+        try { await startVoiceServer(); } catch { /* non-blocking */ }
       }
     }
   }, 30_000);

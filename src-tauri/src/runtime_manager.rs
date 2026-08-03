@@ -165,14 +165,15 @@ const TOOLS: &[ToolDef] = &[
     description: "Alphonso Voice OS — STT (faster-whisper) + LLM + TTS (piper) WebSocket pipeline on :8766",
     repo_url: None,
     pip_packages: &[
-      "faster-whisper",
-      "piper-tts",
-      "webrtcvad",
-      "fastapi",
-      "uvicorn[standard]",
-      "websockets",
-      "numpy",
-      "httpx",
+      "faster-whisper==1.1.0",
+      "piper-tts==1.5.0",
+      "webrtcvad==2.0.10",
+      "fastapi==0.115.0",
+      "uvicorn[standard]==0.32.0",
+      "websockets==13.1",
+      "numpy==2.1.0",
+      "requests==2.32.5",
+      "httpx==0.28.1",
     ],
     requirements_file: None,
     port: Some(8766),
@@ -1235,6 +1236,31 @@ pub async fn runtime_install_tool(
       .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
   }
 
+  if name == "voice-os" {
+    emit_progress(
+      &app,
+      &name,
+      "downloading_voice_model",
+      "Downloading the local Piper voice model…",
+      80,
+    );
+    run_streaming(
+      &app,
+      &name,
+      &pip_py,
+      &[
+        "-m",
+        "piper.download_voices",
+        "--data-dir",
+        ".",
+        "en_US-lessac-medium",
+      ],
+      Some(&dir),
+    )
+    .await
+    .inspect_err(|e| emit_progress(&app, &name, "error", e, 0))?;
+  }
+
   // S-08: AudioCraft Python version check — warn if Python >= 3.12
   if name == "audiocraft" {
     let vpy = venv_python(&dir);
@@ -1309,11 +1335,20 @@ pub async fn runtime_start_tool(
     } else {
       "python".to_string()
     };
-    let script = backend_dir.join("main.py");
     let mut cmd = Command::new(&py);
     cmd
-      .arg(&script)
-      .args(["--host", "127.0.0.1", "--port", "8765"]);
+      .args([
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8766",
+        "--app-dir",
+      ])
+      .arg(&backend_dir)
+      .env("VOICE_PIPER_MODEL_DIR", &dir);
     cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::null());
     no_window(&mut cmd);

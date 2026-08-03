@@ -12,6 +12,15 @@ def test_local_backend_does_not_expose_cloud_voice_route():
     assert response.status_code == 404
 
 
+def test_local_backend_disables_credentials_for_wildcard_cors():
+    from main import app
+
+    cors = next(middleware for middleware in app.user_middleware if middleware.cls.__name__ == "CORSMiddleware")
+
+    assert cors.kwargs["allow_origins"] == ["*"]
+    assert cors.kwargs["allow_credentials"] is False
+
+
 def test_local_health_reports_ollama_configuration():
     from main import app
 
@@ -22,3 +31,5 @@ def test_local_health_reports_ollama_configuration():
     assert "ollama" in payload
     assert "url" in payload["ollama"]
     assert "reachable" in payload["ollama"]
+    assert isinstance(payload["stt"], bool)
+    assert isinstance(payload["tts"], bool)

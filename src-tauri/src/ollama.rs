@@ -238,7 +238,10 @@ pub(crate) async fn ollama_generate(
   let response = client
     .post(&url)
     .json(&body)
-    .timeout(Duration::from_secs(35))
+    // A cold local model load (especially from a secondary drive) can take
+    // longer than the UI stream timeout. Keep the desktop fallback alive long
+    // enough for Ollama to bring the runner online.
+    .timeout(Duration::from_secs(300))
     .send()
     .await;
 

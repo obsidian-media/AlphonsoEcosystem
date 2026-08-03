@@ -16,26 +16,28 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
   if ($LASTEXITCODE -ne 0) { Err "secret-scan" "gitleaks found secrets" }
 } else {
   # (a) filename-based: private key / credential files must not be committed.
-  #     Exclude dependency / generated dirs (node_modules, .venv, _repo_clone,
-  #     dist, build, .cache, coverage) — library files there are not first-party.
-  $excludeDirs = '[\\/](node_modules|\.git|audits[\\/]private|venv|\.venv|target|_repo_clone|dist|build|\.cache|coverage|scripts[\\/]certs|\.tauri)[\\/]'
-  $badFiles = Get-ChildItem -Path $RepoRoot -Recurse -File -Include *.p8,*.p12,*credential*,*.pem,*.key `
-    -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch $excludeDirs }
+  #     Use Git's tracked-file list so large untracked/generated trees cannot
+  #     stall the release gate.
+  $badFiles = git -C $RepoRoot ls-files --cached -- |
+    Where-Object { $_ -match '(^|[\\/])[^\\/]*(\.p8|\.p12|credential[^\\/]*|\.pem|\.key)$' }
   if ($badFiles) { Err "secret-scan" "secret files present: $($badFiles.FullName -join ', ')" }
-  # (b) content-based: first-party code/config only, require an assigned QUOTED
+  # (b) content-based: Git-tracked and non-ignored source/config only, require an assigned QUOTED
   #     LITERAL value (not a variable/identifier reference) — matches the bash
   #     script's fix: `SOMETHING_API_KEY: someVariableName` no longer matches,
   #     only a token field set to an actual quoted literal string still does. Test dirs
   #     excluded outright since fake placeholder tokens are expected there.
   #     Exclude dependency / generated dirs + *.env.example / *.env.sample templates.
   $excludeDirsWithTests = '[\\/](node_modules|\.git|audits[\\/]private|venv|\.venv|target|_repo_clone|dist|build|\.cache|coverage|scripts[\\/]certs|\.tauri|test|tests|e2e)[\\/]'
-  $hits = Get-ChildItem -Path $RepoRoot -Recurse -File `
-    -Include *.json,*.env,*.ts,*.js,*.py,*.yml,*.yaml,*.toml,*.sh `
-    -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -notmatch $excludeDirsWithTests } |
-    Where-Object { $_.Name -notmatch '\.env\.(example|sample)$' } |
-    Where-Object { Select-String -Path $_.FullName -Pattern '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)\s*[=:]\s*["''][A-Za-z0-9/+_-]{8,}["'']' -Quiet }
+  # `Get-ChildItem`/`Select-String` recursion became unbounded in workspaces
+  # that contain large untracked trees. `git grep` scans only repository
+  # content in one native process, which is precisely the material CI can
+  # merge and release.
+  $rawHits = git -C $RepoRoot grep -n -I -E '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)[[:space:]]*[=:][[:space:]]*["''][A-Za-z0-9/+_-]{8,}["'']' -- .
+  if ($LASTEXITCODE -gt 1) { Err "secret-scan" "git grep failed (rc=$LASTEXITCODE)" }
+  $hits = $rawHits |
+    Where-Object { $_ -match '\.(json|env|ts|js|py|yml|yaml|toml|sh):' } |
+    Where-Object { $_ -notmatch '(^|[\\/])(test|tests|e2e)([\\/]|:)' } |
+    Where-Object { $_ -notmatch '\.env\.(example|sample):' }
   if ($hits) { Err "secret-scan" "possible hardcoded secrets in: $($hits.FullName -join ', ')" }
 }
 
