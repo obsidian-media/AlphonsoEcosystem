@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
 // ── Core Tauri mock ───────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -295,7 +295,9 @@ describe('ChatView', () => {
     const stopButton = await screen.findByRole('button', { name: /abort and stop/i });
     fireEvent.click(stopButton);
 
-    resolveCloud({ ok: true, content: 'Hello from NVIDIA', model: 'meta/llama-3.1-8b-instruct', provider: 'nvidia_nim' });
+    await act(async () => {
+      resolveCloud({ ok: true, content: 'Hello from NVIDIA', model: 'meta/llama-3.1-8b-instruct', provider: 'nvidia_nim' });
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Hello from NVIDIA')).toBeNull();

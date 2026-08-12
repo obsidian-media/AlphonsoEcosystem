@@ -141,21 +141,132 @@ struct MessageBubble: View {
     let message: Message
 
     var body: some View {
-        VStack(alignment: message.isIncoming ? .leading : .trailing, spacing: 4) {
-            Text(message.text)
-                .padding(12)
-                .background(
-                    message.isIncoming ?
-                        Color(UIColor.systemGray5) :
-                        Color.accentColor
-                )
-                .foregroundColor(message.isIncoming ? .primary : .white)
-                .cornerRadius(16)
+        VStack(alignment: message.isIncoming ? .leading : .trailing, spacing: 6) {
+            let blocks = parseChatBlocks(from: message.text)
+            
+            ForEach(blocks) { block in
+                if block.isCode {
+                    CodeBlockCard(code: block.content, language: block.codeLanguage)
+                } else {
+                    TextBlockBubble(text: block.content, isIncoming: message.isIncoming)
+                }
+            }
 
             Text(message.timestamp, style: .time)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(CompanionTheme.quietInk)
+                .padding(.horizontal, 4)
         }
         .frame(maxWidth: .infinity, alignment: message.isIncoming ? .leading : .trailing)
     }
+}
+
+struct TextBlockBubble: View {
+    let text: String
+    let isIncoming: Bool
+
+    var body: some View {
+        Text(text)
+            .font(CompanionTheme.body)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(
+                isIncoming ?
+                    CompanionTheme.surface :
+                    CompanionTheme.accent
+            )
+            .foregroundColor(CompanionTheme.ink)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct CodeBlockCard: View {
+    let code: String
+    let language: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(language?.uppercased() ?? "CODE")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(CompanionTheme.mutedInk)
+                Spacer()
+                Button {
+                    UIPasteboard.general.string = code
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 10))
+                        Text("Copy")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(CompanionTheme.accent)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(CompanionTheme.canvas)
+            
+            CompanionRule()
+            
+            ScrollView(.horizontal, showsIndicators: true) {
+                Text(code)
+                    .font(.system(size: 12, weight: .regular, design: .monospaced))
+                    .foregroundStyle(CompanionTheme.ink)
+                    .padding(14)
+                    .textSelection(.enabled)
+            }
+            .background(Color(red: 0.05, green: 0.05, blue: 0.06))
+        }
+        .frame(maxWidth: 500, alignment: .leading)
+        .background(CompanionTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(CompanionTheme.rule, lineWidth: 1)
+        )
+    }
+}
+
+struct ChatBlock: Identifiable {
+    let id = UUID()
+    let isCode: Bool
+    let codeLanguage: String?
+    let content: String
+}
+
+func parseChatBlocks(from text: String) -> [ChatBlock] {
+    let parts = text.components(separatedBy: "```")
+    var blocks: [ChatBlock] = []
+    
+    for (index, part) in parts.enumerated() {
+        let isCode = index % 2 == 1
+        let trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { continue }
+        
+        if isCode {
+            // Find language tag (first line)
+            let lines = trimmed.components(separatedBy: .newlines)
+            let firstLine = lines.first ?? ""
+            let isLanguage = firstLine.range(of: "^[a-zA-Z0-9_-]+$", options: .regularExpression) != nil
+            
+            if isLanguage {
+                let language = firstLine
+                let codeContent = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                blocks.append(ChatBlock(isCode: true, codeLanguage: language, content: codeContent))
+            } else {
+                blocks.append(ChatBlock(isCode: true, codeLanguage: nil, content: trimmed))
+            }
+        } else {
+            blocks.append(ChatBlock(isCode: false, codeLanguage: nil, content: part))
+        }
+    }
+    
+    // Fallback if no blocks were matched
+    if blocks.isEmpty && !text.isEmpty {
+        blocks.append(ChatBlock(isCode: false, codeLanguage: nil, content: text))
+    }
+    
+    return blocks
 }
