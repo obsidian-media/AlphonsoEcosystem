@@ -46,10 +46,15 @@
   forwarding on 443 and HTTP-to-HTTPS redirect on 80. Alibaba Cloud DNS still
   needs a `voice` CNAME to that load-balancer hostname.
 
-## Not performed
+## Not performed (as of 2026-07-30)
 
 - No ECS service/task, Secrets Manager secret, DNS record, or Railway setting
   was created, modified, or deleted.
+- **Superseded:** by 2026-07-31 an ECS task/service and Secrets Manager
+  entries were created — see "Railway migration evidence (2026-07-31)" and
+  "Remaining deployment blockers" below, which record secret writes and a
+  running ECS task. This section is a point-in-time snapshot, not a standing
+  claim.
 
 ## Credit-constrained operation
 

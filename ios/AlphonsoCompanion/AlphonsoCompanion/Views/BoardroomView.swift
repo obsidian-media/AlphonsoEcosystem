@@ -51,6 +51,10 @@ struct BoardroomView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
+
+                            if session.status.lowercased() == "active" {
+                                SteeringInputRow(sessionID: session.id)
+                            }
                         }
                     }
                 }
@@ -171,5 +175,41 @@ struct TaskRow: View {
                 .cornerRadius(4)
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct SteeringInputRow: View {
+    let sessionID: String
+    @EnvironmentObject var webSocketService: WebSocketService
+    @State private var guidance = ""
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                TextField("Guide the boardroom debate...", text: $guidance)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.caption)
+                
+                Button {
+                    let trimmed = guidance.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else { return }
+                    webSocketService.steerBoardroom(sessionId: sessionID, guidance: trimmed)
+                    guidance = ""
+                    // Dismiss keyboard
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                } label: {
+                    Image(systemName: "paperplane.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(guidance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : CompanionTheme.accent)
+                }
+                .disabled(guidance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .buttonStyle(.plain)
+            }
+            Text("Your guidance is injected directly into the active multi-agent conversation")
+                .font(.system(size: 10))
+                .foregroundStyle(CompanionTheme.quietInk)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 8)
     }
 }

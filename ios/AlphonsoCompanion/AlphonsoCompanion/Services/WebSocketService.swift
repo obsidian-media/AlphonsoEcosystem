@@ -19,6 +19,7 @@ class WebSocketService: ObservableObject {
     @Published private(set) var operationsSnapshot = OperationsSnapshot.empty
     @Published private(set) var lastOperationsRefreshAt: Date?
     @Published var connectionHint: String?
+    @Published var preconfiguredAgentID: String? = nil
 
     private var webSocketTask: URLSessionWebSocketTask?
     private let session = URLSession(configuration: .default)
@@ -138,6 +139,33 @@ class WebSocketService: ObservableObject {
             "id": "abort",
             "method": "abort_command",
             "params": ["commandId": commandId]
+        ])
+    }
+
+    func approveTask(id: String) {
+        sendJSONMessage([
+            "id": "approve",
+            "method": "approve_task",
+            "params": ["taskId": id]
+        ])
+    }
+
+    func runWorkflow(id: String) {
+        sendJSONMessage([
+            "id": "run_workflow",
+            "method": "run_workflow",
+            "params": ["workflowId": id]
+        ])
+    }
+
+    func steerBoardroom(sessionId: String, guidance: String) {
+        sendJSONMessage([
+            "id": "steer",
+            "method": "steer_boardroom",
+            "params": [
+                "sessionId": sessionId,
+                "guidance": guidance
+            ]
         ])
     }
 

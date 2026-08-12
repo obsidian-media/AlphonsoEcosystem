@@ -10,6 +10,8 @@ pub async fn route(req: JsonRpcRequest, app: AppHandle) -> JsonRpcResponse {
     "send_command" => handle_send_command(req.params, app).await,
     "abort_command" => handle_abort_command(req.params, app.clone()).await,
     "approve_task" => handle_approve_task(req.params, app).await,
+    "run_workflow" => handle_run_workflow(req.params, app).await,
+    "steer_boardroom" => handle_steer_boardroom(req.params, app).await,
     "get_projects" => handle_get_projects(app.clone()).await,
     "get_boardroom" => handle_get_boardroom(app).await,
     _ => Err(JsonRpcError {
@@ -166,6 +168,38 @@ async fn handle_approve_task(params: Value, app: AppHandle) -> Result<Value, Jso
   Ok(json!({ "ok": true }))
 }
 
+async fn handle_run_workflow(params: Value, app: AppHandle) -> Result<Value, JsonRpcError> {
+  let workflow_id = params["workflowId"].as_str().ok_or(JsonRpcError {
+    code: -32602,
+    message: "Missing 'workflowId' param".into(),
+  })?;
+
+  // Emit Tauri event that the React frontend listens to
+  app
+    .emit("companion://run_workflow", json!({ "workflowId": workflow_id }))
+    .ok();
+
+  Ok(json!({ "ok": true, "workflowId": workflow_id }))
+}
+
+async fn handle_steer_boardroom(params: Value, app: AppHandle) -> Result<Value, JsonRpcError> {
+  let session_id = params["sessionId"].as_str().ok_or(JsonRpcError {
+    code: -32602,
+    message: "Missing 'sessionId' param".into(),
+  })?;
+  let guidance = params["guidance"].as_str().ok_or(JsonRpcError {
+    code: -32602,
+    message: "Missing 'guidance' param".into(),
+  })?;
+
+  // Emit Tauri event that the boardroom facilitator on React listens to
+  app
+    .emit("companion://steer_boardroom", json!({ "sessionId": session_id, "guidance": guidance }))
+    .ok();
+
+  Ok(json!({ "ok": true, "sessionId": session_id }))
+}
+
 async fn handle_get_projects(app: AppHandle) -> Result<Value, JsonRpcError> {
   // Read orchestration receipts from KV; derive unique project names from receipt agentId/summary
   let raw =
@@ -268,12 +302,27 @@ fn operations_snapshot(receipts: &[Value]) -> Value {
 }
 
 async fn handle_get_operations(app: AppHandle) -> Result<Value, JsonRpcError> {
-  let raw =
-    crate::kv_store::kv_get(app, "alphonso_orchestration_receipts_v1".to_string()).unwrap_or(None);
-  let receipts: Vec<Value> = raw
+  let raw_receipts =
+    crate::kv_store::kv_get(app.clone(), "alphonso_orchestration_receipts_v1".to_string()).unwrap_or(None);
+  let receipts: Vec<Value> = raw_receipts
     .and_then(|value| serde_json::from_str(&value).ok())
     .unwrap_or_default();
-  Ok(json!({ "operations": operations_snapshot(&receipts) }))
+
+  let raw_approvals =
+    crate::kv_store::kv_get(app, "alphonso_project_execution_approvals_v1".to_string()).unwrap_or(None);
+  let approvals: Vec<Value> = raw_approvals
+    .and_then(|value| serde_json::from_str(&value).ok())
+    .unwrap_or_default();
+
+  let pending_approvals: Vec<Value> = approvals
+    .into_iter()
+    .filter(|appr| appr["status"].as_str() == Some("pending"))
+    .collect();
+
+  let mut ops = operations_snapshot(&receipts);
+  ops["approvals"] = json!(pending_approvals);
+
+  Ok(json!({ "operations": ops }))
 }
 
 async fn handle_get_boardroom(app: AppHandle) -> Result<Value, JsonRpcError> {

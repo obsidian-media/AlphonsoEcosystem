@@ -49,11 +49,11 @@
 |---|---|
 | `npx vitest run src/test/services/voiceOsService.test.js` | PASS — 1 file, 9 tests. |
 | `python -m pytest tests -q` in `voice/cloud-backend` | PASS — 16 tests. |
-| `cargo fmt --all` then `cargo test voice_sidecar --lib` in `src-tauri` | PASS — 3 sidecar tests, Windows native compile completed. |
+| `cargo fmt --all` then `cargo test voice_sidecar --lib` in `src-tauri` (run 1, before the Piper API/port changes below) | PASS — 3 sidecar tests, Windows native compile completed. |
 | Clean Windows Python 3.11 venv: install `voice/backend/requirements.txt` | PASS — all packages, including `webrtcvad`, installed. |
 | `python -m pytest voice/backend/tests -q` | PASS — 37 tests. |
 | Piper `en_US-lessac-medium` real synthesis | PASS — downloaded successfully; produced a 63,020-byte WAV. |
-| Post-change `cargo test voice_sidecar --lib` | INCONCLUSIVE — native compile exceeded the five-minute command budget without an error diagnostic. |
+| `cargo test voice_sidecar --lib` (run 2, after the "Local Voice now pins a Windows-installable Piper release" source changes in "Completed" above) | INCONCLUSIVE — native compile exceeded the five-minute command budget without an error diagnostic; this is a re-run of the same suite that passed in run 1, not a new failing test. Re-run with a longer timeout to confirm before treating this as resolved. |
 
 ## Not verified / blocked
 

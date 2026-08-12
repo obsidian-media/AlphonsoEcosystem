@@ -1,5 +1,20 @@
 # Voice runtime and Cloud Voice handoff
 
+> **2026-08-10 addendum:** PR #140 (which introduced the bypass described
+> below) merged with 20 CodeRabbit review threads unresolved, including a
+> Critical finding on this exact bypass. The "Mandatory rollback" section
+> was never executed — the bypass was still live in source 8 days later.
+> It has now been removed from source entirely (not just reset to false):
+> `Settings.allow_owner_testing_bypass` deleted from
+> `voice/cloud-backend/app/config.py`, the conditional in `main.py`'s
+> `/v1/voice/respond` removed so device enforcement is unconditional, and
+> `CloudVoiceOwnerTestingBypass` deleted from iOS `Info.plist` and
+> `VoiceCloudService.swift`/`VoiceSession.swift`. If the ECS task definition
+> still sets `VOICE_ALLOW_OWNER_TESTING_BYPASS`, that var is now a no-op and
+> should be dropped on the next deploy. Steps 2–3 of the original rollback
+> plan (restore iOS sign-in UI, validate magic-link enrollment) are still
+> open — see `docs/governance/DEFERRED_WORK.md`.
+
 ## Current state
 
 - **Local Voice: PARTIAL.** `http://127.0.0.1:8766/health` is HTTP 200 with STT and Ollama reachable, while the desktop watchdog still shows `Voice OS offline — restarting...`.

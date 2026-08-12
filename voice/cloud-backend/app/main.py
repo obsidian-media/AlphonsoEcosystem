@@ -43,8 +43,7 @@ async def respond(payload: VoiceRequest, authorization: str | None = Header(defa
     settings = Settings.from_env()
     if not settings.is_ready:
         raise HTTPException(status_code=503, detail="Cloud voice service is not configured")
-    if not settings.allow_owner_testing_bypass:
-        await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
+    await SupabaseDeviceRegistry(settings).require_active_device(authorization, x_alphonso_device_id)
     client = NvidiaClient(settings)
     started = time.perf_counter()
     try:

@@ -1,24 +1,58 @@
 import Foundation
 
 struct OperationsSnapshot: Equatable {
-    static let empty = OperationsSnapshot(activeWork: [], recentOutcomes: [])
+    static let empty = OperationsSnapshot(activeWork: [], recentOutcomes: [], approvals: [])
 
     let activeWork: [OperationsWorkItem]
     let recentOutcomes: [OperationsOutcome]
+    let approvals: [ApprovalItem]
 
-    init(activeWork: [OperationsWorkItem], recentOutcomes: [OperationsOutcome]) {
+    init(activeWork: [OperationsWorkItem], recentOutcomes: [OperationsOutcome], approvals: [ApprovalItem]) {
         self.activeWork = activeWork
         self.recentOutcomes = recentOutcomes
+        self.approvals = approvals
     }
 
     init?(dictionary: [String: Any]) {
         guard let operations = dictionary["operations"] as? [String: Any] else { return nil }
         let active = operations["activeWork"] as? [[String: Any]] ?? []
         let outcomes = operations["recentOutcomes"] as? [[String: Any]] ?? []
+        let approvalsData = operations["approvals"] as? [[String: Any]] ?? []
         self.init(
             activeWork: active.compactMap(OperationsWorkItem.init(dictionary:)),
-            recentOutcomes: outcomes.compactMap(OperationsOutcome.init(dictionary:))
+            recentOutcomes: outcomes.compactMap(OperationsOutcome.init(dictionary:)),
+            approvals: approvalsData.compactMap(ApprovalItem.init(dictionary:))
         )
+    }
+}
+
+struct ApprovalItem: Identifiable, Equatable {
+    let id: String
+    let status: String
+    let riskLevel: String
+    let actionType: String
+    let reason: String
+    let summary: String
+    let createdAt: Date
+
+    init?(dictionary: [String: Any]) {
+        guard let id = dictionary["id"] as? String,
+              let status = dictionary["status"] as? String,
+              let riskLevel = dictionary["riskLevel"] as? String,
+              let actionType = dictionary["actionType"] as? String,
+              let reason = dictionary["reason"] as? String,
+              let summary = dictionary["summary"] as? String else { return nil }
+        self.id = id
+        self.status = status
+        self.riskLevel = riskLevel
+        self.actionType = actionType
+        self.reason = reason
+        self.summary = summary
+        
+        // Parse date from ISO8601 string or fallback to UNIX epoch
+        let dateString = dictionary["createdAt"] as? String ?? ""
+        let formatter = ISO8601DateFormatter()
+        self.createdAt = formatter.date(from: dateString) ?? Date(timeIntervalSince1970: 0)
     }
 }
 

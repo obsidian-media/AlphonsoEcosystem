@@ -429,6 +429,7 @@ export function ChatView({
 
   useEffect(() => {
     let cancelled = false;
+    setMessages([]);
     async function load() {
       const durable = await loadChatMessages(activeChatId);
       if (cancelled) return;

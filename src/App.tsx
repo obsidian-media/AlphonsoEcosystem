@@ -483,6 +483,8 @@ function AppShell() {
     let unlistenCommand: (() => void) | null = null;
     let unlistenApprove: (() => void) | null = null;
     let unlistenAbort: (() => void) | null = null;
+    let unlistenRunWorkflow: (() => void) | null = null;
+    let unlistenSteerBoardroom: (() => void) | null = null;
     let registered = false;
     (async () => {
       try {
@@ -618,6 +620,60 @@ function AppShell() {
           setApprovalPending(taskId);
         });
 
+        // Listen for workflow execution requests from iOS — run the workflow registry service
+        unlistenRunWorkflow = await listen('companion://run_workflow', async (event) => {
+          const payload = event.payload as { workflowId: string };
+          if (!payload || typeof payload.workflowId !== 'string') {
+            console.warn('[App] Received companion://run_workflow with invalid payload, skipping');
+            return;
+          }
+          const { workflowId } = payload;
+          console.warn(`[App] Received companion://run_workflow for: ${workflowId}`);
+          try {
+            const { executeWorkflowTasks } = await import('./services/workflowRegistryService');
+            await executeWorkflowTasks(workflowId);
+            
+            // Send back completed notification to iOS
+            invoke('companion_broadcast', {
+              event: 'done',
+              payload: { commandId: `workflow-${workflowId}`, summary: `Workflow ${workflowId} completed successfully.` }
+            }).catch(() => {});
+          } catch (err) {
+            console.error('[App] Failed to execute companion workflow:', err);
+            invoke('companion_broadcast', {
+              event: 'done',
+              payload: { commandId: `workflow-${workflowId}`, error: `Workflow execution failed: ${err}` }
+            }).catch(() => {});
+          }
+        });
+
+        // Listen for boardroom steering requests from iOS
+        unlistenSteerBoardroom = await listen('companion://steer_boardroom', async (event) => {
+          const payload = event.payload as { sessionId: string; guidance: string };
+          if (!payload || typeof payload.sessionId !== 'string' || typeof payload.guidance !== 'string') {
+            console.warn('[App] Received companion://steer_boardroom with invalid payload, skipping');
+            return;
+          }
+          const { sessionId, guidance } = payload;
+          console.warn(`[App] Received companion://steer_boardroom for session: ${sessionId}, guidance: ${guidance}`);
+          try {
+            const { addThreadMessage } = await import('./services/boardroomThreadService');
+            await addThreadMessage(sessionId, 'shayan', guidance);
+            
+            // Broadcast success back to iOS
+            invoke('companion_broadcast', {
+              event: 'done',
+              payload: { commandId: `steer-${sessionId}`, summary: 'Boardroom steered successfully.' }
+            }).catch(() => {});
+          } catch (err) {
+            console.error('[App] Failed to steer boardroom:', err);
+            invoke('companion_broadcast', {
+              event: 'done',
+              payload: { commandId: `steer-${sessionId}`, error: `Boardroom steering failed: ${err}` }
+            }).catch(() => {});
+          }
+        });
+
         registered = true;
       } catch { /* Tauri API not available */ }
     })();
@@ -626,6 +682,8 @@ function AppShell() {
         try { unlistenCommand?.(); } catch { /* ignore */ }
         try { unlistenApprove?.(); } catch { /* ignore */ }
         try { unlistenAbort?.(); } catch { /* ignore */ }
+        try { unlistenRunWorkflow?.(); } catch { /* ignore */ }
+        try { unlistenSteerBoardroom?.(); } catch { /* ignore */ }
       }
     };
   }, [settings.endpoint, settings.zeroCostMode]);

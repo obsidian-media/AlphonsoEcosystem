@@ -5,6 +5,7 @@ struct ChatView: View {
 
     @State private var inputText = ""
     @State private var activeCommandID: String?
+    @State private var selectedAgentID: String = "alphonso"
 
     var body: some View {
         NavigationStack {
@@ -78,15 +79,47 @@ struct ChatView: View {
                 }
             }
             .toolbar {
-                if webSocketService.connectionState == .authenticated {
-                    Button("Status") {
-                        webSocketService.getStatus()
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Picker("Target Agent", selection: $selectedAgentID) {
+                            Text("Alphonso").tag("alphonso")
+                            Text("Jose").tag("jose")
+                            Text("Hector").tag("hector")
+                            Text("Miya").tag("miya")
+                            Text("Maria").tag("maria")
+                            Text("Marcus").tag("marcus")
+                            Text("Echo").tag("echo")
+                            Text("Sentinel").tag("sentinel")
+                            Text("Nova").tag("nova")
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(selectedAgentID.capitalized)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Image(systemName: "chevron.down")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(CompanionTheme.accent)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if webSocketService.connectionState == .authenticated {
+                        Button("Status") {
+                            webSocketService.getStatus()
+                        }
                     }
                 }
             }
             .onChange(of: webSocketService.activeCommandIDs) { _, _ in
                 guard let activeCommandID, !webSocketService.activeCommandIDs.contains(activeCommandID) else { return }
                 self.activeCommandID = nil
+            }
+            .onAppear {
+                if let preconfigured = webSocketService.preconfiguredAgentID {
+                    selectedAgentID = preconfigured
+                    webSocketService.preconfiguredAgentID = nil
+                }
             }
         }
     }
@@ -100,7 +133,7 @@ struct ChatView: View {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         inputText = ""
-        activeCommandID = webSocketService.sendCommand(text: text)
+        activeCommandID = webSocketService.sendCommand(text: text, agentID: selectedAgentID)
     }
 }
 

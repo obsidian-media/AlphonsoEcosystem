@@ -8,6 +8,10 @@ def test_missing_model_is_safe_and_does_not_download():
     import tts
 
     tts._load_piper.cache_clear()
+    with patch("tts.Path.exists", return_value=False), patch("piper.PiperVoice.load") as mock_load:
+        assert tts._load_piper() is None
+    mock_load.assert_not_called()
+    tts._load_piper.cache_clear()
 
 
 def test_model_path_uses_runtime_hub_directory_when_configured(monkeypatch, tmp_path):
