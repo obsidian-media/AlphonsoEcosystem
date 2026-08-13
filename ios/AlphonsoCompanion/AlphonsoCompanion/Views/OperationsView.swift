@@ -275,7 +275,7 @@ private struct ApprovalRow: View {
             }
             HStack {
                 Spacer()
-                CompanionActionButton("Approve", role: .normal, action: approve)
+                CompanionActionButton("Approve", action: approve)
                     .accessibilityHint("Approves this pending action and resumes execution on the desktop")
             }
         }

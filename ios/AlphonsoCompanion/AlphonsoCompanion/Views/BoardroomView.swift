@@ -53,7 +53,7 @@ struct BoardroomView: View {
                             }
 
                             if session.status.lowercased() == "active" {
-                                SteeringInputRow(sessionID: session.id)
+                                SteeringInputRow(sessionID: session.id.uuidString)
                             }
                         }
                     }
