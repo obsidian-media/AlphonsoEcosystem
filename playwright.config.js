@@ -6,6 +6,12 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1280, height: 800 }
   },
+  webServer: {
+    command: 'npm run e2e:server',
+    url: 'http://127.0.0.1:5173',
+    reuseExistingServer: false,
+    timeout: 120000
+  },
   timeout: 60000,
   retries: 2
 });
