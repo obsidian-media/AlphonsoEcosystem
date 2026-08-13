@@ -133,7 +133,9 @@ pub async fn voice_start(
   }
 
   let health_client = reqwest::Client::builder()
-    .timeout(std::time::Duration::from_millis(VOICE_STARTUP_RETRY_DELAY_MS))
+    .timeout(std::time::Duration::from_millis(
+      VOICE_STARTUP_RETRY_DELAY_MS,
+    ))
     .build()
     .map_err(|e| format!("Failed to build voice health-check client: {e}"))?;
 

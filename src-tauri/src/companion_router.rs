@@ -176,7 +176,10 @@ async fn handle_run_workflow(params: Value, app: AppHandle) -> Result<Value, Jso
 
   // Emit Tauri event that the React frontend listens to
   app
-    .emit("companion://run_workflow", json!({ "workflowId": workflow_id }))
+    .emit(
+      "companion://run_workflow",
+      json!({ "workflowId": workflow_id }),
+    )
     .ok();
 
   Ok(json!({ "ok": true, "workflowId": workflow_id }))
@@ -194,7 +197,10 @@ async fn handle_steer_boardroom(params: Value, app: AppHandle) -> Result<Value, 
 
   // Emit Tauri event that the boardroom facilitator on React listens to
   app
-    .emit("companion://steer_boardroom", json!({ "sessionId": session_id, "guidance": guidance }))
+    .emit(
+      "companion://steer_boardroom",
+      json!({ "sessionId": session_id, "guidance": guidance }),
+    )
     .ok();
 
   Ok(json!({ "ok": true, "sessionId": session_id }))
@@ -302,14 +308,18 @@ fn operations_snapshot(receipts: &[Value]) -> Value {
 }
 
 async fn handle_get_operations(app: AppHandle) -> Result<Value, JsonRpcError> {
-  let raw_receipts =
-    crate::kv_store::kv_get(app.clone(), "alphonso_orchestration_receipts_v1".to_string()).unwrap_or(None);
+  let raw_receipts = crate::kv_store::kv_get(
+    app.clone(),
+    "alphonso_orchestration_receipts_v1".to_string(),
+  )
+  .unwrap_or(None);
   let receipts: Vec<Value> = raw_receipts
     .and_then(|value| serde_json::from_str(&value).ok())
     .unwrap_or_default();
 
   let raw_approvals =
-    crate::kv_store::kv_get(app, "alphonso_project_execution_approvals_v1".to_string()).unwrap_or(None);
+    crate::kv_store::kv_get(app, "alphonso_project_execution_approvals_v1".to_string())
+      .unwrap_or(None);
   let approvals: Vec<Value> = raw_approvals
     .and_then(|value| serde_json::from_str(&value).ok())
     .unwrap_or_default();
