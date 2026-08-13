@@ -1425,7 +1425,7 @@ export function ChatView({
             </span>
             {isGenerating && (
               <button
-                onClick={() => abortRef.current?.abort()}
+                onClick={handleAbortStream}
                 className="h-7 px-3 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest bg-[var(--surface-3)] text-[var(--error)] hover:bg-[var(--error-dim)] border border-[var(--error)]/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--error)]/50"
                 aria-label="Abort and stop"
               >
