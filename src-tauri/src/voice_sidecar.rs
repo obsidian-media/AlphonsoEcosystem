@@ -57,6 +57,30 @@ pub async fn voice_start(
   app: tauri::AppHandle,
   state: State<'_, VoiceSidecar>,
 ) -> Result<String, String> {
+  // Another launch path (Runtime Hub's "voice-os" ToolDef in runtime_manager.rs)
+  // can independently spawn the same uvicorn process on this port with its own
+  // PID tracking. Checking only this module's local Mutex missed that case, so
+  // both paths could believe they owned the process and race to bind :8766.
+  // A live health check catches "already running" regardless of which path
+  // started it.
+  let already_healthy = match reqwest::Client::builder()
+    .timeout(std::time::Duration::from_millis(
+      VOICE_STARTUP_RETRY_DELAY_MS,
+    ))
+    .build()
+  {
+    Ok(client) => client
+      .get(VOICE_HEALTH_URL)
+      .send()
+      .await
+      .map(|response| response.status().is_success())
+      .unwrap_or(false),
+    Err(_) => false,
+  };
+  if already_healthy {
+    return Ok("already_running".into());
+  }
+
   {
     let mut guard = state.0.lock().map_err(|e| e.to_string())?;
     if guard.is_some() {
@@ -108,8 +132,17 @@ pub async fn voice_start(
     *guard = Some(child);
   }
 
+  let health_client = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_millis(
+      VOICE_STARTUP_RETRY_DELAY_MS,
+    ))
+    .build()
+    .map_err(|e| format!("Failed to build voice health-check client: {e}"))?;
+
   for _ in 0..VOICE_STARTUP_ATTEMPTS {
-    let ready = reqwest::get(VOICE_HEALTH_URL)
+    let ready = health_client
+      .get(VOICE_HEALTH_URL)
+      .send()
       .await
       .map(|response| response.status().is_success())
       .unwrap_or(false);

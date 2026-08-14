@@ -1,5 +1,6 @@
 import { appendOrchestrationReceipt } from '../orchestrationReceiptService';
 import { TRUST_STATES } from '../trustModel';
+import { durableGet, durableSet } from '../../lib/durableStore';
 const APPROVAL_KEY = 'alphonso_project_execution_approvals_v1';
 
 const APPROVAL_REQUIRED_TYPES = new Set([
@@ -28,7 +29,7 @@ const APPROVAL_REASONS = {
 
 function readRows() {
   try {
-    const raw = localStorage.getItem(APPROVAL_KEY);
+    const raw = durableGet(APPROVAL_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -37,7 +38,7 @@ function readRows() {
 }
 
 function writeRows(rows) {
-  localStorage.setItem(APPROVAL_KEY, JSON.stringify(rows.slice(-500)));
+  durableSet(APPROVAL_KEY, JSON.stringify(rows.slice(-500)));
 }
 
 export function requiresApproval(actionType) {
