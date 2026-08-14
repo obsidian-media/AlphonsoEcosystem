@@ -35,8 +35,8 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
   $rawHits = git -C $RepoRoot grep -n -I -E '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)[[:space:]]*[=:][[:space:]]*["''][A-Za-z0-9/+_-]{8,}["'']' -- .
   if ($LASTEXITCODE -gt 1) { Err "secret-scan" "git grep failed (rc=$LASTEXITCODE)" }
   $hits = $rawHits |
-    Where-Object { $_ -match '\.(json|env|ts|js|py|yml|yaml|toml|sh):' } |
-    Where-Object { $_ -notmatch '(^|[\\/])(test|tests|e2e)([\\/]|:)' } |
+    Where-Object { $_ -match '\.(json|env|ts|tsx|js|jsx|py|yml|yaml|toml|sh|rs|ps1|swift):' } |
+    Where-Object { $_ -notmatch $excludeDirsWithTests } |
     Where-Object { $_ -notmatch '\.env\.(example|sample):' }
   if ($hits) { Err "secret-scan" "possible hardcoded secrets in: $($hits.FullName -join ', ')" }
 }

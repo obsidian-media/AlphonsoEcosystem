@@ -28,6 +28,16 @@ URL, NVIDIA key, or Piper token. Cloud Voice authorizes each request through
 the Supabase user session and active enrolled-device record; do not introduce a
 second shared bearer token without a client-safe issuance and rotation design.
 
+**No auth bypass exists or should be reintroduced.** An earlier build shipped
+a `VOICE_ALLOW_OWNER_TESTING_BYPASS` env var that skipped
+`SupabaseDeviceRegistry.require_active_device()` on `/v1/voice/respond` for a
+short owner-test window; it was left enabled in a deployed image for over a
+week before being removed from source on 2026-08-10 (see
+`docs/governance/DEFERRED_WORK.md`). `/v1/voice/respond` now unconditionally
+requires an active Supabase device on every request — do not set that
+variable in Railway/ECS, it no longer does anything, and do not add a
+replacement flag that skips device enforcement even temporarily.
+
 ## Supabase device enrollment
 
 Apply `supabase/migrations/20260713214554_cloud_voice_devices.sql` before

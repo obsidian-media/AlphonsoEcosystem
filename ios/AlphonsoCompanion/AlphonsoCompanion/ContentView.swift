@@ -26,6 +26,13 @@ struct ContentView: View {
         .onAppear {
             webSocketService.getStatus()
         }
+        .onChange(of: webSocketService.connectionState) { _, newValue in
+            if newValue == .authenticated {
+                selectedTab = 0
+            } else if newValue == .disconnected {
+                selectedTab = 1
+            }
+        }
     }
     
     private var mainContent: some View {
@@ -54,7 +61,7 @@ struct ContentView: View {
                 }
                 .tag(3)
 
-            AgentDockView()
+            AgentDockView(selectedTab: $selectedTab)
                 .tabItem {
                     Label("Agents", systemImage: "person.2")
                 }

@@ -174,7 +174,7 @@ final class VoiceSessionViewModel: ObservableObject {
     @Published var isCloudAuthInFlight = false
 
     private let audioService = VoiceAudioService()
-    private let cloudService = VoiceCloudService()
+    private var cloudService = VoiceCloudService()
     private var localTranscriptSender: ((String, String, String) -> String?)?
     private var pendingLocalCommandID: String?
     private var lastSpokenMessageID: UUID?
@@ -236,6 +236,30 @@ final class VoiceSessionViewModel: ObservableObject {
 
     func setLocalTranscriptSender(_ sender: @escaping (String, String, String) -> String?) {
         localTranscriptSender = sender
+    }
+
+    /// Adopt the app-level shared `VoiceCloudService` instance so magic-link
+    /// sign-in (completed by `AlphonsoCompanionApp`'s `onOpenURL`) is visible
+    /// here. Without this, this view model's own `cloudService` — created
+    /// independently at init — never observes a session established on the
+    /// app-level instance, and `cloudReady`/`cloudAuthStatus` stay stuck on
+    /// "sign in required" even after a successful magic-link callback.
+    func attach(cloudService: VoiceCloudService) {
+        guard self.cloudService !== cloudService else { return }
+        self.cloudService = cloudService
+        cloudService.onSpeakingEnded = { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                if self.phase == .speaking {
+                    self.phase = .idle
+                    self.statusMessage = "Ready for voice"
+                }
+            }
+        }
+        cloudEndpoint = cloudService.endpoint
+        cloudAPIKey = cloudService.apiKey
+        cloudStatus = cloudService.statusMessage
+        cloudAuthStatus = cloudService.authenticationStatus
     }
 
     func configureCloudEndpoint(_ endpoint: String, apiKey: String = "") {
@@ -313,8 +337,7 @@ final class VoiceSessionViewModel: ObservableObject {
     }
 
     var cloudReady: Bool {
-        let bypass = Bundle.main.object(forInfoDictionaryKey: "CloudVoiceOwnerTestingBypass") as? Bool ?? false
-        return (bypass || cloudAuthStatus == "Cloud Voice account connected") && !cloudEndpoint.isEmpty
+        return cloudAuthStatus == "Cloud Voice account connected" && !cloudEndpoint.isEmpty
     }
 
     func prepareForVoiceSession() {

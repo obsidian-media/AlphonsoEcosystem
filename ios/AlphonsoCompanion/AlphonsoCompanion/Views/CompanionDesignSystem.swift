@@ -1,20 +1,21 @@
 import SwiftUI
 
 enum CompanionTheme {
-    static let canvas = Color(uiColor: .systemBackground)
-    static let ink = Color(uiColor: .label)
-    static let mutedInk = Color(uiColor: .secondaryLabel)
-    static let quietInk = Color(uiColor: .tertiaryLabel)
-    static let rule = Color(uiColor: .separator)
-    static let accent = Color(red: 0.16, green: 0.18, blue: 0.46)
-    static let success = Color(red: 0.08, green: 0.43, blue: 0.27)
-    static let warning = Color(red: 0.62, green: 0.31, blue: 0.06)
-    static let danger = Color(red: 0.67, green: 0.13, blue: 0.16)
+    static let canvas = Color(red: 0.035, green: 0.035, blue: 0.045) // Pure OLED Midnight (#09090B)
+    static let surface = Color(red: 0.078, green: 0.078, blue: 0.098) // Bespoke Deep-Dark Card Surface (#14141A)
+    static let ink = Color(red: 0.98, green: 0.98, blue: 1.0) // Crisp Editorial Bone White (#FAFAFA)
+    static let mutedInk = Color(red: 0.63, green: 0.63, blue: 0.70) // Softened Slate Secondary (#A1A1AA)
+    static let quietInk = Color(red: 0.45, green: 0.45, blue: 0.52) // Muted Zinc Tertiary (#71717A)
+    static let rule = Color(red: 0.15, green: 0.15, blue: 0.18) // Ultra-Thin Slate Separator (#27272A)
+    static let accent = Color(red: 0.42, green: 0.44, blue: 0.94) // Electric Indigo Accent
+    static let success = Color(red: 0.10, green: 0.74, blue: 0.45) // Neon Jade Success
+    static let warning = Color(red: 0.95, green: 0.60, blue: 0.10) // Electric Amber Warning
+    static let danger = Color(red: 0.94, green: 0.27, blue: 0.31) // Laser Ruby Red Danger
 
-    static let display = Font.system(size: 36, weight: .semibold, design: .serif)
-    static let title = Font.system(size: 21, weight: .semibold, design: .rounded)
-    static let section = Font.system(size: 12, weight: .bold, design: .rounded)
-    static let body = Font.system(size: 16, weight: .regular, design: .rounded)
+    static let display = Font.system(size: 34, weight: .bold, design: .serif)
+    static let title = Font.system(size: 19, weight: .semibold, design: .rounded)
+    static let section = Font.system(size: 11, weight: .bold, design: .monospaced)
+    static let body = Font.system(size: 15, weight: .regular, design: .rounded)
     static let caption = Font.system(size: 13, weight: .medium, design: .rounded)
 }
 
