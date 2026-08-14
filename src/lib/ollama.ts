@@ -239,6 +239,47 @@ export function chooseDefaultModel(models: OllamaModel[], currentModel: string |
   return names[0] || '';
 }
 
+const FALLBACK_CHAINS: Record<string, string[]> = {
+  'qwen2.5-coder:7b': ['qwen2.5-coder:3b', 'qwen2.5:7b', 'llama3.1:8b'],
+  'qwen2.5-coder:3b': ['qwen2.5:3b', 'llama3.2:3b', 'qwen2.5-coder:7b'],
+  'qwen2.5:7b': ['llama3.1:8b', 'mistral:7b', 'qwen2.5:3b'],
+  'llama3.1:8b': ['mistral:7b', 'qwen2.5:7b', 'qwen2.5:3b'],
+  'mistral:latest': ['llama3.2:3b', 'qwen2.5:3b', 'qwen2.5:7b'],
+  'gemma2:9b': ['qwen2.5:7b', 'llama3.1:8b', 'phi3:3.8b'],
+  'phi3:3.8b': ['qwen2.5:3b', 'llama3.2:3b', 'qwen2.5:7b'],
+};
+
+/**
+ * Selects the optimal Ollama model for a given task type.
+ * Uses the MODEL_TIERS classification to match task types to the most capable model.
+ */
+export function selectOptimalModel(task: 'code' | 'creative' | 'analysis' | 'chat'): string {
+  switch (task) {
+    case 'code':
+      return MODEL_TIERS.code_large[0] || 'qwen2.5-coder:7b';
+    case 'creative':
+      return MODEL_TIERS.creative[0] || 'mistral:latest';
+    case 'analysis':
+      return MODEL_TIERS.general_large[0] || 'qwen2.5:7b';
+    case 'chat':
+    default:
+      return MODEL_TIERS.general_large[0] || 'qwen2.5:7b';
+  }
+}
+
+/**
+ * Returns an ordered fallback model chain for a given primary model.
+ * When the primary model fails (model errors, OOM, etc.), each entry
+ * in the returned array is tried in order before giving up.
+ */
+export function getModelFallbackChain(primaryModel: string | null | undefined): string[] {
+  if (!primaryModel) return [];
+  const key = Object.keys(FALLBACK_CHAINS).find((k) => primaryModel.toLowerCase().includes(k.split(':')[0]));
+  if (key) return [...FALLBACK_CHAINS[key]];
+  const allModels = Object.values(MODEL_TIERS).flat();
+  return allModels.filter((m) => m !== primaryModel).slice(0, 3);
+}
+
 const MODEL_TIERS: Record<string, string[]> = {
   code_large: ['qwen2.5-coder:7b', 'qwen2.5-coder:14b', 'qwen2.5-coder:32b', 'deepseek-coder:6.7b', 'codellama:7b', 'codellama:13b'],
   code_small: ['qwen2.5-coder:3b', 'qwen2.5-coder:1.5b', 'deepseek-coder:1.3b', 'starcoder:3b'],

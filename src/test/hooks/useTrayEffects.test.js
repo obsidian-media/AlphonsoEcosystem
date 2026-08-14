@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach, act } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 
 import { useTrayEffects } from '../../hooks/useTrayEffects';
 import { mockTrayIcon, mockTrayMenu, mockTrayMenuItem, mockInvoke, resetTauriMocks } from '../../test/tauri-mock';
