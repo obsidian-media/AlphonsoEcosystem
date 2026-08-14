@@ -75,7 +75,7 @@ export async function resolveComfyuiDirectory(currentDir: string | null | undefi
     const comfyui = tools.find(
       (tool) => tool.name === 'comfyui' && tool.installed && typeof tool.installDir === 'string' && tool.installDir.trim()
     );
-    if (comfyui?.installDir) candidates.push(comfyui.installDir);
+    if (comfyui?.installDir) candidates.push(String(comfyui.installDir));
   } catch {
     // Fall through to explicit discovery hints below.
   }
