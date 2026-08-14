@@ -30,6 +30,24 @@ jobs:
           sudo xcode-select -s "/Applications/$XCODE/Contents/Developer"
           xcodebuild -version
 
+      - name: Run AlphonsoCompanionTests
+        working-directory: ios/AlphonsoCompanion
+        run: |
+          set -e
+          UDID=$(xcrun simctl list devices available | grep -m1 "iPhone" | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          if [ -z "$UDID" ]; then
+            echo "::error::No available iPhone simulator found on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Testing against simulator UDID: $UDID"
+
+          xcodebuild test \
+            -project AlphonsoCompanion.xcodeproj \
+            -scheme AlphonsoCompanion \
+            -destination "platform=iOS Simulator,id=$UDID" \
+            CODE_SIGNING_ALLOWED=NO
+
       - name: Setup signing
         env:
           IOS_CERT_DER: ${{ secrets.IOS_CERT_DER }}
