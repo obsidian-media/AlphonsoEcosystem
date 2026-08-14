@@ -11,6 +11,7 @@ struct AlphonsoCompanionApp: App {
             ContentView()
                 .environmentObject(webSocketService)
                 .environmentObject(mdnsService)
+                .environmentObject(voiceCloudService)
                 .onOpenURL { url in
                     Task { try? await voiceCloudService.completeMagicLink(url) }
                 }

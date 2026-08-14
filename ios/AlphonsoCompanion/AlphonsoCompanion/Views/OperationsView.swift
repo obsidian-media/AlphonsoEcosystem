@@ -8,6 +8,7 @@ struct OperationsView: View {
             header
             CompanionRule()
             needsYou
+            workflowLauncher
             inMotion
             recentOutcomes
         }
@@ -55,15 +56,116 @@ struct OperationsView: View {
     private var needsYou: some View {
         VStack(alignment: .leading, spacing: 0) {
             CompanionSectionHeader("Needs you", detail: "Approvals are only shown when the paired desktop owns a live queue.")
-            EmptyOperationsRow(
-                icon: webSocketService.connectionState == .authenticated ? "checkmark" : "link",
-                title: webSocketService.connectionState == .authenticated ? "Nothing needs your approval" : "Desktop not paired",
-                detail: webSocketService.connectionState == .authenticated
-                    ? "No actionable approval records are available from the desktop yet."
-                    : "Connect from the Connect tab, then return here."
-            )
-            CompanionRule()
+            if webSocketService.connectionState != .authenticated {
+                EmptyOperationsRow(
+                    icon: "link",
+                    title: "Desktop not paired",
+                    detail: "Connect from the Connect tab, then return here."
+                )
+                CompanionRule()
+            } else if webSocketService.operationsSnapshot.approvals.isEmpty {
+                EmptyOperationsRow(
+                    icon: "checkmark",
+                    title: "Nothing needs your approval",
+                    detail: "No actionable approval records are available from the desktop yet."
+                )
+                CompanionRule()
+            } else {
+                ForEach(webSocketService.operationsSnapshot.approvals) { approval in
+                    ApprovalRow(approval: approval) {
+                        webSocketService.approveTask(id: approval.id)
+                    }
+                    CompanionRule()
+                }
+            }
         }
+    }
+
+    private var workflowLauncher: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            CompanionSectionHeader(
+                "Workflow Launcher",
+                detail: "Initiate guided agentic operations on your desktop with one tap."
+            )
+
+            if webSocketService.connectionState != .authenticated {
+                EmptyOperationsRow(
+                    icon: "play.circle",
+                    title: "Launcher Offline",
+                    detail: "Connect to the desktop to launch automated workflows."
+                )
+                CompanionRule()
+            } else {
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        workflowCard(
+                            id: "WF_AI_SELF_DEV",
+                            title: "Trigger Code Audit",
+                            desc: "Audit local repository for debt & features",
+                            icon: "shield.checkerboard"
+                        )
+                        workflowCard(
+                            id: "WF_CONTENT_EMPIRE",
+                            title: "Draft Release Blog",
+                            desc: "Plan & draft structured release blog",
+                            icon: "doc.plaintext"
+                        )
+                    }
+                    HStack(spacing: 12) {
+                        workflowCard(
+                            id: "WF_GOVERN_AUTOMATION",
+                            title: "Perform Security Scan",
+                            desc: "Audit CSP, packages & search secrets",
+                            icon: "lock.shield"
+                        )
+                        workflowCard(
+                            id: "WF_PRODUCT_DEV",
+                            title: "Product Dev Chain",
+                            desc: "Pipeline: research, dev, test & launch",
+                            icon: "cpu"
+                        )
+                    }
+                }
+                .padding(.vertical, 16)
+                CompanionRule()
+            }
+        }
+    }
+
+    private func workflowCard(id: String, title: String, desc: String, icon: String) -> some View {
+        Button {
+            webSocketService.runWorkflow(id: id)
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 20))
+                        .foregroundStyle(CompanionTheme.accent)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption)
+                        .foregroundStyle(CompanionTheme.quietInk)
+                }
+                Text(title)
+                    .font(CompanionTheme.caption)
+                    .foregroundStyle(CompanionTheme.ink)
+                    .lineLimit(1)
+                Text(desc)
+                    .font(.system(size: 11))
+                    .foregroundStyle(CompanionTheme.mutedInk)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(CompanionTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(CompanionTheme.rule, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var inMotion: some View {
@@ -150,6 +252,34 @@ private struct OperationsWorkRow: View {
                     CompanionActionButton("Stop", role: .destructive, action: stop)
                         .accessibilityHint("Requests that the paired desktop stop this command")
                 }
+            }
+        }
+        .padding(.vertical, 16)
+    }
+}
+
+private struct ApprovalRow: View {
+    let approval: ApprovalItem
+    let approve: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(approval.summary.isEmpty ? approval.actionType.capitalized : approval.summary)
+                        .font(CompanionTheme.title)
+                        .foregroundStyle(CompanionTheme.ink)
+                    Text(approval.reason)
+                        .font(CompanionTheme.caption)
+                        .foregroundStyle(CompanionTheme.mutedInk)
+                }
+                Spacer(minLength: 12)
+                CompanionStatusMark(status: approval.riskLevel)
+            }
+            HStack {
+                Spacer()
+                CompanionActionButton("Approve", action: approve)
+                    .accessibilityHint("Approves this pending action and resumes execution on the desktop")
             }
         }
         .padding(.vertical, 16)

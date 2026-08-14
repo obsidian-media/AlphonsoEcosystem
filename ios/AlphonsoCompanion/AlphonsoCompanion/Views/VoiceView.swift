@@ -3,6 +3,7 @@ import UIKit
 
 struct VoiceView: View {
     @EnvironmentObject var webSocketService: WebSocketService
+    @EnvironmentObject var voiceCloudService: VoiceCloudService
     @StateObject private var viewModel = VoiceSessionViewModel()
     @State private var cloudEmail = ""
     @State private var cloudOTP = ""
@@ -226,6 +227,7 @@ struct VoiceView: View {
                 }
             }
             .onAppear {
+                viewModel.attach(cloudService: voiceCloudService)
                 viewModel.prepareForVoiceSession()
                 viewModel.setLocalTranscriptSender { text, agentID, language in
                     webSocketService.sendCommand(
