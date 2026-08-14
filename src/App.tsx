@@ -658,7 +658,7 @@ function AppShell() {
           console.warn(`[App] Received companion://steer_boardroom for session: ${sessionId}, guidance: ${guidance}`);
           try {
             const { addThreadMessage } = await import('./services/boardroomThreadService');
-            await addThreadMessage(sessionId, 'shayan', guidance);
+            addThreadMessage({ threadId: sessionId, speaker: 'shayan', content: guidance });
             
             // Broadcast success back to iOS
             invoke('companion_broadcast', {
