@@ -193,15 +193,78 @@ private struct AgentIdentity: Identifiable {
     var assetName: String { name.lowercased() }
 
     static let all: [AgentIdentity] = [
-        .init(name: "Alphonso", role: "Local operator", summary: "Runs work, checks results, and packages outcomes.", accent: .cyan, portraitAlignment: .trailing, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_043623_64a2afa4-ead6-41f9-a9d3-5ed995bae9ca.png"),
-        .init(name: "Jose", role: "Orchestrator", summary: "Routes work, coordinates agents, and keeps approvals visible.", accent: .orange, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260809_095654_f1c94b35-2beb-49b5-8dcc-58c951aa4293.png"),
-        .init(name: "Hector", role: "Research", summary: "Finds, verifies, and synthesizes reliable sources.", accent: .blue, portraitAlignment: .center, imageUrl: nil),
-        .init(name: "Miya", role: "Creative director", summary: "Shapes campaign ideas, storyboards, and exports.", accent: .pink, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_054358_edd3e738-9783-43c3-a2a0-0572c2fa4261.png"),
-        .init(name: "Maria", role: "Governance", summary: "Reviews risk, approvals, and audit evidence.", accent: .purple, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260809_130028_e8598036-b02c-4f82-9a87-9147d77a850a.png"),
-        .init(name: "Marcus", role: "Distribution", summary: "Executes approved publishing and delivery work.", accent: .green, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260809_080103_eb5eb60c-8dab-4a5e-81ae-aadc97ca821a.png"),
-        .init(name: "Echo", role: "Memory historian", summary: "Preserves context and makes past work retrievable.", accent: .indigo, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_050226_44c0d167-1d3a-402d-8513-385e77e27d17.png"),
-        .init(name: "Sentinel", role: "Safety monitor", summary: "Watches automation safety and policy boundaries.", accent: .red, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_044803_fe131f78-e621-4060-ad35-1df4ba8ae0bc.png"),
-        .init(name: "Nova", role: "Opportunity analyst", summary: "Scores options and highlights the strongest next move.", accent: .yellow, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_050229_3690b86a-6e41-4840-8716-e238f3070d49.png")
+        .init(
+            name: "Alphonso",
+            role: "Local operator",
+            summary: "Runs work, checks results, and packages outcomes.",
+            accent: .cyan,
+            portraitAlignment: .trailing,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_043623_64a2afa4-ead6-41f9-a9d3-5ed995bae9ca.png"
+        ),
+        .init(
+            name: "Jose",
+            role: "Orchestrator",
+            summary: "Routes work, coordinates agents, and keeps approvals visible.",
+            accent: .orange,
+            portraitAlignment: .center,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260809_095654_f1c94b35-2beb-49b5-8dcc-58c951aa4293.png"
+        ),
+        .init(
+            name: "Hector",
+            role: "Research",
+            summary: "Finds, verifies, and synthesizes reliable sources.",
+            accent: .blue,
+            portraitAlignment: .center,
+            imageUrl: nil
+        ),
+        .init(
+            name: "Miya",
+            role: "Creative director",
+            summary: "Shapes campaign ideas, storyboards, and exports.",
+            accent: .pink,
+            portraitAlignment: .center,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_054358_edd3e738-9783-43c3-a2a0-0572c2fa4261.png"
+        ),
+        .init(
+            name: "Maria",
+            role: "Governance",
+            summary: "Reviews risk, approvals, and audit evidence.",
+            accent: .purple,
+            portraitAlignment: .center,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260809_130028_e8598036-b02c-4f82-9a87-9147d77a850a.png"
+        ),
+        .init(
+            name: "Marcus",
+            role: "Distribution",
+            summary: "Executes approved publishing and delivery work.",
+            accent: .green,
+            portraitAlignment: .center,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260809_080103_eb5eb60c-8dab-4a5e-81ae-aadc97ca821a.png"
+        ),
+        .init(
+            name: "Echo",
+            role: "Memory historian",
+            summary: "Preserves context and makes past work retrievable.",
+            accent: .indigo,
+            portraitAlignment: .center,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_050226_44c0d167-1d3a-402d-8513-385e77e27d17.png"
+        ),
+        .init(
+            name: "Sentinel",
+            role: "Safety monitor",
+            summary: "Watches automation safety and policy boundaries.",
+            accent: .red,
+            portraitAlignment: .center,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_044803_fe131f78-e621-4060-ad35-1df4ba8ae0bc.png"
+        ),
+        .init(
+            name: "Nova",
+            role: "Opportunity analyst",
+            summary: "Scores options and highlights the strongest next move.",
+            accent: .yellow,
+            portraitAlignment: .center,
+            imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_050229_3690b86a-6e41-4840-8716-e238f3070d49.png"
+        )
     ]
 }
 

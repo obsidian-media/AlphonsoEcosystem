@@ -196,11 +196,17 @@ struct SteeringInputRow: View {
                     webSocketService.steerBoardroom(sessionId: sessionID, guidance: trimmed)
                     guidance = ""
                     // Dismiss keyboard
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+                    )
                 } label: {
                     Image(systemName: "paperplane.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(guidance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : CompanionTheme.accent)
+                        .foregroundStyle(
+                            guidance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                ? Color.secondary
+                                : CompanionTheme.accent
+                        )
                 }
                 .disabled(guidance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .buttonStyle(.plain)

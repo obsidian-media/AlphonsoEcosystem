@@ -253,7 +253,9 @@ func parseChatBlocks(from text: String) -> [ChatBlock] {
             
             if isLanguage {
                 let language = firstLine
-                let codeContent = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                let codeContent = lines.dropFirst()
+                    .joined(separator: "\n")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
                 blocks.append(ChatBlock(isCode: true, codeLanguage: language, content: codeContent))
             } else {
                 blocks.append(ChatBlock(isCode: true, codeLanguage: nil, content: trimmed))
