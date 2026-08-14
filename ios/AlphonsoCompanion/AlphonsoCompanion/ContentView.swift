@@ -26,7 +26,7 @@ struct ContentView: View {
         .onAppear {
             webSocketService.getStatus()
         }
-        .onChange(of: webSocketService.connectionState) { oldValue, newValue in
+        .onChange(of: webSocketService.connectionState) { _, newValue in
             if newValue == .authenticated {
                 selectedTab = 0
             } else if newValue == .disconnected {
