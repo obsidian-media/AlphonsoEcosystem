@@ -19,7 +19,7 @@ class WebSocketService: ObservableObject {
     @Published private(set) var operationsSnapshot = OperationsSnapshot.empty
     @Published private(set) var lastOperationsRefreshAt: Date?
     @Published var connectionHint: String?
-    @Published var preconfiguredAgentID: String? = nil
+    @Published var preconfiguredAgentID: String?
 
     private var webSocketTask: URLSessionWebSocketTask?
     private let session = URLSession(configuration: .default)

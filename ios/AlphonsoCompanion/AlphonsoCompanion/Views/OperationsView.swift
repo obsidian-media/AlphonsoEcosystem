@@ -84,7 +84,7 @@ struct OperationsView: View {
     private var workflowLauncher: some View {
         VStack(alignment: .leading, spacing: 0) {
             CompanionSectionHeader("Workflow Launcher", detail: "Initiate guided agentic operations on your desktop with one tap.")
-            
+
             if webSocketService.connectionState != .authenticated {
                 EmptyOperationsRow(
                     icon: "play.circle",

@@ -143,7 +143,7 @@ struct MessageBubble: View {
     var body: some View {
         VStack(alignment: message.isIncoming ? .leading : .trailing, spacing: 6) {
             let blocks = parseChatBlocks(from: message.text)
-            
+
             ForEach(blocks) { block in
                 if block.isCode {
                     CodeBlockCard(code: block.content, language: block.codeLanguage)

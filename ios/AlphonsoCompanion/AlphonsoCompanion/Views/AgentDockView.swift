@@ -4,7 +4,7 @@ struct AgentDockView: View {
     @EnvironmentObject var webSocketService: WebSocketService
     @Binding var selectedTab: Int
 
-    @State private var selectedAgent: AgentIdentity? = nil
+    @State private var selectedAgent: AgentIdentity?
 
     private let agents = AgentIdentity.all
 
@@ -201,7 +201,7 @@ private struct AgentIdentity: Identifiable {
         .init(name: "Marcus", role: "Distribution", summary: "Executes approved publishing and delivery work.", accent: .green, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260809_080103_eb5eb60c-8dab-4a5e-81ae-aadc97ca821a.png"),
         .init(name: "Echo", role: "Memory historian", summary: "Preserves context and makes past work retrievable.", accent: .indigo, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_050226_44c0d167-1d3a-402d-8513-385e77e27d17.png"),
         .init(name: "Sentinel", role: "Safety monitor", summary: "Watches automation safety and policy boundaries.", accent: .red, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_044803_fe131f78-e621-4060-ad35-1df4ba8ae0bc.png"),
-        .init(name: "Nova", role: "Opportunity analyst", summary: "Scores options and highlights the strongest next move.", accent: .yellow, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_050229_3690b86a-6e41-4840-8716-e238f3070d49.png"),
+        .init(name: "Nova", role: "Opportunity analyst", summary: "Scores options and highlights the strongest next move.", accent: .yellow, portraitAlignment: .center, imageUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3ESNJkrNMFHLSXQUcOGQ7tw7sj0/hf_20260810_050229_3690b86a-6e41-4840-8716-e238f3070d49.png")
     ]
 }
 

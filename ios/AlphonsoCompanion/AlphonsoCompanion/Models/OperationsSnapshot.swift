@@ -48,7 +48,7 @@ struct ApprovalItem: Identifiable, Equatable {
         self.actionType = actionType
         self.reason = reason
         self.summary = summary
-        
+
         // Parse date from ISO8601 string or fallback to UNIX epoch
         let dateString = dictionary["createdAt"] as? String ?? ""
         let formatter = ISO8601DateFormatter()
