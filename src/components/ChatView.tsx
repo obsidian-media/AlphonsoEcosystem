@@ -526,6 +526,180 @@ export function ChatView({
     if (files.length) setAttachedFiles((prev) => [...prev, ...files]);
   };
 
+  const handleJoseCommand = async (cleanInput: string) => {
+    const userMessage = { id: nextMsgId(), role: 'user', content: cleanInput };
+    setMessages((current) => [...current, userMessage]);
+    setInputValue('');
+    setAttachedFile(null);
+    setAttachedFiles([]);
+    setIsGenerating(true);
+    onGenerationChange(true);
+    onJoseExecutionState?.('thinking', 'Jose is decomposing and distributing the command.');
+
+    try {
+      const conversationHistory = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
+      setStreamingText('');
+      setStreamingTokens(0);
+      setStreamingStartTime(Date.now());
+      streamControllerRef.current = new AbortController();
+      const result = await runJoseCommandExecutionPipeline({
+        commandText: cleanInput,
+        source: 'user',
+        endpoint: settings.endpoint,
+        zeroCostMode: settings.zeroCostMode,
+        previewMode,
+        conversationHistory,
+        onProgress: (progress) => {
+          setLiveProgress(progress);
+          onJoseExecutionState?.(
+            progress.stage === 'executed' ? 'task_complete'
+              : progress.stage === 'approval_required' ? 'approving'
+                : progress.stage === 'generating_images' ? 'generating'
+                  : 'thinking',
+            progress.stage === 'wave_start'
+              ? `Wave ${progress.wave + 1}: ${progress.agents?.join(', ')}`
+              : progress.stage === 'executed'
+                ? `${progress.assignment?.agent || 'Agent'} completed`
+                : progress.stage === 'generating_images'
+                  ? `Generating ${progress.promptCount || 0} image(s)...`
+                  : progress.stage === 'approval_required'
+                    ? `${progress.assignment?.agent || 'Agent'} needs approval`
+                    : 'Processing...'
+          );
+        },
+        onToken: (tokenData) => {
+          setStreamingText(tokenData.fullText || '');
+          setStreamingTokens(tokenData.fullText?.length || 0);
+          onJoseExecutionState?.('streaming', `Generating code... ${tokenData.fullText?.length || 0} tokens`);
+        }
+      });
+      streamControllerRef.current = null;
+      setStreamingText('');
+      setStreamingTokens(0);
+      setStreamingStartTime(null);
+
+      setPipelineResult(result);
+      setPipelineCommandText(cleanInput);
+      setLiveProgress(null);
+
+      const command = result?.command || {};
+      const userReport = command?.userReport || null;
+      const baseSummary = userReport?.summary || 'Jose processed the command.';
+      const hintLine = (result?.pendingApprovalCount || 0) > 0
+        ? '\nApprove the pending tasks below to continue.'
+        : '';
+
+      const richSummary = buildProjectSummary(result, cleanInput, baseSummary, screenObserverLogs);
+      const needsRuntimeHub = richSummary.startsWith('__RUNTIME_HUB_REQUIRED__');
+      const displaySummary = needsRuntimeHub ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
+
+      const newMsgId = nextMsgId();
+      setNewMessageIds((prev) => new Set(prev).add(String(newMsgId)));
+      setMessages((current) => [...current, {
+        id: newMsgId,
+        role: 'assistant',
+        content: displaySummary + hintLine,
+        isNew: true,
+        ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
+      }]);
+
+      if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
+        const pending = result.executionReceipts.filter((r) => r.status === 'approval_required');
+        if (pending.length > 0) {
+          setPendingApprovals(pending);
+          setApprovalCommandId(result.commandId);
+
+          // Inject in-chat notification so the user knows approval is needed
+          const agentNames = [...new Set(pending.map((r) => r.agent).filter(Boolean))].join(', ');
+          setMessages((current) => [...current, {
+            id: nextMsgId(),
+            role: 'assistant',
+            content: `⏳ **${agentNames || 'Agent'} ${pending.length === 1 ? 'is' : 'are'} waiting for your approval** — review the task${pending.length !== 1 ? 's' : ''} below and approve or deny to continue.`
+          }]);
+
+          // 10-minute timeout — clear approval panel and notify user
+          if (approvalTimeoutRef.current) clearTimeout(approvalTimeoutRef.current);
+          approvalTimeoutRef.current = setTimeout(() => {
+            setPendingApprovals((prev) => {
+              if (prev.length > 0) {
+                setMessages((current) => [...current, {
+                  id: `timeout-${Date.now()}`,
+                  role: 'assistant',
+                  content: '⏸ Approval timed out after 10 minutes. Resubmit your request to try again.'
+                }]);
+              }
+              return [];
+            });
+            setApprovalCommandId(null);
+          }, 10 * 60 * 1000);
+        }
+      }
+
+      if (result?.commandId) {
+        const receipts = listOrchestrationReceipts({ commandId: result.commandId });
+        setExecutionReceipts(receipts);
+        const pipelineKey = getJosePipelineStorageKey(activeChatId);
+        if (pipelineKey) {
+          try {
+            localStorage.setItem(pipelineKey, JSON.stringify({
+              pipelineResult: result,
+              pipelineCommandText: cleanInput,
+              executionReceipts: receipts
+            }));
+          } catch { /* storage */ }
+        }
+        setPipelineStateChatId(activeChatId);
+        const hectorReceipt = receipts.find((r) => r.agent === 'hector');
+        if (hectorReceipt?.details?.sources?.length) {
+          setHectorBriefing({ sources: hectorReceipt.details.sources });
+        }
+      } else {
+        const pipelineKey = getJosePipelineStorageKey(activeChatId);
+        if (pipelineKey) {
+          try {
+            localStorage.setItem(pipelineKey, JSON.stringify({
+              pipelineResult: result,
+              pipelineCommandText: cleanInput,
+              executionReceipts: []
+            }));
+          } catch { /* storage */ }
+        }
+        setPipelineStateChatId(activeChatId);
+      }
+
+      onJoseExecutionState?.(
+        (result?.pendingApprovalCount || 0) > 0 ? 'approving' : 'task_complete',
+        (result?.pendingApprovalCount || 0) > 0
+          ? 'Jose executed safe tasks and is waiting for approvals.'
+          : 'Jose completed routing and merged reports.'
+      );
+      onTaskComplete();
+
+      // Fire Nova analysis in background — non-blocking
+      try {
+        const novaScores = computeOpportunityScores(cleanInput, {});
+        if (novaScores.valueScore > 60) {
+          let novaThreshold = 65;
+          try { novaThreshold = Number(localStorage.getItem('alphonso_nova_threshold') || '65') || 65; } catch { /* ignore */ }
+          runNovaAnalysis(cleanInput, null, {}, { skipOllama: true }).then(novaResult => {
+            if (novaResult?.schema?.valueScore > novaThreshold) setNovaInsight(novaResult.schema);
+          }).catch(() => {});
+        }
+      } catch { /* non-critical */ }
+    } catch (error) {
+      setMessages((current) => [...current, {
+        id: nextMsgId(),
+        role: 'assistant',
+        isError: true,
+        content: `Jose orchestration failed.\n\n${String(error)}`
+      }]);
+      onJoseExecutionState?.('warning', 'Jose orchestration failed.');
+    } finally {
+      setIsGenerating(false);
+      onGenerationChange(false);
+    }
+  };
+
   const handleSend = async (overrideInput?: string) => {
     const effectiveInput = typeof overrideInput === 'string' ? overrideInput : inputValue;
     if (!effectiveInput.trim() || isGenerating) return;
@@ -538,177 +712,7 @@ export function ChatView({
     const joseCommand = !directMode && (isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput));
 
     if (joseCommand) {
-      const userMessage = { id: nextMsgId(), role: 'user', content: cleanInput };
-      setMessages((current) => [...current, userMessage]);
-      setInputValue('');
-      setAttachedFile(null);
-      setAttachedFiles([]);
-      setIsGenerating(true);
-      onGenerationChange(true);
-      onJoseExecutionState?.('thinking', 'Jose is decomposing and distributing the command.');
-
-      try {
-        const conversationHistory = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
-        setStreamingText('');
-        setStreamingTokens(0);
-        setStreamingStartTime(Date.now());
-        streamControllerRef.current = new AbortController();
-        const result = await runJoseCommandExecutionPipeline({
-          commandText: cleanInput,
-          source: 'user',
-          endpoint: settings.endpoint,
-          zeroCostMode: settings.zeroCostMode,
-          previewMode,
-          conversationHistory,
-          onProgress: (progress) => {
-            setLiveProgress(progress);
-            onJoseExecutionState?.(
-              progress.stage === 'executed' ? 'task_complete'
-                : progress.stage === 'approval_required' ? 'approving'
-                  : progress.stage === 'generating_images' ? 'generating'
-                    : 'thinking',
-              progress.stage === 'wave_start'
-                ? `Wave ${progress.wave + 1}: ${progress.agents?.join(', ')}`
-                : progress.stage === 'executed'
-                  ? `${progress.assignment?.agent || 'Agent'} completed`
-                  : progress.stage === 'generating_images'
-                    ? `Generating ${progress.promptCount || 0} image(s)...`
-                    : progress.stage === 'approval_required'
-                      ? `${progress.assignment?.agent || 'Agent'} needs approval`
-                      : 'Processing...'
-            );
-          },
-          onToken: (tokenData) => {
-            setStreamingText(tokenData.fullText || '');
-            setStreamingTokens(tokenData.fullText?.length || 0);
-            onJoseExecutionState?.('streaming', `Generating code... ${tokenData.fullText?.length || 0} tokens`);
-          }
-        });
-        streamControllerRef.current = null;
-        setStreamingText('');
-        setStreamingTokens(0);
-        setStreamingStartTime(null);
-
-      setPipelineResult(result);
-      setPipelineCommandText(cleanInput);
-      setLiveProgress(null);
-
-        const command = result?.command || {};
-        const userReport = command?.userReport || null;
-        const baseSummary = userReport?.summary || 'Jose processed the command.';
-        const hintLine = (result?.pendingApprovalCount || 0) > 0
-          ? '\nApprove the pending tasks below to continue.'
-          : '';
-
-        const richSummary = buildProjectSummary(result, cleanInput, baseSummary, screenObserverLogs);
-        const needsRuntimeHub = richSummary.startsWith('__RUNTIME_HUB_REQUIRED__');
-        const displaySummary = needsRuntimeHub ? richSummary.slice('__RUNTIME_HUB_REQUIRED__'.length) : richSummary;
-
-        const newMsgId = nextMsgId();
-        setNewMessageIds((prev) => new Set(prev).add(String(newMsgId)));
-        setMessages((current) => [...current, {
-          id: newMsgId,
-          role: 'assistant',
-          content: displaySummary + hintLine,
-          isNew: true,
-          ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
-        }]);
-
-        if ((result?.pendingApprovalCount || 0) > 0 && Array.isArray(result?.executionReceipts)) {
-          const pending = result.executionReceipts.filter((r) => r.status === 'approval_required');
-          if (pending.length > 0) {
-            setPendingApprovals(pending);
-            setApprovalCommandId(result.commandId);
-
-            // Inject in-chat notification so the user knows approval is needed
-            const agentNames = [...new Set(pending.map((r) => r.agent).filter(Boolean))].join(', ');
-            setMessages((current) => [...current, {
-              id: nextMsgId(),
-              role: 'assistant',
-              content: `⏳ **${agentNames || 'Agent'} ${pending.length === 1 ? 'is' : 'are'} waiting for your approval** — review the task${pending.length !== 1 ? 's' : ''} below and approve or deny to continue.`
-            }]);
-
-            // 10-minute timeout — clear approval panel and notify user
-            if (approvalTimeoutRef.current) clearTimeout(approvalTimeoutRef.current);
-            approvalTimeoutRef.current = setTimeout(() => {
-              setPendingApprovals((prev) => {
-                if (prev.length > 0) {
-                  setMessages((current) => [...current, {
-                    id: `timeout-${Date.now()}`,
-                    role: 'assistant',
-                    content: '⏸ Approval timed out after 10 minutes. Resubmit your request to try again.'
-                  }]);
-                }
-                return [];
-              });
-              setApprovalCommandId(null);
-            }, 10 * 60 * 1000);
-          }
-        }
-
-        if (result?.commandId) {
-          const receipts = listOrchestrationReceipts({ commandId: result.commandId });
-          setExecutionReceipts(receipts);
-          const pipelineKey = getJosePipelineStorageKey(activeChatId);
-          if (pipelineKey) {
-            try {
-              localStorage.setItem(pipelineKey, JSON.stringify({
-                pipelineResult: result,
-                pipelineCommandText: cleanInput,
-                executionReceipts: receipts
-              }));
-            } catch { /* storage */ }
-          }
-          setPipelineStateChatId(activeChatId);
-          const hectorReceipt = receipts.find((r) => r.agent === 'hector');
-          if (hectorReceipt?.details?.sources?.length) {
-            setHectorBriefing({ sources: hectorReceipt.details.sources });
-          }
-        } else {
-          const pipelineKey = getJosePipelineStorageKey(activeChatId);
-          if (pipelineKey) {
-            try {
-              localStorage.setItem(pipelineKey, JSON.stringify({
-                pipelineResult: result,
-                pipelineCommandText: cleanInput,
-                executionReceipts: []
-              }));
-            } catch { /* storage */ }
-          }
-          setPipelineStateChatId(activeChatId);
-        }
-
-        onJoseExecutionState?.(
-          (result?.pendingApprovalCount || 0) > 0 ? 'approving' : 'task_complete',
-          (result?.pendingApprovalCount || 0) > 0
-            ? 'Jose executed safe tasks and is waiting for approvals.'
-            : 'Jose completed routing and merged reports.'
-        );
-        onTaskComplete();
-
-        // Fire Nova analysis in background — non-blocking
-        try {
-          const novaScores = computeOpportunityScores(cleanInput, {});
-          if (novaScores.valueScore > 60) {
-            let novaThreshold = 65;
-            try { novaThreshold = Number(localStorage.getItem('alphonso_nova_threshold') || '65') || 65; } catch { /* ignore */ }
-            runNovaAnalysis(cleanInput, null, {}, { skipOllama: true }).then(novaResult => {
-              if (novaResult?.schema?.valueScore > novaThreshold) setNovaInsight(novaResult.schema);
-            }).catch(() => {});
-          }
-        } catch { /* non-critical */ }
-      } catch (error) {
-        setMessages((current) => [...current, {
-          id: nextMsgId(),
-          role: 'assistant',
-          isError: true,
-          content: `Jose orchestration failed.\n\n${String(error)}`
-        }]);
-        onJoseExecutionState?.('warning', 'Jose orchestration failed.');
-      } finally {
-        setIsGenerating(false);
-        onGenerationChange(false);
-      }
+      await handleJoseCommand(cleanInput);
       return;
     }
 
