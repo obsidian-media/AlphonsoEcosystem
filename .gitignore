@@ -76,5 +76,13 @@ desktop.ini
 audits/private/
 
 # Fetched at build time by scripts/fetch-ollama-runtime.mjs — never commit
-# vendored runtime binaries (see docs/DEPENDENCY_BUNDLING_PLAN.md)
-src-tauri/vendor/
+# vendored runtime binaries (see docs/DEPENDENCY_BUNDLING_PLAN.md). The
+# directory itself must stay tracked (src-tauri/vendor/ollama/.gitkeep) —
+# tauri-build validates bundle.resources paths exist on EVERY cargo
+# invocation (check/test/clippy/build), not only `tauri build`'s actual
+# bundling step, so a fully-gitignored directory breaks plain `cargo check`
+# for every contributor who hasn't run the fetch script. Learned this the
+# hard way via a real CI failure (see docs/DEPENDENCY_BUNDLING_PLAN.md's
+# Implementation log) — do not re-ignore the directory itself again.
+src-tauri/vendor/ollama/*
+!src-tauri/vendor/ollama/.gitkeep

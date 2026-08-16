@@ -11,8 +11,8 @@
 // checksums together, after re-verifying both against a real release.
 
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
-import { mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdir, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
@@ -72,9 +72,12 @@ async function download(url, destPath) {
 }
 
 async function sha256File(filePath) {
-  const { readFile } = await import('node:fs/promises');
-  const buffer = await readFile(filePath);
-  return createHash('sha256').update(buffer).digest('hex');
+  // Streamed, not buffered — these archives run ~1.4GB on Windows/Linux;
+  // readFile()'ing the whole thing into memory before hashing was needless
+  // peak-memory pressure in CI for no benefit over hashing as it streams.
+  const hash = createHash('sha256');
+  await pipeline(createReadStream(filePath), hash);
+  return hash.digest('hex');
 }
 
 function extract(archivePath, kind, destDir) {
@@ -187,6 +190,20 @@ async function main() {
 
   await normalizeLayout(extractedPath, VENDOR_DIR);
   await rm(DOWNLOAD_DIR, { recursive: true, force: true });
+
+  // normalizeLayout() wipes VENDOR_DIR before repopulating it, which also
+  // deletes the git-tracked .gitkeep placeholder from the working tree.
+  // Re-touch it so a contributor who fetches locally doesn't see it as
+  // locally deleted (and risk committing that deletion via `git add -A`,
+  // breaking `cargo check` again for everyone else — see the Implementation
+  // log in docs/DEPENDENCY_BUNDLING_PLAN.md for why that file must survive).
+  await writeFile(
+    join(VENDOR_DIR, '.gitkeep'),
+    'Re-created by scripts/fetch-ollama-runtime.mjs after fetching — see the ' +
+    'tracked version of this file in git for the full explanation of why it ' +
+    'must exist.\n',
+    'utf8'
+  );
 
   const staged = await readdir(VENDOR_DIR);
   process.stdout.write(`[fetch-ollama-runtime] staged into ${VENDOR_DIR}: [${staged.join(', ')}]\n`);

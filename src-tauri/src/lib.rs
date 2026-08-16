@@ -1478,20 +1478,21 @@ async fn launch_ollama() -> Result<ServiceLaunchProof, String> {
       launched_at_ms: now_ms(),
     });
   }
+  // Resolve the real binary (bundled vendor/ollama first, then PATH/common
+  // install locations — see runtime_manager::find_ollama()) instead of
+  // shelling out to a bare "ollama" command. The previous cmd/sh-wrapped
+  // version relied entirely on PATH, so a clean install with only the
+  // bundled binary (no system Ollama) would fail to launch here even after
+  // Dependency Bundling Plan O1/O3 — detection alone doesn't help if the
+  // thing that actually starts the process never asks it where to look.
+  let ollama_path = runtime_manager::find_ollama().unwrap_or_else(|| "ollama".to_string());
   use std::process::Command;
-  if cfg!(target_os = "windows") {
-    let mut cmd = Command::new("cmd");
-    cmd.args(["/C", "start", "/B", "ollama", "serve"]);
-    utils::no_window(&mut cmd);
-    cmd
-      .spawn()
-      .map_err(|e| format!("Failed to launch Ollama: {}", e))?;
-  } else {
-    Command::new("sh")
-      .args(["-c", "ollama serve &"])
-      .spawn()
-      .map_err(|e| format!("Failed to launch Ollama: {}", e))?;
-  }
+  let mut cmd = Command::new(&ollama_path);
+  cmd.arg("serve");
+  utils::no_window(&mut cmd);
+  cmd
+    .spawn()
+    .map_err(|e| format!("Failed to launch Ollama ({ollama_path}): {e}"))?;
   Ok(ServiceLaunchProof {
     service: "ollama".to_string(),
     launched: true,

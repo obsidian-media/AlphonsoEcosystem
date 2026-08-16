@@ -59,16 +59,16 @@ session**, defined precisely as:
 contradict — both need the same owner-level decision as the scoping call
 below, not an assumption baked into the wording:**
 
-- **Windows WebView2.** `tauri.conf.json`'s `bundle.windows.webviewInstallMode`
-  is set to `"downloadBootstrapper"` (`tauri.conf.json:80-83`), which fetches
-  the Edge WebView2 runtime from Microsoft at install time if the target
-  machine doesn't already have it. Recent Windows 10/11 ship WebView2
-  in-box, so a genuinely clean *recent* Windows VM may already satisfy this
-  — but "nothing preinstalled" must not quietly assume that. Resolve one of:
-  switch to `"embedBootstrapper"` or `"offlineInstaller"` (larger installer,
-  no network needed regardless of OS baseline) or explicitly document the
-  supported Windows baseline this plan assumes already has WebView2, and
-  test both the "has it" and "doesn't have it" cases on real VMs.
+- **Resolved 2026-08-16 (see `WIN1`).** `tauri.conf.json`'s
+  `bundle.windows.webviewInstallMode.type` is now `"offlineInstaller"`
+  (changed from the original `"downloadBootstrapper"`, which fetched the
+  Edge WebView2 runtime from Microsoft at install time whenever the target
+  machine didn't already have it — a real gap on a genuinely clean VM).
+  `offlineInstaller` embeds the runtime installer (+~127MB), verified
+  against Tauri's own docs to be the only mode needing zero network
+  regardless of Windows baseline. **Not yet verified**: an actual installer
+  built with this setting, tested on a Windows VM without WebView2
+  preinstalled and without network access — that remains `X1`'s job.
 - **Resolved 2026-08-16:** the model-download question is settled — see
   "Scoping decision" below. The bundled default model ships in the
   installer (no first-run download required for criterion #2 to hold);
@@ -410,7 +410,50 @@ un-started.
 Per `REPO_RULES.md` R3/R38, this section states exactly what was verified,
 how, and what wasn't — not a summary claiming things work.
 
-**Real, empirically verified (not assumed):**
+**Round 2 — real bugs caught by real CI and review, not by more inspection:**
+
+- **CI failure, real (`Rust Tests & Clippy` job, run `31962282938`):**
+  `resource path 'vendor/ollama' doesn't exist`. `tauri-build`'s build script
+  validates every `bundle.resources` path on **every** `cargo` invocation
+  (`check`/`test`/`clippy`/`build`), not only when actually bundling via
+  `tauri build` — a fully gitignored `src-tauri/vendor/ollama/` broke plain
+  `cargo check` for every contributor and CI job that hasn't run the fetch
+  script. Fixed by committing `src-tauri/vendor/ollama/.gitkeep` (tracked)
+  while gitignoring everything else under that directory
+  (`src-tauri/vendor/ollama/*` with a `!.gitkeep` negation) — confirmed
+  locally afterward: `cargo check` now gets past the resource-path check and
+  fails only at the same pre-existing, unrelated `libsqlite3-sys` toolchain
+  issue as a clean checkout. The fetch script also re-touches `.gitkeep`
+  after populating the directory (it wipes the directory first), so a
+  contributor who fetches locally sees it as modified, not deleted — the
+  first version of this fix didn't do that and would have shown `.gitkeep`
+  as locally deleted, one `git add -A` away from breaking the repo for
+  everyone else again.
+- **Real functional bug, caught by CodeRabbit review, not by this session's
+  own testing:** `launch_ollama()` in `src-tauri/src/lib.rs` — the Tauri
+  command the primary chat UI actually calls to start Ollama — never called
+  `find_ollama()` at all. It shelled out to a bare `ollama` command via
+  `cmd /C start /B ollama serve` (Windows) / `sh -c "ollama serve &"`
+  (Unix), relying entirely on PATH. O3 fixed *detection*
+  (`find_ollama()`/`bundled_ollama_path()`) but the function that actually
+  *launches* the process never used it — meaning a clean install with only
+  the bundled binary (no system Ollama on PATH) would still fail to start
+  chat, silently defeating the entire point of O1. Fixed: `launch_ollama()`
+  now resolves the path via `find_ollama()` and spawns that binary directly
+  (`Command::new(&ollama_path).arg("serve")`), dropping the `cmd`/`sh`
+  wrapper entirely rather than trying to pass a resolved path through a
+  shell string. This is exactly what `O4` ("verify a full chat round-trip
+  works") was flagging as unverified — it wasn't just unverified, it would
+  have failed outright.
+- `scripts/fetch-ollama-runtime.mjs`'s checksum step now hashes the
+  ~1.4GB archives as a stream (`createReadStream` piped into `createHash`)
+  instead of buffering the whole file into memory first — a real CI
+  memory-pressure concern caught by review, not by this session's testing.
+  Re-verified end-to-end afterward (real download, real checksum match,
+  real extraction) to confirm the streaming change didn't silently break
+  verification.
+
+**Round 1 — empirically verified (not assumed):**
 
 - Ollama `v0.32.13`'s published sha256 checksums for `ollama-windows-amd64.zip`,
   `ollama-darwin.tgz`, and `ollama-linux-amd64.tar.zst` were fetched from the
