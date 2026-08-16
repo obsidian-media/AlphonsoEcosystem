@@ -1,6 +1,7 @@
 # Alphonso Dependency Bundling — Zero-Prerequisite Install
 
-**Status:** DRAFT — not started
+**Status:** DRAFT — v1 scope decided 2026-08-16 (see "Priority for v1" and
+"Scoping decision" below), implementation not started
 **Owner:** unassigned
 **Applies to:** the desktop Tauri build only (`src-tauri/`), not the cloud
 gateways, MCP server, or bridge, which already run in managed containers with
@@ -66,12 +67,11 @@ below, not an assumption baked into the wording:**
   no network needed regardless of OS baseline) or explicitly document the
   supported Windows baseline this plan assumes already has WebView2, and
   test both the "has it" and "doesn't have it" cases on real VMs.
-- **Option B's first-run model download**, if that's the option chosen below,
-  is a deliberate, documented exception to "no internet after install" for
-  the model file specifically — not a contradiction to paper over. If Option
-  B is chosen, criterion #2 above must be read as "works offline once the
-  first-run model download has completed," and that exception stated
-  explicitly next to the criterion, not left implicit.
+- **Resolved 2026-08-16:** the model-download question is settled — see
+  "Scoping decision" below. The bundled default model ships in the
+  installer (no first-run download required for criterion #2 to hold);
+  larger models remain an optional, user-initiated `ollama pull` after the
+  app is already working, not a precondition for it.
 
 **Explicitly out of scope for this acceptance criterion** — see the scoping
 decision below: the optional Runtime Manager AI-tool catalogue (ComfyUI,
@@ -85,6 +85,55 @@ existing — mark it complete based on the acceptance criterion above actually
 passing on genuinely clean VMs for all three platforms, evidenced the way
 `TRUTH_FIRST_EXECUTION_PLAN.md` requires (command/procedure, date, result,
 remaining limitation — no "should work").
+
+## Priority for v1 (decided 2026-08-16)
+
+Not every dependency in this document sits on the golden path a brand-new,
+non-technical user actually walks the first time they install Alphonso.
+Splitting them by whether they block that path — rather than treating every
+row in the baseline table as equally urgent — is what actually determines
+what v1 needs to bundle.
+
+**MUST — blocks a working session for a new user:**
+
+- **Windows WebView2.** Not a feature dependency like the others — it's what
+  renders the app's entire UI on Windows. If it's missing and the install
+  can't reach the network, the app may not display at all. See `WIN1`.
+- **Ollama + a bundled default model.** This is the core "it just chats"
+  promise the acceptance criterion is built around. See domain `O`.
+- **Python for Voice OS**, *if* Voice OS should also work zero-touch. Since
+  Voice OS is opt-in from Settings (criterion #3), this is closer to
+  "should bundle for a good first impression" than "blocks the app" — but
+  it's still in scope for v1 rather than deferred, since shipping the chat
+  path offline while the voice path silently needs a manual Python install
+  would be a confusing half-measure. See domain `PY`.
+
+**Deferred out of v1 — real dependencies, but none of them sit on a new
+user's first session, confirmed by tracing what actually calls each one:**
+
+- **Git** — only clones the optional Runtime Manager AI-tool catalogue
+  (ComfyUI/AUTOMATIC1111/Fooocus/AudioCraft), and video generation is
+  already out of scope (see the acceptance criterion above). See `G1`.
+- **FFmpeg** — verified directly against `voice/backend/requirements.txt`:
+  Voice OS's own STT stack (`faster-whisper`, `webrtcvad`, `numpy`) has
+  **zero** FFmpeg dependency — it captures and processes raw audio itself,
+  it doesn't decode arbitrary media files. FFmpeg is only pulled in by the
+  separate, optional Meeting Transcription feature
+  (`whisperTranscriptionService.ts` + the Runtime Manager's standalone
+  Whisper tool), which a new user doesn't hit on first launch. See `FF1`.
+- **Tesseract/OCR** — only reachable through Operator Dashboard's
+  manual-path OCR adapter, an advanced/operator feature, not the golden
+  path. See `OCR1`.
+- **Image generation (ComfyUI / AUTOMATIC1111)** — scoped out with video
+  generation; both require multi-GB checkpoints regardless of packaging.
+  Not yet a resolved "which one, if either" decision — still genuinely
+  open, tracked separately, not part of this v1 pass.
+
+Deferred does not mean removed from this document — it means these stay on
+today's existing detect-and-fetch path (manual install / on-demand
+winget-brew-apt-pip / git-clone) for v1, and their task-board sections below
+are marked out-of-scope-for-v1 rather than deleted, so the reasoning is
+preserved if a future pass reopens one.
 
 ## Current baseline (verified 2026-08-16 against `main` at v2.6.2)
 
@@ -121,32 +170,41 @@ Key facts that shape every task below:
 - Bundle targets are `nsis`, `dmg`, `app`, `appimage`, `deb`
   (`tauri.conf.json:42-48`); no `msi` target is configured today.
 
-## Scoping decision needed before work starts
+## Scoping decision (resolved 2026-08-16)
 
-This is the one decision that changes every task below, so resolve it first
-and record the answer here rather than letting each task guess independently:
+**Ollama: Option A, chosen.** Bundle the Ollama binary as a Tauri
+`externalBin` sidecar *and* ship one small, lightweight default model file
+inside the installer (a 1–3B-class quantized model, exact choice TBD in O2).
+This is what makes the MUST-tier "it just chats, offline, on first launch"
+promise true without asking a brand-new user to run anything first.
 
-**Option A — Fully self-contained, no network required after download.**
-Bundle the Ollama binary as a Tauri `externalBin` sidecar, ship one small
-default model file (e.g. a ~1–2 GB quantized model) inside the installer,
-bundle an embeddable/standalone Python build with Voice OS's pinned
-dependencies pre-staged, and bundle a static FFmpeg binary per platform.
-Installer size grows from the current lightweight NSIS/DMG/AppImage to
-several gigabytes per platform. True "airplane mode, still works" experience.
+**Heavier models: unchanged, stays on the existing on-demand path.** Nothing
+new needs building here — the app already supports `ollama pull` for
+additional models; that flow is simply how a user upgrades from the bundled
+lightweight default to a bigger model later, by choice, with a normal
+"this will download N GB" prompt. This isn't Option B's *required* first-run
+download — it's optional, user-initiated, and happens after the app is
+already fully working.
 
-**Option B — Bundle only the small pieces, keep the model as a required
-first-run download.** Bundle Python (embeddable/standalone) and FFmpeg
-(static builds are small, tens of MB), bundle Ollama the binary itself, but
-leave the default model as a first-run download with clear progress UI
-instead of shipping it in the installer. Installer stays in the tens-to-low-
-hundreds-of-MB range; the app still needs network once, on first launch, to
-be usable — matching how comparable local-LLM apps (e.g. LM Studio) already
-behave.
+**Voice OS's Python + pinned deps: bundle too (Option A's approach),** for
+the reason in "Priority for v1" above — chat works offline while voice
+silently needs a manual install would be a confusing half-measure, not a
+real cost saving.
 
-Record the decision here once made:
+**FFmpeg, Tesseract, Git: excluded from v1 bundling entirely** — not
+Option A, not Option B, just left on today's existing detect-and-fetch path,
+per "Priority for v1" above. None of them sit on the golden path, so there's
+no bundling decision to make for v1; `G1`/`FF1`/`OCR1` below are resolved as
+out-of-scope rather than pending.
 
-- [ ] **Decision recorded** — Option A / Option B / other, with rationale and
-  the installer-size number that was actually measured, not estimated.
+**Still open, not decided in this pass:** whether to bundle a basic image
+generator (ComfyUI vs. AUTOMATIC1111 vs. neither) — see "Priority for v1."
+Video generation stays fully out per the acceptance criterion.
+
+- [x] **Decision recorded** — 2026-08-16, owner conversation (not yet an
+  installer-size measurement — O1-O4/PY1-PY5 implementation and the real
+  measured size per `X3` still need to happen before this can be marked done
+  per this document's own evidence rules).
 
 ## Task board
 
@@ -161,10 +219,11 @@ Record the decision here once made:
   per platform Alphonso ships for (notably macOS, which supports both Intel
   and Apple Silicon) — a single-architecture binary will silently fail to
   resolve on the other.
-- [ ] **O2** — Resolve the scoping decision's model question: either stage a
-  default model file into the bundle and load it via `ollama create`/local
-  path, or build the first-run download UI with resumable progress and a
-  clear "this needs internet once" message.
+- [ ] **O2** — Pick the specific lightweight default model (1–3B-class,
+  quantized) per the resolved scoping decision, stage it into the bundle,
+  and load it via `ollama create`/a local model path at first launch — no
+  first-run download for the default model. Leave the existing `ollama pull`
+  flow untouched for users who want a bigger model afterward.
 - [ ] **O3** — Update `find_ollama()` (`runtime_manager.rs:520-562`) to check
   the bundled sidecar path before falling back to system-PATH detection, the
   same pattern the reference SessionGuard document uses for its own runtimes.
@@ -190,46 +249,42 @@ Record the decision here once made:
   check the bundled interpreter first, before the Runtime Hub-managed venv,
   before bare system `python`/`python3`. Do not remove the existing
   fallbacks — reorder them.
-- [ ] **PY4** — Resolve the Piper TTS voice model the same way as the Ollama
-  model in the scoping decision: bundle it (~60 MB, small enough that this is
-  a fairly easy "yes") or keep it as a first-run download with clear UI.
+- [ ] **PY4** — Bundle the Piper TTS voice model (~60 MB) rather than
+  downloading it at first run, consistent with the resolved scoping
+  decision — Voice OS is meant to work zero-touch once enabled, and this is
+  small enough that there's no real size tradeoff to weigh.
 - [ ] **PY5** — Reconcile `G-OTHER5` in `TRUTH_FIRST_EXECUTION_PLAN.md` once
   this lands — that item becomes closed or superseded by this document's
   evidence, not both left open independently.
 
-### GIT — Git
+### GIT — Git (out of scope for v1)
 
-- [ ] **G1** — Decide whether Git needs bundling at all for the *core*
-  acceptance criterion. Git today is only required for the optional
-  Runtime Manager tool catalogue (ComfyUI/AUTOMATIC1111/Fooocus/AudioCraft),
-  which is explicitly out of scope per the acceptance criterion above. If
-  the core session never calls Git, this whole domain can be marked
-  **out of scope** rather than done — record that decision explicitly here
-  instead of leaving it silently unaddressed.
-- [ ] **G2** — If a future feature does bring Git into the core path, bundle
-  a portable Git distribution per platform and update `find_git()`
-  (`runtime_manager.rs:471-506`) to check it first.
+- [x] **G1** — Resolved 2026-08-16: **out of scope for v1.** Git today is
+  only required for the optional Runtime Manager tool catalogue
+  (ComfyUI/AUTOMATIC1111/Fooocus/AudioCraft), and video generation is
+  already excluded from the acceptance criterion. Git stays on the existing
+  detect/winget-brew-apt path — no bundling work for v1.
+- [ ] **G2** — Deferred, not v1. If a future feature brings Git into the
+  core path (or a chosen image-generator bundling decision needs it at
+  build time rather than runtime), revisit bundling a portable Git
+  distribution and updating `find_git()` (`runtime_manager.rs:471-506`).
 
-### FF — FFmpeg
+### FF — FFmpeg (out of scope for v1)
 
-- [ ] **FF1** — Determine what in the *current, shipped* app actually invokes
-  FFmpeg today. The only references found are the policy-gate allow-list
-  (`policy_gate.rs:27,141,261-263`) and the `ffmpeg-python` pip package name
-  listed for the optional Whisper tool (`runtime_manager.rs:129`) — neither
-  is confirmed to be an active, user-facing feature path. Answer this before
-  bundling anything; do not bundle a multi-platform static FFmpeg build for a
-  capability that turns out to be unused.
-- [ ] **FF2** — If a real feature depends on it, source static FFmpeg builds
-  per platform (note license: FFmpeg's licensing varies by which codecs are
-  compiled in — verify GPL vs. LGPL implications for the specific build used
-  before redistributing).
-- [ ] **FF3** — Add a `find_ffmpeg()` function mirroring the existing
-  `find_python()`/`find_git()`/`find_ollama()` pattern in
-  `runtime_manager.rs`, checking the bundled binary first.
-- [ ] **FF4** — Point `policy_gate.rs`'s allow-listed `ffmpeg`/`ffmpeg.exe`/
-  `ffprobe`/`ffprobe.exe` entries at the resolved bundled path.
+- [x] **FF1** — Resolved 2026-08-16: **not load-bearing for the core
+  session.** Verified directly against `voice/backend/requirements.txt` —
+  Voice OS's STT stack (`faster-whisper`, `webrtcvad`, `numpy`) has no
+  FFmpeg dependency; it processes raw audio it captures itself, it doesn't
+  decode arbitrary media files. The only real consumer is the separate,
+  optional Meeting Transcription feature
+  (`whisperTranscriptionService.ts` + the standalone Whisper Runtime
+  Manager tool's `ffmpeg-python` dependency) — an advanced feature, not the
+  golden path. FFmpeg stays on the existing manual-install path for v1.
+- [ ] **FF2/FF3/FF4** — Deferred, not v1. Revisit only if Meeting
+  Transcription (or a future feature) is promoted into the core
+  zero-prerequisite experience.
 
-### OCR — Tesseract
+### OCR — Tesseract (out of scope for v1)
 
 **Correction (2026-08-16):** an earlier draft of this document claimed OCR
 didn't exist in the codebase at all. That was wrong — a first-pass grep
@@ -244,19 +299,12 @@ already-installed Tesseract binary; the backend only verifies that path
 exists and then shells out to it. Functionally this is the same gap as
 FFmpeg, just with no PATH-search fallback at all.
 
-- [ ] **OCR1** — Decide whether this belongs in the core acceptance
-  criterion. OCR is not currently exercised by the golden chat/voice path,
-  so treat it like FFmpeg (FF1): confirm what feature actually depends on it
-  and how load-bearing that feature is before committing to bundling a
-  Tesseract binary + language data on all three platforms.
-- [ ] **OCR2** — If in scope, source Tesseract binaries + language data per
-  platform (license: Apache 2.0, redistribution-friendly) and add a
-  `find_tesseract()` function to `runtime_manager.rs` mirroring the existing
-  detection pattern, so the bundled path is found automatically instead of
-  requiring the user to hand-type it.
-- [ ] **OCR3** — Update `check_ocr_capability`/`run_ocr_adapter` to accept an
-  optional bundled-path default instead of requiring `engine_path` from the
-  caller on every invocation.
+- [x] **OCR1** — Resolved 2026-08-16: **out of scope for v1.** OCR is only
+  reachable through Operator Dashboard's manual-path adapter — an
+  advanced/operator feature, not the golden chat/voice path a new user hits.
+  Stays on the existing manual-path model for v1.
+- [ ] **OCR2/OCR3** — Deferred, not v1. Revisit only if OCR is promoted to a
+  core, discoverable feature rather than an operator-only adapter.
 
 ### X — Cross-cutting
 
@@ -281,10 +329,10 @@ FFmpeg, just with no PATH-search fallback at all.
   (Ollama binary, Python, model file if bundled): full reinstall via the
   existing in-app auto-updater (`UpdaterNotification.tsx` +
   `@tauri-apps/plugin-updater`) vs. a separate delta/cache mechanism for the
-  large binaries so every app update doesn't re-download gigabytes. If
-  Option A is chosen, keep the model file (and Piper voice model, if also
-  bundled) in a data/cache directory outside the versioned app bundle rather
-  than inside it, so a routine app update re-downloads only the small
+  large binaries so every app update doesn't re-download gigabytes. Per the
+  resolved scoping decision, keep the bundled Ollama model file and Piper
+  voice model in a data/cache directory outside the versioned app bundle
+  rather than inside it, so a routine app update re-downloads only the small
   application payload — not gigabytes of model weights that haven't
   actually changed.
 - [ ] **X5** — Update `docs/GETTING_STARTED.md` once bundling lands — its
@@ -302,11 +350,16 @@ FFmpeg, just with no PATH-search fallback at all.
 
 ## Sequencing
 
-Recommended order: resolve the **scoping decision** and **WIN1** (WebView2)
-first — both change every other estimate — → O (Ollama) → PY (Python/Voice
-OS) → FF (FFmpeg, only after FF1 confirms it's load-bearing) → OCR (only
-after OCR1 confirms it's load-bearing) → G (Git, likely out-of-scope per G1)
-→ X (cross-cutting verification, throughout — not just at the end).
+With the scoping decision and G1/FF1/OCR1 resolved 2026-08-16, v1 is now:
+**WIN1** (WebView2 — must-fix, do first, it can block the app from even
+displaying) → **O** (Ollama binary + bundled default model) → **PY**
+(Python + Voice OS's pinned deps) → **X1-X5** (cross-cutting verification,
+throughout, not just at the end). **G, FF, OCR are not part of v1
+execution** — their sections are resolved-as-out-of-scope, not pending;
+nothing to sequence there unless a future pass reopens them. The still-open
+image-generation decision (see "Priority for v1") is intentionally not
+sequenced here either — it needs its own decision before it has a task
+board at all.
 
 ## Definition of done
 
