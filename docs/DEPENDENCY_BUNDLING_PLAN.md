@@ -1,7 +1,9 @@
 # Alphonso Dependency Bundling — Zero-Prerequisite Install
 
-**Status:** DRAFT — v1 scope decided 2026-08-16 (see "Priority for v1" and
-"Scoping decision" below), implementation not started
+**Status:** IN PROGRESS — v1 scope decided 2026-08-16; WIN1 and O1/O3
+implemented and partially verified same-day (see "Implementation log" near
+the end of this document for exactly what was and wasn't verified, and how).
+O2/O4, all of PY, and all of X remain open.
 **Owner:** unassigned
 **Applies to:** the desktop Tauri build only (`src-tauri/`), not the cloud
 gateways, MCP server, or bridge, which already run in managed containers with
@@ -162,7 +164,10 @@ Key facts that shape every task below:
   Tauri's sidecar-binary mechanism is not used for any AI runtime today.
   `voice_sidecar.rs` "launches a sidecar process" in the informal sense (a
   companion process on port 8766), not in Tauri's formal bundled-binary
-  sense.
+  sense. **Still true after O1's implementation** — Ollama turned out not to
+  be a single self-contained executable (see O1 below), so it's bundled via
+  `bundle.resources` (the same mechanism already used for `voice/backend`),
+  not `externalBin`. `externalBin` remains genuinely unused in this repo.
 - `voice_sidecar.rs`'s `resolve_voice_python()` falls back to a bare
   `python`/`python3` off PATH if no managed venv exists, which the code's own
   comments flag as a crash risk on first missing import
@@ -172,11 +177,22 @@ Key facts that shape every task below:
 
 ## Scoping decision (resolved 2026-08-16)
 
-**Ollama: Option A, chosen.** Bundle the Ollama binary as a Tauri
-`externalBin` sidecar *and* ship one small, lightweight default model file
-inside the installer (a 1–3B-class quantized model, exact choice TBD in O2).
-This is what makes the MUST-tier "it just chats, offline, on first launch"
-promise true without asking a brand-new user to run anything first.
+**Ollama: Option A, chosen.** Bundle the Ollama runtime (see O1's corrected
+implementation note — it's a `bundle.resources` payload, not an `externalBin`
+sidecar) *and* ship one small, lightweight default model file inside the
+installer (a 1–3B-class quantized model, exact choice TBD in O2). This is
+what makes the MUST-tier "it just chats, offline, on first launch" promise
+true without asking a brand-new user to run anything first.
+
+**Real cost, discovered and accepted 2026-08-16 (Option 1 of the follow-up
+size discussion):** Ollama's official releases bundle CUDA acceleration by
+default and publish no CPU-only variant — verified real download sizes:
+Windows `ollama-windows-amd64.zip` 1,391 MB, Linux `ollama-linux-amd64.tar.zst`
+1,355 MB, macOS `ollama-darwin.tgz` 146 MB (universal binary, much leaner —
+Apple's GPU path doesn't carry the same CUDA weight). The owner explicitly
+chose to accept this cost for full GPU support rather than strip CUDA out or
+drop bundling the binary — see the Implementation log for the full
+size/tradeoff writeup and the two alternatives that were turned down.
 
 **Heavier models: unchanged, stays on the existing on-demand path.** Nothing
 new needs building here — the app already supports `ollama pull` for
@@ -210,23 +226,39 @@ Video generation stays fully out per the acceptance criterion.
 
 ### O — Ollama
 
-- [ ] **O1** — Bundle the Ollama binary as a Tauri `externalBin` sidecar for
-  Windows/macOS/Linux (add to `tauri.conf.json`'s `bundle.externalBin`, sign
-  per platform where required). Tauri requires each sidecar binary to be
-  named with its Rust target triple (e.g.
-  `ollama-x86_64-pc-windows-msvc.exe`, `ollama-aarch64-apple-darwin`), so the
-  build pipeline must produce and stage both `x86_64` and `aarch64` builds
-  per platform Alphonso ships for (notably macOS, which supports both Intel
-  and Apple Silicon) — a single-architecture binary will silently fail to
-  resolve on the other.
+- [x] **O1** — Done 2026-08-16, with a real architecture correction along the
+  way: Ollama is **not** a single self-contained executable — it ships
+  `ollama(.exe)` plus a companion `lib/ollama/` (or, on macOS, a flat
+  directory) full of backend `.dll`/`.so`/`.dylib` files (`llama-server`,
+  per-CPU-microarchitecture GGML variants, `cuda_v12`/`cuda_v13`
+  subdirectories), which Tauri's single-file `externalBin` sidecar mechanism
+  doesn't fit. Implemented via `bundle.resources` instead (`"vendor/ollama":
+  "ollama"` in `tauri.conf.json`, mirroring the existing `voice/backend`
+  entry) — no `externalBin` key was added, the "Key facts" note above still
+  holds. `scripts/fetch-ollama-runtime.mjs` (new) downloads the pinned
+  release (`v0.32.13`), verifies its published sha256, extracts it, and
+  stages it into the gitignored `src-tauri/vendor/ollama/` for the bundler to
+  pick up — wired into every CI job that runs `tauri build`
+  (`.github/workflows/ci.yml`'s `desktop`/`desktop-macos`/`desktop-linux`,
+  and `.github/workflows/release.yml`), each with the correct platform key.
+  Full verification evidence, including what was and wasn't directly tested,
+  is in the Implementation log near the end of this document — do not treat
+  this checkbox as "VM-tested and shipped," only as "code + CI wiring done
+  and the fetch mechanism proven for real against all three platforms."
 - [ ] **O2** — Pick the specific lightweight default model (1–3B-class,
   quantized) per the resolved scoping decision, stage it into the bundle,
   and load it via `ollama create`/a local model path at first launch — no
   first-run download for the default model. Leave the existing `ollama pull`
   flow untouched for users who want a bigger model afterward.
-- [ ] **O3** — Update `find_ollama()` (`runtime_manager.rs:520-562`) to check
-  the bundled sidecar path before falling back to system-PATH detection, the
-  same pattern the reference SessionGuard document uses for its own runtimes.
+- [x] **O3** — Done 2026-08-16. Added `bundled_ollama_path()` to
+  `runtime_manager.rs`, checked first in `find_ollama()` before system-PATH
+  detection. Resolved via `current_exe()`'s parent directory rather than
+  Tauri's `resource_dir()` API, since `find_ollama()` is a plain function
+  called from several sites without an `AppHandle` — this matches
+  `resource_dir()`'s actual behavior on Windows (the only platform
+  `release.yml`'s tag-triggered publish pipeline builds today), but has not
+  been verified to match on macOS/Linux bundle layouts (dmg/appimage/deb
+  resource placement can differ) — see the Implementation log.
 - [ ] **O4** — Verify a full chat round-trip (send message → real model
   response) works with network disabled after install, not just that the
   Ollama process starts.
@@ -339,14 +371,20 @@ FFmpeg, just with no PATH-search fallback at all.
   current "Install Ollama from ollama.com" / "Install Python 3.10+" manual
   steps (`docs/GETTING_STARTED.md:9,15-19,90`) become optional/advanced-only
   instructions, not the primary path.
-- [ ] **WIN1** — Resolve the WebView2 gap called out in the acceptance
-  criterion: either change `tauri.conf.json`'s
-  `bundle.windows.webviewInstallMode` from `"downloadBootstrapper"`
-  (`tauri.conf.json:80-83`) to `"embedBootstrapper"` or `"offlineInstaller"`
-  so Windows install genuinely needs no network regardless of OS baseline,
-  or explicitly document the minimum Windows build this plan assumes already
-  ships WebView2 in-box and test the installer against a VM just below that
-  baseline to confirm it fails predictably rather than silently.
+- [x] **WIN1** — Done 2026-08-16. Changed `tauri.conf.json`'s
+  `bundle.windows.webviewInstallMode.type` from `"downloadBootstrapper"` to
+  `"offlineInstaller"`. Verified against Tauri's real published docs (not
+  assumed) — its own comparison table states plainly: `downloadBootstrapper`
+  and `embedBootstrapper` both still require internet at install time
+  (`embedBootstrapper` only skips downloading the ~1.8MB *bootstrapper*
+  itself, not the ~127MB WebView2 *runtime* it then fetches if missing);
+  only `offlineInstaller` (+~127MB, embeds the runtime installer) and the
+  heavier `fixedVersion` (+~180MB, embeds a specific pinned runtime) need no
+  network regardless of OS baseline. `offlineInstaller` is the minimal
+  correct choice for this document's acceptance criterion.
+  **Not yet verified**: an actual installer build with this setting, run on
+  a Windows VM without WebView2 preinstalled and without network access —
+  that's `X1`'s job, still open.
 
 ## Sequencing
 
@@ -360,6 +398,90 @@ nothing to sequence there unless a future pass reopens them. The still-open
 image-generation decision (see "Priority for v1") is intentionally not
 sequenced here either — it needs its own decision before it has a task
 board at all.
+
+**Progress as of 2026-08-16:** WIN1, O1, and O3 are implemented — see the
+Implementation log below for exactly what was and wasn't verified before
+trusting any of it. O2 (pick + stage the actual default model file), O4
+(full offline chat verification), and all of PY and X remain open and
+un-started.
+
+## Implementation log (2026-08-16)
+
+Per `REPO_RULES.md` R3/R38, this section states exactly what was verified,
+how, and what wasn't — not a summary claiming things work.
+
+**Real, empirically verified (not assumed):**
+
+- Ollama `v0.32.13`'s published sha256 checksums for `ollama-windows-amd64.zip`,
+  `ollama-darwin.tgz`, and `ollama-linux-amd64.tar.zst` were fetched from the
+  real `sha256sum.txt` release asset and hardcoded into
+  `scripts/fetch-ollama-runtime.mjs`.
+- `scripts/fetch-ollama-runtime.mjs` was run for real, end-to-end (download →
+  checksum verify → extract → normalize into `src-tauri/vendor/ollama/`),
+  against **all three** real release assets, on this Linux sandbox:
+  - `darwin-universal`: succeeded. Archive layout is **flat** — no `bin/`/`lib`
+    split, `ollama` (a real Mach-O universal x86_64+arm64 binary, confirmed
+    via `file`) sits directly at the root alongside every backend
+    `.dylib`/`.so`. This contradicted the script's first-draft assumption
+    (based on the CI build workflow's intermediate `dist/<os>-<arch>/{bin,lib}`
+    layout, which turned out to describe a pre-packaging directory, not the
+    shipped archive) — caught by actually running it, not by inspection.
+  - `linux-amd64`: succeeded, but only after installing the `zstd` CLI package
+    — GNU tar's `--zstd`/`-a` flags shell out to a standalone `zstd` binary
+    rather than decompressing it themselves, and failed with "Cannot exec"
+    until it was installed. `ci.yml`'s `desktop-linux` job now installs
+    `zstd` explicitly alongside its existing webkit2gtk/gtk3 packages — do
+    not assume a runner has it. Archive layout: real `bin/`+`lib/` split,
+    real ELF binary (confirmed via `file`), `cuda_v12`/`cuda_v13`
+    subdirectories present, 2.1GB uncompressed.
+  - `windows-amd64`: succeeded via the script's `unzip` fallback path (this
+    sandbox's GNU tar cannot read `.zip` at all, unlike Windows' bundled
+    bsdtar-based `tar.exe`, which is expected — not directly proven here — to
+    take the primary `tar -xf` path instead). Real PE32+ Windows executable
+    (confirmed via `file`), same `bin/`+`lib/` split as Linux,
+    `cuda_v12`/`cuda_v13` present, 1.9GB uncompressed.
+- `cargo fmt --all -- --check` passed clean on the `runtime_manager.rs`
+  change (`bundled_ollama_path()` + the `find_ollama()` call site).
+- Real download sizes for the three release assets (feeds `X3`, not a
+  substitute for it): Windows 1,391 MB, Linux 1,355 MB, macOS 146 MB
+  (compressed, as downloaded — uncompressed-staged sizes above are larger).
+
+**Explicitly NOT verified — do not infer these work from the above:**
+
+- `cargo check`/`cargo test`/`cargo clippy` could not be run to completion in
+  this sandbox: `libsqlite3-sys`'s build script fails with
+  `error[E0658]: use of unstable library feature 'cfg_select'` against this
+  environment's Rust toolchain (`rustc 1.94.1`). **Confirmed pre-existing and
+  unrelated to this change** — reproduced identically via `git stash` on a
+  clean checkout, then restored. This is an environment limitation of this
+  sandbox, not evidence this change compiles cleanly elsewhere; a real
+  `cargo check` run (CI or a working local toolchain) is still owed before
+  trusting the Rust change beyond "passes rustfmt and reads as correct."
+- The Windows `.zip` extraction was verified only via the `unzip` fallback,
+  never the primary `tar -xf` (bsdtar) path Windows CI will actually take —
+  functionally equivalent output, but the exact code path is unconfirmed.
+- No `tauri build` was run anywhere this pass (blocked by the same
+  `cargo check` environment issue) — the installer has never actually been
+  assembled with the new `bundle.resources` entry or `webviewInstallMode`
+  setting. `O1`/`O3`/`WIN1` being checked off means "the code and CI wiring
+  are in place and the fetch mechanism is proven," not "a working installer
+  was produced and tested" — that's `X1`'s job.
+- `resolve_voice_python()`-style resource-directory resolution for
+  `bundled_ollama_path()` was verified conceptually against the existing
+  `voice_sidecar.rs` pattern, not against a running app on any platform.
+- O2 (choosing and staging the actual default LLM model file) was not
+  attempted this pass — `bundle.resources` currently stages the Ollama
+  *runtime* only, no model weights.
+
+**Correction to this document's own earlier framing:** an earlier pass
+described `release.yml` as the only build pipeline and implied macOS/Linux
+had no build coverage at all. That undersold what exists: `ci.yml` already
+runs `tauri build` for **all three platforms** as artifacts on `main`
+pushes/manual dispatch (`desktop` for Windows is blocking; `desktop-macos`
+and `desktop-linux` are `continue-on-error: true`) — it just doesn't publish
+those artifacts as a public release the way `release.yml`'s tag-triggered
+Windows build does. The fetch script is now wired into all three `ci.yml`
+jobs, not just `release.yml`.
 
 ## Definition of done
 

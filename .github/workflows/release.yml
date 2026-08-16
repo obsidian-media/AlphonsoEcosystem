@@ -71,6 +71,9 @@ jobs:
           "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
+      - name: Fetch bundled Ollama runtime
+        run: node scripts/fetch-ollama-runtime.mjs windows-amd64
+
       - name: Build signed Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
