@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.websockets import WebSocketDisconnect
 
 from pipeline import local_ollama_url, run_pipeline
 from session import register, cancel, cleanup_done
@@ -52,14 +53,14 @@ async def health():
     tts_ok = False
     try:
         tts_ok = tts_model_path().exists()
-    except Exception:
+    except OSError:
         pass
     ollama_reachable = False
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.get(local_ollama_url().removesuffix("/api/chat") + "/api/tags")
             ollama_reachable = response.is_success
-    except Exception:
+    except httpx.RequestError:
         pass
     return {
         "status": "ok",
@@ -67,6 +68,37 @@ async def health():
         "tts": tts_ok and importlib.util.find_spec("piper") is not None,
         "ollama": {"url": local_ollama_url(), "reachable": ollama_reachable},
     }
+
+
+async def _process_pcm(
+    ws: WebSocket,
+    session_id: str,
+    pcm: bytes,
+    conversation_history: list[dict],
+) -> None:
+    """Run the STT→LLM→TTS pipeline for one PCM chunk and stream events back."""
+    async for event in run_pipeline(session_id, pcm, conversation_history):
+        etype = event.get("type")
+        try:
+            if etype == "tts":
+                await ws.send_bytes(event["audio"])
+            else:
+                await ws.send_json(event)
+        except (WebSocketDisconnect, RuntimeError):
+            return
+
+        if etype == "state":
+            set_state(session_id, event["value"])
+
+        if etype == "stt":
+            conversation_history.append({"role": "user", "content": event["text"]})
+
+        if etype == "llm" and event.get("done"):
+            reply = event.get("full_reply", "")
+            if reply:
+                conversation_history.append({"role": "assistant", "content": reply})
+            if len(conversation_history) > 20:
+                conversation_history[:] = conversation_history[-20:]
 
 
 @app.websocket("/ws")
@@ -85,30 +117,6 @@ async def ws_endpoint(ws: WebSocket):
     buffer = bytearray()
     conversation_history: list[dict] = []
 
-    async def process(pcm: bytes) -> None:
-        async for event in run_pipeline(session_id, pcm, conversation_history):
-            etype = event.get("type")
-            try:
-                if etype == "tts":
-                    await ws.send_bytes(event["audio"])
-                else:
-                    await ws.send_json(event)
-            except Exception:
-                return
-
-            if etype == "state":
-                set_state(session_id, event["value"])
-
-            if etype == "stt":
-                conversation_history.append({"role": "user", "content": event["text"]})
-
-            if etype == "llm" and event.get("done"):
-                reply = event.get("full_reply", "")
-                if reply:
-                    conversation_history.append({"role": "assistant", "content": reply})
-                if len(conversation_history) > 20:
-                    conversation_history[:] = conversation_history[-20:]
-
     try:
         while True:
             msg = await ws.receive()
@@ -125,7 +133,7 @@ async def ws_endpoint(ws: WebSocket):
                 if len(buffer) >= 24000:  # ~1.5s of 16kHz 16-bit mono PCM
                     data = bytes(buffer)
                     buffer = bytearray()
-                    task = asyncio.create_task(process(data))
+                    task = asyncio.create_task(_process_pcm(ws, session_id, data, conversation_history))
                     register(session_id, task)
 
             elif "text" in msg:
@@ -137,7 +145,7 @@ async def ws_endpoint(ws: WebSocket):
                         buffer = bytearray()
                         set_state(session_id, "idle")
                         await ws.send_json({"type": "state", "value": "idle"})
-                except Exception:
+                except json.JSONDecodeError:
                     pass
 
     finally:
