@@ -81,7 +81,7 @@ Beyond CI, this pass found **two material issues the prior audit missed entirely
 | Versions 2.6.0 in package.json / tauri.conf.json / Cargo.toml | ✅ in sync |
 | `npm audit --omit=dev`: 0 vulns | ✅ confirmed |
 | Credentials stored in localStorage + SQLite (`kv_set`), not OS keychain | ✅ confirmed (`connectorAuth.ts`, `licenseService.ts`) |
-| `policyEnforcementService` defaults: `approvalMode:false`, `zeroCostMode:true` | ✅ confirmed (lines 70–71) |
+| `policyEnforcementService` defaults: `approvalMode:true`, `zeroCostMode:true` | ✅ updated 2026-08-17 (approvalMode changed from false to true in security pass) |
 
 ### 2.2 Confirmed but materially incomplete / misframed
 - **"Genuinely good health / clean" — CONTRADICTED.** CI is red on `main` (§1). The report drew a health verdict without checking CI or running `cargo audit`.

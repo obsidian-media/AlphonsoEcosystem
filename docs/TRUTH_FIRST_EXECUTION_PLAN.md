@@ -343,8 +343,8 @@ an unchecked claim such as “should pass,” “implemented,” or “ready.”
       check.
     - **Insecure defaults** — already directly asserted, not just implied:
       `policyEnforcementService.test.js`'s `getRuntimePolicySettings` describe
-      block explicitly checks `approvalMode === false` and
-      `zeroCostMode === true` on empty storage.
+      block explicitly checks `approvalMode === true` (changed from `false`
+      in the 2026-08-17 security pass) and `zeroCostMode === true` on empty storage.
     - **Secret logging — the one real, previously-uncovered gap.** Read
       `crashLogService.ts` before assuming anything: `logError(error,
       context)` persisted its free-form `context` argument verbatim to

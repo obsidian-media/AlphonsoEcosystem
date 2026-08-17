@@ -206,13 +206,18 @@ pub async fn voice_stop(
   state: State<'_, VoiceSidecar>,
   token_state: State<'_, VoiceToken>,
 ) -> Result<String, String> {
-  let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-  if let Some(mut child) = guard.take() {
-    child.kill().map_err(|e| e.to_string())?;
-  }
-  // Clear the token so stale tokens cannot be replayed after a restart.
+  let kill_result = {
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    if let Some(mut child) = guard.take() {
+      child.kill().map_err(|e| e.to_string())
+    } else {
+      Ok(())
+    }
+  };
+  // Always clear the token regardless of kill outcome — the process state is
+  // uncertain after a failed kill, so a stale token must not be reused.
   *token_state.0.lock().map_err(|e| e.to_string())? = None;
-  Ok("stopped".into())
+  kill_result.map(|_| "stopped".into())
 }
 
 #[tauri::command]

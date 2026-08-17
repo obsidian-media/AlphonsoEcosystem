@@ -65,6 +65,20 @@ impl CompanionServer {
 
     let max_pin_attempts = self.config.max_pin_attempts;
 
+    // Periodically evict expired IP-failure entries so the map cannot grow
+    // without bound on servers that see many distinct source IPs over time.
+    {
+      let ip_failures = Arc::clone(&self.ip_failures);
+      tokio::spawn(async move {
+        let window = std::time::Duration::from_secs(IP_THROTTLE_WINDOW_SECS);
+        loop {
+          tokio::time::sleep(window).await;
+          let mut map = ip_failures.lock().await;
+          map.retain(|_, (_, since)| since.elapsed() < window);
+        }
+      });
+    }
+
     loop {
       let (stream, peer_addr) = listener.accept().await?;
       let clients = Arc::clone(&self.clients);
@@ -199,6 +213,7 @@ async fn handle_connection(
 /// client's `pin_attempts` AND the source-IP failure counter; on the final
 /// allowed miss the live PIN is invalidated so a fresh one must be generated
 /// before any retry is possible.
+#[allow(clippy::too_many_arguments)]
 async fn handle_auth(
   text: &str,
   client_id: Uuid,
