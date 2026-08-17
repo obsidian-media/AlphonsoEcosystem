@@ -102,53 +102,80 @@ async def _process_pcm(
                 conversation_history[:] = conversation_history[-20:]
 
 
+def _validate_token(provided: str | None) -> bool:
+    """Return True only when provided matches the expected token (constant-time compare)."""
+    if _VOICE_TOKEN is None or provided is None:
+        return False
+    return hmac.compare_digest(provided, _VOICE_TOKEN)
+
+
+async def _handle_bytes_msg(
+    ws: WebSocket,
+    session_id: str,
+    raw: bytes,
+    buffer: bytearray,
+    conversation_history: list[dict],
+) -> bytearray:
+    """Handle an inbound PCM chunk: apply barge-in then dispatch to pipeline."""
+    if get_state(session_id) == "speaking":
+        cancel(session_id)
+        set_state(session_id, "idle")
+        buffer = bytearray()
+
+    buffer.extend(raw)
+
+    if len(buffer) >= 24000:  # ~1.5s of 16kHz 16-bit mono PCM
+        data = bytes(buffer)
+        buffer = bytearray()
+        task = asyncio.create_task(_process_pcm(ws, session_id, data, conversation_history))
+        register(session_id, task)
+
+    return buffer
+
+
+async def _handle_text_msg(
+    ws: WebSocket,
+    session_id: str,
+    text: str,
+    buffer: bytearray,
+    conversation_history: list[dict],
+) -> bytearray:
+    """Handle a JSON control message; returns (possibly reset) buffer."""
+    try:
+        ctrl = json.loads(text)
+    except json.JSONDecodeError:
+        ctrl = {}  # ignore malformed control messages
+    if ctrl.get("type") == "reset":
+        cancel(session_id)
+        conversation_history.clear()
+        buffer = bytearray()
+        set_state(session_id, "idle")
+        await ws.send_json({"type": "state", "value": "idle"})
+    return buffer
+
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     # Accept the WebSocket handshake first — close codes (1008) can only be
     # sent after the HTTP→WS upgrade completes. Token validation follows
     # immediately; unauthenticated connections are closed before any data flows.
     await ws.accept()
-    provided = ws.query_params.get("token")
-    if _VOICE_TOKEN is None or provided is None or not hmac.compare_digest(provided, _VOICE_TOKEN):
+    if not _validate_token(ws.query_params.get("token")):
         await ws.close(code=1008)  # 1008 = Policy Violation
         return
+
     session_id = ws.headers.get("x-session", "anon")
     set_state(session_id, "idle")
-
-    buffer = bytearray()
+    buffer: bytearray = bytearray()
     conversation_history: list[dict] = []
 
     try:
         while True:
             msg = await ws.receive()
-
             if "bytes" in msg:
-                # Barge-in: cancel current task when assistant is speaking
-                if get_state(session_id) == "speaking":
-                    cancel(session_id)
-                    set_state(session_id, "idle")
-                    buffer = bytearray()
-
-                buffer.extend(msg["bytes"])
-
-                if len(buffer) >= 24000:  # ~1.5s of 16kHz 16-bit mono PCM
-                    data = bytes(buffer)
-                    buffer = bytearray()
-                    task = asyncio.create_task(_process_pcm(ws, session_id, data, conversation_history))
-                    register(session_id, task)
-
+                buffer = await _handle_bytes_msg(ws, session_id, msg["bytes"], buffer, conversation_history)
             elif "text" in msg:
-                try:
-                    ctrl = json.loads(msg["text"])
-                except json.JSONDecodeError:
-                    ctrl = {}  # ignore malformed control messages
-                if ctrl.get("type") == "reset":
-                    cancel(session_id)
-                    conversation_history.clear()
-                    buffer = bytearray()
-                    set_state(session_id, "idle")
-                    await ws.send_json({"type": "state", "value": "idle"})
-
+                buffer = await _handle_text_msg(ws, session_id, msg["text"], buffer, conversation_history)
     finally:
         cancel(session_id)
         remove_state(session_id)

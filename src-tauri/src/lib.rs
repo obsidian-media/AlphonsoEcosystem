@@ -932,21 +932,30 @@ fn run_ocr_adapter(
       "--user-patterns",
       "--loglevel",
     ];
-    for arg in &extra {
-      let is_allowed = ALLOWED_FLAGS.iter().any(|f| arg == f)
-        || (arg
-          .chars()
-          .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
-          && !arg.starts_with("--")
-          && !arg.starts_with('-'));
-      if !is_allowed {
+    // Each ALLOWED_FLAG must be immediately followed by its value token.
+    // Standalone values (e.g. "pdf") are rejected to prevent Tesseract from
+    // interpreting them as config-file names or sub-commands.
+    let mut iter = extra.iter().peekable();
+    while let Some(arg) = iter.next() {
+      if ALLOWED_FLAGS.contains(&arg.as_str()) {
+        match iter.next() {
+          Some(val) => {
+            args.push(arg.clone());
+            args.push(val.clone());
+          }
+          None => {
+            return Err(format!(
+              "OCR flag {arg:?} requires a value but none was provided."
+            ));
+          }
+        }
+      } else {
         return Err(format!(
           "Disallowed OCR argument: {arg:?}. Permitted flags: {}",
           ALLOWED_FLAGS.join(", ")
         ));
       }
     }
-    args.extend(extra);
   }
 
   let mut ocr_cmd = Command::new(&engine_path);

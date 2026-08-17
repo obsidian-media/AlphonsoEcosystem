@@ -3,7 +3,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-_MOCK_TOKEN = "a1b2c3d4e5f67890a1b2c3d4e5f67890"
+_MOCK_TOKEN = "a1b2c3d4e5f67890a1b2c3d4e5f67890"  # nosec B105 — test fixture, not a real credential
 
 
 def test_local_backend_does_not_expose_cloud_voice_route():
