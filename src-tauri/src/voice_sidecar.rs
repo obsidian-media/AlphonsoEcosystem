@@ -99,11 +99,7 @@ pub async fn voice_start(
     // If the token was lost (e.g. the Tauri process restarted while Voice OS kept
     // running), kill the orphaned process and fall through to restart it with a
     // fresh token so WebSocket connections can authenticate.
-    let has_token = token_state
-      .0
-      .lock()
-      .map(|g| g.is_some())
-      .unwrap_or(false);
+    let has_token = token_state.0.lock().map(|g| g.is_some()).unwrap_or(false);
     if has_token {
       return Ok("already_running".into());
     }
