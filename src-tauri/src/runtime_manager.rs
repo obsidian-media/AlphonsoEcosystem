@@ -1305,6 +1305,7 @@ pub async fn runtime_install_tool(
 pub async fn runtime_start_tool(
   name: String,
   state: tauri::State<'_, RuntimeManager>,
+  token_state: tauri::State<'_, crate::voice_sidecar::VoiceToken>,
   app: AppHandle,
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
@@ -1335,6 +1336,8 @@ pub async fn runtime_start_tool(
     } else {
       "python".to_string()
     };
+    let token = crate::voice_sidecar::random_hex_token();
+    *token_state.0.lock().map_err(|e| e.to_string())? = Some(token.clone());
     let mut cmd = Command::new(&py);
     cmd
       .args([
@@ -1350,7 +1353,8 @@ pub async fn runtime_start_tool(
         "--app-dir",
       ])
       .arg(&backend_dir)
-      .env("VOICE_PIPER_MODEL_DIR", &dir);
+      .env("VOICE_PIPER_MODEL_DIR", &dir)
+      .env("VOICE_OS_TOKEN", &token);
     cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::null());
     no_window(&mut cmd);
