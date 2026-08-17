@@ -1345,6 +1345,8 @@ pub async fn runtime_start_tool(
         "127.0.0.1",
         "--port",
         "8766",
+        // Suppress access logs so the ?token= query param is never written to logs.
+        "--no-access-log",
         "--app-dir",
       ])
       .arg(&backend_dir)

@@ -283,4 +283,31 @@ describe('policyEnforcementService', () => {
       expect(result.blocked).toBe(true);
     });
   });
+
+  describe('approvalMode fail-safe regression', () => {
+    it('blocks youtube with empty localStorage (approvalMode defaults to true)', () => {
+      // beforeEach clears localStorage — defaults apply; youtube is high-risk → blocked
+      const result = evaluatePolicyGate({ connectorId: 'youtube', approved: false });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+    });
+
+    it('blocks youtube with corrupt localStorage JSON (approvalMode still defaults to true)', () => {
+      localStorage.setItem('alphonso_settings', 'not-valid-json{{{');
+      const result = evaluatePolicyGate({ connectorId: 'youtube', approved: false });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+    });
+
+    it('approvalMode defaults to true on empty localStorage (unit)', () => {
+      const settings = getRuntimePolicySettings();
+      expect(settings.approvalMode).toBe(true);
+    });
+
+    it('approvalMode defaults to true on corrupt localStorage JSON (unit)', () => {
+      localStorage.setItem('alphonso_settings', '{bad json}');
+      const settings = getRuntimePolicySettings();
+      expect(settings.approvalMode).toBe(true);
+    });
+  });
 });

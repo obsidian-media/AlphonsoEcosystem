@@ -125,6 +125,9 @@ pub async fn voice_start(
         "127.0.0.1",
         "--port",
         "8766",
+        // Suppress access logs so the ?token= query param is never written to
+        // the Tauri log stream or any other sink.
+        "--no-access-log",
         "--app-dir",
       ])
       .arg(&backend_path)

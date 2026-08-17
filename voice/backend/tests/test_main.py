@@ -1,4 +1,7 @@
+import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 
 def test_local_backend_does_not_expose_cloud_voice_route():
@@ -33,3 +36,41 @@ def test_local_health_reports_ollama_configuration():
     assert "reachable" in payload["ollama"]
     assert isinstance(payload["stt"], bool)
     assert isinstance(payload["tts"], bool)
+
+
+# ---------------------------------------------------------------------------
+# WebSocket token authentication
+# ---------------------------------------------------------------------------
+
+def test_ws_rejects_missing_token():
+    """Endpoint closes with 1008 Policy Violation when no token query param is present."""
+    import main as main_module
+    from main import app
+    with patch.object(main_module, "_VOICE_TOKEN", "test-secret"):
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            with TestClient(app).websocket_connect("/ws") as ws:
+                ws.receive_text()
+    assert exc_info.value.code == 1008
+
+
+def test_ws_rejects_wrong_token():
+    """Endpoint closes with 1008 Policy Violation when an incorrect token is supplied."""
+    import main as main_module
+    from main import app
+    with patch.object(main_module, "_VOICE_TOKEN", "test-secret"):
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            with TestClient(app).websocket_connect("/ws?token=bad-token") as ws:
+                ws.receive_text()
+    assert exc_info.value.code == 1008
+
+
+def test_ws_accepts_valid_token():
+    """Endpoint accepts the connection and processes the reset control message."""
+    import main as main_module
+    from main import app
+    with patch.object(main_module, "_VOICE_TOKEN", "test-secret"):
+        with TestClient(app).websocket_connect("/ws?token=test-secret") as ws:
+            ws.send_json({"type": "reset"})
+            data = ws.receive_json()
+    assert data["type"] == "state"
+    assert data["value"] == "idle"
