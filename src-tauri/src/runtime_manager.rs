@@ -1316,11 +1316,7 @@ pub async fn runtime_start_tool(
       // running), kill the orphaned process and fall through to restart it with a fresh
       // token so WebSocket connections can authenticate.
       if name == "voice-os" {
-        let has_token = token_state
-          .0
-          .lock()
-          .map(|g| g.is_some())
-          .unwrap_or(false);
+        let has_token = token_state.0.lock().map(|g| g.is_some()).unwrap_or(false);
         if !has_token {
           if let Some(pid) = state.spawned_pid(&name) {
             kill_pid(pid);
