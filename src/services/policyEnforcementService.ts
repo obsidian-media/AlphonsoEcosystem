@@ -70,8 +70,13 @@ export interface PolicyGateResult {
 }
 
 export function getRuntimePolicySettings(): RuntimePolicySettings {
+  // Default approvalMode to true (fail-safe) so that on first boot — before
+  // SettingsContext's useEffect writes 'alphonso_settings' to localStorage —
+  // the policy service and the UI show the same value. The old default of
+  // `false` created a race where the first connector calls were ungated even
+  // though the UI showed approval mode as on.
   const defaults: RuntimePolicySettings = {
-    approvalMode: false,
+    approvalMode: true,
     zeroCostMode: true,
     safeMode: true,
     localOnlyMode: true,
@@ -81,7 +86,7 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     return {
-      approvalMode: parsed.approvalMode === true,
+      approvalMode: parsed.approvalMode !== false,
       zeroCostMode: parsed.zeroCostMode !== false,
       safeMode: parsed.safeMode !== false,
       localOnlyMode: parsed.localOnlyMode !== false,
@@ -94,7 +99,7 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
 
 export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySettings> {
   const defaults: RuntimePolicySettings = {
-    approvalMode: false,
+    approvalMode: true,
     zeroCostMode: true,
     safeMode: true,
     localOnlyMode: true,
@@ -105,7 +110,7 @@ export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySett
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        approvalMode: parsed.approvalMode === true,
+        approvalMode: parsed.approvalMode !== false,
         zeroCostMode: parsed.zeroCostMode !== false,
         safeMode: parsed.safeMode !== false,
         localOnlyMode: parsed.localOnlyMode !== false,

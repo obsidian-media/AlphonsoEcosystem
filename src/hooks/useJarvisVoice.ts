@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { PCM_WORKLET_CODE } from './pcm-processor.worklet';
 
-import { getVoiceWebSocketUrl } from '../services/voiceOsService.js';
-const WS_URL = getVoiceWebSocketUrl();
+import { getVoiceWebSocketUrl, getVoiceToken } from '../services/voiceOsService.js';
 
 export interface JarvisVoiceState {
   state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
@@ -59,7 +58,21 @@ export function useJarvisVoice() {
   const start = useCallback(async () => {
     isDisposed.current = false;
     try {
-      const socket = new WebSocket(WS_URL);
+      // Build the WS URL at connection time so we pick up the current session
+      // token. Voice OS rejects connections that don't carry the correct token
+      // in the query string, preventing same-machine web pages from hijacking
+      // the microphone/TTS pipeline.
+      const baseUrl = getVoiceWebSocketUrl();
+      let wsUrl = baseUrl;
+      try {
+        const token = await getVoiceToken();
+        wsUrl = `${baseUrl}?token=${encodeURIComponent(token)}`;
+      } catch {
+        // Voice OS not running yet — proceed without token; the server will
+        // close the connection immediately and the user will see the normal
+        // "not running" error toast.
+      }
+      const socket = new WebSocket(wsUrl);
       if (isDisposed.current) return;
       socket.binaryType = 'arraybuffer';
       ws.current = socket;

@@ -215,6 +215,19 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
   );
 }
 
+function PlaceholderConnectorBanner({ children }: { children: React.ReactNode }): React.JSX.Element {
+  return (
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-0 z-10 rounded-2xl border border-zinc-600/40 bg-zinc-900/60 backdrop-blur-[1px]" />
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span className="text-[10px] font-semibold tracking-wide text-amber-300">Coming Soon</span>
+      </div>
+      <div className="opacity-40">{children}</div>
+    </div>
+  );
+}
+
 type NoticeType = 'info' | 'error' | 'success';
 
 export function ConnectorSetupPanel(): React.JSX.Element {
@@ -725,17 +738,21 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             hint="Deploy gateway/generic-webhook/ (Railway config included), point any external service at https://<gateway>/webhook/<sourceId> with the shared secret, then set the drain URL and token here so Alphonso can poll for events."
             savedLabel="Generic webhook config saved" />
 
-          <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-            fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
-            hint="Get your key at console.anthropic.com/settings/keys. Only used when you explicitly route a task to Claude."
-            savedLabel="Anthropic key saved" />
+          <PlaceholderConnectorBanner>
+            <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+              fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
+              onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
+              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
+              savedLabel="Anthropic key saved" />
+          </PlaceholderConnectorBanner>
 
-          <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
-            fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
-            hint="Get your key at platform.openai.com/api-keys. Only used when you explicitly route a task to ChatGPT."
-            savedLabel="OpenAI key saved" />
+          <PlaceholderConnectorBanner>
+            <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
+              fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
+              onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
+              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
+              savedLabel="OpenAI key saved" />
+          </PlaceholderConnectorBanner>
 
           <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
             fields={[

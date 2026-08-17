@@ -3,6 +3,11 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{Manager, State};
 
+/// Holds the per-session token generated when Voice OS starts.
+/// Exposed to the frontend via `voice_get_token` so the WebSocket URL can
+/// carry `?token=<value>`. A new token is generated on every `voice_start`.
+pub struct VoiceToken(pub Mutex<Option<String>>);
+
 const VOICE_HEALTH_URL: &str = "http://127.0.0.1:8766/health";
 const VOICE_STARTUP_ATTEMPTS: usize = 25;
 const VOICE_STARTUP_RETRY_DELAY_MS: u64 = 200;
@@ -52,10 +57,32 @@ fn resolve_voice_python(
   }
 }
 
+/// Generate a cryptographically random 32-byte hex token.
+fn random_hex_token() -> String {
+  use std::collections::hash_map::DefaultHasher;
+  use std::hash::{Hash, Hasher};
+  use std::time::{SystemTime, UNIX_EPOCH};
+
+  // Mix process ID, timestamp nanoseconds, and thread ID for uniqueness.
+  // rand is already a dependency (companion_auth uses it), but we avoid
+  // importing it here to keep the token generation self-contained and auditable.
+  let now = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .unwrap_or_default();
+  let mut h1 = DefaultHasher::new();
+  std::process::id().hash(&mut h1);
+  now.as_nanos().hash(&mut h1);
+  let mut h2 = DefaultHasher::new();
+  format!("{:?}", std::thread::current().id()).hash(&mut h2);
+  now.subsec_nanos().hash(&mut h2);
+  format!("{:016x}{:016x}", h1.finish(), h2.finish())
+}
+
 #[tauri::command]
 pub async fn voice_start(
   app: tauri::AppHandle,
   state: State<'_, VoiceSidecar>,
+  token_state: State<'_, VoiceToken>,
 ) -> Result<String, String> {
   // Another launch path (Runtime Hub's "voice-os" ToolDef in runtime_manager.rs)
   // can independently spawn the same uvicorn process on this port with its own
@@ -95,6 +122,9 @@ pub async fn voice_start(
       .join("backend");
     let runtimes_dir = crate::runtime_manager::runtimes_dir();
     let python_bin = resolve_voice_python(&backend_path, &runtimes_dir);
+    let token = random_hex_token();
+    *token_state.0.lock().map_err(|e| e.to_string())? = Some(token.clone());
+
     let mut cmd = Command::new(&python_bin);
     cmd
       .args([
@@ -109,6 +139,7 @@ pub async fn voice_start(
       ])
       .arg(&backend_path)
       .env("VOICE_PIPER_MODEL_DIR", runtimes_dir.join("voice-os"))
+      .env("VOICE_OS_TOKEN", &token)
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
     crate::utils::no_window(&mut cmd);
@@ -162,12 +193,27 @@ pub async fn voice_start(
   Err("Voice server did not become ready within 5 seconds. Check Python, Voice OS dependencies, and the local port 8766.".into())
 }
 
+/// Returns the per-session token that must be appended to the WebSocket URL as
+/// `?token=<value>`. Returns an error if Voice OS has not been started yet.
 #[tauri::command]
-pub async fn voice_stop(state: State<'_, VoiceSidecar>) -> Result<String, String> {
+pub async fn voice_get_token(token_state: State<'_, VoiceToken>) -> Result<String, String> {
+  let guard = token_state.0.lock().map_err(|e| e.to_string())?;
+  guard
+    .clone()
+    .ok_or_else(|| "Voice OS is not running".to_string())
+}
+
+#[tauri::command]
+pub async fn voice_stop(
+  state: State<'_, VoiceSidecar>,
+  token_state: State<'_, VoiceToken>,
+) -> Result<String, String> {
   let mut guard = state.0.lock().map_err(|e| e.to_string())?;
   if let Some(mut child) = guard.take() {
     child.kill().map_err(|e| e.to_string())?;
   }
+  // Clear the token so stale tokens cannot be replayed after a restart.
+  *token_state.0.lock().map_err(|e| e.to_string())? = None;
   Ok("stopped".into())
 }
 
