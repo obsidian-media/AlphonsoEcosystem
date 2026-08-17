@@ -57,25 +57,15 @@ fn resolve_voice_python(
   }
 }
 
-/// Generate a cryptographically random 32-byte hex token.
+/// Generate a cryptographically random 128-bit (32 hex char) token.
+///
+/// Uses `rand::rng()` (the crate-level CSPRNG) rather than `DefaultHasher`
+/// which is a non-cryptographic hash seeded from a predictable source.
 fn random_hex_token() -> String {
-  use std::collections::hash_map::DefaultHasher;
-  use std::hash::{Hash, Hasher};
-  use std::time::{SystemTime, UNIX_EPOCH};
-
-  // Mix process ID, timestamp nanoseconds, and thread ID for uniqueness.
-  // rand is already a dependency (companion_auth uses it), but we avoid
-  // importing it here to keep the token generation self-contained and auditable.
-  let now = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .unwrap_or_default();
-  let mut h1 = DefaultHasher::new();
-  std::process::id().hash(&mut h1);
-  now.as_nanos().hash(&mut h1);
-  let mut h2 = DefaultHasher::new();
-  format!("{:?}", std::thread::current().id()).hash(&mut h2);
-  now.subsec_nanos().hash(&mut h2);
-  format!("{:016x}{:016x}", h1.finish(), h2.finish())
+  use rand::RngCore;
+  let mut bytes = [0u8; 16];
+  rand::rng().fill_bytes(&mut bytes);
+  bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 #[tauri::command]
@@ -143,9 +133,14 @@ pub async fn voice_start(
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
     crate::utils::no_window(&mut cmd);
-    let mut child = cmd
-      .spawn()
-      .map_err(|e| format!("Failed to start voice server: {e}"))?;
+    let mut child = match cmd.spawn() {
+      Ok(c) => c,
+      Err(e) => {
+        // Clear the token — Voice OS did not start, so no valid socket session exists.
+        *token_state.0.lock().map_err(|e| e.to_string())? = None;
+        return Err(format!("Failed to start voice server: {e}"));
+      }
+    };
     if let Some(stdout) = child.stdout.take() {
       std::thread::spawn(move || {
         for line in BufReader::new(stdout).lines().map_while(Result::ok) {
@@ -190,6 +185,9 @@ pub async fn voice_start(
   if let Some(mut child) = guard.take() {
     let _ = child.kill();
   }
+  // Clear the token so stale tokens from this failed start attempt cannot be
+  // replayed against a future (successful) Voice OS start.
+  *token_state.0.lock().map_err(|e| e.to_string())? = None;
   Err("Voice server did not become ready within 5 seconds. Check Python, Voice OS dependencies, and the local port 8766.".into())
 }
 

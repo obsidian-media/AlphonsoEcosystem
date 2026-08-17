@@ -209,11 +209,15 @@ async fn handle_auth(
   pin_attempts: u8,
   max_pin_attempts: u8,
 ) -> Result<(String, bool), Box<dyn std::error::Error + Send + Sync>> {
-  // Extract just the IP part (strip port) for per-IP tracking.
+  // Parse the full socket address to extract just the IP. Using parse::<SocketAddr>
+  // handles both IPv4 ("1.2.3.4:port") and IPv6 ("[::1]:port") correctly. The
+  // old rsplit_once(':') approach gave "[::1]" for IPv6 while the pre-handshake
+  // check used ip().to_string() which gives "::1" — different keys, defeating
+  // the throttle for IPv6 clients.
   let source_ip = peer_addr
-    .rsplit_once(':')
-    .map(|(ip, _)| ip.to_string())
-    .unwrap_or_else(|| peer_addr.to_string());
+    .parse::<std::net::SocketAddr>()
+    .map(|a| a.ip().to_string())
+    .unwrap_or_else(|_| peer_addr.to_string());
   #[derive(serde::Deserialize)]
   struct AuthRequest {
     method: String,
@@ -364,6 +368,7 @@ mod tests {
     let pin = pin_manager.generate().await;
     let client_id = Uuid::new_v4();
     let clients = pending_clients(client_id);
+    let ip_failures: IpFailureMap = Arc::new(Mutex::new(HashMap::new()));
     let wrong = r#"{"method":"authenticate","params":{"pin":"000000"}}"#;
     let max = 3u8;
 
@@ -372,6 +377,7 @@ mod tests {
       client_id,
       &clients,
       &pin_manager,
+      &ip_failures,
       "127.0.0.1:1",
       0,
       max,
@@ -384,6 +390,7 @@ mod tests {
       client_id,
       &clients,
       &pin_manager,
+      &ip_failures,
       "127.0.0.1:1",
       1,
       max,
@@ -396,6 +403,7 @@ mod tests {
       client_id,
       &clients,
       &pin_manager,
+      &ip_failures,
       "127.0.0.1:1",
       2,
       max,
@@ -420,14 +428,16 @@ mod tests {
     let pin = pin_manager.generate().await;
     let client_id = Uuid::new_v4();
     let clients = pending_clients(client_id);
+    let ip_failures: IpFailureMap = Arc::new(Mutex::new(HashMap::new()));
     let msg = format!(
       r#"{{"method":"authenticate","params":{{"pin":"{}"}}}}"#,
       pin
     );
 
-    let (resp, close) = handle_auth(&msg, client_id, &clients, &pin_manager, "127.0.0.1:1", 0, 5)
-      .await
-      .unwrap();
+    let (resp, close) =
+      handle_auth(&msg, client_id, &clients, &pin_manager, &ip_failures, "127.0.0.1:1", 0, 5)
+        .await
+        .unwrap();
     assert!(!close);
     assert!(resp.contains("authenticated"));
     assert!(matches!(

@@ -66,7 +66,11 @@ export function useJarvisVoice() {
       let wsUrl = baseUrl;
       try {
         const token = await getVoiceToken();
-        wsUrl = `${baseUrl}?token=${encodeURIComponent(token)}`;
+        // Use the URL constructor so existing query params on baseUrl are preserved
+        // and the token value is properly percent-encoded.
+        const url = new URL(baseUrl);
+        url.searchParams.set('token', token);
+        wsUrl = url.toString();
       } catch {
         // Voice OS not running yet — proceed without token; the server will
         // close the connection immediately and the user will see the normal

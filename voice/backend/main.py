@@ -5,7 +5,7 @@ import os
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from pipeline import local_ollama_url, run_pipeline

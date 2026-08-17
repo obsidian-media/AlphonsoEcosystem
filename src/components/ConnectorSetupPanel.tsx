@@ -218,12 +218,17 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
 function PlaceholderConnectorBanner({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute inset-0 z-10 rounded-2xl border border-zinc-600/40 bg-zinc-900/60 backdrop-blur-[1px]" />
+      {/* Overlay covers the children area and catches pointer events — no pointer-events-none. */}
+      <div className="absolute inset-0 z-10 rounded-2xl border border-zinc-600/40 bg-zinc-900/60 backdrop-blur-[1px]" />
       <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         <span className="text-[10px] font-semibold tracking-wide text-amber-300">Coming Soon</span>
       </div>
-      <div className="opacity-40">{children}</div>
+      {/* pointer-events-none + aria-hidden ensure neither mouse events nor assistive
+          technology can reach or activate the disabled credential form. */}
+      <div className="pointer-events-none opacity-40" aria-hidden="true">
+        {children}
+      </div>
     </div>
   );
 }

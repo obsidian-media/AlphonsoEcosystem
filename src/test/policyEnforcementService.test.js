@@ -15,7 +15,9 @@ describe('policyEnforcementService', () => {
   describe('getRuntimePolicySettings', () => {
     it('returns all-true defaults when localStorage is empty', () => {
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(false);
+      // approvalMode defaults to true (fail-safe) so fresh installs gate high-risk
+      // actions before the user has touched Settings.
+      expect(settings.approvalMode).toBe(true);
       expect(settings.zeroCostMode).toBe(true);
       expect(settings.safeMode).toBe(true);
     });
@@ -35,7 +37,7 @@ describe('policyEnforcementService', () => {
     it('returns defaults on corrupt JSON', () => {
       localStorage.setItem('alphonso_settings', 'not-json');
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(false);
+      expect(settings.approvalMode).toBe(true);
       expect(settings.zeroCostMode).toBe(true);
     });
   });
