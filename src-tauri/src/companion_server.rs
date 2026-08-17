@@ -434,10 +434,18 @@ mod tests {
       pin
     );
 
-    let (resp, close) =
-      handle_auth(&msg, client_id, &clients, &pin_manager, &ip_failures, "127.0.0.1:1", 0, 5)
-        .await
-        .unwrap();
+    let (resp, close) = handle_auth(
+      &msg,
+      client_id,
+      &clients,
+      &pin_manager,
+      &ip_failures,
+      "127.0.0.1:1",
+      0,
+      5,
+    )
+    .await
+    .unwrap();
     assert!(!close);
     assert!(resp.contains("authenticated"));
     assert!(matches!(

@@ -923,14 +923,22 @@ fn run_ocr_adapter(
     // permitted here. `engine_path` is separately validated (must be an
     // existing file) above; this covers the argument list only.
     const ALLOWED_FLAGS: &[&str] = &[
-      "--psm", "--oem", "-l", "--tessdata-dir", "--dpi",
-      "--user-words", "--user-patterns", "--loglevel",
+      "--psm",
+      "--oem",
+      "-l",
+      "--tessdata-dir",
+      "--dpi",
+      "--user-words",
+      "--user-patterns",
+      "--loglevel",
     ];
     for arg in &extra {
       let is_allowed = ALLOWED_FLAGS.iter().any(|f| arg == f)
-        || arg.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+        || (arg
+          .chars()
+          .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
           && !arg.starts_with("--")
-          && !arg.starts_with('-');
+          && !arg.starts_with('-'));
       if !is_allowed {
         return Err(format!(
           "Disallowed OCR argument: {arg:?}. Permitted flags: {}",
