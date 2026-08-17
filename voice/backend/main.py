@@ -54,14 +54,14 @@ async def health():
     try:
         tts_ok = tts_model_path().exists()
     except OSError:
-        pass
+        pass  # model file may not exist on first boot; tts_ok stays False
     ollama_reachable = False
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.get(local_ollama_url().removesuffix("/api/chat") + "/api/tags")
             ollama_reachable = response.is_success
     except httpx.RequestError:
-        pass
+        pass  # Ollama not reachable; ollama_reachable stays False
     return {
         "status": "ok",
         "stt": importlib.util.find_spec("faster_whisper") is not None,
@@ -146,7 +146,7 @@ async def ws_endpoint(ws: WebSocket):
                         set_state(session_id, "idle")
                         await ws.send_json({"type": "state", "value": "idle"})
                 except json.JSONDecodeError:
-                    pass
+                    pass  # ignore malformed control messages
 
     finally:
         cancel(session_id)
