@@ -3,7 +3,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-_MOCK_TOKEN = "a1b2c3d4e5f67890a1b2c3d4e5f67890"  # nosec B105 — test fixture, not a real credential
+_MOCK_TOKEN = "voice-test-fixture-not-a-credential"  # gitleaks:allow  # nosec B105
 
 
 def test_local_backend_does_not_expose_cloud_voice_route():
@@ -76,3 +76,17 @@ def test_ws_accepts_valid_token():
             data = ws.receive_json()
     assert data["type"] == "state"
     assert data["value"] == "idle"
+
+
+def test_ws_handles_normal_disconnect():
+    """Client closing the connection does not raise; server cleanup runs cleanly."""
+    import main as main_module
+    from main import app
+    with patch.object(main_module, "_VOICE_TOKEN", _MOCK_TOKEN):
+        # Exiting the context manager sends websocket.disconnect; the loop must
+        # break on the disconnect message instead of calling receive() again,
+        # which would raise RuntimeError in Starlette.
+        with TestClient(app).websocket_connect(f"/ws?token={_MOCK_TOKEN}") as ws:
+            ws.send_json({"type": "reset"})
+            ws.receive_json()
+            # Leaving the block triggers a normal disconnect — no exception expected.

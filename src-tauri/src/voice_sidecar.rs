@@ -95,7 +95,25 @@ pub async fn voice_start(
     Err(_) => false,
   };
   if already_healthy {
-    return Ok("already_running".into());
+    // If the session token is still held, Voice OS is fully usable — return early.
+    // If the token was lost (e.g. the Tauri process restarted while Voice OS kept
+    // running), kill the orphaned process and fall through to restart it with a
+    // fresh token so WebSocket connections can authenticate.
+    let has_token = token_state
+      .0
+      .lock()
+      .map(|g| g.is_some())
+      .unwrap_or(false);
+    if has_token {
+      return Ok("already_running".into());
+    }
+    // Token was lost — evict the stale tracked child (if any) so the spawn path
+    // below does not see a live entry and return early again.
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    if let Some(mut child) = guard.take() {
+      let _ = child.kill();
+    }
+    // Fall through to spawn fresh.
   }
 
   {

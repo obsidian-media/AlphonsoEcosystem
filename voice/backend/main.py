@@ -172,6 +172,11 @@ async def ws_endpoint(ws: WebSocket):
     try:
         while True:
             msg = await ws.receive()
+            # A "websocket.disconnect" message signals the client has closed the
+            # connection. Break immediately; calling receive() again after this
+            # raises RuntimeError in Starlette.
+            if msg.get("type") == "websocket.disconnect":
+                break
             if "bytes" in msg:
                 buffer = await _handle_bytes_msg(ws, session_id, msg["bytes"], buffer, conversation_history)
             elif "text" in msg:

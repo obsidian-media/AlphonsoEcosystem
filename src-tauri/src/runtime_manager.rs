@@ -1312,11 +1312,35 @@ pub async fn runtime_start_tool(
 
   if let Some(port) = def.port {
     if is_running_async(port, def.health_path.unwrap_or("/")).await {
-      return Ok(RuntimeActionResult {
-        tool: name,
-        ok: true,
-        message: format!("{} is already running on port {}.", def.display_name, port),
-      });
+      // voice-os: if the VoiceToken was lost (e.g. app restarted while Voice OS kept
+      // running), kill the orphaned process and fall through to restart it with a fresh
+      // token so WebSocket connections can authenticate.
+      if name == "voice-os" {
+        let has_token = token_state
+          .0
+          .lock()
+          .map(|g| g.is_some())
+          .unwrap_or(false);
+        if !has_token {
+          if let Some(pid) = state.spawned_pid(&name) {
+            kill_pid(pid);
+            state.remove_pid(&name);
+          }
+          // Fall through to spawn fresh with a new token.
+        } else {
+          return Ok(RuntimeActionResult {
+            tool: name,
+            ok: true,
+            message: format!("{} is already running on port {}.", def.display_name, port),
+          });
+        }
+      } else {
+        return Ok(RuntimeActionResult {
+          tool: name,
+          ok: true,
+          message: format!("{} is already running on port {}.", def.display_name, port),
+        });
+      }
     }
   }
 
@@ -1430,12 +1454,20 @@ pub async fn runtime_start_tool(
 pub async fn runtime_stop_tool(
   name: String,
   state: tauri::State<'_, RuntimeManager>,
+  token_state: tauri::State<'_, crate::voice_sidecar::VoiceToken>,
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
 
   if let Some(pid) = state.spawned_pid(&name) {
     kill_pid(pid);
     state.remove_pid(&name);
+    // Clear the voice session token when Runtime Hub stops Voice OS so stale
+    // tokens cannot be replayed against a future (successful) Voice OS start.
+    if name == "voice-os" {
+      if let Ok(mut guard) = token_state.0.lock() {
+        *guard = None;
+      }
+    }
     return Ok(RuntimeActionResult {
       tool: name,
       ok: true,
