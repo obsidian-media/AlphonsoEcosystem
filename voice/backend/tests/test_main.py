@@ -3,6 +3,8 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
+_MOCK_TOKEN = "a1b2c3d4e5f67890a1b2c3d4e5f67890"
+
 
 def test_local_backend_does_not_expose_cloud_voice_route():
     from main import app
@@ -46,7 +48,7 @@ def test_ws_rejects_missing_token():
     """Endpoint closes with 1008 Policy Violation when no token query param is present."""
     import main as main_module
     from main import app
-    with patch.object(main_module, "_VOICE_TOKEN", "test-secret"):
+    with patch.object(main_module, "_VOICE_TOKEN", _MOCK_TOKEN):
         with pytest.raises(WebSocketDisconnect) as exc_info:
             with TestClient(app).websocket_connect("/ws") as ws:
                 ws.receive_text()
@@ -57,7 +59,7 @@ def test_ws_rejects_wrong_token():
     """Endpoint closes with 1008 Policy Violation when an incorrect token is supplied."""
     import main as main_module
     from main import app
-    with patch.object(main_module, "_VOICE_TOKEN", "test-secret"):
+    with patch.object(main_module, "_VOICE_TOKEN", _MOCK_TOKEN):
         with pytest.raises(WebSocketDisconnect) as exc_info:
             with TestClient(app).websocket_connect("/ws?token=bad-token") as ws:
                 ws.receive_text()
@@ -68,8 +70,8 @@ def test_ws_accepts_valid_token():
     """Endpoint accepts the connection and processes the reset control message."""
     import main as main_module
     from main import app
-    with patch.object(main_module, "_VOICE_TOKEN", "test-secret"):
-        with TestClient(app).websocket_connect("/ws?token=test-secret") as ws:
+    with patch.object(main_module, "_VOICE_TOKEN", _MOCK_TOKEN):
+        with TestClient(app).websocket_connect(f"/ws?token={_MOCK_TOKEN}") as ws:
             ws.send_json({"type": "reset"})
             data = ws.receive_json()
     assert data["type"] == "state"

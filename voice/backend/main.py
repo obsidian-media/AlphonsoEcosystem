@@ -1,4 +1,5 @@
 import asyncio
+import hmac
 import importlib.util
 import json
 import os
@@ -108,7 +109,7 @@ async def ws_endpoint(ws: WebSocket):
     # immediately; unauthenticated connections are closed before any data flows.
     await ws.accept()
     provided = ws.query_params.get("token")
-    if _VOICE_TOKEN is None or provided != _VOICE_TOKEN:
+    if _VOICE_TOKEN is None or provided is None or not hmac.compare_digest(provided, _VOICE_TOKEN):
         await ws.close(code=1008)  # 1008 = Policy Violation
         return
     session_id = ws.headers.get("x-session", "anon")

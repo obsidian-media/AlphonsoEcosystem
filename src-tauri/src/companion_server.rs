@@ -398,7 +398,7 @@ mod tests {
       max,
     )
     .await
-    .unwrap();
+    .expect("handle_auth must not error in test");
     assert!(!close, "first miss must not close");
     let (_r, close) = handle_auth(
       wrong,
@@ -411,7 +411,7 @@ mod tests {
       max,
     )
     .await
-    .unwrap();
+    .expect("handle_auth must not error in test");
     assert!(!close, "second miss must not close");
     let (resp, close) = handle_auth(
       wrong,
@@ -424,7 +424,7 @@ mod tests {
       max,
     )
     .await
-    .unwrap();
+    .expect("handle_auth must not error in test");
     assert!(close, "budget-exhausting miss must close the connection");
     assert!(
       resp.contains("429"),
@@ -460,7 +460,7 @@ mod tests {
       5,
     )
     .await
-    .unwrap();
+    .expect("handle_auth must not error in test");
     assert!(!close);
     assert!(resp.contains("authenticated"));
     assert!(matches!(
