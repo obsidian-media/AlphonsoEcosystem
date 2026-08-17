@@ -3,6 +3,21 @@ import { PCM_WORKLET_CODE } from './pcm-processor.worklet';
 
 import { getVoiceWebSocketUrl, getVoiceToken } from '../services/voiceOsService.js';
 
+async function buildVoiceWsUrl(): Promise<string> {
+  const baseUrl = getVoiceWebSocketUrl();
+  try {
+    const token = await getVoiceToken();
+    // Preserve any existing query params on baseUrl; percent-encode the token value.
+    const url = new URL(baseUrl);
+    url.searchParams.set('token', token);
+    return url.toString();
+  } catch {
+    // Voice OS not running yet — proceed without token; the server will close
+    // the connection immediately and the user will see the normal error toast.
+    return baseUrl;
+  }
+}
+
 export interface JarvisVoiceState {
   state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
   transcript: string;
@@ -59,23 +74,9 @@ export function useJarvisVoice() {
     isDisposed.current = false;
     try {
       // Build the WS URL at connection time so we pick up the current session
-      // token. Voice OS rejects connections that don't carry the correct token
-      // in the query string, preventing same-machine web pages from hijacking
-      // the microphone/TTS pipeline.
-      const baseUrl = getVoiceWebSocketUrl();
-      let wsUrl = baseUrl;
-      try {
-        const token = await getVoiceToken();
-        // Use the URL constructor so existing query params on baseUrl are preserved
-        // and the token value is properly percent-encoded.
-        const url = new URL(baseUrl);
-        url.searchParams.set('token', token);
-        wsUrl = url.toString();
-      } catch {
-        // Voice OS not running yet — proceed without token; the server will
-        // close the connection immediately and the user will see the normal
-        // "not running" error toast.
-      }
+      // token. Voice OS rejects connections without the correct token, preventing
+      // same-machine web pages from hijacking the microphone/TTS pipeline.
+      const wsUrl = await buildVoiceWsUrl();
       const socket = new WebSocket(wsUrl);
       if (isDisposed.current) return;
       socket.binaryType = 'arraybuffer';
