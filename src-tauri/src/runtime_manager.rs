@@ -1357,7 +1357,6 @@ pub async fn runtime_start_tool(
       "python".to_string()
     };
     let token = crate::voice_sidecar::random_hex_token();
-    *token_state.0.lock().map_err(|e| e.to_string())? = Some(token.clone());
     let mut cmd = Command::new(&py);
     cmd
       .args([
@@ -1382,6 +1381,14 @@ pub async fn runtime_start_tool(
       .spawn()
       .map_err(|e| format!("Failed to start Voice OS: {e}"))?;
     let pid = child.id();
+    // Store the token only after successful spawn so a concurrent caller that loses
+    // the race cannot overwrite the token before the winning process is registered.
+    if let Err(e) = token_state.0.lock().map(|mut g| *g = Some(token.clone())) {
+      kill_pid(pid);
+      return Err(format!(
+        "Failed to store Voice OS token, process killed: {e}"
+      ));
+    }
     state.record_pid(&name, pid);
     // S-10: post-spawn health check — emit failure event if process dies within 3 s
     {
