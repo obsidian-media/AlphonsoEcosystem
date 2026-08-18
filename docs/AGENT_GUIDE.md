@@ -99,6 +99,29 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 **Schema:** `opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`
 **When to use:** "Which of these is most promising?", "Prioritize these tasks", "Analyze this opportunity". Nova also runs automatically to score incoming commands for Jose's routing decisions.
 
+## Hermes agent backend (planned, not started)
+
+Every agent's "thinking" today comes from local Ollama by default (with NVIDIA/Gemini
+already available as alternate global providers — see `modelSelectionService.ts`,
+`ModelSwitcher.tsx`). There is a **planned, not-yet-built** feature to add a 4th
+option, **per agent**: routing a specific agent's turn to a live, standalone
+"Hermes Agent" (Nous Research, MIT-licensed) instance the owner runs separately
+on this machine — 5 of the 9 in-app agents (Jose/Hector/Miya/Marcus/Alphonso)
+already have a real, running "standalone twin" profile, each self-described as
+such in its own persona doc, with the remaining 4 (Maria/Echo/Sentinel/Nova)
+planned. Ollama stays the unconditional default for every agent; this is purely
+additive and opt-in per agent.
+
+Full design — exact files/functions to change, a two-PR split (bare connector,
+then hardening: circuit breaker/rate limiter/policy gating/session continuity),
+and a fully-specified Phase 2 (bundling Hermes into the installer for new users)
+— lives in `docs/HERMES_AGENT_DELEGATION_PLAN.md`. **That file is gitignored**
+(it references this machine's own local Hermes install paths/ports) — if you're
+a future session and it's missing, check `docs/TRUTH_FIRST_EXECUTION_PLAN.md` §I
+and `docs/governance/DEFERRED_WORK.md` for the summary, and re-derive or request
+the full file from the owner before starting. Status as of 2026-08-18: design
+complete, no code written, awaiting owner go-ahead.
+
 ## How Agents Collaborate
 
 ```

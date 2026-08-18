@@ -988,6 +988,65 @@ dropped.
     `Alphonso-2c89cbb6ea20a1c39aaef86d1f360083f5064529-x64-setup`. This proves
     build/package integrity, not paired-device English/Farsi acceptance.
 
+### I. Hermes agent-backend delegation (planned, not started)
+
+- [ ] **I1 — Per-agent Hermes provider (PR 1a: bare connector)**
+  - **Owner:** unassigned
+  - **Context:** the user runs a separate, standalone open-source agent
+    framework called Hermes Agent (Nous Research, MIT) with 5 live daemon
+    "profiles" (Jose/Hector/Miya/Marcus/Alphonso, more planned) that are
+    explicit self-described "standalone twins" of this repo's 9 in-app
+    agents, each exposing its own OpenAI-compatible REST API on a local
+    port. Full design (context, exact file/line-level plan, engineering
+    review findings, verified vs. corrected claims from an independent
+    trace) lives in `docs/HERMES_AGENT_DELEGATION_PLAN.md` —
+    **gitignored, local to this machine only**, not in git history. If
+    that file is missing on the machine you're working from, it needs to
+    be re-derived or re-requested from the owner before resuming this task.
+  - Add Hermes as a 4th provider (alongside Ollama/NVIDIA/Gemini) in a
+    **per-agent** (not global) provider picker; new
+    `src/services/connectors/hermesAgentConnector.ts`; extend
+    `modelSelectionService.ts` with a per-agent map defaulting every agent
+    to `ollama` (zero behavior change for anyone who doesn't touch this).
+  - **Done when:** a user can configure a Hermes endpoint for one agent,
+    pick a live-fetched model, flip that agent's provider to Hermes, and a
+    real command routed to that agent is actually answered by the
+    standalone Hermes profile — verified via Hermes' own session logs, not
+    just "the UI shows connected." Full 1a scope, testing, and doc
+    requirements are in the plan doc §1/§1.7/§1.8.
+  - **Prerequisite:** Phase 0 in the plan doc (merge PR #152
+    dependency-bundling, PR #153 handoff-review-feedback; do not merge PR
+    #151 recover/hook-test-coverage, it's red) — not yet executed as of
+    this entry.
+
+- [ ] **I2 — Hermes connector hardening (PR 1b)**
+  - **Owner:** unassigned
+  - Only starts after I1 ships and is verified live. Circuit breaker
+    (needs a new per-connector config API — verified `connectorCircuitBreakerService.ts`
+    has none today, unlike the rate limiter which already has one),
+    rate limiter (directly actionable, real API confirmed), health-check
+    panel registration, audit logging, policy/approval gating for
+    `hermesAgentDelegation`, and session continuity via Hermes'
+    `X-Hermes-Session-Id`. Full detail in the plan doc §1b.
+  - **Done when:** see plan doc §1b.4 testing list.
+
+- [ ] **I3 — Bundle Hermes for new users (Phase 2, design-only today)**
+  - **Owner:** unassigned
+  - Not started, not scoped for immediate work — a bundled Hermes install
+    (managed venv, per-profile fresh key generation, minimal safe default
+    config, dynamic port allocation) so a brand-new user gets this
+    capability without hand-building profiles. Comparable in scope to
+    `docs/DEPENDENCY_BUNDLING_PLAN.md` itself; full acceptance criterion,
+    mechanism, and REPO_RULES-grade verification steps are written out in
+    the plan doc §Phase 2 — deliberately fully specified, not a stub, per
+    explicit owner instruction not to leave it half-done. Requires the
+    owner's explicit go-ahead and a decision on §2.5's rollout-scope
+    question before implementation starts.
+  - **Independent prerequisite, do any time:** the Hermes profiles on this
+    dev machine currently have duplicate/near-duplicate `api_server` keys
+    across Miya/Alphonso/Marcus — a real credential-leak-blast-radius issue,
+    worth fixing now regardless of when Phase 2 starts. See plan doc §2.2.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
@@ -1011,4 +1070,5 @@ dropped.
 | 2026-07-27 | Migrated `skillPackService` and `joseExecutionEngineService` from `.js` to `.ts`; split skill-pack content into registry/content/guidance modules and verified the affected test sets plus full Vitest, lint, and typecheck. | This session's code changes and verification output. |
 | 2026-07-29 | Codex completed a fresh risk-based all-angle audit after a full codebase-memory reindex. | `audits/2026-07-29_Codex_AllAngle_Audit.md`; lint passed; the full PowerShell verifier timed out in fallback secret scanning, so no release-readiness claim was made. |
 | 2026-07-29 | Codex resolved the Local Voice dependency/model/runtime-path deferrals and added a focused Vitest command. | Windows clean-venv install; `pytest voice/backend/tests -q` 37/37; Piper real WAV synthesis; pending only fresh Rust compile and hardware/Ollama/playback evidence. |
+| 2026-08-18 | Added Section I (Hermes agent-backend delegation): planned, not started. Full design lives in a gitignored local plan doc (machine-specific detail); this file, `docs/governance/DEFERRED_WORK.md`, and `docs/AGENT_GUIDE.md` all point to it so a future session on this machine can find it. | `docs/HERMES_AGENT_DELEGATION_PLAN.md` (gitignored, see `.gitignore`); no code changes made this pass — planning/reconnaissance only. |
 
