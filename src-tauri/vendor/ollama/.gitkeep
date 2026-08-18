@@ -1,0 +1,13 @@
+This directory must exist in the repository even though its real contents
+are gitignored — see docs/DEPENDENCY_BUNDLING_PLAN.md's Implementation log.
+
+tauri-build validates that every `bundle.resources` path in tauri.conf.json
+exists on EVERY cargo invocation (`cargo check`/`test`/`clippy`/`build`), not
+only when actually bundling via `tauri build`. A fully gitignored directory
+here broke plain `cargo check` for every contributor and CI job that hasn't
+run `node scripts/fetch-ollama-runtime.mjs` first (a real CI failure, not a
+hypothetical one — see the "Rust Tests & Clippy" job).
+
+Run `node scripts/fetch-ollama-runtime.mjs <platform>` to populate this
+directory with the real, checksum-verified Ollama runtime before running
+`tauri build`. Do not commit that fetched content — only this placeholder.

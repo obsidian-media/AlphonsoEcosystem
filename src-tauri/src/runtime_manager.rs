@@ -516,8 +516,39 @@ fn git_version(exe: &str) -> Option<String> {
     .filter(|s| !s.is_empty())
 }
 
+/// Dependency Bundling Plan O3 (docs/DEPENDENCY_BUNDLING_PLAN.md): check for
+/// an Ollama binary bundled via tauri.conf.json's `bundle.resources` entry
+/// (`"vendor/ollama": "ollama"`, staged at build time by
+/// `scripts/fetch-ollama-runtime.mjs`) before any system detection below.
+///
+/// Resolved via `current_exe()`'s parent rather than threading a Tauri
+/// `AppHandle` through `find_ollama()` — it's called from several places
+/// that don't have one. This matches how Tauri's `resource_dir()` behaves on
+/// Windows specifically (bundle.resources are installed alongside the main
+/// .exe there), which is the only platform `release.yml` actually builds
+/// today. If a macOS/Linux release job is ever added, verify this still
+/// matches `resource_dir()`'s dmg/appimage/deb resource layout before
+/// relying on it there too — do not assume it carries over unchanged.
+fn bundled_ollama_path() -> Option<String> {
+  let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+  let binary_name = if cfg!(target_os = "windows") {
+    "ollama.exe"
+  } else {
+    "ollama"
+  };
+  let candidate = exe_dir.join("ollama").join(binary_name);
+  if candidate.exists() {
+    candidate.to_str().map(|s| s.to_string())
+  } else {
+    None
+  }
+}
+
 /// Gap 3: find Ollama across PATH + common Windows install locations
 pub fn find_ollama() -> Option<String> {
+  if let Some(bundled) = bundled_ollama_path() {
+    return Some(bundled);
+  }
   if which_exe("ollama") {
     return Some("ollama".to_string());
   }
