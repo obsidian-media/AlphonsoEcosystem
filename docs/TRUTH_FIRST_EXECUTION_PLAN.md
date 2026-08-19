@@ -990,8 +990,15 @@ dropped.
 
 ### I. Hermes agent-backend delegation (planned, not started)
 
-- [ ] **I1 — Per-agent Hermes provider (PR 1a: bare connector)**
-  - **Owner:** unassigned
+- [~] **I1 — Per-agent Hermes provider (PR 1a: bare connector)**
+  - **Owner:** Alphonso (execution)
+  - **In progress (2026-08-19):** connector, per-agent provider map, credential
+    UI, per-agent picker, and the shared `generateAgentLlmResponse` dispatcher
+    implemented and wired into every confirmed per-agent LLM call site. New/
+    updated targeted tests passing (55 + 403 + 121 across the connector,
+    dispatcher, `modelSelectionService`, and all touched per-agent services'
+    existing suites — see PR for exact counts). Not yet marked `[x]`: full
+    `npm run test`/`typecheck`/`lint` verification and PR merge still pending.
   - **Context:** the user runs a separate, standalone open-source agent
     framework called Hermes Agent (Nous Research, MIT) with 5 live daemon
     "profiles" (Jose/Hector/Miya/Marcus/Alphonso, more planned) that are

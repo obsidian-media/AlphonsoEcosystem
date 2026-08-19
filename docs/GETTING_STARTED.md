@@ -128,6 +128,19 @@ The voice pipeline routes to the same 9 agents as the chat interface:
 | "Compliance..." / "Governance..." | Maria |
 | Anything else | Alphonso |
 
+## Connecting a Hermes profile (optional — advanced)
+
+If you separately run [Hermes Agent](https://github.com/NousResearch) (Nous Research's standalone agent framework — a different install from this app), you can delegate a specific agent's replies to its matching Hermes profile instead of local Ollama. This is fully optional and per-agent: nothing changes for anyone who doesn't set it up, and every other agent keeps using Ollama untouched.
+
+**Prerequisite:** a running Hermes profile with its API server enabled (`platforms.api_server.enabled: true` in that profile's `config.yaml`) — see Hermes Agent's own docs for setup. Note the profile's base URL (e.g. `http://127.0.0.1:8645`) and its `key`.
+
+1. Open **Settings → Connectors → API Credentials → Hermes Agents**
+2. For the agent you want to delegate (e.g. Jose), paste that profile's Base URL and API Key, then **Save & Enable** — the row shows connected/unreachable after a live reachability check
+3. Scroll to **Settings → Connectors → Agent Providers**, find that agent's row, and switch its provider tab to **Hermes**
+4. Pick a model from the dropdown — it's fetched live from that profile's own `/v1/models`, never a fixed list
+
+That agent's replies now come from the real standalone Hermes profile. Every other agent, and this same agent if you switch it back, still uses Ollama exactly as before.
+
 ---
 
 ## Key Concepts

@@ -1,4 +1,4 @@
-import { generateOllamaResponse, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { generateAgentLlmResponse, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import type { CrossThreadContextResult } from './boardroomThreadService';
 
@@ -119,7 +119,7 @@ export async function generateAgentResponse({
   const prompt = buildFacilitatorPrompt({ topic, priorMessages, newMessageText, agentId, crossThreadContext });
   const startedAt = Date.now();
   try {
-    const result = await generateOllamaResponse({ endpoint, model, prompt, signal });
+    const result = await generateAgentLlmResponse(agentId, { endpoint, model, prompt, signal });
     return { ok: true, text: (result?.response || '').trim(), model, latencyMs: Date.now() - startedAt };
   } catch (error) {
     return { ok: false, text: '', error: (error as Error)?.message || String(error) };

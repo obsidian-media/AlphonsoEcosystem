@@ -1,10 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 vi.mock('../../lib/ollama', async () => {
   const actual = await vi.importActual('../../lib/ollama');
   return {
     ...actual,
-    generateOllamaResponse: vi.fn()
+    // boardroomFacilitatorService.ts routes through the shared per-agent
+    // dispatcher (generateAgentLlmResponse), not generateOllamaResponse
+    // directly — see src/lib/ollama.ts. Mock the dispatcher itself.
+    generateAgentLlmResponse: vi.fn()
   };
 });
 
@@ -45,9 +52,9 @@ describe('boardroomFacilitatorService', () => {
   });
 
   describe('generateAlphonsoResponse', () => {
-    it('calls generateOllamaResponse with the built prompt and returns the response text', async () => {
+    it('calls generateAgentLlmResponse for the alphonso agent with the built prompt and returns the response text', async () => {
       const ollama = await import('../../lib/ollama');
-      (ollama.generateOllamaResponse as any).mockResolvedValue({ response: 'Got it — pulling in Hector.', done: true });
+      (ollama.generateAgentLlmResponse as any).mockResolvedValue({ response: 'Got it — pulling in Hector.', done: true });
 
       const { generateAlphonsoResponse } = await import('../../services/boardroomFacilitatorService');
       const result = await generateAlphonsoResponse({
@@ -58,14 +65,15 @@ describe('boardroomFacilitatorService', () => {
 
       expect(result.ok).toBe(true);
       expect(result.text).toBe('Got it — pulling in Hector.');
-      expect(ollama.generateOllamaResponse).toHaveBeenCalledWith(
+      expect(ollama.generateAgentLlmResponse).toHaveBeenCalledWith(
+        'alphonso',
         expect.objectContaining({ model: expect.any(String), prompt: expect.stringContaining('We need a plan.') })
       );
     });
 
-    it('returns ok:false with an error message when Ollama call throws', async () => {
+    it('returns ok:false with an error message when the dispatcher call throws', async () => {
       const ollama = await import('../../lib/ollama');
-      (ollama.generateOllamaResponse as any).mockRejectedValue(new Error('Ollama is not running'));
+      (ollama.generateAgentLlmResponse as any).mockRejectedValue(new Error('Ollama is not running'));
 
       const { generateAlphonsoResponse } = await import('../../services/boardroomFacilitatorService');
       const result = await generateAlphonsoResponse({
@@ -82,7 +90,7 @@ describe('boardroomFacilitatorService', () => {
   describe('generateAgentResponse', () => {
     it("builds a persona prompt using the target agent's real role from agentRegistry, not a hardcoded Alphonso description", async () => {
       const ollama = await import('../../lib/ollama');
-      (ollama.generateOllamaResponse as any).mockResolvedValue({ response: 'On it — checking sources now.', done: true });
+      (ollama.generateAgentLlmResponse as any).mockResolvedValue({ response: 'On it — checking sources now.', done: true });
 
       const { generateAgentResponse } = await import('../../services/boardroomFacilitatorService');
       const result = await generateAgentResponse({
@@ -94,14 +102,15 @@ describe('boardroomFacilitatorService', () => {
 
       expect(result.ok).toBe(true);
       expect(result.text).toBe('On it — checking sources now.');
-      const promptArg = (ollama.generateOllamaResponse as any).mock.calls[0][0].prompt;
+      expect((ollama.generateAgentLlmResponse as any).mock.calls[0][0]).toBe('hector');
+      const promptArg = (ollama.generateAgentLlmResponse as any).mock.calls[0][1].prompt;
       expect(promptArg.toLowerCase()).toContain('hector');
       expect(promptArg.toLowerCase()).toContain('research');
     });
 
     it('falls back to a generic persona for an unknown agent id rather than throwing', async () => {
       const ollama = await import('../../lib/ollama');
-      (ollama.generateOllamaResponse as any).mockResolvedValue({ response: 'ok', done: true });
+      (ollama.generateAgentLlmResponse as any).mockResolvedValue({ response: 'ok', done: true });
 
       const { generateAgentResponse } = await import('../../services/boardroomFacilitatorService');
       const result = await generateAgentResponse({
@@ -116,7 +125,7 @@ describe('boardroomFacilitatorService', () => {
 
     it('propagates errors the same way generateAlphonsoResponse does', async () => {
       const ollama = await import('../../lib/ollama');
-      (ollama.generateOllamaResponse as any).mockRejectedValue(new Error('Ollama is not running'));
+      (ollama.generateAgentLlmResponse as any).mockRejectedValue(new Error('Ollama is not running'));
 
       const { generateAgentResponse } = await import('../../services/boardroomFacilitatorService');
       const result = await generateAgentResponse({
@@ -132,7 +141,7 @@ describe('boardroomFacilitatorService', () => {
 
     it('returns the model used and a measured latencyMs on success', async () => {
       const ollama = await import('../../lib/ollama');
-      (ollama.generateOllamaResponse as any).mockImplementation(
+      (ollama.generateAgentLlmResponse as any).mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({ response: 'ok', done: true }), 5))
       );
 
@@ -156,7 +165,7 @@ describe('boardroomFacilitatorService', () => {
 
     it('does not return model/latencyMs on failure', async () => {
       const ollama = await import('../../lib/ollama');
-      (ollama.generateOllamaResponse as any).mockRejectedValue(new Error('Ollama is not running'));
+      (ollama.generateAgentLlmResponse as any).mockRejectedValue(new Error('Ollama is not running'));
 
       const { generateAgentResponse } = await import('../../services/boardroomFacilitatorService');
       const result = await generateAgentResponse({

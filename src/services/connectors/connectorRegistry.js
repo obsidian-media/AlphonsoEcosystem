@@ -244,6 +244,19 @@ export const DEFAULT_CONNECTORS = [
     disabledReason: 'Gemini API key is not configured.'
   },
   {
+    id: 'hermes_agents',
+    name: 'Hermes Agents',
+    status: 'not_configured',
+    transport: 'hermes_agent_api',
+    // Per-agent, not a single fixed pair — configured dynamically per agent id
+    // (JOSE_URL/JOSE_KEY, HECTOR_URL/HECTOR_KEY, ...) via
+    // hermesAgentConnector.ts's isHermesAgentConfigured(agentId), not a single
+    // requiredEnv literal. Local/self-hosted, same posture as Ollama.
+    requiredEnv: [],
+    permissions: ['prompt_exchange'],
+    disabledReason: 'No Hermes profile endpoints configured.'
+  },
+  {
     id: 'n8n',
     name: 'n8n Automation',
     status: 'foundation_only',

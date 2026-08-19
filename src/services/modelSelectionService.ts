@@ -1,11 +1,94 @@
 import { fetchOllamaModels, chooseBestModelForTask, listAvailableModels, PREFERRED_MODEL } from '../lib/ollama';
+import { isHermesAgentConfigured } from './connectors/hermesAgentConnector';
 
 const MODEL_PREF_KEY = 'alphonso_model_preferences_v1';
 const MODEL_PROVIDER_KEY = 'alphonso_model_provider_v1';
+const AGENT_PROVIDER_KEY = 'alphonso_agent_provider_v1';
 const MAX_RECENT = 10;
 
 export type ModelProvider = 'ollama' | 'nvidia_nim' | 'gemini';
 const CLOUD_PROVIDERS: ModelProvider[] = ['nvidia_nim', 'gemini'];
+
+export type AgentModelProvider = ModelProvider | 'hermes';
+
+export interface AgentProviderConfig {
+  provider: AgentModelProvider;
+  /** For 'hermes': a model id pulled live from that agent's own /v1/models. Unused otherwise. */
+  model?: string;
+}
+
+const DEFAULT_AGENT_PROVIDER: AgentProviderConfig = { provider: 'ollama' };
+const VALID_AGENT_PROVIDERS: AgentModelProvider[] = ['ollama', 'nvidia_nim', 'gemini', 'hermes'];
+
+function loadAgentProviderMap(): Record<string, AgentProviderConfig> {
+  try {
+    const raw = localStorage.getItem(AGENT_PROVIDER_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveAgentProviderMap(map: Record<string, AgentProviderConfig>) {
+  try {
+    localStorage.setItem(AGENT_PROVIDER_KEY, JSON.stringify(map));
+  } catch { /* quota */ }
+}
+
+/**
+ * Per-agent LLM provider — the `alphonso` agent's row is deliberately backed
+ * by the pre-existing global `getSelectedProvider()`/`setSelectedProvider()`
+ * storage rather than a new entry, so ChatView's existing provider picker
+ * (which already drives the Alphonso agent's replies) needs no changes and
+ * nothing regresses for users who never touch the new per-agent UI. Every
+ * other agent defaults to `{ provider: 'ollama' }` until explicitly set —
+ * a fresh install / untouched setting is byte-identical to today's behavior.
+ */
+export function getAgentProvider(agentId: string): AgentProviderConfig {
+  const map = loadAgentProviderMap();
+  if (agentId === 'alphonso') {
+    // A 'hermes' selection for Alphonso lives in the per-agent map (the legacy
+    // global key's type can't represent it) and takes precedence when present;
+    // otherwise fall back to the pre-existing global picker's value.
+    if (map.alphonso?.provider === 'hermes') return map.alphonso;
+    return { provider: getSelectedProvider() };
+  }
+  return map[agentId] || { ...DEFAULT_AGENT_PROVIDER };
+}
+
+/**
+ * Only accepts 'hermes' once that agent has a saved, reachable Hermes
+ * endpoint (per §1.1 of the design) — never lets the UI put an agent into a
+ * state where its provider is set but unusable.
+ */
+export function setAgentProvider(agentId: string, config: AgentProviderConfig): void {
+  if (!VALID_AGENT_PROVIDERS.includes(config.provider)) {
+    throw new Error(`Unknown provider "${config.provider}"`);
+  }
+  if (config.provider === 'hermes' && !isHermesAgentConfigured(agentId)) {
+    throw new Error(`Hermes is not configured for agent "${agentId}" — add its endpoint first`);
+  }
+  if (agentId === 'alphonso') {
+    // 'hermes' isn't part of the legacy ModelProvider union ChatView's picker
+    // uses — Alphonso's row supports it too via this same per-agent path,
+    // it's just stored alongside the others rather than in the legacy key.
+    if (config.provider === 'ollama' || config.provider === 'nvidia_nim' || config.provider === 'gemini') {
+      setSelectedProvider(config.provider);
+      // Clear any stale 'hermes' override so getAgentProvider('alphonso')
+      // stops preferring it over the legacy key just updated above.
+      const map = loadAgentProviderMap();
+      if (map.alphonso) {
+        delete map.alphonso;
+        saveAgentProviderMap(map);
+      }
+      return;
+    }
+  }
+  const map = loadAgentProviderMap();
+  map[agentId] = { provider: config.provider, ...(config.model ? { model: config.model } : {}) };
+  saveAgentProviderMap(map);
+}
 
 // Curated, not enumerated via API — Gemini has no bulk free-tier-catalog
 // endpoint the way NVIDIA does. gemini-1.5-* and Gemini 2.0 Flash/Flash-Lite

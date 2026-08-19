@@ -12,6 +12,9 @@ const RISK_CACHE_TTL = 300000;
 // genuinely free-tier (rate-limited, not billed on overage) as of
 // 2026-07-25. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md
 // before adding them here or removing them from here.
+// hermes_agents is also intentionally NOT in this set — every profile is a
+// local/self-hosted process the user runs on their own machine (same posture
+// as Ollama), not a metered cloud API this app pays for per call.
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
