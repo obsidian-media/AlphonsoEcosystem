@@ -79,6 +79,7 @@ vi.mock('../components/ToolConnectionsPanel', () => ({
 
 // ── Component under test ──────────────────────────────────────────────────────
 import { ConnectorSetupPanel } from '../components/ConnectorSetupPanel';
+import { listAgentProfiles } from '../agents/agentRegistry';
 
 describe('ConnectorSetupPanel', () => {
   beforeEach(() => {
@@ -127,6 +128,24 @@ describe('ConnectorSetupPanel', () => {
     // Multiple "Save & Enable" buttons exist (one per CredentialSection)
     const saveButtons = screen.getAllByRole('button', { name: /save & enable/i });
     expect(saveButtons.length).toBeGreaterThan(0);
+  });
+
+  // ── Hermes Agents section — no-hardcoding regression (design doc §1.7 item 3) ──
+  // Guards against exactly the drift the user flagged: the row list must come
+  // from agentRegistry.js at render time, not a separately maintained array —
+  // asserted at the UI layer, not just the data layer, since a hardcoded array
+  // could still leak into a component even with a clean service.
+  it('renders exactly one Hermes credential row per agent in agentRegistry.js, dynamically', () => {
+    render(<ConnectorSetupPanel />);
+    const agents = listAgentProfiles();
+    expect(agents.length).toBeGreaterThan(0);
+    for (const agent of agents) {
+      expect(screen.getByText(`Hermes — ${agent.name}`)).toBeTruthy();
+    }
+    // Every rendered "Hermes — X" heading corresponds to a real registry
+    // entry — no stray hardcoded row that isn't backed by the registry.
+    const hermesHeadings = screen.getAllByText(/^Hermes — /);
+    expect(hermesHeadings.length).toBe(agents.length);
   });
 
   it('notice div is not present initially when no notice is set', () => {

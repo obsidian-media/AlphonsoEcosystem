@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { PolicyGateResult } from '../../services/policyEnforcementService';
 
-const mockGetConnectorCredential = vi.fn(() => 'mock-perplexity-key');
-const mockEvaluatePolicyGate = vi.fn(() => ({ ok: true }));
+const mockGetConnectorCredential = vi.fn((..._args: unknown[]) => 'mock-perplexity-key');
+const mockEvaluatePolicyGate = vi.fn((..._args: unknown[]): Partial<PolicyGateResult> => ({ ok: true }));
 const fetchMock = vi.fn();
 
 vi.mock('../../services/connectors/connectorAuth', () => ({

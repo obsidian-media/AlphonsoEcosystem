@@ -99,6 +99,43 @@ Alphonso has 9 specialized agents. Each has a defined role, permissions, and con
 **Schema:** `opportunityId`, `valueScore`, `riskScore`, `timingScore`, `effortScore`, `priorityTier`, `recommendation`, `analyzedAtMs`
 **When to use:** "Which of these is most promising?", "Prioritize these tasks", "Analyze this opportunity". Nova also runs automatically to score incoming commands for Jose's routing decisions.
 
+## Hermes agent backend (PR 1a shipped — bare connector)
+
+Every agent's "thinking" comes from local Ollama by default (with NVIDIA/Gemini
+as alternate providers — see `modelSelectionService.ts`, `ModelSwitcher.tsx`).
+A 4th option now exists, **per agent**: routing a specific agent's turn to a
+live, standalone "Hermes Agent" (Nous Research, MIT-licensed) instance the
+owner runs separately on their own machine — 5 of the 9 in-app agents
+(Jose/Hector/Miya/Marcus/Alphonso) have a real, running "standalone twin"
+profile today, each self-described as such in its own persona doc, with the
+remaining 4 (Maria/Echo/Sentinel/Nova) expected to follow. Ollama stays the
+unconditional default for every agent; this is purely additive and opt-in per
+agent — untouched for anyone who never opens Settings → Connectors → Agent
+Providers.
+
+**PR 1a scope (shipped):** `src/services/connectors/hermesAgentConnector.ts`,
+the per-agent provider map in `modelSelectionService.ts`
+(`getAgentProvider`/`setAgentProvider`), the `HermesAgentsSection` credential
+UI and `AgentProvidersSection` picker, and the shared `generateAgentLlmResponse`
+dispatcher in `src/lib/ollama.ts` wired into every confirmed per-agent LLM
+call site (see the "Shared per-agent LLM dispatcher" row in `CLAUDE.md`'s
+Do Not Duplicate table for the exact list). Stateless calls only — no circuit
+breaker, rate limiter, policy/approval gating, or session continuity yet.
+
+**PR 1b (not started):** connector-infrastructure parity (health-check panel
+registration, circuit breaker, rate limiter, audit log), policy/approval
+gating for Hermes-backed turns (since a Hermes profile can execute real tools,
+not just generate text), and session continuity via Hermes' own
+`X-Hermes-Session-Id`/memory. **Phase 2 (not started):** bundling Hermes into
+the installer for new users.
+
+Full design lives in `docs/HERMES_AGENT_DELEGATION_PLAN.md`. **That file is
+gitignored** (it references this machine's own local Hermes install
+paths/ports) — if you're a future session and it's missing, check
+`docs/TRUTH_FIRST_EXECUTION_PLAN.md` §I and `docs/governance/DEFERRED_WORK.md`
+for the summary, and re-derive or request the full file from the owner before
+starting Phase 1b or Phase 2.
+
 ## How Agents Collaborate
 
 ```

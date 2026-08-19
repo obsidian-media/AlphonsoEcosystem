@@ -15,6 +15,15 @@ export async function stopVoiceServer() {
   return result;
 }
 
+/**
+ * Returns the per-session token generated when Voice OS started. Must be
+ * appended to the WebSocket URL as `?token=<value>`. Throws if Voice OS is
+ * not running.
+ */
+export async function getVoiceToken(): Promise<string> {
+  return invoke<string>('voice_get_token');
+}
+
 export async function getVoiceServerStatus() {
   return invoke('voice_status');
 }

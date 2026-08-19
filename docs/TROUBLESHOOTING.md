@@ -175,6 +175,16 @@ WhatsApp sends numbers without a `+` prefix (e.g. `16474842752`). Your `WHATSAPP
 | No audio playback | TTS model file missing | piper downloads the model on first use — ensure internet access for first run |
 | `/health` returns 500 | Model preload failed | Check terminal output for STT/TTS errors; ensure Python 3.10+ and all deps installed |
 
+## Hermes Agent Issues
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Hermes credential row shows "unreachable" after saving | Base URL wrong, or the Hermes profile isn't running | Confirm the profile's own `platforms.api_server.enabled: true` in its `config.yaml`, confirm the port matches, and confirm the profile process is actually running |
+| Hermes tab is greyed out / disabled in Agent Providers | That agent has no saved (or no reachable) Hermes endpoint | Configure it first under Settings → Connectors → API Credentials → Hermes Agents, then return to Agent Providers |
+| Model dropdown shows "Profile unreachable" | `/v1/models` request failed after credentials were saved | Re-check the profile is still running and the API key hasn't been rotated/regenerated on the Hermes side since you saved it |
+| Chat/pipeline reply fails with a Hermes error instead of using Ollama | Expected — by design, a Hermes failure never silently falls back to a different agent's answer | Fix the underlying Hermes profile issue, or switch that agent's provider back to Ollama in Agent Providers |
+| 401 from a Hermes profile after it worked before | The API key was regenerated on the Hermes side | Copy the new key from that profile's `config.yaml` and re-save it in Hermes Agents |
+
 ## Getting Help
 
 1. Check the [Activity tab](./AGENT_GUIDE.md#viewing-agent-activity) for audit logs

@@ -9,7 +9,9 @@ import {
   getRecommendedModel,
   getSelectedProvider,
   setSelectedProvider,
-  getCloudModelList
+  getCloudModelList,
+  getAgentProvider,
+  setAgentProvider
 } from '../services/modelSelectionService';
 
 vi.mock('../lib/ollama', () => ({
@@ -25,10 +27,16 @@ vi.mock('../services/connectors/nvidiaNimConnector', () => ({
   listNvidiaModels: vi.fn(async () => ['meta/llama-3.1-8b-instruct', 'nvidia/nemotron-4-340b-instruct'])
 }));
 
+const hermesConfiguredAgents = new Set();
+vi.mock('../services/connectors/hermesAgentConnector', () => ({
+  isHermesAgentConfigured: vi.fn((agentId) => hermesConfiguredAgents.has(agentId))
+}));
+
 const PREF_KEY = 'alphonso_model_preferences_v1';
 
 beforeEach(() => {
   localStorage.clear();
+  hermesConfiguredAgents.clear();
 });
 
 // ── getSelectedModel ──────────────────────────────────────────────────────────
@@ -196,5 +204,67 @@ describe('getCloudModelList', () => {
     listNvidiaModels.mockRejectedValueOnce(new Error('NVIDIA API key not configured'));
     const models = await getCloudModelList('nvidia_nim');
     expect(models).toEqual([]);
+  });
+});
+
+// ── getAgentProvider / setAgentProvider ───────────────────────────────────────
+
+describe('getAgentProvider / setAgentProvider', () => {
+  it('defaults every agent to ollama when nothing is set — untouched setting is byte-identical to today', () => {
+    expect(getAgentProvider('jose')).toEqual({ provider: 'ollama' });
+    expect(getAgentProvider('hector')).toEqual({ provider: 'ollama' });
+    expect(getAgentProvider('nova')).toEqual({ provider: 'ollama' });
+  });
+
+  it('the alphonso agent is backed by the legacy global getSelectedProvider/setSelectedProvider storage', () => {
+    setSelectedProvider('nvidia_nim');
+    expect(getAgentProvider('alphonso')).toEqual({ provider: 'nvidia_nim' });
+  });
+
+  it('setAgentProvider for a non-alphonso agent does not affect the legacy global provider', () => {
+    setAgentProvider('hector', { provider: 'nvidia_nim' });
+    expect(getSelectedProvider()).toBe('ollama');
+    expect(getAgentProvider('hector')).toEqual({ provider: 'nvidia_nim' });
+    expect(getAgentProvider('alphonso')).toEqual({ provider: 'ollama' });
+  });
+
+  it('setAgentProvider persists a per-agent model alongside the provider', () => {
+    setAgentProvider('hector', { provider: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct' });
+    expect(getAgentProvider('hector')).toEqual({ provider: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct' });
+  });
+
+  it('rejects an unknown provider', () => {
+    expect(() => setAgentProvider('hector', { provider: 'not-a-real-provider' })).toThrow('Unknown provider');
+  });
+
+  it('rejects hermes for an agent with no configured Hermes endpoint', () => {
+    expect(() => setAgentProvider('hector', { provider: 'hermes' })).toThrow('not configured');
+    expect(getAgentProvider('hector')).toEqual({ provider: 'ollama' });
+  });
+
+  it('accepts hermes once that agent is configured', () => {
+    hermesConfiguredAgents.add('hector');
+    setAgentProvider('hector', { provider: 'hermes', model: 'hermes-agent' });
+    expect(getAgentProvider('hector')).toEqual({ provider: 'hermes', model: 'hermes-agent' });
+  });
+
+  it('supports hermes for the alphonso agent via the per-agent map, taking precedence over the legacy key', () => {
+    hermesConfiguredAgents.add('alphonso');
+    setSelectedProvider('nvidia_nim');
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    expect(getAgentProvider('alphonso')).toEqual({ provider: 'hermes' });
+  });
+
+  it('switching alphonso back to a legacy provider clears a stale hermes override', () => {
+    hermesConfiguredAgents.add('alphonso');
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    expect(getAgentProvider('alphonso').provider).toBe('hermes');
+
+    setAgentProvider('alphonso', { provider: 'gemini' });
+    expect(getAgentProvider('alphonso')).toEqual({ provider: 'gemini' });
+  });
+
+  it('no-hardcoding regression: agent ids are not baked into modelSelectionService — an unknown agent id still gets a valid default', () => {
+    expect(getAgentProvider('some-future-10th-agent')).toEqual({ provider: 'ollama' });
   });
 });

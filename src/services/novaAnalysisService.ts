@@ -1,5 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { generateOllamaResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { generateAgentLlmResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
@@ -250,7 +250,7 @@ export async function runNovaAnalysis(commandText: string, assignment: Assignmen
   let ollamaResult: NovaAnalysisResult | null = null;
   try {
     const prompt = buildNovaAnalysisPrompt(commandText, priorOutputs, scores);
-    const response = await generateOllamaResponse({ endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt }) as { response?: string } | null;
+    const response = await generateAgentLlmResponse('nova', { endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt }) as { response?: string } | null;
     ollamaResult = parseNovaAnalysisResponse(response?.response || '');
   } catch {
     // Ollama unavailable — use deterministic fallback

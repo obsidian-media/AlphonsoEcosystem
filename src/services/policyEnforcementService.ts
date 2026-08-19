@@ -12,6 +12,9 @@ const RISK_CACHE_TTL = 300000;
 // genuinely free-tier (rate-limited, not billed on overage) as of
 // 2026-07-25. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md
 // before adding them here or removing them from here.
+// hermes_agents is also intentionally NOT in this set — every profile is a
+// local/self-hosted process the user runs on their own machine (same posture
+// as Ollama), not a metered cloud API this app pays for per call.
 const PAID_OR_METERED_CONNECTORS: Set<string> = new Set([
   'chatgpt',
   'claude',
@@ -70,8 +73,13 @@ export interface PolicyGateResult {
 }
 
 export function getRuntimePolicySettings(): RuntimePolicySettings {
+  // Default approvalMode to true (fail-safe) so that on first boot — before
+  // SettingsContext's useEffect writes 'alphonso_settings' to localStorage —
+  // the policy service and the UI show the same value. The old default of
+  // `false` created a race where the first connector calls were ungated even
+  // though the UI showed approval mode as on.
   const defaults: RuntimePolicySettings = {
-    approvalMode: false,
+    approvalMode: true,
     zeroCostMode: true,
     safeMode: true,
     localOnlyMode: true,
@@ -81,7 +89,7 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     return {
-      approvalMode: parsed.approvalMode === true,
+      approvalMode: parsed.approvalMode !== false,
       zeroCostMode: parsed.zeroCostMode !== false,
       safeMode: parsed.safeMode !== false,
       localOnlyMode: parsed.localOnlyMode !== false,
@@ -94,7 +102,7 @@ export function getRuntimePolicySettings(): RuntimePolicySettings {
 
 export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySettings> {
   const defaults: RuntimePolicySettings = {
-    approvalMode: false,
+    approvalMode: true,
     zeroCostMode: true,
     safeMode: true,
     localOnlyMode: true,
@@ -105,7 +113,7 @@ export async function getRuntimePolicySettingsAsync(): Promise<RuntimePolicySett
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        approvalMode: parsed.approvalMode === true,
+        approvalMode: parsed.approvalMode !== false,
         zeroCostMode: parsed.zeroCostMode !== false,
         safeMode: parsed.safeMode !== false,
         localOnlyMode: parsed.localOnlyMode !== false,

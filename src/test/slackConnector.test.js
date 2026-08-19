@@ -5,6 +5,13 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
+vi.mock('../services/policyEnforcementService', () => ({
+  evaluatePolicyGate: vi.fn().mockReturnValue({ ok: true, blocked: false, setupRequired: false, reason: null, riskLevel: 'medium', confidence: 'verified', verificationState: 'active' }),
+  getRuntimePolicySettings: vi.fn().mockReturnValue({ approvalMode: false, zeroCostMode: false, safeMode: false, localOnlyMode: false, previewMode: false }),
+  classifyConnectorRisk: vi.fn().mockReturnValue('medium'),
+  setRuntimePolicySettings: vi.fn().mockResolvedValue(undefined),
+}));
+
 const SLACK_API_BASE = 'https://slack.com/api';
 
 let mockFetch;

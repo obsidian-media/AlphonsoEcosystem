@@ -4,9 +4,9 @@
 
 # Alphonso
 
-> **v2.6.1** — Local-first AI desktop companion with 9 agents, 24 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.6.2** — Local-first AI desktop companion with 9 agents, 25 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
-[![Version](https://img.shields.io/badge/version-2.6.1-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
+[![Version](https://img.shields.io/badge/version-2.6.2-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3758%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
 [![License: All Rights Reserved](https://img.shields.io/badge/License-SHALAUDE%20v1.0-red)](https://github.com/obsidian-media/AlphonsoEcosystem/blob/main/LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
@@ -122,7 +122,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **117 Rust unit tests across 26 modules** — 108 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **117 Rust unit tests across 26 modules** — 109 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -286,7 +286,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │                  React 18 (Vite 8, Tailwind 3)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
-│  │  9 Agents     │  │  118 UI          │  │  185 Services      │  │
+│  │  9 Agents     │  │  118 UI          │  │  186 Services      │  │
 │  │  (profiles,   │  │  Components     │  │  (policy-gated,    │  │
 │  │   contracts)  │  │  14 Hooks       │  │   orchestrated)    │  │
 │  └──────┬────────┘  └─────────────────┘  └──────────┬─────────┘  │
@@ -305,7 +305,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~2,140 lines · 108 Tauri commands · 26 modules   │    │
+│  │  lib.rs ~2,181 lines · 109 Tauri commands · 26 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -401,7 +401,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 3,758 tests across 263 files
+npm run test           # 3,831 tests across 265 files
 npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -482,7 +482,7 @@ blocker.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 185 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 186 services already exist.
 
 ## Security
 

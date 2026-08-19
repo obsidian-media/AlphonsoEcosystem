@@ -44,7 +44,7 @@ import { writeWorkspaceArtifact } from './workspaceArtifactService';
 import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { executeWithBrain } from './agentBrainService';
-import { generateOllamaResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
+import { generateAgentLlmResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectors/connectorImageGenerators';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
@@ -557,7 +557,7 @@ async function buildMiyaPackage(commandText: any, assignment: any, options: any 
 
   try {
     const prompt = draftPrompt('miya', commandText, { snippet: options.retrievedContext?.snippet || '' });
-    const response = await generateOllamaResponse({
+    const response = await generateAgentLlmResponse('miya', {
       endpoint: options.endpoint,
       model: options.model || PREFERRED_MODEL,
       prompt
@@ -891,7 +891,7 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
     try {
       const contextSnippet = [summary, options.retrievedContext?.snippet].filter(Boolean).join('\n');
       const prompt = draftPrompt('hector', commandText, { snippet: contextSnippet });
-      const response = await generateOllamaResponse({
+      const response = await generateAgentLlmResponse('hector', {
         endpoint: options.endpoint,
         model: options.model || PREFERRED_MODEL,
         prompt

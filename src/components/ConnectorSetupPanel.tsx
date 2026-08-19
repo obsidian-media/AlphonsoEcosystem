@@ -31,6 +31,8 @@ import {
 import { getTelegramAutoPollState, runSingleTelegramPoll } from '../services/telegramAutoPollService';
 import { saveConnectorCredential, getConnectorCredential, hydrateConnectorCredentialsFromSqlite } from '../services/connectors/connectorAuth';
 import { verifyTelegramBotEnvironment } from '../services/telegramBrowserConnector';
+import { listAgentProfiles } from '../agents/agentRegistry';
+import { getHermesAgentEndpoint, saveHermesAgentEndpoint, getHermesAgentHealth } from '../services/connectors/hermesAgentConnector';
 
 type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
 
@@ -56,6 +58,7 @@ const CONNECTOR_ICONS: Record<string, LucideIcon> = {
   deepseek: Cpu,
   nvidia_nim: Cpu,
   gemini: Cpu,
+  hermes_agents: Cpu,
 };
 
 interface Connector {
@@ -212,6 +215,95 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
         Test Connection
       </button>
     </div>
+  );
+}
+
+function PlaceholderConnectorBanner({ children }: { children: React.ReactNode }): React.JSX.Element {
+  return (
+    <div className="relative">
+      {/* Overlay covers the children area and catches pointer events — no pointer-events-none. */}
+      <div className="absolute inset-0 z-10 rounded-2xl border border-zinc-600/40 bg-zinc-900/60 backdrop-blur-[1px]" />
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span className="text-[10px] font-semibold tracking-wide text-amber-300">Coming Soon</span>
+      </div>
+      {/* pointer-events-none + aria-hidden ensure neither mouse events nor assistive
+          technology can reach or activate the disabled credential form. */}
+      <div className="pointer-events-none opacity-40" aria-hidden="true">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface HermesAgentRowState {
+  url: string;
+  key: string;
+  checking: boolean;
+  health: { ok: boolean; error?: string } | null;
+}
+
+/**
+ * One credential row per agent id from `agentRegistry.js` — never a
+ * hardcoded list, so a 6th/7th/... Hermes profile the user configures later
+ * needs no code change here. Each row is its own `CredentialSection` reusing
+ * the exact same component every other connector uses; "Save & Enable"
+ * additionally runs the unauthenticated `GET /health` reachability probe so
+ * the row shows connected/unreachable rather than just "saved".
+ */
+function HermesAgentsSection(): React.JSX.Element {
+  const agents = useMemo(() => listAgentProfiles(), []);
+  const [rows, setRows] = useState<Record<string, HermesAgentRowState>>(() => {
+    const initial: Record<string, HermesAgentRowState> = {};
+    for (const agent of agents) {
+      const { url, key } = getHermesAgentEndpoint(agent.id);
+      initial[agent.id] = { url, key, checking: false, health: null };
+    }
+    return initial;
+  });
+
+  const updateRow = (agentId: string, patch: Partial<HermesAgentRowState>) => {
+    setRows((prev) => ({ ...prev, [agentId]: { ...prev[agentId], ...patch } }));
+  };
+
+  const handleSave = async (agentId: string) => {
+    const row = rows[agentId];
+    saveHermesAgentEndpoint(agentId, row.url, row.key);
+    updateRow(agentId, { checking: true, health: null });
+    const health = await getHermesAgentHealth(agentId);
+    updateRow(agentId, { checking: false, health });
+  };
+
+  return (
+    <>
+      {agents.map((agent) => {
+        const row = rows[agent.id];
+        if (!row) return null;
+        return (
+          <CredentialSection
+            key={agent.id}
+            title={`Hermes — ${agent.name}`}
+            icon={Cpu}
+            borderColor="border-fuchsia-300/20"
+            bgColor="bg-fuchsia-500/8"
+            accentColor="text-fuchsia-400"
+            fields={[
+              { label: 'Base URL', placeholder: 'http://127.0.0.1:8645', value: row.url, onChange: (v) => updateRow(agent.id, { url: v }), key: `HERMES_${agent.id}_URL`, secret: false },
+              { label: 'API Key', placeholder: 'Bearer token from that profile\'s config.yaml', value: row.key, onChange: (v) => updateRow(agent.id, { key: v }), key: `HERMES_${agent.id}_KEY` }
+            ]}
+            onSave={() => { handleSave(agent.id); }}
+            hint={
+              row.checking
+                ? 'Checking reachability…'
+                : row.health
+                  ? (row.health.ok ? `Connected.` : `Saved, but unreachable: ${row.health.error}`)
+                  : `A standalone Hermes Agent profile mirroring ${agent.name} (same soul/role, different runtime). Paste its api_server base URL and Bearer key from that profile's own config.yaml.`
+            }
+            savedLabel={`${agent.name} Hermes endpoint saved`}
+          />
+        );
+      })}
+    </>
   );
 }
 
@@ -725,17 +817,21 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             hint="Deploy gateway/generic-webhook/ (Railway config included), point any external service at https://<gateway>/webhook/<sourceId> with the shared secret, then set the drain URL and token here so Alphonso can poll for events."
             savedLabel="Generic webhook config saved" />
 
-          <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
-            fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
-            hint="Get your key at console.anthropic.com/settings/keys. Only used when you explicitly route a task to Claude."
-            savedLabel="Anthropic key saved" />
+          <PlaceholderConnectorBanner>
+            <CredentialSection title="Claude (Anthropic)" icon={Bot} borderColor="border-orange-300/20" bgColor="bg-orange-500/8" accentColor="text-orange-400"
+              fields={[{ label: 'API Key', placeholder: 'sk-ant-...', value: anthropicApiKey, onChange: setAnthropicApiKey, key: 'ANTHROPIC_API_KEY' }]}
+              onSave={() => saveConnectorApiKey('claude', { ANTHROPIC_API_KEY: anthropicApiKey })}
+              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
+              savedLabel="Anthropic key saved" />
+          </PlaceholderConnectorBanner>
 
-          <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
-            fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
-            onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
-            hint="Get your key at platform.openai.com/api-keys. Only used when you explicitly route a task to ChatGPT."
-            savedLabel="OpenAI key saved" />
+          <PlaceholderConnectorBanner>
+            <CredentialSection title="ChatGPT (OpenAI)" icon={Bot} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
+              fields={[{ label: 'API Key', placeholder: 'sk-...', value: openaiApiKey, onChange: setOpenaiApiKey, key: 'OPENAI_API_KEY' }]}
+              onSave={() => saveConnectorApiKey('chatgpt', { OPENAI_API_KEY: openaiApiKey })}
+              hint="Not yet active in the routing pipeline. Your key is saved and will be used once this connector launches."
+              savedLabel="OpenAI key saved" />
+          </PlaceholderConnectorBanner>
 
           <CredentialSection title="Notion" icon={Database} borderColor="border-pink-300/20" bgColor="bg-pink-500/8" accentColor="text-pink-400"
             fields={[
@@ -825,6 +921,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('gemini', { GEMINI_API_KEY: geminiApiKey })}
             hint="Get a free key at aistudio.google.com (AI Studio free tier, not billed Vertex AI). Free tier, not local: requests leave your machine and go to Google's cloud. Rate-limited and provider-controlled, not guaranteed by Alphonso — if Google changes their free-tier policy, this may stop working or require billing on their side."
             savedLabel="Gemini key saved" />
+
+          <HermesAgentsSection />
         </div>
       </div>
 

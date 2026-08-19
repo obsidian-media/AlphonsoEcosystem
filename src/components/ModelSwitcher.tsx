@@ -264,13 +264,72 @@ export function CloudModelPicker({ provider, selectedModel, onModelChange }: Clo
   );
 }
 
-export type ModelProviderId = 'ollama' | CloudProvider;
+export type ModelProviderId = 'ollama' | CloudProvider | 'hermes';
 
 const PROVIDER_LABELS: Record<ModelProviderId, string> = {
   ollama: 'Ollama',
   nvidia_nim: 'NVIDIA NIM',
-  gemini: 'Gemini'
+  gemini: 'Gemini',
+  hermes: 'Hermes'
 };
+
+interface HermesModelPickerProps {
+  agentId: string;
+  selectedModel: string;
+  onModelChange: (name: string) => void;
+}
+
+/** Mirrors CloudModelPicker's shape, but the list is live from that agent's own /v1/models — never typed/guessed. */
+export function HermesModelPicker({ agentId, selectedModel, onModelChange }: HermesModelPickerProps): React.JSX.Element {
+  const [models, setModels] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    import('../services/connectors/hermesAgentConnector').then((m) => m.listHermesAgentModels(agentId)).then((list) => {
+      if (cancelled) return;
+      setModels(list);
+      setLoading(false);
+      if (list.length > 0 && !list.includes(selectedModel)) {
+        onModelChange(list[0]);
+      }
+    }).catch((err) => {
+      if (!cancelled) { setModels([]); setLoading(false); setError(err instanceof Error ? err.message : String(err)); }
+    });
+    return () => { cancelled = true; };
+  }, [agentId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/5 rounded-lg text-[10px] text-zinc-500 font-medium uppercase tracking-widest">
+        <Cpu className="w-3 h-3 shrink-0" /><span>Loading models…</span>
+      </div>
+    );
+  }
+
+  if (models.length === 0) {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-amber-500/20 rounded-lg text-[10px] text-amber-400 font-medium uppercase tracking-widest" title={error || undefined}>
+        <Cpu className="w-3 h-3 shrink-0" /><span>{error ? 'Profile unreachable' : 'No models available'}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
+      <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
+      <select value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
+        className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
+        title={selectedModel || 'Select a model'}>
+        {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
+      </select>
+      <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-2 pointer-events-none" />
+    </div>
+  );
+}
 
 interface ModelProviderPickerProps {
   provider: ModelProviderId;
@@ -278,19 +337,29 @@ interface ModelProviderPickerProps {
   selectedModel: string;
   onModelChange: (name: string) => void;
   ollamaPicker: React.ReactNode;
+  /**
+   * Which agent this picker controls. Omitted (the default, ChatView's
+   * existing usage) means the legacy global/Alphonso picker — Hermes is not
+   * offered there since it has no single "the app's" Hermes profile, only
+   * per-agent ones. Passed explicitly (the new per-agent Settings UI) adds a
+   * Hermes tab, gated on isHermesAgentConfigured(agentId).
+   */
+  agentId?: string;
 }
 
-export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker }: ModelProviderPickerProps): React.JSX.Element {
+export function ModelProviderPicker({ provider, onProviderChange, selectedModel, onModelChange, ollamaPicker, agentId }: ModelProviderPickerProps): React.JSX.Element {
   const [configured, setConfigured] = useState<Record<CloudProvider, boolean>>({ nvidia_nim: false, gemini: false });
+  const [hermesConfigured, setHermesConfigured] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const checkConfigured = () => {
       Promise.all([
         import('../services/connectors/nvidiaNimConnector').then((m) => m.isNvidiaConfigured()),
-        import('../services/connectors/geminiConnector').then((m) => m.isGeminiConfigured())
-      ]).then(([nvidia, gemini]) => {
-        if (!cancelled) setConfigured({ nvidia_nim: nvidia, gemini });
+        import('../services/connectors/geminiConnector').then((m) => m.isGeminiConfigured()),
+        agentId ? import('../services/connectors/hermesAgentConnector').then((m) => m.isHermesAgentConfigured(agentId)) : Promise.resolve(false)
+      ]).then(([nvidia, gemini, hermes]) => {
+        if (!cancelled) { setConfigured({ nvidia_nim: nvidia, gemini }); setHermesConfigured(hermes); }
       }).catch(() => { /* leave as-is — treated as unconfigured until a successful check */ });
     };
     checkConfigured();
@@ -299,19 +368,27 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
     // a remount — re-check whenever the window regains focus.
     window.addEventListener('focus', checkConfigured);
     return () => { cancelled = true; window.removeEventListener('focus', checkConfigured); };
-  }, []);
+  }, [agentId]);
 
-  const isConfigured = (id: ModelProviderId) => id === 'ollama' || configured[id as CloudProvider];
+  const isConfigured = (id: ModelProviderId) => {
+    if (id === 'ollama') return true;
+    if (id === 'hermes') return hermesConfigured;
+    return configured[id as CloudProvider];
+  };
+
+  const visibleProviders: ModelProviderId[] = agentId
+    ? ['ollama', 'nvidia_nim', 'gemini', 'hermes']
+    : ['ollama', 'nvidia_nim', 'gemini'];
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-[9px]">
-        {(Object.keys(PROVIDER_LABELS) as ModelProviderId[]).map((id) => {
+        {visibleProviders.map((id) => {
           const disabled = !isConfigured(id);
           return (
             <button key={id} type="button" disabled={disabled}
               onClick={() => onProviderChange(id)}
-              title={disabled ? `${PROVIDER_LABELS[id]} is not configured — add a key in Settings → Connectors` : PROVIDER_LABELS[id]}
+              title={disabled ? `${PROVIDER_LABELS[id]} is not configured — add ${id === 'hermes' ? 'an endpoint' : 'a key'} in Settings → Connectors` : PROVIDER_LABELS[id]}
               className={`px-2 py-0.5 uppercase tracking-widest font-bold transition-colors ${
                 provider === id ? 'bg-amber-500 text-black' : disabled ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
               }`}>
@@ -320,7 +397,9 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
           );
         })}
       </div>
-      {provider === 'ollama' ? ollamaPicker : <CloudModelPicker provider={provider} selectedModel={selectedModel} onModelChange={onModelChange} />}
+      {provider === 'ollama' && ollamaPicker}
+      {provider === 'hermes' && agentId && <HermesModelPicker agentId={agentId} selectedModel={selectedModel} onModelChange={onModelChange} />}
+      {(provider === 'nvidia_nim' || provider === 'gemini') && <CloudModelPicker provider={provider} selectedModel={selectedModel} onModelChange={onModelChange} />}
     </div>
   );
 }

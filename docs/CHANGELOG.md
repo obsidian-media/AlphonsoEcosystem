@@ -6,6 +6,47 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.6.2] — 2026-08-14 (post-PR #143 repo hygiene: security, CI, and bug fixes)
+
+- **Fixed a live bug: iOS Boardroom steering was silently broken.** `App.tsx`'s
+  handler for `companion://steer_boardroom` called `addThreadMessage(sessionId,
+  'shayan', guidance)` with 3 positional arguments against a function that
+  takes a single options object — every steering message sent from the iOS
+  companion since PR #143 shipped silently no-opped (destructuring a string
+  as `{threadId, speaker, content}` yields all `undefined`, and the function
+  returns `null` on empty content). Fixed to pass the object form.
+- **Fixed a real regression in Ollama error classification.** `ollama.ts`'s
+  `classifyOllamaError` required a literal `DOMException` instance to
+  classify an abort as `'timeout'`, which the (now-removed) `.js` sibling did
+  not require — plain abort-shaped errors and non-`DOMException` aborts from
+  some environments were silently misclassified as `'disconnected'` instead.
+  Fixed to match tested behavior.
+- **Removed stale `src/lib/appStorage.js` and `ollama.js`** duplicates that
+  had been left behind alongside their already-migrated `.ts` counterparts —
+  Vite's default resolve order was silently running the untyped `.js` files
+  in production. Ported the two `ollama.js`-only exports (`selectOptimalModel`,
+  `getModelFallbackChain`) into `ollama.ts` first; confirmed zero callers for
+  either, so no behavior change.
+- **Security:** patched `requests` 2.32.5 → 2.33.0 in the voice backend
+  (GHSA-gc5v-m9x4-r6x2, insecure temp-file reuse).
+- **CI:** wired `AlphonsoCompanionTests` (5 files, previously never executed
+  anywhere) into `ios-build.yml` ahead of the signing/archive/upload steps.
+- **Typecheck:** fixed all 5 remaining `tsc --noEmit` errors (the Boardroom
+  bug above, a `ToolStatus` index-signature narrowing issue in
+  `comfyuiSettingsService.ts`, and two under-typed test mocks in
+  `perplexityConnector.test.ts`) — the repo is now 0-error clean.
+- **Dependencies:** bumped `actions/setup-python`, `actions/setup-node`,
+  `softprops/action-gh-release`, `mdns-sd`, `eslint`, `tokio-tungstenite`,
+  `@types/node`, and `@vitejs/plugin-react` (8 Dependabot PRs, all green).
+  Left `tailwindcss` v4 and `rand` 0.10 deferred (major breaking bumps, CI
+  red on both, consistent with the prior decision to hold them).
+- **Repo hygiene:** audited all local branches and git stashes accumulated
+  over the past month; removed 6 branches and 15 stashes confirmed to have
+  zero unique content, and rescued 7,243 lines of never-committed hook test
+  coverage from a stash onto `recover/hook-test-coverage` (tracked in
+  `docs/governance/DEFERRED_WORK.md` — needs Vitest 4 mock-pattern updates
+  before it can land).
+
 ## [2.6.1] — 2026-07-22 (product readiness and review follow-up)
 
 - **ComfyUI desktop recovery:** Alphonso now auto-resolves the real ComfyUI

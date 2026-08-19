@@ -7,6 +7,32 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-18] Hermes agent-backend delegation (per-agent Ollama/NVIDIA/Gemini/Hermes
+  provider picker, wiring 9 in-app agents to a separate live Hermes Agent
+  install the user runs on this machine): **planned, not started, no code
+  written.** Full design (context, PR 1a/1b split, Phase 2 bundling spec,
+  engineering-review findings, and corrections found against an independent
+  second trace) lives in `docs/HERMES_AGENT_DELEGATION_PLAN.md` —
+  **gitignored, machine-local only**, not in git history, because it
+  references this dev machine's own local Hermes install paths/ports. Also
+  tracked in `docs/TRUTH_FIRST_EXECUTION_PLAN.md` §I (tasks I1/I2/I3) and
+  noted in `docs/AGENT_GUIDE.md`. Resume hint: read the plan doc's Phase 0
+  first (two open PRs — #152 dependency-bundling, #153 handoff-review-feedback
+  — need merging before any Hermes code starts; #151 recover/hook-test-coverage
+  stays unmerged, red). If the plan doc is missing on the machine you're on,
+  it needs to be re-derived or requested from the owner — the summary in TFEP
+  §I and this entry are not a substitute for the full file. Status: design
+  complete, awaiting owner go-ahead to start PR 1a.
+
+- [2026-08-14] `recover/hook-test-coverage` branch (pushed, no PR): the rescued
+  stash@0 test suite, now sitting at 257+/396 passing with the act-import and
+  duplicate-file issues fixed. 132 tests across `useAppShellState`,
+  `useBootEffects`, `usePersistenceEffects`, `useSessionEffects`,
+  `useTrayEffects` still fail — root cause identified as a Vitest
+  2.1.9→4.1.8 major-version jump changing `vi.mock` hoisting semantics,
+  which needs real per-file mock-pattern rewrites, not something to force
+  through quickly. Status: deferred.
+
 - [2026-08-02] Voice runtime and temporary Cloud Voice bypass: **open.**
   Ollama cold-load remains unverified after the five-minute timeout fix, and
   Voice OS health can disagree with its watchdog toast. Cloud Voice runs with
