@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { generateOllamaResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { generateAgentLlmResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { runEchoPreservation } from './echoMemoryService';
 
 const WATCHER_CONFIG_KEY = 'alphonso_echo_watcher_config_v1';
@@ -73,11 +73,11 @@ async function processFile(relativePath: string, workspaceRoot: string): Promise
 
     let summary = '';
     try {
-      const ollamaResult = await generateOllamaResponse({
+      const ollamaResult = await generateAgentLlmResponse('echo', {
         endpoint: DEFAULT_OLLAMA_ENDPOINT,
         model: PREFERRED_MODEL,
         prompt: `Summarize this file content in 2-3 sentences for knowledge preservation:\n\n${content.slice(0, 4000)}`,
-      }) as Record<string, unknown> | null;
+      });
       summary = String(ollamaResult?.response || content.slice(0, 500));
     } catch {
       summary = content.slice(0, 500);

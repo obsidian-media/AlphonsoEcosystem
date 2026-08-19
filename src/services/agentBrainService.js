@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { generateOllamaResponse, generateOllamaStream } from '../lib/ollama';
+import { generateOllamaStream, generateAgentLlmResponse } from '../lib/ollama';
 import { parseJsonResponse } from '../lib/jsonUtils';
 import { verifyCommandExecution } from './verificationService';
 import { writeWorkspaceArtifact } from './workspaceArtifactService';
@@ -128,7 +128,7 @@ async function generateClarifyingQuestions(commandText, endpoint) {
   ].join('\n');
 
   try {
-    const response = await generateOllamaResponse({ endpoint, prompt, model: getModelForTask('reason') });
+    const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('reason') });
     const parsed = parseJsonResponse(response?.response);
     if (Array.isArray(parsed)) return parsed.slice(0, 4);
     if (parsed?.questions && Array.isArray(parsed.questions)) return parsed.questions.slice(0, 4);
@@ -172,7 +172,7 @@ async function generatePlanPreview(commandText, projectContext, endpoint) {
   ].join('\n');
 
   try {
-    const response = await generateOllamaResponse({ endpoint, prompt, model: getModelForTask('reason') });
+    const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('reason') });
     return parseJsonResponse(response?.response);
   } catch {
     return null;
@@ -332,7 +332,7 @@ async function generateWithOptimizedParams(prompt, endpoint, taskType, onToken) 
   if (onToken) {
     return generateOllamaStream({ endpoint, model, prompt, onToken });
   }
-  return generateOllamaResponse({ endpoint, prompt, model });
+  return generateAgentLlmResponse('alphonso', { endpoint, prompt, model });
 }
 
 // ─── Brain 6: Multi-step Decomposition ──────────────────────────────────────
@@ -974,7 +974,7 @@ export async function executeWithTools(commandText, options = {}) {
     onProgress?.({ stage: 'tool_thinking', agent: 'alphonso', detail: `Iteration ${iteration + 1}/${MAX_TOOL_ITERATIONS}` });
 
     try {
-      const response = await generateOllamaResponse({ endpoint, prompt, model: getModelForTask('code') });
+      const response = await generateAgentLlmResponse('alphonso', { endpoint, prompt, model: getModelForTask('code') });
       const parsed = parseJsonResponse(response?.response);
 
       if (!parsed) {

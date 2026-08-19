@@ -30,6 +30,9 @@ import { FilesView } from './FilesView';
 import { getWatcherConfig, saveWatcherConfig } from '../services/echoFileWatcherService';
 import { getUsageStats } from '../services/memoryMonitorService';
 import { CoachHistoryPanel } from './CoachHistoryPanel';
+import { listAgentProfiles } from '../agents/agentRegistry';
+import { getAgentProvider, setAgentProvider, type AgentProviderConfig } from '../services/modelSelectionService';
+import { ModelProviderPicker, type ModelProviderId } from './ModelSwitcher';
 import {
   ALL_COACH_TRIGGER_IDS,
   getCoachEnabled,
@@ -129,6 +132,69 @@ const COACH_TRIGGER_LABELS: Record<string, string> = {
   unused_surface_area: 'Unused connectors / skill packs',
   license_wall: 'License wall (repeated Pro-gated denials)',
 };
+
+/**
+ * Per-agent LLM backend picker — Ollama (default) / NVIDIA / Gemini / Hermes,
+ * one row per agent in `agentRegistry.js` (never a hardcoded list, so a
+ * future 10th agent needs no change here). Hermes only becomes selectable
+ * once that agent has a configured, reachable endpoint (see the "Hermes
+ * Agents" section in API Credentials above). Everything defaults to Ollama —
+ * this section is purely opt-in and changes nothing for anyone who never
+ * opens it.
+ */
+function AgentProvidersSection() {
+  const agents = listAgentProfiles();
+  const [configs, setConfigs] = useState<Record<string, AgentProviderConfig>>(() => {
+    const initial: Record<string, AgentProviderConfig> = {};
+    for (const agent of agents) initial[agent.id] = getAgentProvider(agent.id);
+    return initial;
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const handleProviderChange = (agentId: string, provider: ModelProviderId) => {
+    try {
+      setAgentProvider(agentId, { provider });
+      setConfigs((prev) => ({ ...prev, [agentId]: getAgentProvider(agentId) }));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleModelChange = (agentId: string, model: string) => {
+    const current = configs[agentId];
+    try {
+      setAgentProvider(agentId, { provider: current.provider, model });
+      setConfigs((prev) => ({ ...prev, [agentId]: getAgentProvider(agentId) }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {error && (
+        <div className="p-3 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-xs text-[var(--error)]">{error}</div>
+      )}
+      {agents.map((agent) => {
+        const config = configs[agent.id] || { provider: 'ollama' as ModelProviderId };
+        return (
+          <div key={agent.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+            <div className="text-sm font-semibold text-[var(--text-1)] shrink-0">{agent.name}</div>
+            <ModelProviderPicker
+              agentId={agent.id}
+              provider={config.provider as ModelProviderId}
+              onProviderChange={(p) => handleProviderChange(agent.id, p)}
+              selectedModel={config.model || ''}
+              onModelChange={(m) => handleModelChange(agent.id, m)}
+              ollamaPicker={<div className="text-[10px] text-[var(--text-4)] uppercase tracking-widest px-2 py-1">Default Ollama model</div>}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function CoachSettingsSection() {
   const [enabled, setEnabledState] = useState(getCoachEnabled);
@@ -1092,6 +1158,10 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Key} label="API Credentials" />
         <ConnectorSetupPanel />
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={Bot} label="Agent Providers" />
+        <AgentProvidersSection />
       </section>
       <section className="space-y-4">
         <SectionHeader icon={Plug} label="External Tools (Composio)" />

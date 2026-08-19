@@ -1,5 +1,10 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import type { OllamaModelsProof, OllamaGenerateProof } from '../types/tauri-commands';
+// Type-only — zero runtime footprint, so this doesn't reintroduce the module
+// cycle the dynamic value-imports in generateAgentLlmResponse avoid below.
+import type { NvidiaSendResult } from '../services/connectors/nvidiaNimConnector';
+import type { GeminiSendResult } from '../services/connectors/geminiConnector';
+import type { HermesSendResult } from '../services/connectors/hermesAgentConnector';
 
 export const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
 export const PREFERRED_MODEL = 'qwen2.5-coder:7b';
@@ -558,6 +563,72 @@ export async function generateOllamaResponse({ endpoint, model, prompt, signal }
       done: proof.done !== false
     };
   }
+}
+
+export interface AgentGenerateOptions {
+  endpoint?: string;
+  model?: string;
+  prompt: string;
+  signal?: AbortSignal;
+}
+
+export interface AgentGenerateResult {
+  response: string;
+  done: boolean;
+}
+
+/**
+ * The one shared per-agent LLM dispatcher — every per-agent service should
+ * call this instead of `generateOllamaResponse` directly. Resolves that
+ * agent's provider *fresh on every call* via `getAgentProvider` (never a
+ * cached/stale flag), so a credential removed or a Hermes profile that went
+ * down mid-pipeline fails that call with a clear error rather than silently
+ * using a stale assumption. Defaults every agent to Ollama — this function
+ * changes nothing for anyone who has never touched Settings → Agent
+ * Providers. Design doc: docs/HERMES_AGENT_DELEGATION_PLAN.md §1.5
+ * (gitignored, local to the machine this was authored on).
+ *
+ * Dynamic imports avoid a module cycle: `modelSelectionService.ts` already
+ * imports from this file (fetchOllamaModels/PREFERRED_MODEL), so a static
+ * top-level import of it back here would be circular.
+ */
+export async function generateAgentLlmResponse(agentId: string, options: AgentGenerateOptions): Promise<AgentGenerateResult> {
+  const { getAgentProvider } = await import('../services/modelSelectionService');
+  const config = getAgentProvider(agentId);
+
+  if (config.provider === 'ollama') {
+    return generateOllamaResponse({
+      endpoint: options.endpoint,
+      model: options.model || PREFERRED_MODEL,
+      prompt: options.prompt,
+      signal: options.signal
+    });
+  }
+
+  const messages = [{ role: 'user', content: options.prompt }];
+
+  if (config.provider === 'nvidia_nim') {
+    const { sendNvidiaMessage } = await import('../services/connectors/nvidiaNimConnector');
+    const result: NvidiaSendResult = await sendNvidiaMessage(messages, { model: config.model });
+    if (!result.ok) throw new Error(('message' in result && result.message) || 'NVIDIA NIM rate limit exceeded');
+    return { response: result.content, done: true };
+  }
+
+  if (config.provider === 'gemini') {
+    const { sendGeminiMessage } = await import('../services/connectors/geminiConnector');
+    const result: GeminiSendResult = await sendGeminiMessage(messages, { model: config.model });
+    if (!result.ok) throw new Error(('message' in result && result.message) || 'Gemini rate limit exceeded');
+    return { response: result.content, done: true };
+  }
+
+  if (config.provider === 'hermes') {
+    const { sendHermesAgentMessage } = await import('../services/connectors/hermesAgentConnector');
+    const result: HermesSendResult = await sendHermesAgentMessage(agentId, messages, { model: config.model });
+    if (!result.ok) throw new Error(('message' in result && result.message) || 'Hermes profile rate limit exceeded');
+    return { response: result.content, done: true };
+  }
+
+  throw new Error(`Unknown provider "${(config as { provider: string }).provider}" for agent "${agentId}"`);
 }
 
 export async function pullOllamaModel({ endpoint, model, onProgress }: PullModelOptions): Promise<{ ok: boolean; model: string }> {

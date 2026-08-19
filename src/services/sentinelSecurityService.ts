@@ -1,5 +1,5 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
-import { generateOllamaResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { generateAgentLlmResponse, PREFERRED_MODEL, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
 import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { appendOrchestrationReceipt } from './orchestrationReceiptService';
@@ -193,7 +193,7 @@ export async function runSentinelSecurityScan(commandText: string, assignment: S
   if (shouldRunOllama) {
     try {
       const prompt = buildSentinelThreatPrompt(commandText, priorOutputs, scanResult);
-      const response = await generateOllamaResponse({ endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt });
+      const response = await generateAgentLlmResponse('sentinel', { endpoint: DEFAULT_OLLAMA_ENDPOINT, model: PREFERRED_MODEL, prompt });
       ollamaResult = parseSentinelThreatResponse(response?.response || '');
     } catch {
       // Ollama unavailable — use deterministic fallback
