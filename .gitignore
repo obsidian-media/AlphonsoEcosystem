@@ -72,6 +72,11 @@ ALPHONSO BOARDROOM HANDOFF.pdf
 # docs/governance/DEFERRED_WORK.md, and docs/AGENT_GUIDE.md.
 docs/HERMES_AGENT_DELEGATION_PLAN.md
 
+# Local competitive-strategy docs — internal positioning analysis, not a
+# durable/public project record; referenced from TRUTH_FIRST_EXECUTION_PLAN.md.
+docs/STRATEGY_AGNT_VS_ALPHONSO.md
+docs/STRATEGY_AB_ROADMAP.md
+
 # Windows folder-view metadata
 desktop.ini
 .superpowers/
