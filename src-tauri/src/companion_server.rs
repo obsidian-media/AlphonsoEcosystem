@@ -4,6 +4,7 @@ use crate::companion_types::{ClientState, CompanionConfig, JsonRpcRequest};
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Instant;
 use tauri::AppHandle;
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, Mutex};
@@ -11,11 +12,24 @@ use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 use uuid::Uuid;
 
+/// Maximum failed PIN attempts allowed from a single source IP within the
+/// throttle window before new connections from that IP are rejected outright.
+const IP_THROTTLE_MAX_FAILURES: u8 = 5;
+/// How long (seconds) an IP's failure counter persists before it resets.
+const IP_THROTTLE_WINDOW_SECS: u64 = 60;
+
+/// Per-IP failure tracker: maps source IP string → (failure_count, window_start).
+type IpFailureMap = Arc<Mutex<HashMap<String, (u8, Instant)>>>;
+
 pub struct CompanionServer {
   config: CompanionConfig,
   pin_manager: Arc<PinManager>,
   clients: Arc<Mutex<HashMap<Uuid, ClientState>>>,
   event_tx: broadcast::Sender<String>,
+  /// Source-IP failure map: tracks failed PIN attempts across connections from
+  /// the same IP so a script cannot bypass the per-connection budget by opening
+  /// many parallel connections.
+  ip_failures: IpFailureMap,
 }
 
 #[allow(dead_code)]
@@ -25,6 +39,7 @@ impl CompanionServer {
     let server = Self {
       pin_manager: Arc::new(PinManager::new(config.pin_ttl_secs)),
       clients: Arc::new(Mutex::new(HashMap::new())),
+      ip_failures: Arc::new(Mutex::new(HashMap::new())),
       event_tx,
       config,
     };
@@ -50,6 +65,20 @@ impl CompanionServer {
 
     let max_pin_attempts = self.config.max_pin_attempts;
 
+    // Periodically evict expired IP-failure entries so the map cannot grow
+    // without bound on servers that see many distinct source IPs over time.
+    {
+      let ip_failures = Arc::clone(&self.ip_failures);
+      tokio::spawn(async move {
+        let window = std::time::Duration::from_secs(IP_THROTTLE_WINDOW_SECS);
+        loop {
+          tokio::time::sleep(window).await;
+          let mut map = ip_failures.lock().await;
+          map.retain(|_, (_, since)| since.elapsed() < window);
+        }
+      });
+    }
+
     loop {
       let (stream, peer_addr) = listener.accept().await?;
       let clients = Arc::clone(&self.clients);
@@ -57,7 +86,31 @@ impl CompanionServer {
       let event_rx = self.event_tx.subscribe();
       let app = app_handle.clone();
 
+      let ip_failures = Arc::clone(&self.ip_failures);
       tokio::spawn(async move {
+        let source_ip = peer_addr.ip().to_string();
+
+        // Enforce per-IP throttle before even upgrading to WebSocket.
+        {
+          let mut map = ip_failures.lock().await;
+          if let Some((count, since)) = map.get(&source_ip) {
+            if since.elapsed().as_secs() < IP_THROTTLE_WINDOW_SECS
+              && *count >= IP_THROTTLE_MAX_FAILURES
+            {
+              log::warn!(
+                "Companion: IP {} throttled ({} failures in window), dropping connection",
+                source_ip,
+                count
+              );
+              return;
+            }
+            // Expired window — reset.
+            if since.elapsed().as_secs() >= IP_THROTTLE_WINDOW_SECS {
+              map.remove(&source_ip);
+            }
+          }
+        }
+
         let client_id = Uuid::new_v4();
         clients
           .lock()
@@ -70,6 +123,7 @@ impl CompanionServer {
           client_id,
           Arc::clone(&clients),
           Arc::clone(&pin_manager),
+          Arc::clone(&ip_failures),
           event_rx,
           app,
           max_pin_attempts,
@@ -96,6 +150,7 @@ async fn handle_connection(
   client_id: Uuid,
   clients: Arc<Mutex<HashMap<Uuid, ClientState>>>,
   pin_manager: Arc<PinManager>,
+  ip_failures: IpFailureMap,
   mut event_rx: broadcast::Receiver<String>,
   app: AppHandle,
   max_pin_attempts: u8,
@@ -119,8 +174,8 @@ async fn handle_connection(
                         }
                         Some(ClientState::Pending { pin_attempts }) => {
                             handle_auth(
-                                &text, client_id, &clients, &pin_manager, &peer_addr,
-                                pin_attempts, max_pin_attempts,
+                                &text, client_id, &clients, &pin_manager, &ip_failures,
+                                &peer_addr, pin_attempts, max_pin_attempts,
                             )
                             .await?
                         }
@@ -155,17 +210,29 @@ async fn handle_connection(
 /// Handles a pending client's auth message. Returns the JSON response plus a
 /// flag indicating whether the caller should close the connection (set once the
 /// wrong-PIN attempt budget is exhausted). Every wrong PIN increments the
-/// client's `pin_attempts`; on the final allowed miss the live PIN is
-/// invalidated so a fresh one must be generated before any retry is possible.
+/// client's `pin_attempts` AND the source-IP failure counter; on the final
+/// allowed miss the live PIN is invalidated so a fresh one must be generated
+/// before any retry is possible.
+#[allow(clippy::too_many_arguments)]
 async fn handle_auth(
   text: &str,
   client_id: Uuid,
   clients: &Arc<Mutex<HashMap<Uuid, ClientState>>>,
   pin_manager: &Arc<PinManager>,
+  ip_failures: &IpFailureMap,
   peer_addr: &str,
   pin_attempts: u8,
   max_pin_attempts: u8,
 ) -> Result<(String, bool), Box<dyn std::error::Error + Send + Sync>> {
+  // Parse the full socket address to extract just the IP. Using parse::<SocketAddr>
+  // handles both IPv4 ("1.2.3.4:port") and IPv6 ("[::1]:port") correctly. The
+  // old rsplit_once(':') approach gave "[::1]" for IPv6 while the pre-handshake
+  // check used ip().to_string() which gives "::1" — different keys, defeating
+  // the throttle for IPv6 clients.
+  let source_ip = peer_addr
+    .parse::<std::net::SocketAddr>()
+    .map(|a| a.ip().to_string())
+    .unwrap_or_else(|_| peer_addr.to_string());
   #[derive(serde::Deserialize)]
   struct AuthRequest {
     method: String,
@@ -189,6 +256,21 @@ async fn handle_auth(
         Ok((r#"{"result":{"authenticated":true}}"#.to_string(), false))
       } else {
         let attempts = pin_attempts.saturating_add(1);
+        // Record this failure against the source IP.
+        {
+          let mut map = ip_failures.lock().await;
+          let entry = map.entry(source_ip.clone()).or_insert((0, Instant::now()));
+          if entry.1.elapsed().as_secs() >= IP_THROTTLE_WINDOW_SECS {
+            // Window expired — reset counter.
+            *entry = (0, Instant::now());
+          }
+          entry.0 = entry.0.saturating_add(1);
+          log::debug!(
+            "Companion: IP {} failed PIN ({} in window)",
+            source_ip,
+            entry.0
+          );
+        }
         if attempts >= max_pin_attempts {
           // Budget exhausted: kill this PIN and signal disconnect.
           pin_manager.invalidate().await;
@@ -301,6 +383,7 @@ mod tests {
     let pin = pin_manager.generate().await;
     let client_id = Uuid::new_v4();
     let clients = pending_clients(client_id);
+    let ip_failures: IpFailureMap = Arc::new(Mutex::new(HashMap::new()));
     let wrong = r#"{"method":"authenticate","params":{"pin":"000000"}}"#;
     let max = 3u8;
 
@@ -309,36 +392,39 @@ mod tests {
       client_id,
       &clients,
       &pin_manager,
+      &ip_failures,
       "127.0.0.1:1",
       0,
       max,
     )
     .await
-    .unwrap();
+    .expect("handle_auth must not error in test");
     assert!(!close, "first miss must not close");
     let (_r, close) = handle_auth(
       wrong,
       client_id,
       &clients,
       &pin_manager,
+      &ip_failures,
       "127.0.0.1:1",
       1,
       max,
     )
     .await
-    .unwrap();
+    .expect("handle_auth must not error in test");
     assert!(!close, "second miss must not close");
     let (resp, close) = handle_auth(
       wrong,
       client_id,
       &clients,
       &pin_manager,
+      &ip_failures,
       "127.0.0.1:1",
       2,
       max,
     )
     .await
-    .unwrap();
+    .expect("handle_auth must not error in test");
     assert!(close, "budget-exhausting miss must close the connection");
     assert!(
       resp.contains("429"),
@@ -357,14 +443,24 @@ mod tests {
     let pin = pin_manager.generate().await;
     let client_id = Uuid::new_v4();
     let clients = pending_clients(client_id);
+    let ip_failures: IpFailureMap = Arc::new(Mutex::new(HashMap::new()));
     let msg = format!(
       r#"{{"method":"authenticate","params":{{"pin":"{}"}}}}"#,
       pin
     );
 
-    let (resp, close) = handle_auth(&msg, client_id, &clients, &pin_manager, "127.0.0.1:1", 0, 5)
-      .await
-      .unwrap();
+    let (resp, close) = handle_auth(
+      &msg,
+      client_id,
+      &clients,
+      &pin_manager,
+      &ip_failures,
+      "127.0.0.1:1",
+      0,
+      5,
+    )
+    .await
+    .expect("handle_auth must not error in test");
     assert!(!close);
     assert!(resp.contains("authenticated"));
     assert!(matches!(

@@ -1336,17 +1336,38 @@ pub async fn runtime_install_tool(
 pub async fn runtime_start_tool(
   name: String,
   state: tauri::State<'_, RuntimeManager>,
+  token_state: tauri::State<'_, crate::voice_sidecar::VoiceToken>,
   app: AppHandle,
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
 
   if let Some(port) = def.port {
     if is_running_async(port, def.health_path.unwrap_or("/")).await {
-      return Ok(RuntimeActionResult {
-        tool: name,
-        ok: true,
-        message: format!("{} is already running on port {}.", def.display_name, port),
-      });
+      // voice-os: if the VoiceToken was lost (e.g. app restarted while Voice OS kept
+      // running), kill the orphaned process and fall through to restart it with a fresh
+      // token so WebSocket connections can authenticate.
+      if name == "voice-os" {
+        let has_token = token_state.0.lock().map(|g| g.is_some()).unwrap_or(false);
+        if !has_token {
+          if let Some(pid) = state.spawned_pid(&name) {
+            kill_pid(pid);
+            state.remove_pid(&name);
+          }
+          // Fall through to spawn fresh with a new token.
+        } else {
+          return Ok(RuntimeActionResult {
+            tool: name,
+            ok: true,
+            message: format!("{} is already running on port {}.", def.display_name, port),
+          });
+        }
+      } else {
+        return Ok(RuntimeActionResult {
+          tool: name,
+          ok: true,
+          message: format!("{} is already running on port {}.", def.display_name, port),
+        });
+      }
     }
   }
 
@@ -1366,6 +1387,7 @@ pub async fn runtime_start_tool(
     } else {
       "python".to_string()
     };
+    let token = crate::voice_sidecar::random_hex_token();
     let mut cmd = Command::new(&py);
     cmd
       .args([
@@ -1376,10 +1398,13 @@ pub async fn runtime_start_tool(
         "127.0.0.1",
         "--port",
         "8766",
+        // Suppress access logs so the ?token= query param is never written to logs.
+        "--no-access-log",
         "--app-dir",
       ])
       .arg(&backend_dir)
-      .env("VOICE_PIPER_MODEL_DIR", &dir);
+      .env("VOICE_PIPER_MODEL_DIR", &dir)
+      .env("VOICE_OS_TOKEN", &token);
     cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::null());
     no_window(&mut cmd);
@@ -1387,6 +1412,14 @@ pub async fn runtime_start_tool(
       .spawn()
       .map_err(|e| format!("Failed to start Voice OS: {e}"))?;
     let pid = child.id();
+    // Store the token only after successful spawn so a concurrent caller that loses
+    // the race cannot overwrite the token before the winning process is registered.
+    if let Err(e) = token_state.0.lock().map(|mut g| *g = Some(token.clone())) {
+      kill_pid(pid);
+      return Err(format!(
+        "Failed to store Voice OS token, process killed: {e}"
+      ));
+    }
     state.record_pid(&name, pid);
     // S-10: post-spawn health check — emit failure event if process dies within 3 s
     {
@@ -1455,12 +1488,20 @@ pub async fn runtime_start_tool(
 pub async fn runtime_stop_tool(
   name: String,
   state: tauri::State<'_, RuntimeManager>,
+  token_state: tauri::State<'_, crate::voice_sidecar::VoiceToken>,
 ) -> Result<RuntimeActionResult, String> {
   let def = tool_def(&name).ok_or_else(|| format!("Unknown tool: {}", name))?;
 
   if let Some(pid) = state.spawned_pid(&name) {
     kill_pid(pid);
     state.remove_pid(&name);
+    // Clear the voice session token when Runtime Hub stops Voice OS so stale
+    // tokens cannot be replayed against a future (successful) Voice OS start.
+    if name == "voice-os" {
+      if let Ok(mut guard) = token_state.0.lock() {
+        *guard = None;
+      }
+    }
     return Ok(RuntimeActionResult {
       tool: name,
       ok: true,

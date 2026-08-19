@@ -36,7 +36,7 @@ describe('policyEnforcementService', () => {
   describe('getRuntimePolicySettings', () => {
     it('returns safe defaults when no settings stored', () => {
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(false);
+      expect(settings.approvalMode).toBe(true);
       expect(settings.zeroCostMode).toBe(true);
       expect(settings.safeMode).toBe(true);
       expect(settings.localOnlyMode).toBe(true);

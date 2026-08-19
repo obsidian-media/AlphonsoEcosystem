@@ -15,7 +15,9 @@ describe('policyEnforcementService', () => {
   describe('getRuntimePolicySettings', () => {
     it('returns all-true defaults when localStorage is empty', () => {
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(false);
+      // approvalMode defaults to true (fail-safe) so fresh installs gate high-risk
+      // actions before the user has touched Settings.
+      expect(settings.approvalMode).toBe(true);
       expect(settings.zeroCostMode).toBe(true);
       expect(settings.safeMode).toBe(true);
     });
@@ -35,7 +37,7 @@ describe('policyEnforcementService', () => {
     it('returns defaults on corrupt JSON', () => {
       localStorage.setItem('alphonso_settings', 'not-json');
       const settings = getRuntimePolicySettings();
-      expect(settings.approvalMode).toBe(false);
+      expect(settings.approvalMode).toBe(true);
       expect(settings.zeroCostMode).toBe(true);
     });
   });
@@ -279,6 +281,33 @@ describe('policyEnforcementService', () => {
       });
       expect(result.ok).toBe(false);
       expect(result.blocked).toBe(true);
+    });
+  });
+
+  describe('approvalMode fail-safe regression', () => {
+    it('blocks youtube with empty localStorage (approvalMode defaults to true)', () => {
+      // beforeEach clears localStorage — defaults apply; youtube is high-risk → blocked
+      const result = evaluatePolicyGate({ connectorId: 'youtube', approved: false });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+    });
+
+    it('blocks youtube with corrupt localStorage JSON (approvalMode still defaults to true)', () => {
+      localStorage.setItem('alphonso_settings', 'not-valid-json{{{');
+      const result = evaluatePolicyGate({ connectorId: 'youtube', approved: false });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+    });
+
+    it('approvalMode defaults to true on empty localStorage (unit)', () => {
+      const settings = getRuntimePolicySettings();
+      expect(settings.approvalMode).toBe(true);
+    });
+
+    it('approvalMode defaults to true on corrupt localStorage JSON (unit)', () => {
+      localStorage.setItem('alphonso_settings', '{bad json}');
+      const settings = getRuntimePolicySettings();
+      expect(settings.approvalMode).toBe(true);
     });
   });
 });

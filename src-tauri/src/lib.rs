@@ -35,7 +35,7 @@ mod voice_sidecar;
 mod whatsapp_webhook;
 mod workspace;
 mod youtube;
-use voice_sidecar::VoiceSidecar;
+use voice_sidecar::{VoiceSidecar, VoiceToken};
 
 pub(crate) struct RateLimiter {
   calls: Mutex<HashMap<String, (u32, std::time::Instant)>>,
@@ -917,7 +917,45 @@ fn run_ocr_adapter(
   }
 
   if let Some(extra) = extra_args {
-    args.extend(extra);
+    // Allowlist tesseract CLI flags so extra_args cannot be abused to execute
+    // arbitrary sub-commands or redirect output to attacker-controlled paths.
+    // Only flags with a documented, benign effect on tesseract output are
+    // permitted here. `engine_path` is separately validated (must be an
+    // existing file) above; this covers the argument list only.
+    const ALLOWED_FLAGS: &[&str] = &[
+      "--psm",
+      "--oem",
+      "-l",
+      "--tessdata-dir",
+      "--dpi",
+      "--user-words",
+      "--user-patterns",
+      "--loglevel",
+    ];
+    // Each ALLOWED_FLAG must be immediately followed by its value token.
+    // Standalone values (e.g. "pdf") are rejected to prevent Tesseract from
+    // interpreting them as config-file names or sub-commands.
+    let mut iter = extra.iter().peekable();
+    while let Some(arg) = iter.next() {
+      if ALLOWED_FLAGS.contains(&arg.as_str()) {
+        match iter.next() {
+          Some(val) => {
+            args.push(arg.clone());
+            args.push(val.clone());
+          }
+          None => {
+            return Err(format!(
+              "OCR flag {arg:?} requires a value but none was provided."
+            ));
+          }
+        }
+      } else {
+        return Err(format!(
+          "Disallowed OCR argument: {arg:?}. Permitted flags: {}",
+          ALLOWED_FLAGS.join(", ")
+        ));
+      }
+    }
   }
 
   let mut ocr_cmd = Command::new(&engine_path);
@@ -1766,6 +1804,7 @@ pub fn run() {
     .manage(http_client)
     .manage(runtime_manager::RuntimeManager::new())
     .manage(VoiceSidecar(std::sync::Mutex::new(None)))
+    .manage(VoiceToken(std::sync::Mutex::new(None)))
     .manage(RateLimiter::new())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -2281,7 +2320,8 @@ pub fn run() {
       companion_server::companion_get_local_ip,
       voice_sidecar::voice_start,
       voice_sidecar::voice_stop,
-      voice_sidecar::voice_status
+      voice_sidecar::voice_status,
+      voice_sidecar::voice_get_token
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
