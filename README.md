@@ -4,7 +4,7 @@
 
 # Alphonso
 
-> **v2.6.2** — Local-first AI desktop companion with 9 agents, 24 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.6.2** — Local-first AI desktop companion with 9 agents, 25 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.6.2-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3758%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
@@ -286,7 +286,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │                  React 18 (Vite 8, Tailwind 3)                   │
 │                                                                  │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
-│  │  9 Agents     │  │  118 UI          │  │  185 Services      │  │
+│  │  9 Agents     │  │  118 UI          │  │  186 Services      │  │
 │  │  (profiles,   │  │  Components     │  │  (policy-gated,    │  │
 │  │   contracts)  │  │  14 Hooks       │  │   orchestrated)    │  │
 │  └──────┬────────┘  └─────────────────┘  └──────────┬─────────┘  │
@@ -401,7 +401,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 3,758 tests across 263 files
+npm run test           # 3,831 tests across 265 files
 npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -482,7 +482,7 @@ blocker.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 185 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 186 services already exist.
 
 ## Security
 
