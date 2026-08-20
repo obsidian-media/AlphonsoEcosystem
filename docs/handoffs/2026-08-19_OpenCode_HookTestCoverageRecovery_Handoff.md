@@ -1,5 +1,15 @@
 # Hook Test Coverage Recovery — Handoff to OpenCode
 
+**RESOLVED 2026-08-20** (Claude Code session): all 5 originally-flagged files
+(`useAppShellState`, `useBootEffects`, `usePersistenceEffects`,
+`useSessionEffects`, `useTrayEffects`) fixed, plus `useKeyboardShortcuts`
+(found failing during verification — not in the original 5, so the
+"pure-hoisting theory" caveat below was warranted). Full `src/test/hooks/`
+suite: 15 files / 345 tests, 0 failures. Branch merged with `main` (zero
+conflicts, no manual resolution needed) and pushed; PR #151 CI re-triggered.
+The rest of this document is preserved as historical record of the
+diagnosis — see `docs/governance/DEFERRED_WORK.md` for the resolution entry.
+
 **From:** Claude Code (session 2026-08-19)
 **To:** OpenCode (or any agent picking up `recover/hook-test-coverage`)
 **Branch:** `recover/hook-test-coverage` (pushed to `origin`, PR #151 open against `main`)
