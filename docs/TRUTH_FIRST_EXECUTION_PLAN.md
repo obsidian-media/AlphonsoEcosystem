@@ -1054,6 +1054,31 @@ dropped.
     across Miya/Alphonso/Marcus — a real credential-leak-blast-radius issue,
     worth fixing now regardless of when Phase 2 starts. See plan doc §2.2.
 
+### J. Competitive strategy & "AB" direction (planning artifacts only, not started as code)
+
+- [ ] **J1 — Governed-autonomy primitive on Jose (scoped goal engine)**
+  - **Owner:** unassigned
+  - Not started, no code changes. Full technical spec — service shape,
+    hard cycle/duration ceilings, approval-gate interaction, UI reuse,
+    persistence pattern, explicit non-goals, and definition of done — is
+    written out in `docs/STRATEGY_AB_ROADMAP.md` §5 (gitignored, machine-
+    local; see `.gitignore`). Deliberately fully specified, not a stub, per
+    the same "not half-done" standard applied to the Hermes Phase 2 doc.
+  - Context: after a competitive comparison against `agnt-gg/agnt` (a
+    similarly-scoped local-first agent OS), the owner explicitly chose to
+    pursue AlphonsoEcosystem as both a governed developer platform and a
+    daily companion ("AB"). The comparison and the resulting sequencing
+    rationale (why this is the next buildable step, and why marketplace/
+    SDK/DAG-canvas work is deliberately deferred until real public users
+    exist) live in `docs/STRATEGY_AGNT_VS_ALPHONSO.md` and
+    `docs/STRATEGY_AB_ROADMAP.md` §§3-6 respectively.
+  - **Done when:** §5.5's definition of done in the roadmap doc is met —
+    a user can hand Jose an open-ended objective, it runs as budget-guarded
+    cycles respecting Approval Mode exactly as today, auto-pauses at a
+    hard cycle ceiling or on ambiguous evaluation, is visible/controllable
+    from a `GoalTracker` panel, and has real tests matching
+    `joseExecutionEngineService.test.js`'s existing rigor.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
@@ -1078,4 +1103,5 @@ dropped.
 | 2026-07-29 | Codex completed a fresh risk-based all-angle audit after a full codebase-memory reindex. | `audits/2026-07-29_Codex_AllAngle_Audit.md`; lint passed; the full PowerShell verifier timed out in fallback secret scanning, so no release-readiness claim was made. |
 | 2026-07-29 | Codex resolved the Local Voice dependency/model/runtime-path deferrals and added a focused Vitest command. | Windows clean-venv install; `pytest voice/backend/tests -q` 37/37; Piper real WAV synthesis; pending only fresh Rust compile and hardware/Ollama/playback evidence. |
 | 2026-08-18 | Added Section I (Hermes agent-backend delegation): planned, not started. Full design lives in a gitignored local plan doc (machine-specific detail); this file, `docs/governance/DEFERRED_WORK.md`, and `docs/AGENT_GUIDE.md` all point to it so a future session on this machine can find it. | `docs/HERMES_AGENT_DELEGATION_PLAN.md` (gitignored, see `.gitignore`); no code changes made this pass — planning/reconnaissance only. |
+| 2026-08-19 | PR #165 merged (Hermes Phase 1a, per-agent LLM delegation) — I1 marked in progress with evidence. Separately, added Section J (competitive strategy): a grounded (non-hype) comparison against `agnt-gg/agnt` and the resulting "AB" (governed agent OS + daily companion) direction, with a fully-specified next technical step (scoped goal engine on Jose). | `docs/STRATEGY_AGNT_VS_ALPHONSO.md`, `docs/STRATEGY_AB_ROADMAP.md` (both gitignored, machine-local; see `.gitignore`); no code changes — planning only. |
 

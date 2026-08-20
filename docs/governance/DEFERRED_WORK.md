@@ -24,14 +24,22 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   §I and this entry are not a substitute for the full file. Status: design
   complete, awaiting owner go-ahead to start PR 1a.
 
-- [2026-08-14] `recover/hook-test-coverage` branch (pushed, no PR): the rescued
-  stash@0 test suite, now sitting at 257+/396 passing with the act-import and
-  duplicate-file issues fixed. 132 tests across `useAppShellState`,
-  `useBootEffects`, `usePersistenceEffects`, `useSessionEffects`,
-  `useTrayEffects` still fail — root cause identified as a Vitest
-  2.1.9→4.1.8 major-version jump changing `vi.mock` hoisting semantics,
-  which needs real per-file mock-pattern rewrites, not something to force
-  through quickly. Status: deferred.
+- [2026-08-14] `recover/hook-test-coverage` branch (PR #151 open against
+  `main`, CI red as of 2026-08-16): the rescued stash@0 test suite, now
+  sitting at 257+/396 passing with the act-import and duplicate-file issues
+  fixed. 132 tests across `useAppShellState`, `useBootEffects`,
+  `usePersistenceEffects`, `useSessionEffects`, `useTrayEffects` still fail —
+  root cause identified as a Vitest 2.1.9→4.1.8 major-version jump changing
+  `vi.mock` hoisting semantics, which needs real per-file mock-pattern
+  rewrites, not something to force through quickly. Status: deferred.
+  **2026-08-19:** handed off to OpenCode for pickup — full handoff with
+  branch state, PR CI status, per-file diagnosis (including one finding that
+  complicates the pure-hoisting theory — `useAppShellState.test.js`'s mocks
+  don't show the classic capture pattern, so not all 5 files' failures may
+  share one root cause) and quick-start commands in
+  `docs/handoffs/2026-08-19_OpenCode_HookTestCoverageRecovery_Handoff.md`.
+  Branch was 52 commits behind `main` at handoff time but merges cleanly
+  (verified via `git merge-tree`, zero conflicts).
 
 - [2026-08-02] Voice runtime and temporary Cloud Voice bypass: **open.**
   Ollama cold-load remains unverified after the five-minute timeout fix, and
