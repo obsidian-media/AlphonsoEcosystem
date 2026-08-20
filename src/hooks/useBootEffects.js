@@ -117,12 +117,18 @@ export function useBootEffects({
   // Phase 1 (idle): Online/offline listener
   useEffect(() => {
     let idleId;
+    const onlineHandler = () => setIsOnline(true);
+    const offlineHandler = () => setIsOnline(false);
     function run() {
-      window.addEventListener('online', () => setIsOnline(true));
-      window.addEventListener('offline', () => setIsOnline(false));
+      window.addEventListener('online', onlineHandler);
+      window.addEventListener('offline', offlineHandler);
     }
     idleId = onIdle(run);
-    return () => { if (idleId) cancelIdle(idleId); };
+    return () => {
+      if (idleId) cancelIdle(idleId);
+      window.removeEventListener('online', onlineHandler);
+      window.removeEventListener('offline', offlineHandler);
+    };
   }, [setIsOnline]);
 
   // Phase 1 (idle): Auto-launch local services (Ollama + optionally ComfyUI)

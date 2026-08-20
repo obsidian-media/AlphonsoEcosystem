@@ -40,6 +40,12 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   `docs/handoffs/2026-08-19_OpenCode_HookTestCoverageRecovery_Handoff.md`.
   Branch was 52 commits behind `main` at handoff time but merges cleanly
   (verified via `git merge-tree`, zero conflicts).
+  **2026-08-20:** all 5 files fixed — `useAppShellState`, `useBootEffects`,
+  `useKeyboardShortcuts`, `usePersistenceEffects`, `useSessionEffects`,
+  `useTrayEffects` (6 files, one more than originally flagged) all pass.
+  Full `src/test/hooks/` suite: 15 files / 345 tests, 0 failures. Branch
+  merged with `main` (zero conflicts). Status: **resolved**, PR #151 ready
+  for CI re-run and merge review.
 
 - [2026-08-02] Voice runtime and temporary Cloud Voice bypass: **open.**
   Ollama cold-load remains unverified after the five-minute timeout fix, and
