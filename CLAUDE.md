@@ -37,7 +37,7 @@ npm run updater:verify   # Verify updater readiness
 npm run auth:youtube     # OAuth flow for YouTube
 npm run auth:meta        # OAuth flow for Meta/Instagram
 
-# Coverage (actual measured: ~38%+, threshold: 35%, scoped to src/)
+# Coverage (actual measured 2026-08-20: lines 53.08%, branches 41.06%, functions 44.86%, statements 50.91%; enforced floors: lines 48%/branches 38%/functions 30%/statements 48%, scoped to src/)
 npm run test:coverage    # Run tests with coverage report
 
 # E2E — Playwright installed (no extra install needed)
@@ -318,7 +318,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~SQLite dual-write for remaining keys~~ — **CLOSED Sprint Next-10 T10** (`src/lib/durableStore.js` + migrated crashLogService, agentAuditService, novaAnalysisService)
 - ~~Test coverage at ~30%~~ — **CLOSED Sprint Next-10 T3** (111 test files / 1621+ tests; 10 new service test files)
 - Branch protection on `main` — manual GitHub step (MCP doesn't expose branch protection API); require CI pass before merge
-- Coverage at ~38%+ — functions at 5.88% (18 new service test files added in Test Expansion sprint)
+- ~~Coverage at ~38%+ — functions at 5.88%~~ — **CLOSED 2026-08-20**: re-measured against a clean before/after (0a69e5e vs. post-PR#151 merge) — actual coverage is lines 53.08%/branches 41.06%/functions 44.86%/statements 50.91%. Enforced floors in `vitest.config.js` raised from the artificially-low `functions: 0` to real numbers with margin (lines 48/branches 38/functions 30/statements 48).
 - ~~Runtime Manager 9 gaps~~ — **CLOSED 2026-06-23**
 - ~~Onboarding flow~~ — **CLOSED 2026-06-23** (Ollama auto-start, not-installed detection, Telegram/WhatsApp/Composio inline guides, `OllamaOfflineBanner` in main shell)
 - ~~Ollama offline state~~ — **CLOSED 2026-06-23** (`OllamaOfflineBanner.jsx` — global, persistent, Start/Retry/Runtime Hub)
