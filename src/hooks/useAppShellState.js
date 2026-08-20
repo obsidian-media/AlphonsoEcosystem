@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from '@tauri-apps/api/event';
 import { getStorage } from '../lib/appStorage';
-import { INITIAL_CONVERSATION_ID, VERIFICATION_LOG_CAP, SNAPSHOT_HISTORY_CAP, MEMORY_EXPIRY_MS, SCREEN_OBSERVER_INTERVAL_MS } from '../constants/appConstants';
+import { INITIAL_CONVERSATION_ID, VERIFICATION_LOG_CAP, SNAPSHOT_HISTORY_CAP, MEMORY_EXPIRY_MS, SCREEN_OBSERVER_INTERVAL_MS, companionStateFromVoice, coachMessageFromVoice } from '../constants/appConstants';
 import { listMemoryItems, pushMemoryItem } from '../services/memoryService';
 import { listSnapshots, createSnapshot, restoreSnapshotById, backupMemoryLedger } from '../services/recoveryService';
 import { appendVerificationLog, getVerificationLogs, readDurableAuditLog } from '../services/verificationService';
@@ -70,7 +70,7 @@ export function useAppShellState({
   const mergedAgentDockCompanions = useMemo(() => {
     // Logic from App.jsx
     const activeStates = {
-      alphonso: { state: voice.voiceStatus, message: voice.voiceStatus }, // Simplified for brevity
+      alphonso: { state: companionStateFromVoice(voice.voiceStatus), message: coachMessageFromVoice(voice.voiceStatus) },
       hector: hectorCompanionState, jose: joseCompanionState, miya: miyaCompanionState
     };
     return listAgentProfiles().map((agent) => ({

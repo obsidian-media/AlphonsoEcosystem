@@ -1,8 +1,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
+import { mockListen, mockUnlisten } from '../../test/tauri-mock';
 import { useTrayEffects } from '../../hooks/useTrayEffects';
-import { mockTrayIcon, mockTrayMenu, mockTrayMenuItem, mockInvoke, resetTauriMocks } from '../../test/tauri-mock';
+
+vi.mock('../../services/coachModeService', () => ({
+  openCoachWindow: vi.fn().mockResolvedValue(undefined),
+  closeCoachWindow: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../services/verificationService', () => ({
+  appendVerificationLog: vi.fn((entry) => ({ ...entry, id: 'log-1', timestamp: Date.now() })),
+}));
+
+vi.mock('../../services/trustModel', () => ({
+  TRUST_STATES: {
+    VERIFIED: 'verified',
+    INFERRED: 'inferred',
+    TEMPORARY: 'temporary',
+    UNVERIFIED: 'unverified',
+    FAILED: 'failed',
+    PENDING: 'pending',
+  },
+}));
+
+import { openCoachWindow, closeCoachWindow } from '../../services/coachModeService';
+import { appendVerificationLog } from '../../services/verificationService';
 
 describe('useTrayEffects', () => {
   const mockSettings = {
@@ -26,8 +49,7 @@ describe('useTrayEffects', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    vi.spyOn(window, 'clearTimeout');
-    vi.spyOn(window, 'clearInterval');
+    mockListen.mockResolvedValue(mockUnlisten);
   });
 
   afterEach(() => {
@@ -52,426 +74,148 @@ describe('useTrayEffects', () => {
     });
   });
 
-  describe('System tray icon creation', () => {
-    it('creates TrayIcon on mount', async () => {
-      const { TrayIcon } = await import('@tauri-apps/api/tray');
+  describe('Last task completed timeout', () => {
+    it('clears lastTaskCompletedAt after 5 seconds', async () => {
       renderHook(() => useTrayEffects(defaultProps));
+      expect(defaultProps.setLastTaskCompletedAt).not.toHaveBeenCalled();
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-      expect(TrayIcon).toHaveBeenCalledWith(expect.objectContaining({
-        icon: expect.any(Object),
-        menu: expect.any(Object),
-        tooltip: expect.any(String),
-      }));
+      expect(defaultProps.setLastTaskCompletedAt).toHaveBeenCalledWith(null);
     });
 
-    it('sets tooltip on tray icon creation', async () => {
-      const { TrayIcon } = await import('@tauri-apps/api/tray');
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(TrayIcon).toHaveBeenCalledWith(expect.objectContaining({
-        tooltip: expect.stringContaining('Alphonso'),
-      }));
-    });
-
-    it('sets up click handler for tray icon', async () => {
-      const { TrayIcon } = await import('@tauri-apps/api/tray');
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      const trayIconInstance = mockTrayIcon;
-      expect(trayIconInstance.onClick).toHaveBeenCalled();
-    });
-
-    it('sets up right-click handler for context menu', async () => {
-      const { TrayIcon } = await import('@tauri-apps/api/tray');
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      const trayIconInstance = mockTrayIcon;
-      expect(trayIconInstance.onRightClick).toHaveBeenCalled();
+    it('cleans up the timeout on unmount', () => {
+      const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+      const { unmount } = renderHook(() => useTrayEffects(defaultProps));
+      unmount();
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      clearTimeoutSpy.mockRestore();
     });
   });
 
-  describe('Menu items creation', () => {
-    it('creates Show menu item', async () => {
-      const { Menu, MenuItem } = await import('@tauri-apps/api/tray');
-      renderHook(() => useTrayEffects(defaultProps));
+  describe('Approval required notice timeout', () => {
+    it('clears approvalRequiredNotice after 6 seconds when set', async () => {
+      const props = { ...defaultProps, approvalRequiredNotice: true };
+      renderHook(() => useTrayEffects(props));
+      expect(props.setApprovalRequiredNotice).not.toHaveBeenCalled();
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-      expect(MenuItem).toHaveBeenCalledWith(expect.objectContaining({
-        text: expect.stringMatching(/show/i),
-      }));
+      expect(props.setApprovalRequiredNotice).toHaveBeenCalledWith(false);
     });
 
-    it('creates Hide menu item', async () => {
-      const { MenuItem } = await import('@tauri-apps/api/tray');
+    it('does not schedule timeout when approvalRequiredNotice is false', async () => {
       renderHook(() => useTrayEffects(defaultProps));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-      expect(MenuItem).toHaveBeenCalledWith(expect.objectContaining({
-        text: expect.stringMatching(/hide/i),
-      }));
-    });
-
-    it('creates Settings menu item', async () => {
-      const { MenuItem } = await import('@tauri-apps/api/tray');
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(MenuItem).toHaveBeenCalledWith(expect.objectContaining({
-        text: expect.stringMatching(/settings/i),
-      }));
-    });
-
-    it('creates Quit menu item', async () => {
-      const { MenuItem } = await import('@tauri-apps/api/tray');
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(MenuItem).toHaveBeenCalledWith(expect.objectContaining({
-        text: expect.stringMatching(/quit/i),
-      }));
-    });
-
-    it('creates Voice Toggle menu item', async () => {
-      const { MenuItem, CheckMenuItem } = await import('@tauri-apps/api/tray');
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(CheckMenuItem).toHaveBeenCalledWith(expect.objectContaining({
-        text: expect.stringMatching(/voice/i),
-      }));
-    });
-
-    it('appends all menu items to menu', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(mockTrayMenu.append).toHaveBeenCalled();
+      expect(defaultProps.setApprovalRequiredNotice).not.toHaveBeenCalled();
     });
   });
 
-  describe('Menu item click handlers', () => {
-    it('calls createNewChat on Show click', async () => {
-      const { MenuItem } = await import('@tauri-apps/api/tray');
-      let showClickHandler;
-      MenuItem.mockImplementation((options) => {
-        if (options.text?.toLowerCase().includes('show')) {
-          showClickHandler = options.onClick;
-        }
-        return mockTrayMenuItem;
-      });
-
+  describe('Tray menu listeners', () => {
+    it('binds all tray event listeners on mount', async () => {
       renderHook(() => useTrayEffects(defaultProps));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
+      expect(mockListen).toHaveBeenCalledWith('alphonso://tray_menu', expect.any(Function));
+      expect(mockListen).toHaveBeenCalledWith('alphonso://new_chat', expect.any(Function));
+      expect(mockListen).toHaveBeenCalledWith('alphonso://voice_start', expect.any(Function));
+      expect(mockListen).toHaveBeenCalledWith('alphonso://coach_toggle', expect.any(Function));
+    });
 
-      act(() => {
-        if (showClickHandler) showClickHandler();
+    it('creates a new chat on new_chat event', async () => {
+      renderHook(() => useTrayEffects(defaultProps));
+      await act(async () => {
+        await vi.runAllTimersAsync();
       });
-
+      const newChatHandler = mockListen.mock.calls.find(([event]) => event === 'alphonso://new_chat')?.[1];
+      expect(newChatHandler).toBeDefined();
+      if (newChatHandler) {
+        act(() => newChatHandler());
+      }
       expect(defaultProps.createNewChat).toHaveBeenCalled();
     });
 
-    it('hides window on Hide click', async () => {
-      const { MenuItem, getCurrentWindow } = await import('@tauri-apps/api/window');
-      let hideClickHandler;
-      MenuItem.mockImplementation((options) => {
-        if (options.text?.toLowerCase().includes('hide')) {
-          hideClickHandler = options.onClick;
-        }
-        return mockTrayMenuItem;
-      });
-
-      const mockWindow = { hide: vi.fn() };
-      getCurrentWindow.mockReturnValue(mockWindow);
-
+    it('toggles voice listening on voice_start event', async () => {
       renderHook(() => useTrayEffects(defaultProps));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-
-      act(() => {
-        if (hideClickHandler) hideClickHandler();
-      });
-
-      expect(mockWindow.hide).toHaveBeenCalled();
-    });
-
-    it('opens settings on Settings click', async () => {
-      const { MenuItem, invoke } = await import('@tauri-apps/api/core');
-      let settingsClickHandler;
-      MenuItem.mockImplementation((options) => {
-        if (options.text?.toLowerCase().includes('settings')) {
-          settingsClickHandler = options.onClick;
-        }
-        return mockTrayMenuItem;
-      });
-
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      act(() => {
-        if (settingsClickHandler) settingsClickHandler();
-      });
-
-      expect(invoke).toHaveBeenCalledWith('open_settings_window');
-    });
-
-    it('exits app on Quit click', async () => {
-      const { MenuItem, invoke } = await import('@tauri-apps/api/core');
-      let quitClickHandler;
-      MenuItem.mockImplementation((options) => {
-        if (options.text?.toLowerCase().includes('quit')) {
-          quitClickHandler = options.onClick;
-        }
-        return mockTrayMenuItem;
-      });
-
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      act(() => {
-        if (quitClickHandler) quitClickHandler();
-      });
-
-      expect(invoke).toHaveBeenCalledWith('exit_app');
-    });
-
-    it('toggles voice listening on Voice Toggle click', async () => {
-      const { CheckMenuItem } = await import('@tauri-apps/api/tray');
-      let voiceClickHandler;
-      CheckMenuItem.mockImplementation((options) => {
-        if (options.text?.toLowerCase().includes('voice')) {
-          voiceClickHandler = options.onClick;
-        }
-        return mockTrayMenuItem;
-      });
-
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      act(() => {
-        if (voiceClickHandler) voiceClickHandler();
-      });
-
+      const voiceHandler = mockListen.mock.calls.find(([event]) => event === 'alphonso://voice_start')?.[1];
+      expect(voiceHandler).toBeDefined();
+      if (voiceHandler) {
+        act(() => voiceHandler());
+      }
       expect(defaultProps.voice.toggleListening).toHaveBeenCalled();
     });
-  });
 
-  describe('Window show/hide toggle on tray click', () => {
-    it('shows window when hidden and tray clicked', async () => {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const mockWindow = { show: vi.fn(), isVisible: vi.fn().mockResolvedValue(false) };
-      getCurrentWindow.mockReturnValue(mockWindow);
-
+    it('logs verification entry on tray_menu event', async () => {
       renderHook(() => useTrayEffects(defaultProps));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-
-      const clickHandler = mockTrayIcon.onClick.mock.calls[0]?.[0];
-      if (clickHandler) {
+      const trayMenuHandler = mockListen.mock.calls.find(([event]) => event === 'alphonso://tray_menu')?.[1];
+      expect(trayMenuHandler).toBeDefined();
+      if (trayMenuHandler) {
         await act(async () => {
-          await clickHandler();
+          await trayMenuHandler({ payload: 'show_window' });
         });
       }
-
-      expect(mockWindow.show).toHaveBeenCalled();
+      expect(appendVerificationLog).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'tray_menu_event',
+        source: 'tauri-tray',
+        payload: { action: 'show_window' },
+      }));
+      expect(defaultProps.setVerificationLogs).toHaveBeenCalled();
     });
+  });
 
-    it('hides window when visible and tray clicked', async () => {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const mockWindow = { hide: vi.fn(), isVisible: vi.fn().mockResolvedValue(true) };
-      getCurrentWindow.mockReturnValue(mockWindow);
-
+  describe('Coach window toggle', () => {
+    it('opens coach window and sets coachMode when currently off', async () => {
       renderHook(() => useTrayEffects(defaultProps));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-
-      const clickHandler = mockTrayIcon.onClick.mock.calls[0]?.[0];
-      if (clickHandler) {
+      const coachToggleHandler = mockListen.mock.calls.find(([event]) => event === 'alphonso://coach_toggle')?.[1];
+      expect(coachToggleHandler).toBeDefined();
+      if (coachToggleHandler) {
         await act(async () => {
-          await clickHandler();
+          await coachToggleHandler();
         });
       }
-
-      expect(mockWindow.hide).toHaveBeenCalled();
-    });
-  });
-
-  describe('Notification display from tray', () => {
-    it('has notification API available from shared mock', () => {
-      // Notification API is mocked in shared tauri-mock.ts
-      // This test verifies the hook integrates with the tray system
-      const { result } = renderHook(() => useTrayEffects(defaultProps));
-      expect(result.current).toBeDefined();
+      expect(openCoachWindow).toHaveBeenCalledWith(false, 'alphonso');
+      expect(defaultProps.setCoachMode).toHaveBeenCalledWith(true);
     });
 
-    it('integrates with tray icon for badge updates', async () => {
-      const { result } = renderHook(() => useTrayEffects({ ...defaultProps, unreadCount: 5 }));
+    it('closes coach window and clears coachMode when currently on', async () => {
+      const props = { ...defaultProps, coachMode: true };
+      renderHook(() => useTrayEffects(props));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-      expect(result.current).toBeDefined();
-    });
-  });
-
-  describe('Badge count update', () => {
-    it('updates tray icon title/badge with unread count', async () => {
-      renderHook(() => useTrayEffects({ ...defaultProps, unreadCount: 5 }));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      expect(mockTrayIcon.setTitle).toHaveBeenCalledWith('5');
-    });
-
-    it('clears badge when unread count is zero', async () => {
-      renderHook(() => useTrayEffects({ ...defaultProps, unreadCount: 0 }));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      expect(mockTrayIcon.setTitle).toHaveBeenCalledWith('');
-    });
-
-    it('does not set badge when unreadCount is undefined', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      expect(mockTrayIcon.setTitle).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Tooltip text update', () => {
-    it('updates tooltip when props change', async () => {
-      const { rerender } = renderHook(
-        ({ props }) => useTrayEffects(props),
-        { initialProps: { props: defaultProps } }
-      );
-
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      vi.clearAllMocks();
-
-      rerender({ props: { ...defaultProps, tooltipText: 'Custom tooltip' } });
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      expect(mockTrayIcon.setTooltip).toHaveBeenCalledWith('Custom tooltip');
-    });
-
-    it('sets default tooltip on mount', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      expect(mockTrayIcon.setTooltip).toHaveBeenCalledWith(expect.stringContaining('Alphonso'));
+      const coachToggleHandler = mockListen.mock.calls.find(([event]) => event === 'alphonso://coach_toggle')?.[1];
+      expect(coachToggleHandler).toBeDefined();
+      if (coachToggleHandler) {
+        await act(async () => {
+          await coachToggleHandler();
+        });
+      }
+      expect(closeCoachWindow).toHaveBeenCalled();
+      expect(props.setCoachMode).toHaveBeenCalledWith(false);
     });
   });
 
   describe('Cleanup on unmount', () => {
-    it('destroys tray icon on unmount', async () => {
+    it('unlistens tray events on unmount', async () => {
       const { unmount } = renderHook(() => useTrayEffects(defaultProps));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
-
+      mockUnlisten.mockClear();
       unmount();
-
-      expect(mockTrayIcon.destroy).toHaveBeenCalled();
-    });
-
-    it('removes tray icon click listeners on unmount', async () => {
-      const { unmount } = renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      unmount();
-
-      expect(mockTrayIcon.onClick).toHaveBeenCalled();
-      expect(mockTrayIcon.onRightClick).toHaveBeenCalled();
-    });
-  });
-
-  describe('Context menu positioning', () => {
-    it('shows context menu on right click', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      const rightClickHandler = mockTrayIcon.onRightClick.mock.calls[0]?.[0];
-      if (rightClickHandler) {
-        await act(async () => {
-          await rightClickHandler();
-        });
-      }
-
-      expect(mockTrayMenu.popup).toHaveBeenCalled();
-    });
-
-    it('closes context menu on click outside', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-
-      expect(mockTrayMenu.close).toBeDefined();
-    });
-  });
-
-  describe('Platform-specific behavior', () => {
-    it('handles macOS platform', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(mockTrayIcon.setIconAsTemplate).toHaveBeenCalled();
-    });
-
-    it('handles Windows platform', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(mockTrayIcon.setIconAsTemplate).toHaveBeenCalled();
-    });
-
-    it('handles Linux platform', async () => {
-      renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(mockTrayIcon.setIconAsTemplate).toHaveBeenCalled();
+      expect(mockUnlisten).toHaveBeenCalled();
     });
   });
 
@@ -512,19 +256,22 @@ describe('useTrayEffects', () => {
   });
 
   describe('Idempotent initialization', () => {
-    it('does not duplicate tray creation on re-render with same props', async () => {
+    it('does not duplicate listener binding on re-render with same props', async () => {
       const { rerender } = renderHook(() => useTrayEffects(defaultProps));
 
       await act(async () => {
         await vi.runAllTimersAsync();
       });
 
+      const firstCallCount = mockListen.mock.calls.length;
+
       rerender(defaultProps);
       await act(async () => {
         await vi.runAllTimersAsync();
       });
 
-      expect(true).toBe(true);
+      const secondCallCount = mockListen.mock.calls.length;
+      expect(secondCallCount).toBe(firstCallCount);
     });
   });
 
@@ -540,9 +287,8 @@ describe('useTrayEffects', () => {
       expect(true).toBe(true);
     });
 
-    it('handles rapid prop changes without duplicate tray icons', async () => {
-      const { TrayIcon, rerender } = await import('@tauri-apps/api/tray');
-      const { rerender: rerenderHook } = renderHook(
+    it('handles rapid prop changes without duplicate listener binding', async () => {
+      const { rerender } = renderHook(
         ({ props }) => useTrayEffects(props),
         { initialProps: { props: defaultProps } }
       );
@@ -551,47 +297,36 @@ describe('useTrayEffects', () => {
         await vi.runAllTimersAsync();
       });
 
-      const firstCallCount = TrayIcon.mock.calls.length;
+      const firstCallCount = mockListen.mock.calls.length;
 
-      rerenderHook({ props: { ...defaultProps, coachMode: true } });
+      rerender({ props: { ...defaultProps, approvalRequiredNotice: true } });
       await act(async () => {
         await vi.runAllTimersAsync();
       });
 
-      rerenderHook({ props: { ...defaultProps, coachMode: false } });
+      rerender({ props: { ...defaultProps, approvalRequiredNotice: false } });
       await act(async () => {
         await vi.runAllTimersAsync();
       });
 
-      const secondCallCount = TrayIcon.mock.calls.length;
+      const secondCallCount = mockListen.mock.calls.length;
       expect(secondCallCount).toBe(firstCallCount);
     });
   });
 
   describe('Error handling', () => {
-    it('handles TrayIcon creation failure gracefully', async () => {
-      const { TrayIcon } = await import('@tauri-apps/api/tray');
-      TrayIcon.mockRejectedValueOnce(new Error('Tray not supported'));
-
+    it('ignores listener binding errors gracefully', async () => {
+      mockListen.mockRejectedValueOnce(new Error('Tauri unavailable'));
       const { result } = renderHook(() => useTrayEffects(defaultProps));
-      await act(async () => {
-        try {
-          await vi.runAllTimersAsync();
-        } catch (e) {
-          // Expected to catch error
-        }
-      });
-
-      expect(result.current).toBeUndefined();
-    });
-
-    it('handles notification permission denied gracefully', async () => {
-      // Notification API is mocked in shared tauri-mock.ts
-      renderHook(() => useTrayEffects(defaultProps));
       await act(async () => {
         await vi.runAllTimersAsync();
       });
+      expect(result.current).toBeUndefined();
+    });
 
+    it('handles cleanup without errors', () => {
+      const { unmount } = renderHook(() => useTrayEffects(defaultProps));
+      unmount();
       expect(true).toBe(true);
     });
   });

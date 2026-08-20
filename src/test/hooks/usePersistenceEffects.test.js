@@ -5,7 +5,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
-vi.mock('../lib/appStorage', () => ({
+vi.mock('../../lib/appStorage', () => ({
   setStorage: vi.fn(),
   getStorage: vi.fn((key, fallback) => fallback),
 }));
@@ -13,6 +13,7 @@ vi.mock('../lib/appStorage', () => ({
 import { usePersistenceEffects } from '../../hooks/usePersistenceEffects';
 import { invoke } from '@tauri-apps/api/core';
 import { setStorage } from '../../lib/appStorage';
+import { COACH_LAYOUT_KEY } from '../../constants/appConstants';
 
 describe('usePersistenceEffects', () => {
   const defaultProps = {
@@ -62,15 +63,16 @@ describe('usePersistenceEffects', () => {
     });
 
     it('updates persistence when settings object changes', () => {
-      const { rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { rerender } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
+      vi.clearAllMocks();
       const updatedSettings = { ...defaultProps.settings, zeroCostMode: false };
 
       rerender({ ...defaultProps, settings: updatedSettings });
 
-      expect(setStorage).toHaveBeenCalledTimes(2);
-      expect(setStorage).toHaveBeenLastCalledWith('alphonso_settings', updatedSettings);
-      expect(invoke).toHaveBeenCalledTimes(2);
-      expect(invoke).toHaveBeenLastCalledWith('save_settings', {
+      expect(setStorage).toHaveBeenCalledTimes(1);
+      expect(setStorage).toHaveBeenCalledWith('alphonso_settings', updatedSettings);
+      expect(invoke).toHaveBeenCalledTimes(1);
+      expect(invoke).toHaveBeenCalledWith('save_settings', {
         settingsJson: JSON.stringify(updatedSettings),
       });
     });
@@ -96,7 +98,8 @@ describe('usePersistenceEffects', () => {
     });
 
     it('updates persistence when conversations array changes', () => {
-      const { rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { rerender } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
+      vi.clearAllMocks();
       const newConversations = [
         ...defaultProps.conversations,
         { id: 'chat-3', title: 'Third Chat', timestamp: Date.now() + 1000 },
@@ -104,10 +107,10 @@ describe('usePersistenceEffects', () => {
 
       rerender({ ...defaultProps, conversations: newConversations });
 
-      expect(setStorage).toHaveBeenCalledTimes(2);
-      expect(setStorage).toHaveBeenLastCalledWith('alphonso_conversations', newConversations);
-      expect(invoke).toHaveBeenCalledTimes(2);
-      expect(invoke).toHaveBeenLastCalledWith('kv_set', {
+      expect(setStorage).toHaveBeenCalledTimes(1);
+      expect(setStorage).toHaveBeenCalledWith('alphonso_conversations', newConversations);
+      expect(invoke).toHaveBeenCalledTimes(1);
+      expect(invoke).toHaveBeenCalledWith('kv_set', {
         key: 'alphonso_conversations',
         value: JSON.stringify(newConversations),
       });
@@ -142,49 +145,53 @@ describe('usePersistenceEffects', () => {
     });
 
     it('updates persistence when nativeSelfDevProof changes', () => {
-      const { rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { rerender } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
+      vi.clearAllMocks();
       const proof = { stage: 'started', timestamp: Date.now() };
 
       rerender({ ...defaultProps, nativeSelfDevProof: proof });
-      expect(setStorage).toHaveBeenCalledTimes(2);
-      expect(setStorage).toHaveBeenLastCalledWith('alphonso_native_selfdev_proof', proof);
+      expect(setStorage).toHaveBeenCalledTimes(1);
+      expect(setStorage).toHaveBeenCalledWith('alphonso_native_selfdev_proof', proof);
     });
   });
 
   describe('Coach layout persistence', () => {
     it('persists coach layout (mini mode + corner) to localStorage', () => {
       renderHook(() => usePersistenceEffects(defaultProps));
-      expect(setStorage).toHaveBeenCalledWith('alphonso_coach_layout', {
+      expect(setStorage).toHaveBeenCalledWith(COACH_LAYOUT_KEY, {
         mini: false,
         corner: 'bottom-right',
       });
     });
 
     it('updates persistence when coachMiniMode changes', () => {
-      const { rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { rerender } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
+      vi.clearAllMocks();
       rerender({ ...defaultProps, coachMiniMode: true });
-      expect(setStorage).toHaveBeenCalledTimes(2);
-      expect(setStorage).toHaveBeenLastCalledWith('alphonso_coach_layout', {
+      expect(setStorage).toHaveBeenCalledTimes(1);
+      expect(setStorage).toHaveBeenCalledWith(COACH_LAYOUT_KEY, {
         mini: true,
         corner: 'bottom-right',
       });
     });
 
     it('updates persistence when coachSnapCorner changes', () => {
-      const { rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { rerender } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
+      vi.clearAllMocks();
       rerender({ ...defaultProps, coachSnapCorner: 'top-left' });
-      expect(setStorage).toHaveBeenCalledTimes(2);
-      expect(setStorage).toHaveBeenLastCalledWith('alphonso_coach_layout', {
+      expect(setStorage).toHaveBeenCalledTimes(1);
+      expect(setStorage).toHaveBeenCalledWith(COACH_LAYOUT_KEY, {
         mini: false,
         corner: 'top-left',
       });
     });
 
     it('updates persistence when both coach props change together', () => {
-      const { rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { rerender } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
+      vi.clearAllMocks();
       rerender({ ...defaultProps, coachMiniMode: true, coachSnapCorner: 'top-right' });
-      expect(setStorage).toHaveBeenCalledTimes(2);
-      expect(setStorage).toHaveBeenLastCalledWith('alphonso_coach_layout', {
+      expect(setStorage).toHaveBeenCalledTimes(1);
+      expect(setStorage).toHaveBeenCalledWith(COACH_LAYOUT_KEY, {
         mini: true,
         corner: 'top-right',
       });
@@ -198,19 +205,20 @@ describe('usePersistenceEffects', () => {
       expect(keys).toContain('alphonso_settings');
       expect(keys).toContain('alphonso_conversations');
       expect(keys).toContain('alphonso_native_selfdev_proof');
-      expect(keys).toContain('alphonso_coach_layout');
+      expect(keys).toContain(COACH_LAYOUT_KEY);
     });
 
     it('only re-persists changed values on prop updates', () => {
-      const { rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { rerender } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
       vi.clearAllMocks();
 
       rerender({ ...defaultProps, settings: { ...defaultProps.settings, zeroCostMode: false } });
 
+      expect(setStorage).toHaveBeenCalledTimes(1);
       expect(setStorage).toHaveBeenCalledWith('alphonso_settings', expect.any(Object));
       expect(setStorage).not.toHaveBeenCalledWith('alphonso_conversations', expect.anything());
       expect(setStorage).not.toHaveBeenCalledWith('alphonso_native_selfdev_proof', expect.anything());
-      expect(setStorage).not.toHaveBeenCalledWith('alphonso_coach_layout', expect.anything());
+      expect(setStorage).not.toHaveBeenCalledWith(COACH_LAYOUT_KEY, expect.anything());
     });
 
     it('handles rapid successive updates without errors', () => {
@@ -229,10 +237,10 @@ describe('usePersistenceEffects', () => {
     });
 
     it('does not persist after unmount', () => {
-      const { unmount, rerender } = renderHook(() => usePersistenceEffects(defaultProps));
+      const { unmount } = renderHook((props) => usePersistenceEffects(props), { initialProps: defaultProps });
       unmount();
       vi.clearAllMocks();
-      rerender({ ...defaultProps, settings: { ...defaultProps.settings, zeroCostMode: false } });
+      act(() => vi.runAllTimers());
       expect(setStorage).not.toHaveBeenCalled();
       expect(invoke).not.toHaveBeenCalled();
     });

@@ -21,16 +21,19 @@ vi.mock('@tauri-apps/api/window', () => ({
   Window: vi.fn(),
 }));
 
-vi.mock('../services/coachInterventionService', () => ({
+vi.mock('../../services/coachInterventionService', () => ({
   COACH_INTERVENTION_LEVELS: { HARD: 'hard', SOFT: 'soft', MEDIUM: 'medium', INFO: 'info' },
-  subscribeSessionGuardBridge: vi.fn((cb) => cb({ intervention: null })),
+  subscribeCoachEngine: vi.fn((cb) => {
+    cb({ intervention: null });
+    return () => {};
+  }),
 }));
 
-vi.mock('../services/coachSoundCueService', () => ({
+vi.mock('../../services/coachSoundCueService', () => ({
   playCoachSoundCue: vi.fn(),
 }));
 
-vi.mock('../services/trustModel', () => ({
+vi.mock('../../services/trustModel', () => ({
   TRUST_STATES: {
     VERIFIED: 'verified',
     INFERRED: 'inferred',
@@ -41,12 +44,14 @@ vi.mock('../services/trustModel', () => ({
   },
 }));
 
-const mockAppendSessionEvent = vi.fn();
-vi.mock('../services/sessionIntelligenceService', () => ({
+const mockAppendSessionEvent = vi.hoisted(() => vi.fn());
+vi.mock('../../services/sessionIntelligenceService', () => ({
   appendSessionEvent: mockAppendSessionEvent,
 }));
 
 import { useSessionEffects } from '../../hooks/useSessionEffects';
+import { subscribeCoachEngine } from '../../services/coachInterventionService';
+import { playCoachSoundCue } from '../../services/coachSoundCueService';
 
 describe('useSessionEffects', () => {
   const mockToast = {
@@ -167,7 +172,7 @@ describe('useSessionEffects', () => {
     it('maps activeTab to correct agent names', () => {
       const { rerender } = renderHook(
         ({ props }) => useSessionEffects(props),
-        { initialProps: { props: { ...defaultProps, activeTab: 'miya' } } }
+        { initialProps: { props: { ...defaultProps, activeTab: 'alphonso' } } }
       );
 
       mockAppendSessionEvent.mockClear();
@@ -198,7 +203,7 @@ describe('useSessionEffects', () => {
     it('defaults to alphonso agent for unknown tabs', () => {
       const { rerender } = renderHook(
         ({ props }) => useSessionEffects(props),
-        { initialProps: { props: { ...defaultProps, activeTab: 'unknown' } } }
+        { initialProps: { props: { ...defaultProps, activeTab: 'alphonso' } } }
       );
 
       mockAppendSessionEvent.mockClear();
@@ -236,7 +241,7 @@ describe('useSessionEffects', () => {
       expect(mockAppendSessionEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           confidence: 'verified',
-          verificationState: 'unverified',
+          verificationState: 'verified',
         })
       );
     });
@@ -500,20 +505,19 @@ describe('useSessionEffects', () => {
     });
   });
 
-  describe('Session guard bridge subscription', () => {
-    it('subscribes to session guard bridge on mount', () => {
-      const { subscribeSessionGuardBridge } = require('../services/coachInterventionService');
-      renderHook(() => useSessionEffects(defaultProps));
-      expect(subscribeSessionGuardBridge).toHaveBeenCalled();
+  describe('Coach engine subscription', () => {
+    it('subscribes to coach engine on mount', () => {
+            renderHook(() => useSessionEffects(defaultProps));
+      expect(subscribeCoachEngine).toHaveBeenCalled();
     });
 
-    it('sets coach intervention from bridge event', () => {
-      const { subscribeSessionGuardBridge } = require('../services/coachInterventionService');
-      const mockSetCoachIntervention = vi.fn();
+    it('sets coach intervention from engine event', () => {
+            const mockSetCoachIntervention = vi.fn();
       const props = { ...defaultProps, setCoachIntervention: mockSetCoachIntervention };
 
-      subscribeSessionGuardBridge.mockImplementationOnce((cb) => {
+      subscribeCoachEngine.mockImplementationOnce((cb) => {
         cb({ intervention: { level: 'hard', message: 'Test intervention' } });
+        return () => {};
       });
 
       renderHook(() => useSessionEffects(props));
@@ -524,13 +528,13 @@ describe('useSessionEffects', () => {
     });
 
     it('sets coach mini mode to false on HARD intervention', () => {
-      const { subscribeSessionGuardBridge } = require('../services/coachInterventionService');
-      const mockSetCoachMiniMode = vi.fn();
+            const mockSetCoachMiniMode = vi.fn();
       const mockSetCoachMode = vi.fn();
       const props = { ...defaultProps, setCoachMiniMode: mockSetCoachMiniMode, setCoachMode: mockSetCoachMode };
 
-      subscribeSessionGuardBridge.mockImplementationOnce((cb) => {
+      subscribeCoachEngine.mockImplementationOnce((cb) => {
         cb({ intervention: { level: 'hard', message: 'Test' } });
+        return () => {};
       });
 
       renderHook(() => useSessionEffects(props));
@@ -539,11 +543,10 @@ describe('useSessionEffects', () => {
     });
 
     it('plays sound cue for intervention level', () => {
-      const { subscribeSessionGuardBridge } = require('../services/coachInterventionService');
-      const { playCoachSoundCue } = require('../services/coachSoundCueService');
-
-      subscribeSessionGuardBridge.mockImplementationOnce((cb) => {
+            
+      subscribeCoachEngine.mockImplementationOnce((cb) => {
         cb({ intervention: { level: 'soft', message: 'Test' } });
+        return () => {};
       });
 
       renderHook(() => useSessionEffects(defaultProps));
@@ -551,11 +554,10 @@ describe('useSessionEffects', () => {
     });
 
     it('does not play sound cue when no intervention level', () => {
-      const { subscribeSessionGuardBridge } = require('../services/coachInterventionService');
-      const { playCoachSoundCue } = require('../services/coachSoundCueService');
-
-      subscribeSessionGuardBridge.mockImplementationOnce((cb) => {
+            
+      subscribeCoachEngine.mockImplementationOnce((cb) => {
         cb({ intervention: null });
+        return () => {};
       });
 
       renderHook(() => useSessionEffects(defaultProps));

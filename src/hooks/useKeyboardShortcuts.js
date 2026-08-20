@@ -35,7 +35,13 @@ export function useKeyboardShortcuts(handlers = {}) {
 
           e.preventDefault();
           const handler = handlersRef.current[shortcut.action];
-          if (handler) handler(e);
+          if (handler) {
+            try {
+              handler(e);
+            } catch (error) {
+              console.error(`Shortcut handler failed for '${shortcut.action}':`, error);
+            }
+          }
           return;
         }
       }
