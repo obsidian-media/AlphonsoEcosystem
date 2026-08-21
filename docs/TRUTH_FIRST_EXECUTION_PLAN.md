@@ -988,7 +988,7 @@ dropped.
     `Alphonso-2c89cbb6ea20a1c39aaef86d1f360083f5064529-x64-setup`. This proves
     build/package integrity, not paired-device English/Farsi acceptance.
 
-### I. Hermes agent-backend delegation (planned, not started)
+### I. Hermes agent-backend delegation (Phase 1a/1b complete; Phase 2 planned)
 
 - [x] **I1 — Per-agent Hermes provider (PR 1a: bare connector)** — **DONE 2026-08-21**
   - **Owner:** Alphonso (execution)
@@ -1095,17 +1095,44 @@ dropped.
       Alphonso's non-streaming sites) do not yet pass a `sessionId` —
       explicitly deferred, not silently dropped, since each needs its own
       judgment call about what "one logical unit of work" means there.
+      **Security fix mid-review:** CodeQL correctly flagged sending the raw
+      `threadId`/`packetId` as `X-Hermes-Session-Id` as `js/insecure-randomness`
+      — both are generated with `Math.random()` elsewhere (fine for their
+      original use as a UI/storage key, not fine once used as a value that
+      groups persistent memory state on the Hermes side). Fixed by mapping
+      each raw id to a fresh `crypto.randomUUID()` the first time it's seen
+      (cached per raw id, so the "one thread/packet = one session" property
+      still holds) rather than sending the guessable value directly.
     - `generateAgentLlmResponse`'s `AgentGenerateResult` gained optional
       `backend`/`model` fields (populated for all 4 providers) so a future
       caller can record `backend:'hermes'` + the resolved model on an
       orchestration receipt — **exposed, not yet wired into any of the
       receipt-writing call sites** (`appendOrchestrationReceipt`'s
       `details` bag still doesn't get this automatically; a real follow-up,
-      not claimed done here).
-  - **1b.4 testing:** 122 new/updated targeted tests, all passing:
-    17 `connectorCircuitBreakerService` (configure API), 25
+      not claimed done here). This also surfaced and fixed a real,
+      unrelated bug in `boardroomFacilitatorService.ts`'s
+      `generateAgentResponse` (caught by CodeRabbit review): it was
+      returning the *requested* model instead of the provider-resolved one,
+      so Boardroom could display the wrong model name for a Hermes-backed
+      reply.
+    - **Known gap, flagged not fixed (CodeRabbit review catch, valid):**
+      `hermes_agents` is excluded from `PAID_OR_METERED_CONNECTORS` on the
+      assumption every profile is local/self-hosted, but nothing verifies
+      the saved endpoint is actually a loopback address — a remote paid
+      "Hermes" endpoint would bypass Zero-Cost Mode entirely. Pre-existing
+      since PR 1a, not introduced by 1b, but a 1b test
+      (`policyEnforcementService.test.js`) documented this as current
+      behavior without flagging it as a gap — corrected via a
+      `docs/governance/DEFERRED_WORK.md` entry instead of fixed here, since
+      the real fix needs a locality-policy decision this repo hasn't made
+      (bare loopback only, or also a user's own remote box via Tailscale,
+      which Phase 2 discusses as a legitimate future case).
+  - **1b.4 testing:** 113 targeted tests across touched files, all passing:
+    17 `connectorCircuitBreakerService` (configure API), 27
     `hermesAgentConnector` (circuit breaker, rate limiter, audit, blocked
-    shape, approved passthrough, session id header threading), 4 new
+    shape, approved passthrough, session id header threading — 3 of these
+    added mid-review for the crypto.randomUUID() fix: UUID shape, same-raw-id
+    stability, different-raw-ids differ), 4 new
     `policyEnforcementService` (hermes_agents risk + gate behavior), 63
     `connectorHealthCheckService` (Hermes aggregation), 1 new
     `generateAgentLlmResponse` (sessionId/approved passthrough), 1 new
@@ -1222,5 +1249,6 @@ dropped.
 | 2026-08-18 | Added Section I (Hermes agent-backend delegation): planned, not started. Full design lives in a gitignored local plan doc (machine-specific detail); this file, `docs/governance/DEFERRED_WORK.md`, and `docs/AGENT_GUIDE.md` all point to it so a future session on this machine can find it. | `docs/HERMES_AGENT_DELEGATION_PLAN.md` (gitignored, see `.gitignore`); no code changes made this pass — planning/reconnaissance only. |
 | 2026-08-19 | PR #165 merged (Hermes Phase 1a, per-agent LLM delegation) — I1 marked in progress with evidence. Separately, added Section J (competitive strategy): a grounded (non-hype) comparison against `agnt-gg/agnt` and the resulting "AB" (governed agent OS + daily companion) direction, with a fully-specified next technical step (scoped goal engine on Jose). | `docs/STRATEGY_AGNT_VS_ALPHONSO.md`, `docs/STRATEGY_AB_ROADMAP.md` (both gitignored, machine-local; see `.gitignore`); no code changes — planning only. |
 | 2026-08-20 | PR #151 merged (hook-test-coverage recovery, all 6 originally/newly-flagged files fixed, 345/345 in `src/test/hooks/`); doc counts refreshed repo-wide to 279 files / 4,199 tests after confirming the full local suite completes (previously documented as timing out — not reproduced this run). Added J2: PaperClip (`paperclipai/paperclip`) concept-sourcing notes. | PR #151 (merged, all required CI green); `docs/STRATEGY_PAPERCLIP_REFERENCE.md` (gitignored); `docs/governance/DEFERRED_WORK.md` 2026-08-20 entry. |
-| 2026-08-21 | PR #167 merged (PaperClip docs tracking + a pre-existing `clippy::useless_format` fix that was blocking CI, unrelated to this repo's own changes + 2 CodeRabbit review fixes). Closed **I1** for real: live-verified Phase 1a against the actual running Hector Hermes profile (spawned via the `hermes-fleet-scripts` lazy-spawn mechanism, confirmed via Hermes' own `agent.log` that a real chat completion round-tripped through Nous Research inference). Closed **I2** (Hermes Phase 1b hardening): circuit-breaker `configure()` API, rate-limiter/circuit-breaker tuning, audit logging on every call path, `hermes_agents` classified high-risk in the policy gate (with the real "Approval Mode now blocks Hermes by default, no call site passes `approved:true` yet" nuance flagged, not hidden), session continuity (`X-Hermes-Session-Id`, wired into 2 of 9 call sites), and `backend`/`model` exposed on `generateAgentLlmResponse`'s result. 122 new/updated tests + 525 regression-verified tests across every file importing a touched module, `tsc --noEmit` clean, lint clean. | PR #167 (merged); this file's I1/I2 entries above for full per-subsection evidence; `src/test/hermesAgentConnector.test.js` (25), `src/test/connectorCircuitBreakerService.test.js` (17 incl. 3 new), `src/test/policyEnforcementService.test.js` (3 new hermes tests), `src/test/connectorHealthCheckService.test.js` (5 new), `src/test/generateAgentLlmResponse.test.js` (1 new), `src/test/services/boardroomFacilitatorService.test.ts` (1 new). |
+| 2026-08-21 | PR #167 merged (PaperClip docs tracking + a pre-existing `clippy::useless_format` fix that was blocking CI, unrelated to this repo's own changes + 2 CodeRabbit review fixes). | PR #167 (merged). |
+| 2026-08-21 | Closed **I1** for real: live-verified Phase 1a against the actual running Hector Hermes profile (spawned via the `hermes-fleet-scripts` lazy-spawn mechanism, confirmed via Hermes' own `agent.log` that a real chat completion round-tripped through Nous Research inference). Closed **I2** (Hermes Phase 1b hardening): circuit-breaker `configure()` API, rate-limiter/circuit-breaker tuning, audit logging on every call path, `hermes_agents` classified high-risk in the policy gate (with the real "Approval Mode now blocks Hermes by default, no call site passes `approved:true` yet" nuance flagged, not hidden — tracked as a new deferred item in `docs/governance/DEFERRED_WORK.md`), session continuity (`X-Hermes-Session-Id`, derived as a fresh `crypto.randomUUID()` per logical unit of work rather than sent raw — a real CodeQL `js/insecure-randomness` finding caught and fixed mid-review, since the raw threadId/packetId are `Math.random()`-generated and were never previously used in a security-sensitive context — wired into 2 of 9 call sites), and `backend`/`model` exposed on `generateAgentLlmResponse`'s result (also fixed a related bug this surfaced: `boardroomFacilitatorService.ts`'s `generateAgentResponse` was returning the requested model instead of the provider-resolved one). Also flagged, not fixed (tracked as a separate deferred item): `hermes_agents` bypasses Zero-Cost Mode for any saved endpoint, including a non-loopback one — pre-existing since PR 1a, surfaced by a 1b test that documented rather than fixed it. 113 targeted tests across touched files + 525 regression-verified tests across every file importing a touched module, `tsc --noEmit` clean, lint clean. | PR #168; this file's I1/I2 entries above for full per-subsection evidence; `docs/governance/DEFERRED_WORK.md`'s 2026-08-21 entries; `src/test/hermesAgentConnector.test.js` (27), `src/test/connectorCircuitBreakerService.test.js` (17 incl. 3 new), `src/test/policyEnforcementService.test.js` (4 incl. 3 new hermes tests), `src/test/connectorHealthCheckService.test.js` (5 new), `src/test/generateAgentLlmResponse.test.js` (1 new), `src/test/services/boardroomFacilitatorService.test.ts` (1 new). |
 

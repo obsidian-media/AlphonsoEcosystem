@@ -123,7 +123,7 @@ export async function generateAgentResponse({
   const startedAt = Date.now();
   try {
     const result = await generateAgentLlmResponse(agentId, { endpoint, model, prompt, signal, sessionId: threadId });
-    return { ok: true, text: (result?.response || '').trim(), model, latencyMs: Date.now() - startedAt };
+    return { ok: true, text: (result?.response || '').trim(), model: result?.model ?? model, latencyMs: Date.now() - startedAt };
   } catch (error) {
     return { ok: false, text: '', error: (error as Error)?.message || String(error) };
   }
