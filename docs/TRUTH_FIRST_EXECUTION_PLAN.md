@@ -1071,14 +1071,22 @@ dropped.
       change for any current call site**; only a direct caller of
       `sendHermesAgentMessage` sees the new shape. Accepts an `approved`
       option threaded from `generateAgentLlmResponse`'s new
-      `AgentGenerateOptions.approved` field. **Real, not yet fully verified
-      nuance:** since Approval Mode now defaults to `true` app-wide (2026-08-17
-      security pass), every Hermes call is blocked by default unless a caller
-      passes `approved:true` — none of the 9 existing call sites do yet, so
-      Hermes is effectively unusable end-to-end until either the user
-      disables Approval Mode or a future pass wires real UI approval
-      (`requestApproval()` in `App.tsx`) into at least one call site. Flagged
-      here rather than silently left as a surprise.
+      `AgentGenerateOptions.approved` field. **Closed 2026-08-21** (same day
+      as the rest of 1b.2 — flagged as a gap first, then fixed rather than
+      left as a known surprise): since Approval Mode defaults to `true`
+      app-wide, a Hermes call needed a real approved:true source for the 2
+      confirmed call sites. Jose's Miya/Hector builders get a new
+      `isBlockedByHermesApproval(assignment)` gate in the wave loop
+      (mirrors the existing Zero-Cost Mode / Sentinel gates exactly — routes
+      to `pending_approval`, resumed via the existing `executeApprovedPackets`
+      path once a human approves in `ApprovalPanel`). Boardroom
+      (`BoardroomChatView.tsx`) calls the existing `requestApproval()` bridge
+      from `App.tsx` directly, passed down as a prop from
+      `MissionRoomBoardroomTabs` rather than a reverse import (no component
+      previously imported *from* `App.tsx`). Both paths reuse the same one
+      approval primitive rather than inventing a second — see
+      `docs/governance/DEFERRED_WORK.md`'s 2026-08-21 resolution entry for
+      full detail and the 5 new tests proving it.
     - **1b.3 session continuity:** `getHermesSessionMode`/`setHermesSessionMode`
       added (per-agent, defaults to `'persistent'`); `sendHermesAgentMessage`
       sends `X-Hermes-Session-Id` when persistent and a `sessionId` is given.

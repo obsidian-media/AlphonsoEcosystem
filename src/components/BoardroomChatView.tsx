@@ -15,8 +15,25 @@ import {
   type BoardroomThreadMessage
 } from '../services/boardroomThreadService';
 import { generateAgentResponse, detectLowConfidence } from '../services/boardroomFacilitatorService';
+import { getAgentProvider } from '../services/modelSelectionService';
+import { getRuntimePolicySettings } from '../services/policyEnforcementService';
 
 const AGENT_PROFILES = listAgentProfiles();
+
+/**
+ * Closes the Phase 1b gap in docs/governance/DEFERRED_WORK.md: Boardroom
+ * has no packet/queue system (unlike Jose's pipeline), so it can't reuse
+ * that gate — it calls the existing app-wide `requestApproval()` bridge
+ * (already used by PluginProvider/WorkspaceProvider in App.tsx) directly,
+ * synchronously, before the Hermes call, since this runs inside a live
+ * React event handler.
+ */
+async function resolveHermesApproval(agentId: string, requestApproval?: (label: string) => Promise<boolean>): Promise<boolean> {
+  if (getAgentProvider(agentId)?.provider !== 'hermes') return true;
+  if (!getRuntimePolicySettings().approvalMode) return true;
+  if (!requestApproval) return false;
+  return requestApproval(`${agentId} wants to use your Hermes profile to answer — it can run real tools, not just generate text.`);
+}
 
 // Spec 1.10.2: a hard cap on chained AI-generated hops per message, so an
 // unbroken chain of agents @mentioning each other can't run forever. This
@@ -117,7 +134,7 @@ function MessageBubble({
   );
 }
 
-export function BoardroomChatView() {
+export function BoardroomChatView({ requestApproval }: { requestApproval?: (label: string) => Promise<boolean> } = {}) {
   const [threads, setThreads] = useState<BoardroomThread[]>(() => {
     migrateLegacySessions();
     return listThreads();
@@ -211,15 +228,19 @@ export function BoardroomChatView() {
 
       const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
       const crossThreadContext = findCrossThreadContext({ excludeThreadId: activeThreadId, queryText: text });
-      const result = await generateAgentResponse({
-        agentId,
-        topic: activeThread.topic,
-        priorMessages,
-        newMessageText: text,
-        crossThreadContext,
-        signal: controller.signal,
-        threadId: activeThreadId
-      });
+      const approved = await resolveHermesApproval(agentId, requestApproval);
+      const result = approved
+        ? await generateAgentResponse({
+            agentId,
+            topic: activeThread.topic,
+            priorMessages,
+            newMessageText: text,
+            crossThreadContext,
+            signal: controller.signal,
+            threadId: activeThreadId,
+            approved
+          })
+        : { ok: false, text: '', error: 'Approval denied — Hermes delegation was not confirmed.' };
 
       if (stopRequestedRef.current) {
         addThreadMessage({
@@ -276,14 +297,18 @@ export function BoardroomChatView() {
     const agentId = message.speaker;
     const priorMessages = listThreadMessages(activeThreadId).map((m) => ({ speaker: m.speaker, content: m.content }));
     const crossThreadContext = findCrossThreadContext({ excludeThreadId: activeThreadId, queryText: message.retryContext });
-    const result = await generateAgentResponse({
-      agentId,
-      topic: activeThread.topic,
-      priorMessages,
-      newMessageText: message.retryContext,
-      crossThreadContext,
-      threadId: activeThreadId
-    });
+    const retryApproved = await resolveHermesApproval(agentId, requestApproval);
+    const result = retryApproved
+      ? await generateAgentResponse({
+          agentId,
+          topic: activeThread.topic,
+          priorMessages,
+          newMessageText: message.retryContext,
+          crossThreadContext,
+          threadId: activeThreadId,
+          approved: retryApproved
+        })
+      : { ok: false, text: '', error: 'Approval denied — Hermes delegation was not confirmed.' };
     const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
     addThreadMessage({
       threadId: activeThreadId,

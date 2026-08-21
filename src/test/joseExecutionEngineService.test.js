@@ -252,6 +252,37 @@ describe('LLM-powered agent drafting', () => {
 
     expect(result.ok).toBe(true);
   });
+
+  it('routes a Hermes-backed Miya assignment to pending_approval instead of executing, when Approval Mode is on (Phase 1b gap fix)', async () => {
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ miya: { provider: 'hermes', model: 'hermes-agent' } }));
+    localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: create a creative package about space exploration',
+      source: 'user',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.pendingApprovalCount).toBeGreaterThan(0);
+    expect(result.executionReceipts.some((r) => r.reason === 'hermes_agent_delegation')).toBe(true);
+  });
+
+  it('does not require approval for a Hermes-backed Miya assignment when Approval Mode is off', async () => {
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ miya: { provider: 'hermes', model: 'hermes-agent' } }));
+    localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: false }));
+
+    const result = await runJoseCommandExecutionPipeline({
+      commandText: 'ask jose: create a creative package about space exploration',
+      source: 'user',
+      endpoint: 'http://localhost:11434',
+      zeroCostMode: true
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.executionReceipts.some((r) => r.reason === 'hermes_agent_delegation')).toBe(false);
+  });
 });
 
 describe('retrieveRelevantContext', () => {

@@ -79,6 +79,7 @@ const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((
 
 function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprovalRequest: () => void }) {
   const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
+  const approval = useRequestApprovalBridge();
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex items-center gap-1 px-5 pt-3 pb-0 border-b border-[var(--border)] shrink-0">
@@ -100,7 +101,7 @@ function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprova
         {subTab === 'mission' ? (
           <MissionRoom onCreateApprovalRequest={onCreateApprovalRequest} />
         ) : (
-          <Suspense fallback={null}><BoardroomView /></Suspense>
+          <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} /></Suspense>
         )}
       </div>
     </div>
