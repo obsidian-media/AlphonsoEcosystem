@@ -28,31 +28,47 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   policy/approval gating, session continuity) are now **done**. 1a was also
   live-verified for real against a running Hector Hermes profile (see
   `docs/TRUTH_FIRST_EXECUTION_PLAN.md` §I1 for the session-log evidence).
-  Status: **1a/1b code complete and merged** (PR #168), but **not fully
-  resolved end-to-end** — a real gap remains, flagged not hidden: Approval
-  Mode now defaults to `true` app-wide, so Hermes calls are blocked by
-  default and none of the 9 real call sites yet pass `approved:true`.
-  Hermes is not usable end-to-end until either the user disables Approval
-  Mode, or a follow-up wires real `requestApproval()` UI into at least one
-  call site (Boardroom's `generateAgentResponse`/`BoardroomChatView.tsx`
-  and Jose's Miya/Hector builders in `joseExecutionEngineService.ts` are
-  the 5 sites that need it — tracked as a new deferred item below, not
-  silently left in this entry's prose). Phase 2 (bundling) remains not
-  started per its own explicit gate.
+  Status: **1a/1b code complete and merged** (PR #168). The end-to-end
+  approval-flow gap noted below at this same timestamp was closed the same
+  day — see that entry's resolution. Phase 2 (bundling) remains not started
+  per its own explicit gate; its one open rollout-scope question (§2.5) was
+  resolved 2026-08-21 (per-agent opt-in, PR #169).
 
-- [2026-08-21] **Hermes approval-flow wiring** (the gap named just above):
-  none of Hermes' 5 real-command call sites pass `approved:true` to the
-  policy gate, so with Approval Mode on (the default) every Hermes call is
-  blocked before it reaches the profile. Deferred rather than built in PR
-  #168 because it requires threading `App.tsx`'s `requestApproval()`
-  React-context bridge into non-React service call sites
-  (`joseExecutionEngineService.ts`, `boardroomFacilitatorService.ts`) —
-  a real architecture question (does Jose's pipeline get its own
-  approval-resolution step, or does Boardroom show its own inline consent
-  UI before calling `generateAgentResponse`?), not a plumbing-only fix.
-  Resume hint: `docs/HERMES_AGENT_DELEGATION_PLAN.md` §1b.2 has the
-  original scope note; decide the UX shape first (one shared approval gate
-  vs. per-surface), then wire `approved` through call sites named there.
+- [2026-08-21] **Hermes approval-flow wiring** — **RESOLVED same day.** None
+  of Hermes' real call sites passed `approved:true` to the policy gate, so
+  with Approval Mode on (the default) every Hermes call was blocked before
+  reaching the profile. Fixed with two mechanisms, matching how each call
+  site actually runs:
+  - **Jose's pipeline** (non-React, packet/queue-based): added
+    `isBlockedByHermesApproval(assignment)` in `joseExecutionEngineService.ts`,
+    mirroring the existing Zero-Cost Mode / Sentinel gates exactly — routes
+    a Hermes-backed Miya/Hector assignment to `pending_approval` status
+    *before* the wave loop ever reaches `buildMiyaPackage`/
+    `executeHectorAssignment`, using the same `ApprovalPanel`/
+    `executeApprovedPackets` re-execution path every other high-risk gate
+    already uses. Once a packet reaches those two functions, `approved: true`
+    is safe unconditionally — the gate already proved either the provider
+    isn't Hermes, Approval Mode is off, or a human explicitly approved it.
+  - **Boardroom** (live React chat, no packet/queue system to reuse): calls
+    the existing app-wide `requestApproval()` bridge
+    (`useRequestApprovalBridge()` in `App.tsx`, already used by
+    `PluginProvider`/`WorkspaceProvider`) directly and synchronously before
+    a Hermes-backed reply, via a new `resolveHermesApproval()` helper in
+    `BoardroomChatView.tsx`. `requestApproval` is passed down as a prop from
+    `MissionRoomBoardroomTabs` in `App.tsx` (no component previously
+    imported *from* `App.tsx` — passing it down as a prop instead of a
+    reverse import keeps that precedent intact).
+  - Both mechanisms reuse the *same* single approval primitive
+    (`requestApproval()`/`ApprovalModal`) rather than inventing a second
+    one — this was the open architecture question from the original entry,
+    now answered: one shared bridge, invoked from each surface's own
+    natural call site.
+  - 5 new tests (2 in `joseExecutionEngineService.test.js`, 3 in
+    `boardroomChatView.test.jsx`) prove both the blocked-by-default and
+    explicitly-approved paths for real, plus that a non-Hermes agent never
+    triggers an unnecessary approval prompt. `tsc --noEmit` clean, lint
+    clean, 263+ tests across every file touched re-verified with 0
+    regressions.
 
 - [2026-08-21] **Hermes Zero-Cost Mode bypass via a non-loopback endpoint**:
   `saveHermesAgentEndpoint` accepts any URL, and `hermes_agents` is

@@ -107,7 +107,8 @@ export async function generateAgentResponse({
   endpoint = DEFAULT_OLLAMA_ENDPOINT,
   model = DEFAULT_MODEL,
   signal,
-  threadId
+  threadId,
+  approved
 }: {
   agentId: string;
   topic: string;
@@ -119,11 +120,13 @@ export async function generateAgentResponse({
   signal?: AbortSignal;
   /** One Boardroom thread = one Hermes session unit, per §1b.3 (per-run scoping, not cross-run identity — see design fork note there). Ignored for non-Hermes providers. */
   threadId?: string;
+  /** Resolved via requestApproval() in BoardroomChatView.tsx before this is called, when the target agent is Hermes-backed and Approval Mode is on. Ignored for non-Hermes providers. */
+  approved?: boolean;
 }): Promise<FacilitatorResult> {
   const prompt = buildFacilitatorPrompt({ topic, priorMessages, newMessageText, agentId, crossThreadContext });
   const startedAt = Date.now();
   try {
-    const result = await generateAgentLlmResponse(agentId, { endpoint, model, prompt, signal, sessionId: threadId ? resolveSecureSessionId(threadId) : undefined });
+    const result = await generateAgentLlmResponse(agentId, { endpoint, model, prompt, signal, sessionId: threadId ? resolveSecureSessionId(threadId) : undefined, approved });
     return { ok: true, text: (result?.response || '').trim(), model: result?.model ?? model, latencyMs: Date.now() - startedAt };
   } catch (error) {
     return { ok: false, text: '', error: (error as Error)?.message || String(error) };

@@ -133,6 +133,70 @@ describe('BoardroomChatView', () => {
     expect(facilitator.generateAgentResponse).not.toHaveBeenCalledWith(expect.objectContaining({ agentId: 'alphonso' }));
   });
 
+  it('requests approval via requestApproval before delegating to a Hermes-backed agent, and passes approved:true through once granted (Phase 1b gap fix)', async () => {
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'hermes', model: 'hermes-agent' } }));
+    localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'hector hermes reply' });
+    const requestApproval = vi.fn().mockResolvedValue(true);
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView requestApproval={requestApproval} />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Hermes Approval Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Hermes Approval Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector look into this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText('hector hermes reply');
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    expect(facilitator.generateAgentResponse).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'hector', approved: true }));
+  });
+
+  it('does not call generateAgentResponse when requestApproval resolves false for a Hermes-backed agent', async () => {
+    localStorage.setItem('alphonso_agent_provider_v1', JSON.stringify({ hector: { provider: 'hermes', model: 'hermes-agent' } }));
+    localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    const requestApproval = vi.fn().mockResolvedValue(false);
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView requestApproval={requestApproval} />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Hermes Denied Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Hermes Denied Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector look into this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText(/approval denied/i);
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    expect(facilitator.generateAgentResponse).not.toHaveBeenCalled();
+  });
+
+  it('does not call requestApproval for a non-Hermes agent (no unnecessary prompting)', async () => {
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'hector reply' });
+    const requestApproval = vi.fn().mockResolvedValue(true);
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView requestApproval={requestApproval} />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Ollama Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Ollama Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector look into this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText('hector reply');
+    expect(requestApproval).not.toHaveBeenCalled();
+  });
+
   it('shows a visible error message when Alphonso auto-response fails, not a silent swallow', async () => {
     const facilitator = await import('../services/boardroomFacilitatorService');
     facilitator.generateAgentResponse.mockResolvedValue({ ok: false, text: '', error: 'Ollama is not running' });

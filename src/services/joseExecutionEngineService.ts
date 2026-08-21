@@ -46,6 +46,8 @@ import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService
 import { executeWithBrain } from './agentBrainService';
 import { generateAgentLlmResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
+import { getAgentProvider } from './modelSelectionService';
+import { getRuntimePolicySettings } from './policyEnforcementService';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectors/connectorImageGenerators';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
@@ -126,6 +128,27 @@ function isBlockedByZeroCostMode(packet, assignment) {
   if (policy?.blockedByZeroCostMode) return true;
   const costClass = String(policy?.costClass || assignment?.costClass || '').toLowerCase();
   return costClass === 'paid_or_metered';
+}
+
+/**
+ * Closes the Phase 1b gap flagged in docs/governance/DEFERRED_WORK.md: a
+ * Hermes-backed turn can run real tools, so it needs the same
+ * pending-approval treatment as Zero-Cost Mode / Sentinel above, not a
+ * silent block deep inside buildMiyaPackage/executeHectorAssignment. Only
+ * miya/hector currently have a real Hermes call site (see
+ * generateAgentLlmResponse's confirmed call sites) — this still checks
+ * assignment.agent generically so it keeps working if more agents gain one.
+ * Once a human approves via the existing ApprovalPanel flow,
+ * `executeApprovedPackets` re-runs `executeAssignmentWithRetries` directly
+ * (bypassing this wave-loop gate entirely, since the gate already did its
+ * job), so the two call sites this unblocks can safely pass `approved: true`
+ * unconditionally — by the time they run, either the provider isn't hermes,
+ * Approval Mode is off, or this gate already required and got explicit
+ * human approval.
+ */
+function isBlockedByHermesApproval(assignment) {
+  if (getAgentProvider(assignment?.agent)?.provider !== 'hermes') return false;
+  return Boolean(getRuntimePolicySettings().approvalMode);
 }
 
 function extractNovaScore(result) {
@@ -564,7 +587,11 @@ async function buildMiyaPackage(commandText: any, assignment: any, options: any 
       prompt,
       // One orchestration packet = one Hermes session unit (per-run scoping,
       // §1b.3 in docs/HERMES_AGENT_DELEGATION_PLAN.md). Ignored for non-Hermes providers.
-      sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
+      sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined,
+      // Safe unconditionally: isBlockedByHermesApproval already routed this
+      // packet to pending_approval and stopped before reaching here if Miya
+      // is Hermes-backed and Approval Mode is on — see that gate's comment.
+      approved: true
     });
     const parsed = parseJsonResponse(response?.response);
     if (parsed && typeof parsed.title === 'string') {
@@ -899,7 +926,11 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
         endpoint: options.endpoint,
         model: options.model || PREFERRED_MODEL,
         prompt,
-        sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
+        sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined,
+        // Safe unconditionally: isBlockedByHermesApproval already routed this
+        // packet to pending_approval and stopped before reaching here if
+        // Hector is Hermes-backed and Approval Mode is on — see that gate's comment.
+        approved: true
       });
       const llmSummary = String(response?.response || '').trim();
       if (llmSummary.length > 20) {
@@ -1324,6 +1355,55 @@ export async function runJoseCommandExecutionPipeline({
           blocked: true,
           setupRequired: false,
           details: { reason: 'zero_cost_policy_gate' },
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        continue;
+      }
+
+      if (isBlockedByHermesApproval(assignment)) {
+        pendingApprovalCount += 1;
+        updatePacketStatus(assignment.packetId, 'pending_approval', {
+          policyBlocked: true,
+          policyReason: 'Approval Mode requires explicit approval before delegating to this agent\'s Hermes profile — it can run real tools, not just generate text.',
+          verificationState: TRUST_STATES.PENDING
+        });
+        executionReceipts.push({
+          packetId: assignment.packetId,
+          agent: assignment.agent,
+          status: 'approval_required',
+          reason: 'hermes_agent_delegation'
+        });
+        onProgress?.({
+          stage: 'approval_required',
+          assignment,
+          packetId: assignment.packetId,
+          reason: 'hermes_agent_delegation'
+        });
+        recordOrchestrationQueueTransition({
+          commandId: command.id,
+          packetId: assignment.packetId,
+          agent: AGENTS.JOSE,
+          fromStatus: packet.status || 'unknown',
+          toStatus: 'pending_approval',
+          reason: 'Hermes agent delegation requires approval.',
+          retryCount: packet.retryCount || 0,
+          confidence: TRUST_STATES.VERIFIED,
+          verificationState: TRUST_STATES.PENDING
+        });
+        appendOrchestrationReceipt({
+          workflowId: 'jose_execution_pipeline',
+          commandId: command.id,
+          packetId: assignment.packetId,
+          eventType: 'policy_gate_blocked',
+          status: 'pending_approval',
+          agent: AGENTS.JOSE,
+          actionType: assignment.actionType,
+          riskLevel: assignment.riskLevel || 'high',
+          approved: false,
+          blocked: true,
+          setupRequired: false,
+          details: { reason: 'hermes_agent_delegation' },
           confidence: TRUST_STATES.VERIFIED,
           verificationState: TRUST_STATES.PENDING
         });
