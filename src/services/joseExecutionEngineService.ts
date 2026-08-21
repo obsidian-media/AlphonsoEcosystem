@@ -560,7 +560,10 @@ async function buildMiyaPackage(commandText: any, assignment: any, options: any 
     const response = await generateAgentLlmResponse('miya', {
       endpoint: options.endpoint,
       model: options.model || PREFERRED_MODEL,
-      prompt
+      prompt,
+      // One orchestration packet = one Hermes session unit (per-run scoping,
+      // §1b.3 in docs/HERMES_AGENT_DELEGATION_PLAN.md). Ignored for non-Hermes providers.
+      sessionId: assignment?.packetId
     });
     const parsed = parseJsonResponse(response?.response);
     if (parsed && typeof parsed.title === 'string') {
@@ -894,7 +897,8 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
       const response = await generateAgentLlmResponse('hector', {
         endpoint: options.endpoint,
         model: options.model || PREFERRED_MODEL,
-        prompt
+        prompt,
+        sessionId: assignment?.packetId
       });
       const llmSummary = String(response?.response || '').trim();
       if (llmSummary.length > 20) {

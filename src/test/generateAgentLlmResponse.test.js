@@ -59,6 +59,13 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [{ role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent' });
   });
 
+  it('passes sessionId and approved through to sendHermesAgentMessage when the caller supplies them', async () => {
+    agentProviderMap.jose = { provider: 'hermes', model: 'hermes-agent' };
+    sendHermesAgentMessage.mockResolvedValueOnce({ ok: true, content: 'hi', model: 'hermes-agent', usage: null, provider: 'hermes' });
+    await generateAgentLlmResponse('jose', { prompt: 'orchestrate this', sessionId: 'receipt-7', approved: true });
+    expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [{ role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent', sessionId: 'receipt-7', approved: true });
+  });
+
   it('a different agent set to ollama is unaffected by another agent being on hermes — per-agent resolution, not global', async () => {
     agentProviderMap.jose = { provider: 'hermes', model: 'hermes-agent' };
     // hector has no entry -> defaults to ollama

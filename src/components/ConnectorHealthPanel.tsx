@@ -206,7 +206,7 @@ async function testConnector(connectorId: string): Promise<TestResult> {
     return checkConnectorHealth('mobile_bridge');
   }
 
-  if (['github', 'slack', 'discord', 'generic_webhook', 'n8n', 'brave_search', 'perplexity', 'tavily', 'deepseek'].includes(connectorId)) {
+  if (['github', 'slack', 'discord', 'generic_webhook', 'n8n', 'brave_search', 'perplexity', 'tavily', 'deepseek', 'hermes_agents'].includes(connectorId)) {
     return checkConnectorHealth(connectorId);
   }
 

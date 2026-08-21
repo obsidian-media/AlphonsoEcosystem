@@ -105,7 +105,8 @@ export async function generateAgentResponse({
   crossThreadContext = [],
   endpoint = DEFAULT_OLLAMA_ENDPOINT,
   model = DEFAULT_MODEL,
-  signal
+  signal,
+  threadId
 }: {
   agentId: string;
   topic: string;
@@ -115,11 +116,13 @@ export async function generateAgentResponse({
   endpoint?: string;
   model?: string;
   signal?: AbortSignal;
+  /** One Boardroom thread = one Hermes session unit, per §1b.3 (per-run scoping, not cross-run identity — see design fork note there). Ignored for non-Hermes providers. */
+  threadId?: string;
 }): Promise<FacilitatorResult> {
   const prompt = buildFacilitatorPrompt({ topic, priorMessages, newMessageText, agentId, crossThreadContext });
   const startedAt = Date.now();
   try {
-    const result = await generateAgentLlmResponse(agentId, { endpoint, model, prompt, signal });
+    const result = await generateAgentLlmResponse(agentId, { endpoint, model, prompt, signal, sessionId: threadId });
     return { ok: true, text: (result?.response || '').trim(), model, latencyMs: Date.now() - startedAt };
   } catch (error) {
     return { ok: false, text: '', error: (error as Error)?.message || String(error) };

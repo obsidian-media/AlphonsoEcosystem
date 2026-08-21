@@ -570,12 +570,29 @@ export interface AgentGenerateOptions {
   model?: string;
   prompt: string;
   signal?: AbortSignal;
+  /**
+   * A stable id for the logical unit of work this call belongs to — only
+   * used when the resolved provider is 'hermes' (see
+   * `sendHermesAgentMessage`'s `sessionId` option / §1b.3 in
+   * docs/HERMES_AGENT_DELEGATION_PLAN.md). Ignored for every other provider.
+   */
+  sessionId?: string;
+  /** Pass through to the Hermes policy gate once a caller has already resolved approval via the UI. Ignored for every other provider. */
+  approved?: boolean;
 }
 
 export interface AgentGenerateResult {
   response: string;
   done: boolean;
+  /** Which provider actually answered — lets a caller record it on an orchestration receipt (see docs/HERMES_AGENT_DELEGATION_PLAN.md §1b.1's "record backend + resolved model" item). Not yet wired into every receipt-writing call site — only exposed here so a caller can. */
+  backend?: AgentModelProviderLike;
+  /** The resolved model id actually used for this call. */
+  model?: string;
 }
+
+// Kept as a bare string union (not imported from modelSelectionService) to
+// avoid the same import-cycle risk documented below for the dynamic imports.
+type AgentModelProviderLike = 'ollama' | 'nvidia_nim' | 'gemini' | 'hermes';
 
 /**
  * The one shared per-agent LLM dispatcher — every per-agent service should
@@ -597,12 +614,14 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
   const config = getAgentProvider(agentId);
 
   if (config.provider === 'ollama') {
-    return generateOllamaResponse({
+    const model = options.model || PREFERRED_MODEL;
+    const result = await generateOllamaResponse({
       endpoint: options.endpoint,
-      model: options.model || PREFERRED_MODEL,
+      model,
       prompt: options.prompt,
       signal: options.signal
     });
+    return { ...result, backend: 'ollama', model };
   }
 
   const messages = [{ role: 'user', content: options.prompt }];
@@ -611,21 +630,25 @@ export async function generateAgentLlmResponse(agentId: string, options: AgentGe
     const { sendNvidiaMessage } = await import('../services/connectors/nvidiaNimConnector');
     const result: NvidiaSendResult = await sendNvidiaMessage(messages, { model: config.model });
     if (!result.ok) throw new Error(('message' in result && result.message) || 'NVIDIA NIM rate limit exceeded');
-    return { response: result.content, done: true };
+    return { response: result.content, done: true, backend: 'nvidia_nim', model: result.model };
   }
 
   if (config.provider === 'gemini') {
     const { sendGeminiMessage } = await import('../services/connectors/geminiConnector');
     const result: GeminiSendResult = await sendGeminiMessage(messages, { model: config.model });
     if (!result.ok) throw new Error(('message' in result && result.message) || 'Gemini rate limit exceeded');
-    return { response: result.content, done: true };
+    return { response: result.content, done: true, backend: 'gemini', model: result.model };
   }
 
   if (config.provider === 'hermes') {
     const { sendHermesAgentMessage } = await import('../services/connectors/hermesAgentConnector');
-    const result: HermesSendResult = await sendHermesAgentMessage(agentId, messages, { model: config.model });
+    const result: HermesSendResult = await sendHermesAgentMessage(agentId, messages, {
+      model: config.model,
+      sessionId: options.sessionId,
+      approved: options.approved
+    });
     if (!result.ok) throw new Error(('message' in result && result.message) || 'Hermes profile rate limit exceeded');
-    return { response: result.content, done: true };
+    return { response: result.content, done: true, backend: 'hermes', model: result.model };
   }
 
   throw new Error(`Unknown provider "${(config as { provider: string }).provider}" for agent "${agentId}"`);

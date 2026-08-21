@@ -14,12 +14,15 @@ import {
   getCircuitState,
   resetCircuit,
   getAll,
+  configure,
+  resetAllConfigs,
 } from '../services/connectorCircuitBreakerService';
 
 describe('connectorCircuitBreakerService', () => {
   beforeEach(() => {
     Object.keys(durableStorage).forEach((k) => delete durableStorage[k]);
     vi.clearAllMocks();
+    resetAllConfigs();
   });
 
   afterEach(() => {
@@ -74,5 +77,39 @@ describe('connectorCircuitBreakerService', () => {
     recordFailure('b');
     const all = getAll();
     expect(typeof all).toBe('object');
+  });
+
+  it('configure() overrides the failure threshold for one connector without affecting others', () => {
+    configure('hermes_agents', { failureThreshold: 8 });
+    for (let i = 0; i < 5; i++) recordFailure('hermes_agents');
+    expect(isOpen('hermes_agents')).toBe(false);
+    expect(getCircuitState('hermes_agents').failures).toBe(5);
+
+    for (let i = 0; i < 3; i++) recordFailure('other_connector');
+    for (let i = 0; i < 3; i++) recordFailure('hermes_agents');
+    expect(isOpen('hermes_agents')).toBe(true);
+    expect(isOpen('other_connector')).toBe(false);
+  });
+
+  it('configure() overrides the cooldown for one connector', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(0);
+    configure('hermes_agents', { failureThreshold: 5, cooldownMs: 5_000 });
+    for (let i = 0; i < 5; i++) recordFailure('hermes_agents');
+    expect(isOpen('hermes_agents')).toBe(true);
+
+    vi.spyOn(Date, 'now').mockReturnValue(6_000);
+    expect(getCircuitState('hermes_agents').state).toBe('half-open');
+  });
+
+  it('configure() partial update preserves the other field', () => {
+    configure('svc6', { failureThreshold: 10 });
+    configure('svc6', { cooldownMs: 1_000 });
+    vi.spyOn(Date, 'now').mockReturnValue(0);
+    for (let i = 0; i < 9; i++) recordFailure('svc6');
+    expect(isOpen('svc6')).toBe(false);
+    for (let i = 0; i < 1; i++) recordFailure('svc6');
+    expect(isOpen('svc6')).toBe(true);
+    vi.spyOn(Date, 'now').mockReturnValue(2_000);
+    expect(getCircuitState('svc6').state).toBe('half-open');
   });
 });

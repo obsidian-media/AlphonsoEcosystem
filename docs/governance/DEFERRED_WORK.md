@@ -23,6 +23,16 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   it needs to be re-derived or requested from the owner — the summary in TFEP
   §I and this entry are not a substitute for the full file. Status: design
   complete, awaiting owner go-ahead to start PR 1a.
+  **2026-08-21:** both PR 1a (merged 2026-08-19, PR #165) and PR 1b
+  (hardening — circuit breaker/rate limiter tuning, audit logging,
+  policy/approval gating, session continuity) are now **done**. 1a was also
+  live-verified for real against a running Hector Hermes profile (see
+  `docs/TRUTH_FIRST_EXECUTION_PLAN.md` §I1 for the session-log evidence).
+  One real gap remains, flagged not hidden: Approval Mode now defaults to
+  `true` app-wide, so Hermes calls are blocked by default and no call site
+  yet passes `approved:true` — Hermes is not usable end-to-end until that's
+  addressed or the user disables Approval Mode. Status: **resolved**, Phase 2
+  (bundling) remains not started per its own explicit gate.
 
 - [2026-08-14] `recover/hook-test-coverage` branch (PR #151 open against
   `main`, CI red as of 2026-08-16): the rescued stash@0 test suite, now
