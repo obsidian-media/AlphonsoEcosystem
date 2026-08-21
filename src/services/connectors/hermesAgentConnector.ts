@@ -16,6 +16,29 @@ const CONNECTOR_ID = 'hermes_agents';
 rateLimiter.configure(CONNECTOR_ID, { maxTokens: 300, refillRate: 300 });
 circuitBreaker.configure(CONNECTOR_ID, { failureThreshold: 8, cooldownMs: 15_000 });
 
+// Callers pass a "logical unit of work" id (a Boardroom threadId, a Jose
+// packetId) as `sessionId` — those ids are generated with Math.random()
+// elsewhere in the codebase (fine for their original purpose: a UI/storage
+// key with no security implications). Sending that guessable value directly
+// as X-Hermes-Session-Id would let anything that can guess/collide it read
+// or inject into another unit of work's Hermes-side persistent memory
+// grouping — a real CodeQL js/insecure-randomness finding, not a false
+// positive. Instead, map each raw caller-supplied id to a fresh
+// cryptographically-random UUID the first time it's seen, and reuse that
+// mapping on subsequent calls for the same logical unit — this preserves
+// "one thread/packet = one Hermes session" without the header value ever
+// deriving from a weak PRNG.
+const secureSessionIds = new Map<string, string>();
+
+function resolveSecureSessionId(rawId: string): string {
+  let secure = secureSessionIds.get(rawId);
+  if (!secure) {
+    secure = crypto.randomUUID();
+    secureSessionIds.set(rawId, secure);
+  }
+  return secure;
+}
+
 // Hermes Agent (Nous Research, MIT) — a standalone agent framework the user
 // runs separately from this app. A "profile" is a live, standing Hermes
 // instance that mirrors one of AlphonsoEcosystem's own 9 agents (same soul,
@@ -214,7 +237,7 @@ export async function sendHermesAgentMessage(
 
   const sessionMode = getHermesSessionMode(agentId);
   const sessionHeader: Record<string, string> =
-    sessionMode === 'persistent' && sessionId ? { 'X-Hermes-Session-Id': sessionId } : {};
+    sessionMode === 'persistent' && sessionId ? { 'X-Hermes-Session-Id': resolveSecureSessionId(sessionId) } : {};
 
   let r: Response;
   try {

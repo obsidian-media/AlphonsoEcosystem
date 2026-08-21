@@ -200,12 +200,34 @@ describe('hermesAgentConnector', () => {
     expect(getHermesSessionMode('jose')).toBe('stateless');
   });
 
-  it('sendHermesAgentMessage sends X-Hermes-Session-Id when a sessionId is given and mode is persistent (default)', async () => {
+  it('sendHermesAgentMessage sends a secure, UUID-shaped X-Hermes-Session-Id derived from (not equal to) the raw sessionId — the raw id is Math.random()-generated elsewhere and must never be sent directly (CodeQL js/insecure-randomness)', async () => {
     saveHermesAgentEndpoint('jose', 'http://127.0.0.1:8645', 'jose-key');
     fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }], model: 'hermes-agent', usage: null }) });
     await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }], { sessionId: 'receipt-42' });
     const [, calledInit] = fetch.mock.calls[0];
-    expect(calledInit.headers['X-Hermes-Session-Id']).toBe('receipt-42');
+    const sentHeader = calledInit.headers['X-Hermes-Session-Id'];
+    expect(sentHeader).not.toBe('receipt-42');
+    expect(sentHeader).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  });
+
+  it('sendHermesAgentMessage maps the same raw sessionId to the same secure header value across calls (preserves "one unit of work = one session")', async () => {
+    saveHermesAgentEndpoint('jose', 'http://127.0.0.1:8645', 'jose-key');
+    fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }], model: 'hermes-agent', usage: null }) });
+    await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }], { sessionId: 'receipt-99' });
+    await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Again' }], { sessionId: 'receipt-99' });
+    const first = fetch.mock.calls[0][1].headers['X-Hermes-Session-Id'];
+    const second = fetch.mock.calls[1][1].headers['X-Hermes-Session-Id'];
+    expect(first).toBe(second);
+  });
+
+  it('sendHermesAgentMessage maps different raw sessionIds to different secure header values', async () => {
+    saveHermesAgentEndpoint('jose', 'http://127.0.0.1:8645', 'jose-key');
+    fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'ok' } }], model: 'hermes-agent', usage: null }) });
+    await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }], { sessionId: 'receipt-a' });
+    await sendHermesAgentMessage('jose', [{ role: 'user', content: 'Hi' }], { sessionId: 'receipt-b' });
+    const first = fetch.mock.calls[0][1].headers['X-Hermes-Session-Id'];
+    const second = fetch.mock.calls[1][1].headers['X-Hermes-Session-Id'];
+    expect(first).not.toBe(second);
   });
 
   it('sendHermesAgentMessage omits X-Hermes-Session-Id when no sessionId is given', async () => {
