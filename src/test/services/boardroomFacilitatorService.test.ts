@@ -108,7 +108,7 @@ describe('boardroomFacilitatorService', () => {
       expect(promptArg.toLowerCase()).toContain('research');
     });
 
-    it('passes threadId through to generateAgentLlmResponse as sessionId (one Boardroom thread = one Hermes session unit)', async () => {
+    it('resolves threadId to a secure session id and passes it through to generateAgentLlmResponse (never the raw, Math.random()-derived threadId — see hermesAgentConnector.resolveSecureSessionId)', async () => {
       const ollama = await import('../../lib/ollama');
       (ollama.generateAgentLlmResponse as any).mockResolvedValue({ response: 'ok', done: true });
 
@@ -121,7 +121,9 @@ describe('boardroomFacilitatorService', () => {
         threadId: 'thread-abc-123'
       });
 
-      expect((ollama.generateAgentLlmResponse as any).mock.calls[0][1].sessionId).toBe('thread-abc-123');
+      const passedSessionId = (ollama.generateAgentLlmResponse as any).mock.calls[0][1].sessionId;
+      expect(passedSessionId).not.toBe('thread-abc-123');
+      expect(passedSessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     });
 
     it('falls back to a generic persona for an unknown agent id rather than throwing', async () => {

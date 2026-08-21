@@ -30,7 +30,18 @@ circuitBreaker.configure(CONNECTOR_ID, { failureThreshold: 8, cooldownMs: 15_000
 // deriving from a weak PRNG.
 const secureSessionIds = new Map<string, string>();
 
-function resolveSecureSessionId(rawId: string): string {
+/**
+ * Exported so callers can (and should) resolve a caller-side weak id — a
+ * Boardroom threadId, a Jose packetId — to a secure value *before* it's ever
+ * assigned into a `sessionId`-shaped parameter, not just inside this module.
+ * CodeQL's taint tracker flags the raw Math.random()-derived value the
+ * moment it's passed into a security-context parameter, regardless of a
+ * transform happening further down the call chain — resolving at the
+ * call site breaks that taint at its origin instead of relying on this
+ * module's own internal (still-applied, defense-in-depth) call to the same
+ * function inside `sendHermesAgentMessage`.
+ */
+export function resolveSecureSessionId(rawId: string): string {
   let secure = secureSessionIds.get(rawId);
   if (!secure) {
     secure = crypto.randomUUID();

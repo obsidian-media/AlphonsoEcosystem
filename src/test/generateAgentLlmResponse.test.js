@@ -28,7 +28,7 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
   it('defaults to Ollama and calls the real /api/generate endpoint — untouched behavior for anyone who never configures this', async () => {
     fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ response: 'hi from ollama', done: true }) });
     const result = await generateAgentLlmResponse('jose', { prompt: 'hello' });
-    expect(result).toEqual({ response: 'hi from ollama', done: true });
+    expect(result).toMatchObject({ response: 'hi from ollama', done: true, backend: 'ollama' });
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/generate'), expect.objectContaining({ method: 'POST' }));
     expect(sendNvidiaMessage).not.toHaveBeenCalled();
     expect(sendHermesAgentMessage).not.toHaveBeenCalled();
@@ -38,7 +38,7 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     agentProviderMap.hector = { provider: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct' };
     sendNvidiaMessage.mockResolvedValueOnce({ ok: true, content: 'hi from nvidia', model: 'meta/llama-3.1-8b-instruct', usage: null, provider: 'nvidia_nim' });
     const result = await generateAgentLlmResponse('hector', { prompt: 'research this' });
-    expect(result).toEqual({ response: 'hi from nvidia', done: true });
+    expect(result).toEqual({ response: 'hi from nvidia', done: true, backend: 'nvidia_nim', model: 'meta/llama-3.1-8b-instruct' });
     expect(sendNvidiaMessage).toHaveBeenCalledWith([{ role: 'user', content: 'research this' }], { model: 'meta/llama-3.1-8b-instruct' });
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -47,7 +47,7 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     agentProviderMap.miya = { provider: 'gemini' };
     sendGeminiMessage.mockResolvedValueOnce({ ok: true, content: 'hi from gemini', model: 'gemini-2.5-flash-lite', usage: null, provider: 'gemini' });
     const result = await generateAgentLlmResponse('miya', { prompt: 'write a script' });
-    expect(result).toEqual({ response: 'hi from gemini', done: true });
+    expect(result).toEqual({ response: 'hi from gemini', done: true, backend: 'gemini', model: 'gemini-2.5-flash-lite' });
     expect(sendGeminiMessage).toHaveBeenCalledWith([{ role: 'user', content: 'write a script' }], { model: undefined });
   });
 
@@ -55,7 +55,7 @@ describe('generateAgentLlmResponse — the one shared per-agent dispatcher', () 
     agentProviderMap.jose = { provider: 'hermes', model: 'hermes-agent' };
     sendHermesAgentMessage.mockResolvedValueOnce({ ok: true, content: 'hi from jose profile', model: 'hermes-agent', usage: null, provider: 'hermes' });
     const result = await generateAgentLlmResponse('jose', { prompt: 'orchestrate this' });
-    expect(result).toEqual({ response: 'hi from jose profile', done: true });
+    expect(result).toEqual({ response: 'hi from jose profile', done: true, backend: 'hermes', model: 'hermes-agent' });
     expect(sendHermesAgentMessage).toHaveBeenCalledWith('jose', [{ role: 'user', content: 'orchestrate this' }], { model: 'hermes-agent' });
   });
 

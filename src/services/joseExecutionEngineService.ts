@@ -45,6 +45,7 @@ import { getProjectDirectoryPath } from './projectDirectoryService';
 import { scaffoldProject, detectStackTemplate } from './scaffoldTemplatesService';
 import { executeWithBrain } from './agentBrainService';
 import { generateAgentLlmResponse, fetchOllamaModels, PREFERRED_MODEL } from '../lib/ollama';
+import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { generateComfyUiImage, generateSdWebUiImage } from './connectors/connectorImageGenerators';
 import { runContentCatalystJob, createContentBridgeRequest } from '../features/content-catalyst/services/contentCatalystService';
 import { createProjectGoal, generateBatch, advanceToNextBatch, getActiveGoal, getActiveBatch, getBatchProgress, executeBatch, getGoalById } from './batchOrchestratorService';
@@ -563,7 +564,7 @@ async function buildMiyaPackage(commandText: any, assignment: any, options: any 
       prompt,
       // One orchestration packet = one Hermes session unit (per-run scoping,
       // §1b.3 in docs/HERMES_AGENT_DELEGATION_PLAN.md). Ignored for non-Hermes providers.
-      sessionId: assignment?.packetId
+      sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
     });
     const parsed = parseJsonResponse(response?.response);
     if (parsed && typeof parsed.title === 'string') {
@@ -898,7 +899,7 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
         endpoint: options.endpoint,
         model: options.model || PREFERRED_MODEL,
         prompt,
-        sessionId: assignment?.packetId
+        sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined
       });
       const llmSummary = String(response?.response || '').trim();
       if (llmSummary.length > 20) {
