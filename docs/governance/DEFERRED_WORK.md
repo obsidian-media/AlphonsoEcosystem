@@ -7,6 +7,37 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-21] **Windows/Linux Tauri installer builds broken since 2026-08-16 —
+  release pipeline currently non-functional, discovered incidentally, not yet
+  fixed.** `ci.yml`'s `Tauri Desktop Build` (Windows) and
+  `Tauri Desktop Build (Linux)` jobs have failed on every push to `main`
+  since commit `e387067` ("Implement WIN1 (WebView2 offline installer) and
+  O1/O3 (bundle Ollama runtime)", 2026-08-16) — confirmed via
+  `gh run list --branch main`: last success `31929916332` (2026-08-16), every
+  run since has failed. macOS build is unaffected (still succeeds). Root
+  cause (not yet independently verified by rebuilding smaller, but highly
+  likely given the timing and error shape): that commit bundles the full
+  Ollama runtime — including CUDA v12/v13 backend libraries, easily 1GB+ —
+  plus a WebView2 offline installer (+~127MB) directly into the app via
+  `tauri.conf.json`'s `bundle.resources`. Windows fails with
+  `Internal compiler error #12345: error mmapping datablock to 33618611` from
+  `makensis` (a known NSIS class of bug tied to oversized data blocks);
+  Linux fails with `failed to run linuxdeploy` during AppImage assembly. Both
+  only fail at the final packaging step — `cargo build --release` itself
+  succeeds on both platforms every time, so this is purely an
+  installer-bundling limit, not a code-compilation regression. These jobs
+  are not required branch-protection checks, which is why 5+ days of broken
+  releases went unnoticed. Not fixed here because it needs a real design
+  decision (same class of tradeoff `DEPENDENCY_BUNDLING_PLAN.md` already
+  flagged as Option 1 vs. smaller alternatives) — e.g. download Ollama at
+  first run instead of embedding it in the installer, split CUDA variants
+  into optional downloads, or verify whether increasing runner
+  memory/switching NSIS solid-compression settings is sufficient — not
+  something to silently pick. Resume hint: reproduce locally with
+  `npm run tauri build` on Windows to confirm the size theory before
+  committing to a fix direction; check `src-tauri/vendor/ollama/` bundle
+  size directly as the fastest way to confirm/refute the root-cause theory.
+
 - [2026-08-18] Hermes agent-backend delegation (per-agent Ollama/NVIDIA/Gemini/Hermes
   provider picker, wiring 9 in-app agents to a separate live Hermes Agent
   install the user runs on this machine): **planned, not started, no code
