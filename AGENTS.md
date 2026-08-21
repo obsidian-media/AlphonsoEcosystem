@@ -77,7 +77,7 @@ npm run test             # 4,199 tests (279 files; verified 2026-08-20)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command
-npm run test:coverage    # Coverage report (threshold: 38% lines / 36% branches / 0% functions)
+npm run test:coverage    # Coverage report (actual 2026-08-20: 53.08% lines / 41.06% branches / 44.86% functions / 50.91% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
 
 # From src-tauri/

@@ -1079,6 +1079,28 @@ dropped.
     from a `GoalTracker` panel, and has real tests matching
     `joseExecutionEngineService.test.js`'s existing rigor.
 
+- [ ] **J2 — PaperClip concept-sourcing (reference notes only, not scoped)**
+  - **Owner:** unassigned
+  - Not started, no code changes. `docs/STRATEGY_PAPERCLIP_REFERENCE.md`
+    (gitignored, machine-local; see `.gitignore`) reviews `paperclipai/paperclip`
+    (an adjacent, non-competing agent-team management platform, MIT/TS,
+    ~79k stars as observed 2026-08-20 via `https://github.com/paperclipai/paperclip`
+    — re-check before citing, star counts move) and lists 5 design concepts
+    worth building in Alphonso's own
+    stack — not code to vendor. Ranked by the doc: budget-gated execution
+    (extends `resourceCostService.ts` + `policyEnforcementService.ts`,
+    smallest lift), an out-of-process adapter for real external coding
+    agents (replaces `codingAgentService.ts`'s chat-completion-only path),
+    a unified heartbeat scheduler (consolidates 5 independent `setInterval`
+    loops), a secret-scrubbing check on workspace export (unverified, flagged
+    not confirmed), and adopting OpenTelemetry for roadmap item T17 instead
+    of a bespoke observability build. Each item still needs its own J1-style
+    scope-and-spec pass before it's real work.
+  - **Resume hint:** read `docs/STRATEGY_PAPERCLIP_REFERENCE.md` §3 in full
+    before starting any of the 5 items — don't re-derive the gap analysis
+    from scratch, it was checked against real source (`resourceCostService.ts`,
+    `pluginSandboxService.ts`, `codingAgentService.ts`) before being written.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
@@ -1104,4 +1126,5 @@ dropped.
 | 2026-07-29 | Codex resolved the Local Voice dependency/model/runtime-path deferrals and added a focused Vitest command. | Windows clean-venv install; `pytest voice/backend/tests -q` 37/37; Piper real WAV synthesis; pending only fresh Rust compile and hardware/Ollama/playback evidence. |
 | 2026-08-18 | Added Section I (Hermes agent-backend delegation): planned, not started. Full design lives in a gitignored local plan doc (machine-specific detail); this file, `docs/governance/DEFERRED_WORK.md`, and `docs/AGENT_GUIDE.md` all point to it so a future session on this machine can find it. | `docs/HERMES_AGENT_DELEGATION_PLAN.md` (gitignored, see `.gitignore`); no code changes made this pass — planning/reconnaissance only. |
 | 2026-08-19 | PR #165 merged (Hermes Phase 1a, per-agent LLM delegation) — I1 marked in progress with evidence. Separately, added Section J (competitive strategy): a grounded (non-hype) comparison against `agnt-gg/agnt` and the resulting "AB" (governed agent OS + daily companion) direction, with a fully-specified next technical step (scoped goal engine on Jose). | `docs/STRATEGY_AGNT_VS_ALPHONSO.md`, `docs/STRATEGY_AB_ROADMAP.md` (both gitignored, machine-local; see `.gitignore`); no code changes — planning only. |
+| 2026-08-20 | PR #151 merged (hook-test-coverage recovery, all 6 originally/newly-flagged files fixed, 345/345 in `src/test/hooks/`); doc counts refreshed repo-wide to 279 files / 4,199 tests after confirming the full local suite completes (previously documented as timing out — not reproduced this run). Added J2: PaperClip (`paperclipai/paperclip`) concept-sourcing notes. | PR #151 (merged, all required CI green); `docs/STRATEGY_PAPERCLIP_REFERENCE.md` (gitignored); `docs/governance/DEFERRED_WORK.md` 2026-08-20 entry. |
 
