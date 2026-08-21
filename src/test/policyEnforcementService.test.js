@@ -55,6 +55,12 @@ describe('policyEnforcementService', () => {
       expect(classifyConnectorRisk('whatsapp')).toBe('high');
     });
 
+    it('returns high for hermes_agents unconditionally, regardless of actionType (a Hermes profile can run real tools on any call)', () => {
+      expect(classifyConnectorRisk('hermes_agents')).toBe('high');
+      expect(classifyConnectorRisk('hermes_agents', 'hermesAgentDelegation')).toBe('high');
+      expect(classifyConnectorRisk('hermes_agents', 'some_unrelated_action')).toBe('high');
+    });
+
     it('returns high for publish action', () => {
       expect(classifyConnectorRisk('notion', 'publish_content')).toBe('high');
     });
@@ -204,6 +210,27 @@ describe('policyEnforcementService', () => {
       const result = evaluatePolicyGate({ connectorId: 'unknown_connector' });
       expect(result.ok).toBe(true);
       expect(result.blocked).toBe(false);
+    });
+
+    it('blocks hermes_agents in approval mode without approval (same high-risk gate as telegram/whatsapp/youtube)', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+      const result = evaluatePolicyGate({ connectorId: 'hermes_agents', actionType: 'hermesAgentDelegation', approved: false });
+      expect(result.ok).toBe(false);
+      expect(result.blocked).toBe(true);
+      expect(result.reason).toContain('Approval Mode');
+    });
+
+    it('allows hermes_agents in approval mode once approved:true', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ approvalMode: true }));
+      const result = evaluatePolicyGate({ connectorId: 'hermes_agents', actionType: 'hermesAgentDelegation', approved: true });
+      expect(result.ok).toBe(true);
+      expect(result.blocked).toBe(false);
+    });
+
+    it('does not block hermes_agents on Zero-Cost Mode — it is local/self-hosted, not paid/metered', () => {
+      localStorage.setItem('alphonso_settings', JSON.stringify({ zeroCostMode: true, approvalMode: false }));
+      const result = evaluatePolicyGate({ connectorId: 'hermes_agents', actionType: 'hermesAgentDelegation', approved: false });
+      expect(result.ok).toBe(true);
     });
   });
 

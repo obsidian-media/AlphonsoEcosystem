@@ -217,7 +217,8 @@ export function BoardroomChatView() {
         priorMessages,
         newMessageText: text,
         crossThreadContext,
-        signal: controller.signal
+        signal: controller.signal,
+        threadId: activeThreadId
       });
 
       if (stopRequestedRef.current) {
@@ -280,7 +281,8 @@ export function BoardroomChatView() {
       topic: activeThread.topic,
       priorMessages,
       newMessageText: message.retryContext,
-      crossThreadContext
+      crossThreadContext,
+      threadId: activeThreadId
     });
     const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
     addThreadMessage({

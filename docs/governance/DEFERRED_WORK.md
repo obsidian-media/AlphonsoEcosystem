@@ -23,6 +23,56 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   it needs to be re-derived or requested from the owner — the summary in TFEP
   §I and this entry are not a substitute for the full file. Status: design
   complete, awaiting owner go-ahead to start PR 1a.
+  **2026-08-21:** both PR 1a (merged 2026-08-19, PR #165) and PR 1b
+  (hardening — circuit breaker/rate limiter tuning, audit logging,
+  policy/approval gating, session continuity) are now **done**. 1a was also
+  live-verified for real against a running Hector Hermes profile (see
+  `docs/TRUTH_FIRST_EXECUTION_PLAN.md` §I1 for the session-log evidence).
+  Status: **1a/1b code complete and merged** (PR #168), but **not fully
+  resolved end-to-end** — a real gap remains, flagged not hidden: Approval
+  Mode now defaults to `true` app-wide, so Hermes calls are blocked by
+  default and none of the 9 real call sites yet pass `approved:true`.
+  Hermes is not usable end-to-end until either the user disables Approval
+  Mode, or a follow-up wires real `requestApproval()` UI into at least one
+  call site (Boardroom's `generateAgentResponse`/`BoardroomChatView.tsx`
+  and Jose's Miya/Hector builders in `joseExecutionEngineService.ts` are
+  the 5 sites that need it — tracked as a new deferred item below, not
+  silently left in this entry's prose). Phase 2 (bundling) remains not
+  started per its own explicit gate.
+
+- [2026-08-21] **Hermes approval-flow wiring** (the gap named just above):
+  none of Hermes' 5 real-command call sites pass `approved:true` to the
+  policy gate, so with Approval Mode on (the default) every Hermes call is
+  blocked before it reaches the profile. Deferred rather than built in PR
+  #168 because it requires threading `App.tsx`'s `requestApproval()`
+  React-context bridge into non-React service call sites
+  (`joseExecutionEngineService.ts`, `boardroomFacilitatorService.ts`) —
+  a real architecture question (does Jose's pipeline get its own
+  approval-resolution step, or does Boardroom show its own inline consent
+  UI before calling `generateAgentResponse`?), not a plumbing-only fix.
+  Resume hint: `docs/HERMES_AGENT_DELEGATION_PLAN.md` §1b.2 has the
+  original scope note; decide the UX shape first (one shared approval gate
+  vs. per-surface), then wire `approved` through call sites named there.
+
+- [2026-08-21] **Hermes Zero-Cost Mode bypass via a non-loopback endpoint**:
+  `saveHermesAgentEndpoint` accepts any URL, and `hermes_agents` is
+  deliberately excluded from `PAID_OR_METERED_CONNECTORS` on the stated
+  assumption that every Hermes profile is local/self-hosted (same posture
+  as Ollama) — but nothing actually verifies the saved endpoint is a
+  loopback address. A user (or a misconfigured/malicious credential entry)
+  pointing "Hermes" at a real remote paid API would bypass Zero-Cost Mode
+  entirely. Pre-existing since PR 1a, not introduced by PR #168 — but PR
+  #168 added a test (`policyEnforcementService.test.js` — "does not block
+  hermes_agents on Zero-Cost Mode") that documents this behavior as current
+  fact without flagging it as a gap, which is corrected by this entry.
+  Deferred rather than fixed in #168 because the real fix needs a design
+  decision this repo hasn't made yet: what counts as "local" (bare
+  loopback only, or also a user's own remote box reached via Tailscale,
+  which `docs/HERMES_AGENT_DELEGATION_PLAN.md`'s Phase 2 discusses as a
+  legitimate future case)? Resume hint: decide the locality policy, then
+  add an endpoint-locality check in `hermesAgentConnector.ts` before the
+  policy gate call, gated on that decision — see
+  `src/services/connectors/hermesAgentConnector.ts`'s `sendHermesAgentMessage`.
 
 - [2026-08-14] `recover/hook-test-coverage` branch (PR #151 open against
   `main`, CI red as of 2026-08-16): the rescued stash@0 test suite, now

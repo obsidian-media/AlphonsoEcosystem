@@ -259,6 +259,47 @@ export async function checkGenericWebhookConnection(): Promise<HealthCheckResult
   };
 }
 
+/**
+ * Hermes is per-agent (up to 9 independent profiles, each its own endpoint),
+ * unlike every other connector this panel checks — so this aggregates across
+ * all configured agents rather than probing a single fixed endpoint. Agent
+ * ids come from `agentRegistry.js`, never a hardcoded list, per the design
+ * doc's "no hardcoding, enforced at every layer" rule.
+ */
+export async function checkHermesAgentsConnection(): Promise<HealthCheckResult> {
+  const startTime = timestampMs();
+  const { listAgentProfiles } = await import('../agents/agentRegistry');
+  const { isHermesAgentConfigured, getHermesAgentHealth } = await import('./connectors/hermesAgentConnector');
+
+  const agents = listAgentProfiles();
+  const configuredIds = agents.map((a: { id: string }) => a.id).filter((id: string) => isHermesAgentConfigured(id));
+
+  if (configuredIds.length === 0) {
+    return {
+      ok: false,
+      message: 'No Hermes agent profiles configured.',
+      latency: measureLatency(startTime),
+      details: { reason: 'missing_config', configured: [] }
+    };
+  }
+
+  const perAgent = await Promise.all(
+    configuredIds.map(async (id: string) => ({ id, health: await getHermesAgentHealth(id) }))
+  );
+  const reachable = perAgent.filter((a) => a.health.ok);
+
+  return {
+    ok: reachable.length > 0,
+    message: `${reachable.length}/${configuredIds.length} configured Hermes agent profile(s) reachable.`,
+    latency: measureLatency(startTime),
+    details: {
+      configured: configuredIds,
+      reachable: reachable.map((a) => a.id),
+      unreachable: perAgent.filter((a) => !a.health.ok).map((a) => ({ id: a.id, error: a.health.error }))
+    }
+  };
+}
+
 export async function checkN8nConnection(): Promise<HealthCheckResult> {
   const startTime = timestampMs();
   const { isN8nHealthy } = await import('./connectors/n8nConnector');
@@ -306,6 +347,8 @@ export async function checkConnectorHealth(connectorId: string, options: { botTo
       return checkGenericWebhookConnection();
     case 'n8n':
       return checkN8nConnection();
+    case 'hermes_agents':
+      return checkHermesAgentsConnection();
     case 'brave_search':
       return checkApiKeyConfigured('brave_search', 'BRAVE_SEARCH_API_KEY', 'Brave Search');
     case 'perplexity':

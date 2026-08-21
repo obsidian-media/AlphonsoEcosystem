@@ -144,7 +144,14 @@ export function classifyConnectorRisk(connectorId: string, actionType: string = 
 
   let risk: ConnectorRiskLevel = 'low';
   if (id === 'youtube' || action.includes('publish') || action.includes('upload')) risk = 'high';
-  else if (id === 'telegram' || id === 'whatsapp') risk = 'high';
+  // hermes_agents: unlike a bare chat-completion connector, a Hermes profile
+  // is a full standing agent (terminal, code_execution, delegation, cronjob,
+  // memory — see docs/HERMES_AGENT_DELEGATION_PLAN.md §1b.2) that can run real
+  // tools while producing its answer, depending on that profile's own tool
+  // config this app cannot see client-side. Classified high unconditionally
+  // (like telegram/whatsapp), not by actionType pattern, since any call can
+  // trigger tool use regardless of what actionType string is passed.
+  else if (id === 'telegram' || id === 'whatsapp' || id === 'hermes_agents') risk = 'high';
   else if (id === 'chatgpt' || id === 'claude' || id === 'qwen' || id === 'notion' || id === 'clickup' || id === 'github' || id === 'slack' || id === 'discord') risk = 'medium';
 
   policyCache.set(cacheKey, risk, RISK_CACHE_TTL);
