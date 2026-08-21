@@ -1084,7 +1084,9 @@ dropped.
   - Not started, no code changes. `docs/STRATEGY_PAPERCLIP_REFERENCE.md`
     (gitignored, machine-local; see `.gitignore`) reviews `paperclipai/paperclip`
     (an adjacent, non-competing agent-team management platform, MIT/TS,
-    ~79k stars) and lists 5 design concepts worth building in Alphonso's own
+    ~79k stars as observed 2026-08-20 via `https://github.com/paperclipai/paperclip`
+    — re-check before citing, star counts move) and lists 5 design concepts
+    worth building in Alphonso's own
     stack — not code to vendor. Ranked by the doc: budget-gated execution
     (extends `resourceCostService.ts` + `policyEnforcementService.ts`,
     smallest lift), an out-of-process adapter for real external coding

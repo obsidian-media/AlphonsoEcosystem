@@ -572,7 +572,7 @@ fn proof_markdown(
   let mut lines = vec![
     "# Alphonso Native RC0 Proof".to_string(),
     String::new(),
-    format!("- runtime: `native_tauri`"),
+    "- runtime: `native_tauri`".to_string(),
     format!("- proofState: `{proof_state}`"),
     format!("- workspaceRoot: `{workspace_root}`"),
     format!("- filesScanned: {}", scan.files_scanned),

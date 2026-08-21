@@ -369,7 +369,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~package.json version stale~~ — **CLOSED 2026-07-01** (bumped to 2.5.0)
 - ~~Dependabot PRs (8 safe)~~ — **CLOSED 2026-07-01** (merged #77–#80, #82, #84, #86, #87; left open: #81 rand 0.10 breaking, #83 tailwindcss v4 breaking, #85 vite-plugin-react v6 major)
 - Branch protection on `main` — still OPEN (manual GitHub step; MCP doesn't expose branch protection API)
-- functions coverage at 5.88% — threshold lowered to 0 to unblock CI; real gap remains
+- ~~functions coverage at 5.88% — threshold lowered to 0 to unblock CI~~ — **CLOSED 2026-08-20**, see the coverage entry near line 321 above (44.86% actual, 30% enforced floor).
 - ~~No LICENSE~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (`LICENSE` — SHALAUDE v1.0, all-rights-reserved, source-visible; see `ALPHONSOTOTHEMOON.md` §1)
 - ~~Skill packs not cross-checked against agent contracts~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (`validateSkillPackAgainstContract` in `agentContractService.ts`, wired into `skillPackService.ts` install/enable paths)
 - ~~5 of 9 agents (Alphonso, Marcus, Echo, Sentinel, Nova) had no default skill pack~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (all 9 agents now have an `agent_skill` category pack in `skillPackService.ts`)
