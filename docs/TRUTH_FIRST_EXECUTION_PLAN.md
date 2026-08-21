@@ -1159,18 +1159,22 @@ dropped.
     "effectively unusable until a call site passes approved:true" note
     above.
 
-- [ ] **I3 — Bundle Hermes for new users (Phase 2, design-only today)**
+- [ ] **I3 — Bundle Hermes for new users (Phase 2, design complete, not started)**
   - **Owner:** unassigned
-  - Not started, not scoped for immediate work — a bundled Hermes install
-    (managed venv, per-profile fresh key generation, minimal safe default
-    config, dynamic port allocation) so a brand-new user gets this
-    capability without hand-building profiles. Comparable in scope to
+  - Not started, not yet scoped into an implementation task — a bundled
+    Hermes install (managed venv, per-profile fresh key generation, minimal
+    safe default config, dynamic port allocation) so a brand-new user gets
+    this capability without hand-building profiles. Comparable in scope to
     `docs/DEPENDENCY_BUNDLING_PLAN.md` itself; full acceptance criterion,
     mechanism, and REPO_RULES-grade verification steps are written out in
     the plan doc §Phase 2 — deliberately fully specified, not a stub, per
-    explicit owner instruction not to leave it half-done. Requires the
-    owner's explicit go-ahead and a decision on §2.5's rollout-scope
-    question before implementation starts.
+    explicit owner instruction not to leave it half-done.
+  - **§2.5 rollout-scope decision: RESOLVED 2026-08-21** — owner confirmed
+    per-agent opt-in (zero profiles bundled by default; only provisions on
+    explicit "set up a local Hermes profile for this agent" action), matching
+    the plan doc's own recommendation. This was the one open product call
+    blocking implementation scope — now clear to scope into a real task
+    whenever work on it starts.
   - **Independent prerequisite, do any time:** the Hermes profiles on this
     dev machine currently have duplicate/near-duplicate `api_server` keys
     across Miya/Alphonso/Marcus — a real credential-leak-blast-radius issue,
