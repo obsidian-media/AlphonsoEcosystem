@@ -174,6 +174,7 @@ function TaskCard({ task, onUpdate }: { task: Task; onUpdate: (taskId: string, p
           <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">{task.priority} · {owner.name}</div>
         </div>
         <select
+          aria-label={`Status for ${task.title}`}
           value={task.status}
           onChange={(event) => onUpdate(task.id, { status: event.target.value as MissionTaskStatus })}
           className={cx('rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-widest outline-none', statusTone(task.status))}
@@ -350,7 +351,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             {messages.map((message) => <MessageBubble key={message.id} message={message} />)}
           </div>
           <div className="mt-3 flex flex-col gap-2 rounded-[1.5rem] border border-white/10 bg-zinc-950/80 p-3 md:flex-row">
-            <select value={speaker} onChange={(event) => setSpeaker(event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm font-bold text-zinc-200 outline-none">
+            <select aria-label="Speaking as" value={speaker} onChange={(event) => setSpeaker(event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm font-bold text-zinc-200 outline-none">
               {Object.values(MISSION_ROOM_AGENTS).map((agent) => <option key={agent.key} value={agent.key}>{agent.name}</option>)}
             </select>
             <textarea

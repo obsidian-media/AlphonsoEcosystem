@@ -94,7 +94,7 @@ function FieldSelect({ label, value, onChange, options }: FieldSelectProps): Rea
   return (
     <div>
       <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
+      <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-amber-400/40">
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

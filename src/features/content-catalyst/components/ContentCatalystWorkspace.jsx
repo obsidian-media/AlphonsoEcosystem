@@ -272,8 +272,8 @@ export function ContentCatalystWorkspace({ settings, onJobChange, onApprovalRequ
           <p className="mt-1 text-sm font-semibold text-zinc-200">Make the asset. Ship the story.</p>
           <p className="mt-1 text-xs text-zinc-400">Brief → copy → image → motion → approved distribution. Every output stays attached to the job.</p>
           <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wider">
-            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-zinc-300">{analytics?.totalDrafts ?? 0} drafts</span>
-            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-zinc-300">{analytics?.publishedCount ?? 0} published</span>
+            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-zinc-300">{analytics?.total ?? 0} drafts</span>
+            <span className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-zinc-300">{analytics?.published ?? 0} published</span>
             <span className={`rounded-full border px-2.5 py-1 ${activeJob?.status === 'failed' ? 'border-rose-400/30 text-rose-200' : 'border-cyan-400/30 text-cyan-200'}`}>{creativeState}</span>
           </div>
         </div>

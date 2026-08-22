@@ -656,7 +656,7 @@ export function OperatorDashboard({
             <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2 space-y-2">
               <div className="text-[11px] text-zinc-500 uppercase tracking-widest">OCR Adapter Run</div>
               <div className="grid grid-cols-2 gap-2">
-                <select value={ocrAdapter} onChange={(event) => setOcrAdapter(event.target.value)} className="bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px]">
+                <select aria-label="OCR adapter" value={ocrAdapter} onChange={(event) => setOcrAdapter(event.target.value)} className="bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px]">
                   <option value="version_check">version_check</option>
                   <option value="tesseract_cli">tesseract_cli</option>
                 </select>

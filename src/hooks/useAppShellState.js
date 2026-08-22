@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from '@tauri-apps/api/event';
-import { getStorage } from '../lib/appStorage';
+import { getStorage, setStorage } from '../lib/appStorage';
 import { INITIAL_CONVERSATION_ID, VERIFICATION_LOG_CAP, SNAPSHOT_HISTORY_CAP, MEMORY_EXPIRY_MS, SCREEN_OBSERVER_INTERVAL_MS, companionStateFromVoice, coachMessageFromVoice } from '../constants/appConstants';
 import { listMemoryItems, pushMemoryItem } from '../services/memoryService';
 import { listSnapshots, createSnapshot, restoreSnapshotById, backupMemoryLedger } from '../services/recoveryService';
@@ -22,7 +22,16 @@ export function useAppShellState({
   voice, toast
 }) {
   const [activeTab, setActiveTab] = useState('mission');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Regression fix for a real QA finding: sidebar collapse state was never
+  // persisted, unlike the theme toggle — always reset to open on reload.
+  const [isSidebarOpen, setIsSidebarOpenRaw] = useState(() => getStorage('alphonso_sidebar_open_v1', true));
+  const setIsSidebarOpen = useCallback((next) => {
+    setIsSidebarOpenRaw((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      setStorage('alphonso_sidebar_open_v1', resolved);
+      return resolved;
+    });
+  }, []);
   const [conversations, setConversations] = useState(() => getStorage('alphonso_conversations', [
     { id: INITIAL_CONVERSATION_ID, title: 'New Chat Session', timestamp: Date.now() }
   ]));
@@ -114,7 +123,14 @@ export function useAppShellState({
 
   const createNewChat = useCallback(() => {
     // Logic from App.jsx
-    const newId = `chat-${Date.now()}`;
+    // Regression fix for a real QA finding: two rapid createNewChat calls
+    // (e.g. a fast double-click, or the Ctrl+N tray shortcut firing back-to-
+    // back with the sidebar '+' button) can land in the same millisecond,
+    // making Date.now() alone produce two conversations with an identical
+    // id — Sidebar keys its list on chat.id, so React silently drops one of
+    // the two entries from the DOM while both remain in state, which reads
+    // to the user as a duplicate/missing chat in Recent Chats.
+    const newId = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const newChat = { id: newId, title: 'Unsaved Chat', timestamp: Date.now() };
     setConversations((current) => [newChat, ...current]);
     setActiveChatId(newId);

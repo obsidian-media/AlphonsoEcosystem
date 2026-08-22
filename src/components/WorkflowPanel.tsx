@@ -43,7 +43,7 @@ export function WorkflowPanel({ onClose, onRunWorkflow }: Props) {
             <ListChecks className="h-4 w-4 text-zinc-300" />
             <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-200">Workflows</h2>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:bg-white/5">
+          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-zinc-400 hover:bg-white/5">
             <X className="h-4 w-4" />
           </button>
         </div>

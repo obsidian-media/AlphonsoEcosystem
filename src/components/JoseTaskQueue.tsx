@@ -145,7 +145,7 @@ export function JoseTaskQueue({ onRefresh }: JoseTaskQueueProps) {
         </div>
         <div className="flex items-center gap-2 text-[10px] text-zinc-600">
           <span>cmds: {commands.length}</span>
-          <button onClick={refresh} className="hover:text-zinc-300 transition-colors"><RefreshCw className="w-3 h-3" /></button>
+          <button onClick={refresh} aria-label="Refresh task queue" className="hover:text-zinc-300 transition-colors"><RefreshCw className="w-3 h-3" /></button>
         </div>
       </div>
 

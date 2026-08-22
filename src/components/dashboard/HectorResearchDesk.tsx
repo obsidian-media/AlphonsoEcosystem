@@ -203,7 +203,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source Type</label>
-                <select value={sourceType} onChange={(e) => setSourceType(e.target.value)}
+                <select aria-label="Source Type" value={sourceType} onChange={(e) => setSourceType(e.target.value)}
                   className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none">
                   {(HECTOR_SOURCE_TYPES as string[]).map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
                 </select>

@@ -641,6 +641,7 @@ export function OrchestratorView({
             )}
             <button
               type="button"
+              aria-label="Refresh all"
               onClick={refreshAll}
               className="rounded-lg border border-white/[0.08] bg-zinc-900/60 p-2 text-zinc-400 hover:text-zinc-200 transition-colors"
             >
@@ -739,6 +740,7 @@ export function OrchestratorView({
                   className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-amber-200/30"
                 />
                 <select
+                  aria-label="Route target"
                   value={routeTarget}
                   onChange={(e) => setRouteTarget(e.target.value)}
                   className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none"
