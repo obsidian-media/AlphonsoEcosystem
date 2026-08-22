@@ -49,7 +49,7 @@ export function VoiceView() {
     setWsUrl(getVoiceWebSocketUrl());
     setPythonFound(prereqs.status === 'fulfilled' ? Boolean(prereqs.value?.pythonFound) : null);
 
-    if (tools.status === 'fulfilled') {
+    if (tools.status === 'fulfilled' && Array.isArray(tools.value)) {
       const voiceOs = tools.value.find((tool) => tool.name === 'voice-os');
       setRuntime({ checked: true, installed: Boolean(voiceOs?.installed), running: Boolean(voiceOs?.running) });
     } else {

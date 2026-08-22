@@ -43,6 +43,44 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   pre-existing tests across the 6 affected component/service test files
   still passing — no regression.
 
+- [2026-08-22] **External QA sweep (3 rounds, browser-based, Ollama stubbed) —
+  21 findings triaged into 6 workstreams; Workstream 1 (null-unsafe Tauri
+  bridge) fixed same day.** A third-party QA pass (Slack, real Chromium
+  against the Vite dev server) found the app's browser-dev-mode Tauri mock
+  (`index.html`: `window.__TAURI_INTERNALS__.invoke` resolves
+  `Promise.resolve(null)` for every command absent a real Tauri webview) is a
+  landmine for any consumer that doesn't null-guard an `invoke()` result.
+  **Fixed:** `VoiceView.tsx`'s `tools.value.find(...)` crashed the whole app
+  (`Cannot read properties of null (reading 'find')`) and got stuck behind
+  index.html's boot-error overlay — no dismiss/reload action existed, so one
+  crash anywhere locked out every view until a manual page reload.
+  `ConnectorHealthPanel.tsx`'s `validateConnectorCredentials()` had the same
+  bug class: `presence[k]` on a null `check_env_vars_presence` result leaked
+  a raw `TypeError` string into the Validate button's result text. Fixed:
+  (1) `runtimeManagerService.ts`'s `getAllStatus()`/`listTools()` now default
+  to `[]` instead of passing through a possible `null` — fixes it at the
+  source for every consumer, not just VoiceView; (2) `VoiceView.tsx` also
+  guards defensively at the call site (`Array.isArray` check); (3)
+  `ConnectorHealthPanel.tsx`'s `presence` defaults to `{}`; (4) `index.html`'s
+  boot-error overlay now only stays a full-screen click-blocker for a
+  genuine pre-render boot failure — once the app has rendered once
+  (`__ALPHONSO_BOOT_READY__` fired), a later runtime error no longer
+  resurrects the lockout (React's existing `ErrorBoundary`/`ViewErrorBoundary`
+  own recovery for that case instead), and the panel now also ships a
+  "Reload app" button for the genuine-boot-failure case. Regression tests
+  added: `voiceView.test.jsx`, `runtimeManagerService.test.js` (null → `[]`),
+  `ConnectorHealthPanel.test.jsx` (Validate no longer shows raw `TypeError`
+  text). `tsc --noEmit` clean, lint clean, all 3 affected test files passing
+  (30/30). **Remaining workstreams from the same QA sweep, not yet started:**
+  session/chat data integrity (history not rehydrated, "New chat" doesn't
+  isolate sessions, delete-chat has no confirm), duplicated `deriveStatus()`
+  causing connector-count drift (+ Content Studio's matching 3-counter bug),
+  6+ hardcoded `localhost:11434` call sites ignoring the configured endpoint,
+  Miya fabricating a full content package from empty inputs, dead/inert
+  buttons (workflow Run, connector TEST, Boardroom kanban drag), and an a11y
+  sweep (635 axe-core contrast violations, 23 unlabeled selects, 16 unlabeled
+  buttons). Source report (gitignored, machine-local): `Q&A E2E Test.md`.
+
 - [2026-08-21] **Windows/Linux Tauri installer builds broken since 2026-08-16 —
   release pipeline currently non-functional.** `ci.yml`'s `Tauri Desktop
   Build` (Windows) and `Tauri Desktop Build (Linux)` jobs have failed on

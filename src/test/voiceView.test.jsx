@@ -88,6 +88,27 @@ describe('VoiceView', () => {
     expect(screen.getByRole('button', { name: /start local voice/i })).toBeDisabled();
   });
 
+  it('does not crash when getAllStatus resolves null (outside Tauri, e.g. plain browser dev mode)', async () => {
+    // Regression for a real QA-reported crash: `window.__TAURI_INTERNALS__.invoke`
+    // resolves `Promise.resolve(null)` for every command outside a real Tauri
+    // webview (see index.html), so tools.value.find(...) threw
+    // "Cannot read properties of null (reading 'find')" and locked the whole
+    // app behind the boot-error overlay. getAllStatus() itself no longer
+    // resolves null (guarded in runtimeManagerService.ts), but this asserts
+    // VoiceView also degrades gracefully if a null ever reaches it.
+    const { getVoiceServerStatus } = await import('../services/voiceOsService');
+    const { checkPrerequisites, getAllStatus } = await import('../services/runtimeManagerService');
+    getVoiceServerStatus.mockResolvedValue('stopped');
+    checkPrerequisites.mockResolvedValue({ pythonFound: true });
+    getAllStatus.mockResolvedValue(null);
+
+    const { VoiceView } = await import('../components/VoiceView');
+    expect(() => render(<VoiceView />)).not.toThrow();
+
+    expect(await screen.findByText(/Checking the managed runtime/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start local voice/i })).toBeDisabled();
+  });
+
   it('keeps Cloud Voice explicitly pending until physical-device verification', async () => {
     const { getVoiceServerStatus } = await import('../services/voiceOsService');
     getVoiceServerStatus.mockResolvedValue('stopped');
