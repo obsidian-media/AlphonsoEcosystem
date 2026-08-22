@@ -122,7 +122,7 @@ class MDNSService: ObservableObject {
     /// Stripping the suffix here keeps the host usable for standard URL construction; the (rare,
     /// link-local-address) tradeoff is documented in the deferred-work register.
     /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
-    static func sanitizedHostString(from host: NWEndpoint.Host) -> String {
+    nonisolated static func sanitizedHostString(from host: NWEndpoint.Host) -> String {
         switch host {
         case .ipv4(let address):
             return stripInterfaceSuffix("\(address)")
@@ -141,7 +141,7 @@ class MDNSService: ObservableObject {
     /// it can be unit-tested directly with plain strings — constructing a real scoped
     /// `NWEndpoint.Host` requires a live `NWInterface`, which has no test-friendly initializer.
     /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
-    static func stripInterfaceSuffix(_ raw: String) -> String {
+    nonisolated static func stripInterfaceSuffix(_ raw: String) -> String {
         guard let separator = raw.firstIndex(of: "%") else { return raw }
         return String(raw[..<separator])
     }
