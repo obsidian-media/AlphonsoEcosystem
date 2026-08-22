@@ -262,6 +262,22 @@ Video generation stays fully out per the acceptance criterion.
 - [ ] **O4** — Verify a full chat round-trip (send message → real model
   response) works with network disabled after install, not just that the
   Ollama process starts.
+- [x] **O5** — Done 2026-08-21, in response to the real Windows/Linux
+  installer-build break tracked in `docs/governance/DEFERRED_WORK.md`'s
+  2026-08-21 entry (root cause: bundling both `cuda_v12` and `cuda_v13`
+  pushed the NSIS installer past a `makensis` data-block limit).
+  `scripts/fetch-ollama-runtime.mjs` now prunes `lib/ollama/cuda_v13` after
+  staging, keeping `cuda_v12` (backward-compatible with newer drivers too,
+  at a larger footprint than keeping only v13 would have been — the
+  deliberate tradeoff, see the comment above `CUDA_VARIANT_TO_DROP` in that
+  script). Verified for real: ran the fetch script end-to-end against the
+  live `windows-amd64` v0.32.13 asset before and after the change —
+  `cuda_v13` confirmed absent post-fetch, `cuda_v12` (~1.1GB) and the small
+  `vulkan` fallback dir (~50MB) still present. **Not yet verified:** whether
+  this is sufficient to actually clear CI's `Tauri Desktop Build`/
+  `Tauri Desktop Build (Linux)` failures — needs a real CI run, not local
+  extraction alone. Linux's `linuxdeploy` failure hasn't been independently
+  confirmed to share the same root cause as Windows's `makensis` failure.
 
 ### PY — Python / Voice OS
 
