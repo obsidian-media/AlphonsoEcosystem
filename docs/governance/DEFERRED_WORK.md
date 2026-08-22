@@ -7,6 +7,40 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-22] **QA sweep Workstream 6 (workflow Run silently never
+  executes) — fixed same day.** Continuation of the 2026-08-22 external QA
+  sweep (Workstreams 1–5 already merged, see those entries). **Fixed QA
+  N-4** ("workflow Run does nothing — no run, no error, no history, no
+  dead-letter entry"): `WorkflowBuilderView.tsx`'s Run button called
+  `runVisualWorkflow()`, which only ever creates a **queued** run record
+  (persists it, appends a timeline entry and a receipt) and returns — it
+  never actually executes the stages. Nothing else in the codebase ever
+  picks a visual-builder run back up, so it sat at `status: 'queued'`
+  forever with zero further observable effect, matching QA's "silent"
+  description exactly. Fixed by calling `executeWorkflowRun(run.id)`
+  immediately after queuing — the same second call
+  `WorkflowOperationsDashboard.tsx` already makes for the *other* (parallel,
+  operations-registry) workflow system, now applied consistently to the
+  visual-builder side too. **Bonus bug found while fixing this:** the old
+  success-message code read `result?.runId`, but `runVisualWorkflow()`'s
+  real return shape is `{ ok, run: { id, ... } }` — `result.runId` never
+  existed, so even the "Run started" toast was already dead code before
+  today; the run outcome message now reads the real `run.status`
+  (`completed`/`partial`/blocked-stage-count) instead of a fixed string.
+  Regression tests: 2 new cases in
+  `src/test/components/WorkflowBuilderView.test.tsx` (Run actually calls
+  `executeWorkflowRun` with the queued run's real id and shows "Run
+  completed"; a partial/blocked outcome surfaces the blocked-stage count
+  rather than a silent success). Existing test mock for
+  `workflowExecutionService` corrected to match the real function shapes.
+  `tsc --noEmit` clean, lint clean, all 6 tests in that file (4 pre-existing
+  + 2 new) passing, no regression in `workflowExecutionService.test.js` (2
+  tests) or the separate `WorkflowBuilderView.test.jsx` (7 tests).
+  **Not yet investigated in this pass:** the other two dead-button findings
+  from the same QA sweep — connector TEST button being inert, and Boardroom
+  kanban cards having zero draggable DOM nodes — are separate components
+  with separate root causes, still open.
+
 - [2026-08-22] **QA sweep Workstream 5 (Miya empty-input fabrication guard) —
   fixed same day.** Continuation of the 2026-08-22 external QA sweep
   (Workstreams 1–4 fixed separately, see those entries once merged).
