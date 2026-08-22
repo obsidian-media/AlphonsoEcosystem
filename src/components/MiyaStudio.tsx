@@ -1587,6 +1587,7 @@ function YouTubePublishHandoffPanel({ output, publishDraft, setPublishDraft, onC
           placeholder="Local video file path (for connector upload)"
         />
         <select
+          aria-label="YouTube privacy status"
           value={publishDraft.privacyStatus}
           onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setPublishDraft((current) => ({ ...current, privacyStatus: event.target.value }))}
           className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm text-zinc-200"

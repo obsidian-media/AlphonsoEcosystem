@@ -132,6 +132,7 @@ export function WorkflowBuilderView() {
             <button
               onClick={handleCreate}
               disabled={!newName.trim()}
+              aria-label="Create workflow"
               className="px-2 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 disabled:opacity-40 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />

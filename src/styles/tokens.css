@@ -25,11 +25,20 @@
   --info: oklch(75% 0.16 220);
   --info-dim: oklch(75% 0.16 220 / 0.12);
 
-  /* Text */
+  /* Text
+     text-3/text-4 lightness bumped (45%->62%, 32%->48%) — a real QA finding
+     from an axe-core WCAG AA sweep (635 contrast violations app-wide, driven
+     overwhelmingly by these two tokens since they're used for nearly every
+     secondary/tertiary label, timestamp, and placeholder). This is a
+     token-level fix at the source rather than a per-node patch, matching
+     axe-core's own recommended remediation; full re-audit against a real
+     browser wasn't run as part of this fix (no browser tooling available
+     here), so treat this as a material improvement, not a proven 0-violation
+     result. */
   --text-1: oklch(96% 0.01 255);
   --text-2: oklch(72% 0.025 255);
-  --text-3: oklch(45% 0.025 255);
-  --text-4: oklch(32% 0.02 255);
+  --text-3: oklch(62% 0.025 255);
+  --text-4: oklch(48% 0.02 255);
 
   /* Border */
   --border: oklch(100% 0 0 / 0.07);
@@ -110,8 +119,8 @@
 
   --text-1: oklch(15% 0.01 255);
   --text-2: oklch(38% 0.02 255);
-  --text-3: oklch(58% 0.018 255);
-  --text-4: oklch(72% 0.012 255);
+  --text-3: oklch(48% 0.018 255);
+  --text-4: oklch(60% 0.012 255);
 
   --border: oklch(0% 0 0 / 0.08);
   --border-strong: oklch(0% 0 0 / 0.16);

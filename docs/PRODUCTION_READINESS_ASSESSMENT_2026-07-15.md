@@ -23,9 +23,9 @@ roadmap (§6):
 | **T6** PIN lockout | ✅ done, merged | 5-attempt lockout + PIN invalidation + constant-time compare |
 | **T11** Persistence recovery + migrations | ✅ done, merged | kv backup now read-back/recoverable; versioned migration runner; write-loss race fixed |
 | **T12** Fail-open DSL default | ✅ done, merged | connector DSL risk-tiered; `require_consent` enforced for publish/paid sends |
-| **T10** E2E repair | ⏳ partial, merged | collection fixed (0→28 collect); ~22 specs stale; job made **advisory** (owner-approved, temporary); specs repair still open |
+| **T10** E2E repair | ✅ done, 2026-08-22 | collection fixed (0→28 collect) since 2026-07-16; specs themselves went green as a side effect of unrelated bug fixes in the 2026-08-22 QA batch (#174–183) — confirmed via 5 consecutive CI runs on `main`, all 28/28 passing, before removing `continue-on-error` from the `e2e` job and re-adding it to required branch-protection contexts |
 | **T3** Secret-scan triage | ✅ done, 2026-07-16 | not a real leak — `secrets-scan` job's `base`/`head` both resolved to the pushed commit on every direct push to `main` (only differed on PRs), so TruffleHog's own action refused to run ("BASE and HEAD commits are the same") and hard-failed every push-to-main run for months; fixed by diffing against `github.event.before` on push / PR base sha on PRs; added a proper disclosure/response section + automated-scanning summary to `SECURITY.md` (previously just a fix-log, no reporting process) |
-| **T4** Branch protection | ✅ done, 2026-07-16 | protection already partially existed (Test & Build + Rust Tests & Clippy required, 1 review required, force-push/deletion blocked) — that's why merging PR #99 needed `--admin`. Added `Secrets Scan (TruffleHog)` and `Doc Count Freshness` to the required-contexts list now that both are reliably green (T1-T3). `Playwright E2E Smoke Test` intentionally left out of the required list per T10's advisory decision. `enforce_admins` left `false` — single/small-maintainer repo, an admin override remains available for exactly the kind of judgment call made merging PR #99 |
+| **T4** Branch protection | ✅ done, 2026-07-16, updated 2026-08-22 | protection already partially existed (Test & Build + Rust Tests & Clippy required, 1 review required, force-push/deletion blocked) — that's why merging PR #99 needed `--admin`. Added `Secrets Scan (TruffleHog)` and `Doc Count Freshness` to the required-contexts list once both were reliably green (T1-T3). `Playwright E2E Smoke Test` was intentionally left out of the required list per T10's advisory decision — added back 2026-08-22 now that T10 is closed. `enforce_admins` is confirmed `true` live as of 2026-08-22 (the 2026-07-16 note claiming `false` was never re-verified until now — this session did not change it) |
 | T13 keychain, T14 lib.rs split, T15 updater verify, T16 iOS pairing live-verify, T17 observability, T18 svc-role key, T19 doc-gen, T20 budgets | ▶ **not started** | tracked below and in CLAUDE.md's Real Gaps list |
 
 **Note on `LICENSE_TRUST_KEY`:** T5 ships fail-closed — `src/config/licenseTrustKey.ts` exports `null` until the vendor generates a real ECDSA-P256 key pair (`node scripts/issue-license.mjs --generate-keys`) and pastes the public JWK in. No paid tier can be granted until that happens; this is intentional, not a bug.
@@ -37,12 +37,18 @@ this branch merges with branch protection on. The remaining lift to 7–8 is the
 structural work (persistence schema, observability, `lib.rs` split, OS-keychain,
 E2E repair), not more Critical firefighting.
 
-**Honest caveat on E2E:** the Playwright suite was red-on-collection for months
-(so it gated nothing), and ~22 specs now fail as stale UI assertions that need
-live-app iteration to repair. The job has been made advisory
-(`continue-on-error`) by owner decision so the real gates can gate meanwhile; it
-still runs and reports. This is explicitly temporary — the flag is removed and
-E2E returns to blocking once the specs are green (T10).
+**Update 2026-08-22 — E2E caveat resolved (T10 closed):** the Playwright suite
+was red-on-collection for months (so it gated nothing), and once collection was
+fixed ~22 of 28 specs failed as stale UI assertions. The job was made advisory
+(`continue-on-error`) by owner decision so the real gates could gate meanwhile.
+Nobody had re-checked since 2026-07-16 whether the specs went green — they had:
+5 consecutive CI runs on `main` (2026-08-22) all show 28/28 passing, almost
+certainly a side effect of the real UI bugs fixed across that day's QA batch
+(#174–183: chat-switch leak, connector-status drift, workflow Run, etc.), not a
+deliberate E2E-repair effort. Verified directly against live CI logs before
+touching anything, then removed `continue-on-error` from the `e2e` job in
+`ci.yml` and re-added `Playwright E2E Smoke Test` to the required
+branch-protection contexts — it blocks merges again like every other gate.
 
 ---
 
@@ -292,15 +298,14 @@ Sequenced so an engineer can execute top-to-bottom. Each task: Priority · Categ
 - **Complexity:** Medium.
 - **DoD:** Adversarial tests exist and fail against the old (broken) implementations.
 
-### T10 — Fix the E2E smoke suite and add auth E2E
+### T10 — Fix the E2E smoke suite and add auth E2E — ✅ CLOSED 2026-08-22
 - **Priority:** High · **Category:** Testing
-- **Problem:** `multiagent.spec.js` breaks at setup; E2E gate red.
-- **Root cause:** `addInitScript`/`beforeEach` path or tauri-mock issue.
-- **Plan:** Repair the setup; add an E2E for license activation (forged vs valid) and companion pairing happy-path.
-- **Files:** `e2e/multiagent.spec.js`, `e2e/tauri-mock.js`, new specs.
-- **Dependencies:** T1.
-- **Complexity:** Medium.
-- **DoD:** All 7 E2E specs pass in CI.
+- **Problem (as of 2026-07-16):** `multiagent.spec.js` breaks at setup; E2E gate red.
+- **Root cause (2026-07-16):** `addInitScript`/`beforeEach` path or tauri-mock issue; collection fixed same day, leaving ~22/28 specs failing as stale UI-interaction assertions. Made advisory (`continue-on-error: true`) rather than blocking merges on an unrepaired suite.
+- **What actually closed it (2026-08-22):** nobody had gone back to check whether the ~22 stale specs got fixed — they had, as a side effect of unrelated real-bug fixes across the same day's QA-fix batch (#174–183: `ChatView.tsx` chat-switch leak, `connectorStatusService.ts` drift, `WorkflowBuilderView.tsx`'s Run button, Miya fabrication guard, etc.), not a dedicated E2E-repair pass. Verified against 5 consecutive CI runs on `main` before touching anything — all 5 show 28/28 passing. Removed `continue-on-error` from the `e2e` job in `ci.yml` and re-added `Playwright E2E Smoke Test` to the required branch-protection contexts.
+- **Files:** `.github/workflows/ci.yml` (this pass); the specs themselves were fixed incidentally in `#174–183`, not directly touched here.
+- **Not done:** the "add an E2E for license activation / companion pairing happy-path" half of the original plan was never built — the 28 specs that now pass are the pre-existing smoke suite, not new coverage. Still a legitimate follow-up if deeper E2E coverage is wanted.
+- **DoD:** All 28 existing E2E specs pass in CI and the job is a required (blocking) check again. ✅
 
 ### T11 — Harden persistence: schema + migration for the KV/localStorage store
 - **Priority:** High · **Category:** Database

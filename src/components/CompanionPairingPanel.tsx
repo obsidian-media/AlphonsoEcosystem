@@ -116,6 +116,7 @@ export function CompanionPairingPanel() {
               <button
                 onClick={copyPin}
                 className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                aria-label="Copy PIN"
                 title="Copy PIN"
               >
                 {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-zinc-400" />}

@@ -5,7 +5,7 @@ import { getVerificationLogs } from './services/verificationService';
 import { appendVerificationLog } from './services/verificationService';
 import { TRUST_STATES } from './services/trustModel';
 import { sendNativeNotification } from './services/notificationService';
-import { checkAppUpdate } from './services/appUpdateService';
+import { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } from './services/appUpdateService';
 import { logApprovalEvent } from './services/agentAuditService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
@@ -451,7 +451,13 @@ function AppShell() {
     if (typeof window.__TAURI_INTERNALS__ === 'undefined') return;
     (async () => {
       try {
-        const { checkAppUpdate, getLastUpdateNotice, setLastUpdateNotice } = await import('./services/appUpdateService');
+        // Regression fix: this used to dynamically import appUpdateService,
+        // but checkAppUpdate is already statically imported above (used as
+        // an onCheckUpdates prop for SettingsView/RightPanel) — Vite can't
+        // split a module into its own chunk when it's also statically
+        // imported elsewhere, so this "dynamic" import produced zero
+        // code-splitting benefit and only added a needless async hop
+        // (a real QA finding: 4 such ineffective dynamic imports in App.tsx).
         const result = await checkAppUpdate({
           endpoint: 'https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest/download/latest.json',
           pubkey: 'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJENzgyMEY4MkZGMTE3OUMKUldTY0YvRXYrQ0I0TGRlVWt2cmZhcGVaUVRtQ0lZcDZkZUl5YmxqcEZvbjFYTG01ZnJvWVgwMUgK'

@@ -943,7 +943,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
           <div className="border-t border-white/10 p-4 space-y-4">
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[11rem_1fr_12rem]">
-              <select value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+              <select aria-label="Connector to route" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
                 {connectors.map((c) => <option key={`route-${c.id}`} value={c.id}>{c.name}</option>)}
               </select>
               <input value={simulatedText} onChange={(e) => setSimulatedText(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Simulated command text" />
@@ -960,7 +960,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[10rem_1fr_1fr_auto_auto]">
-              <select value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+              <select aria-label="Connector for outbound message" value={connectorId} onChange={(e) => setConnectorId(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
                 {connectors.map((c) => <option key={`outbound-${c.id}`} value={c.id}>{c.name}</option>)}
               </select>
               {connectorId === 'youtube' ? (
@@ -994,7 +994,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_10rem]">
                 <input value={youtubeDescription} onChange={(e) => setYoutubeDescription(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Description (optional)" />
                 <input value={youtubeTags} onChange={(e) => setYoutubeTags(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100" placeholder="Tags, comma-separated" />
-                <select value={youtubePrivacy} onChange={(e) => setYoutubePrivacy(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+                <select aria-label="YouTube privacy" value={youtubePrivacy} onChange={(e) => setYoutubePrivacy(e.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
                   <option value="private">private</option>
                   <option value="unlisted">unlisted</option>
                   <option value="public">public</option>

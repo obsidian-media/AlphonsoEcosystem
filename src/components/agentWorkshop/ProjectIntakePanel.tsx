@@ -43,7 +43,7 @@ export function ProjectIntakePanel({ intake, setIntake, presets = {}, onApplyPre
         <input className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" placeholder="Project name" value={intake.projectName} onChange={(e) => setIntake({ ...intake, projectName: e.target.value })} />
         <input className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" placeholder="Stack" value={intake.stack} onChange={(e) => setIntake({ ...intake, stack: e.target.value })} />
         <input className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" placeholder="Deadline" value={intake.deadline} onChange={(e) => setIntake({ ...intake, deadline: e.target.value })} />
-        <select className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" value={intake.projectType} onChange={(e) => setIntake({ ...intake, projectType: e.target.value })}>
+        <select aria-label="Project type" className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm" value={intake.projectType} onChange={(e) => setIntake({ ...intake, projectType: e.target.value })}>
           <option value="web_app">web app</option>
           <option value="saas">SaaS</option>
           <option value="desktop_app">local desktop app</option>

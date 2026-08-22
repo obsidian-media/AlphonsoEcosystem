@@ -414,6 +414,7 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
             )}
             <div className="flex items-center gap-2 border-t border-[var(--border)] p-3">
               <select
+                aria-label="Speaking as"
                 value={composerSpeaker}
                 onChange={(e) => setComposerSpeaker(e.target.value)}
                 className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-xs text-[var(--text-1)]"

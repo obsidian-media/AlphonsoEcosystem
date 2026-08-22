@@ -316,6 +316,7 @@ export function WorkflowOperationsDashboard({ settings }: Props) {
                   placeholder="Workflow input"
                 />
                 <select
+                  aria-label="Trigger type"
                   value={triggerType}
                   onChange={(event) => setTriggerType(event.target.value)}
                   className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"

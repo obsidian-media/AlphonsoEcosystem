@@ -142,6 +142,7 @@ export function SentinelAllowlistPanel() {
             className="flex-1 min-w-0 px-2 py-1 text-[11px] rounded bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent)]"
           />
           <select
+            aria-label="Allowlist entry type"
             value={form.type}
             onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'domain' | 'path' | 'ip' }))}
             className="px-1.5 py-1 text-[11px] rounded bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-1)] focus:outline-none w-16"
@@ -152,6 +153,7 @@ export function SentinelAllowlistPanel() {
           </select>
           <button
             type="submit"
+            aria-label="Add allowlist entry"
             className="px-2 py-1 text-[11px] rounded bg-emerald-600/20 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
           >
             <Plus className="w-3 h-3" />

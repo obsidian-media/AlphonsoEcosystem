@@ -170,7 +170,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
     <div className="flex flex-col gap-1.5">
       <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
         <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
-        <select value={selected} onChange={handleChange}
+        <select aria-label={selected || 'Select Ollama model'} value={selected} onChange={handleChange}
           className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[140px] truncate"
           title={selected || 'Select Ollama model'}>
           {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
@@ -259,7 +259,7 @@ export function CloudModelPicker({ provider, selectedModel, onModelChange }: Clo
   return (
     <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
       <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
-      <select value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
+      <select aria-label={selectedModel || 'Select a model'} value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
         className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
         title={selectedModel || 'Select a model'}>
         {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
@@ -326,7 +326,7 @@ export function HermesModelPicker({ agentId, selectedModel, onModelChange }: Her
   return (
     <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
       <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
-      <select value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
+      <select aria-label={selectedModel || 'Select a model'} value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
         className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
         title={selectedModel || 'Select a model'}>
         {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
