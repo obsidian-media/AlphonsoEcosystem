@@ -177,6 +177,7 @@ final class VoiceSessionViewModel: ObservableObject {
     private var cloudService = VoiceCloudService()
     private var localTranscriptSender: ((String, String, String) -> String?)?
     private var pendingLocalCommandID: String?
+    private var pendingLocalDraftText: String?
     private var lastSpokenMessageID: UUID?
     private var lastCloudResponse: VoiceCloudResponse?
     private var pendingCloudMessageID: UUID?
@@ -357,6 +358,7 @@ final class VoiceSessionViewModel: ObservableObject {
         cloudService.stopPlayback()
         self.mode = mode
         pendingLocalCommandID = nil
+        pendingLocalDraftText = nil
         phase = .idle
         statusMessage = "\(mode.title) mode selected"
     }
@@ -412,6 +414,7 @@ final class VoiceSessionViewModel: ObservableObject {
                 return
             }
             pendingLocalCommandID = commandID
+            pendingLocalDraftText = trimmed
         case .cloud:
             cloudSubmissionTask = Task { [weak self] in
                 guard let self else { return }
@@ -439,6 +442,7 @@ final class VoiceSessionViewModel: ObservableObject {
 
         lastSpokenMessageID = message.id
         pendingLocalCommandID = nil
+        pendingLocalDraftText = nil
         appendAssistantReply(message.text, delivery: .spoken)
         phase = .speaking
         statusMessage = "Speaking reply through \(providerTitle)"
@@ -450,6 +454,12 @@ final class VoiceSessionViewModel: ObservableObject {
         pendingLocalCommandID = nil
         phase = .idle
         statusMessage = "Could not send to the paired desktop: \(message)"
+        // Restore the draft so the user can retry without retyping — and so `canSend`
+        // (which requires a non-empty draft) reflects that a retry is actually possible.
+        if let pendingLocalDraftText {
+            draftTranscript = pendingLocalDraftText
+        }
+        pendingLocalDraftText = nil
     }
 
     @discardableResult
@@ -497,6 +507,7 @@ final class VoiceSessionViewModel: ObservableObject {
         statusMessage = "Conversation cleared"
         lastSpokenMessageID = nil
         pendingLocalCommandID = nil
+        pendingLocalDraftText = nil
         lastCloudResponse = nil
         pendingCloudMessageID = nil
     }
