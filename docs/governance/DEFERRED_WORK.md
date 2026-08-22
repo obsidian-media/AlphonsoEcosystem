@@ -31,6 +31,33 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   cases — disabled state, hint message, no model call on a forced click,
   re-enables once real content exists). `tsc --noEmit` clean, lint clean.
 
+- [2026-08-22] **QA sweep Workstream 3 (connector-count drift) — fixed same
+  day.** Continuation of the 2026-08-22 external QA sweep (Workstream 1 —
+  null-unsafe Tauri bridge; Workstream 2 — chat session integrity — both
+  fixed separately, see those entries once merged). **Root-caused QA N-13**
+  ("connector counts disagree with each other" — sidebar "21 disabled" vs.
+  panel "0 live | 0 missing config | 4 local only | 19 disabled" over the
+  same 25 connectors): `ConnectorStatusIndicators.tsx` (sidebar) and
+  `ConnectorHealthPanel.tsx` (view) each had their OWN copy of
+  `deriveStatus()` that had drifted apart — the panel's copy classified
+  chatgpt/claude with zero credentials as a distinct `'placeholder'` bucket;
+  the sidebar's copy had no such rule and folded those same connectors into
+  `'disabled'` instead. Same data, two different classifications, two
+  different on-screen counts. Fixed by extracting one shared, exported
+  `deriveConnectorStatus()` into a new `src/services/connectorStatusService.ts`
+  (kept the panel's more complete logic, since the placeholder distinction is
+  a real UX nuance worth having, not something to drop) — both components now
+  import it instead of maintaining their own copy. Regression test:
+  `connectorStatusService.test.js` (8 cases pinning every branch of the
+  classification, including the placeholder rule that was the actual point
+  of drift) — this test alone would have caught the original fork the moment
+  either copy changed without the other. `tsc --noEmit` clean, lint clean,
+  pre-existing `ConnectorHealthPanel.test.jsx` (3 tests) still passing.
+  **Not yet investigated in this pass:** Content Studio's separate
+  three-counters bug (QA N-12 — header "0 DRAFTS" vs. tab badge "DRAFTS 1"
+  vs. analytics panel numbers) is a different component with a different
+  root cause, not covered by this fix — still open.
+
 - [2026-08-22] **QA sweep Workstream 2 (chat session integrity) — fixed same
   day.** Continuation of the 2026-08-22 external QA sweep (Workstream 1 —
   null-unsafe Tauri bridge — fixed separately, see that entry once merged).
