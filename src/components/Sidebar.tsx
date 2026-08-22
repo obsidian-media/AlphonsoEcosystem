@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Bot,
@@ -104,6 +104,21 @@ const NAV_SECTIONS: NavSection[] = [
 export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
   const { theme, toggleTheme } = useTheme();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDeleteTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleDeleteClick(chatId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (pendingDeleteId === chatId) {
+      if (pendingDeleteTimerRef.current) clearTimeout(pendingDeleteTimerRef.current);
+      setPendingDeleteId(null);
+      onDeleteChat(chatId, e);
+      return;
+    }
+    setPendingDeleteId(chatId);
+    if (pendingDeleteTimerRef.current) clearTimeout(pendingDeleteTimerRef.current);
+    pendingDeleteTimerRef.current = setTimeout(() => setPendingDeleteId(null), 3000);
+  }
 
   return (
     <aside className={`${isOpen ? 'w-52' : 'w-14'} flex flex-col transition-all duration-300 ease-in-out bg-[var(--surface-1)] shrink-0 border-r border-[var(--border)]`}>
@@ -194,9 +209,14 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                 >
                   <span className="truncate">{chat.title}</span>
                   <button
-                    onClick={(e) => onDeleteChat(chat.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-danger/20 hover:text-danger rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:opacity-100"
-                    aria-label={`Delete chat: ${chat.title}`}
+                    onClick={(e) => handleDeleteClick(chat.id, e)}
+                    className={`p-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:opacity-100 ${
+                      pendingDeleteId === chat.id
+                        ? 'opacity-100 bg-danger/20 text-danger'
+                        : 'opacity-0 group-hover:opacity-100 hover:bg-danger/20 hover:text-danger'
+                    }`}
+                    aria-label={pendingDeleteId === chat.id ? `Confirm delete chat: ${chat.title}` : `Delete chat: ${chat.title}`}
+                    title={pendingDeleteId === chat.id ? 'Click again to confirm delete' : 'Delete chat'}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
