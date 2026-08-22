@@ -5,6 +5,7 @@ import { listAgentActivity } from './agentActivityService';
 import { listJoseCommands, createJoseCommandRoute } from './joseCommandRouterService';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { getStorage, setStorage } from '../lib/appStorage';
+import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const POLL_MS = 15000;
 const OWNER_NUMBER_KEY = 'alphonso_whatsapp_owner_number';
@@ -67,7 +68,7 @@ async function checkOllamaOnline(): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const response = await fetch('http://localhost:11434/api/tags', { signal: controller.signal });
+    const response = await fetch(`${getConfiguredOllamaEndpoint()}/api/tags`, { signal: controller.signal });
     clearTimeout(timeoutId);
     return response.ok;
   } catch {

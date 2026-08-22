@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GripHorizontal, Minus, ChevronDown, Wifi, WifiOff } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { AgentAvatar } from './AgentAvatar';
+import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const STORAGE_KEY = 'alphonso_agent_dock_minimized_v1';
 const POSITION_STORAGE_KEY = 'alphonso_agent_dock_position_v1';
@@ -51,7 +52,7 @@ function useOllamaStatus(): boolean | null {
     let cancelled = false;
     async function check() {
       try {
-        const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2000) });
+        const res = await fetch(`${getConfiguredOllamaEndpoint()}/api/tags`, { signal: AbortSignal.timeout(2000) });
         if (!cancelled) setOnline(res.ok);
       } catch {
         if (!cancelled) setOnline(false);

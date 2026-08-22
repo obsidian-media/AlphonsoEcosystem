@@ -24,6 +24,7 @@ import {
 } from '../services/connectorRegistryService';
 import { checkConnectorHealth } from '../services/connectorHealthCheckService';
 import { deriveConnectorStatus } from '../services/connectorStatusService';
+import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 interface Connector {
   id: string;
@@ -122,7 +123,7 @@ async function testConnector(connectorId: string): Promise<TestResult> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2000);
-      const res = await fetch('http://localhost:11434/api/tags', { signal: controller.signal });
+      const res = await fetch(`${getConfiguredOllamaEndpoint()}/api/tags`, { signal: controller.signal });
       clearTimeout(timer);
       return res.ok
         ? { ok: true, message: 'Ollama reachable' }

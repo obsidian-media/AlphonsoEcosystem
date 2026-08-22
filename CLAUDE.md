@@ -105,6 +105,7 @@ Before writing any new service, component, or feature, check this list:
 | KV store Rust commands | `src-tauri/src/kv_store.rs` — `kv_set`, `kv_get`, `kv_delete`, `save_settings`, `load_settings` |
 | Playwright config + E2E test | `playwright.config.js` + `e2e/smoke.spec.js` (Chromium installed) |
 | Multi-turn Ollama chat | `generateOllamaChatStream` in `src/lib/ollama.js` (uses `/api/chat`) |
+| Configured Ollama endpoint (for non-component code) | `getConfiguredOllamaEndpoint()` in `src/lib/ollama.ts` — reads persisted `alphonso_settings.endpoint`. Do NOT hardcode `http://localhost:11434` in a new service/component — that exact bug (6+ call sites ignoring the Settings endpoint field) was found and fixed 2026-08-22, see `docs/governance/DEFERRED_WORK.md`. React components that already receive `settings` as a prop should keep using `settings.endpoint` directly. |
 | JSON response parser | `src/lib/jsonUtils.js` — `parseJsonResponse` (strips ``` fences, parses JSON). Do not re-add to joseExecutionEngineService. |
 | Agent activity log wiring | `appendAgentActivity` imported in `joseExecutionEngineService` + `connectorRegistryService` |
 | GitHub connector | `src/services/connectors/githubConnector.ts` — issues, PRs, releases, code search, workflows |

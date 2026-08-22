@@ -34,6 +34,81 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   vs. analytics panel numbers) is a different component with a different
   root cause, not covered by this fix — still open.
 
+- [2026-08-22] **QA sweep Workstream 2 (chat session integrity) — fixed same
+  day.** Continuation of the 2026-08-22 external QA sweep (Workstream 1 —
+  null-unsafe Tauri bridge — fixed separately, see that entry once merged).
+  **Root-caused and fixed a real cross-chat data leak (QA N-1 "chat history
+  saved but never restored" + N-15 "New chat doesn't isolate sessions" turned
+  out to be the SAME bug, not two):** `ChatView.tsx` had two effects keyed
+  off `activeChatId` — one to load/clear messages for the newly-active chat,
+  one to persist the current `messages` array to that chat's storage key.
+  Both effects ran in the same React commit when `activeChatId` changed
+  (switching chats), but the persist effect used the OLD `messages` value
+  (the load effect's `setMessages([])` hadn't been applied to state yet at
+  that point in the same commit) — so it wrote the *previous* chat's
+  messages into the *new* chat's storage key, which the load effect's own
+  fallback read then read straight back, resurrecting old history inside a
+  chat that should have started empty. Fixed by removing `activeChatId` from
+  the persist effect's dependency array (it's read from the closure, not
+  used to retrigger the effect — the effect should only fire on a real
+  `messages` change, which is always correctly ordered after the load effect
+  applies). Confirmed via a real reproduction test (not assumed): first
+  attempt at a regression test passed even against the unfixed code because
+  the test's own `setConversations` mock was recreated fresh every render
+  (unlike React's guaranteed-stable `useState` setter in the real app) — that
+  additional instability was itself enough to explain a failure independent
+  of the real bug, so the test was corrected to use one stable mock
+  reference across renders before trusting its result either way.
+  **Also fixed (N-9):** chat delete had no confirmation — one click,
+  instant, irreversible. `Sidebar.tsx`'s delete button now requires two
+  clicks (first arms a "confirm" state with a 3-second auto-reset second
+  click actually deletes), no new modal component needed.
+  **Not yet investigated in this pass:** the QA report's `RECENT CHATS`
+  duplicate-entry symptom may or may not be a separate bug from the one
+  fixed here — worth re-testing against this fix before assuming it's also
+  resolved. Regression tests added: `chatViewRehydration.test.jsx` (2 tests:
+  rehydration works when durable memory is unavailable; switching chats
+  doesn't leak the old chat's messages into the new one's storage key),
+  `sidebarDeleteChat.test.jsx` (3 tests: first click arms, second confirms,
+  timeout resets). `tsc --noEmit` clean, lint clean, all pre-existing
+  `ChatView.test.jsx` tests (15) still passing — no regression.
+
+- [2026-08-22] **QA sweep Workstream 4 (hardcoded Ollama endpoint) — fixed
+  same day.** Continuation of the 2026-08-22 external QA sweep (Workstreams
+  1–3 fixed separately, see those entries once merged). **Fixed QA N-14**
+  ("endpoint propagation — measured, not inferred": QA repointed Settings'
+  "Ollama API Endpoint" at a second Ollama on `:11500` and captured, at the
+  network layer, that chat correctly followed the new host while several
+  other panels/services kept polling the old `:11434` default). Root cause:
+  6+ call sites had `http://localhost:11434` hardcoded as a literal string
+  instead of reading the user's configured endpoint. Added
+  `getConfiguredOllamaEndpoint()` to `src/lib/ollama.ts` (reads persisted
+  `alphonso_settings.endpoint` via `getStorage`, falls through
+  `normalizeEndpoint()`'s existing default logic) — the one place
+  non-component code without a `settings` prop/context should read the
+  endpoint from. Fixed call sites: `AgentDock.tsx`, `ConnectorHealthPanel.tsx`,
+  `ModelSwitcher.tsx` (2 module-level URL constants converted to per-call
+  functions, since a constant captured once at import time would go stale
+  the moment Settings changes without a reload), `telegramCompanionService.js`
+  (2 sites), `whatsappCompanionService.ts`, and one QA didn't explicitly
+  name but is the same bug class: `OllamaPreflightPanel.tsx`'s default prop
+  value — `OperatorDashboard.tsx` renders it with no `endpoint` prop at all,
+  so it always silently used the hardcoded default.
+  `externalAgentAdapter.js`'s `options.endpoint || 'http://localhost:11434'`
+  fallback fixed the same way. **Deliberately NOT touched:**
+  `hectorResearchService.js`'s two `endpoint: 'http://localhost:11434'`
+  occurrences are cosmetic fallback values inside a `.catch()` error-object
+  literal (never used to make a live request — the real `invoke()` call
+  already passes `endpoint: null` and lets the Rust side resolve it), and
+  `SettingsContext.jsx`'s default is the settings object's own legitimate
+  default value, not a bypass. Regression tests:
+  `connectorOllamaEndpointConfig.test.js` (4 cases, including the exact
+  QA repro of repointing to `:11500`); updated 2 pre-existing test mocks
+  (`OllamaPreflightPanel.test.jsx`, `externalAgentAdapter.test.js`) that
+  didn't yet stub the new export. `tsc --noEmit` clean, lint clean, all 68
+  pre-existing tests across the 6 affected component/service test files
+  still passing — no regression.
+
 - [2026-08-22] **External QA sweep (3 rounds, browser-based, Ollama stubbed) —
   21 findings triaged into 6 workstreams; Workstream 1 (null-unsafe Tauri
   bridge) fixed same day.** A third-party QA pass (Slack, real Chromium
