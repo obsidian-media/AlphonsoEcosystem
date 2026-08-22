@@ -7,6 +7,30 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-22] **QA sweep Workstream 5 (Miya empty-input fabrication guard) —
+  fixed same day.** Continuation of the 2026-08-22 external QA sweep
+  (Workstreams 1–4 fixed separately, see those entries once merged).
+  **Fixed QA N-11** — the most principle-violating finding in the whole
+  sweep: Miya's "Generate Package" button in `MiyaStudio.tsx` produced a
+  complete fabricated deliverable (hook, 4 scenes, shot list, image prompts,
+  narration reading "Topic: Untitled") from entirely empty pipeline inputs,
+  directly contradicting the product's own stated differentiator ("does not
+  fake completed renders" — see the Boardroom/Hector honesty patterns
+  elsewhere in this codebase). Root cause: `canGenerate` only checked model
+  connectivity (`settings.selectedModel && ollamaStatus.state ===
+  'connected'`), never whether the user had actually typed anything.
+  Added a separate `hasRequiredInput` check (any of idea/topic/niche/goal/
+  script non-empty after trim) — mirrors the pattern the YouTube publish
+  flow already used for its own required-field validation, which the QA
+  report explicitly pointed to as "your own handoff already shows how."
+  Guarded in three places: the button's `disabled` condition (with a
+  distinct hint message from the existing "Connect Ollama" one, so the two
+  failure reasons don't get confused), the `title` tooltip, and defensively
+  inside `generateScriptToVideoPackage()` itself in case it's ever invoked
+  another way. Regression test: `miyaStudioEmptyInputGuard.test.jsx` (4
+  cases — disabled state, hint message, no model call on a forced click,
+  re-enables once real content exists). `tsc --noEmit` clean, lint clean.
+
 - [2026-08-21] **Windows/Linux Tauri installer builds broken since 2026-08-16 —
   release pipeline currently non-functional.** `ci.yml`'s `Tauri Desktop
   Build` (Windows) and `Tauri Desktop Build (Linux)` jobs have failed on
