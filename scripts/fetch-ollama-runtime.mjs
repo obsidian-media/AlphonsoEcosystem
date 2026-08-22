@@ -9,6 +9,24 @@
 //
 // Pinned deliberately, not "latest" — bump OLLAMA_VERSION and the matching
 // checksums together, after re-verifying both against a real release.
+//
+// CUDA variant trim (2026-08-21, installer-size fix): Windows/Linux ship BOTH
+// cuda_v12 (~1.1GB uncompressed) and cuda_v13 (~630MB uncompressed) backend
+// directories under lib/ollama/ — shipping both pushed the Windows NSIS
+// installer past a data-block size makensis chokes on ("error mmapping
+// datablock"), breaking every Windows/Linux desktop build since 2026-08-16
+// (docs/governance/DEFERRED_WORK.md). Real measured sizes verified 2026-08-21
+// by actually extracting the v0.32.13 windows-amd64 archive, not estimated.
+// Dropping cuda_v13 and keeping cuda_v12 is the deliberate choice: NVIDIA
+// drivers are backward-compatible (a driver new enough for v13 also runs v12
+// binaries), so keeping v12 preserves GPU acceleration for the widest driver
+// range at the larger of the two footprints; keeping only v13 would save more
+// space but silently drop CUDA support for anyone without the newest driver.
+// macOS has no cuda_v* directories at all (Apple GPU path is separate), so
+// this only ever applies to windows-amd64/linux-amd64 — the prune step below
+// is a no-op if the directory isn't present, so it doesn't need a platform
+// check of its own.
+const CUDA_VARIANT_TO_DROP = 'cuda_v13';
 
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -162,6 +180,22 @@ async function normalizeLayout(extractedDir, vendorDir) {
   );
 }
 
+// Real path verified 2026-08-21 by actually extracting the windows-amd64
+// v0.32.13 archive: lib/ollama/cuda_v12 and lib/ollama/cuda_v13, sitting
+// alongside the CPU-only ggml-cpu-*.dll variants and a small vulkan/
+// fallback dir. No-op (not an error) if the path doesn't exist — covers
+// macOS, which never had cuda_v* dirs, and any future release layout change
+// without needing a separate platform branch here.
+async function pruneCudaVariant(vendorDir, variant) {
+  const cudaDir = join(vendorDir, 'lib', 'ollama', variant);
+  if (!existsSync(cudaDir)) {
+    process.stdout.write(`[fetch-ollama-runtime] no ${variant} directory to prune (${cudaDir}) — skipping\n`);
+    return;
+  }
+  await rm(cudaDir, { recursive: true, force: true });
+  process.stdout.write(`[fetch-ollama-runtime] pruned ${cudaDir} (installer-size fix — see the CUDA variant trim note near OLLAMA_VERSION)\n`);
+}
+
 async function main() {
   const platformKey = resolvePlatformKey();
   const asset = ASSETS[platformKey];
@@ -189,6 +223,7 @@ async function main() {
   extract(archivePath, asset.kind, extractedPath);
 
   await normalizeLayout(extractedPath, VENDOR_DIR);
+  await pruneCudaVariant(VENDOR_DIR, CUDA_VARIANT_TO_DROP);
   await rm(DOWNLOAD_DIR, { recursive: true, force: true });
 
   // normalizeLayout() wipes VENDOR_DIR before repopulating it, which also

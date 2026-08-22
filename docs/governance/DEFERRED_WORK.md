@@ -8,35 +8,44 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 ## Items
 
 - [2026-08-21] **Windows/Linux Tauri installer builds broken since 2026-08-16 —
-  release pipeline currently non-functional, discovered incidentally, not yet
-  fixed.** `ci.yml`'s `Tauri Desktop Build` (Windows) and
-  `Tauri Desktop Build (Linux)` jobs have failed on every push to `main`
-  since commit `e387067` ("Implement WIN1 (WebView2 offline installer) and
-  O1/O3 (bundle Ollama runtime)", 2026-08-16) — confirmed via
-  `gh run list --branch main`: last success `31929916332` (2026-08-16), every
-  run since has failed. macOS build is unaffected (still succeeds). Root
-  cause (not yet independently verified by rebuilding smaller, but highly
-  likely given the timing and error shape): that commit bundles the full
-  Ollama runtime — including CUDA v12/v13 backend libraries, easily 1GB+ —
-  plus a WebView2 offline installer (+~127MB) directly into the app via
-  `tauri.conf.json`'s `bundle.resources`. Windows fails with
-  `Internal compiler error #12345: error mmapping datablock to 33618611` from
-  `makensis` (a known NSIS class of bug tied to oversized data blocks);
-  Linux fails with `failed to run linuxdeploy` during AppImage assembly. Both
-  only fail at the final packaging step — `cargo build --release` itself
-  succeeds on both platforms every time, so this is purely an
-  installer-bundling limit, not a code-compilation regression. These jobs
-  are not required branch-protection checks, which is why 5+ days of broken
-  releases went unnoticed. Not fixed here because it needs a real design
-  decision (same class of tradeoff `DEPENDENCY_BUNDLING_PLAN.md` already
-  flagged as Option 1 vs. smaller alternatives) — e.g. download Ollama at
-  first run instead of embedding it in the installer, split CUDA variants
-  into optional downloads, or verify whether increasing runner
-  memory/switching NSIS solid-compression settings is sufficient — not
-  something to silently pick. Resume hint: reproduce locally with
-  `npm run tauri build` on Windows to confirm the size theory before
-  committing to a fix direction; check `src-tauri/vendor/ollama/` bundle
-  size directly as the fastest way to confirm/refute the root-cause theory.
+  release pipeline currently non-functional.** `ci.yml`'s `Tauri Desktop
+  Build` (Windows) and `Tauri Desktop Build (Linux)` jobs have failed on
+  every push to `main` since commit `e387067` ("Implement WIN1 (WebView2
+  offline installer) and O1/O3 (bundle Ollama runtime)", 2026-08-16) —
+  confirmed via `gh run list --branch main`: last success `31929916332`
+  (2026-08-16), every run since has failed. macOS build is unaffected (still
+  succeeds). Root cause, confirmed 2026-08-21 by actually downloading and
+  extracting the real `ollama-windows-amd64.zip` (v0.32.13) rather than
+  estimating: `lib/ollama/cuda_v12` is ~1.1GB uncompressed, `cuda_v13` is
+  ~630MB — shipping both pushed the Windows NSIS installer past a
+  `makensis` data-block size limit (`error mmapping datablock`, a known NSIS
+  bug class for oversized single blocks); Linux fails separately with
+  `failed to run linuxdeploy` during AppImage assembly, not yet independently
+  root-caused (may or may not be the same size story — `linuxdeploy` is a
+  different tool with a different failure mode). Both only fail at the final
+  packaging step — `cargo build --release` succeeds on both platforms every
+  time.
+  **Fix attempted same day, Option 2 of the three considered (owner chose
+  this order: try Option 2, then 3, then 1):** `scripts/fetch-ollama-runtime.mjs`
+  now prunes `lib/ollama/cuda_v13` after staging, keeping only `cuda_v12` —
+  verified for real by running the fetch script end-to-end twice (before/after
+  the change) against the live `windows-amd64` asset on this machine: the
+  `cuda_v13` directory is confirmed absent from `src-tauri/vendor/ollama/`
+  post-fetch, `cuda_v12` and the small `vulkan` fallback dir remain. Kept v12
+  over v13 deliberately — NVIDIA drivers are backward-compatible, so v12
+  binaries run on both older and newer driver installs, while dropping v12
+  instead would have saved more space (~1.1GB vs. ~630MB) at the cost of
+  silently losing GPU acceleration for anyone without the newest driver.
+  **Not yet verified:** whether this cut is enough to actually clear the
+  NSIS/linuxdeploy failures — that needs a real CI Tauri Desktop Build run,
+  not local extraction alone. If CI still fails, the agreed fallback order is
+  Option 3 (split lite installer + separate runtime downloader), then as a
+  last resort Option 1 (download Ollama at first run instead of bundling it,
+  which reverses `DEPENDENCY_BUNDLING_PLAN.md`'s explicit "works offline on
+  first launch" decision from 2026-08-16 — only accept that regression if
+  2 and 3 both fail). Resume hint: watch the next `main` push's `Tauri
+  Desktop Build`/`Tauri Desktop Build (Linux)` job results; if still red,
+  move to Option 3 before Option 1.
 
 - [2026-08-18] Hermes agent-backend delegation (per-agent Ollama/NVIDIA/Gemini/Hermes
   provider picker, wiring 9 in-app agents to a separate live Hermes Agent
