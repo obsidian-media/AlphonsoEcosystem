@@ -501,7 +501,17 @@ export function ChatView({
         return { ...conversation, title };
       }));
     }
-  }, [messages, activeChatId, setConversations]);
+    // activeChatId is deliberately NOT a dependency here — it's read from the
+    // current closure, not used to retrigger this effect. When activeChatId
+    // changes (switching chats), this effect and the load effect above both
+    // have to run in the same commit; if activeChatId were a dependency here
+    // too, this effect would fire using the OLD, not-yet-cleared `messages`
+    // array (setMessages([]) from the load effect hasn't been applied to the
+    // DOM yet at that point) and write the previous chat's messages into the
+    // new chat's storage key — which the load effect's fallback read would
+    // then read straight back, making chat switches leak history into the
+    // new "empty" chat. Only firing on a real `messages` change avoids that.
+  }, [messages, setConversations]);
 
   useEffect(() => {
     if (settings.autoScroll !== false) {
