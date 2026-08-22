@@ -256,6 +256,15 @@ export function MiyaStudio({
   const runwayStartRef = useRef<number | null>(null);
 
   const canGenerate = settings.selectedModel && ollamaStatus.state === 'connected';
+  // Regression fix for a real QA finding (Q&A E2E Test.md N-11): Generate
+  // Package produced a full fabricated deliverable (hook, 4 scenes, shot
+  // list, image prompts, "Topic: Untitled") from entirely empty inputs — the
+  // one thing this app's whole pitch says it doesn't do. CREATE YOUTUBE
+  // PUBLISH REQUEST already validates its own required field; this mirrors
+  // that pattern for the main Generate action, which had none.
+  const hasRequiredInput = Boolean(
+    pipeline.idea.trim() || pipeline.topic.trim() || pipeline.niche.trim() || pipeline.goal.trim() || pipeline.script.trim()
+  );
 
   const companionMessage = useMemo(() => {
     if (isGenerating || isGeneratingMedia) return 'Rendering creative package...';
@@ -272,6 +281,10 @@ export function MiyaStudio({
   }, [canGenerate, isGenerating, isGeneratingMedia, lastError]);
 
   const generateScriptToVideoPackage = async (): Promise<void> => {
+    if (!hasRequiredInput) {
+      setLastError('Enter at least an idea, topic, niche, goal, or script before generating — Miya does not fabricate a package from nothing.');
+      return;
+    }
     setIsGenerating(true);
     setLastError('');
     onStudioStateChange?.('rendering', 'Miya is building script-to-video package.');
@@ -1012,13 +1025,17 @@ export function MiyaStudio({
               <div className="mt-4 flex items-center gap-3">
                 <button
                   onClick={generateScriptToVideoPackage}
-                  disabled={isGenerating || !canGenerate}
+                  disabled={isGenerating || !canGenerate || !hasRequiredInput}
                   className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={!hasRequiredInput ? 'Enter at least one field below first' : undefined}
                 >
                   {isGenerating ? 'Generating…' : 'Generate Package'}
                 </button>
                 {!canGenerate && (
                   <span className="text-[11px] text-zinc-600">Connect Ollama to generate</span>
+                )}
+                {canGenerate && !hasRequiredInput && (
+                  <span className="text-[11px] text-zinc-600">Enter at least one field below first</span>
                 )}
               </div>
               {lastError && (
