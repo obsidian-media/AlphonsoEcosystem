@@ -7,6 +7,29 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-22] **Playwright E2E Smoke Test — roadmap T10 closed, re-added as a
+  required branch-protection check.** The suite was made advisory
+  (`continue-on-error: true`) on 2026-07-16 because ~22 of 28 specs failed as
+  stale UI-interaction assertions right after a collection-time crash was
+  fixed. Nobody had gone back to re-check since. While answering a user
+  question about branch protection during the #183 review, checked 5
+  consecutive CI runs on `main` (2026-08-22) and found all 5 at 28/28
+  passing — the specs almost certainly went green as a side effect of the
+  real UI bugs fixed across the same day's QA batch (#174–183), not a
+  dedicated repair effort. Removed `continue-on-error` from the `e2e` job in
+  `.github/workflows/ci.yml`; added `Playwright E2E Smoke Test` to
+  `main`'s required `required_status_checks.contexts` via the GitHub API
+  (now: Test & Build, Rust Tests & Clippy, Secrets Scan (TruffleHog), Doc
+  Count Freshness, gate, Playwright E2E Smoke Test). Also corrected two
+  stale duplicate "Branch protection — still OPEN" lines in `CLAUDE.md`
+  that predated its actual 2026-07-16 closure and were never removed, and
+  confirmed `enforce_admins` is `true` (a 2026-07-16 note claimed `false`;
+  never re-verified until now — not changed this session, just corrected in
+  docs). Updated `docs/PRODUCTION_READINESS_ASSESSMENT_2026-07-15.md`'s T10
+  row/writeup and T4 row to match. Not done: the original T10 plan's "add
+  new E2E for license activation / companion pairing" was never built —
+  only the pre-existing 28-spec suite was confirmed green and re-armed.
+
 - [2026-08-22] **CI never ran `tsc --noEmit` — real regression slipped
   through to `main` uncaught, gap now closed.** Discovered while rebasing
   an unrelated QA-sweep branch (#180) against `main`: PR #179 had merged 5
