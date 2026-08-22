@@ -57,11 +57,11 @@ export interface PrereqStatus {
 }
 
 export async function getAllStatus(): Promise<ToolStatus[]> {
-  return invoke('runtime_get_all_status');
+  return (await invoke<ToolStatus[]>('runtime_get_all_status')) ?? [];
 }
 
 export async function listTools(): Promise<ToolStatus[]> {
-  return invoke('runtime_list_tools');
+  return (await invoke<ToolStatus[]>('runtime_list_tools')) ?? [];
 }
 
 export async function installTool(name: string, onProgress?: (progress: ProgressEvent) => void): Promise<ToolResult> {
