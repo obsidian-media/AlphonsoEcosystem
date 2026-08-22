@@ -39,6 +39,97 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   until someone ran `tsc --noEmit` by hand. All 6 tests in the file still
   pass; `tsc --noEmit` clean project-wide again.
 
+- [2026-08-22] **QA sweep — bundled remaining findings in one PR (a11y sweep,
+  contrast tokens, Content Studio counters, chat-id collision, sidebar
+  persistence, sourcemaps, one ineffective dynamic import).** Continuation
+  of the 2026-08-22 external QA sweep, bundled per explicit user request
+  after the per-workstream PR pattern (#174-182) produced a costly
+  DEFERRED_WORK.md/doc-count merge-conflict cascade. Fixes: (1) added
+  `aria-label` to all 27 `<select>` elements across 19 component files and
+  11 icon-only `<button>` elements found via static regex sweep for the
+  "icon as sole child, no text, no aria-label" pattern — matches QA's
+  axe-core finding of 23 unlabeled selects / 16 unlabeled buttons, though
+  the exact browser-run count wasn't reproduced (no browser/axe-core
+  available in this environment; static analysis is a lower bound, not a
+  proof of exactly 16). (2) Bumped `--text-3`/`--text-4` contrast tokens in
+  `tokens.css` (dark: 45%/32% → 62%/48%; light: 58%/72% → 48%/60%) — a
+  token-level fix at the root of a reported 635 contrast violations, since
+  these two tokens back nearly every secondary/tertiary label, timestamp,
+  and placeholder app-wide; not re-verified against a real axe-core run for
+  the same reason. (3) Fixed Content Studio's header counters
+  (`ContentCatalystWorkspace.jsx`) reading `analytics?.totalDrafts` /
+  `analytics?.publishedCount`, fields that don't exist on the real
+  `getContentAnalyticsSnapshot()` shape (`total`/`published`) — confirmed
+  by cross-checking `AnalyticsDashboard.jsx`, which already used the
+  correct field names, proving the snapshot shape and isolating the bug to
+  the two header badge lines (QA N-12). (4) Fixed a real `createNewChat()`
+  id collision in `useAppShellState.js`: `chat-${Date.now()}` alone can
+  collide when two chats are created in the same millisecond (fast
+  double-click, or a tray shortcut racing the sidebar '+' button); Sidebar
+  keys its list on `chat.id`, so React silently drops one of the two
+  colliding entries from the DOM while both remain in state — this is the
+  most likely root cause of the QA N-15 "RECENT CHATS listed the same
+  auto-titled entry twice" symptom. Fixed by appending a random suffix;
+  added a regression test that freezes `Date.now()` and asserts two rapid
+  creates never collide. Separately, the *message-leak* half of N-15
+  ("previous message stayed on screen" after switching chats) was
+  re-verified against the current code and found already covered by the
+  Workstream-2 fix (PR #175, `activeChatId` removed from the messages
+  persist effect's dependency array) and its existing regression tests —
+  no additional change needed there. (5) Persisted sidebar collapse state
+  (`alphonso_sidebar_open_v1` via `getStorage`/`setStorage`) — it
+  previously always reset to open on reload, unlike the theme toggle.
+  (6) Disabled Vite sourcemap generation (`sourcemap: false` in
+  `vite.config.js`) — `'hidden'` still *writes* full `.map` files to
+  `dist/`, it only omits the `//# sourceMappingURL` comment; Tauri
+  packages everything under `dist/` into the installer regardless, so this
+  shipped 109 files / 5.4MB (~57% of the built payload) of unminified
+  source into every install, and nothing in this repo's CI/scripts ever
+  reads these maps back (checked — no Sentry/error-tracking source-map
+  step exists). (7) Removed one of the four dynamic imports QA flagged as
+  ineffective: `App.tsx`'s boot effect dynamically imported
+  `appUpdateService`, which was already statically imported earlier in the
+  same file (used as an `onCheckUpdates` prop) — Vite cannot code-split a
+  module that's also statically imported elsewhere, so the "dynamic"
+  import produced zero splitting benefit and only added a needless async
+  hop. The other 3 QA named (`lib/ollama.ts`, `agents/agentRegistry.js`,
+  `services/boardroomThreadService.ts`) were checked the same way and
+  found to have **no** static import anywhere in `App.tsx` — they are
+  genuinely conditional, lazy-loaded-on-first-use code paths (companion
+  voice-conversation handling, iOS boardroom-steering), not duplicated
+  imports, so left unchanged; QA's "4 ineffective" count may have been an
+  overcount, or referred to indirect/transitive bundling not verifiable via
+  static grep alone.
+
+  **Investigated, no code change (documented rather than guessed at):**
+  Crash Log "Invalid Date" — `crashLogService.ts`'s `logError()` always
+  writes `timestamp: Date.now()` (a valid number end to end;
+  `CrashLogView.tsx` renders it with `new Date(entry.timestamp)`), and
+  `durableGet()` is a synchronous localStorage read with no async
+  hydration path in this flow — not reproduced via static review across
+  two separate investigation passes. A stray "connector" header label —
+  searched for bare `"connector"`/`'connector'` fallback strings and
+  literal `>connector<` text across all components, found nothing.
+
+  **Test verification note:** `npx tsc --noEmit` is clean and
+  `npm run lint` passed (via the pre-commit hook). Targeted `vitest run`
+  could not be executed this session — even a single test file
+  (`useAppShellState.test.js`) hit the pre-existing, previously-documented
+  vitest worker-pool startup timeout on this shared dev machine (see the
+  "Full local test suite... cannot complete in one run" entry in
+  `CLAUDE.md`), reproduced identically across 4 different pool/flag
+  configurations (`forks` default, `--pool=forks
+  --poolOptions.forks.singleFork`, `--fileParallelism=false`,
+  `--pool=threads --fileParallelism=false`). This is an environment/
+  resource-contention constraint, not evidence of a code defect — the
+  changes here are narrow (attribute additions, CSS custom-property value
+  changes, and 3 small, individually-reasoned logic changes, one of which
+  ships its own new regression test). Whoever picks this up next should
+  re-run `npx vitest run src/test/hooks/useAppShellState.test.js
+  src/test/ChatView.test.jsx src/test/chatViewRehydration.test.jsx
+  src/features/content-catalyst` once the machine is under lighter load,
+  rather than assume either pass or fail.
+
 - [2026-08-22] **QA sweep — N-3 (connector TEST button "inert") re-verified,
   already fixed, not a new fix.** Continuation of the 2026-08-22 external QA
   sweep. QA reported the connector TEST button as inert ("byte-for-byte
