@@ -6,10 +6,9 @@ import {
   recordEvent,
   EVENT_OUTCOMES
 } from '../services/eventsService';
-import { checkOllama, normalizeEndpoint } from '../lib/ollama';
+import { checkOllama, normalizeEndpoint, getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const PREFILIGHT_EVENT_TYPE = 'ollama.preflight';
-const DEFAULT_ENDPOINT = 'http://localhost:11434';
 const PREFERRED_PRESELECT = 'llama3.2:3b';
 const LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -42,7 +41,7 @@ interface Props {
   endpoint?: string;
 }
 
-export function OllamaPreflightPanel({ endpoint = DEFAULT_ENDPOINT }: Props) {
+export function OllamaPreflightPanel({ endpoint = getConfiguredOllamaEndpoint() }: Props) {
   const [events, setEvents] = useState<PreflightEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [busy, setBusy] = useState<boolean>(false);

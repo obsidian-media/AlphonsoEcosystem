@@ -7,6 +7,42 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-22] **QA sweep Workstream 4 (hardcoded Ollama endpoint) — fixed
+  same day.** Continuation of the 2026-08-22 external QA sweep (Workstreams
+  1–3 fixed separately, see those entries once merged). **Fixed QA N-14**
+  ("endpoint propagation — measured, not inferred": QA repointed Settings'
+  "Ollama API Endpoint" at a second Ollama on `:11500` and captured, at the
+  network layer, that chat correctly followed the new host while several
+  other panels/services kept polling the old `:11434` default). Root cause:
+  6+ call sites had `http://localhost:11434` hardcoded as a literal string
+  instead of reading the user's configured endpoint. Added
+  `getConfiguredOllamaEndpoint()` to `src/lib/ollama.ts` (reads persisted
+  `alphonso_settings.endpoint` via `getStorage`, falls through
+  `normalizeEndpoint()`'s existing default logic) — the one place
+  non-component code without a `settings` prop/context should read the
+  endpoint from. Fixed call sites: `AgentDock.tsx`, `ConnectorHealthPanel.tsx`,
+  `ModelSwitcher.tsx` (2 module-level URL constants converted to per-call
+  functions, since a constant captured once at import time would go stale
+  the moment Settings changes without a reload), `telegramCompanionService.js`
+  (2 sites), `whatsappCompanionService.ts`, and one QA didn't explicitly
+  name but is the same bug class: `OllamaPreflightPanel.tsx`'s default prop
+  value — `OperatorDashboard.tsx` renders it with no `endpoint` prop at all,
+  so it always silently used the hardcoded default.
+  `externalAgentAdapter.js`'s `options.endpoint || 'http://localhost:11434'`
+  fallback fixed the same way. **Deliberately NOT touched:**
+  `hectorResearchService.js`'s two `endpoint: 'http://localhost:11434'`
+  occurrences are cosmetic fallback values inside a `.catch()` error-object
+  literal (never used to make a live request — the real `invoke()` call
+  already passes `endpoint: null` and lets the Rust side resolve it), and
+  `SettingsContext.jsx`'s default is the settings object's own legitimate
+  default value, not a bypass. Regression tests:
+  `connectorOllamaEndpointConfig.test.js` (4 cases, including the exact
+  QA repro of repointing to `:11500`); updated 2 pre-existing test mocks
+  (`OllamaPreflightPanel.test.jsx`, `externalAgentAdapter.test.js`) that
+  didn't yet stub the new export. `tsc --noEmit` clean, lint clean, all 68
+  pre-existing tests across the 6 affected component/service test files
+  still passing — no regression.
+
 - [2026-08-21] **Windows/Linux Tauri installer builds broken since 2026-08-16 —
   release pipeline currently non-functional.** `ci.yml`'s `Tauri Desktop
   Build` (Windows) and `Tauri Desktop Build (Linux)` jobs have failed on

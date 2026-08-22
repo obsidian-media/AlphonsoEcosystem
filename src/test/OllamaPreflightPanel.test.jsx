@@ -36,7 +36,8 @@ vi.mock('../lib/ollama.js', () => ({
     models: [{ name: 'llama3.2:3b' }],
     selectedModel: 'llama3.2:3b'
   })),
-  normalizeEndpoint: vi.fn((e) => e || 'http://localhost:11434')
+  normalizeEndpoint: vi.fn((e) => e || 'http://localhost:11434'),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://localhost:11434')
 }));
 
 import { OllamaPreflightPanel } from '../components/OllamaPreflightPanel.jsx';
