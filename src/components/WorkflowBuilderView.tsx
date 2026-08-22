@@ -8,7 +8,7 @@ import {
   addWorkflowNode,
   type Workflow,
 } from '../services/workflowBuilderService';
-import { runVisualWorkflow } from '../services/workflowExecutionService';
+import { runVisualWorkflow, executeWorkflowRun } from '../services/workflowExecutionService';
 
 type RunState = null | 'running' | 'done' | 'error';
 
@@ -81,9 +81,32 @@ export function WorkflowBuilderView() {
     setRunState('running');
     setRunMessage('');
     try {
-      const result = runVisualWorkflow(selectedId, { initiatedBy: 'user' });
-      setRunState('done');
-      setRunMessage(result?.runId ? `Run started (${result.runId.slice(-6)})` : 'Workflow queued');
+      // runVisualWorkflow() only creates a queued run record — it never
+      // executes it. Without this second call, the run sits at status
+      // 'queued' forever with no way to observe it from this view, which is
+      // exactly the "no run, no error, no history, no dead-letter entry"
+      // silence a real QA pass reported (N-4). executeWorkflowRun() is the
+      // same call WorkflowOperationsDashboard.tsx already makes for the
+      // other (operations-registry) workflow system — this mirrors that.
+      const queued = runVisualWorkflow(selectedId, { initiatedBy: 'user' });
+      if (!queued?.ok || !queued.run?.id) {
+        setRunState('error');
+        setRunMessage(queued?.error || 'Run failed to queue.');
+        return;
+      }
+      const executed = await executeWorkflowRun(queued.run.id);
+      const finalStatus = executed?.run?.status;
+      if (finalStatus === 'completed') {
+        setRunState('done');
+        setRunMessage(`Run completed (${queued.run.id.slice(-6)})`);
+      } else if (finalStatus === 'partial') {
+        const blocked = executed?.run?.progress?.blockedStages || 0;
+        setRunState('error');
+        setRunMessage(`Run partially completed — ${blocked} stage${blocked === 1 ? '' : 's'} blocked (${queued.run.id.slice(-6)})`);
+      } else {
+        setRunState('error');
+        setRunMessage(executed?.error || `Run ended in unexpected state: ${finalStatus || 'unknown'}`);
+      }
     } catch (err) {
       setRunState('error');
       setRunMessage(err instanceof Error ? err.message : 'Run failed');
