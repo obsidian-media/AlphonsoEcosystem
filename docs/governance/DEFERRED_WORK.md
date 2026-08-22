@@ -99,6 +99,33 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   kanban cards having zero draggable DOM nodes — are separate components
   with separate root causes, still open.
 
+- [2026-08-22] **QA sweep — N-16 (Boardroom/Mission Room kanban "not
+  draggable") re-verified, already has a working click fallback, not a new
+  fix.** Continuation of the 2026-08-22 external QA sweep. QA reported
+  (Round 3): "Boardroom kanban has zero draggable nodes — `[draggable="true"]`
+  → 0 nodes... The 5 lanes are a static display." Traced this to the actual
+  UI before assuming it still applies: the rebuilt Boardroom
+  (`BoardroomChatView.tsx`) has no kanban at all — "cards" was explicitly
+  deferred scope in the 2026-07-10 rebuild (see CLAUDE.md's "Boardroom
+  sessions" entry). The real "5 lanes" QA was describing is
+  `MissionRoom.tsx`'s colored status-count strip (todo/doing/review/
+  approved/blocked) plus a flat task list below it — never drag-and-drop by
+  design, but each `TaskCard` already has a working `<select>` dropdown
+  (`onChange` → `updateTask()` → `updateMissionTask()`, persisted) that
+  moves a task between lanes by clicking, not dragging. This is exactly the
+  fallback QA's own Round 1 report asked for ("add a click/menu fallback;
+  drag-only kanbans are unusable with a trackpad") — it already exists, just
+  not literally an HTML5 drag gesture. No component test existed for
+  `MissionRoom.tsx` at all before this pass. Added
+  `MissionRoomKanbanStatus.test.tsx` — a real end-to-end test against the
+  actual localStorage-backed service (not mocked): seeds a task via
+  `addMissionTask`, renders `<MissionRoom />`, changes the status dropdown,
+  and confirms both the UI and `listMissionTasks()` reflect the new lane.
+  **Conclusion:** not re-opening as a bug — the click-based move mechanism
+  QA asked for is real and now has real test coverage; the only gap is that
+  it's not a *drag* gesture, which was never the design. `tsc --noEmit`
+  clean, lint clean.
+
 - [2026-08-22] **QA sweep Workstream 5 (Miya empty-input fabrication guard) —
   fixed same day.** Continuation of the 2026-08-22 external QA sweep
   (Workstreams 1–4 fixed separately, see those entries once merged).
