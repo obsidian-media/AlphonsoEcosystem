@@ -7,6 +7,119 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-22] **`useAppEffects` was fully dead code since 2026-06-15 (44+
+  commits, 2+ months) — restored.** Found while triaging a live post-install
+  bug report against the fresh v2.6.3 build. Commit `3665b15`
+  ("refactor: extract AppShell state into useAppShellState hook") deleted
+  `useAppEffects(...)` from `App.tsx` with the commit message claiming
+  "functionality moved to hook" — it was not; `useAppShellState.js` only
+  ever migrated plain `useState`/`useCallback`/`useMemo`, never the 7
+  effect-owning sub-hooks (`useBootEffects`, `usePersistenceEffects`,
+  `useSessionEffects`, `useNativeProofEffects`, `useDataHydration`,
+  `usePollingEffects`, `useTrayEffects`). Confirmed via grep across the
+  whole tree: the only import of `useAppEffects` (or any of the 7) outside
+  their own files was from their own test files.
+  **Real, user-visible breakage this closes:**
+  - Desktop-bridge indicator permanently stuck on "Checking" (RightPanel
+    System tab) — `setDesktopBridge` was never called past its initial
+    placeholder value.
+  - Telegram and WhatsApp companion auto-start on boot — dead; only a
+    manual "Poll" action ever worked.
+  - Settings and the conversation list never hydrated from the Tauri
+    SQLite backup on boot (`load_settings`/`kv_get('alphonso_conversations')`)
+    — only the initial localStorage read applied.
+  - **Conversation list never persisted at all** — `setStorage('alphonso_conversations', ...)`
+    only existed inside the dead `usePersistenceEffects`; new chats / renames
+    were lost on every restart.
+  - Connector credential early-hydration (`hydrateConnectorCredentialsFromSqlite`)
+    never ran outside the 2 inline calls inside Telegram/WhatsApp's own
+    startup effects — any other connector reading credentials early could
+    still hit the cache-poisoning race documented in `connectorAuth.ts`.
+  - Audit logs, disk plugin manifests, memory items, and the runtime ledger
+    never re-hydrated from durable storage on boot.
+  - System tray menu actions (New Chat, Coach toggle, Voice toggle from the
+    tray icon) were all silent no-ops.
+  - Workspace-root default, Zero-Cost-Mode default, and the neon-studio
+    theme fallback never applied on first boot.
+  **Not a blind restore** — 2 of the 7 sub-hooks were trimmed first because
+  their responsibilities had been independently rebuilt elsewhere after
+  2026-06-15 and would have double-fired if pasted back verbatim:
+  `useSessionEffects`'s old `subscribeCoachEngine()` subscription (superseded
+  by `CoachContext.jsx`'s own `runCoachDetectors` polling loop, added
+  2026-07-23) and `usePollingEffects`'s update-check block (superseded by
+  `App.tsx`'s own direct `checkAppUpdate()` boot effect). Both hooks' other,
+  non-duplicated responsibilities were kept. Their test files were trimmed
+  to match — the removed describe blocks tested behavior that no longer
+  exists in the hook, not behavior that regressed.
+  Also had to expose several setters that existed internally in their
+  context providers but were never included in the exported context value
+  (`OllamaContext`'s `setDesktopBridge`/`setLastCheckedAt`, `PluginContext`'s
+  `setPlugins`/`setPluginAudit`/`setDiskPluginManifests`) — these were
+  presumably always missing, not a new regression, since nothing else ever
+  needed them until this restore.
+  Verified: `tsc --noEmit` clean, `npm run lint` clean, all 8 affected hook
+  test files (173 tests) + `appLazyImports`/`hectorResearchService`/
+  `boardroomFacilitatorService` (56 tests) passing. Not yet verified live
+  against a real running app — that needs the next installed build.
+
+- [2026-08-22] **Live post-install bug batch — CSP blocking Hermes, Coach
+  Mode ACL, Voice OS startup timeout, 2 hardcoded/first-available-model
+  bugs.** Found via direct interactive testing of the fresh v2.6.3 install,
+  not static review — the user ran the app and reported failures one at a
+  time; each was root-caused from the real error text before fixing.
+  - **Hermes Agents CSP block**: `tauri.conf.json`'s `connect-src` was a
+    hardcoded port allowlist that never included any Hermes profile port
+    (these are arbitrary, assigned per local install, not fixed) — every
+    fetch to a Hermes profile silently died as `Failed to fetch` regardless
+    of whether the profile was even running. Confirmed by checking which
+    Hermes ports were actually listening (only one was) and finding that
+    one failed identically to the 7 dead ones — same wall, not 8 coincidental
+    failures. Fixed by allowing loopback (`http://localhost:*`,
+    `http://127.0.0.1:*`) rather than hardcoding the observed ports, since a
+    fixed list would just break again on a different install. Needs a new
+    build to take effect — CSP is baked in at build time.
+  - **Coach Mode "Command plugin:webview|create_webview_window not allowed
+    by ACL"**: `capabilities/default.json` listed `"coach"` under `windows`
+    (which window labels the capability applies to) but never granted
+    `core:webview:allow-create-webview-window` itself — `core:default`
+    doesn't include it. The main window's `new WebviewWindow('coach', ...)`
+    call needs that permission on the *calling* window's capability set.
+    Added the missing permission (confirmed valid against
+    `gen/schemas/desktop-schema.json`).
+  - **Voice OS "did not become ready within 5 seconds"**: `voice_sidecar.rs`
+    gave the spawned Python process a hard 5s budget (`VOICE_STARTUP_ATTEMPTS
+    = 25` × `VOICE_STARTUP_RETRY_DELAY_MS = 200`), but `main.py`'s
+    `lifespan()` preloads the `faster-whisper` STT model before `/health`
+    can succeed — that alone routinely exceeds 5s on a cold start, on top of
+    Python/FastAPI import overhead. Verified directly: launched the exact
+    same command by hand and it came up fine, just past the old window.
+    Bumped to 15s (75 attempts).
+  - **Boardroom hardcoded `llama3.2:3b`**: `boardroomFacilitatorService.ts`'s
+    `generateAgentResponse` defaulted `model` to a literal
+    `'llama3.2:3b'` constant — a real, always-truthy value that permanently
+    shadowed `generateAgentLlmResponse`'s own `options.model || PREFERRED_MODEL`
+    fallback, so Boardroom always asked Ollama for that exact model
+    regardless of what the user actually selected, whether or not they had
+    it installed. Added `getConfiguredOllamaModel()` to `lib/ollama.ts`
+    (mirrors the existing `getConfiguredOllamaEndpoint()` pattern) and used
+    it as the real default.
+  - **Hector research quality ("just gave me a bunch of related links")**:
+    `hectorResearchService.js`'s `chooseHectorOllamaModel()` always picked
+    `models[0]` — whichever model Ollama happened to list first — with no
+    regard for the user's actual selection. If that first-listed model is
+    weak or unsuited for synthesis, Hector's summarization step silently
+    degrades to a bare source list. Fixed to prefer the configured model
+    when it's actually installed, falling back to the first available only
+    if it isn't.
+  Verified: `tsc --noEmit` clean, `cargo check` clean, targeted vitest green
+  (see the `useAppEffects` entry above for the full test-file list, since
+  both this batch and that restore landed together). The CSP and Voice OS
+  fixes are Rust/config-level and need a new build to verify live; the
+  Boardroom/Hector model fixes and Coach Mode ACL fix are also unverified
+  against a real running app this session (no live app available in this
+  environment) — flagged for live re-verification on the next build, not
+  assumed working from code alone.
+
 - [2026-08-22] **Playwright E2E Smoke Test — roadmap T10 closed, re-added as a
   required branch-protection check.** The suite was made advisory
   (`continue-on-error: true`) on 2026-07-16 because ~22 of 28 specs failed as

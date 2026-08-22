@@ -9,7 +9,16 @@ use tauri::{Manager, State};
 pub struct VoiceToken(pub Mutex<Option<String>>);
 
 const VOICE_HEALTH_URL: &str = "http://127.0.0.1:8766/health";
-const VOICE_STARTUP_ATTEMPTS: usize = 25;
+// 5s (25 * 200ms) was too tight a budget for a cold start — main.py's
+// lifespan() preloads the faster-whisper model before /health can succeed,
+// and Python interpreter startup + fastapi/uvicorn/faster_whisper imports +
+// model load routinely exceeds 5s on a real machine, especially the first
+// run. Confirmed live: a direct `python -m uvicorn main:app` launch (same
+// command this spawns) came up fine, just not within the old window — this
+// was a false "did not become ready" failure on a server that was actually
+// still starting normally, not evidence of a broken install. Bumped to a
+// 15s budget (75 * 200ms).
+const VOICE_STARTUP_ATTEMPTS: usize = 75;
 const VOICE_STARTUP_RETRY_DELAY_MS: u64 = 200;
 
 pub struct VoiceSidecar(pub Mutex<Option<Child>>);
@@ -205,7 +214,7 @@ pub async fn voice_start(
   // Clear the token so stale tokens from this failed start attempt cannot be
   // replayed against a future (successful) Voice OS start.
   *token_state.0.lock().map_err(|e| e.to_string())? = None;
-  Err("Voice server did not become ready within 5 seconds. Check Python, Voice OS dependencies, and the local port 8766.".into())
+  Err("Voice server did not become ready within 15 seconds. Check Python, Voice OS dependencies, and the local port 8766.".into())
 }
 
 /// Returns the per-session token that must be appended to the WebSocket URL as

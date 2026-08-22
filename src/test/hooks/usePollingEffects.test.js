@@ -28,39 +28,20 @@ vi.mock('../lib/appStorage', () => ({
   setStorage: vi.fn(),
 }));
 
-const mockCheckAppUpdate = vi.fn().mockResolvedValue({
-  available: false,
-  configured: true,
-  latestVersion: null,
-  currentVersion: '2.6.0',
-  notes: null,
-  pubDate: null,
-  downloadUrl: null,
-  checkedAtMs: Date.now(),
-  trust: 'verified',
-  error: null,
-});
-const mockNotifyUpdateAvailable = vi.fn().mockResolvedValue(false);
-const mockAppendVerificationLog = vi.fn().mockReturnValue({
-  id: 'log-1',
-  timestampMs: Date.now(),
-  type: 'app_update_check',
-  trust: 'verified',
-  payload: {},
-});
 const mockReadDurableAuditLog = vi.fn().mockResolvedValue([]);
 const mockIsConnectorAuthenticated = vi.fn((id) => id === 'whatsapp');
 const mockPollWhatsAppConnector = vi.fn().mockResolvedValue({ routed: 0, rejected: 0 });
 const mockIsBraveSearchConfigured = vi.fn().mockResolvedValue(false);
 const mockStopScreenObserver = vi.fn();
 
-vi.mock('../services/appUpdateService', () => ({
-  checkAppUpdate: mockCheckAppUpdate,
-  notifyUpdateAvailable: mockNotifyUpdateAvailable,
-}));
-
 vi.mock('../services/verificationService', () => ({
-  appendVerificationLog: mockAppendVerificationLog,
+  appendVerificationLog: vi.fn().mockReturnValue({
+    id: 'log-1',
+    timestampMs: Date.now(),
+    type: 'app_update_check',
+    trust: 'verified',
+    payload: {},
+  }),
   getVerificationLogs: vi.fn(() => []),
   readDurableAuditLog: mockReadDurableAuditLog,
 }));
@@ -92,20 +73,6 @@ vi.mock('../services/trustModel', () => ({
 import { usePollingEffects } from '../../hooks/usePollingEffects';
 
 describe('usePollingEffects', () => {
-  const mockSettings = {
-    autoUpdateEnabled: true,
-    updaterEndpoint: 'https://updates.example.com',
-    updaterPubkey: 'test-pubkey',
-    updaterTarget: 'windows',
-    workspaceRoot: '/test/workspace',
-  };
-
-  const mockDesktopBridge = {
-    state: 'connected',
-    label: 'Connected',
-    message: 'Alphonso',
-  };
-
   const mockToast = {
     info: vi.fn(),
     error: vi.fn(),
@@ -114,14 +81,9 @@ describe('usePollingEffects', () => {
   };
 
   const defaultProps = {
-    settings: mockSettings,
-    desktopBridge: mockDesktopBridge,
     isCoachWindow: false,
     operatorMode: false,
     toast: mockToast,
-    updateCheckState: { checking: false, configured: false, available: false },
-    setUpdateCheckState: vi.fn(),
-    setVerificationLogs: vi.fn(),
     setDurableAuditLogs: vi.fn(),
     setBraveSearchConfigured: vi.fn(),
     screenObserverRunRef: { current: false },
@@ -154,75 +116,6 @@ describe('usePollingEffects', () => {
     });
   });
 
-  describe('Update check polling', () => {
-    it('starts update check when autoUpdateEnabled and connected', () => {
-      const { unmount } = renderHook(() => usePollingEffects(defaultProps));
-
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-
-      expect(defaultProps.setUpdateCheckState).toHaveBeenCalled();
-      unmount();
-    });
-
-    it('does not start update check when autoUpdateEnabled is false', () => {
-      const props = { ...defaultProps, settings: { ...mockSettings, autoUpdateEnabled: false } };
-      renderHook(() => usePollingEffects(props));
-
-      act(() => {
-        vi.advanceTimersByTime(10000);
-      });
-
-      expect(defaultProps.setUpdateCheckState).not.toHaveBeenCalled();
-    });
-
-    it('does not start update check when isCoachWindow is true', () => {
-      const props = { ...defaultProps, isCoachWindow: true };
-      renderHook(() => usePollingEffects(props));
-
-      act(() => {
-        vi.advanceTimersByTime(10000);
-      });
-
-      expect(defaultProps.setUpdateCheckState).not.toHaveBeenCalled();
-    });
-
-    it('does not start update check when desktopBridge is not connected', () => {
-      const props = {
-        ...defaultProps,
-        desktopBridge: { state: 'disconnected', label: 'Disconnected', message: '' },
-      };
-      renderHook(() => usePollingEffects(props));
-
-      act(() => {
-        vi.advanceTimersByTime(10000);
-      });
-
-      expect(defaultProps.setUpdateCheckState).not.toHaveBeenCalled();
-    });
-
-    it('clears interval on unmount', () => {
-      const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
-      const { unmount } = renderHook(() => usePollingEffects(defaultProps));
-
-      unmount();
-
-      expect(clearIntervalSpy).toHaveBeenCalled();
-      clearIntervalSpy.mockRestore();
-    });
-
-    it('clears timeout on unmount', () => {
-      const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
-      const { unmount } = renderHook(() => usePollingEffects(defaultProps));
-
-      unmount();
-
-      expect(clearTimeoutSpy).toHaveBeenCalled();
-      clearTimeoutSpy.mockRestore();
-    });
-  });
-
   describe('Brave Search config check', () => {
     it('does not check Brave Search config when isCoachWindow is true', () => {
       const props = { ...defaultProps, isCoachWindow: true };
@@ -250,8 +143,7 @@ describe('usePollingEffects', () => {
     it('does not poll WhatsApp when not authenticated', () => {
       mockIsConnectorAuthenticated.mockReturnValue(false);
 
-      const props = { ...defaultProps, settings: { ...mockSettings, autoUpdateEnabled: false } };
-      renderHook(() => usePollingEffects(props));
+      renderHook(() => usePollingEffects(defaultProps));
 
       act(() => {
         vi.advanceTimersByTime(5000);
@@ -319,22 +211,6 @@ describe('usePollingEffects', () => {
     });
   });
 
-  describe('Multiple independent pollers', () => {
-    it('handles multiple hook instances independently', () => {
-      const { unmount: unmount1 } = renderHook(() => usePollingEffects(defaultProps));
-      const { unmount: unmount2 } = renderHook(() => usePollingEffects(defaultProps));
-
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-
-      expect(defaultProps.setUpdateCheckState).toHaveBeenCalledTimes(2);
-
-      unmount1();
-      unmount2();
-    });
-  });
-
   describe('Race condition handling', () => {
     it('handles rapid mount/unmount without errors', () => {
       for (let i = 0; i < 5; i++) {
@@ -355,21 +231,6 @@ describe('usePollingEffects', () => {
       rerender({ props: { ...defaultProps, operatorMode: true } });
 
       expect(true).toBe(true);
-    });
-  });
-
-  describe('Error handling in pollers', () => {
-    it('handles update check errors gracefully', () => {
-      mockCheckAppUpdate.mockRejectedValueOnce(new Error('Update check failed'));
-
-      const { unmount } = renderHook(() => usePollingEffects(defaultProps));
-
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-
-      expect(defaultProps.setUpdateCheckState).toHaveBeenCalled();
-      unmount();
     });
   });
 });

@@ -1,9 +1,7 @@
-import { generateAgentLlmResponse, DEFAULT_OLLAMA_ENDPOINT } from '../lib/ollama';
+import { generateAgentLlmResponse, DEFAULT_OLLAMA_ENDPOINT, getConfiguredOllamaModel } from '../lib/ollama';
 import { resolveSecureSessionId } from './connectors/hermesAgentConnector';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import type { CrossThreadContextResult } from './boardroomThreadService';
-
-const DEFAULT_MODEL = 'llama3.2:3b';
 
 const LOW_CONFIDENCE_PHRASES = [
   "i'm not sure",
@@ -105,7 +103,7 @@ export async function generateAgentResponse({
   newMessageText,
   crossThreadContext = [],
   endpoint = DEFAULT_OLLAMA_ENDPOINT,
-  model = DEFAULT_MODEL,
+  model = getConfiguredOllamaModel(),
   signal,
   threadId,
   approved

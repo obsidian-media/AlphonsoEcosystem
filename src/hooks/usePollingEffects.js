@@ -1,81 +1,20 @@
 import { useEffect } from 'react';
-import { checkAppUpdate, notifyUpdateAvailable } from '../services/appUpdateService';
-import { TRUST_STATES } from '../services/trustModel';
-import { appendVerificationLog } from '../services/verificationService';
 import { readDurableAuditLog } from '../services/verificationService';
 import { isConnectorAuthenticated, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { isBraveSearchConfigured } from '../services/hectorResearchService';
 import { stopScreenObserver } from '../services/screenIntelligenceService';
 
 export function usePollingEffects({
-  settings,
-  desktopBridge,
   isCoachWindow,
   operatorMode,
   toast,
-  updateCheckState,
-  setUpdateCheckState,
-  setVerificationLogs,
   setDurableAuditLogs,
   setBraveSearchConfigured,
   screenObserverRunRef
 }) {
-  // Update check callback and interval — deferred to avoid boot storm
-  useEffect(() => {
-    if (!settings.autoUpdateEnabled || isCoachWindow || desktopBridge.state !== 'connected') return undefined;
-
-    const runUpdateCheck = async ({ manual = false } = {}) => {
-      if (!settings.autoUpdateEnabled && !manual) return;
-
-      setUpdateCheckState((current) => ({
-        ...current,
-        checking: true
-      }));
-
-      const proof = await checkAppUpdate({
-        endpoint: settings.updaterEndpoint,
-        pubkey: settings.updaterPubkey,
-        target: settings.updaterTarget
-      });
-
-      const notificationSent = proof.available ? await notifyUpdateAvailable(proof) : false;
-      setUpdateCheckState({
-        checking: false,
-        configured: Boolean(proof.configured),
-        available: Boolean(proof.available),
-        latestVersion: proof.latestVersion || null,
-        currentVersion: proof.currentVersion || '',
-        notes: proof.notes || null,
-        pubDate: proof.pubDate || null,
-        downloadUrl: proof.downloadUrl || null,
-        checkedAtMs: proof.checkedAtMs || Date.now(),
-        trust: proof.trust || TRUST_STATES.UNVERIFIED,
-        error: proof.error || null,
-        notificationSent
-      });
-
-      const trust = proof.available ? TRUST_STATES.VERIFIED : (proof.configured ? TRUST_STATES.INFERRED : TRUST_STATES.UNVERIFIED);
-      const log = appendVerificationLog({
-        type: 'app_update_check',
-        source: 'tauri-updater-runtime',
-        trust,
-        payload: {
-          configured: Boolean(proof.configured),
-          available: Boolean(proof.available),
-          latestVersion: proof.latestVersion || null,
-          error: proof.error || null
-        }
-      });
-      setVerificationLogs((current) => [...current, log].slice(-250));
-    };
-
-    const timerId = window.setTimeout(() => {
-      runUpdateCheck({ manual: false });
-    }, 5000);
-    const intervalMs = 1000 * 60 * 30;
-    const timer = window.setInterval(() => runUpdateCheck({ manual: false }), intervalMs);
-    return () => { window.clearTimeout(timerId); window.clearInterval(timer); };
-  }, [desktopBridge.state, isCoachWindow, settings.autoUpdateEnabled, settings.updaterEndpoint, settings.updaterPubkey, settings.updaterTarget, setUpdateCheckState, setVerificationLogs]);
+  // Update-check polling was removed here: App.tsx's own boot useEffect
+  // (wired directly to checkAppUpdate()) already owns this — restoring it
+  // here too would fire two independent update checks on the same interval.
 
   // Screen observer cleanup
   useEffect(() => () => {

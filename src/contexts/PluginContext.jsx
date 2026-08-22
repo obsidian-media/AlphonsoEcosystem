@@ -207,8 +207,10 @@ export function PluginProvider({ children, requestApproval, setVerificationLogs,
 
   const value = useMemo(() => ({
     plugins, pluginAudit, pluginSandboxPolicy, diskPluginManifests, lastPluginToolRun, lastManifestValidation,
+    setPlugins, setPluginAudit, setDiskPluginManifests,
     handleTogglePlugin, handleExecutePluginTool, handleValidatePluginManifest, handleDiscoverPlugins, handleUpdatePluginSandboxPolicy
   }), [plugins, pluginAudit, pluginSandboxPolicy, diskPluginManifests, lastPluginToolRun, lastManifestValidation,
+    setPlugins, setPluginAudit, setDiskPluginManifests,
     handleTogglePlugin, handleExecutePluginTool, handleValidatePluginManifest, handleDiscoverPlugins, handleUpdatePluginSandboxPolicy]);
 
   return (

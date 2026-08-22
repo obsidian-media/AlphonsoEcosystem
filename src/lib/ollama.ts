@@ -111,6 +111,19 @@ export function getConfiguredOllamaEndpoint(): string {
   return normalizeEndpoint(settings?.endpoint);
 }
 
+// Same rationale as getConfiguredOllamaEndpoint() above, for the model field.
+// A real bug this closes: boardroomFacilitatorService.ts hardcoded
+// `DEFAULT_MODEL = 'llama3.2:3b'` as its fallback, which — being always a
+// truthy string, never undefined — permanently shadowed generateAgentLlmResponse's
+// own `options.model || PREFERRED_MODEL` fallback. Boardroom asked Ollama for
+// llama3.2:3b on every turn regardless of what the user actually selected in
+// Settings (or whether they even have that model installed), silently ignoring
+// PREFERRED_MODEL and the user's own choice alike.
+export function getConfiguredOllamaModel(): string {
+  const settings = getStorage<{ selectedModel?: string } | null>('alphonso_settings', null);
+  return settings?.selectedModel || PREFERRED_MODEL;
+}
+
 export function formatModelSize(size: number): string {
   if (!Number.isFinite(size) || size <= 0) return 'Unknown size';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
