@@ -36,16 +36,30 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   binaries run on both older and newer driver installs, while dropping v12
   instead would have saved more space (~1.1GB vs. ~630MB) at the cost of
   silently losing GPU acceleration for anyone without the newest driver.
-  **Not yet verified:** whether this cut is enough to actually clear the
-  NSIS/linuxdeploy failures — that needs a real CI Tauri Desktop Build run,
-  not local extraction alone. If CI still fails, the agreed fallback order is
-  Option 3 (split lite installer + separate runtime downloader), then as a
-  last resort Option 1 (download Ollama at first run instead of bundling it,
-  which reverses `DEPENDENCY_BUNDLING_PLAN.md`'s explicit "works offline on
-  first launch" decision from 2026-08-16 — only accept that regression if
-  2 and 3 both fail). Resume hint: watch the next `main` push's `Tauri
-  Desktop Build`/`Tauri Desktop Build (Linux)` job results; if still red,
-  move to Option 3 before Option 1.
+  **Verified 2026-08-22 via a real CI run** (manually dispatched against the
+  fix branch with `gh workflow run ci.yml --ref ...`, since these jobs only
+  trigger on push-to-main/workflow_dispatch, not on `pull_request`): **Windows
+  `Tauri Desktop Build` now succeeds** — `makensis` completed in ~9 minutes
+  and produced a real `Alphonso_2.6.2_x64-setup.exe` artifact (~957MB,
+  confirmed via `gh api .../artifacts`), no more datablock error. Merged to
+  `main` at `96354f9` (PR #172).
+  **Linux `Tauri Desktop Build (Linux)` still fails** — same
+  `failed to run linuxdeploy` error, now in ~20 seconds (vs. ~2 minutes for
+  the last known-good run on 2026-08-16), with zero diagnostic output between
+  "Bundling ... .AppImage" and the failure — Tauri swallows linuxdeploy's own
+  stderr. The near-instant failure time suggests this may NOT be the same
+  size-driven root cause as Windows's NSIS bug (a real size problem would
+  likely fail partway through processing ~1GB+ of payload, not in 20s flat) —
+  worth investigating as a possibly distinct issue (FUSE/AppImage execution
+  environment on the runner, a linuxdeploy/plugin version regression, disk
+  space) rather than assuming the same CUDA-trim fix will resolve it.
+  **This is not currently blocking anything**: `desktop-linux` has
+  `continue-on-error: true` in `ci.yml` (same as macOS), so it was never a
+  required check — Windows was the only gating job, and it's fixed. Resume
+  hint if picked up: get real stderr out of linuxdeploy directly (run
+  `linuxdeploy-x86_64.AppImage` by hand against the built `app` binary
+  outside of Tauri's bundler, or add `RUST_LOG=debug`/`--verbose` to
+  `tauri build` if supported) before assuming it's the same size issue.
 
 - [2026-08-18] Hermes agent-backend delegation (per-agent Ollama/NVIDIA/Gemini/Hermes
   provider picker, wiring 9 in-app agents to a separate live Hermes Agent
