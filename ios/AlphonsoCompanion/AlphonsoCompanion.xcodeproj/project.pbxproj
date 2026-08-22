@@ -219,6 +219,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D1000002 /* PBXTargetDependency */,
 			);
 			name = AlphonsoCompanionTests;
 			productName = AlphonsoCompanionTests;
@@ -244,6 +245,24 @@
 		};
 /* End PBXNativeTarget section */
 
+/* Begin PBXContainerItemProxy section */
+		D1000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A8000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A5000001;
+			remoteInfo = AlphonsoCompanion;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		D1000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A5000001 /* AlphonsoCompanion */;
+			targetProxy = D1000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin PBXProject section */
 		A8000001 /* Project object */ = {
 			isa = PBXProject;
@@ -254,6 +273,9 @@
 				TargetAttributes = {
 					A5000001 = {
 						CreatedOnToolsVersion = 15.0;
+					};
+					B5000001 = {
+						TestTargetID = A5000001;
 					};
 					C5000001 = {
 						TestTargetID = A5000001;
