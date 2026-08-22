@@ -5,6 +5,7 @@ import type { OllamaModelsProof, OllamaGenerateProof } from '../types/tauri-comm
 import type { NvidiaSendResult } from '../services/connectors/nvidiaNimConnector';
 import type { GeminiSendResult } from '../services/connectors/geminiConnector';
 import type { HermesSendResult } from '../services/connectors/hermesAgentConnector';
+import { getStorage } from './appStorage';
 
 export const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
 export const PREFERRED_MODEL = 'qwen2.5-coder:7b';
@@ -91,6 +92,23 @@ export function normalizeEndpoint(endpoint: string | null | undefined): string {
 
   const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
   return withProtocol.replace(/\/+$/, '');
+}
+
+// Regression fix for a real QA finding (Q&A E2E Test.md — 6+ call sites
+// hardcoded http://localhost:11434, ignoring the "Ollama API Endpoint" field
+// in Settings; measured directly by the QA pass repointing Settings at a
+// second Ollama on :11500 and seeing chat follow it while several other
+// panels/services kept polling :11434). Settings persists to localStorage
+// under 'alphonso_settings' (see usePersistenceEffects.js) — this is the one
+// place non-component code (services with no React settings prop/context)
+// should read the user's configured endpoint from, instead of a literal
+// 'http://localhost:11434' string. React components that already receive
+// `settings` as a prop should keep using `settings.endpoint` directly and
+// pass it through normalizeEndpoint() — this helper is for call sites that
+// don't have that prop.
+export function getConfiguredOllamaEndpoint(): string {
+  const settings = getStorage<{ endpoint?: string } | null>('alphonso_settings', null);
+  return normalizeEndpoint(settings?.endpoint);
 }
 
 export function formatModelSize(size: number): string {
