@@ -43,7 +43,7 @@ vi.mock('../../lib/appStorage', () => ({
 }));
 
 vi.mock('../../services/sentinelSecurityService', () => ({
-  runQuickScan: vi.fn().mockResolvedValue({ threatLevel: 'clear', findings: [], summary: 'No issues found.' })
+  scanForThreats: vi.fn().mockReturnValue({ riskScore: 0, severity: 'low', findings: [], blocked: false, redactedText: '' })
 }));
 
 vi.mock('../../services/novaAnalysisService', () => ({
@@ -496,16 +496,16 @@ describe('telegramCompanionService', () => {
   });
 
   describe('handleScanCommand', () => {
-    it('runs Sentinel scan and reports clear', async () => {
-      const { runQuickScan } = await import('../../services/sentinelSecurityService');
-      runQuickScan.mockResolvedValue({ threatLevel: 'clear', findings: [], summary: 'All clear.' });
+    it('runs Sentinel scan and reports low severity', async () => {
+      const { scanForThreats } = await import('../../services/sentinelSecurityService');
+      scanForThreats.mockReturnValue({ riskScore: 0, severity: 'low', findings: [], blocked: false, redactedText: '' });
 
       await service.handleScanCommand('test-token', 'chat-123');
 
       const calls = mockInvoke.mock.calls.filter(c => c[0] === 'connector_send_telegram');
       const scanMsg = calls.find(c => c[1].text.includes('Sentinel Scan'));
       expect(scanMsg).toBeTruthy();
-      expect(scanMsg[1].text).toContain('clear');
+      expect(scanMsg[1].text).toContain('low');
     });
   });
 

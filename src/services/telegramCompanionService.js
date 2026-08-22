@@ -6,7 +6,7 @@ import { listMemoryItems } from './memoryService';
 import { createJoseCommandRoute, listJoseCommands } from './joseCommandRouterService';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { listAgentProfiles } from '../agents/agentRegistry';
-import { runQuickScan } from './sentinelSecurityService';
+import { scanForThreats } from './sentinelSecurityService';
 import { getOpportunityHistory } from './novaAnalysisService';
 import { listOrchestrationReceipts } from './orchestrationReceiptService';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
@@ -319,12 +319,21 @@ export async function handleNovaCommand(token, chatId) {
 export async function handleScanCommand(token, chatId) {
   try {
     await sendTelegramMessageInternal({ token, chatId, text: '🔍 Running Sentinel security scan…' });
-    const result = await runQuickScan();
-    const level = result?.threatLevel || 'unknown';
+    // Regression fix: this imported a nonexistent `runQuickScan` export from
+    // sentinelSecurityService.ts (the real name is scanForThreats — the
+    // `runQuickScan` this was modeled on is a *local* function in
+    // RightPanel.tsx, not a service export) and read fields (threatLevel,
+    // summary) that don't exist on the real ScanResult shape either. Never
+    // caught because this module was unreachable from any production entry
+    // point until useBootEffects.js's Telegram auto-start was restored
+    // (see docs/governance/DEFERRED_WORK.md, 2026-08-22) — a build with
+    // this module actually bundled had never run before.
+    const result = scanForThreats('', {});
+    const severity = result?.severity || 'unknown';
     const findings = Array.isArray(result?.findings) ? result.findings.length : 0;
-    const summary = result?.summary || 'Scan complete.';
-    const icon = level === 'clear' ? '✅' : level === 'low' ? '🟡' : level === 'medium' ? '🟠' : '🔴';
-    return sendTelegramMessageInternal({ token, chatId, text: `${icon} Sentinel Scan\n\nThreat level: ${level}\nFindings: ${findings}\n${summary}` });
+    const summary = result?.blocked ? 'Action blocked pending review.' : 'Scan complete.';
+    const icon = severity === 'low' ? '✅' : severity === 'medium' ? '🟡' : severity === 'high' ? '🟠' : '🔴';
+    return sendTelegramMessageInternal({ token, chatId, text: `${icon} Sentinel Scan\n\nSeverity: ${severity}\nFindings: ${findings}\n${summary}` });
   } catch {
     return sendTelegramMessageInternal({ token, chatId, text: '⚠️ Scan failed. Ensure Alphonso is running.' });
   }

@@ -120,6 +120,39 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   environment) — flagged for live re-verification on the next build, not
   assumed working from code alone.
 
+  **Follow-up same day: restoring `useAppEffects` (above) surfaced a real,
+  previously-unreachable build error.** `telegramCompanionService.js`
+  imported a nonexistent `runQuickScan` export from
+  `sentinelSecurityService.ts` — the real `runQuickScan` is a *local*
+  function inside `RightPanel.tsx`, never a service export; the handler
+  also read fields (`threatLevel`, `summary`) that don't exist on the real
+  `ScanResult` shape (`severity`, `findings`, `blocked`, `riskScore`,
+  `redactedText`). This had been latent since whenever the mismatch was
+  introduced — `telegramCompanionService.js` had **zero** production
+  reachability (confirmed via grep) until `useBootEffects.js`'s Telegram
+  auto-start effect, restored in this same PR, made it reachable for the
+  first time, at which point `npm run build`'s static export analysis
+  caught it immediately. Fixed the import and the field reads to match the
+  real `ScanResult` type; the existing test's mock had independently
+  invented the same wrong shape (`runQuickScan`/`threatLevel`/`summary`)
+  rather than matching the real module, so it passed despite the real
+  integration being broken — corrected the mock to match reality, not just
+  made the code satisfy an already-wrong mock. Verified: local
+  `npm run build` now succeeds, `tsc --noEmit` clean, lint clean,
+  `telegramCompanionService.test.js` 40/40 passing.
+  **Also surfaced, not yet acted on:** the production build now reports
+  `INEFFECTIVE_DYNAMIC_IMPORT` warnings for `boardroomThreadService.ts`,
+  `lib/ollama.ts`, and `agents/agentRegistry.js` — the same 3 App.tsx
+  dynamic imports investigated during the 2026-08-22 QA sweep (PR #183)
+  and judged "genuinely lazy" from a static grep of `App.tsx` alone. The
+  real build tool disagrees: all 3 are *also* statically imported by other
+  files (`BoardroomChatView.tsx`, `ChatView.tsx`, etc.), so the module ends
+  up in the main bundle regardless — the dynamic import in `App.tsx` truly
+  is ineffective, same as the 4th one already fixed. Not fixed this pass
+  (out of scope for this PR); tracked here since the earlier "not
+  verifiable via static grep alone" caveat turned out to be resolvable
+  with the real build output, which wasn't checked at the time.
+
 - [2026-08-22] **Playwright E2E Smoke Test — roadmap T10 closed, re-added as a
   required branch-protection check.** The suite was made advisory
   (`continue-on-error: true`) on 2026-07-16 because ~22 of 28 specs failed as
