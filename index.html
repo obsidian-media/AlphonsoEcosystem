@@ -132,17 +132,44 @@
         word-break: break-word;
         text-align: left;
       }
+      #alphonso-boot-status .reload-btn {
+        margin-top: 14px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(59,130,246,0.4);
+        background: rgba(59,130,246,0.12);
+        color: #bfdbfe;
+        font: 600 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+      #alphonso-boot-status .reload-btn:hover { background: rgba(59,130,246,0.22); }
+      /* Errors after the app has already rendered once must never block the
+         page — a React error boundary (or the offending feature itself)
+         already owns recovery for that case. Only a genuine pre-render boot
+         failure should show the full-screen panel. */
+      #alphonso-boot-status[data-state="error"][data-post-render="true"] {
+        pointer-events: none;
+        opacity: 0;
+      }
     </style>
     <script>
       window.__ALPHONSO_BOOT_READY__ = function () {
         var el = document.getElementById('alphonso-boot-status');
-        if (el) el.dataset.state = 'ready';
+        if (el) { el.dataset.state = 'ready'; el.dataset.rendered = 'true'; }
       };
       window.__ALPHONSO_BOOT_ERROR__ = function (message, detail) {
         var el = document.getElementById('alphonso-boot-status');
         if (!el) return;
+        // Once the real app has rendered at least once, a later runtime error
+        // (e.g. a component throwing on a null Tauri-bridge result) is not a
+        // boot failure — don't resurrect this full-screen, click-blocking
+        // overlay over an app that's otherwise still usable.
+        if (el.dataset.rendered === 'true') {
+          el.dataset.postRender = 'true';
+        }
         el.dataset.state = 'error';
-        el.innerHTML = '<div class="panel"><div class="title">Boot error</div><div class="message">' + message + '</div><div class="detail">' + (detail || '') + '</div></div>';
+        el.innerHTML = '<div class="panel"><div class="title">Boot error</div><div class="message">' + message + '</div><div class="detail">' + (detail || '') + '</div><button type="button" class="reload-btn" onclick="location.reload()">Reload app</button></div>';
       };
       window.addEventListener('error', function (e) {
         var msg  = e && e.message ? String(e.message) : 'Unknown startup error.';

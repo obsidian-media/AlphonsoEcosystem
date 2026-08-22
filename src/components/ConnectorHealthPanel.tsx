@@ -240,7 +240,7 @@ async function validateConnectorCredentials(connectorId: string): Promise<TestRe
     if (requiredEnv.length === 0) {
       return { ok: true, message: 'No credential validation required' };
     }
-    const presence = await invoke<Record<string, boolean>>('check_env_vars_presence', { names: requiredEnv });
+    const presence = (await invoke<Record<string, boolean>>('check_env_vars_presence', { names: requiredEnv })) ?? {};
     const missing = requiredEnv.filter((k) => !presence[k]);
     if (missing.length === 0) {
       return { ok: true, message: `All ${requiredEnv.length} credential(s) present` };
