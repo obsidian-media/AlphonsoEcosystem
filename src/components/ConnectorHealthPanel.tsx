@@ -23,6 +23,7 @@ import {
   verifyConnectorEnvironment
 } from '../services/connectorRegistryService';
 import { checkConnectorHealth } from '../services/connectorHealthCheckService';
+import { deriveConnectorStatus } from '../services/connectorStatusService';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 interface Connector {
@@ -75,45 +76,6 @@ const CONNECTOR_LABELS: Record<string, string> = {
   runway: 'Runway',
   mobile_bridge: 'Mobile Bridge'
 };
-
-/**
- * Derives a simplified UX status from the connector registry object.
- *
- * Returns one of:
- *   'live'           — configured + env verified + last test verified
- *   'missing_config' — has required env keys but none are present
- *   'foundation_only'— local-only connector with no env requirements
- *   'placeholder'    — visible but intentionally inactive placeholder connector
- *   'disabled'       — everything else (not_configured, unknown, etc.)
- */
-function deriveStatus(connector: Connector | null | undefined): string {
-  if (!connector) return 'disabled';
-  const status = String(connector.status || '').toLowerCase();
-  const requiredEnv = Array.isArray(connector.requiredEnv) ? connector.requiredEnv : [];
-  const envPresence = connector.envPresence || {};
-
-  if (status === 'foundation_only') return 'foundation_only';
-
-  if (['chatgpt', 'claude'].includes(connector.id) && requiredEnv.length > 0) {
-    const anyPresent = requiredEnv.some((k) => Boolean(envPresence[k]));
-    if (!anyPresent) return 'placeholder';
-  }
-
-  if (status === 'configured') {
-    const allEnvPresent = requiredEnv.length === 0 || requiredEnv.every((k) => Boolean(envPresence[k]));
-    const testOk = connector.lastTestStatus === 'verified';
-    if (allEnvPresent && testOk) return 'live';
-    // configured but env missing or test not verified
-    return 'missing_config';
-  }
-
-  if (requiredEnv.length > 0) {
-    const anyPresent = requiredEnv.some((k) => Boolean(envPresence[k]));
-    if (anyPresent) return 'missing_config';
-  }
-
-  return 'disabled';
-}
 
 const STATUS_BADGE: Record<string, { dot: string; badge: string; label: string }> = {
   live: {
@@ -280,7 +242,7 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
     setValidateState('idle');
   };
 
-  const status = deriveStatus(connector);
+  const status = deriveConnectorStatus(connector);
   const { dot, badge, label } = STATUS_BADGE[status] || STATUS_BADGE.disabled;
   const Icon = CONNECTOR_ICONS[connector.id] || Circle;
   const displayName = CONNECTOR_LABELS[connector.id] || connector.name;
@@ -427,7 +389,7 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
 function StatusSummaryBar({ connectors, zeroCostMode }: { connectors: Connector[]; zeroCostMode: boolean }) {
   const counts = connectors.reduce<Record<string, number>>(
     (acc, c) => {
-      const s = deriveStatus(c);
+      const s = deriveConnectorStatus(c);
       acc[s] = (acc[s] || 0) + 1;
       return acc;
     },
