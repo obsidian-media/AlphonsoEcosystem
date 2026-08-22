@@ -273,11 +273,16 @@ Video generation stays fully out per the acceptance criterion.
   script). Verified for real: ran the fetch script end-to-end against the
   live `windows-amd64` v0.32.13 asset before and after the change —
   `cuda_v13` confirmed absent post-fetch, `cuda_v12` (~1.1GB) and the small
-  `vulkan` fallback dir (~50MB) still present. **Not yet verified:** whether
-  this is sufficient to actually clear CI's `Tauri Desktop Build`/
-  `Tauri Desktop Build (Linux)` failures — needs a real CI run, not local
-  extraction alone. Linux's `linuxdeploy` failure hasn't been independently
-  confirmed to share the same root cause as Windows's `makensis` failure.
+  `vulkan` fallback dir (~50MB) still present. **Verified against real CI
+  2026-08-22** (manual `workflow_dispatch` run against the fix branch):
+  Windows `Tauri Desktop Build` now succeeds, produced a real
+  `Alphonso_2.6.2_x64-setup.exe` (~957MB). Merged via PR #172 (`96354f9`).
+  **Linux `Tauri Desktop Build (Linux)` still fails** — different failure
+  shape (fails in ~20s vs. the prior successful run's ~2 minutes, suggesting
+  a possibly distinct root cause, not necessarily the same size issue) — not
+  a blocker since that job is `continue-on-error: true`, but still open; see
+  `docs/governance/DEFERRED_WORK.md`'s 2026-08-21/22 entry for the resume
+  hint.
 
 ### PY — Python / Voice OS
 
