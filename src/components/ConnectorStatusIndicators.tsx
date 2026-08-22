@@ -2,37 +2,9 @@ import React from 'react';
 import { memo, useEffect, useState } from 'react';
 import { ZapOff } from 'lucide-react';
 import { listConnectors } from '../services/connectorRegistryService';
+import { deriveConnectorStatus, type StatusConnector } from '../services/connectorStatusService';
 
-interface Connector {
-  id: string;
-  status?: string;
-  requiredEnv?: string[];
-  envPresence?: Record<string, boolean>;
-  lastTestStatus?: string;
-}
-
-function deriveStatus(connector: Connector | undefined): string {
-  if (!connector) return 'disabled';
-  const status = String(connector.status || '').toLowerCase();
-  const requiredEnv = Array.isArray(connector.requiredEnv) ? connector.requiredEnv : [];
-  const envPresence = connector.envPresence || {};
-
-  if (status === 'foundation_only') return 'foundation_only';
-
-  if (status === 'configured') {
-    const allEnvPresent = requiredEnv.length === 0 || requiredEnv.every((k) => Boolean(envPresence[k]));
-    const testOk = connector.lastTestStatus === 'verified';
-    if (allEnvPresent && testOk) return 'live';
-    return 'missing_config';
-  }
-
-  if (requiredEnv.length > 0) {
-    const anyPresent = requiredEnv.some((k) => Boolean(envPresence[k]));
-    if (anyPresent) return 'missing_config';
-  }
-
-  return 'disabled';
-}
+type Connector = StatusConnector;
 
 interface ConnectorStatusDotProps {
   connectorId: string;
@@ -45,7 +17,7 @@ export const ConnectorStatusDot = memo(function ConnectorStatusDot({ connectorId
     const refresh = () => {
       const connectors = listConnectors();
       const connector = connectors.find((c: Connector) => c.id === connectorId);
-      setStatus(deriveStatus(connector));
+      setStatus(deriveConnectorStatus(connector));
     };
     refresh();
     const id = setInterval(refresh, 5000);
@@ -94,7 +66,7 @@ export const ConnectorStatusStrip = memo(function ConnectorStatusStrip({ zeroCos
   }, []);
 
   const counts = connectors.reduce((acc: Record<string, number>, c: Connector) => {
-    const s = deriveStatus(c);
+    const s = deriveConnectorStatus(c);
     acc[s] = (acc[s] || 0) + 1;
     return acc;
   }, {});

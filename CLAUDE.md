@@ -76,6 +76,7 @@ Before writing any new service, component, or feature, check this list:
 |---|---|
 | Connector health UI (full panel) | `src/components/ConnectorHealthPanel.jsx` (lazy chunk) |
 | Connector status dot/strip for sidebars | `src/components/ConnectorStatusIndicators.jsx` — import from HERE not ConnectorHealthPanel |
+| Connector status classification (live/missing_config/foundation_only/placeholder/disabled) | `src/services/connectorStatusService.ts` — `deriveConnectorStatus()`. Both `ConnectorStatusIndicators.tsx` and `ConnectorHealthPanel.tsx` import this one function; do NOT redefine a local `deriveStatus()` in a new component — that duplication is exactly what caused a real connector-count drift bug (fixed 2026-08-22, see `docs/governance/DEFERRED_WORK.md`) |
 | Approval modal with risk levels | `src/components/ApprovalModal.jsx` |
 | Toast notifications | `ToastProvider` in `main.jsx`, inbound toasts in `App.jsx` |
 | Policy / approval enforcement | `src/services/policyEnforcementService.ts` |
