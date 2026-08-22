@@ -64,6 +64,16 @@ describe('getAllStatus', () => {
     const result = await getAllStatus();
     expect(result.find((t) => t.name === 'comfyui').installed).toBe(false);
   });
+
+  it('returns [] instead of null when invoke resolves null (outside Tauri)', async () => {
+    // Regression: window.__TAURI_INTERNALS__.invoke resolves Promise.resolve(null)
+    // for every command outside a real Tauri webview (see index.html's browser-dev
+    // mock) — consumers like VoiceView called .find() directly on this and crashed
+    // the whole app. getAllStatus() must never hand back null.
+    invoke.mockResolvedValue(null);
+    const result = await getAllStatus();
+    expect(result).toEqual([]);
+  });
 });
 
 describe('listTools', () => {
@@ -71,6 +81,12 @@ describe('listTools', () => {
     invoke.mockResolvedValue([]);
     await listTools();
     expect(invoke).toHaveBeenCalledWith('runtime_list_tools');
+  });
+
+  it('returns [] instead of null when invoke resolves null', async () => {
+    invoke.mockResolvedValue(null);
+    const result = await listTools();
+    expect(result).toEqual([]);
   });
 });
 
