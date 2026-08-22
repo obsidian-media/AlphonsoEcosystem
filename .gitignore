@@ -86,6 +86,11 @@ desktop.ini
 *credential*
 audits/private/
 
+# External/informal QA reports pasted in from other channels (e.g. Slack) —
+# machine-local working notes, not a repo-governed doc; findings get triaged
+# into DEFERRED_WORK.md / real issues instead of living here.
+Q&A E2E Test.md
+
 # Fetched at build time by scripts/fetch-ollama-runtime.mjs — never commit
 # vendored runtime binaries (see docs/DEPENDENCY_BUNDLING_PLAN.md). The
 # directory itself must stay tracked (src-tauri/vendor/ollama/.gitkeep) —
