@@ -457,7 +457,7 @@ class WebSocketService: ObservableObject {
     }
 
     /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
-    static func makeWebSocketURL(host: String, port: UInt16) -> URL? {
+    nonisolated static func makeWebSocketURL(host: String, port: UInt16) -> URL? {
         var components = URLComponents()
         components.scheme = "ws"
         components.port = Int(port)
