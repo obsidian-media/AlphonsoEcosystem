@@ -82,7 +82,8 @@ describe('WorkflowBuilderView', () => {
     vi.mocked(listWorkflows).mockReturnValue([
       {
         id: 'wf-1', name: 'Test Workflow', agentScope: 'any',
-        nodes: [{ id: 'n1', type: 'trigger', label: 'Trigger', config: {} }],
+        trust: 'unverified', createdAtMs: Date.now(), updatedAtMs: Date.now(),
+        nodes: [{ id: 'n1', type: 'trigger', position: { x: 0, y: 0 }, config: {}, trust: 'unverified', createdAtMs: Date.now() }],
         edges: []
       },
     ]);
@@ -90,8 +91,8 @@ describe('WorkflowBuilderView', () => {
     render(<WorkflowBuilderView />);
     fireEvent.click(screen.getByText('Test Workflow'));
 
-    const runButton = await screen.findByRole('button', { name: /run/i });
-    expect(runButton).not.toBeDisabled();
+    const runButton = await screen.findByRole('button', { name: /run/i }) as HTMLButtonElement;
+    expect(runButton.disabled).toBe(false);
     fireEvent.click(runButton);
 
     await vi.waitFor(() => {
@@ -102,14 +103,15 @@ describe('WorkflowBuilderView', () => {
     await vi.waitFor(() => {
       expect(executeWorkflowRun).toHaveBeenCalledWith('wf-run-123456');
     });
-    expect(await screen.findByText(/run completed/i)).toBeInTheDocument();
+    expect(await screen.findByText(/run completed/i)).toBeTruthy();
   });
 
   it('surfaces a partial/blocked outcome instead of a silent success message', async () => {
     vi.mocked(listWorkflows).mockReturnValue([
       {
         id: 'wf-1', name: 'Test Workflow', agentScope: 'any',
-        nodes: [{ id: 'n1', type: 'trigger', label: 'Trigger', config: {} }],
+        trust: 'unverified', createdAtMs: Date.now(), updatedAtMs: Date.now(),
+        nodes: [{ id: 'n1', type: 'trigger', position: { x: 0, y: 0 }, config: {}, trust: 'unverified', createdAtMs: Date.now() }],
         edges: []
       },
     ]);
@@ -123,6 +125,6 @@ describe('WorkflowBuilderView', () => {
     const runButton = await screen.findByRole('button', { name: /run/i });
     fireEvent.click(runButton);
 
-    expect(await screen.findByText(/1 stage blocked/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1 stage blocked/i)).toBeTruthy();
   });
 });
