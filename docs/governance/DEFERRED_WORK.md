@@ -7,6 +7,38 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-22] **CI never ran `tsc --noEmit` — real regression slipped
+  through to `main` uncaught, gap now closed.** Discovered while rebasing
+  an unrelated QA-sweep branch (#180) against `main`: PR #179 had merged 5
+  real `tsc --noEmit` errors in `WorkflowBuilderView.test.tsx` (mock objects
+  missing required fields; jest-dom matchers used in a `.tsx` file where no
+  type augmentation is wired up — see the hotfix entry below for full
+  detail). Confirmed the root systemic cause: `.github/workflows/ci.yml`'s
+  `Test & Build` job runs `npm run lint`/`npm test`/`npm run build` but
+  **never** `npm run typecheck` (`tsc --noEmit`), despite that script
+  existing and being part of `verify:app` — so a real, live TypeScript
+  error can reach `main` and stay there indefinitely with CI fully green.
+  Hotfixed the immediate regression directly (see next entry) and closed
+  the gap itself: added a `Typecheck` step to `ci.yml` right after `Lint
+  check`, matching `verify:app`'s own step ordering (`lint → typecheck →
+  test → build`), same `--if-present` pattern as the lint step, no
+  `continue-on-error` — a real type error will now fail CI going forward.
+
+- [2026-08-22] **Hotfix: real `tsc --noEmit` errors from PR #179 fixed.**
+  `WorkflowBuilderView.test.tsx`'s 2 new tests (from Workstream 6) had
+  mock objects missing required `WorkflowNode`/`Workflow` fields (`trust`,
+  `createdAtMs`, `updatedAtMs`, `position`) and an extra `label` field not
+  in the real type, plus used `toBeInTheDocument()`/`toBeDisabled()`
+  (jest-dom matchers) — but no `.tsx` test file in this project has jest-dom
+  type augmentation wired up for `tsc`, confirmed by grepping the whole
+  suite: every other `.tsx` test uses `toBeTruthy()`/plain property checks
+  instead. Fixed both: completed the mock shapes, swapped to the
+  plain-Vitest equivalents already used everywhere else. Vitest itself was
+  never broken (jest-dom matchers work fine at runtime via
+  `setupTests.js`) — this was purely a `tsc` type-checking gap, invisible
+  until someone ran `tsc --noEmit` by hand. All 6 tests in the file still
+  pass; `tsc --noEmit` clean project-wide again.
+
 - [2026-08-22] **QA sweep Workstream 6 (workflow Run silently never
   executes) — fixed same day.** Continuation of the 2026-08-22 external QA
   sweep (Workstreams 1–5 already merged, see those entries). **Fixed QA
