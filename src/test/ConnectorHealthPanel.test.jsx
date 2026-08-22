@@ -63,4 +63,28 @@ describe('ConnectorHealthPanel', () => {
     expect(screen.queryByText(/TypeError/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Cannot read propert/i)).not.toBeInTheDocument();
   });
+
+  it('Test button actually calls checkConnectorHealth and updates the row (QA N-3: "TEST is inert")', async () => {
+    // A real QA finding: "Byte-for-byte identical row text before and after
+    // the click, zero network requests, zero console output." Verified
+    // against current code before touching anything — testConnector()
+    // already routes github/slack/discord/etc. through checkConnectorHealth,
+    // so this pins that real behavior as a regression test rather than
+    // re-fixing something already working.
+    const { checkConnectorHealth } = await import('../services/connectorHealthCheckService');
+    checkConnectorHealth.mockResolvedValue({ ok: true, latencyMs: 42 });
+
+    render(<ConnectorHealthPanel zeroCostMode={false} />);
+    fireEvent.click(screen.getByText(/Health Monitor/i));
+    const testButtons = screen.getAllByTitle('Test connector connectivity');
+    const githubTestButton = testButtons[testButtons.length - 1];
+    fireEvent.click(githubTestButton);
+
+    await waitFor(() => {
+      expect(checkConnectorHealth).toHaveBeenCalledWith('github');
+    });
+    await waitFor(() => {
+      expect(githubTestButton).toHaveTextContent('OK');
+    });
+  });
 });
