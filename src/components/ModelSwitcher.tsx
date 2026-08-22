@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Cpu } from 'lucide-react';
+import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
-const OLLAMA_TAGS_URL = 'http://localhost:11434/api/tags';
-const OLLAMA_PULL_URL = 'http://localhost:11434/api/pull';
+// Computed per-call, not module-scoped constants — the configured endpoint
+// (Settings → "Ollama API Endpoint") can change without a page reload, and a
+// value captured once at import time would go stale (a real QA finding —
+// these two constants ignored the setting entirely).
+const ollamaTagsUrl = () => `${getConfiguredOllamaEndpoint()}/api/tags`;
+const ollamaPullUrl = () => `${getConfiguredOllamaEndpoint()}/api/pull`;
 const FETCH_TIMEOUT_MS = 3000;
 
 const AI_MODELS = ['ollama', 'claude', 'chatgpt'] as const;
@@ -50,7 +55,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
-        const resp = await fetch(OLLAMA_TAGS_URL, { signal: controller.signal });
+        const resp = await fetch(ollamaTagsUrl(), { signal: controller.signal });
         clearTimeout(timer);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json() as { models?: { name?: string; model?: string }[] };
@@ -89,7 +94,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
     setPullingModel(modelName);
     setPullProgress('Starting download...');
     try {
-      const res = await fetch(OLLAMA_PULL_URL, {
+      const res = await fetch(ollamaPullUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: modelName, stream: true }),
@@ -122,7 +127,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
       }
       setPullProgress('Download complete');
       try {
-        const tagRes = await fetch(OLLAMA_TAGS_URL);
+        const tagRes = await fetch(ollamaTagsUrl());
         if (tagRes.ok) {
           const tagData = await tagRes.json() as { models?: { name?: string; model?: string }[] };
           const names = Array.isArray(tagData?.models) ? tagData.models.map((m) => m.name ?? m.model ?? '').filter(Boolean) : [];
