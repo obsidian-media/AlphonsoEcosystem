@@ -21,6 +21,13 @@ import { ViewLoadingState } from './components/ViewLoadingState';
 import { useAppKeyboardShortcuts } from './hooks/useAppKeyboardShortcuts';
 import { useIdleLock } from './hooks/useIdleLock';
 import { useAppShellState } from './hooks/useAppShellState';
+import { useBootEffects } from './hooks/useBootEffects';
+import { usePersistenceEffects } from './hooks/usePersistenceEffects';
+import { useSessionEffects } from './hooks/useSessionEffects';
+import { useNativeProofEffects } from './hooks/useNativeProofEffects';
+import { useDataHydration } from './hooks/useDataHydration';
+import { usePollingEffects } from './hooks/usePollingEffects';
+import { useTrayEffects } from './hooks/useTrayEffects';
 
 // Runtime validation helpers for Tauri event payloads — replaces bare `as` assertions
 function validateCompanionCommand(payload: unknown): {
@@ -155,8 +162,8 @@ function AppShell() {
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
   const { settings, setSettings, operatorMode, setOperatorMode } = useSettings();
-  const { ollamaStatus, desktopBridge, lastCheckedAt, installedModels, selectedModelMissing, runOllamaCheck, copyTroubleshootingCommand, copyState, ollamaCheckRunRef } = useOllama();
-  const { plugins, pluginAudit, pluginSandboxPolicy, diskPluginManifests, lastPluginToolRun, lastManifestValidation, handleTogglePlugin, handleExecutePluginTool, handleValidatePluginManifest, handleDiscoverPlugins, handleUpdatePluginSandboxPolicy } = usePlugins();
+  const { ollamaStatus, desktopBridge, setDesktopBridge, lastCheckedAt, setLastCheckedAt, installedModels, selectedModelMissing, runOllamaCheck, copyTroubleshootingCommand, copyState, ollamaCheckRunRef } = useOllama();
+  const { plugins, pluginAudit, pluginSandboxPolicy, diskPluginManifests, lastPluginToolRun, lastManifestValidation, setPlugins, setPluginAudit, setDiskPluginManifests, handleTogglePlugin, handleExecutePluginTool, handleValidatePluginManifest, handleDiscoverPlugins, handleUpdatePluginSandboxPolicy } = usePlugins();
   const { workspaceFoundation, workspaceProof, ocrCapability, workspaceSymbolIndex, lastOcrAdapterRun, handleRunWorkspaceProof, handleCheckOcrCapability, handleBuildSymbolIndex, handleRunOcrAdapter, handleToggleWorkspaceFeature } = useWorkspace();
   const { verificationLogs, durableAuditLogs, auditChainProof, setVerificationLogs, setDurableAuditLogs, verifyOllamaWithProof, verifyProcesses, verifyPaths, verifyAuditChain, verifyCommand, handleRunReleasePreflight, handleRuntimeRepair } = useVerification();
   const { coachMode, coachAlwaysOnTop, coachMiniMode, coachSnapCorner, coachIntervention, coachPauseUntilMs, setCoachMode, setCoachMiniMode, setCoachAlwaysOnTop, handleToggleCoachMode, handleToggleCoachTop, handleCoachInterventionAction, minimizeToCoach } = useCoach();
@@ -219,7 +226,8 @@ function AppShell() {
     snapshots, showWorkflowPanel, approvalRequiredNotice, approvalPending,
     showOnboarding, nativeSelfDevProof, updateCheckState, braveSearchConfigured,
     approvalResolveRef, idleTimerRef, screenObserverRunRef,
-    switchTab, mergedAgentDockCompanions, nativeProofHooks,
+    nativeSelfDevAutorunRef, prevOllamaStateRef,
+    switchTab, mergedAgentDockCompanions, nativeProofHooks, writeNativeProofStage,
     setConversations, setActiveChatId, setIsSidebarOpen, setIsLocked, setIsOnline,
     setMemoryItems, setScreenObserverState, setScreenObserverLogs,
     setMiyaCompanionState, setJoseCompanionState, setHectorCompanionState,
@@ -257,6 +265,30 @@ function AppShell() {
 
   useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab, setShowKeyboardShortcuts });
   useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
+
+  // Restored 2026-08-22 — this whole block (7 hooks) was silently dead since
+  // 2026-06-15 (commit 3665b15): the refactor that introduced useAppShellState
+  // deleted the useAppEffects(...) call here and claimed the functionality had
+  // "moved to hook," but useAppShellState never actually called any of these —
+  // it only migrated plain useState/useCallback/useMemo. Real, user-visible
+  // breakage this restores: desktop-bridge detection (stuck on "Checking"
+  // forever), Telegram/WhatsApp companion auto-start on boot, settings +
+  // conversation-list hydration from the SQLite backup, connector-credential
+  // early hydration (hydrateConnectorCredentialsFromSqlite), and system-tray
+  // menu actions (new chat / coach toggle / voice toggle from the tray icon).
+  // Two of the seven sub-hooks were trimmed before restoring, because their
+  // responsibilities were independently rebuilt elsewhere after 2026-06-15
+  // and would otherwise double-fire: useSessionEffects's old coach-engine
+  // subscription (CoachContext.jsx now runs its own detector loop) and
+  // usePollingEffects's update-check block (App.tsx's own boot effect below
+  // already owns checkAppUpdate()).
+  useBootEffects({ settings, setSettings, setConversations, setActiveChatId, setDesktopBridge, setIsOnline });
+  usePersistenceEffects({ settings, conversations, nativeSelfDevProof, coachMiniMode, coachSnapCorner });
+  useSessionEffects({ isCoachWindow, activeTab, ollamaStatus, approvalRequiredNotice, prevOllamaStateRef, toast, setJoseCompanionState });
+  useNativeProofEffects({ settings, desktopBridge, updateCheckState, workspaceFoundation, nativeProofHooks, writeNativeProofStage, nativeSelfDevAutorunRef, setNativeSelfDevProof });
+  useDataHydration({ settings, desktopBridge, isCoachWindow, setVerificationLogs, setDurableAuditLogs, setDiskPluginManifests, setMemoryItems, setPlugins, setPluginAudit });
+  usePollingEffects({ isCoachWindow, operatorMode, toast, setDurableAuditLogs, setBraveSearchConfigured, screenObserverRunRef });
+  useTrayEffects({ settings, coachMode, coachAlwaysOnTop, approvalRequiredNotice, setApprovalRequiredNotice, setCoachMode, setLastTaskCompletedAt, setVerificationLogs, createNewChat, voice });
 
   // Echo end-of-session synthesis on window close
   useEffect(() => {

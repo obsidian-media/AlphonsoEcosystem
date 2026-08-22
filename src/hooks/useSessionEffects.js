@@ -1,9 +1,4 @@
 import { useEffect } from 'react';
-import {
-  COACH_INTERVENTION_LEVELS,
-  subscribeCoachEngine
-} from '../services/coachInterventionService';
-import { playCoachSoundCue } from '../services/coachSoundCueService';
 import { TRUST_STATES } from '../services/trustModel';
 import { appendSessionEvent } from '../services/sessionIntelligenceService';
 
@@ -14,23 +9,13 @@ export function useSessionEffects({
   approvalRequiredNotice,
   prevOllamaStateRef,
   toast,
-  setCoachIntervention,
-  setCoachMiniMode,
-  setCoachMode,
   setJoseCompanionState
 }) {
-  // Coach engine intervention subscription
-  useEffect(() => subscribeCoachEngine((engineEvent) => {
-    setCoachIntervention(engineEvent.intervention);
-    const level = engineEvent.intervention?.level;
-    if (level === COACH_INTERVENTION_LEVELS.HARD) {
-      setCoachMiniMode(false);
-      setCoachMode(true);
-    }
-    if (level) {
-      playCoachSoundCue(level);
-    }
-  }), []);
+  // Coach engine intervention subscription was removed here: CoachContext.jsx
+  // now owns coach-intervention detection directly (runCoachDetectors on its
+  // own 2-min interval, added 2026-07-23 per coachEngineService.ts) — this
+  // hook's old subscribeCoachEngine() call was a pre-2026-07-23 mechanism
+  // that would have double-fired interventions if restored alongside it.
 
   // Session lifecycle events
   useEffect(() => {

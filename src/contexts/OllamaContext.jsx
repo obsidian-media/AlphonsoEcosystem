@@ -57,14 +57,16 @@ export function OllamaProvider({ children, setVerificationLogs, setMemoryItems }
   const value = useMemo(() => ({
     ollamaStatus,
     desktopBridge,
+    setDesktopBridge,
     lastCheckedAt,
+    setLastCheckedAt,
     installedModels,
     selectedModelMissing,
     runOllamaCheck,
     copyTroubleshootingCommand,
     copyState,
     ollamaCheckRunRef
-  }), [ollamaStatus, desktopBridge, lastCheckedAt, installedModels, selectedModelMissing, runOllamaCheck, copyTroubleshootingCommand, copyState]);
+  }), [ollamaStatus, desktopBridge, setDesktopBridge, lastCheckedAt, setLastCheckedAt, installedModels, selectedModelMissing, runOllamaCheck, copyTroubleshootingCommand, copyState]);
 
   return (
     <OllamaContext.Provider value={value}>

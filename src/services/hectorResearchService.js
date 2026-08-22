@@ -189,9 +189,19 @@ function extractJsonArray(text) {
 async function chooseHectorOllamaModel() {
   try {
     const proof = await invoke('ollama_list_models', { endpoint: null });
-    const model = Array.isArray(proof?.models) && proof.models.length > 0
-      ? proof.models[0]?.name || null
-      : null;
+    const installed = Array.isArray(proof?.models) ? proof.models : [];
+    // Regression fix: this used to always take proof.models[0] — whichever
+    // model Ollama happened to list first — completely ignoring the user's
+    // actually-selected model. If the first-listed model is weak or unsuited
+    // for synthesis (e.g. a small/embedding model), Hector's research
+    // summary silently degrades to a bare source list with no real
+    // synthesis, which reads exactly like "just gave me a bunch of links."
+    // Prefer the configured model when it's actually installed; only fall
+    // back to the first available model if it isn't.
+    const { getConfiguredOllamaModel } = await import('../lib/ollama');
+    const configured = getConfiguredOllamaModel();
+    const preferred = installed.find((m) => m?.name === configured);
+    const model = preferred?.name || installed[0]?.name || null;
     return {
       ok: Boolean(model),
       model,

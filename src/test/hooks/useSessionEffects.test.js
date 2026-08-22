@@ -21,18 +21,6 @@ vi.mock('@tauri-apps/api/window', () => ({
   Window: vi.fn(),
 }));
 
-vi.mock('../../services/coachInterventionService', () => ({
-  COACH_INTERVENTION_LEVELS: { HARD: 'hard', SOFT: 'soft', MEDIUM: 'medium', INFO: 'info' },
-  subscribeCoachEngine: vi.fn((cb) => {
-    cb({ intervention: null });
-    return () => {};
-  }),
-}));
-
-vi.mock('../../services/coachSoundCueService', () => ({
-  playCoachSoundCue: vi.fn(),
-}));
-
 vi.mock('../../services/trustModel', () => ({
   TRUST_STATES: {
     VERIFIED: 'verified',
@@ -50,8 +38,6 @@ vi.mock('../../services/sessionIntelligenceService', () => ({
 }));
 
 import { useSessionEffects } from '../../hooks/useSessionEffects';
-import { subscribeCoachEngine } from '../../services/coachInterventionService';
-import { playCoachSoundCue } from '../../services/coachSoundCueService';
 
 describe('useSessionEffects', () => {
   const mockToast = {
@@ -68,9 +54,6 @@ describe('useSessionEffects', () => {
     approvalRequiredNotice: false,
     prevOllamaStateRef: { current: 'connected' },
     toast: mockToast,
-    setCoachIntervention: vi.fn(),
-    setCoachMiniMode: vi.fn(),
-    setCoachMode: vi.fn(),
     setJoseCompanionState: vi.fn(),
   };
 
@@ -502,66 +485,6 @@ describe('useSessionEffects', () => {
         state: 'approving',
         message: 'Approval queue needs review.',
       });
-    });
-  });
-
-  describe('Coach engine subscription', () => {
-    it('subscribes to coach engine on mount', () => {
-            renderHook(() => useSessionEffects(defaultProps));
-      expect(subscribeCoachEngine).toHaveBeenCalled();
-    });
-
-    it('sets coach intervention from engine event', () => {
-            const mockSetCoachIntervention = vi.fn();
-      const props = { ...defaultProps, setCoachIntervention: mockSetCoachIntervention };
-
-      subscribeCoachEngine.mockImplementationOnce((cb) => {
-        cb({ intervention: { level: 'hard', message: 'Test intervention' } });
-        return () => {};
-      });
-
-      renderHook(() => useSessionEffects(props));
-      expect(mockSetCoachIntervention).toHaveBeenCalledWith({
-        level: 'hard',
-        message: 'Test intervention',
-      });
-    });
-
-    it('sets coach mini mode to false on HARD intervention', () => {
-            const mockSetCoachMiniMode = vi.fn();
-      const mockSetCoachMode = vi.fn();
-      const props = { ...defaultProps, setCoachMiniMode: mockSetCoachMiniMode, setCoachMode: mockSetCoachMode };
-
-      subscribeCoachEngine.mockImplementationOnce((cb) => {
-        cb({ intervention: { level: 'hard', message: 'Test' } });
-        return () => {};
-      });
-
-      renderHook(() => useSessionEffects(props));
-      expect(mockSetCoachMiniMode).toHaveBeenCalledWith(false);
-      expect(mockSetCoachMode).toHaveBeenCalledWith(true);
-    });
-
-    it('plays sound cue for intervention level', () => {
-            
-      subscribeCoachEngine.mockImplementationOnce((cb) => {
-        cb({ intervention: { level: 'soft', message: 'Test' } });
-        return () => {};
-      });
-
-      renderHook(() => useSessionEffects(defaultProps));
-      expect(playCoachSoundCue).toHaveBeenCalledWith('soft');
-    });
-
-    it('does not play sound cue when no intervention level', () => {
-            
-      subscribeCoachEngine.mockImplementationOnce((cb) => {
-        cb({ intervention: null });
-        return () => {};
-      });
-
-      renderHook(() => useSessionEffects(defaultProps));
-      expect(playCoachSoundCue).not.toHaveBeenCalled();
     });
   });
 
