@@ -457,7 +457,12 @@ class WebSocketService: ObservableObject {
     }
 
     /// Internal (not private) so `AlphonsoCompanionTests` can exercise it via `@testable import`.
-    static func makeWebSocketURL(host: String, port: UInt16) -> URL? {
+    nonisolated static func makeWebSocketURL(host: String, port: UInt16) -> URL? {
+        // An empty host string is not a real error case for URLComponents — it happily
+        // produces "ws://:8765" (empty-but-present host component) instead of nil, which
+        // would let an unresolved/blank pairing host silently "succeed" at URL construction.
+        // Treat it the same as any other unusable host: nil.
+        guard !host.isEmpty else { return nil }
         var components = URLComponents()
         components.scheme = "ws"
         components.port = Int(port)
