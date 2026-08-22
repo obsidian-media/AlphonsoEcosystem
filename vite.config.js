@@ -7,7 +7,15 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
-    sourcemap: 'hidden',
+    // Regression fix for a real QA finding: 'hidden' still WRITES .map files
+    // to dist/ (it only omits the //# sourceMappingURL comment referencing
+    // them) — Tauri packages everything under dist/ into the installer
+    // regardless, so this shipped the app's full, unminified source map
+    // (109 files / 5.4 MB, ~57% of the built payload) inside every install.
+    // Nothing in this repo's CI/scripts ever uploads or reads these maps
+    // (checked — no Sentry/error-tracking source-map step exists), so there
+    // was no benefit being traded away by disabling them outright.
+    sourcemap: false,
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {

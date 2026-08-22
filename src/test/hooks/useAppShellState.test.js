@@ -305,8 +305,27 @@ describe('useAppShellState', () => {
         result.current.createNewChat();
       });
       expect(result.current.conversations).toHaveLength(2);
-      expect(result.current.activeChatId).toMatch(/^chat-\d+$/);
+      expect(result.current.activeChatId).toMatch(/^chat-\d+-[a-z0-9]+$/);
       expect(result.current.activeTab).toBe('chat');
+    });
+
+    it('does not collide ids when two chats are created in the same millisecond', () => {
+      const { result } = renderHook(() => useAppShellState(defaultProps));
+      const realNow = Date.now;
+      Date.now = () => 1700000000000;
+      try {
+        act(() => {
+          result.current.createNewChat();
+        });
+        act(() => {
+          result.current.createNewChat();
+        });
+      } finally {
+        Date.now = realNow;
+      }
+      const ids = result.current.conversations.map((c) => c.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(result.current.conversations).toHaveLength(3);
     });
 
     it('deletes chat and resets to default when last chat removed', () => {

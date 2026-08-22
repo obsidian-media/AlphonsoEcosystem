@@ -506,6 +506,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
               <div key={label}>
                 <div className="text-[9px] font-bold uppercase text-zinc-600 mb-1">{label}</div>
                 <select
+                  aria-label={`Snapshot ${label}`}
                   value={val}
                   onChange={(e) => setter(e.target.value)}
                   className="w-full rounded-lg bg-zinc-900 border border-white/10 px-2 py-1.5 text-[10px] text-zinc-200 outline-none"

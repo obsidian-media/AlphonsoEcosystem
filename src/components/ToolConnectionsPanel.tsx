@@ -196,6 +196,7 @@ export function ToolConnectionsPanel() {
         <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <select
+              aria-label="Connection type"
               value={connectionType}
               onChange={(event) => {
                 const nextType = event.target.value;

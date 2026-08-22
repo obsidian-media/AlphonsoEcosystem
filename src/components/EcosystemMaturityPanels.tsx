@@ -249,16 +249,16 @@ export function MemoryConfidencePanel() {
   return (
     <Panel icon={Brain} title="Memory Confidence System" tone="indigo">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-        <select value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+        <select aria-label="Filter by confidence" value={confidenceFilter} onChange={(event) => setConfidenceFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
           {['all', 'verified', 'inferred', 'temporary', 'expired', 'unverified', 'user_confirmed'].map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
         </select>
-        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+        <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
           {categories.map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}
         </select>
-        <select value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+        <select aria-label="Filter by agent" value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
           {['all', 'jose', 'alphonso', 'miya', 'hector', 'maria', 'marcus', 'echo', 'sentinel', 'nova', 'shared'].map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
-        <select value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
+        <select aria-label="Filter by date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100">
           <option value="all">all dates</option>
           <option value="today">today</option>
           <option value="7d">last 7 days</option>

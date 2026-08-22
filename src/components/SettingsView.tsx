@@ -319,6 +319,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
       ) : (
         <div className="relative">
           <select
+            aria-label="Select model"
             value={models.some((model) => model.name === selectedModel) ? selectedModel : ''}
             onChange={(event) => onSelectModel(event.target.value)}
             className="w-full appearance-none bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
@@ -851,6 +852,7 @@ export function SettingsView({
               <button
                 onClick={handlePickWorkspaceRoot}
                 className="px-3 py-2 rounded-xl border border-white/10 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+                aria-label="Browse for folder"
                 title="Browse for folder"
               >
                 <Folder className="w-4 h-4" />

@@ -218,6 +218,7 @@ export function SessionHistoryView() {
             />
           </div>
           <select
+            aria-label="Filter by status"
             value={filterStatus}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
             className="px-2.5 py-1.5 text-xs rounded-lg bg-zinc-800 border border-white/[0.08] text-zinc-200 focus:outline-none"

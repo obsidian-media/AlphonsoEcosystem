@@ -212,6 +212,7 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
       <div className="flex items-center gap-1.5 px-3 py-2.5">
         <button
           type="button"
+          aria-label="Drag to move agent dock"
           onPointerDown={startDrag}
           className="cursor-grab rounded p-0.5 text-zinc-400 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-400 active:cursor-grabbing"
         >
@@ -235,7 +236,7 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
           )}
         </div>
 
-        <button onClick={toggle} className="p-0.5 rounded text-zinc-600 hover:text-zinc-300 transition-colors">
+        <button onClick={toggle} aria-label={minimized ? 'Expand agent dock' : 'Minimize agent dock'} className="p-0.5 rounded text-zinc-600 hover:text-zinc-300 transition-colors">
           {minimized ? <ChevronDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
         </button>
       </div>

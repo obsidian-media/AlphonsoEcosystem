@@ -64,6 +64,7 @@ export class ViewErrorBoundary extends Component<Props, State> {
             <button
               onClick={this.handleCopyError}
               className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-xl text-xs text-zinc-500 transition-colors"
+              aria-label="Copy error details"
               title="Copy error details"
             >
               <Copy className="w-3 h-3" />

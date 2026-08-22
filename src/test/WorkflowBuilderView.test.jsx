@@ -63,13 +63,9 @@ describe('WorkflowBuilderView', () => {
     render(<WorkflowBuilderView />);
     const input = screen.getByPlaceholderText(/New workflow name/i);
     fireEvent.change(input, { target: { value: 'My Workflow' } });
-    // The + button is the only button in the sidebar create row
-    const plusBtn = screen.getByRole('button', { name: '' });
-    // Find button by querying all buttons and picking the one with Plus icon (no text)
-    const allButtons = screen.getAllByRole('button');
-    // The create button is disabled when empty — after typing it should be enabled
-    const createBtn = allButtons.find(btn => !btn.disabled && btn.querySelector('svg'));
-    fireEvent.click(createBtn || allButtons[0]);
+    // The create button now carries aria-label="Create workflow" (a11y fix)
+    const createBtn = screen.getByRole('button', { name: 'Create workflow' });
+    fireEvent.click(createBtn);
     expect(createWorkflow).toHaveBeenCalledWith('My Workflow');
   });
 
