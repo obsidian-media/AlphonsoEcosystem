@@ -7,6 +7,32 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-08-22] **QA sweep — N-3 (connector TEST button "inert") re-verified,
+  already fixed, not a new fix.** Continuation of the 2026-08-22 external QA
+  sweep. QA reported the connector TEST button as inert ("byte-for-byte
+  identical row text before and after the click, zero network requests,
+  zero console output"). Checked the current code directly rather than
+  assuming the report still holds: `ConnectorHealthPanel.tsx`'s
+  `handleTest()`/`testConnector()` already route github/slack/discord/etc.
+  through a real `checkConnectorHealth()` call and update `testState`/
+  `testMessage` on completion — this is fully wired, not stubbed. Added a
+  regression test (`ConnectorHealthPanel.test.jsx`, 1 new case) proving the
+  Test button on a real connector calls `checkConnectorHealth('github')` and
+  flips the button to "OK" — this pins the current correct behavior so it
+  can't silently regress, since no test previously covered this path at
+  all. Also checked whether `handleTest`/`handleValidate` need a defensive
+  `try/catch` around their awaited calls (an unhandled rejection would leave
+  the button stuck on "…testing" forever, the same bug class as Workstream
+  1's null-Tauri-bridge issue) — traced `checkConnectorHealth()` and
+  `validateConnectorCredentials()` fully: every internal branch has its own
+  try/catch and always resolves, never throws, so this is not a live risk;
+  didn't add speculative error handling for a scenario that can't occur.
+  **Conclusion:** whatever QA observed on their test pass either predates
+  a fix already merged, or was specific to a connector/environment
+  combination not reproduced here — not re-opening this as a bug without
+  a live repro. `tsc --noEmit` clean, lint clean, all 5 tests in
+  `ConnectorHealthPanel.test.jsx` passing.
+
 - [2026-08-22] **QA sweep Workstream 6 (workflow Run silently never
   executes) — fixed same day.** Continuation of the 2026-08-22 external QA
   sweep (Workstreams 1–5 already merged, see those entries). **Fixed QA
