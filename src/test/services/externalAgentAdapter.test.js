@@ -18,7 +18,8 @@ vi.mock('../../services/connectorRegistryService.js', () => ({
 }));
 
 vi.mock('../../lib/ollama.js', () => ({
-  generateOllamaChatStream: vi.fn()
+  generateOllamaChatStream: vi.fn(),
+  getConfiguredOllamaEndpoint: vi.fn(() => 'http://localhost:11434')
 }));
 
 const localStorageMock = {

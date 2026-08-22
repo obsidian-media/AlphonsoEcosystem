@@ -9,6 +9,7 @@ import { listAgentProfiles } from '../agents/agentRegistry';
 import { runQuickScan } from './sentinelSecurityService';
 import { getOpportunityHistory } from './novaAnalysisService';
 import { listOrchestrationReceipts } from './orchestrationReceiptService';
+import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const INBOUND_POLL_MS = 4000;
 const PUSH_WATCHER_MS = 6000;
@@ -153,7 +154,7 @@ export async function handleStatusCommand(token, chatId) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const response = await fetch('http://localhost:11434/api/tags', {
+    const response = await fetch(`${getConfiguredOllamaEndpoint()}/api/tags`, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -334,7 +335,7 @@ export async function handleReportCommand(token, chatId) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const response = await fetch('http://localhost:11434/api/tags', {
+    const response = await fetch(`${getConfiguredOllamaEndpoint()}/api/tags`, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);

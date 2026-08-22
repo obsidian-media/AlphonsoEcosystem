@@ -2,7 +2,7 @@ import { isDeepSeekConfigured, sendDeepSeekMessage } from '../connectors/deepsee
 import { sendChatGPTMessage } from '../chatgptService.js';
 import { sendClaudeMessage } from '../claudeService.js';
 import { isConnectorAuthenticated } from '../connectorRegistryService.js';
-import { generateOllamaChatStream } from '../../lib/ollama.js';
+import { generateOllamaChatStream, getConfiguredOllamaEndpoint } from '../../lib/ollama.js';
 
 /**
  * External Agent Adapter — routes external agent tasks to live providers.
@@ -73,7 +73,7 @@ export async function runExternalAgentTask(provider, task, options = {}) {
   if (provider === 'ollama') {
     try {
       const model = options.model || 'llama3.1';
-      const endpoint = options.endpoint || 'http://localhost:11434';
+      const endpoint = options.endpoint || getConfiguredOllamaEndpoint();
       let content = '';
       await generateOllamaChatStream({ endpoint, model, messages: [{ role: 'user', content: task }], onToken: (t) => { content = t; } });
       return { enabled: true, status: 'ok', content, provider: 'ollama', tracked: true };
