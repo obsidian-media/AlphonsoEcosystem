@@ -6,6 +6,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.6.3] — 2026-08-22 (installer fix + external QA sweep)
+
+- **Fixed the Windows/Linux Tauri installer build break** (broken since
+  2026-08-16). Pruned the `cuda_v13` backend from the bundled Ollama runtime,
+  keeping only `cuda_v12` — the combined payload had grown past what NSIS
+  could package. Verified via a real `workflow_dispatch` run producing a
+  957MB Windows installer artifact. Linux's `linuxdeploy` failure persists
+  with a distinct, faster-failing root cause — still open, not a blocker
+  since `Tauri Desktop Build (Linux)` is `continue-on-error`.
+- **External QA E2E sweep — closed 12 real findings** across 10 PRs
+  (#174–183): a null-Tauri-bridge boot crash, a chat-switch message leak,
+  duplicated connector-status classification logic causing sidebar/panel
+  drift, hardcoded Ollama endpoints ignoring the Settings field, Miya
+  fabricating output from empty inputs, the Workflow Builder's Run button
+  silently only queuing instead of executing, a real `tsc --noEmit`
+  regression that reached `main` because CI never ran typecheck (gap now
+  closed), Content Studio's header counters reading nonexistent snapshot
+  fields, a `createNewChat()` id collision that could duplicate Recent
+  Chats entries, sidebar-collapse state never persisting, and Vite still
+  writing full unminified sourcemaps into every installer despite
+  `sourcemap: 'hidden'`.
+- **Accessibility:** added `aria-label` to all 27 `<select>` elements and 11
+  icon-only `<button>` elements found missing an accessible name (an
+  axe-core WCAG AA audit finding), and bumped the `--text-3`/`--text-4`
+  contrast tokens (dark and light) at the root of a reported 635 contrast
+  violations.
+- **CI:** `Playwright E2E Smoke Test` closed out roadmap T10 and is a
+  required, blocking branch-protection check again — the suite had quietly
+  gone green (28/28) since the advisory flag was set on 2026-07-16, but
+  nobody had re-checked until now.
+- package.json / tauri.conf.json / Cargo.toml / Cargo.lock version: 2.6.3
+  (all four in sync).
+
+---
+
 ## [2.6.2] — 2026-08-14 (post-PR #143 repo hygiene: security, CI, and bug fixes)
 
 - **Fixed a live bug: iOS Boardroom steering was silently broken.** `App.tsx`'s
