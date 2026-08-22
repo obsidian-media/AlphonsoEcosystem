@@ -18,7 +18,14 @@ vi.mock('../../services/workflowBuilderService', () => ({
 }));
 
 vi.mock('../../services/workflowExecutionService', () => ({
-  runVisualWorkflow: vi.fn().mockResolvedValue({ runId: 'run-123456' }),
+  runVisualWorkflow: vi.fn().mockReturnValue({
+    ok: true,
+    run: { id: 'wf-run-123456', status: 'queued', progress: { totalStages: 1, completedStages: 0, blockedStages: 0 } }
+  }),
+  executeWorkflowRun: vi.fn().mockResolvedValue({
+    ok: true,
+    run: { id: 'wf-run-123456', status: 'completed', progress: { totalStages: 1, completedStages: 1, blockedStages: 0 } }
+  }),
 }));
 
 vi.mock('lucide-react', () => ({
@@ -36,6 +43,8 @@ vi.mock('lucide-react', () => ({
 }));
 
 import { WorkflowBuilderView } from '../../components/WorkflowBuilderView';
+import { listWorkflows } from '../../services/workflowBuilderService';
+import { runVisualWorkflow, executeWorkflowRun } from '../../services/workflowExecutionService';
 
 describe('WorkflowBuilderView', () => {
   beforeEach(() => {
@@ -63,5 +72,59 @@ describe('WorkflowBuilderView', () => {
   it('shows empty state when no workflow selected', () => {
     render(<WorkflowBuilderView />);
     expect(screen.getByText('Select or create a workflow')).toBeTruthy();
+  });
+
+  // Regression for a real QA finding (Q&A E2E Test.md N-4): clicking Run on
+  // a workflow with real steps produced "no run, no error, no history, no
+  // dead-letter entry" — root cause was runVisualWorkflow() only ever
+  // creating a queued run record and never actually executing it.
+  it('actually executes the run (not just queues it) when Run is clicked', async () => {
+    vi.mocked(listWorkflows).mockReturnValue([
+      {
+        id: 'wf-1', name: 'Test Workflow', agentScope: 'any',
+        trust: 'unverified', createdAtMs: Date.now(), updatedAtMs: Date.now(),
+        nodes: [{ id: 'n1', type: 'trigger', position: { x: 0, y: 0 }, config: {}, trust: 'unverified', createdAtMs: Date.now() }],
+        edges: []
+      },
+    ]);
+
+    render(<WorkflowBuilderView />);
+    fireEvent.click(screen.getByText('Test Workflow'));
+
+    const runButton = await screen.findByRole('button', { name: /run/i }) as HTMLButtonElement;
+    expect(runButton.disabled).toBe(false);
+    fireEvent.click(runButton);
+
+    await vi.waitFor(() => {
+      expect(runVisualWorkflow).toHaveBeenCalledWith('wf-1', expect.objectContaining({ initiatedBy: 'user' }));
+    });
+    // The actual fix: executeWorkflowRun must be called with the queued
+    // run's real id — not left as a queued-forever run with no follow-up.
+    await vi.waitFor(() => {
+      expect(executeWorkflowRun).toHaveBeenCalledWith('wf-run-123456');
+    });
+    expect(await screen.findByText(/run completed/i)).toBeTruthy();
+  });
+
+  it('surfaces a partial/blocked outcome instead of a silent success message', async () => {
+    vi.mocked(listWorkflows).mockReturnValue([
+      {
+        id: 'wf-1', name: 'Test Workflow', agentScope: 'any',
+        trust: 'unverified', createdAtMs: Date.now(), updatedAtMs: Date.now(),
+        nodes: [{ id: 'n1', type: 'trigger', position: { x: 0, y: 0 }, config: {}, trust: 'unverified', createdAtMs: Date.now() }],
+        edges: []
+      },
+    ]);
+    vi.mocked(executeWorkflowRun).mockResolvedValue({
+      ok: true,
+      run: { id: 'wf-run-123456', status: 'partial', progress: { totalStages: 2, completedStages: 1, blockedStages: 1 } }
+    });
+
+    render(<WorkflowBuilderView />);
+    fireEvent.click(screen.getByText('Test Workflow'));
+    const runButton = await screen.findByRole('button', { name: /run/i });
+    fireEvent.click(runButton);
+
+    expect(await screen.findByText(/1 stage blocked/i)).toBeTruthy();
   });
 });
