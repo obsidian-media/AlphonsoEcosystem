@@ -6,6 +6,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.6.4] — 2026-08-23 (live post-install bug batch)
+
+- **Restored `useAppEffects`**, dead since 2026-06-15 (2+ months, 44+
+  commits) — a refactor deleted the call and claimed the logic "moved to
+  a hook," but it never did. Fixes: the desktop-bridge indicator was
+  permanently stuck on "Checking"; Telegram/WhatsApp companion auto-start
+  on boot never ran; settings and the conversation list never hydrated
+  from the SQLite backup; **the conversation list never persisted at
+  all** (chat history was lost on every restart); connector-credential
+  early hydration was missing; audit logs/plugin manifests/memory items
+  never re-hydrated on boot; system tray menu actions (New Chat, Coach
+  toggle, Voice toggle) were silent no-ops.
+- **Fixed 5 real bugs found via direct interactive testing**, each
+  root-caused from the actual error text: Hermes Agents were blocked by
+  a CSP port allowlist that never covered Hermes' arbitrary local ports;
+  Coach Mode was missing the `core:webview:allow-create-webview-window`
+  ACL permission; Voice OS's 5-second startup timeout was too tight for
+  a real `faster-whisper` model cold-load (bumped to 15s); Boardroom and
+  Hector's research pipeline were both silently ignoring the user's
+  selected Ollama model in favor of a hardcoded value / whichever model
+  Ollama listed first.
+- **Fixed a real, previously-unreachable build bug**: restoring
+  `useAppEffects` made `telegramCompanionService.js` reachable in a
+  production build for the first time ever, immediately surfacing a
+  `/scan` command handler that imported a nonexistent
+  `sentinelSecurityService` export and read fields that don't exist on
+  the real result shape — silently broken since it was written, masked
+  by a test mock that had independently invented the same wrong shape.
+- package.json / tauri.conf.json / Cargo.toml / Cargo.lock version:
+  2.6.4 (all four in sync).
+
+---
+
 ## [2.6.3] — 2026-08-22 (installer fix + external QA sweep)
 
 - **Fixed the Windows/Linux Tauri installer build break** (broken since
