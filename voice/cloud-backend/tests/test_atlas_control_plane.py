@@ -1,0 +1,150 @@
+import asyncio
+import os
+import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+from fastapi.testclient import TestClient
+
+sys.path.insert(0, str(Path(__file__).parents[1]))
+
+from app.atlas_control_plane import AtlasDemoControlPlane
+from app.main import app, atlas_demo_control_plane
+from app.supabase_auth import SupabaseUser
+
+
+ENV = {
+    "SUPABASE_URL": "https://example.supabase.co",
+    "SUPABASE_ANON_KEY": "publishable-key",
+    "ATLAS_CONTROL_PLANE_DEMO_MODE": "true",
+}
+HEADERS = {
+    "Authorization": "Bearer demo-user-token",
+    "X-Alphonso-API-Version": "v1",
+}
+USER = SupabaseUser(id="user-mobile-test", access_token="demo-user-token")
+
+
+def reset_demo_state() -> None:
+    asyncio.run(atlas_demo_control_plane.reset_for_tests())
+
+
+def test_atlas_routes_are_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("ATLAS_CONTROL_PLANE_DEMO_MODE", raising=False)
+    response = TestClient(app).get(
+        "/api/v1/workspaces/workspace-northstar/briefing",
+        headers={"X-Alphonso-API-Version": "v1"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Atlas control-plane demo mode is not enabled"
+
+
+def test_atlas_briefing_requires_a_user_token():
+    with patch.dict(os.environ, ENV, clear=False):
+        response = TestClient(app).get(
+            "/api/v1/workspaces/workspace-northstar/briefing",
+            headers={"X-Alphonso-API-Version": "v1"},
+        )
+
+    assert response.status_code == 401
+
+
+def test_atlas_briefing_requires_v1_header():
+    with patch.dict(os.environ, ENV, clear=False):
+        response = TestClient(app).get(
+            "/api/v1/workspaces/workspace-northstar/briefing",
+            headers={"Authorization": "Bearer demo-user-token"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported Atlas API version"
+
+
+def test_atlas_briefing_is_authenticated_and_uses_mobile_contract():
+    reset_demo_state()
+    with patch.dict(os.environ, ENV, clear=False), patch(
+        "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
+    ):
+        response = TestClient(app).get(
+            "/api/v1/workspaces/workspace-northstar/briefing",
+            headers=HEADERS,
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["workspace"]["name"] == "Northstar Workspace"
+    assert payload["workspace"]["posture"] == "cloud"
+    assert payload["active_runs"][0]["trace_id"] == "RUN/RS-204"
+    assert payload["decisions"][0]["state"] == "awaiting_review"
+    assert payload["decisions"][0]["run_id"] == "run-release-brief"
+
+
+def test_atlas_create_draft_is_user_scoped_and_returns_v1_run():
+    reset_demo_state()
+    with patch.dict(os.environ, ENV, clear=False), patch(
+        "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
+    ):
+        response = TestClient(app).post(
+            "/api/v1/workspaces/workspace-northstar/runs/drafts",
+            headers=HEADERS,
+            json={
+                "brief": "Prepare release notes",
+                "desired_outcome": "A reviewed draft",
+                "execution_posture": "hybrid",
+            },
+        )
+        briefing = TestClient(app).get(
+            "/api/v1/workspaces/workspace-northstar/briefing",
+            headers=HEADERS,
+        )
+
+    assert response.status_code == 201
+    run = response.json()
+    assert run["title"] == "Prepare release notes"
+    assert run["phase"] == "planned"
+    assert run["posture"] == "hybrid"
+    assert run["trace_id"].startswith("DRAFT/")
+    assert any(item["id"] == run["id"] for item in briefing.json()["active_runs"])
+
+
+def test_atlas_review_is_not_final_approval_and_cannot_repeat():
+    reset_demo_state()
+    with patch.dict(os.environ, ENV, clear=False), patch(
+        "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
+    ):
+        first = TestClient(app).post(
+            "/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/reviews",
+            headers=HEADERS,
+            json={},
+        )
+        repeated = TestClient(app).post(
+            "/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/reviews",
+            headers=HEADERS,
+            json={},
+        )
+
+    assert first.status_code == 200
+    assert first.json()["state"] == "review_recorded_pending_confirmation"
+    assert repeated.status_code == 409
+    assert repeated.json()["detail"] == "This decision cannot be reviewed in its current state"
+
+
+def test_atlas_unknown_workspace_never_creates_state():
+    reset_demo_state()
+    with patch.dict(os.environ, ENV, clear=False), patch(
+        "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
+    ):
+        response = TestClient(app).get(
+            "/api/v1/workspaces/unknown-workspace/briefing",
+            headers=HEADERS,
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Workspace record is unavailable"
+
+
+def test_non_production_control_plane_is_not_a_desktop_gateway():
+    assert not hasattr(AtlasDemoControlPlane, "dispatch_command")
+    assert not hasattr(AtlasDemoControlPlane, "execute_connector")
+    assert not hasattr(AtlasDemoControlPlane, "approve_decision")

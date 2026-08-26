@@ -7,6 +7,14 @@ from uuid import uuid4
 from fastapi import FastAPI, Header, HTTPException
 
 from app.config import Settings
+from app.atlas_control_plane import (
+    AtlasBriefingResponse,
+    AtlasDecisionResponse,
+    AtlasDecisionReviewRequest,
+    AtlasDemoControlPlane,
+    AtlasDraftRunRequest,
+    AtlasRunResponse,
+)
 from app.contracts import ChatMessage, DeviceEnrollmentRequest, Timings, VoiceRequest, VoiceResponse
 from app.nvidia import NvidiaClient, NvidiaError
 from app.piper_tts import PiperTTSClient
@@ -14,6 +22,22 @@ from app.voice_policy import VoicePolicyError, build_system_message
 from app.supabase_auth import SupabaseDeviceRegistry
 
 app = FastAPI(title="Alphonso Cloud Voice")
+atlas_demo_control_plane = AtlasDemoControlPlane()
+
+
+def _require_atlas_demo(settings: Settings, api_version: str | None) -> None:
+    if not settings.atlas_control_plane_demo_mode:
+        raise HTTPException(status_code=503, detail="Atlas control-plane demo mode is not enabled")
+    if api_version != "v1":
+        raise HTTPException(status_code=400, detail="Unsupported Atlas API version")
+
+
+async def _atlas_demo_user(authorization: str | None, api_version: str | None):
+    settings = Settings.from_env()
+    _require_atlas_demo(settings, api_version)
+    # The non-production contract is user-scoped but deliberately does not claim
+    # device binding, worker dispatch, connector access, or final action approval.
+    return await SupabaseDeviceRegistry(settings).user_from_authorization(authorization)
 
 
 @app.get("/health")
@@ -27,6 +51,40 @@ async def ready() -> dict[str, object]:
     if not status["ready"]:
         raise HTTPException(status_code=503, detail=status)
     return status
+
+
+@app.get("/api/v1/workspaces/{workspace_id}/briefing", response_model=AtlasBriefingResponse)
+async def atlas_briefing(
+    workspace_id: str,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+) -> AtlasBriefingResponse:
+    user = await _atlas_demo_user(authorization, x_alphonso_api_version)
+    return await atlas_demo_control_plane.briefing(user.id, workspace_id)
+
+
+@app.post("/api/v1/workspaces/{workspace_id}/runs/drafts", response_model=AtlasRunResponse, status_code=201)
+async def atlas_create_draft(
+    workspace_id: str,
+    payload: AtlasDraftRunRequest,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+) -> AtlasRunResponse:
+    user = await _atlas_demo_user(authorization, x_alphonso_api_version)
+    return await atlas_demo_control_plane.create_draft(user.id, workspace_id, payload)
+
+
+@app.post("/api/v1/workspaces/{workspace_id}/decisions/{decision_id}/reviews", response_model=AtlasDecisionResponse)
+async def atlas_record_decision_review(
+    workspace_id: str,
+    decision_id: str,
+    payload: AtlasDecisionReviewRequest,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+) -> AtlasDecisionResponse:
+    del payload  # Reserved for a future server-issued action-challenge receipt.
+    user = await _atlas_demo_user(authorization, x_alphonso_api_version)
+    return await atlas_demo_control_plane.record_review(user.id, workspace_id, decision_id)
 
 
 @app.post("/v1/voice/devices/enroll")

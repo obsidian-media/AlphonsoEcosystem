@@ -19,6 +19,7 @@ class Settings:
     request_timeout_seconds: float
     supabase_url: str
     supabase_anon_key: str
+    atlas_control_plane_demo_mode: bool
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -36,6 +37,7 @@ class Settings:
             request_timeout_seconds=float(os.environ.get("VOICE_CLOUD_TIMEOUT_SECONDS", "60")),
             supabase_url=os.environ.get("SUPABASE_URL", "").rstrip("/"),
             supabase_anon_key=os.environ.get("SUPABASE_ANON_KEY", "").strip(),
+            atlas_control_plane_demo_mode=os.environ.get("ATLAS_CONTROL_PLANE_DEMO_MODE", "false").strip().lower() == "true",
         )
 
     @property
@@ -47,6 +49,7 @@ class Settings:
             "ready": self.is_ready,
             "nvidia_nim": bool(self.nvidia_api_key and self.nim_model),
             "device_enrollment": bool(self.supabase_url and self.supabase_anon_key),
+            "atlas_control_plane_demo": self.atlas_control_plane_demo_mode,
             "tts": {
                 "magpie": bool(self.magpie_url),
                 "chatterbox": bool(self.chatterbox_url),
