@@ -44,6 +44,31 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertTrue(run.traceID.hasPrefix("DRAFT/"))
     }
 
+    func testRunDetailGuidanceExplainsAwaitingDecisionWithoutClaimingExecution() async throws {
+        let repository = AtlasFixtureRepository()
+        let briefing = try await repository.loadBriefing(workspaceID: "workspace-northstar")
+        guard let run = briefing.activeRuns.first(where: { $0.id == "run-release-brief" }) else {
+            return XCTFail("Expected release brief fixture run")
+        }
+
+        XCTAssertEqual(run.phaseLabel, "Awaiting decision")
+        XCTAssertEqual(run.status, .awaitingDecision)
+        XCTAssertTrue(run.nextAction.contains("Review the linked decision"))
+        XCTAssertFalse(run.nextAction.localizedCaseInsensitiveContains("execute"))
+    }
+
+    func testRunDetailGuidanceExplainsExecutingRecord() async throws {
+        let repository = AtlasFixtureRepository()
+        let briefing = try await repository.loadBriefing(workspaceID: "workspace-northstar")
+        guard let run = briefing.activeRuns.first(where: { $0.id == "run-research-synthesis" }) else {
+            return XCTFail("Expected research fixture run")
+        }
+
+        XCTAssertEqual(run.phaseLabel, "In progress")
+        XCTAssertEqual(run.status, .executing)
+        XCTAssertTrue(run.nextAction.contains("verified update"))
+    }
+
     @MainActor
     func testStoreRecordsDecisionReviewAndUpdatesBriefing() async {
         let store = AtlasWorkspaceStore()

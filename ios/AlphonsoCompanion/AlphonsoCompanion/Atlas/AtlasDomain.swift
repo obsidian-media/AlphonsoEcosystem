@@ -118,6 +118,40 @@ struct AtlasRun: Codable, Equatable, Identifiable {
             return "UPDATED \(updatedAt.formatted(.relative(presentation: .named)).uppercased())"
         }
     }
+
+    var phaseLabel: String {
+        switch phase {
+        case .planned: return "Planned"
+        case .awaitingApproval: return "Awaiting decision"
+        case .queued: return "Queued"
+        case .executing: return "In progress"
+        case .waitingOnDependency: return "Waiting on dependency"
+        case .succeeded: return "Delivered"
+        case .failed: return "Needs attention"
+        case .cancelled: return "Cancelled"
+        }
+    }
+
+    var nextAction: String {
+        switch phase {
+        case .planned:
+            return "Refine the intent and prepare this work for the verified queue."
+        case .awaitingApproval:
+            return "Review the linked decision and its evidence before recording any confirmation."
+        case .queued:
+            return "The verified workspace queue will begin this work when its dependencies are ready."
+        case .executing:
+            return "Monitor the record; Alphonso will attach the next verified update here."
+        case .waitingOnDependency:
+            return "Resolve the named dependency before this record can continue."
+        case .succeeded:
+            return "Review the delivered record and retain its trace for future accountability."
+        case .failed:
+            return "Inspect the record and decide whether to create a new, explicitly scoped run."
+        case .cancelled:
+            return "This record remains available as an accountability trace; it will not continue."
+        }
+    }
 }
 
 struct AtlasOutcome: Codable, Equatable, Identifiable {

@@ -249,6 +249,7 @@ private struct AtlasWorkView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
     let createWork: () -> Void
     @State private var selectedSegment = 0
+    @State private var selectedRun: AtlasRun?
 
     var body: some View {
         NavigationStack {
@@ -279,6 +280,10 @@ private struct AtlasWorkView: View {
             }
             .navigationBarHidden(true)
         }
+        .sheet(item: $selectedRun) { run in
+            AtlasRunDetailSheet(run: run)
+                .environmentObject(store)
+        }
     }
 
     private var visibleRuns: [AtlasRun] {
@@ -307,7 +312,7 @@ private struct AtlasWorkView: View {
                         stamp: run.traceID,
                         status: run.status,
                         posture: run.posture,
-                        action: {}
+                        action: { selectedRun = run }
                     )
                 }
             }
@@ -332,6 +337,106 @@ private struct AtlasWorkView: View {
 
     private var emptyDetail: String {
         selectedSegment == 2 ? "Completed work and approved artifacts will be collected here." : selectedSegment == 1 ? "Create a brief or schedule a workflow to build the next run." : "New workspace activity will appear here as it begins."
+    }
+}
+
+private struct AtlasRunDetailSheet: View {
+    let run: AtlasRun
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedDecision: AtlasDecision?
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    AtlasPostureBadge(run.posture, freshness: run.timestampLabel)
+                    Text("Work record")
+                        .font(AtlasTheme.Type.proof)
+                        .tracking(1.1)
+                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    Text(run.title)
+                        .font(AtlasTheme.Type.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    AtlasStatusLabel(run.status)
+                }
+
+                AtlasRule()
+
+                AtlasSectionHeader("Intent", detail: "The record preserves why this work exists and who owns the next accountable step.")
+                AtlasRunFact(label: "Objective", value: run.summary)
+                AtlasRunFact(label: "Owner", value: run.owner)
+                AtlasRunFact(label: "State", value: run.phaseLabel)
+                AtlasRunFact(label: "Last verified update", value: run.updatedAt.formatted(.relative(presentation: .named)))
+
+                AtlasSectionHeader("Next accountable step")
+                Text(run.nextAction)
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(AtlasTheme.Spacing.md)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+
+                decisionSection
+
+                AtlasSectionHeader("Record trace", detail: "Use this immutable identifier when referring to the workspace record or its audit trail.")
+                AtlasRunFact(label: "Trace", value: run.traceID, monospaced: true)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+            }
+        }
+        .sheet(item: $selectedDecision) { decision in
+            AtlasDecisionReviewSheet(decision: decision)
+                .environmentObject(store)
+        }
+    }
+
+    @ViewBuilder
+    private var decisionSection: some View {
+        if let decision = linkedDecision {
+            AtlasSectionHeader("Decision checkpoint", detail: "This work remains connected to its evidence and policy record.")
+            AtlasRunFact(label: "Policy", value: decision.policyCode)
+            AtlasRunFact(label: "Evidence", value: decision.evidenceSummary)
+            AtlasPrimaryButton(title: "Open decision review", symbol: "checkmark.shield", action: {
+                selectedDecision = decision
+            })
+            .accessibilityHint("Opens the linked evidence and policy review. Recording a confirmation does not execute an external action.")
+        } else {
+            AtlasSectionHeader("Decision checkpoint")
+            AtlasEmptyState(
+                symbol: "checkmark.shield",
+                title: "No decision is attached",
+                detail: "This record has no policy checkpoint waiting for your review."
+            )
+        }
+    }
+
+    private var linkedDecision: AtlasDecision? {
+        store.briefing?.decisions.first(where: { $0.runID == run.id })
+    }
+}
+
+private struct AtlasRunFact: View {
+    let label: String
+    let value: String
+    var monospaced = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(AtlasTheme.Type.proof)
+                .tracking(0.8)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            Text(value)
+                .font(monospaced ? AtlasTheme.Type.metadata.monospaced() : AtlasTheme.Type.body)
+                .foregroundStyle(AtlasTheme.ColorToken.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
