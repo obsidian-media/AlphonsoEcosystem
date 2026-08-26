@@ -208,6 +208,50 @@ struct AtlasDecisionConfirmationReceipt: Codable, Equatable, Identifiable {
     var isNonExecuting: Bool { executionStatus == "not_executed" }
 }
 
+enum AtlasAuditEventType: String, Codable, CaseIterable, Equatable {
+    case reviewRecorded = "review_recorded"
+    case challengeIssued = "challenge_issued"
+    case confirmationRecorded = "confirmation_recorded"
+
+    var label: String {
+        switch self {
+        case .reviewRecorded: return "Review recorded"
+        case .challengeIssued: return "Challenge issued"
+        case .confirmationRecorded: return "Confirmation recorded"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .reviewRecorded: return "Evidence review was recorded for this decision."
+        case .challengeIssued: return "A short-lived device-bound confirmation challenge was issued."
+        case .confirmationRecorded: return "Confirmation intent was recorded; no action was executed."
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .reviewRecorded: return "doc.text.magnifyingglass"
+        case .challengeIssued: return "key.viewfinder"
+        case .confirmationRecorded: return "checkmark.seal"
+        }
+    }
+}
+
+struct AtlasAuditReceipt: Codable, Equatable, Identifiable {
+    let id: String
+    let workspaceID: String
+    let decisionID: String?
+    let challengeID: String?
+    let deviceID: String?
+    let eventType: AtlasAuditEventType
+    let executionStatus: String
+    let correlationID: String
+    let occurredAt: Date
+
+    var isNonExecuting: Bool { executionStatus == "not_executed" }
+}
+
 struct AtlasDecision: Codable, Equatable, Identifiable {
     let id: String
     let title: String
@@ -264,6 +308,7 @@ protocol AtlasWorkspaceRepository {
         decisionID: String,
         challengeID: String
     ) async throws -> AtlasDecisionConfirmationReceipt
+    func loadAuditReceipts(workspaceID: String) async throws -> [AtlasAuditReceipt]
 }
 
 extension AtlasWorkspaceRepository {
@@ -280,6 +325,10 @@ extension AtlasWorkspaceRepository {
         challengeID: String
     ) async throws -> AtlasDecisionConfirmationReceipt {
         throw AtlasRepositoryError.decisionUnavailable
+    }
+
+    func loadAuditReceipts(workspaceID: String) async throws -> [AtlasAuditReceipt] {
+        []
     }
 }
 
@@ -420,6 +469,9 @@ final class AtlasWorkspaceStore: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var decisionReviewRecorded = false
     @Published private(set) var confirmationReceipt: AtlasDecisionConfirmationReceipt?
+    @Published private(set) var auditReceipts: [AtlasAuditReceipt] = []
+    @Published private(set) var isLoadingAuditReceipts = false
+    @Published private(set) var auditReceiptError: String?
     @Published var selectedPosture: AtlasExecutionPosture = .cloud
 
     private let repository: any AtlasWorkspaceRepository
@@ -450,6 +502,17 @@ final class AtlasWorkspaceStore: ObservableObject {
 
     func selectPosture(_ posture: AtlasExecutionPosture) {
         selectedPosture = posture
+    }
+
+    func loadAuditReceipts() async {
+        isLoadingAuditReceipts = true
+        auditReceiptError = nil
+        defer { isLoadingAuditReceipts = false }
+        do {
+            auditReceipts = try await repository.loadAuditReceipts(workspaceID: workspaceID)
+        } catch {
+            auditReceiptError = error.localizedDescription
+        }
     }
 
     func startLiveUpdates() {

@@ -153,6 +153,57 @@ final class AtlasCloudRepositoryTests: XCTestCase {
         XCTAssertEqual(object["local_authentication_completed"] as? Bool, true)
     }
 
+    func testAuditReceiptsUseReadOnlyV1Contract() async throws {
+        let transport = StubTransport(data: fixtureAuditReceiptData, statusCode: 200)
+        let repository = AtlasCloudRepository(
+            configuration: try XCTUnwrap(AtlasCloudConfiguration(baseURL: URL(string: "https://control.alphonso.test")!)),
+            accessTokenProvider: StubTokenProvider(token: "unit-token"),
+            deviceIdentifierProvider: StubDeviceIdentifierProvider(deviceID: "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"),
+            transport: transport
+        )
+
+        let receipts = try await repository.loadAuditReceipts(workspaceID: "workspace-northstar")
+
+        XCTAssertEqual(receipts.count, 2)
+        XCTAssertEqual(receipts.first?.eventType, .confirmationRecorded)
+        XCTAssertTrue(receipts.allSatisfy(\.isNonExecuting))
+        XCTAssertEqual(
+            transport.lastRequest?.url?.absoluteString,
+            "https://control.alphonso.test/api/v1/workspaces/workspace-northstar/audit-receipts"
+        )
+        XCTAssertEqual(transport.lastRequest?.httpMethod, "GET")
+        XCTAssertEqual(transport.lastRequest?.value(forHTTPHeaderField: "X-Alphonso-Device-Id"), "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8")
+    }
+
+    private var fixtureAuditReceiptData: Data {
+        Data("""
+        [
+          {
+            "id": "receipt-001",
+            "workspace_id": "workspace-northstar",
+            "decision_id": "decision-release-brief",
+            "challenge_id": "challenge-001",
+            "device_id": "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8",
+            "event_type": "confirmation_recorded",
+            "execution_status": "not_executed",
+            "correlation_id": "0f7df649-7e40-4c30-b2cd-4a97fc24e449",
+            "occurred_at": "2026-08-26T14:42:00.000Z"
+          },
+          {
+            "id": "audit-002",
+            "workspace_id": "workspace-northstar",
+            "decision_id": "decision-release-brief",
+            "challenge_id": null,
+            "device_id": "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8",
+            "event_type": "review_recorded",
+            "execution_status": "not_executed",
+            "correlation_id": "0c7df649-7e40-4c30-b2cd-4a97fc24e449",
+            "occurred_at": "2026-08-26T14:40:00.000Z"
+          }
+        ]
+        """.utf8)
+    }
+
     private var fixtureChallengeData: Data {
         Data("""
         {

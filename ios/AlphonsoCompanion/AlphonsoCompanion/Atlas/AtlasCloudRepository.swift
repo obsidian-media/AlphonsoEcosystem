@@ -335,6 +335,19 @@ struct AtlasCloudRepository: AtlasWorkspaceRepository {
         }
     }
 
+    func loadAuditReceipts(workspaceID: String) async throws -> [AtlasAuditReceipt] {
+        let request = try authorizedRequest(
+            path: ["workspaces", workspaceID, "audit-receipts"],
+            method: "GET"
+        )
+        let data = try await execute(request)
+        do {
+            return try Self.decoder.decode([AtlasAuditReceiptResponse].self, from: data).map(\.domain)
+        } catch {
+            throw AtlasCloudRepositoryError.invalidPayload
+        }
+    }
+
     private func authorizedRequest(path: [String], method: String, body: Data? = nil) throws -> URLRequest {
         var request = URLRequest(url: configuration.endpoint(pathComponents: path))
         request.httpMethod = method
@@ -458,6 +471,32 @@ struct AtlasDecisionActionConfirmationResponse: Decodable {
             id: receiptID,
             decision: decision.domain,
             executionStatus: executionStatus
+        )
+    }
+}
+
+struct AtlasAuditReceiptResponse: Decodable {
+    let id: String
+    let workspaceID: String
+    let decisionID: String?
+    let challengeID: String?
+    let deviceID: String?
+    let eventType: AtlasAuditEventType
+    let executionStatus: String
+    let correlationID: String
+    let occurredAt: Date
+
+    var domain: AtlasAuditReceipt {
+        AtlasAuditReceipt(
+            id: id,
+            workspaceID: workspaceID,
+            decisionID: decisionID,
+            challengeID: challengeID,
+            deviceID: deviceID,
+            eventType: eventType,
+            executionStatus: executionStatus,
+            correlationID: correlationID,
+            occurredAt: occurredAt
         )
     }
 }

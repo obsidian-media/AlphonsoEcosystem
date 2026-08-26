@@ -8,6 +8,7 @@ struct AtlasMobileRoot: View {
     @StateObject private var store = AtlasWorkspaceStore()
     @State private var selection: AtlasDestination = .home
     @State private var showingCreateWork = false
+    @State private var showingAuditTrail = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -28,7 +29,10 @@ struct AtlasMobileRoot: View {
                 .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
                 .tag(AtlasDestination.chat)
 
-            AtlasMoreView(openLegacyCompanion: openLegacyCompanion)
+            AtlasMoreView(
+                openLegacyCompanion: openLegacyCompanion,
+                openAuditTrail: { showingAuditTrail = true }
+            )
                 .tabItem { Label("More", systemImage: "square.grid.2x2") }
                 .tag(AtlasDestination.more)
         }
@@ -62,6 +66,11 @@ struct AtlasMobileRoot: View {
                 }
             }
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showingAuditTrail) {
+            AtlasAuditTrailView()
+                .environmentObject(store)
+                .presentationDetents([.large])
         }
     }
 }
@@ -524,6 +533,7 @@ private struct AtlasChatStudioView: View {
 
 private struct AtlasMoreView: View {
     let openLegacyCompanion: () -> Void
+    let openAuditTrail: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -545,7 +555,11 @@ private struct AtlasMoreView: View {
                 AtlasSectionHeader("Connections")
                 AtlasMoreRow(symbol: "link", title: "Integrations", detail: "Scopes, health, and approved actions")
                 AtlasMoreRow(symbol: "desktopcomputer", title: "Local Worker", detail: "Private resources and connected desktop capability")
-                AtlasMoreRow(symbol: "lock.shield", title: "Security & Devices", detail: "Sessions, device trust, and audit records")
+                Button(action: openAuditTrail) {
+                    AtlasMoreRow(symbol: "lock.shield", title: "Security & Devices", detail: "Sessions, device trust, and accountability records")
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the immutable review and confirmation record")
 
                 AtlasSectionHeader("Migration")
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
@@ -588,6 +602,99 @@ private struct AtlasMoreRow: View {
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+        }
+        .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AtlasAuditTrailView: View {
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+                    Text("Audit trail")
+                        .font(AtlasTheme.Type.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("A read-only accountability record for reviews, challenges, and confirmations. Atlas records intent here; it does not execute an action.")
+                        .font(AtlasTheme.Type.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                AtlasSectionHeader("Accountability record", detail: summary)
+                content
+            }
+            .navigationBarHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Refresh") {
+                        Task { @MainActor in await store.loadAuditReceipts() }
+                    }
+                }
+            }
+            .task { await store.loadAuditReceipts() }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if store.isLoadingAuditReceipts && store.auditReceipts.isEmpty {
+            ProgressView("Loading accountability record…")
+                .frame(maxWidth: .infinity, minHeight: 160)
+                .tint(AtlasTheme.ColorToken.moss)
+        } else if let error = store.auditReceiptError {
+            AtlasEmptyState(symbol: "exclamationmark.shield", title: "Audit trail unavailable", detail: error)
+        } else if store.auditReceipts.isEmpty {
+            AtlasEmptyState(symbol: "checkmark.seal", title: "No accountability records yet", detail: "Reviews, confirmation challenges, and recorded intent will appear here as work reaches a policy boundary.")
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(store.auditReceipts) { receipt in
+                    AtlasAuditReceiptRow(receipt: receipt)
+                    if receipt.id != store.auditReceipts.last?.id { AtlasRule() }
+                }
+            }
+        }
+    }
+
+    private var summary: String {
+        let count = store.auditReceipts.count
+        return "\(count) record\(count == 1 ? "" : "s") · read only · no action executed"
+    }
+}
+
+private struct AtlasAuditReceiptRow: View {
+    let receipt: AtlasAuditReceipt
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: receipt.eventType.symbol)
+                .font(.title3)
+                .foregroundStyle(receipt.isNonExecuting ? AtlasTheme.ColorToken.moss : AtlasTheme.ColorToken.clay)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(receipt.eventType.label)
+                    .font(AtlasTheme.Type.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(receipt.eventType.detail)
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                HStack(spacing: AtlasTheme.Spacing.sm) {
+                    Text("NO ACTION EXECUTED")
+                        .font(AtlasTheme.Type.proof)
+                        .tracking(0.7)
+                        .foregroundStyle(AtlasTheme.ColorToken.moss)
+                    Text(receipt.occurredAt.formatted(.relative(presentation: .named)).uppercased())
+                        .font(AtlasTheme.Type.proof)
+                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                }
+            }
+            Spacer(minLength: 0)
         }
         .padding(.vertical, AtlasTheme.Spacing.md)
         .accessibilityElement(children: .combine)
