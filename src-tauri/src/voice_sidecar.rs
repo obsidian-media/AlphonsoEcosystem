@@ -1,12 +1,28 @@
+use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
 
 /// Holds the per-session token generated when Voice OS starts.
 /// Exposed to the frontend via `voice_get_token` so the WebSocket URL can
 /// carry `?token=<value>`. A new token is generated on every `voice_start`.
 pub struct VoiceToken(pub Mutex<Option<String>>);
+
+// Cap on how many of the sidecar's most recent stderr lines are retained for
+// surfacing in a startup-failure error message. Bounded so a noisy process
+// can't grow this unboundedly for the lifetime of the app.
+const VOICE_STDERR_TAIL_LINES: usize = 20;
+
+/// Appends a line to a capped ring buffer, dropping the oldest line once full.
+fn push_capped(buf: &Mutex<VecDeque<String>>, line: String) {
+  if let Ok(mut guard) = buf.lock() {
+    if guard.len() >= VOICE_STDERR_TAIL_LINES {
+      guard.pop_front();
+    }
+    guard.push_back(line);
+  }
+}
 
 const VOICE_HEALTH_URL: &str = "http://127.0.0.1:8766/health";
 // 5s (25 * 200ms) was too tight a budget for a cold start — main.py's
@@ -121,6 +137,8 @@ pub async fn voice_start(
     // Fall through to spawn fresh.
   }
 
+  let stderr_tail: Arc<Mutex<VecDeque<String>>> = Arc::new(Mutex::new(VecDeque::new()));
+
   {
     let mut guard = state.0.lock().map_err(|e| e.to_string())?;
     if guard.is_some() {
@@ -175,9 +193,11 @@ pub async fn voice_start(
       });
     }
     if let Some(stderr) = child.stderr.take() {
+      let tail = Arc::clone(&stderr_tail);
       std::thread::spawn(move || {
         for line in BufReader::new(stderr).lines().map_while(Result::ok) {
           log::warn!("[voice-os] {}", line);
+          push_capped(&tail, line);
         }
       });
     }
@@ -201,6 +221,38 @@ pub async fn voice_start(
     if ready {
       return Ok("started".into());
     }
+
+    // Before the timeout-vs-crash conflation fix, a sidecar that exited
+    // immediately (missing dependency, port already bound, model-download
+    // failure, etc.) still ran out the full startup budget and surfaced the
+    // exact same generic "did not become ready" message as a merely-slow
+    // cold start — indistinguishable to the user, and to anyone debugging a
+    // report of it. Checking the child here lets an early exit fail fast
+    // with the real reason instead of waiting out the rest of the budget.
+    let exit_status = {
+      let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+      guard
+        .as_mut()
+        .and_then(|child| child.try_wait().ok().flatten())
+    };
+    if let Some(status) = exit_status {
+      let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+      guard.take();
+      *token_state.0.lock().map_err(|e| e.to_string())? = None;
+      let tail = stderr_tail
+        .lock()
+        .map(|t| t.iter().cloned().collect::<Vec<_>>().join("\n"))
+        .unwrap_or_default();
+      return Err(format!(
+        "Voice server process exited immediately ({status}) instead of starting. Last output:\n{}",
+        if tail.is_empty() {
+          "(no output captured)".to_string()
+        } else {
+          tail
+        }
+      ));
+    }
+
     tokio::time::sleep(std::time::Duration::from_millis(
       VOICE_STARTUP_RETRY_DELAY_MS,
     ))
@@ -214,7 +266,14 @@ pub async fn voice_start(
   // Clear the token so stale tokens from this failed start attempt cannot be
   // replayed against a future (successful) Voice OS start.
   *token_state.0.lock().map_err(|e| e.to_string())? = None;
-  Err("Voice server did not become ready within 15 seconds. Check Python, Voice OS dependencies, and the local port 8766.".into())
+  let tail = stderr_tail
+    .lock()
+    .map(|t| t.iter().cloned().collect::<Vec<_>>().join("\n"))
+    .unwrap_or_default();
+  Err(format!(
+    "Voice server did not become ready within 15 seconds. Check Python, Voice OS dependencies, and the local port 8766.{}",
+    if tail.is_empty() { String::new() } else { format!(" Last output:\n{tail}") }
+  ))
 }
 
 /// Returns the per-session token that must be appended to the WebSocket URL as
