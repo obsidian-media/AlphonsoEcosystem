@@ -1,9 +1,65 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { pushMemory } from './unifiedMemoryService';
+import { secureGet, secureSet } from './secureStorageService';
 
 const COMPOSIO_CONFIG_KEY = 'alphonso_composio_config_v1';
+const COMPOSIO_CREDENTIAL_STORAGE_KEY = 'alphonso_composio_api_key_v1';
 const COMPOSIO_TOOLS_CACHE_KEY = 'alphonso_composio_tools_v1';
 const COMPOSIO_CACHE_TTL_MS = 300_000;
+
+// In-memory cache for the API key only — enabled/userId aren't secrets and
+// stay in the plain config blob below. Starts unset (`null`); `getComposioConfig`
+// falls back to reading a legacy `apiKey` field out of the config blob when
+// unset, so a key saved before this migration (or a test that plants one
+// directly into that blob, as the existing suite does) is still found
+// without requiring `hydrateComposioApiKeyFromKeychain` to run first.
+let _apiKeyCache: string | null = null;
+
+/** Test-only seam: module-level cache must not leak state across test files/cases. */
+export function __resetComposioApiKeyCacheForTests(): void {
+  _apiKeyCache = null;
+}
+
+interface RawComposioBlob {
+  enabled?: boolean;
+  apiKey?: string;
+  userId?: string;
+}
+
+function readConfigBlob(): RawComposioBlob {
+  try {
+    const raw = localStorage.getItem(COMPOSIO_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Populates the in-memory API-key cache from the OS keychain at boot.
+ * If the keychain has no entry yet (a key saved before this migration, or a
+ * fresh Composio setup this session hasn't hydrated), falls back to the
+ * legacy blob field, migrates it into the keychain, and strips it from the
+ * blob so it stops sitting there in plaintext.
+ */
+export async function hydrateComposioApiKeyFromKeychain(): Promise<void> {
+  const fromKeychain = await secureGet(COMPOSIO_CREDENTIAL_STORAGE_KEY);
+  if (fromKeychain) {
+    _apiKeyCache = fromKeychain;
+    return;
+  }
+  const blob = readConfigBlob();
+  if (blob.apiKey) {
+    _apiKeyCache = blob.apiKey;
+    const migrated = await secureSet(COMPOSIO_CREDENTIAL_STORAGE_KEY, blob.apiKey);
+    // Only strip the plaintext blob field once the keychain actually has the
+    // value — stripping unconditionally would lose the key outright if the
+    // keychain write failed (browser dev mode, OS keychain access denied).
+    if (migrated) {
+      localStorage.setItem(COMPOSIO_CONFIG_KEY, JSON.stringify({ ...blob, apiKey: '' }));
+    }
+  }
+}
 
 const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v3';
 
@@ -54,17 +110,26 @@ export interface ComposioStatusResult {
 // ── Configuration ───────────────────────────────────────────────────────────
 
 export function getComposioConfig(): ComposioConfig {
-  try {
-    const raw = localStorage.getItem(COMPOSIO_CONFIG_KEY);
-    return raw ? JSON.parse(raw) : { enabled: false, apiKey: '', userId: 'alphonso-user' };
-  } catch {
-    return { enabled: false, apiKey: '', userId: 'alphonso-user' };
-  }
+  const blob = readConfigBlob();
+  return {
+    enabled: blob.enabled ?? false,
+    apiKey: _apiKeyCache ?? blob.apiKey ?? '',
+    userId: blob.userId ?? 'alphonso-user'
+  };
 }
 
 export function setComposioConfig(config: Partial<ComposioConfig>): ComposioConfig {
   const merged = { ...getComposioConfig(), ...config };
-  localStorage.setItem(COMPOSIO_CONFIG_KEY, JSON.stringify(merged));
+  // Whenever this writes, make sure the resolved apiKey (whether just set, or
+  // carried over unchanged from the cache/legacy blob) is what the cache holds
+  // and is persisted to the keychain. Without this, a config-only update (e.g.
+  // toggling `enabled`) would silently drop a legacy apiKey that was never
+  // migrated yet — the blob write below no longer carries apiKey at all.
+  if (merged.apiKey && merged.apiKey !== _apiKeyCache) {
+    _apiKeyCache = merged.apiKey;
+    secureSet(COMPOSIO_CREDENTIAL_STORAGE_KEY, merged.apiKey).catch(() => { /* best-effort */ });
+  }
+  localStorage.setItem(COMPOSIO_CONFIG_KEY, JSON.stringify({ enabled: merged.enabled, userId: merged.userId }));
   return merged;
 }
 

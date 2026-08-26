@@ -7,7 +7,9 @@ import {
   getCachedToolkits,
   executeComposioAction,
   getComposioStatus,
-  checkComposioHealth
+  checkComposioHealth,
+  hydrateComposioApiKeyFromKeychain,
+  __resetComposioApiKeyCacheForTests
 } from '../services/composioService';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -19,6 +21,11 @@ vi.mock('../services/trustModel', () => ({
 
 vi.mock('../services/unifiedMemoryService', () => ({
   pushMemory: vi.fn()
+}));
+
+const invokeMock = vi.fn();
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args) => invokeMock(...args)
 }));
 
 const mockFetch = vi.fn();
@@ -38,6 +45,8 @@ vi.stubGlobal('localStorage', mockLocalStorage);
 beforeEach(() => {
   mockLocalStorage.clear();
   vi.clearAllMocks();
+  invokeMock.mockResolvedValue(null);
+  __resetComposioApiKeyCacheForTests();
 });
 
 // ── getComposioConfig ─────────────────────────────────────────────────────────
@@ -75,12 +84,36 @@ describe('setComposioConfig', () => {
     expect(merged.apiKey).toBe('old-key'); // Preserved
   });
 
-  it('persists config to localStorage', () => {
+  it('does NOT persist the apiKey to localStorage — it goes to the OS keychain instead', () => {
     setComposioConfig({ apiKey: 'new-key-12345' });
+    const persisted = mockLocalStorage.setItem.mock.calls.find(([k]) => k === 'alphonso_composio_config_v1');
+    expect(persisted).toBeTruthy();
+    expect(persisted[1]).not.toContain('new-key-12345');
+    expect(invokeMock).toHaveBeenCalledWith('secure_credential_set', {
+      key: 'alphonso_composio_api_key_v1',
+      value: 'new-key-12345'
+    });
+  });
+
+  it('still persists enabled/userId to localStorage (not secrets)', () => {
+    setComposioConfig({ enabled: true, userId: 'someone' });
     expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
       'alphonso_composio_config_v1',
-      expect.stringContaining('new-key-12345')
+      expect.stringContaining('someone')
     );
+  });
+
+  it('does not lose a legacy blob apiKey on a config-only update (e.g. toggling enabled) before it has been migrated', () => {
+    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({
+      enabled: false, apiKey: 'legacy-key-not-yet-migrated', userId: 'alphonso-user'
+    });
+    const merged = setComposioConfig({ enabled: true });
+    expect(merged.apiKey).toBe('legacy-key-not-yet-migrated');
+    expect(invokeMock).toHaveBeenCalledWith('secure_credential_set', {
+      key: 'alphonso_composio_api_key_v1',
+      value: 'legacy-key-not-yet-migrated'
+    });
+    expect(getComposioConfig().apiKey).toBe('legacy-key-not-yet-migrated');
   });
 
   it('returns the merged config object', () => {
@@ -347,5 +380,51 @@ describe('checkComposioHealth', () => {
     const result = await checkComposioHealth();
     expect(result.status).toBe('error');
     expect(result.message).toContain('Connection refused');
+  });
+});
+
+// ── hydrateComposioApiKeyFromKeychain ──────────────────────────────────────────
+
+describe('hydrateComposioApiKeyFromKeychain', () => {
+  it('adopts the keychain value when the keychain already has an entry', async () => {
+    invokeMock.mockResolvedValueOnce('from-keychain');
+    await hydrateComposioApiKeyFromKeychain();
+    expect(getComposioConfig().apiKey).toBe('from-keychain');
+  });
+
+  it('migrates a legacy blob apiKey into the keychain and strips it from the blob when the keychain is empty', async () => {
+    localStorageStore['alphonso_composio_config_v1'] = '{"enabled":true,"apiKey":"legacy-key","userId":"user"}';
+    invokeMock.mockResolvedValueOnce(null); // keychain get: nothing yet
+
+    await hydrateComposioApiKeyFromKeychain();
+
+    expect(getComposioConfig().apiKey).toBe('legacy-key');
+    expect(invokeMock).toHaveBeenCalledWith('secure_credential_set', {
+      key: 'alphonso_composio_api_key_v1',
+      value: 'legacy-key'
+    });
+    const blobAfter = JSON.parse(localStorageStore['alphonso_composio_config_v1']);
+    expect(blobAfter.apiKey).toBe('');
+    expect(blobAfter.enabled).toBe(true); // non-secret fields preserved
+  });
+
+  it('does NOT strip the legacy blob apiKey when the keychain write fails during migration (would otherwise lose the key)', async () => {
+    localStorageStore['alphonso_composio_config_v1'] = '{"enabled":true,"apiKey":"legacy-key","userId":"user"}';
+    invokeMock.mockResolvedValueOnce(null); // keychain get: nothing yet
+    invokeMock.mockRejectedValueOnce(new Error('keychain unavailable')); // keychain set: fails
+
+    await hydrateComposioApiKeyFromKeychain();
+
+    // Still usable this session via the in-memory cache...
+    expect(getComposioConfig().apiKey).toBe('legacy-key');
+    // ...and NOT wiped from the only place it's actually durably stored.
+    const blobAfter = JSON.parse(localStorageStore['alphonso_composio_config_v1']);
+    expect(blobAfter.apiKey).toBe('legacy-key');
+  });
+
+  it('does nothing when neither the keychain nor the legacy blob has a key', async () => {
+    invokeMock.mockResolvedValueOnce(null);
+    await hydrateComposioApiKeyFromKeychain();
+    expect(getComposioConfig().apiKey).toBe('');
   });
 });
