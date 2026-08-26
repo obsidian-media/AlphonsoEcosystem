@@ -1,0 +1,387 @@
+import Combine
+import Foundation
+
+// MARK: - Workspace
+
+struct AtlasWorkspace: Codable, Equatable, Identifiable {
+    let id: String
+    let name: String
+    let posture: AtlasExecutionPosture
+    let memberRole: String
+}
+
+enum AtlasFreshness: Codable, Equatable {
+    case current
+    case delayed(minutes: Int)
+    case offline(lastConfirmedAt: Date)
+
+    var label: String {
+        switch self {
+        case .current:
+            return "Synced now"
+        case .delayed(let minutes):
+            return "Updated \(minutes)m ago"
+        case .offline(let date):
+            return "Last confirmed \(date.formatted(.relative(presentation: .named)))"
+        }
+    }
+
+    var isActionable: Bool {
+        if case .offline = self { return false }
+        return true
+    }
+}
+
+// MARK: - Work
+
+enum AtlasRunPhase: String, Codable, CaseIterable, Equatable {
+    case planned
+    case awaitingApproval
+    case queued
+    case executing
+    case waitingOnDependency
+    case succeeded
+    case failed
+    case cancelled
+
+    var presentationStatus: AtlasRunStatus {
+        switch self {
+        case .planned, .queued:
+            return .planned
+        case .awaitingApproval:
+            return .awaitingDecision
+        case .executing:
+            return .executing
+        case .waitingOnDependency:
+            return .waiting
+        case .succeeded:
+            return .delivered
+        case .failed, .cancelled:
+            return .failed
+        }
+    }
+
+    var isActive: Bool {
+        switch self {
+        case .planned, .awaitingApproval, .queued, .executing, .waitingOnDependency:
+            return true
+        case .succeeded, .failed, .cancelled:
+            return false
+        }
+    }
+}
+
+struct AtlasRun: Codable, Equatable, Identifiable {
+    let id: String
+    let title: String
+    let summary: String
+    let owner: String
+    let phase: AtlasRunPhase
+    let posture: AtlasExecutionPosture
+    let updatedAt: Date
+    let traceID: String
+
+    var status: AtlasRunStatus { phase.presentationStatus }
+
+    var timestampLabel: String {
+        switch phase {
+        case .awaitingApproval:
+            return "WAITING ON YOU"
+        default:
+            return "UPDATED \(updatedAt.formatted(.relative(presentation: .named)).uppercased())"
+        }
+    }
+}
+
+struct AtlasOutcome: Codable, Equatable, Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let completedAt: Date
+    let traceID: String
+}
+
+// MARK: - Decisions
+
+enum AtlasDecisionRisk: String, Codable, Equatable {
+    case routine
+    case elevated
+    case high
+
+    var isStepUpRequired: Bool { self == .high }
+}
+
+enum AtlasDecisionState: String, Codable, Equatable {
+    case awaitingReview
+    case reviewRecordedPendingConfirmation
+    case approved
+    case rejected
+    case expired
+    case unavailable
+
+    var canReview: Bool { self == .awaitingReview }
+}
+
+struct AtlasDecision: Codable, Equatable, Identifiable {
+    let id: String
+    let title: String
+    let summary: String
+    let affectedResource: String
+    let executionDetail: String
+    let policyCode: String
+    let policyReason: String
+    let evidenceSummary: String
+    let risk: AtlasDecisionRisk
+    let state: AtlasDecisionState
+    let expiresAt: Date
+    let runID: String
+
+    var expiryLabel: String {
+        let relative = expiresAt.formatted(.relative(presentation: .named))
+        return "Expires \(relative)"
+    }
+}
+
+struct AtlasBriefing: Codable, Equatable {
+    let workspace: AtlasWorkspace
+    let freshness: AtlasFreshness
+    let activeRuns: [AtlasRun]
+    let outcomes: [AtlasOutcome]
+    let decisions: [AtlasDecision]
+    let refreshedAt: Date
+
+    var nextDecision: AtlasDecision? {
+        decisions.first(where: { $0.state.canReview })
+    }
+}
+
+// MARK: - Repository seam
+
+protocol AtlasWorkspaceRepository {
+    func loadBriefing(workspaceID: String) async throws -> AtlasBriefing
+    func createDraftRun(
+        workspaceID: String,
+        brief: String,
+        desiredOutcome: String,
+        posture: AtlasExecutionPosture
+    ) async throws -> AtlasRun
+    func recordDecisionReview(
+        workspaceID: String,
+        decisionID: String
+    ) async throws -> AtlasDecision
+}
+
+enum AtlasRepositoryError: LocalizedError, Equatable {
+    case workspaceUnavailable
+    case decisionUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .workspaceUnavailable:
+            return "This workspace is unavailable. Check the connection and try again."
+        case .decisionUnavailable:
+            return "This decision is no longer available for review. Refresh the workspace before trying again."
+        }
+    }
+}
+
+/// Fixture-backed repository used until the Cloud control-plane endpoints are implemented.
+/// It conforms to the same async contract expected from the future network-backed repository.
+struct AtlasFixtureRepository: AtlasWorkspaceRepository {
+    func loadBriefing(workspaceID: String) async throws -> AtlasBriefing {
+        guard workspaceID == fixtureWorkspace.id else { throw AtlasRepositoryError.workspaceUnavailable }
+        return fixtureBriefing
+    }
+
+    func createDraftRun(
+        workspaceID: String,
+        brief: String,
+        desiredOutcome: String,
+        posture: AtlasExecutionPosture
+    ) async throws -> AtlasRun {
+        guard workspaceID == fixtureWorkspace.id else { throw AtlasRepositoryError.workspaceUnavailable }
+        let compactBrief = brief.trimmingCharacters(in: .whitespacesAndNewlines)
+        let compactOutcome = desiredOutcome.trimmingCharacters(in: .whitespacesAndNewlines)
+        return AtlasRun(
+            id: "draft-\(UUID().uuidString.lowercased())",
+            title: compactBrief,
+            summary: compactOutcome.isEmpty ? "Draft run ready for planning." : compactOutcome,
+            owner: "You",
+            phase: .planned,
+            posture: posture,
+            updatedAt: Date(),
+            traceID: "DRAFT/\(UUID().uuidString.prefix(8).uppercased())"
+        )
+    }
+
+    func recordDecisionReview(workspaceID: String, decisionID: String) async throws -> AtlasDecision {
+        guard workspaceID == fixtureWorkspace.id,
+              let decision = fixtureBriefing.decisions.first(where: { $0.id == decisionID }),
+              decision.state.canReview else {
+            throw AtlasRepositoryError.decisionUnavailable
+        }
+        return AtlasDecision(
+            id: decision.id,
+            title: decision.title,
+            summary: decision.summary,
+            affectedResource: decision.affectedResource,
+            executionDetail: decision.executionDetail,
+            policyCode: decision.policyCode,
+            policyReason: decision.policyReason,
+            evidenceSummary: decision.evidenceSummary,
+            risk: decision.risk,
+            state: .reviewRecordedPendingConfirmation,
+            expiresAt: decision.expiresAt,
+            runID: decision.runID
+        )
+    }
+
+    private var fixtureWorkspace: AtlasWorkspace {
+        AtlasWorkspace(
+            id: "workspace-northstar",
+            name: "Northstar Workspace",
+            posture: .cloud,
+            memberRole: "Operator"
+        )
+    }
+
+    private var fixtureBriefing: AtlasBriefing {
+        let now = Date()
+        let decision = AtlasDecision(
+            id: "decision-release-brief",
+            title: "Approve the release brief",
+            summary: "A reviewed launch brief is ready to move to the distribution queue.",
+            affectedResource: "Northstar / Release communications",
+            executionDetail: "Cloud workspace · verified distribution integration",
+            policyCode: "P-017",
+            policyReason: "External communication policy P-017 requires an accountable operator approval.",
+            evidenceSummary: "All required source claims and campaign assets passed the workspace launch checklist. No unresolved policy exceptions are present.",
+            risk: .high,
+            state: .awaitingReview,
+            expiresAt: now.addingTimeInterval(18 * 60),
+            runID: "run-release-brief"
+        )
+        return AtlasBriefing(
+            workspace: fixtureWorkspace,
+            freshness: .current,
+            activeRuns: [
+                AtlasRun(
+                    id: "run-research-synthesis",
+                    title: "Competitive research synthesis",
+                    summary: "Hector is consolidating eight verified sources into a decision brief.",
+                    owner: "Hector",
+                    phase: .executing,
+                    posture: .cloud,
+                    updatedAt: now.addingTimeInterval(-120),
+                    traceID: "RUN/RS-204"
+                ),
+                AtlasRun(
+                    id: "run-release-brief",
+                    title: "Product launch sequence",
+                    summary: "Jose is waiting for the final release brief approval.",
+                    owner: "Jose",
+                    phase: .awaitingApproval,
+                    posture: .cloud,
+                    updatedAt: now.addingTimeInterval(-90),
+                    traceID: "RUN/RL-018"
+                )
+            ],
+            outcomes: [
+                AtlasOutcome(
+                    id: "outcome-research-archive",
+                    title: "Research archive updated",
+                    detail: "Nine verified findings were added to the Northstar workspace and linked to their source trail.",
+                    completedAt: now.addingTimeInterval(-3600),
+                    traceID: "OUT/RA-009"
+                )
+            ],
+            decisions: [decision],
+            refreshedAt: now
+        )
+    }
+}
+
+@MainActor
+final class AtlasWorkspaceStore: ObservableObject {
+    @Published private(set) var briefing: AtlasBriefing?
+    @Published private(set) var isLoading = false
+    @Published private(set) var errorMessage: String?
+    @Published private(set) var decisionReviewRecorded = false
+    @Published var selectedPosture: AtlasExecutionPosture = .cloud
+
+    private let repository: any AtlasWorkspaceRepository
+    private let workspaceID: String
+
+    init(
+        repository: any AtlasWorkspaceRepository = AtlasFixtureRepository(),
+        workspaceID: String = "workspace-northstar"
+    ) {
+        self.repository = repository
+        self.workspaceID = workspaceID
+    }
+
+    func load() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let loadedBriefing = try await repository.loadBriefing(workspaceID: workspaceID)
+            briefing = loadedBriefing
+            selectedPosture = loadedBriefing.workspace.posture
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func selectPosture(_ posture: AtlasExecutionPosture) {
+        selectedPosture = posture
+    }
+
+    func createDraft(brief: String, desiredOutcome: String) async {
+        errorMessage = nil
+        do {
+            let draft = try await repository.createDraftRun(
+                workspaceID: workspaceID,
+                brief: brief,
+                desiredOutcome: desiredOutcome,
+                posture: selectedPosture
+            )
+            guard var current = briefing else { return }
+            current = AtlasBriefing(
+                workspace: current.workspace,
+                freshness: current.freshness,
+                activeRuns: [draft] + current.activeRuns,
+                outcomes: current.outcomes,
+                decisions: current.decisions,
+                refreshedAt: Date()
+            )
+            briefing = current
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func recordDecisionReview(_ decision: AtlasDecision) async {
+        errorMessage = nil
+        do {
+            let reviewed = try await repository.recordDecisionReview(
+                workspaceID: workspaceID,
+                decisionID: decision.id
+            )
+            guard var current = briefing else { return }
+            current = AtlasBriefing(
+                workspace: current.workspace,
+                freshness: current.freshness,
+                activeRuns: current.activeRuns,
+                outcomes: current.outcomes,
+                decisions: current.decisions.map { $0.id == reviewed.id ? reviewed : $0 },
+                refreshedAt: Date()
+            )
+            briefing = current
+            decisionReviewRecorded = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}

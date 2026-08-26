@@ -48,7 +48,7 @@ enum AtlasTheme {
     }
 }
 
-enum AtlasExecutionPosture: String, CaseIterable, Identifiable {
+enum AtlasExecutionPosture: String, CaseIterable, Codable, Identifiable {
     case cloud = "Cloud"
     case hybrid = "Hybrid"
     case local = "Local"
