@@ -1808,6 +1808,96 @@ pub(crate) async fn connector_get_comfyui_history(
   })
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct HermesAgentHttpProof {
+  pub(crate) ok: bool,
+  pub(crate) http_status: Option<u16>,
+  pub(crate) body: Option<String>,
+  pub(crate) error: Option<String>,
+}
+
+/// Proxies an HTTP request to a user-run Hermes Agent profile through Rust's
+/// `reqwest` client instead of the webview's own `fetch()`.
+///
+/// Hermes Agent (Nous Research, MIT) is a standalone process the user runs
+/// separately, on their own arbitrary local port, and — being a third-party
+/// project never built with this integration in mind — has no reason to
+/// send CORS headers. A browser-side `fetch()` from the Tauri webview
+/// (origin `http://tauri.localhost` in production) to that port is
+/// cross-origin, so without an `Access-Control-Allow-Origin` response
+/// header the browser silently blocks it and every call surfaces as the
+/// same uninformative `TypeError: Failed to fetch` — indistinguishable
+/// from the server being down, wrong URL, wrong port, or genuinely offline.
+/// A native `reqwest` call has no browser and is not subject to CORS at
+/// all, so it succeeds or fails on the request's own merits and reports
+/// which. Mirrors the existing `connector_github_action`/
+/// `probe_local_runtime_health` pattern of doing outbound HTTP from Rust
+/// rather than the webview.
+#[tauri::command]
+pub(crate) async fn connector_hermes_agent_request(
+  url: String,
+  method: String,
+  headers: std::collections::HashMap<String, String>,
+  body: Option<String>,
+  timeout_ms: u64,
+) -> Result<HermesAgentHttpProof, String> {
+  let client = match reqwest::Client::builder()
+    .timeout(Duration::from_millis(timeout_ms.max(1)))
+    .build()
+  {
+    Ok(c) => c,
+    Err(error) => {
+      return Ok(HermesAgentHttpProof {
+        ok: false,
+        http_status: None,
+        body: None,
+        error: Some(error.to_string()),
+      })
+    }
+  };
+
+  let mut request = match method.to_ascii_uppercase().as_str() {
+    "GET" => client.get(&url),
+    "POST" => client.post(&url),
+    other => {
+      return Ok(HermesAgentHttpProof {
+        ok: false,
+        http_status: None,
+        body: None,
+        error: Some(format!("Unsupported method: {other}")),
+      })
+    }
+  };
+  for (key, value) in headers.iter() {
+    request = request.header(key, value);
+  }
+  if let Some(payload) = body {
+    request = request.body(payload);
+  }
+
+  let response = match request.send().await {
+    Ok(r) => r,
+    Err(error) => {
+      return Ok(HermesAgentHttpProof {
+        ok: false,
+        http_status: None,
+        body: None,
+        error: Some(error.to_string()),
+      })
+    }
+  };
+  let http_status = Some(response.status().as_u16());
+  let ok = response.status().is_success();
+  let body_text = response.text().await.unwrap_or_default();
+  Ok(HermesAgentHttpProof {
+    ok,
+    http_status,
+    body: Some(body_text),
+    error: None,
+  })
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
