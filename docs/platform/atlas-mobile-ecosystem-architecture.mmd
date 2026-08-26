@@ -1,0 +1,55 @@
+%%{init: {'theme':'base','themeVariables': {'fontFamily':'Arial','primaryColor':'#E8E1D5','primaryTextColor':'#19201E','primaryBorderColor':'#63705A','lineColor':'#68716B','secondaryColor':'#DEE4D9','tertiaryColor':'#F7F3EC','clusterBkg':'#F8F5EF','clusterBorder':'#A39B8E'}}}%%
+flowchart TB
+    subgraph PHONE[Atlas Mobile — iPhone]
+        direction TB
+        UI[Atlas Product Shell<br/>Home · Work · Inbox · Chat · More]
+        STORE[Typed Workspace Store<br/>briefings · runs · decisions]
+        IDENTITY[Atlas Identity Bridge<br/>refresh session + enroll]
+        KEYCHAIN[(ThisDeviceOnly Keychain<br/>access token + device ID)]
+        VOICE[Existing Cloud Voice Session<br/>magic link + token refresh]
+        UI --> STORE
+        UI --> IDENTITY
+        IDENTITY --> VOICE
+        IDENTITY --> KEYCHAIN
+    end
+
+    subgraph CLOUD[Atlas Cloud Control Plane — HTTPS]
+        direction TB
+        API[Versioned Atlas API<br/>/api/v1]
+        AUTH[Supabase User Validation]
+        TRUST[Atlas Device Trust Gate<br/>user + enrolled device]
+        STATE[(User-Scoped Atlas State<br/>briefing · drafts · reviews)]
+        POLICY[Policy Boundary<br/>review only — no final approval]
+        API --> AUTH
+        AUTH --> TRUST
+        TRUST --> STATE
+        STATE --> POLICY
+    end
+
+    subgraph HYBRID[Optional Hybrid Execution]
+        direction TB
+        WORKER[Trusted Local Worker<br/>desktop, private files, local models]
+        PAIR[Separate Pairing Boundary<br/>QR/WSS + scoped capability]
+        WORKER --> PAIR
+    end
+
+    subgraph EXTERNAL[External Identity]
+        SUPA[Supabase Auth]
+    end
+
+    VOICE <-- magic link + refresh --> SUPA
+    IDENTITY -- enrolls matching device ID --> API
+    STORE -- bearer token + device ID --> API
+    API -. optional scoped dispatch only .-> PAIR
+
+    classDef mobile fill:#E8E1D5,stroke:#63705A,color:#19201E,stroke-width:1.5px;
+    classDef cloud fill:#DEE4D9,stroke:#526B5A,color:#17221B,stroke-width:1.5px;
+    classDef trust fill:#293632,stroke:#C9D2C3,color:#F8F5EF,stroke-width:2px;
+    classDef hybrid fill:#E2E6EC,stroke:#61718A,color:#142334,stroke-width:1.5px;
+    classDef external fill:#F1E0CB,stroke:#9C7757,color:#35281E,stroke-width:1.5px;
+
+    class UI,STORE,IDENTITY,KEYCHAIN,VOICE mobile;
+    class API,AUTH,STATE cloud;
+    class TRUST,POLICY trust;
+    class WORKER,PAIR hybrid;
+    class SUPA external;

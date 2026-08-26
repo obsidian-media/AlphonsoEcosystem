@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, StringConstraints
@@ -105,6 +105,17 @@ class AtlasDraftRunRequest(BaseModel):
     execution_posture: ExecutionPosture
 
 
+class AtlasDeviceEnrollmentRequest(BaseModel):
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=36, max_length=36)]
+    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+
+
+class AtlasDeviceEnrollmentResponse(BaseModel):
+    status: Literal["enrolled"]
+    device_id: str
+    device_trust: Literal["demo_enrolled"]
+
+
 class AtlasDecisionReviewRequest(BaseModel):
     """Reserved for a future action-challenge receipt; body is intentionally empty today."""
 
@@ -114,7 +125,37 @@ class AtlasDemoControlPlane:
 
     def __init__(self) -> None:
         self._workspaces_by_user: dict[str, dict[str, object]] = {}
+        self._devices_by_user: dict[str, dict[str, str]] = {}
         self._lock = asyncio.Lock()
+
+    async def enroll_device(
+        self,
+        user_id: str,
+        payload: AtlasDeviceEnrollmentRequest,
+    ) -> AtlasDeviceEnrollmentResponse:
+        try:
+            UUID(payload.device_id)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Invalid Atlas device identifier") from error
+        async with self._lock:
+            devices = self._devices_by_user.setdefault(user_id, {})
+            devices[payload.device_id] = payload.display_name
+        return AtlasDeviceEnrollmentResponse(
+            status="enrolled",
+            device_id=payload.device_id,
+            device_trust="demo_enrolled",
+        )
+
+    async def require_enrolled_device(self, user_id: str, device_id: str | None) -> None:
+        if not device_id:
+            raise HTTPException(status_code=401, detail="Missing Atlas device identifier")
+        try:
+            UUID(device_id)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Invalid Atlas device identifier") from error
+        async with self._lock:
+            if device_id not in self._devices_by_user.get(user_id, {}):
+                raise HTTPException(status_code=403, detail="This device is not enrolled for Atlas Cloud")
 
     async def briefing(self, user_id: str, workspace_id: str) -> AtlasBriefingResponse:
         workspace = await self._workspace_for(user_id, workspace_id)
@@ -164,6 +205,7 @@ class AtlasDemoControlPlane:
     async def reset_for_tests(self) -> None:
         async with self._lock:
             self._workspaces_by_user.clear()
+            self._devices_by_user.clear()
 
     async def _workspace_for(self, user_id: str, workspace_id: str) -> dict[str, object]:
         if workspace_id != "workspace-northstar":

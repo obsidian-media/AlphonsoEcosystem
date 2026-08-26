@@ -14,6 +14,7 @@ final class AtlasCloudRepositoryTests: XCTestCase {
         let repository = AtlasCloudRepository(
             configuration: try XCTUnwrap(AtlasCloudConfiguration(baseURL: URL(string: "https://control.alphonso.test")!)),
             accessTokenProvider: StubTokenProvider(token: "unit-token"),
+            deviceIdentifierProvider: StubDeviceIdentifierProvider(deviceID: "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"),
             transport: transport
         )
 
@@ -30,6 +31,7 @@ final class AtlasCloudRepositoryTests: XCTestCase {
         XCTAssertEqual(request.httpMethod, "GET")
         XCTAssertEqual(request.url?.absoluteString, "https://control.alphonso.test/api/v1/workspaces/workspace-northstar/briefing")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer unit-token")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Alphonso-Device-Id"), "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8")
         XCTAssertEqual(request.value(forHTTPHeaderField: "X-Alphonso-Client"), "ios")
         XCTAssertEqual(request.value(forHTTPHeaderField: "X-Alphonso-API-Version"), "v1")
     }
@@ -39,6 +41,7 @@ final class AtlasCloudRepositoryTests: XCTestCase {
         let repository = AtlasCloudRepository(
             configuration: try XCTUnwrap(AtlasCloudConfiguration(baseURL: URL(string: "https://control.alphonso.test")!)),
             accessTokenProvider: StubTokenProvider(token: "unit-token"),
+            deviceIdentifierProvider: StubDeviceIdentifierProvider(deviceID: "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"),
             transport: transport
         )
 
@@ -57,6 +60,7 @@ final class AtlasCloudRepositoryTests: XCTestCase {
         let repository = AtlasCloudRepository(
             configuration: try XCTUnwrap(AtlasCloudConfiguration(baseURL: URL(string: "https://control.alphonso.test")!)),
             accessTokenProvider: StubTokenProvider(token: "unit-token"),
+            deviceIdentifierProvider: StubDeviceIdentifierProvider(deviceID: "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"),
             transport: transport
         )
 
@@ -78,6 +82,41 @@ final class AtlasCloudRepositoryTests: XCTestCase {
         XCTAssertEqual(object["brief"], "Prepare release notes")
         XCTAssertEqual(object["desired_outcome"], "A reviewed draft")
         XCTAssertEqual(object["execution_posture"], "hybrid")
+    }
+
+    func testEnrollmentPostsMatchingDeviceHeaderAndPayload() async throws {
+        let transport = StubTransport(data: fixtureEnrollmentData, statusCode: 201)
+        let client = AtlasEnrollmentClient(
+            configuration: try XCTUnwrap(AtlasCloudConfiguration(baseURL: URL(string: "https://control.alphonso.test")!)),
+            accessTokenProvider: StubTokenProvider(token: "unit-token"),
+            deviceIdentifierProvider: StubDeviceIdentifierProvider(deviceID: "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"),
+            transport: transport
+        )
+
+        let receipt = try await client.enroll(displayName: "Atlas iPhone")
+
+        XCTAssertEqual(receipt.status, "enrolled")
+        XCTAssertEqual(receipt.deviceID, "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8")
+        XCTAssertEqual(receipt.deviceTrust, "demo_enrolled")
+        let request = try XCTUnwrap(transport.lastRequest)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.absoluteString, "https://control.alphonso.test/api/v1/devices/enroll")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer unit-token")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Alphonso-Device-Id"), receipt.deviceID)
+        let payload = try XCTUnwrap(request.httpBody)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: payload) as? [String: String])
+        XCTAssertEqual(object["device_id"], receipt.deviceID)
+        XCTAssertEqual(object["display_name"], "Atlas iPhone")
+    }
+
+    private var fixtureEnrollmentData: Data {
+        Data("""
+        {
+          "status": "enrolled",
+          "device_id": "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8",
+          "device_trust": "demo_enrolled"
+        }
+        """.utf8)
     }
 
     private var fixtureDraftRunData: Data {
@@ -153,6 +192,14 @@ private struct StubTokenProvider: AtlasAccessTokenProvider {
 
     func accessToken() throws -> String {
         token
+    }
+}
+
+private struct StubDeviceIdentifierProvider: AtlasDeviceIdentifierProvider {
+    let deviceID: String
+
+    func deviceID() throws -> String {
+        deviceID
     }
 }
 

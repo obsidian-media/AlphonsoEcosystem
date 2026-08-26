@@ -23,11 +23,12 @@ The iOS build activates its Cloud repository only when `AtlasControlPlaneURL` is
 
 ## API contract
 
-Every route requires `Authorization: Bearer <user-access-token>` and `X-Alphonso-API-Version: v1`. The current demo accepts only the seeded `workspace-northstar` workspace and scopes ephemeral state by authenticated user ID.
+Every route requires `Authorization: Bearer <user-access-token>` and `X-Alphonso-API-Version: v1`. Workspace routes also require `X-Alphonso-Device-Id`, which must match a device enrolled by the authenticated user. The current demo accepts only the seeded `workspace-northstar` workspace and scopes ephemeral state by authenticated user ID.
 
 | Operation | Route | Behavior |
 |---|---|---|
-| Workspace briefing | `GET /api/v1/workspaces/workspace-northstar/briefing` | Returns workspace metadata, freshness, active runs, outcomes, and pending decisions. |
+| Enroll Atlas device | `POST /api/v1/devices/enroll` | Requires a matching `X-Alphonso-Device-Id` header and body `device_id`; returns `demo_enrolled` device trust. |
+| Workspace briefing | `GET /api/v1/workspaces/workspace-northstar/briefing` | Requires an enrolled device; returns workspace metadata, freshness, active runs, outcomes, and pending decisions. |
 | Create a draft run | `POST /api/v1/workspaces/workspace-northstar/runs/drafts` | Accepts `brief`, `desired_outcome`, and `execution_posture`; returns a planned run and adds it to the caller’s ephemeral briefing. |
 | Record a decision review | `POST /api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/reviews` | Records a review state only. It does **not** approve, dispatch, publish, or perform an external action. |
 
@@ -41,8 +42,8 @@ Run the focused Atlas suite from this directory:
 pytest -q tests/test_atlas_control_plane.py tests/test_contracts.py
 ```
 
-The tests cover disabled-by-default behavior, required bearer authentication, required API-version headers, mobile response shape, draft creation, per-user ephemeral state, review transition behavior, and unknown-workspace rejection.
+The tests cover disabled-by-default behavior, required bearer authentication, required API-version headers, device-header/payload matching, enrolled-device enforcement, mobile response shape, draft creation, per-user ephemeral state, review transition behavior, and unknown-workspace rejection.
 
 ## Production replacement checklist
 
-The demo state in `app/atlas_control_plane.py` must be replaced rather than extended in place. A production control plane needs a database-backed workspace model; RLS-enforced user membership; device enrollment and revocation; server-side scopes; a persistent append-only audit record; rate limits; background-safe event delivery; server-issued action challenges; biometric confirmation verification; and explicit policy-gated execution adapters. The desktop companion server remains a separate local-worker boundary and must not be reachable through these HTTP routes.
+The demo state in `app/atlas_control_plane.py` must be replaced rather than extended in place. A production control plane needs a database-backed workspace model; RLS-enforced user membership; durable device enrollment and revocation; server-side scopes; a persistent append-only audit record; rate limits; background-safe event delivery; server-issued action challenges; biometric confirmation verification; and explicit policy-gated execution adapters. The desktop companion server remains a separate local-worker boundary and must not be reachable through these HTTP routes.

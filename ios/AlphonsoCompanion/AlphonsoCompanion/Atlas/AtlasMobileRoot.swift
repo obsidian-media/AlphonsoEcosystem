@@ -4,6 +4,7 @@ import SwiftUI
 /// backed by a fixture repository until the Cloud control-plane client is available.
 struct AtlasMobileRoot: View {
     let openLegacyCompanion: () -> Void
+    @EnvironmentObject private var identity: AtlasIdentityService
     @StateObject private var store = AtlasWorkspaceStore()
     @State private var selection: AtlasDestination = .home
     @State private var showingCreateWork = false
@@ -34,6 +35,9 @@ struct AtlasMobileRoot: View {
         .environmentObject(store)
         .tint(AtlasTheme.ColorToken.moss)
         .task {
+            if AtlasCloudConfiguration.fromBundle() != nil {
+                try? await identity.restoreAndEnroll()
+            }
             if store.briefing == nil {
                 await store.load()
             }

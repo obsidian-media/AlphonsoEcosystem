@@ -273,6 +273,12 @@ final class VoiceCloudService: NSObject, ObservableObject, AVAudioPlayerDelegate
         statusMessage = authenticationStatus
     }
 
+    /// Provides a refreshed user access token to the Atlas identity bridge. The caller
+    /// persists it only in Atlas's dedicated, ThisDeviceOnly Keychain entry.
+    func atlasAccessToken() async throws -> String {
+        try await validAccessToken()
+    }
+
     private func validAccessToken() async throws -> String {
         guard var session = Self.loadSession(account: sessionAccount) else { throw VoiceCloudError.signInRequired }
         if session.expiresAt.timeIntervalSinceNow < 60 {

@@ -12,6 +12,8 @@ from app.atlas_control_plane import (
     AtlasDecisionResponse,
     AtlasDecisionReviewRequest,
     AtlasDemoControlPlane,
+    AtlasDeviceEnrollmentRequest,
+    AtlasDeviceEnrollmentResponse,
     AtlasDraftRunRequest,
     AtlasRunResponse,
 )
@@ -35,9 +37,20 @@ def _require_atlas_demo(settings: Settings, api_version: str | None) -> None:
 async def _atlas_demo_user(authorization: str | None, api_version: str | None):
     settings = Settings.from_env()
     _require_atlas_demo(settings, api_version)
-    # The non-production contract is user-scoped but deliberately does not claim
-    # device binding, worker dispatch, connector access, or final action approval.
+    # The non-production contract is user-scoped and requires an enrolled mobile
+    # device for all workspace operations. It still excludes worker dispatch,
+    # connector access, and final action approval.
     return await SupabaseDeviceRegistry(settings).user_from_authorization(authorization)
+
+
+async def _atlas_enrolled_user(
+    authorization: str | None,
+    api_version: str | None,
+    device_id: str | None,
+):
+    user = await _atlas_demo_user(authorization, api_version)
+    await atlas_demo_control_plane.require_enrolled_device(user.id, device_id)
+    return user
 
 
 @app.get("/health")
@@ -53,13 +66,27 @@ async def ready() -> dict[str, object]:
     return status
 
 
+@app.post("/api/v1/devices/enroll", response_model=AtlasDeviceEnrollmentResponse, status_code=201)
+async def atlas_enroll_device(
+    payload: AtlasDeviceEnrollmentRequest,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
+) -> AtlasDeviceEnrollmentResponse:
+    if x_alphonso_device_id != payload.device_id:
+        raise HTTPException(status_code=400, detail="Atlas device header does not match enrollment payload")
+    user = await _atlas_demo_user(authorization, x_alphonso_api_version)
+    return await atlas_demo_control_plane.enroll_device(user.id, payload)
+
+
 @app.get("/api/v1/workspaces/{workspace_id}/briefing", response_model=AtlasBriefingResponse)
 async def atlas_briefing(
     workspace_id: str,
     authorization: str | None = Header(default=None),
     x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
 ) -> AtlasBriefingResponse:
-    user = await _atlas_demo_user(authorization, x_alphonso_api_version)
+    user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
     return await atlas_demo_control_plane.briefing(user.id, workspace_id)
 
 
@@ -69,8 +96,9 @@ async def atlas_create_draft(
     payload: AtlasDraftRunRequest,
     authorization: str | None = Header(default=None),
     x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
 ) -> AtlasRunResponse:
-    user = await _atlas_demo_user(authorization, x_alphonso_api_version)
+    user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
     return await atlas_demo_control_plane.create_draft(user.id, workspace_id, payload)
 
 
@@ -81,9 +109,10 @@ async def atlas_record_decision_review(
     payload: AtlasDecisionReviewRequest,
     authorization: str | None = Header(default=None),
     x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
 ) -> AtlasDecisionResponse:
     del payload  # Reserved for a future server-issued action-challenge receipt.
-    user = await _atlas_demo_user(authorization, x_alphonso_api_version)
+    user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
     return await atlas_demo_control_plane.record_review(user.id, workspace_id, decision_id)
 
 

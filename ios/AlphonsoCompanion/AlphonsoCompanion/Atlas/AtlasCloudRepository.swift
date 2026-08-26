@@ -53,6 +53,81 @@ enum AtlasAccessTokenError: LocalizedError, Equatable {
 
 /// Dedicated Keychain storage for the future mobile account session. This intentionally
 /// does not reuse Voice Cloud credentials or store an access token in UserDefaults.
+protocol AtlasDeviceIdentifierProvider {
+    func deviceID() throws -> String
+}
+
+enum AtlasDeviceIdentifierError: LocalizedError, Equatable {
+    case keychain(OSStatus)
+
+    var errorDescription: String? {
+        "The secure Atlas device identifier is unavailable on this device."
+    }
+}
+
+struct AtlasKeychainDeviceIdentifierProvider: AtlasDeviceIdentifierProvider {
+    static let service = "com.alphonso.mobile.controlPlane"
+    static let account = "device-id"
+
+    func deviceID() throws -> String {
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: Self.service,
+            kSecAttrAccount: Self.account,
+            kSecReturnData: true,
+            kSecMatchLimit: kSecMatchLimitOne
+        ]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        if status == errSecSuccess,
+           let data = item as? Data,
+           let existing = String(data: data, encoding: .utf8),
+           UUID(uuidString: existing) != nil {
+            return existing
+        }
+        if status != errSecSuccess && status != errSecItemNotFound {
+            throw AtlasDeviceIdentifierError.keychain(status)
+        }
+        let identifier = UUID().uuidString
+        try Self.save(deviceID: identifier)
+        return identifier
+    }
+
+    static func save(deviceID: String) throws {
+        guard UUID(uuidString: deviceID) != nil else { throw AtlasDeviceIdentifierError.keychain(errSecParam) }
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
+        ]
+        let attributes: [CFString: Any] = [
+            kSecValueData: Data(deviceID.utf8),
+            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        ]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecItemNotFound {
+            var add = query
+            attributes.forEach { add[$0.key] = $0.value }
+            let addStatus = SecItemAdd(add as CFDictionary, nil)
+            guard addStatus == errSecSuccess else { throw AtlasDeviceIdentifierError.keychain(addStatus) }
+        } else if updateStatus != errSecSuccess {
+            throw AtlasDeviceIdentifierError.keychain(updateStatus)
+        }
+    }
+
+    static func remove() throws {
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw AtlasDeviceIdentifierError.keychain(status)
+        }
+    }
+}
+
 struct AtlasKeychainAccessTokenProvider: AtlasAccessTokenProvider {
     static let service = "com.alphonso.mobile.controlPlane"
     static let account = "access-token"
@@ -158,15 +233,18 @@ enum AtlasCloudRepositoryError: LocalizedError, Equatable {
 struct AtlasCloudRepository: AtlasWorkspaceRepository {
     let configuration: AtlasCloudConfiguration
     private let accessTokenProvider: any AtlasAccessTokenProvider
+    private let deviceIdentifierProvider: any AtlasDeviceIdentifierProvider
     private let transport: any AtlasHTTPTransport
 
     init(
         configuration: AtlasCloudConfiguration,
         accessTokenProvider: any AtlasAccessTokenProvider = AtlasKeychainAccessTokenProvider(),
+        deviceIdentifierProvider: any AtlasDeviceIdentifierProvider = AtlasKeychainDeviceIdentifierProvider(),
         transport: any AtlasHTTPTransport = AtlasURLSessionTransport()
     ) {
         self.configuration = configuration
         self.accessTokenProvider = accessTokenProvider
+        self.deviceIdentifierProvider = deviceIdentifierProvider
         self.transport = transport
     }
 
@@ -228,6 +306,7 @@ struct AtlasCloudRepository: AtlasWorkspaceRepository {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(try accessTokenProvider.accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(try deviceIdentifierProvider.deviceID(), forHTTPHeaderField: "X-Alphonso-Device-Id")
         request.setValue("ios", forHTTPHeaderField: "X-Alphonso-Client")
         request.setValue(configuration.apiVersion, forHTTPHeaderField: "X-Alphonso-API-Version")
         request.httpBody = body

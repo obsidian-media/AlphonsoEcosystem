@@ -13,7 +13,8 @@ This is deliberately a migration seam, not a claim of backend parity. Atlas now 
 | `Foundation/AtlasDesignSystem.swift` | Semantic tokens, Dynamic Type roles, execution posture, status labels, and reusable Atlas components. |
 | `Atlas/AtlasMobileRoot.swift` | Atlas navigation and store-driven Home/Work/Inbox/Chat/More screens, focused decision review, and create-work sheet. |
 | `Atlas/AtlasDomain.swift` | Typed Workspace, Briefing, Run, Decision, and Outcome models; async repository protocol; fixture repository; observable workspace store. |
-| `Atlas/AtlasCloudRepository.swift` | Versioned HTTPS v1 client, Keychain access-token provider, transport seam, response DTOs, typed error mapping, and fixture-aware repository factory. |
+| `Atlas/AtlasCloudRepository.swift` | Versioned HTTPS v1 client, `ThisDeviceOnly` Keychain token/device-ID providers, transport seam, response DTOs, typed error mapping, and fixture-aware repository factory. |
+| `Atlas/AtlasIdentityService.swift` | Shared Cloud Voice session handoff, refreshed-token mirroring, Atlas device enrollment client, and observable device-trust state. |
 | `ContentView.swift` | Reversible `@AppStorage` migration switch between Atlas and the legacy local companion. |
 | `AlphonsoCompanionUITests/AlphonsoCompanionUITests.swift` | Smoke coverage for the Atlas default experience and the legacy return path. |
 
@@ -29,16 +30,24 @@ Atlas remains fixture-backed by default. A build activates the Cloud repository 
 
 | v1 operation | Request | Expected response |
 |---|---|---|
-| Workspace briefing | `GET /api/v1/workspaces/{workspace_id}/briefing` | Typed workspace, freshness, active runs, outcomes, decisions, and refresh timestamp. |
+| Enroll device | `POST /api/v1/devices/enroll` | Matching `X-Alphonso-Device-Id` header/body pair; returns a device-trust receipt. |
+| Workspace briefing | `GET /api/v1/workspaces/{workspace_id}/briefing` | Requires bearer token and enrolled device; returns typed workspace, freshness, active runs, outcomes, decisions, and refresh timestamp. |
 | Create draft work | `POST /api/v1/workspaces/{workspace_id}/runs/drafts` | Typed run, with snake-case `execution_posture` in the request. |
 | Record decision review | `POST /api/v1/workspaces/{workspace_id}/decisions/{decision_id}/reviews` | Typed decision state. This is a review handoff, not a final approval endpoint. |
 
-The client sends `Authorization: Bearer <access-token>`, `X-Alphonso-Client: ios`, and `X-Alphonso-API-Version: v1` on every request. It maps 401, 403, and 404 responses to specific session, permission, and record-availability states. Final approval still requires a server-issued action challenge and biometric step-up in a future increment.
+The client sends `Authorization: Bearer <access-token>`, `X-Alphonso-Device-Id`, `X-Alphonso-Client: ios`, and `X-Alphonso-API-Version: v1` on every workspace request. The Atlas identity bridge refreshes the existing user session, mirrors the short-lived access token into an Atlas-specific `ThisDeviceOnly` Keychain entry, and enrolls the matching device ID before the typed workspace store loads. It maps 401, 403, and 404 responses to specific session, device-trust, permission, and record-availability states. Final approval still requires a server-issued action challenge and biometric step-up in a future increment.
+
+## Architecture visual
+
+![Atlas mobile ecosystem architecture](atlas-mobile-ecosystem-architecture.png)
+
+The diagram source is maintained in `atlas-mobile-ecosystem-architecture.mmd`. It separates the full mobile product shell, secure identity and Keychain boundary, HTTPS control plane, optional Hybrid worker, and external authentication provider.
 
 ## Planned replacement of fixture-backed state
 
 | Atlas surface | Current foundation source | Target contract |
 |---|---|---|
+| Device trust | `AtlasIdentityService`, existing Cloud Voice session, and Atlas-specific Keychain device ID | `POST /api/v1/devices/enroll`, durable device enrollment/revocation, and a device-bound session policy. |
 | Workspace ribbon | `AtlasWorkspaceStore` via a factory that falls back to `AtlasFixtureRepository` when Cloud is unconfigured | `WorkspaceSummary` plus health and execution-posture events. |
 | Home | `AtlasBriefing` and correlated `AtlasRun`/`AtlasOutcome` records | `GET /v1/workspaces/{id}/briefing` and typed briefing events. |
 | Work ledger | Typed `AtlasRun` phase records | `GET /v1/runs` and a correlated run event stream. |

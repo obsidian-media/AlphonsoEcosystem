@@ -18,15 +18,31 @@ ENV = {
     "SUPABASE_ANON_KEY": "publishable-key",
     "ATLAS_CONTROL_PLANE_DEMO_MODE": "true",
 }
+DEVICE_ID = "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"
 HEADERS = {
     "Authorization": "Bearer demo-user-token",
     "X-Alphonso-API-Version": "v1",
+    "X-Alphonso-Device-Id": DEVICE_ID,
 }
 USER = SupabaseUser(id="user-mobile-test", access_token="demo-user-token")
 
 
 def reset_demo_state() -> None:
     asyncio.run(atlas_demo_control_plane.reset_for_tests())
+
+
+def enroll(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/devices/enroll",
+        headers=HEADERS,
+        json={"device_id": DEVICE_ID, "display_name": "Atlas iPhone"},
+    )
+    assert response.status_code == 201
+    assert response.json() == {
+        "status": "enrolled",
+        "device_id": DEVICE_ID,
+        "device_trust": "demo_enrolled",
+    }
 
 
 def test_atlas_routes_are_disabled_by_default(monkeypatch):
@@ -44,7 +60,7 @@ def test_atlas_briefing_requires_a_user_token():
     with patch.dict(os.environ, ENV, clear=False):
         response = TestClient(app).get(
             "/api/v1/workspaces/workspace-northstar/briefing",
-            headers={"X-Alphonso-API-Version": "v1"},
+            headers={"X-Alphonso-API-Version": "v1", "X-Alphonso-Device-Id": DEVICE_ID},
         )
 
     assert response.status_code == 401
@@ -54,14 +70,14 @@ def test_atlas_briefing_requires_v1_header():
     with patch.dict(os.environ, ENV, clear=False):
         response = TestClient(app).get(
             "/api/v1/workspaces/workspace-northstar/briefing",
-            headers={"Authorization": "Bearer demo-user-token"},
+            headers={"Authorization": "Bearer demo-user-token", "X-Alphonso-Device-Id": DEVICE_ID},
         )
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Unsupported Atlas API version"
 
 
-def test_atlas_briefing_is_authenticated_and_uses_mobile_contract():
+def test_workspace_operations_require_enrolled_device_after_user_authentication():
     reset_demo_state()
     with patch.dict(os.environ, ENV, clear=False), patch(
         "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
@@ -70,6 +86,34 @@ def test_atlas_briefing_is_authenticated_and_uses_mobile_contract():
             "/api/v1/workspaces/workspace-northstar/briefing",
             headers=HEADERS,
         )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "This device is not enrolled for Atlas Cloud"
+
+
+def test_enrollment_rejects_header_payload_mismatch():
+    reset_demo_state()
+    with patch.dict(os.environ, ENV, clear=False), patch(
+        "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
+    ):
+        response = TestClient(app).post(
+            "/api/v1/devices/enroll",
+            headers=HEADERS,
+            json={"device_id": "2d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8", "display_name": "Different phone"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Atlas device header does not match enrollment payload"
+
+
+def test_atlas_briefing_is_authenticated_enrolled_and_uses_mobile_contract():
+    reset_demo_state()
+    with patch.dict(os.environ, ENV, clear=False), patch(
+        "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
+    ):
+        client = TestClient(app)
+        enroll(client)
+        response = client.get("/api/v1/workspaces/workspace-northstar/briefing", headers=HEADERS)
 
     assert response.status_code == 200
     payload = response.json()
@@ -85,7 +129,9 @@ def test_atlas_create_draft_is_user_scoped_and_returns_v1_run():
     with patch.dict(os.environ, ENV, clear=False), patch(
         "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
     ):
-        response = TestClient(app).post(
+        client = TestClient(app)
+        enroll(client)
+        response = client.post(
             "/api/v1/workspaces/workspace-northstar/runs/drafts",
             headers=HEADERS,
             json={
@@ -94,10 +140,7 @@ def test_atlas_create_draft_is_user_scoped_and_returns_v1_run():
                 "execution_posture": "hybrid",
             },
         )
-        briefing = TestClient(app).get(
-            "/api/v1/workspaces/workspace-northstar/briefing",
-            headers=HEADERS,
-        )
+        briefing = client.get("/api/v1/workspaces/workspace-northstar/briefing", headers=HEADERS)
 
     assert response.status_code == 201
     run = response.json()
@@ -113,12 +156,14 @@ def test_atlas_review_is_not_final_approval_and_cannot_repeat():
     with patch.dict(os.environ, ENV, clear=False), patch(
         "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
     ):
-        first = TestClient(app).post(
+        client = TestClient(app)
+        enroll(client)
+        first = client.post(
             "/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/reviews",
             headers=HEADERS,
             json={},
         )
-        repeated = TestClient(app).post(
+        repeated = client.post(
             "/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/reviews",
             headers=HEADERS,
             json={},
@@ -135,10 +180,9 @@ def test_atlas_unknown_workspace_never_creates_state():
     with patch.dict(os.environ, ENV, clear=False), patch(
         "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
     ):
-        response = TestClient(app).get(
-            "/api/v1/workspaces/unknown-workspace/briefing",
-            headers=HEADERS,
-        )
+        client = TestClient(app)
+        enroll(client)
+        response = client.get("/api/v1/workspaces/unknown-workspace/briefing", headers=HEADERS)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Workspace record is unavailable"
