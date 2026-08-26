@@ -99,6 +99,7 @@ private struct AtlasHomeView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
     let createWork: () -> Void
     @State private var selectedDecision: AtlasDecision?
+    @State private var selectedRun: AtlasRun?
 
     var body: some View {
         NavigationStack {
@@ -114,6 +115,11 @@ private struct AtlasHomeView: View {
             .navigationBarHidden(true)
             .sheet(item: $selectedDecision) { decision in
                 AtlasDecisionReviewSheet(decision: decision)
+                    .environmentObject(store)
+                    .presentationDetents([.large])
+            }
+            .sheet(item: $selectedRun) { run in
+                AtlasRunDetailSheet(run: run)
                     .environmentObject(store)
                     .presentationDetents([.large])
             }
@@ -277,11 +283,7 @@ private struct AtlasHomeView: View {
                         stamp: run.timestampLabel,
                         status: run.status,
                         posture: run.posture,
-                        action: {
-                            if let decision = briefing.decisions.first(where: { $0.runID == run.id && $0.state.canReview }) {
-                                selectedDecision = decision
-                            }
-                        }
+                        action: { selectedRun = run }
                     )
                 }
             } else {
