@@ -26,6 +26,8 @@
 		A1000011 /* CompanionDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* CompanionDesignSystem.swift */; };
 		A1000012 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* OperationsView.swift */; };
 		B1000000 /* CompanionConnectionStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001 /* CompanionConnectionStateMachine.swift */; };
+		E1000101 /* AtlasDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000101 /* AtlasDesignSystem.swift */; };
+		E1000102 /* AtlasMobileRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000102 /* AtlasMobileRoot.swift */; };
 		B1000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B2000003 /* XCTest.framework */; };
 		B1000002 /* CompanionConnectionStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002 /* CompanionConnectionStateMachineTests.swift */; };
 		B1000003 /* VoiceSessionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005 /* VoiceSessionViewModelTests.swift */; };
@@ -68,6 +70,8 @@
 		C2000001 /* AlphonsoCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphonsoCompanionUITests.swift; sourceTree = "<group>"; };
 		C2000003 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 		C2000004 /* AlphonsoCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlphonsoCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2000101 /* AtlasDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasDesignSystem.swift; sourceTree = "<group>"; };
+		E2000102 /* AtlasMobileRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasMobileRoot.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,8 +115,11 @@
 			isa = PBXGroup;
 			children = (
 				A2000001 /* AlphonsoCompanionApp.swift */,
-				A2000002 /* ContentView.swift */,
-				A4000003 /* Models */,
+									A2000002 /* ContentView.swift */,
+					E4000101 /* Foundation */,
+					E4000102 /* Atlas */,
+					A4000003 /* Models */,
+
 				A4000004 /* Services */,
 				A4000006 /* Views */,
 				A200000D /* Assets.xcassets */,
@@ -166,6 +173,22 @@
 				A200000A /* SettingsView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		E4000101 /* Foundation */ = {
+			isa = PBXGroup;
+			children = (
+				E2000101 /* AtlasDesignSystem.swift */,
+			);
+			path = Foundation;
+			sourceTree = "<group>";
+		};
+		E4000102 /* Atlas */ = {
+			isa = PBXGroup;
+			children = (
+				E2000102 /* AtlasMobileRoot.swift */,
+			);
+			path = Atlas;
 			sourceTree = "<group>";
 		};
 		A4000007 /* AlphonsoCompanionTests */ = {
@@ -335,7 +358,10 @@
 				A100000F /* OperationsSnapshot.swift in Sources */,
 				A1000011 /* CompanionDesignSystem.swift in Sources */,
 				A1000012 /* OperationsView.swift in Sources */,
-				B1000000 /* CompanionConnectionStateMachine.swift in Sources */,
+									B1000000 /* CompanionConnectionStateMachine.swift in Sources */,
+					E1000101 /* AtlasDesignSystem.swift in Sources */,
+					E1000102 /* AtlasMobileRoot.swift in Sources */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

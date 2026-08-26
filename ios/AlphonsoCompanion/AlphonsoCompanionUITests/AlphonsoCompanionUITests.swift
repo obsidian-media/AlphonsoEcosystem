@@ -1,21 +1,39 @@
 import XCTest
 
 final class AlphonsoCompanionUITests: XCTestCase {
-    func testLaunchShowsPrimaryTabs() {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testAtlasIsTheDefaultMobileExperience() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
         app.launch()
 
-        XCTAssertTrue(app.tabBars.buttons["Connect"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.tabBars.buttons["Agents"].exists)
-        XCTAssertTrue(app.tabBars.buttons["Voice"].exists)
-        XCTAssertTrue(app.textFields["pairing-pin-field"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["pairing-connect-button"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Today"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.tabBars.buttons["Home"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Work"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Inbox"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Chat"].exists)
+        XCTAssertTrue(app.tabBars.buttons["More"].exists)
+        XCTAssertTrue(app.staticTexts["Northstar Workspace"].exists)
+    }
 
-        app.tabBars.buttons["Voice"].tap()
-        XCTAssertTrue(app.navigationBars["Voice"].waitForExistence(timeout: 2))
+    func testUserCanEnterAndExitLegacyCompanionMode() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
 
-        app.tabBars.buttons["Agents"].tap()
-        XCTAssertTrue(app.navigationBars["Agents"].waitForExistence(timeout: 2))
+        app.tabBars.buttons["More"].tap()
+        let openLegacy = app.buttons["Open legacy companion"]
+        XCTAssertTrue(openLegacy.waitForExistence(timeout: 3))
+        openLegacy.tap()
+
+        XCTAssertTrue(app.staticTexts["Legacy local companion"].waitForExistence(timeout: 3))
+        let returnToAtlas = app.buttons["Return to Atlas"]
+        XCTAssertTrue(returnToAtlas.exists)
+        returnToAtlas.tap()
+
+        XCTAssertTrue(app.staticTexts["Today"].waitForExistence(timeout: 3))
     }
 }
