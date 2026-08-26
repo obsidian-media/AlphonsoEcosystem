@@ -10,6 +10,8 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertEqual(briefing.workspace.name, "Northstar Workspace")
         XCTAssertEqual(briefing.workspace.posture, .cloud)
         XCTAssertEqual(briefing.activeRuns.count, 2)
+        XCTAssertEqual(briefing.outcomes.first?.traceID, "OUT/RA-009")
+        XCTAssertEqual(briefing.outcomes.first?.title, "Research archive updated")
         XCTAssertEqual(briefing.nextDecision?.policyCode, "P-017")
         XCTAssertEqual(briefing.nextDecision?.state, .awaitingReview)
     }

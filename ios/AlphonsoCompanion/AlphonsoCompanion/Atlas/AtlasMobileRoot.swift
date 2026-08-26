@@ -335,6 +335,7 @@ private struct AtlasWorkView: View {
     let createWork: () -> Void
     @Binding var selectedSegment: Int
     @State private var selectedRun: AtlasRun?
+    @State private var selectedOutcome: AtlasOutcome?
 
     var body: some View {
         NavigationStack {
@@ -369,6 +370,12 @@ private struct AtlasWorkView: View {
             AtlasRunDetailSheet(run: run)
                 .environmentObject(store)
         }
+        .sheet(item: $selectedOutcome) { outcome in
+            AtlasOutcomeDetailSheet(
+                outcome: outcome,
+                posture: store.briefing?.workspace.posture ?? store.selectedPosture
+            )
+        }
     }
 
     private var visibleRuns: [AtlasRun] {
@@ -379,27 +386,55 @@ private struct AtlasWorkView: View {
         case 1:
             return runs.filter { $0.phase == .planned || $0.phase == .queued }
         default:
-            return runs.filter { !$0.phase.isActive }
+            return []
         }
     }
 
+    @ViewBuilder
     private var runLedger: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            AtlasSectionHeader(sectionTitle, detail: "Open a record to inspect intent, evidence, and next action.")
-            if visibleRuns.isEmpty {
-                AtlasEmptyState(symbol: emptySymbol, title: emptyTitle, detail: emptyDetail)
-                    .padding(.top, AtlasTheme.Spacing.sm)
-            } else {
-                ForEach(visibleRuns) { run in
-                    AtlasLedgerRow(
-                        title: run.title,
-                        detail: run.summary,
-                        stamp: run.traceID,
-                        status: run.status,
-                        posture: run.posture,
-                        action: { selectedRun = run }
-                    )
+        if selectedSegment == 2 {
+            outcomeLibrary
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                AtlasSectionHeader(sectionTitle, detail: "Open a record to inspect intent, evidence, and next action.")
+                if visibleRuns.isEmpty {
+                    AtlasEmptyState(symbol: emptySymbol, title: emptyTitle, detail: emptyDetail)
+                        .padding(.top, AtlasTheme.Spacing.sm)
+                } else {
+                    ForEach(visibleRuns) { run in
+                        AtlasLedgerRow(
+                            title: run.title,
+                            detail: run.summary,
+                            stamp: run.traceID,
+                            status: run.status,
+                            posture: run.posture,
+                            action: { selectedRun = run }
+                        )
+                    }
                 }
+            }
+        }
+    }
+
+    private var outcomeLibrary: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            AtlasSectionHeader("Verified outcomes", detail: "Delivered workspace records with traceable source context.")
+            if let outcomes = store.briefing?.outcomes, !outcomes.isEmpty {
+                ForEach(outcomes) { outcome in
+                    Button { selectedOutcome = outcome } label: {
+                        AtlasOutcomeRow(outcome: outcome)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens the verified outcome record and its trace")
+                    if outcome.id != outcomes.last?.id { AtlasRule() }
+                }
+            } else {
+                AtlasEmptyState(
+                    symbol: "archivebox",
+                    title: "No verified outcomes yet",
+                    detail: "Delivered workspace outcomes will appear here with their trace records."
+                )
+                .padding(.top, AtlasTheme.Spacing.sm)
             }
         }
     }
@@ -408,7 +443,7 @@ private struct AtlasWorkView: View {
         switch selectedSegment {
         case 0: return "Runbook"
         case 1: return "Planned work"
-        default: return "Delivered work"
+        default: return "Verified outcomes"
         }
     }
 
@@ -417,11 +452,85 @@ private struct AtlasWorkView: View {
     }
 
     private var emptyTitle: String {
-        selectedSegment == 2 ? "No delivered work yet" : selectedSegment == 1 ? "No planned work yet" : "No active work"
+        selectedSegment == 2 ? "No verified outcomes yet" : selectedSegment == 1 ? "No planned work yet" : "No active work"
     }
 
     private var emptyDetail: String {
-        selectedSegment == 2 ? "Completed work and approved artifacts will be collected here." : selectedSegment == 1 ? "Create a brief or schedule a workflow to build the next run." : "New workspace activity will appear here as it begins."
+        selectedSegment == 2 ? "Delivered workspace outcomes will appear here with their trace records." : selectedSegment == 1 ? "Create a brief or schedule a workflow to build the next run." : "New workspace activity will appear here as it begins."
+    }
+}
+
+private struct AtlasOutcomeRow: View {
+    let outcome: AtlasOutcome
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: "checkmark.seal")
+                .font(.title3)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(outcome.title)
+                    .font(AtlasTheme.Type.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(outcome.detail)
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("COMPLETED \(outcome.completedAt.formatted(.relative(presentation: .named)).uppercased()) · \(outcome.traceID)")
+                    .font(AtlasTheme.Type.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+        }
+        .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AtlasOutcomeDetailSheet: View {
+    let outcome: AtlasOutcome
+    let posture: AtlasExecutionPosture
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    AtlasPostureBadge(posture, freshness: "Verified outcome")
+                    Text("Outcome record")
+                        .font(AtlasTheme.Type.proof)
+                        .tracking(1.1)
+                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    Text(outcome.title)
+                        .font(AtlasTheme.Type.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                }
+
+                AtlasRule()
+                AtlasSectionHeader("Verified result")
+                AtlasRunFact(label: "Outcome", value: outcome.detail)
+                AtlasRunFact(label: "Completed", value: outcome.completedAt.formatted(.relative(presentation: .named)))
+
+                AtlasSectionHeader("Record trace", detail: "Reference this immutable identifier when connecting the outcome to workspace evidence.")
+                AtlasRunFact(label: "Trace", value: outcome.traceID, monospaced: true)
+
+                AtlasSectionHeader("Accountability")
+                Text("This outcome records a verified workspace result. It is not by itself an authorization, execution command, or final external-action receipt.")
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+            }
+        }
     }
 }
 
