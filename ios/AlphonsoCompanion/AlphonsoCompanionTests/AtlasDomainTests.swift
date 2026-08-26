@@ -69,6 +69,32 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertTrue(run.nextAction.contains("verified update"))
     }
 
+    @MainActor
+    func testStoreLoadPublishesAuthoritativeSnapshotSyncStatus() async {
+        let store = AtlasWorkspaceStore()
+        await store.load()
+
+        guard case .snapshot(let freshness, _) = store.syncStatus else {
+            return XCTFail("Expected fixture load to publish a snapshot sync state")
+        }
+        XCTAssertEqual(freshness, .current)
+        XCTAssertTrue(store.syncStatus.canRefresh)
+        XCTAssertFalse(store.syncStatus.isWorking)
+    }
+
+    func testSyncStatusKeepsLiveAndFailureRecoveryExplicit() {
+        let live = AtlasWorkspaceSyncStatus.live(freshness: .current, refreshedAt: Date())
+        XCTAssertEqual(live.title, "Live workspace")
+        XCTAssertTrue(live.detail.localizedCaseInsensitiveContains("authenticated workspace updates"))
+        XCTAssertTrue(live.canRefresh)
+
+        let failed = AtlasWorkspaceSyncStatus.failed("Network unavailable")
+        XCTAssertEqual(failed.title, "Workspace needs attention")
+        XCTAssertEqual(failed.detail, "Network unavailable")
+        XCTAssertTrue(failed.canRefresh)
+        XCTAssertFalse(failed.isWorking)
+    }
+
     func testAccountStatusMakesFixtureAndEnrollmentBoundariesExplicit() {
         let fixture = AtlasIdentityService.State.unavailable.accountStatus
         XCTAssertEqual(fixture.title, "Fixture mode")

@@ -104,6 +104,7 @@ private struct AtlasHomeView: View {
         NavigationStack {
             AtlasPage {
                 workspaceRibbon
+                workspaceHealth
                 header
                 nextDecision
                 activeWork
@@ -144,6 +145,60 @@ private struct AtlasHomeView: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("Changes workspace execution posture")
+    }
+
+    private var workspaceHealth: some View {
+        let status = store.syncStatus
+        return HStack(alignment: .top, spacing: AtlasTheme.Spacing.sm) {
+            Group {
+                if status.isWorking {
+                    ProgressView()
+                        .tint(AtlasTheme.ColorToken.moss)
+                } else {
+                    Image(systemName: status.symbol)
+                        .foregroundStyle(syncTint)
+                }
+            }
+            .frame(width: 22, height: 22)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(status.title)
+                    .font(AtlasTheme.Type.section)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(status.detail)
+                    .font(AtlasTheme.Type.metadata)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+
+            if status.canRefresh {
+                Button("Refresh") {
+                    Task { @MainActor in await store.load() }
+                }
+                .font(AtlasTheme.Type.section)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+                .frame(minHeight: 44)
+                .padding(.horizontal, AtlasTheme.Spacing.xs)
+                .accessibilityHint("Requests a fresh authoritative workspace briefing")
+            }
+        }
+        .padding(AtlasTheme.Spacing.md)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .padding(.top, AtlasTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var syncTint: Color {
+        switch store.syncStatus {
+        case .failed: return AtlasTheme.ColorToken.clay
+        case .live: return AtlasTheme.ColorToken.moss
+        case .snapshot: return AtlasTheme.ColorToken.cobalt
+        case .refreshing: return AtlasTheme.ColorToken.moss
+        case .idle: return AtlasTheme.ColorToken.quietInk
+        }
     }
 
     private var header: some View {

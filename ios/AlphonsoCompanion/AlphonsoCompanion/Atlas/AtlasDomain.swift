@@ -163,6 +163,59 @@ struct AtlasDraftPreparationReceipt: Equatable {
     }
 }
 
+enum AtlasWorkspaceSyncStatus: Equatable {
+    case idle
+    case refreshing
+    case snapshot(freshness: AtlasFreshness, refreshedAt: Date)
+    case live(freshness: AtlasFreshness, refreshedAt: Date)
+    case failed(String)
+
+    var title: String {
+        switch self {
+        case .idle: return "Sync paused"
+        case .refreshing: return "Refreshing workspace"
+        case .snapshot: return "Workspace updated"
+        case .live: return "Live workspace"
+        case .failed: return "Workspace needs attention"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .idle: return "pause.circle"
+        case .refreshing: return "arrow.triangle.2.circlepath"
+        case .snapshot: return "arrow.down.circle"
+        case .live: return "dot.radiowaves.left.and.right"
+        case .failed: return "exclamationmark.shield"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .idle:
+            return "Open the workspace to request a fresh briefing."
+        case .refreshing:
+            return "Requesting an authoritative workspace briefing."
+        case .snapshot(let freshness, _):
+            return "\(freshness.label). The next refresh will reconcile an authoritative snapshot."
+        case .live(let freshness, _):
+            return "\(freshness.label). Authenticated workspace updates are reconciling from server snapshots."
+        case .failed(let message):
+            return message
+        }
+    }
+
+    var canRefresh: Bool {
+        if case .refreshing = self { return false }
+        return true
+    }
+
+    var isWorking: Bool {
+        if case .refreshing = self { return true }
+        return false
+    }
+}
+
 enum AtlasDraftOperation: Equatable {
     case idle
     case preparing
@@ -522,6 +575,7 @@ final class AtlasWorkspaceStore: ObservableObject {
     @Published private(set) var briefing: AtlasBriefing?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var syncStatus: AtlasWorkspaceSyncStatus = .idle
     @Published private(set) var decisionReviewRecorded = false
     @Published private(set) var confirmationReceipt: AtlasDecisionConfirmationReceipt?
     @Published private(set) var draftOperation: AtlasDraftOperation = .idle
@@ -545,14 +599,18 @@ final class AtlasWorkspaceStore: ObservableObject {
     func load() async {
         isLoading = true
         errorMessage = nil
+        syncStatus = .refreshing
         defer { isLoading = false }
 
         do {
             let loadedBriefing = try await repository.loadBriefing(workspaceID: workspaceID)
             briefing = loadedBriefing
             selectedPosture = loadedBriefing.workspace.posture
+            syncStatus = .snapshot(freshness: loadedBriefing.freshness, refreshedAt: loadedBriefing.refreshedAt)
         } catch {
-            errorMessage = error.localizedDescription
+            let message = error.localizedDescription
+            errorMessage = message
+            syncStatus = .failed(message)
         }
     }
 
@@ -586,7 +644,9 @@ final class AtlasWorkspaceStore: ObservableObject {
                 }
             } catch {
                 if !Task.isCancelled {
-                    self.errorMessage = error.localizedDescription
+                    let message = error.localizedDescription
+                    self.errorMessage = message
+                    self.syncStatus = .failed(message)
                 }
             }
             self.liveSyncTask = nil
@@ -606,6 +666,7 @@ final class AtlasWorkspaceStore: ObservableObject {
             $0.state == .reviewRecordedPendingConfirmation || $0.state == .confirmationRecorded
         }
         errorMessage = nil
+        syncStatus = .live(freshness: event.briefing.freshness, refreshedAt: event.briefing.refreshedAt)
     }
 
     func resetDraftOperation() {
