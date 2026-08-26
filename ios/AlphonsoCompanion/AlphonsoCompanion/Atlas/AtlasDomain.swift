@@ -739,15 +739,22 @@ final class AtlasWorkspaceStore: ObservableObject {
     func prepareActionConfirmation(_ decision: AtlasDecision) async -> AtlasActionChallenge? {
         errorMessage = nil
         do {
-            let reviewed = try await repository.recordDecisionReview(
-                workspaceID: workspaceID,
-                decisionID: decision.id
-            )
-            applyDecision(reviewed)
-            decisionReviewRecorded = true
+            let decisionForChallenge: AtlasDecision
+            if let currentDecision = briefing?.decisions.first(where: { $0.id == decision.id }),
+               currentDecision.state.needsConfirmation {
+                decisionForChallenge = currentDecision
+            } else {
+                let reviewed = try await repository.recordDecisionReview(
+                    workspaceID: workspaceID,
+                    decisionID: decision.id
+                )
+                applyDecision(reviewed)
+                decisionReviewRecorded = true
+                decisionForChallenge = reviewed
+            }
             return try await repository.requestActionChallenge(
                 workspaceID: workspaceID,
-                decisionID: reviewed.id
+                decisionID: decisionForChallenge.id
             )
         } catch {
             errorMessage = error.localizedDescription

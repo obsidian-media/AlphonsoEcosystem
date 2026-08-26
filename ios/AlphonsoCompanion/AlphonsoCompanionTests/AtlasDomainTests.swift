@@ -29,6 +29,65 @@ private struct DraftWithoutBriefingRepository: AtlasWorkspaceRepository {
     }
 }
 
+private final class ReviewThenChallengeRepository: AtlasWorkspaceRepository {
+    private let fixture = AtlasFixtureRepository()
+    private(set) var reviewCount = 0
+    private var challengeAttemptCount = 0
+
+    func loadBriefing(workspaceID: String) async throws -> AtlasBriefing {
+        try await fixture.loadBriefing(workspaceID: workspaceID)
+    }
+
+    func createDraftRun(
+        workspaceID: String,
+        brief: String,
+        desiredOutcome: String,
+        posture: AtlasExecutionPosture
+    ) async throws -> AtlasRun {
+        try await fixture.createDraftRun(
+            workspaceID: workspaceID,
+            brief: brief,
+            desiredOutcome: desiredOutcome,
+            posture: posture
+        )
+    }
+
+    func recordDecisionReview(workspaceID: String, decisionID: String) async throws -> AtlasDecision {
+        reviewCount += 1
+        let briefing = try await fixture.loadBriefing(workspaceID: workspaceID)
+        guard let decision = briefing.decisions.first(where: { $0.id == decisionID }) else {
+            throw AtlasRepositoryError.decisionUnavailable
+        }
+        return AtlasDecision(
+            id: decision.id,
+            title: decision.title,
+            summary: decision.summary,
+            affectedResource: decision.affectedResource,
+            executionDetail: decision.executionDetail,
+            policyCode: decision.policyCode,
+            policyReason: decision.policyReason,
+            evidenceSummary: decision.evidenceSummary,
+            risk: decision.risk,
+            state: .reviewRecordedPendingConfirmation,
+            expiresAt: decision.expiresAt,
+            runID: decision.runID
+        )
+    }
+
+    func requestActionChallenge(workspaceID: String, decisionID: String) async throws -> AtlasActionChallenge {
+        challengeAttemptCount += 1
+        if challengeAttemptCount == 1 { throw AtlasRepositoryError.decisionUnavailable }
+        return AtlasActionChallenge(
+            id: "retry-challenge",
+            decisionID: decisionID,
+            policyCode: "P-017",
+            statement: "Confirm retry challenge",
+            requiresLocalAuthentication: true,
+            expiresAt: Date().addingTimeInterval(300)
+        )
+    }
+}
+
 private struct DecisionFailureRepository: AtlasWorkspaceRepository {
     private let fixture = AtlasFixtureRepository()
 
@@ -189,6 +248,25 @@ final class AtlasDomainTests: XCTestCase {
 
         XCTAssertNil(challenge)
         XCTAssertEqual(store.errorMessage, AtlasRepositoryError.decisionUnavailable.errorDescription)
+    }
+
+    @MainActor
+    func testChallengeRetryDoesNotRecordReviewTwice() async {
+        let repository = ReviewThenChallengeRepository()
+        let store = AtlasWorkspaceStore(repository: repository)
+        await store.load()
+        guard let decision = store.briefing?.nextDecision else {
+            return XCTFail("Expected a reviewable fixture decision")
+        }
+
+        let firstAttempt = await store.prepareActionConfirmation(decision)
+        XCTAssertNil(firstAttempt)
+        XCTAssertEqual(repository.reviewCount, 1)
+        XCTAssertEqual(store.briefing?.decisions.first?.state, .reviewRecordedPendingConfirmation)
+
+        let retry = await store.prepareActionConfirmation(decision)
+        XCTAssertEqual(retry?.id, "retry-challenge")
+        XCTAssertEqual(repository.reviewCount, 1)
     }
 
     @MainActor
