@@ -340,7 +340,7 @@ private struct AtlasHomeView: View {
     private var commandDock: some View {
         VStack(spacing: AtlasTheme.Spacing.sm) {
             AtlasPrimaryButton(title: "Create work", symbol: "plus", action: createWork)
-            Text("Text, voice, or a file can begin a new brief.")
+            Text("A typed direction begins a new structured work brief.")
                 .font(AtlasTheme.Type.metadata)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
         }
