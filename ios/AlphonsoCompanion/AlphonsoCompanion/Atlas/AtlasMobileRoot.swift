@@ -116,6 +116,7 @@ private struct AtlasHomeView: View {
     let createWork: () -> Void
     @State private var selectedDecision: AtlasDecision?
     @State private var selectedRun: AtlasRun?
+    @State private var selectedOutcome: AtlasOutcome?
 
     var body: some View {
         NavigationStack {
@@ -138,6 +139,13 @@ private struct AtlasHomeView: View {
                 AtlasRunDetailSheet(run: run)
                     .environmentObject(store)
                     .presentationDetents([.large])
+            }
+            .sheet(item: $selectedOutcome) { outcome in
+                AtlasOutcomeDetailSheet(
+                    outcome: outcome,
+                    posture: store.briefing?.workspace.posture ?? store.selectedPosture
+                )
+                .presentationDetents([.large])
             }
         }
     }
@@ -312,7 +320,11 @@ private struct AtlasHomeView: View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
             AtlasSectionHeader("Since you last checked")
             if let outcome = store.briefing?.outcomes.first {
-                AtlasEmptyState(symbol: "checkmark.seal", title: outcome.title, detail: outcome.detail)
+                Button { selectedOutcome = outcome } label: {
+                    AtlasHomeOutcomeRow(outcome: outcome)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the verified outcome record and its trace")
             } else {
                 AtlasEmptyState(symbol: "clock", title: "No new outcomes", detail: "Verified outcomes will appear here after work is delivered.")
             }
@@ -327,6 +339,38 @@ private struct AtlasHomeView: View {
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
         }
         .padding(.top, AtlasTheme.Spacing.lg)
+    }
+}
+
+private struct AtlasHomeOutcomeRow: View {
+    let outcome: AtlasOutcome
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: "checkmark.seal")
+                .font(.title3)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(outcome.title)
+                    .font(AtlasTheme.Type.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(outcome.detail)
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("OUTCOME · \(outcome.traceID)")
+                    .font(AtlasTheme.Type.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+        }
+        .padding(AtlasTheme.Spacing.md)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 
