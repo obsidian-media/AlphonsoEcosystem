@@ -7,6 +7,7 @@ struct AtlasMobileRoot: View {
     @EnvironmentObject private var identity: AtlasIdentityService
     @StateObject private var store = AtlasWorkspaceStore()
     @State private var selection: AtlasDestination = .home
+    @State private var workSegment = 0
     @State private var showingCreateWork = false
     @State private var draftSeed = ""
     @State private var showingAuditTrail = false
@@ -21,10 +22,13 @@ struct AtlasMobileRoot: View {
                 .tabItem { Label("Home", systemImage: "house") }
                 .tag(AtlasDestination.home)
 
-            AtlasWorkView(createWork: {
-                draftSeed = ""
-                showingCreateWork = true
-            })
+            AtlasWorkView(
+                createWork: {
+                    draftSeed = ""
+                    showingCreateWork = true
+                },
+                selectedSegment: $workSegment
+            )
                 .tabItem { Label("Work", systemImage: "checklist") }
                 .tag(AtlasDestination.work)
 
@@ -80,6 +84,7 @@ struct AtlasMobileRoot: View {
                 },
                 viewPreparedWork: {
                     showingCreateWork = false
+                    workSegment = 1
                     selection = .work
                 }
             )
@@ -328,7 +333,7 @@ private struct AtlasHomeView: View {
 private struct AtlasWorkView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
     let createWork: () -> Void
-    @State private var selectedSegment = 0
+    @Binding var selectedSegment: Int
     @State private var selectedRun: AtlasRun?
 
     var body: some View {
