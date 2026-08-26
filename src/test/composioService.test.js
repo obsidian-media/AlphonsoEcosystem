@@ -411,9 +411,7 @@ describe('hydrateComposioApiKeyFromKeychain', () => {
   });
 
   it('does NOT strip the legacy blob apiKey when the keychain write fails during migration (would otherwise lose the key)', async () => {
-    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({
-      enabled: true, apiKey: 'legacy-key', userId: 'user'
-    });
+    localStorageStore['alphonso_composio_config_v1'] = '{"enabled":true,"apiKey":"legacy-key","userId":"user"}';
     invokeMock.mockResolvedValueOnce(null); // keychain get: nothing yet
     invokeMock.mockRejectedValueOnce(new Error('keychain unavailable')); // keychain set: fails
 

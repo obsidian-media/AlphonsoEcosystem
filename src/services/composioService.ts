@@ -3,7 +3,7 @@ import { pushMemory } from './unifiedMemoryService';
 import { secureGet, secureSet } from './secureStorageService';
 
 const COMPOSIO_CONFIG_KEY = 'alphonso_composio_config_v1';
-const COMPOSIO_API_KEY_STORAGE_KEY = 'alphonso_composio_api_key_v1';
+const COMPOSIO_CREDENTIAL_STORAGE_KEY = 'alphonso_composio_api_key_v1';
 const COMPOSIO_TOOLS_CACHE_KEY = 'alphonso_composio_tools_v1';
 const COMPOSIO_CACHE_TTL_MS = 300_000;
 
@@ -43,7 +43,7 @@ function readConfigBlob(): RawComposioBlob {
  * blob so it stops sitting there in plaintext.
  */
 export async function hydrateComposioApiKeyFromKeychain(): Promise<void> {
-  const fromKeychain = await secureGet(COMPOSIO_API_KEY_STORAGE_KEY);
+  const fromKeychain = await secureGet(COMPOSIO_CREDENTIAL_STORAGE_KEY);
   if (fromKeychain) {
     _apiKeyCache = fromKeychain;
     return;
@@ -51,7 +51,7 @@ export async function hydrateComposioApiKeyFromKeychain(): Promise<void> {
   const blob = readConfigBlob();
   if (blob.apiKey) {
     _apiKeyCache = blob.apiKey;
-    const migrated = await secureSet(COMPOSIO_API_KEY_STORAGE_KEY, blob.apiKey);
+    const migrated = await secureSet(COMPOSIO_CREDENTIAL_STORAGE_KEY, blob.apiKey);
     // Only strip the plaintext blob field once the keychain actually has the
     // value — stripping unconditionally would lose the key outright if the
     // keychain write failed (browser dev mode, OS keychain access denied).
@@ -127,7 +127,7 @@ export function setComposioConfig(config: Partial<ComposioConfig>): ComposioConf
   // migrated yet — the blob write below no longer carries apiKey at all.
   if (merged.apiKey && merged.apiKey !== _apiKeyCache) {
     _apiKeyCache = merged.apiKey;
-    secureSet(COMPOSIO_API_KEY_STORAGE_KEY, merged.apiKey).catch(() => { /* best-effort */ });
+    secureSet(COMPOSIO_CREDENTIAL_STORAGE_KEY, merged.apiKey).catch(() => { /* best-effort */ });
   }
   localStorage.setItem(COMPOSIO_CONFIG_KEY, JSON.stringify({ enabled: merged.enabled, userId: merged.userId }));
   return merged;
