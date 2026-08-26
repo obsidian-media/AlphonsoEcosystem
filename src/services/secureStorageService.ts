@@ -18,16 +18,28 @@ import { invoke } from '@tauri-apps/api/core';
  */
 
 export async function secureSet(key: string, value: string): Promise<void> {
+  let keychainOk = false;
   try {
     await invoke('secure_credential_set', { key, value });
+    keychainOk = true;
   } catch {
     // Keychain unavailable (browser dev mode, OS keychain access denied,
-    // etc.) — the caller still needs the value to persist somehow.
+    // etc.) — fall through to the localStorage fallback below.
   }
-  // Always mirror to localStorage too: it's what `secureGet` falls back to
-  // when the keychain entry is missing (e.g. this ran outside Tauri), and
-  // removing it here rather than after a confirmed keychain write would
-  // drop the value with no fallback if the keychain write above failed.
+  if (keychainOk) {
+    // The keychain has it now — clear any localStorage copy so the secret
+    // doesn't sit there in plaintext. (An earlier version of this function
+    // always mirrored to localStorage regardless of keychain outcome, which
+    // CodeQL correctly flagged as clear-text storage of sensitive data: it
+    // meant every "migrated" secret was still permanently readable from
+    // localStorage, defeating the entire point of this module.)
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* localStorage unavailable */
+    }
+    return;
+  }
   try {
     localStorage.setItem(key, value);
   } catch {

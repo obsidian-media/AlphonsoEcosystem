@@ -29,10 +29,11 @@ describe('secureStorageService', () => {
       expect(invokeMock).toHaveBeenCalledWith('secure_credential_set', { key: 'my_key', value: 'my_value' });
     });
 
-    it('also mirrors to localStorage so secureGet has a fallback if the keychain read later fails', async () => {
+    it('clears any localStorage copy once the keychain write succeeds, so the secret does not sit in plaintext', async () => {
+      storage['my_key'] = 'stale-plaintext-copy';
       invokeMock.mockResolvedValueOnce(undefined);
       await secureSet('my_key', 'my_value');
-      expect(storage['my_key']).toBe('my_value');
+      expect(storage['my_key']).toBeUndefined();
     });
 
     it('still writes to localStorage even when the keychain write throws (outside Tauri)', async () => {
