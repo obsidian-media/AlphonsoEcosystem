@@ -1,5 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
 import { LICENSE_TRUST_KEY } from '../config/licenseTrustKey';
+import { secureGet, secureSet, secureDelete } from './secureStorageService';
 
 /**
  * License service — offline, signature-verified tiers.
@@ -11,6 +11,13 @@ import { LICENSE_TRUST_KEY } from '../config/licenseTrustKey';
  * (`verified`) and is recomputed by verifying the stored token at boot
  * (`initLicense`) or on `activateLicense`. Writing `{tier:'pro'}` into
  * localStorage — the old bypass — now grants nothing.
+ *
+ * The token itself is written through `secureStorageService` (OS keychain,
+ * with a localStorage fallback/mirror) rather than plain localStorage —
+ * signature verification already stops forgery, but a plaintext token
+ * sitting in localStorage was still a real license-sharing/exfiltration
+ * exposure that the keychain closes for anyone whose OS credential store is
+ * actually available.
  */
 
 const LICENSE_TOKEN_KEY = 'alphonso_license_token';
@@ -201,8 +208,7 @@ function licenseFromPayload(p: LicensePayload, token: string): LicenseInfo {
 export async function initLicense(): Promise<LicenseInfo> {
   try { localStorage.removeItem(LEGACY_LICENSE_KEY); } catch { /* localStorage unavailable */ }
 
-  let token: string | null = null;
-  try { token = localStorage.getItem(LICENSE_TOKEN_KEY); } catch { /* localStorage unavailable */ }
+  const token = await secureGet(LICENSE_TOKEN_KEY);
 
   if (!token) {
     verified = freeLicense();
@@ -258,18 +264,12 @@ export async function activateLicense(
   }
 
   verified = licenseFromPayload(res.payload, trimmed);
-  try { localStorage.setItem(LICENSE_TOKEN_KEY, trimmed); } catch { /* localStorage unavailable */ }
-  try {
-    await invoke('kv_set', { key: LICENSE_TOKEN_KEY, value: trimmed });
-  } catch { /* SQLite not available outside Tauri — localStorage write above already succeeded */ }
+  await secureSet(LICENSE_TOKEN_KEY, trimmed);
 
   return { success: true, tier: res.payload.tier };
 }
 
 export async function deactivateLicense(): Promise<void> {
   verified = freeLicense();
-  try { localStorage.removeItem(LICENSE_TOKEN_KEY); } catch { /* localStorage unavailable */ }
-  try {
-    await invoke('kv_set', { key: LICENSE_TOKEN_KEY, value: '' });
-  } catch { /* SQLite not available outside Tauri — localStorage removal above already succeeded */ }
+  await secureDelete(LICENSE_TOKEN_KEY);
 }
