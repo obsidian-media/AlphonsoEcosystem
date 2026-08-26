@@ -306,6 +306,38 @@ enum AtlasDecisionState: String, Codable, CaseIterable, Equatable {
 
     var canReview: Bool { self == .awaitingReview }
     var needsConfirmation: Bool { self == .reviewRecordedPendingConfirmation }
+
+    var inboxLabel: String {
+        switch self {
+        case .awaitingReview: return "Needs review"
+        case .reviewRecordedPendingConfirmation: return "Challenge ready"
+        case .confirmationRecorded: return "Confirmation recorded"
+        case .approved: return "Approved"
+        case .rejected: return "Rejected"
+        case .expired: return "Expired"
+        case .unavailable: return "Unavailable"
+        }
+    }
+
+    var inboxDetail: String {
+        switch self {
+        case .awaitingReview: return "Review evidence and policy before requesting a confirmation challenge."
+        case .reviewRecordedPendingConfirmation: return "Review is recorded; request a fresh server challenge before confirmation."
+        case .confirmationRecorded: return "A confirmation receipt is recorded. It did not execute an external action."
+        case .approved: return "This decision is approved in the authoritative workspace record."
+        case .rejected: return "This decision was rejected and remains available as an accountability record."
+        case .expired: return "This decision expired before a confirmation record was accepted."
+        case .unavailable: return "This decision record is currently unavailable. Refresh the workspace before acting."
+        }
+    }
+
+    var inboxStatus: AtlasRunStatus {
+        switch self {
+        case .awaitingReview, .reviewRecordedPendingConfirmation: return .awaitingDecision
+        case .confirmationRecorded, .approved: return .completed
+        case .rejected, .expired, .unavailable: return .blocked
+        }
+    }
 }
 
 struct AtlasActionChallenge: Codable, Equatable, Identifiable {

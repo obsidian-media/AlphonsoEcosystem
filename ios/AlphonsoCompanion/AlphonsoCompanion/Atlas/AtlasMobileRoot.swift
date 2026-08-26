@@ -702,42 +702,27 @@ private struct AtlasInboxView: View {
                 }
 
                 AtlasSectionHeader("Needs your judgement", detail: decisionDetail)
-                if actionableDecisions.isEmpty {
+                if reviewDecisions.isEmpty {
                     AtlasEmptyState(symbol: "checkmark.circle", title: "No decisions are waiting", detail: "Alphonso will surface exceptions, approvals, and assigned follow-ups here.")
                 } else {
-                    ForEach(actionableDecisions) { decision in
-                        Button { selectedDecision = decision } label: {
-                            HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
-                                Image(systemName: decision.risk == .high ? "exclamationmark.shield" : "checkmark.shield")
-                                    .font(.title3)
-                                    .foregroundStyle(decision.risk == .high ? AtlasTheme.ColorToken.clay : AtlasTheme.ColorToken.amber)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(decision.title)
-                                        .font(AtlasTheme.Type.title)
-                                    Text("\(decision.affectedResource) · \(decision.expiryLabel)")
-                                        .font(AtlasTheme.Type.body)
-                                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
-                                    AtlasStatusLabel(.awaitingDecision)
-                                }
-                                Spacer(minLength: AtlasTheme.Spacing.xs)
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
-                            }
-                            .padding(.vertical, AtlasTheme.Spacing.md)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Opens evidence and policy details before approval")
-                        AtlasRule()
-                    }
+                    decisionRows(reviewDecisions, actionable: true)
                 }
 
-                AtlasSectionHeader("Cleared")
-                AtlasEmptyState(
-                    symbol: store.decisionReviewRecorded ? "checkmark.seal" : "clock",
-                    title: store.decisionReviewRecorded ? "Review recorded" : "No completed decisions in this session",
-                    detail: store.decisionReviewRecorded ? "The control-plane handoff is ready for the next confirmation step." : "Resolved decisions and auditable receipts will appear here."
-                )
+                if !confirmationDecisions.isEmpty {
+                    AtlasSectionHeader("Confirmation queue", detail: "These reviews are recorded. Request a fresh server challenge before confirmation.")
+                    decisionRows(confirmationDecisions, actionable: true)
+                }
+
+                AtlasSectionHeader("Recorded", detail: "Read-only accountability records remain visible here; confirmation records are not external execution.")
+                if recordedDecisions.isEmpty {
+                    AtlasEmptyState(
+                        symbol: store.decisionReviewRecorded ? "checkmark.seal" : "clock",
+                        title: store.decisionReviewRecorded ? "Review recorded" : "No recorded decisions in this session",
+                        detail: store.decisionReviewRecorded ? "The control-plane handoff is ready for a fresh confirmation challenge." : "Resolved decisions and auditable receipts will appear here."
+                    )
+                } else {
+                    decisionRows(recordedDecisions, actionable: false)
+                }
             }
             .navigationBarHidden(true)
             .sheet(item: $selectedDecision) { decision in
@@ -748,13 +733,75 @@ private struct AtlasInboxView: View {
         }
     }
 
-    private var actionableDecisions: [AtlasDecision] {
+    @ViewBuilder
+    private func decisionRows(_ decisions: [AtlasDecision], actionable: Bool) -> some View {
+        ForEach(decisions) { decision in
+            if actionable {
+                Button { selectedDecision = decision } label: {
+                    AtlasInboxDecisionRow(decision: decision, showsNavigation: true)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens evidence and policy details. Recording a confirmation does not execute an external action.")
+            } else {
+                AtlasInboxDecisionRow(decision: decision, showsNavigation: false)
+            }
+            AtlasRule()
+        }
+    }
+
+    private var reviewDecisions: [AtlasDecision] {
         (store.briefing?.decisions ?? []).filter(\.state.canReview)
     }
 
+    private var confirmationDecisions: [AtlasDecision] {
+        (store.briefing?.decisions ?? []).filter(\.state.needsConfirmation)
+    }
+
+    private var recordedDecisions: [AtlasDecision] {
+        (store.briefing?.decisions ?? []).filter { !$0.state.canReview && !$0.state.needsConfirmation }
+    }
+
     private var decisionDetail: String {
-        let count = actionableDecisions.count
+        let count = reviewDecisions.count
         return "\(count) decision\(count == 1 ? "" : "s") · review before acting"
+    }
+}
+
+private struct AtlasInboxDecisionRow: View {
+    let decision: AtlasDecision
+    let showsNavigation: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: decision.risk == .high ? "exclamationmark.shield" : "checkmark.shield")
+                .font(.title3)
+                .foregroundStyle(decision.risk == .high ? AtlasTheme.ColorToken.clay : AtlasTheme.ColorToken.amber)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(decision.title)
+                    .font(AtlasTheme.Type.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text("\(decision.affectedResource) · \(decision.expiryLabel)")
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                Text(decision.state.inboxDetail)
+                    .font(AtlasTheme.Type.metadata)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                AtlasStatusLabel(decision.state.inboxStatus)
+            }
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+            if showsNavigation {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            } else {
+                Text(decision.state.inboxLabel.uppercased())
+                    .font(AtlasTheme.Type.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
+        }
+        .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
     }
 }
 

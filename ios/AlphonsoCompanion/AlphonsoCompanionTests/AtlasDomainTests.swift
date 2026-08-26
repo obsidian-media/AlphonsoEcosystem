@@ -129,6 +129,20 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertEqual(briefing.nextDecision?.state, .awaitingReview)
     }
 
+    func testDecisionInboxPresentationStates() {
+        XCTAssertTrue(AtlasDecisionState.awaitingReview.canReview)
+        XCTAssertEqual(AtlasDecisionState.awaitingReview.inboxLabel, "Needs review")
+        XCTAssertEqual(AtlasDecisionState.awaitingReview.inboxStatus, .awaitingDecision)
+
+        XCTAssertTrue(AtlasDecisionState.reviewRecordedPendingConfirmation.needsConfirmation)
+        XCTAssertEqual(AtlasDecisionState.reviewRecordedPendingConfirmation.inboxLabel, "Challenge ready")
+        XCTAssertEqual(AtlasDecisionState.reviewRecordedPendingConfirmation.inboxStatus, .awaitingDecision)
+
+        XCTAssertEqual(AtlasDecisionState.confirmationRecorded.inboxLabel, "Confirmation recorded")
+        XCTAssertEqual(AtlasDecisionState.confirmationRecorded.inboxStatus, .completed)
+        XCTAssertEqual(AtlasDecisionState.expired.inboxStatus, .blocked)
+    }
+
     func testFixtureRepositoryRejectsUnknownWorkspace() async {
         let repository = AtlasFixtureRepository()
 
