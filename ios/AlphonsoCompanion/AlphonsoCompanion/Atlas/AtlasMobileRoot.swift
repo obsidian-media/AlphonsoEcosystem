@@ -1355,6 +1355,7 @@ private struct AtlasDecisionReviewSheet: View {
     @State private var isWorking = false
     @State private var localError: String?
     @State private var localErrorTitle = "Review or challenge was not recorded"
+    @State private var needsFreshChallenge = false
 
     var body: some View {
         NavigationStack {
@@ -1426,10 +1427,15 @@ private struct AtlasDecisionReviewSheet: View {
                 .accessibilityHint("Records a confirmation receipt only. It does not execute an external action.")
             }
         } else {
-            focusButton(title: "Record review & request challenge", symbol: "checkmark.shield") {
+            focusButton(
+                title: needsFreshChallenge ? "Request a new confirmation challenge" : "Record review & request challenge",
+                symbol: needsFreshChallenge ? "arrow.clockwise" : "checkmark.shield"
+            ) {
                 requestChallenge()
             }
-            .accessibilityHint("Records your review, then requests a short-lived server confirmation challenge. No action is executed.")
+            .accessibilityHint(needsFreshChallenge
+                ? "Requests a fresh short-lived server challenge after a confirmation failure. No action is executed."
+                : "Records your review, then requests a short-lived server confirmation challenge. No action is executed.")
         }
     }
 
@@ -1455,8 +1461,11 @@ private struct AtlasDecisionReviewSheet: View {
             defer { isWorking = false }
             challenge = await store.prepareActionConfirmation(decision)
             if challenge == nil {
+                needsFreshChallenge = store.decisionReviewRecorded
                 localErrorTitle = store.decisionReviewRecorded ? "Challenge was not issued" : "Review or challenge was not recorded"
                 localError = store.errorMessage ?? "Atlas could not record this review or request a confirmation challenge. Refresh the workspace and try again."
+            } else {
+                needsFreshChallenge = false
             }
         }
     }
@@ -1473,6 +1482,8 @@ private struct AtlasDecisionReviewSheet: View {
                 }
                 receipt = await store.recordActionConfirmation(decision: decision, challenge: challenge)
                 if receipt == nil {
+                    challenge = nil
+                    needsFreshChallenge = true
                     localError = store.errorMessage ?? "Atlas could not record this confirmation. Refresh the workspace and request a new challenge if needed."
                 }
             } catch {
