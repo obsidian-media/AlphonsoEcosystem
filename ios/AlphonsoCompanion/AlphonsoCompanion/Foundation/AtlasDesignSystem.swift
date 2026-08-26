@@ -56,6 +56,28 @@ enum AtlasExecutionPosture: String, CaseIterable, Codable, Identifiable {
 
     var id: String { rawValue }
 
+    private var wireValue: String {
+        switch self {
+        case .cloud: return "cloud"
+        case .hybrid: return "hybrid"
+        case .local: return "local"
+        case .onDevice: return "on_device"
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self).lowercased()
+        guard let posture = Self.allCases.first(where: { $0.wireValue == value }) else {
+            throw DecodingError.dataCorruptedError(in: try decoder.singleValueContainer(), debugDescription: "Unsupported execution posture: \(value)")
+        }
+        self = posture
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(wireValue)
+    }
+
     var symbol: String {
         switch self {
         case .cloud: return "cloud"

@@ -36,6 +36,8 @@
 		B1000005 /* WebSocketServiceURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000007 /* WebSocketServiceURLTests.swift */; };
 		B1000006 /* MDNSServiceHostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000008 /* MDNSServiceHostTests.swift */; };
 		E1000104 /* AtlasDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000104 /* AtlasDomainTests.swift */; };
+		E1000105 /* AtlasCloudRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000105 /* AtlasCloudRepository.swift */; };
+		E1000106 /* AtlasCloudRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000106 /* AtlasCloudRepositoryTests.swift */; };
 		C1000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C2000003 /* XCTest.framework */; };
 		C1000002 /* AlphonsoCompanionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* AlphonsoCompanionUITests.swift */; };
 /* End PBXBuildFile section */
@@ -68,6 +70,8 @@
 		B2000007 /* WebSocketServiceURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketServiceURLTests.swift; sourceTree = "<group>"; };
 		B2000008 /* MDNSServiceHostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MDNSServiceHostTests.swift; sourceTree = "<group>"; };
 		E2000104 /* AtlasDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasDomainTests.swift; sourceTree = "<group>"; };
+		E2000105 /* AtlasCloudRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasCloudRepository.swift; sourceTree = "<group>"; };
+		E2000106 /* AtlasCloudRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasCloudRepositoryTests.swift; sourceTree = "<group>"; };
 		B2000003 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 		B2000004 /* AlphonsoCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlphonsoCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2000001 /* AlphonsoCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphonsoCompanionUITests.swift; sourceTree = "<group>"; };
@@ -192,6 +196,7 @@
 			children = (
 				E2000102 /* AtlasMobileRoot.swift */,
 				E2000103 /* AtlasDomain.swift */,
+				E2000105 /* AtlasCloudRepository.swift */,
 			);
 			path = Atlas;
 			sourceTree = "<group>";
@@ -205,6 +210,7 @@
 				B2000007 /* WebSocketServiceURLTests.swift */,
 									B2000008 /* MDNSServiceHostTests.swift */,
 					E2000104 /* AtlasDomainTests.swift */,
+					E2000106 /* AtlasCloudRepositoryTests.swift */,
 
 			);
 			path = AlphonsoCompanionTests;
@@ -369,6 +375,7 @@
 					E1000101 /* AtlasDesignSystem.swift in Sources */,
 					E1000102 /* AtlasMobileRoot.swift in Sources */,
 					E1000103 /* AtlasDomain.swift in Sources */,
+					E1000105 /* AtlasCloudRepository.swift in Sources */,
 
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -383,6 +390,7 @@
 				B1000005 /* WebSocketServiceURLTests.swift in Sources */,
 									B1000006 /* MDNSServiceHostTests.swift in Sources */,
 					E1000104 /* AtlasDomainTests.swift in Sources */,
+					E1000106 /* AtlasCloudRepositoryTests.swift in Sources */,
 
 			);
 			runOnlyForDeploymentPostprocessing = 0;

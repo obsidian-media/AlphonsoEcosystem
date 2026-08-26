@@ -44,6 +44,33 @@ enum AtlasRunPhase: String, Codable, CaseIterable, Equatable {
     case failed
     case cancelled
 
+    private var wireValue: String {
+        switch self {
+        case .planned: return "planned"
+        case .awaitingApproval: return "awaiting_approval"
+        case .queued: return "queued"
+        case .executing: return "executing"
+        case .waitingOnDependency: return "waiting_on_dependency"
+        case .succeeded: return "succeeded"
+        case .failed: return "failed"
+        case .cancelled: return "cancelled"
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self).lowercased()
+        guard let phase = Self.allCases.first(where: { $0.wireValue == value }) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported run phase: \(value)")
+        }
+        self = phase
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(wireValue)
+    }
+
     var presentationStatus: AtlasRunStatus {
         switch self {
         case .planned, .queued:
@@ -103,21 +130,60 @@ struct AtlasOutcome: Codable, Equatable, Identifiable {
 
 // MARK: - Decisions
 
-enum AtlasDecisionRisk: String, Codable, Equatable {
+enum AtlasDecisionRisk: String, Codable, CaseIterable, Equatable {
     case routine
     case elevated
     case high
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self).lowercased()
+        guard let risk = Self(rawValue: value) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported decision risk: \(value)")
+        }
+        self = risk
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
     var isStepUpRequired: Bool { self == .high }
 }
 
-enum AtlasDecisionState: String, Codable, Equatable {
+enum AtlasDecisionState: String, Codable, CaseIterable, Equatable {
     case awaitingReview
     case reviewRecordedPendingConfirmation
     case approved
     case rejected
     case expired
     case unavailable
+
+    private var wireValue: String {
+        switch self {
+        case .awaitingReview: return "awaiting_review"
+        case .reviewRecordedPendingConfirmation: return "review_recorded_pending_confirmation"
+        case .approved: return "approved"
+        case .rejected: return "rejected"
+        case .expired: return "expired"
+        case .unavailable: return "unavailable"
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self).lowercased()
+        guard let state = Self.allCases.first(where: { $0.wireValue == value }) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported decision state: \(value)")
+        }
+        self = state
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(wireValue)
+    }
 
     var canReview: Bool { self == .awaitingReview }
 }
@@ -313,10 +379,10 @@ final class AtlasWorkspaceStore: ObservableObject {
     private let workspaceID: String
 
     init(
-        repository: any AtlasWorkspaceRepository = AtlasFixtureRepository(),
+        repository: (any AtlasWorkspaceRepository)? = nil,
         workspaceID: String = "workspace-northstar"
     ) {
-        self.repository = repository
+        self.repository = repository ?? AtlasWorkspaceRepositoryFactory.makeDefault()
         self.workspaceID = workspaceID
     }
 

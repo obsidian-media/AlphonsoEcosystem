@@ -56,6 +56,10 @@
 	<string>Alphonso uses the microphone for voice conversations.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Alphonso uses speech recognition to transcribe your voice.</string>
+	<key>AtlasControlPlaneURL</key>
+	<string></string>
+	<key>AtlasControlPlaneAPIVersion</key>
+	<string>v1</string>
 	<key>CloudVoiceEndpoint</key>
 	<string>https://voice.obsidianmedia.online/v1/voice/respond</string>
 	<key>SupabaseURL</key>
