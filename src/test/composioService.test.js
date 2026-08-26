@@ -393,9 +393,7 @@ describe('hydrateComposioApiKeyFromKeychain', () => {
   });
 
   it('migrates a legacy blob apiKey into the keychain and strips it from the blob when the keychain is empty', async () => {
-    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({
-      enabled: true, apiKey: 'legacy-key', userId: 'user'
-    });
+    localStorageStore['alphonso_composio_config_v1'] = '{"enabled":true,"apiKey":"legacy-key","userId":"user"}';
     invokeMock.mockResolvedValueOnce(null); // keychain get: nothing yet
 
     await hydrateComposioApiKeyFromKeychain();
