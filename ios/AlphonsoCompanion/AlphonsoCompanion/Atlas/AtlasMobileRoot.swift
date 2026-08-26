@@ -1354,6 +1354,7 @@ private struct AtlasDecisionReviewSheet: View {
     @State private var receipt: AtlasDecisionConfirmationReceipt?
     @State private var isWorking = false
     @State private var localError: String?
+    @State private var localErrorTitle = "Review or challenge was not recorded"
 
     var body: some View {
         NavigationStack {
@@ -1383,7 +1384,7 @@ private struct AtlasDecisionReviewSheet: View {
                         AtlasStudioBlock(
                             kind: "RECOVERY REQUIRED",
                             symbol: "exclamationmark.shield.fill",
-                            title: "Review was not recorded",
+                            title: localErrorTitle,
                             detail: localError,
                             accent: AtlasTheme.ColorToken.clay
                         )
@@ -1448,6 +1449,7 @@ private struct AtlasDecisionReviewSheet: View {
 
     private func requestChallenge() {
         localError = nil
+        localErrorTitle = "Review or challenge was not recorded"
         Task { @MainActor in
             isWorking = true
             defer { isWorking = false }
@@ -1460,6 +1462,7 @@ private struct AtlasDecisionReviewSheet: View {
 
     private func confirm(_ challenge: AtlasActionChallenge) {
         localError = nil
+        localErrorTitle = "Confirmation was not recorded"
         Task { @MainActor in
             isWorking = true
             defer { isWorking = false }
