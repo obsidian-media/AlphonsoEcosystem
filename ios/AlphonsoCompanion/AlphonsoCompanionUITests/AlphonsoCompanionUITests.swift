@@ -17,6 +17,44 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Chat"].exists)
         XCTAssertTrue(app.tabBars.buttons["More"].exists)
         XCTAssertTrue(app.staticTexts["Northstar Workspace"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["atlas.home.workspaceHealth"].exists)
+    }
+
+    func testAtlasMoreRoutesExposeAccountAndAuditSurfaces() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.tabBars.buttons["More"].tap()
+        let account = app.buttons["atlas.more.account"]
+        XCTAssertTrue(account.waitForExistence(timeout: 3))
+        account.tap()
+        XCTAssertTrue(app.staticTexts["Account & Cloud"].waitForExistence(timeout: 3))
+        app.buttons["Close"].tap()
+
+        let audit = app.buttons["atlas.more.auditTrail"]
+        XCTAssertTrue(audit.waitForExistence(timeout: 3))
+        audit.tap()
+        XCTAssertTrue(app.staticTexts["Audit trail"].waitForExistence(timeout: 3))
+    }
+
+    func testTypedDirectionOpensPrefilledWorkPreparation() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.tabBars.buttons["Chat"].tap()
+        let direction = app.descendants(matching: .any)["atlas.chat.direction"]
+        XCTAssertTrue(direction.waitForExistence(timeout: 3))
+        direction.tap()
+        direction.typeText("Prepare a mobile release checklist")
+
+        let prepare = app.buttons["atlas.chat.prepare"]
+        XCTAssertTrue(prepare.isEnabled)
+        prepare.tap()
+
+        let brief = app.descendants(matching: .any)["atlas.create.brief"]
+        XCTAssertTrue(brief.waitForExistence(timeout: 3))
     }
 
     func testUserCanEnterAndExitLegacyCompanionMode() throws {

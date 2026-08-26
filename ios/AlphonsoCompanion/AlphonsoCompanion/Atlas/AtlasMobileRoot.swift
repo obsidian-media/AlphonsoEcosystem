@@ -223,6 +223,7 @@ private struct AtlasHomeView: View {
         .background(AtlasTheme.ColorToken.sheet)
         .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
         .padding(.top, AtlasTheme.Spacing.md)
+        .accessibilityIdentifier("atlas.home.workspaceHealth")
         .accessibilityElement(children: .combine)
     }
 
@@ -406,6 +407,7 @@ private struct AtlasWorkView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.top, AtlasTheme.Spacing.lg)
+                .accessibilityIdentifier("atlas.work.segment")
                 .accessibilityHint("Filters the work runbook")
 
                 runLedger
@@ -864,6 +866,7 @@ private struct AtlasChatStudioView: View {
                     .background(AtlasTheme.ColorToken.sheet)
                     .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
                     .accessibilityLabel("Typed direction for a work brief")
+                    .accessibilityIdentifier("atlas.chat.direction")
 
                 Button {
                     createWork(input.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -876,6 +879,7 @@ private struct AtlasChatStudioView: View {
                 }
                 .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityLabel("Turn typed direction into a work brief")
+                .accessibilityIdentifier("atlas.chat.prepare")
             }
             Text("Voice capture, file intake, and generated suggestions will appear only when their authenticated mobile contracts are available.")
                 .font(AtlasTheme.Type.metadata)
@@ -911,6 +915,7 @@ private struct AtlasMoreView: View {
                     AtlasMoreRow(symbol: "person.crop.circle", title: "Account & Cloud", detail: "Session status, device trust, and safe recovery", isNavigable: true)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("atlas.more.account")
                 .accessibilityHint("Opens Atlas account connection and device-trust status")
                 AtlasMoreRow(symbol: "person.3", title: "Team", detail: "Role and contribution records are planned with the future Workspace API.")
                 AtlasMoreRow(symbol: "bubble.left.and.bubble.right", title: "Boardroom", detail: "Collaborative decision sessions are planned for a later control-plane increment.")
@@ -923,6 +928,7 @@ private struct AtlasMoreView: View {
                     AtlasMoreRow(symbol: "lock.shield", title: "Security & Devices", detail: "Sessions, device trust, and accountability records", isNavigable: true)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("atlas.more.auditTrail")
                 .accessibilityHint("Opens the immutable review and confirmation record")
 
                 AtlasSectionHeader("Migration")
@@ -1248,6 +1254,7 @@ private struct AtlasCreateWorkSheet: View {
                 AtlasSectionHeader("Brief")
                 TextField("What needs to happen?", text: $brief, axis: .vertical)
                     .font(AtlasTheme.Type.body)
+                    .accessibilityIdentifier("atlas.create.brief")
                     .lineLimit(3...8)
                     .padding(AtlasTheme.Spacing.md)
                     .background(AtlasTheme.ColorToken.sheet)
@@ -1256,6 +1263,7 @@ private struct AtlasCreateWorkSheet: View {
                 AtlasSectionHeader("Desired outcome")
                 TextField("What would a useful result look like?", text: $outcome, axis: .vertical)
                     .font(AtlasTheme.Type.body)
+                    .accessibilityIdentifier("atlas.create.outcome")
                     .lineLimit(2...6)
                     .padding(AtlasTheme.Spacing.md)
                     .background(AtlasTheme.ColorToken.sheet)
@@ -1330,6 +1338,7 @@ private struct AtlasCreateWorkSheet: View {
 
     private func prepareButton(title: String, symbol: String) -> some View {
         AtlasPrimaryButton(title: title, symbol: symbol, action: prepareWork)
+            .accessibilityIdentifier("atlas.create.prepare")
             .disabled(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .opacity(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
             .padding(.top, AtlasTheme.Spacing.lg)
