@@ -386,7 +386,7 @@ private struct AtlasCreateDraftRequest: Encodable {
 
 private struct AtlasDecisionReviewRequest: Encodable {}
 
-private struct AtlasBriefingResponse: Decodable {
+struct AtlasBriefingResponse: Decodable {
     let workspace: AtlasWorkspaceResponse
     let freshness: AtlasFreshnessResponse
     let activeRuns: [AtlasRunResponse]
@@ -406,7 +406,7 @@ private struct AtlasBriefingResponse: Decodable {
     }
 }
 
-private struct AtlasWorkspaceResponse: Decodable {
+struct AtlasWorkspaceResponse: Decodable {
     let id: String
     let name: String
     let posture: AtlasExecutionPosture
@@ -417,7 +417,7 @@ private struct AtlasWorkspaceResponse: Decodable {
     }
 }
 
-private struct AtlasFreshnessResponse: Decodable {
+struct AtlasFreshnessResponse: Decodable {
     let state: String
     let minutes: Int?
     let lastConfirmedAt: Date?
@@ -434,7 +434,7 @@ private struct AtlasFreshnessResponse: Decodable {
     }
 }
 
-private struct AtlasRunResponse: Decodable {
+struct AtlasRunResponse: Decodable {
     let id: String
     let title: String
     let summary: String
@@ -458,7 +458,7 @@ private struct AtlasRunResponse: Decodable {
     }
 }
 
-private struct AtlasOutcomeResponse: Decodable {
+struct AtlasOutcomeResponse: Decodable {
     let id: String
     let title: String
     let detail: String
@@ -470,7 +470,7 @@ private struct AtlasOutcomeResponse: Decodable {
     }
 }
 
-private struct AtlasDecisionResponse: Decodable {
+struct AtlasDecisionResponse: Decodable {
     let id: String
     let title: String
     let summary: String

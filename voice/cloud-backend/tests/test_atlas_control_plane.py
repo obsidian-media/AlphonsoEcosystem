@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.atlas_control_plane import AtlasDemoControlPlane
+from app.atlas_control_plane import AtlasDemoControlPlane, AtlasDeviceEnrollmentRequest, AtlasDraftRunRequest
 from app.main import app, atlas_demo_control_plane
 from app.supabase_auth import SupabaseUser
 
@@ -186,6 +186,46 @@ def test_atlas_unknown_workspace_never_creates_state():
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Workspace record is unavailable"
+
+
+def test_atlas_event_subscription_reconciles_snapshot_and_draft_change():
+    async def scenario() -> None:
+        control_plane = AtlasDemoControlPlane()
+        user_id = "user-event-test"
+        workspace_id = "workspace-northstar"
+        await control_plane.enroll_device(
+            user_id,
+            AtlasDeviceEnrollmentRequest(device_id=DEVICE_ID, display_name="Atlas iPhone"),
+        )
+        queue = await control_plane.subscribe_events(user_id, workspace_id)
+        snapshot = await queue.get()
+        assert snapshot.id == "1"
+        assert snapshot.type == "workspace.snapshot"
+        assert snapshot.briefing.workspace.id == workspace_id
+
+        await control_plane.create_draft(
+            user_id,
+            workspace_id,
+            AtlasDraftRunRequest(
+                brief="Prepare a live update",
+                desired_outcome="A synchronized draft",
+                execution_posture="cloud",
+            ),
+        )
+        created = await queue.get()
+        assert created.id == "2"
+        assert created.type == "run.created"
+        assert created.briefing.active_runs[0].title == "Prepare a live update"
+
+        reviewed = await control_plane.record_review(user_id, workspace_id, "decision-release-brief")
+        review_event = await queue.get()
+        assert reviewed.state == "review_recorded_pending_confirmation"
+        assert review_event.id == "3"
+        assert review_event.type == "decision.reviewed"
+        assert review_event.briefing.decisions[0].state == "review_recorded_pending_confirmation"
+        await control_plane.unsubscribe_events(user_id, workspace_id, queue)
+
+    asyncio.run(scenario())
 
 
 def test_non_production_control_plane_is_not_a_desktop_gateway():

@@ -99,6 +99,14 @@ class AtlasBriefingResponse(BaseModel):
     refreshed_at: datetime
 
 
+class AtlasWorkspaceEvent(BaseModel):
+    id: str
+    type: Literal["workspace.snapshot", "run.created", "decision.reviewed"]
+    workspace_id: str
+    occurred_at: datetime
+    briefing: AtlasBriefingResponse
+
+
 class AtlasDraftRunRequest(BaseModel):
     brief: AtlasText
     desired_outcome: AtlasText
@@ -126,6 +134,8 @@ class AtlasDemoControlPlane:
     def __init__(self) -> None:
         self._workspaces_by_user: dict[str, dict[str, object]] = {}
         self._devices_by_user: dict[str, dict[str, str]] = {}
+        self._event_subscribers: dict[str, set[asyncio.Queue[AtlasWorkspaceEvent]]] = {}
+        self._event_sequence = 0
         self._lock = asyncio.Lock()
 
     async def enroll_device(
@@ -180,7 +190,8 @@ class AtlasDemoControlPlane:
             trace_id=f"DRAFT/{uuid4().hex[:8].upper()}",
         )
         async with self._lock:
-            workspace["runs"].append(run)
+            workspace["runs"].insert(0, run)
+        await self._publish_event(user_id, workspace_id, workspace, "run.created")
         return run
 
     async def record_review(
@@ -199,13 +210,45 @@ class AtlasDemoControlPlane:
                     raise HTTPException(status_code=409, detail="This decision cannot be reviewed in its current state")
                 recorded = decision.model_copy(update={"state": "review_recorded_pending_confirmation"})
                 decisions[index] = recorded
-                return recorded
-        raise HTTPException(status_code=404, detail="Decision record is unavailable")
+                break
+            else:
+                raise HTTPException(status_code=404, detail="Decision record is unavailable")
+        await self._publish_event(user_id, workspace_id, workspace, "decision.reviewed")
+        return recorded
+    async def subscribe_events(
+        self,
+        user_id: str,
+        workspace_id: str,
+    ) -> asyncio.Queue[AtlasWorkspaceEvent]:
+        workspace = await self._workspace_for(user_id, workspace_id)
+        queue: asyncio.Queue[AtlasWorkspaceEvent] = asyncio.Queue(maxsize=16)
+        key = self._workspace_key(user_id, workspace_id)
+        async with self._lock:
+            self._event_subscribers.setdefault(key, set()).add(queue)
+            queue.put_nowait(self._new_event(workspace_id, workspace, "workspace.snapshot"))
+        return queue
+
+    async def unsubscribe_events(
+        self,
+        user_id: str,
+        workspace_id: str,
+        queue: asyncio.Queue[AtlasWorkspaceEvent],
+    ) -> None:
+        key = self._workspace_key(user_id, workspace_id)
+        async with self._lock:
+            subscribers = self._event_subscribers.get(key)
+            if not subscribers:
+                return
+            subscribers.discard(queue)
+            if not subscribers:
+                self._event_subscribers.pop(key, None)
 
     async def reset_for_tests(self) -> None:
         async with self._lock:
             self._workspaces_by_user.clear()
             self._devices_by_user.clear()
+            self._event_subscribers.clear()
+            self._event_sequence = 0
 
     async def _workspace_for(self, user_id: str, workspace_id: str) -> dict[str, object]:
         if workspace_id != "workspace-northstar":
@@ -217,6 +260,43 @@ class AtlasDemoControlPlane:
                 workspace = _seed_workspace()
                 self._workspaces_by_user[key] = workspace
             return workspace
+
+    async def _publish_event(
+        self,
+        user_id: str,
+        workspace_id: str,
+        workspace: dict[str, object],
+        event_type: Literal["run.created", "decision.reviewed"],
+    ) -> None:
+        key = self._workspace_key(user_id, workspace_id)
+        async with self._lock:
+            event = self._new_event(workspace_id, workspace, event_type)
+            for queue in self._event_subscribers.get(key, set()).copy():
+                if queue.full():
+                    try:
+                        queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        pass
+                queue.put_nowait(event)
+
+    @staticmethod
+    def _workspace_key(user_id: str, workspace_id: str) -> str:
+        return f"{user_id}:{workspace_id}"
+
+    def _new_event(
+        self,
+        workspace_id: str,
+        workspace: dict[str, object],
+        event_type: Literal["workspace.snapshot", "run.created", "decision.reviewed"],
+    ) -> AtlasWorkspaceEvent:
+        self._event_sequence += 1
+        return AtlasWorkspaceEvent(
+            id=str(self._event_sequence),
+            type=event_type,
+            workspace_id=workspace_id,
+            occurred_at=_utc_now(),
+            briefing=self._briefing_response(workspace),
+        )
 
     def _briefing_response(self, workspace: dict[str, object]) -> AtlasBriefingResponse:
         now = _utc_now()

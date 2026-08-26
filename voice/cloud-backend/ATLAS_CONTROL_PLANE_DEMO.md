@@ -29,10 +29,11 @@ Every route requires `Authorization: Bearer <user-access-token>` and `X-Alphonso
 |---|---|---|
 | Enroll Atlas device | `POST /api/v1/devices/enroll` | Requires a matching `X-Alphonso-Device-Id` header and body `device_id`; returns `demo_enrolled` device trust. |
 | Workspace briefing | `GET /api/v1/workspaces/workspace-northstar/briefing` | Requires an enrolled device; returns workspace metadata, freshness, active runs, outcomes, and pending decisions. |
+| Workspace event feed | `GET /api/v1/workspaces/workspace-northstar/events` | Authenticated server-sent events; the first message is an authoritative `workspace.snapshot`, followed by full snapshots for `run.created` and `decision.reviewed`. |
 | Create a draft run | `POST /api/v1/workspaces/workspace-northstar/runs/drafts` | Accepts `brief`, `desired_outcome`, and `execution_posture`; returns a planned run and adds it to the caller’s ephemeral briefing. |
 | Record a decision review | `POST /api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/reviews` | Records a review state only. It does **not** approve, dispatch, publish, or perform an external action. |
 
-The response uses snake-case JSON and ISO-8601 timestamps. A repeated review of the same decision returns `409`, preventing the demo client from treating review handoff as an idempotent final approval.
+The response uses snake-case JSON and ISO-8601 timestamps. A repeated review of the same decision returns `409`, preventing the demo client from treating review handoff as an idempotent final approval. The event feed is intentionally **snapshot-driven**: event messages carry a complete briefing, and clients reconcile only a complete authoritative snapshot rather than applying an unverified partial mutation. This demo does not promise historical replay or durable resume from `Last-Event-ID`.
 
 ## Development verification
 
@@ -42,7 +43,7 @@ Run the focused Atlas suite from this directory:
 pytest -q tests/test_atlas_control_plane.py tests/test_contracts.py
 ```
 
-The tests cover disabled-by-default behavior, required bearer authentication, required API-version headers, device-header/payload matching, enrolled-device enforcement, mobile response shape, draft creation, per-user ephemeral state, review transition behavior, and unknown-workspace rejection.
+The tests cover disabled-by-default behavior, required bearer authentication, required API-version headers, device-header/payload matching, enrolled-device enforcement, mobile response shape, snapshot-first event delivery, typed draft events, per-user ephemeral state, review transition behavior, and unknown-workspace rejection.
 
 ## Production replacement checklist
 

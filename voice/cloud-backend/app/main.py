@@ -5,6 +5,7 @@ import time
 from uuid import uuid4
 
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.config import Settings
 from app.atlas_control_plane import (
@@ -88,6 +89,31 @@ async def atlas_briefing(
 ) -> AtlasBriefingResponse:
     user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
     return await atlas_demo_control_plane.briefing(user.id, workspace_id)
+
+
+@app.get("/api/v1/workspaces/{workspace_id}/events")
+async def atlas_workspace_events(
+    workspace_id: str,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
+) -> StreamingResponse:
+    user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
+    queue = await atlas_demo_control_plane.subscribe_events(user.id, workspace_id)
+
+    async def stream_events():
+        try:
+            while True:
+                event = await queue.get()
+                yield f"id: {event.id}\nevent: {event.type}\ndata: {event.model_dump_json()}\n\n"
+        finally:
+            await atlas_demo_control_plane.unsubscribe_events(user.id, workspace_id, queue)
+
+    return StreamingResponse(
+        stream_events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/v1/workspaces/{workspace_id}/runs/drafts", response_model=AtlasRunResponse, status_code=201)

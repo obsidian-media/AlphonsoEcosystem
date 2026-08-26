@@ -32,10 +32,11 @@ Atlas remains fixture-backed by default. A build activates the Cloud repository 
 |---|---|---|
 | Enroll device | `POST /api/v1/devices/enroll` | Matching `X-Alphonso-Device-Id` header/body pair; returns a device-trust receipt. |
 | Workspace briefing | `GET /api/v1/workspaces/{workspace_id}/briefing` | Requires bearer token and enrolled device; returns typed workspace, freshness, active runs, outcomes, decisions, and refresh timestamp. |
+| Live workspace feed | `GET /api/v1/workspaces/{workspace_id}/events` | Authenticated server-sent events. The first event is `workspace.snapshot`; each follow-on event contains a complete authoritative briefing for store reconciliation. |
 | Create draft work | `POST /api/v1/workspaces/{workspace_id}/runs/drafts` | Typed run, with snake-case `execution_posture` in the request. |
 | Record decision review | `POST /api/v1/workspaces/{workspace_id}/decisions/{decision_id}/reviews` | Typed decision state. This is a review handoff, not a final approval endpoint. |
 
-The client sends `Authorization: Bearer <access-token>`, `X-Alphonso-Device-Id`, `X-Alphonso-Client: ios`, and `X-Alphonso-API-Version: v1` on every workspace request. The Atlas identity bridge refreshes the existing user session, mirrors the short-lived access token into an Atlas-specific `ThisDeviceOnly` Keychain entry, and enrolls the matching device ID before the typed workspace store loads. It maps 401, 403, and 404 responses to specific session, device-trust, permission, and record-availability states. Final approval still requires a server-issued action challenge and biometric step-up in a future increment.
+The client sends `Authorization: Bearer <access-token>`, `X-Alphonso-Device-Id`, `X-Alphonso-Client: ios`, and `X-Alphonso-API-Version: v1` on every workspace request. The Atlas identity bridge refreshes the existing user session, mirrors the short-lived access token into an Atlas-specific `ThisDeviceOnly` Keychain entry, and enrolls the matching device ID before the typed workspace store loads. After enrollment, the store opens the authenticated event feed and reconciles only complete server-authoritative briefings; it does not apply partial stream mutations. It maps 401, 403, and 404 responses to specific session, device-trust, permission, and record-availability states. Final approval still requires a server-issued action challenge and biometric step-up in a future increment.
 
 ## Architecture visual
 

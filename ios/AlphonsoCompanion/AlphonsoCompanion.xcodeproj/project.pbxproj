@@ -39,6 +39,7 @@
 		E1000105 /* AtlasCloudRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000105 /* AtlasCloudRepository.swift */; };
 		E1000106 /* AtlasCloudRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000106 /* AtlasCloudRepositoryTests.swift */; };
 		E1000107 /* AtlasIdentityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000107 /* AtlasIdentityService.swift */; };
+		E1000108 /* AtlasWorkspaceEventStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000108 /* AtlasWorkspaceEventStream.swift */; };
 		C1000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C2000003 /* XCTest.framework */; };
 		C1000002 /* AlphonsoCompanionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* AlphonsoCompanionUITests.swift */; };
 /* End PBXBuildFile section */
@@ -74,6 +75,7 @@
 		E2000105 /* AtlasCloudRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasCloudRepository.swift; sourceTree = "<group>"; };
 		E2000106 /* AtlasCloudRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasCloudRepositoryTests.swift; sourceTree = "<group>"; };
 		E2000107 /* AtlasIdentityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasIdentityService.swift; sourceTree = "<group>"; };
+		E2000108 /* AtlasWorkspaceEventStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AtlasWorkspaceEventStream.swift; sourceTree = "<group>"; };
 		B2000003 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 		B2000004 /* AlphonsoCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlphonsoCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2000001 /* AlphonsoCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphonsoCompanionUITests.swift; sourceTree = "<group>"; };
@@ -200,6 +202,7 @@
 				E2000103 /* AtlasDomain.swift */,
 				E2000105 /* AtlasCloudRepository.swift */,
 				E2000107 /* AtlasIdentityService.swift */,
+				E2000108 /* AtlasWorkspaceEventStream.swift */,
 			);
 			path = Atlas;
 			sourceTree = "<group>";
@@ -380,6 +383,7 @@
 					E1000103 /* AtlasDomain.swift in Sources */,
 					E1000105 /* AtlasCloudRepository.swift in Sources */,
 					E1000107 /* AtlasIdentityService.swift in Sources */,
+					E1000108 /* AtlasWorkspaceEventStream.swift in Sources */,
 
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -377,6 +377,7 @@ final class AtlasWorkspaceStore: ObservableObject {
 
     private let repository: any AtlasWorkspaceRepository
     private let workspaceID: String
+    private var liveSyncTask: Task<Void, Never>?
 
     init(
         repository: (any AtlasWorkspaceRepository)? = nil,
@@ -404,6 +405,41 @@ final class AtlasWorkspaceStore: ObservableObject {
         selectedPosture = posture
     }
 
+    func startLiveUpdates() {
+        guard liveSyncTask == nil,
+              let configuration = AtlasCloudConfiguration.fromBundle() else {
+            return
+        }
+        let stream = AtlasWorkspaceEventStream(configuration: configuration)
+        liveSyncTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                for try await event in stream.events(workspaceID: self.workspaceID) {
+                    if Task.isCancelled { return }
+                    self.reconcile(event)
+                }
+            } catch {
+                if !Task.isCancelled {
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+            self.liveSyncTask = nil
+        }
+    }
+
+    func stopLiveUpdates() {
+        liveSyncTask?.cancel()
+        liveSyncTask = nil
+    }
+
+    private func reconcile(_ event: AtlasWorkspaceEvent) {
+        guard event.workspaceID == workspaceID else { return }
+        briefing = event.briefing
+        selectedPosture = event.briefing.workspace.posture
+        decisionReviewRecorded = event.briefing.decisions.contains { $0.state == .reviewRecordedPendingConfirmation }
+        errorMessage = nil
+    }
+
     func createDraft(brief: String, desiredOutcome: String) async {
         errorMessage = nil
         do {
@@ -426,6 +462,10 @@ final class AtlasWorkspaceStore: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    deinit {
+        liveSyncTask?.cancel()
     }
 
     func recordDecisionReview(_ decision: AtlasDecision) async {

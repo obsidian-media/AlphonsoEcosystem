@@ -41,6 +41,17 @@ struct AtlasMobileRoot: View {
             if store.briefing == nil {
                 await store.load()
             }
+            if case .enrolled = identity.state {
+                store.startLiveUpdates()
+            }
+        }
+        .onChange(of: identity.state) { newState in
+            if case .enrolled = newState {
+                store.startLiveUpdates()
+            }
+        }
+        .onDisappear {
+            store.stopLiveUpdates()
         }
         .sheet(isPresented: $showingCreateWork) {
             AtlasCreateWorkSheet(posture: store.selectedPosture) { brief, desiredOutcome in
