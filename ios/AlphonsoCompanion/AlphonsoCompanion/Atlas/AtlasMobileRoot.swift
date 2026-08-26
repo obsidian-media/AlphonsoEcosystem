@@ -1418,20 +1418,20 @@ private struct AtlasDecisionReviewSheet: View {
             AtlasPage(focus: true) {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
                     AtlasSectionHeader("Decision review", detail: "Review, challenge, and confirmation are separate accountability steps.", focus: true)
-                    Text(decision.title)
+                    Text(currentDecision.title)
                         .font(AtlasTheme.Type.display)
                         .foregroundStyle(AtlasTheme.ColorToken.focusInk)
-                    AtlasStatusLabel(.awaitingDecision, focus: true)
+                    AtlasStatusLabel(currentDecision.state.inboxStatus, focus: true)
                     AtlasRule(focus: true)
 
-                    AtlasDecisionFact(label: "What will happen", value: decision.summary)
-                    AtlasDecisionFact(label: "Affected resource", value: decision.affectedResource)
-                    AtlasDecisionFact(label: "Execution location", value: decision.executionDetail)
-                    AtlasDecisionFact(label: "Why review is required", value: decision.policyReason)
-                    AtlasDecisionFact(label: "Expires", value: decision.expiryLabel)
+                    AtlasDecisionFact(label: "What will happen", value: currentDecision.summary)
+                    AtlasDecisionFact(label: "Affected resource", value: currentDecision.affectedResource)
+                    AtlasDecisionFact(label: "Execution location", value: currentDecision.executionDetail)
+                    AtlasDecisionFact(label: "Why review is required", value: currentDecision.policyReason)
+                    AtlasDecisionFact(label: "Expires", value: currentDecision.expiryLabel)
 
                     AtlasSectionHeader("Evidence", detail: "Review the record before requesting a confirmation challenge.", focus: true)
-                    Text(decision.evidenceSummary)
+                    Text(currentDecision.evidenceSummary)
                         .font(AtlasTheme.Type.body)
                         .foregroundStyle(AtlasTheme.ColorToken.focusMutedInk)
 
@@ -1458,9 +1458,25 @@ private struct AtlasDecisionReviewSheet: View {
         .preferredColorScheme(.dark)
     }
 
+    private var currentDecision: AtlasDecision {
+        store.briefing?.decisions.first(where: { $0.id == decision.id }) ?? decision
+    }
+
+    private var requiresFreshChallenge: Bool {
+        needsFreshChallenge || currentDecision.state.needsConfirmation
+    }
+
     @ViewBuilder
     private var confirmationControl: some View {
-        if let receipt {
+        if currentDecision.state == .confirmationRecorded {
+            AtlasStudioBlock(
+                kind: "CONFIRMATION RECORDED",
+                symbol: "checkmark.seal.fill",
+                title: "Intent recorded — not executed",
+                detail: "The authoritative workspace record contains a confirmation receipt only. No external action, dispatch, publication, or approval was executed.",
+                accent: AtlasTheme.ColorToken.moss
+            )
+        } else if let receipt {
             AtlasStudioBlock(
                 kind: "CONFIRMATION RECORDED",
                 symbol: "checkmark.seal.fill",
@@ -1484,12 +1500,12 @@ private struct AtlasDecisionReviewSheet: View {
             }
         } else {
             focusButton(
-                title: needsFreshChallenge ? "Request a new confirmation challenge" : "Record review & request challenge",
-                symbol: needsFreshChallenge ? "arrow.clockwise" : "checkmark.shield"
+                title: requiresFreshChallenge ? "Request a new confirmation challenge" : "Record review & request challenge",
+                symbol: requiresFreshChallenge ? "arrow.clockwise" : "checkmark.shield"
             ) {
                 requestChallenge()
             }
-            .accessibilityHint(needsFreshChallenge
+            .accessibilityHint(requiresFreshChallenge
                 ? "Requests a fresh short-lived server challenge after a confirmation failure. No action is executed."
                 : "Records your review, then requests a short-lived server confirmation challenge. No action is executed.")
         }
@@ -1515,7 +1531,7 @@ private struct AtlasDecisionReviewSheet: View {
         Task { @MainActor in
             isWorking = true
             defer { isWorking = false }
-            challenge = await store.prepareActionConfirmation(decision)
+            challenge = await store.prepareActionConfirmation(currentDecision)
             if challenge == nil {
                 needsFreshChallenge = store.decisionReviewRecorded
                 localErrorTitle = store.decisionReviewRecorded ? "Challenge was not issued" : "Review or challenge was not recorded"
@@ -1536,7 +1552,7 @@ private struct AtlasDecisionReviewSheet: View {
                 if challenge.requiresLocalAuthentication {
                     try await AtlasLocalAuthenticator().authenticate(reason: challenge.statement)
                 }
-                receipt = await store.recordActionConfirmation(decision: decision, challenge: challenge)
+                receipt = await store.recordActionConfirmation(decision: currentDecision, challenge: challenge)
                 if receipt == nil {
                     challenge = nil
                     needsFreshChallenge = true

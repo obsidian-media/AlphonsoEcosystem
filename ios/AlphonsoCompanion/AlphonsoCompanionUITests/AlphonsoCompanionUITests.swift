@@ -38,6 +38,17 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Audit trail"].waitForExistence(timeout: 3))
     }
 
+    func testInboxGroupsReviewChallengeAndRecordedDecisions() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.tabBars.buttons["Inbox"].tap()
+        XCTAssertTrue(app.staticTexts["Needs your judgement"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Confirmation queue"].exists)
+        XCTAssertTrue(app.staticTexts["Recorded"].exists)
+    }
+
     func testTypedDirectionOpensPrefilledWorkPreparation() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
