@@ -8,16 +8,23 @@ struct AtlasMobileRoot: View {
     @StateObject private var store = AtlasWorkspaceStore()
     @State private var selection: AtlasDestination = .home
     @State private var showingCreateWork = false
+    @State private var draftSeed = ""
     @State private var showingAuditTrail = false
     @State private var showingAccount = false
 
     var body: some View {
         TabView(selection: $selection) {
-            AtlasHomeView(createWork: { showingCreateWork = true })
+            AtlasHomeView(createWork: {
+                draftSeed = ""
+                showingCreateWork = true
+            })
                 .tabItem { Label("Home", systemImage: "house") }
                 .tag(AtlasDestination.home)
 
-            AtlasWorkView(createWork: { showingCreateWork = true })
+            AtlasWorkView(createWork: {
+                draftSeed = ""
+                showingCreateWork = true
+            })
                 .tabItem { Label("Work", systemImage: "checklist") }
                 .tag(AtlasDestination.work)
 
@@ -26,7 +33,10 @@ struct AtlasMobileRoot: View {
                 .badge(store.briefing?.decisions.filter(\.state.canReview).count ?? 0)
                 .tag(AtlasDestination.inbox)
 
-            AtlasChatStudioView(createWork: { showingCreateWork = true })
+            AtlasChatStudioView(createWork: { direction in
+                draftSeed = direction
+                showingCreateWork = true
+            })
                 .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
                 .tag(AtlasDestination.chat)
 
@@ -64,6 +74,7 @@ struct AtlasMobileRoot: View {
         .sheet(isPresented: $showingCreateWork) {
             AtlasCreateWorkSheet(
                 posture: store.selectedPosture,
+                initialBrief: draftSeed,
                 created: { brief, desiredOutcome in
                     await store.createDraft(brief: brief, desiredOutcome: desiredOutcome)
                 },
@@ -584,7 +595,7 @@ private struct AtlasInboxView: View {
 
 private struct AtlasChatStudioView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
-    let createWork: () -> Void
+    let createWork: (String) -> Void
     @State private var input = ""
     @State private var activeMode: StudioMode = .write
 
@@ -652,6 +663,11 @@ private struct AtlasChatStudioView: View {
         )
     }
 
+    private var workBriefSeed: String {
+        let composedDirection = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        return composedDirection.isEmpty ? (highlightedDecision?.summary ?? "") : composedDirection
+    }
+
     private var outcomeBlock: some View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
             AtlasStudioBlock(
@@ -661,9 +677,12 @@ private struct AtlasChatStudioView: View {
                 detail: highlightedDecision?.policyReason ?? "Use the command dock to state intent and create the next structured work run.",
                 accent: highlightedDecision == nil ? AtlasTheme.ColorToken.moss : AtlasTheme.ColorToken.clay
             )
-            Button("Convert this into a work brief", action: createWork)
+            Button("Convert this into a work brief") {
+                createWork(workBriefSeed)
+            }
                 .font(AtlasTheme.Type.section)
                 .foregroundStyle(AtlasTheme.ColorToken.moss)
+                .frame(minHeight: 44, alignment: .leading)
         }
     }
 
@@ -687,12 +706,13 @@ private struct AtlasChatStudioView: View {
                     .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
 
                 Button {
-                    createWork()
+                    createWork(input.trimmingCharacters(in: .whitespacesAndNewlines))
                     input = ""
                 } label: {
                     Image(systemName: input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "arrow.up.circle" : "arrow.up.circle.fill")
                         .font(.title2)
                         .foregroundStyle(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AtlasTheme.ColorToken.quietInk : AtlasTheme.ColorToken.moss)
+                        .frame(width: 44, height: 44)
                 }
                 .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityLabel("Turn direction into a work brief")
@@ -1049,9 +1069,21 @@ private struct AtlasCreateWorkSheet: View {
     let created: (String, String) async -> AtlasDraftOperation
     let viewPreparedWork: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var brief = ""
+    @State private var brief: String
     @State private var outcome = ""
     @State private var operation: AtlasDraftOperation = .idle
+
+    init(
+        posture: AtlasExecutionPosture,
+        initialBrief: String = "",
+        created: @escaping (String, String) async -> AtlasDraftOperation,
+        viewPreparedWork: @escaping () -> Void
+    ) {
+        self.posture = posture
+        self.created = created
+        self.viewPreparedWork = viewPreparedWork
+        _brief = State(initialValue: initialBrief)
+    }
 
     var body: some View {
         NavigationStack {
