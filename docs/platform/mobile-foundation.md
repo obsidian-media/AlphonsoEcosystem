@@ -21,7 +21,7 @@ This is deliberately a migration seam, not a claim of backend parity. Atlas now 
 
 ## Migration contract
 
-The legacy implementation remains structurally isolated and is selected with the `alphonso.mobile.experience` application preference. Atlas is the default. The **More → Open legacy companion** action intentionally preserves access to the old local pairing workflow until the new typed Hybrid worker protocol has been implemented and verified.
+The legacy implementation remains structurally isolated and is selected with the `alphonso.mobile.experience` application preference. Atlas is the default. The **More → Open legacy companion** action intentionally preserves access to the old local pairing workflow until the new typed Hybrid worker protocol has been implemented and verified. More exposes chevrons only for active routes—currently Account & Cloud and Security & Devices—and explicitly marks Team, Boardroom, Knowledge, Integrations, and Local Worker as planned rather than presenting inert navigation affordances.
 
 No new product work should be added directly to `WebSocketService` or the seven-tab legacy `TabView`. New mobile capability should target Atlas and extend `AtlasWorkspaceRepository` through versioned, typed control-plane contracts once available.
 

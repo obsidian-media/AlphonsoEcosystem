@@ -858,19 +858,19 @@ private struct AtlasMoreView: View {
 
                 AtlasSectionHeader("Workspace")
                 Button(action: openAccount) {
-                    AtlasMoreRow(symbol: "person.crop.circle", title: "Account & Cloud", detail: "Session status, device trust, and safe recovery")
+                    AtlasMoreRow(symbol: "person.crop.circle", title: "Account & Cloud", detail: "Session status, device trust, and safe recovery", isNavigable: true)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens Atlas account connection and device-trust status")
-                AtlasMoreRow(symbol: "person.3", title: "Team", detail: "Roles, availability, and contribution traces")
-                AtlasMoreRow(symbol: "bubble.left.and.bubble.right", title: "Boardroom", detail: "Collaborative decisions and session records")
-                AtlasMoreRow(symbol: "books.vertical", title: "Knowledge", detail: "Workspace memory, evidence, and research")
+                AtlasMoreRow(symbol: "person.3", title: "Team", detail: "Role and contribution records are planned with the future Workspace API.")
+                AtlasMoreRow(symbol: "bubble.left.and.bubble.right", title: "Boardroom", detail: "Collaborative decision sessions are planned for a later control-plane increment.")
+                AtlasMoreRow(symbol: "books.vertical", title: "Knowledge", detail: "Workspace memory and research provenance require the future evidence contract.")
 
                 AtlasSectionHeader("Connections")
-                AtlasMoreRow(symbol: "link", title: "Integrations", detail: "Scopes, health, and approved actions")
-                AtlasMoreRow(symbol: "desktopcomputer", title: "Local Worker", detail: "Private resources and connected desktop capability")
+                AtlasMoreRow(symbol: "link", title: "Integrations", detail: "Scoped integration health and approved action policies are not enabled in this foundation.")
+                AtlasMoreRow(symbol: "desktopcomputer", title: "Local Worker", detail: "Private worker pairing awaits the device-bound Hybrid protocol.")
                 Button(action: openAuditTrail) {
-                    AtlasMoreRow(symbol: "lock.shield", title: "Security & Devices", detail: "Sessions, device trust, and accountability records")
+                    AtlasMoreRow(symbol: "lock.shield", title: "Security & Devices", detail: "Sessions, device trust, and accountability records", isNavigable: true)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens the immutable review and confirmation record")
@@ -1003,6 +1003,7 @@ private struct AtlasMoreRow: View {
     let symbol: String
     let title: String
     let detail: String
+    var isNavigable = false
 
     var body: some View {
         HStack(alignment: .top, spacing: AtlasTheme.Spacing.sm) {
@@ -1019,9 +1020,15 @@ private struct AtlasMoreRow: View {
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
             }
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            if isNavigable {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            } else {
+                Text("PLANNED")
+                    .font(AtlasTheme.Type.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
         }
         .padding(.vertical, AtlasTheme.Spacing.md)
         .accessibilityElement(children: .combine)
