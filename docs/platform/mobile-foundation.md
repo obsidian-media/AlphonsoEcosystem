@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The iOS application now has a new default product shell named **Atlas**. Atlas is the first implementation of Alphonso as a full mobile ecosystem client. It replaces the legacy companion-first navigation with **Home, Work, Inbox, Chat, and More** while the existing companion remains available as a reversible compatibility mode. Selecting a Work ledger entry opens a native **Work record** with the run’s purpose, owner, phase, verified update time, accountable next step, immutable trace, and—only when the authoritative briefing relates one—the decision/evidence checkpoint.
+The iOS application now has a new default product shell named **Atlas**. Atlas is the first implementation of Alphonso as a full mobile ecosystem client. It replaces the legacy companion-first navigation with **Home, Work, Inbox, Chat, and More** while the existing companion remains available as a reversible compatibility mode. Selecting a Work ledger entry opens a native **Work record** with the run’s purpose, owner, phase, verified update time, accountable next step, immutable trace, and—only when the authoritative briefing relates one—the decision/evidence checkpoint. The native Create work sheet holds its user in a clear preparation state, presents an explicit prepared-work receipt before leaving the sheet, and provides retryable local error feedback. A prepared record is a planned run only; it does not execute a task.
 
 This is deliberately a migration seam, not a claim of backend parity. Atlas now renders through typed workspace, briefing, run, decision, and outcome models backed by an async fixture repository. The repository conforms to the same contract the future Cloud control-plane client will use, allowing the information architecture, accessibility patterns, state handling, and design system to be validated on device before live API connectivity is introduced.
 
@@ -56,6 +56,7 @@ The diagram source is maintained in `atlas-mobile-ecosystem-architecture.mmd`. I
 | Workspace ribbon | `AtlasWorkspaceStore` via a factory that falls back to `AtlasFixtureRepository` when Cloud is unconfigured | `WorkspaceSummary` plus health and execution-posture events. |
 | Home | `AtlasBriefing` and correlated `AtlasRun`/`AtlasOutcome` records | `GET /v1/workspaces/{id}/briefing` and typed briefing events. |
 | Work ledger | Typed `AtlasRun` phase records plus a derived, read-only Work record from the current briefing | `GET /v1/runs`, a correlated run event stream, and a typed per-run detail/artifact contract before richer evidence is claimed. |
+| Create work | Local typed preparation operation with preparing/prepared/failed states and a user-visible draft receipt | Durable idempotency key, server-signed creation receipt, offline retry queue, and explicit policy validation before any queued workload begins. |
 | Inbox decision | Typed `AtlasDecision` state and review handoff | `GET /v1/decisions` plus server-issued action challenge/receipt. |
 | Chat Studio | Typed workspace and decision context | Conversation/run API with structured event blocks and attachment transfer. |
 | Local Worker | Legacy direct pairing remains available | QR/WSS device-bound worker registration and scoped Hybrid work dispatch. |

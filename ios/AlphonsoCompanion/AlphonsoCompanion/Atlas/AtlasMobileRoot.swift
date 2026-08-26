@@ -62,13 +62,16 @@ struct AtlasMobileRoot: View {
             store.stopLiveUpdates()
         }
         .sheet(isPresented: $showingCreateWork) {
-            AtlasCreateWorkSheet(posture: store.selectedPosture) { brief, desiredOutcome in
-                Task { @MainActor in
+            AtlasCreateWorkSheet(
+                posture: store.selectedPosture,
+                created: { brief, desiredOutcome in
                     await store.createDraft(brief: brief, desiredOutcome: desiredOutcome)
+                },
+                viewPreparedWork: {
                     showingCreateWork = false
                     selection = .work
                 }
-            }
+            )
             .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingAuditTrail) {
@@ -986,10 +989,12 @@ private enum StudioMode: CaseIterable, Hashable, Identifiable {
 
 private struct AtlasCreateWorkSheet: View {
     let posture: AtlasExecutionPosture
-    let created: (String, String) -> Void
+    let created: (String, String) async -> AtlasDraftOperation
+    let viewPreparedWork: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var brief = ""
     @State private var outcome = ""
+    @State private var operation: AtlasDraftOperation = .idle
 
     var body: some View {
         NavigationStack {
@@ -1020,16 +1025,7 @@ private struct AtlasCreateWorkSheet: View {
                     .background(AtlasTheme.ColorToken.sheet)
                     .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
 
-                AtlasPrimaryButton(title: "Prepare work", symbol: "arrow.right", action: {
-                    created(
-                        brief.trimmingCharacters(in: .whitespacesAndNewlines),
-                        outcome.trimmingCharacters(in: .whitespacesAndNewlines)
-                    )
-                    dismiss()
-                })
-                .disabled(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .opacity(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
-                .padding(.top, AtlasTheme.Spacing.lg)
+                preparationFeedback
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1037,6 +1033,69 @@ private struct AtlasCreateWorkSheet: View {
                     Button("Cancel", action: { dismiss() })
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var preparationFeedback: some View {
+        switch operation {
+        case .idle:
+            prepareButton
+        case .preparing:
+            AtlasPrimaryButton(title: "Preparing work…", symbol: "clock", action: {})
+                .disabled(true)
+                .opacity(0.65)
+                .padding(.top, AtlasTheme.Spacing.lg)
+                .accessibilityLabel("Preparing work")
+        case .prepared(let receipt):
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
+                AtlasStudioBlock(
+                    kind: "WORK PREPARED",
+                    symbol: "checkmark.seal.fill",
+                    title: receipt.title,
+                    detail: receipt.detail,
+                    accent: AtlasTheme.ColorToken.moss
+                )
+                AtlasPrimaryButton(title: "View prepared work", symbol: "checklist", action: {
+                    viewPreparedWork()
+                    dismiss()
+                })
+                .accessibilityHint("Opens the Work runbook. The record is prepared only and has not executed a task.")
+            }
+            .padding(.top, AtlasTheme.Spacing.lg)
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                AtlasStudioBlock(
+                    kind: "PREPARATION NOT RECORDED",
+                    symbol: "exclamationmark.shield.fill",
+                    title: "Work could not be prepared",
+                    detail: message,
+                    accent: AtlasTheme.ColorToken.clay
+                )
+                prepareButton(title: "Try again", symbol: "arrow.clockwise")
+            }
+            .padding(.top, AtlasTheme.Spacing.lg)
+        }
+    }
+
+    private var prepareButton: some View {
+        prepareButton(title: "Prepare work", symbol: "arrow.right")
+    }
+
+    private func prepareButton(title: String, symbol: String) -> some View {
+        AtlasPrimaryButton(title: title, symbol: symbol, action: prepareWork)
+            .disabled(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
+            .padding(.top, AtlasTheme.Spacing.lg)
+    }
+
+    private func prepareWork() {
+        let trimmedBrief = brief.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedOutcome = outcome.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBrief.isEmpty else { return }
+        operation = .preparing
+        Task { @MainActor in
+            operation = await created(trimmedBrief, trimmedOutcome)
         }
     }
 }

@@ -96,6 +96,26 @@ final class AtlasDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testStoreCreatesPreparedWorkReceiptAndInsertsRun() async {
+        let store = AtlasWorkspaceStore()
+        await store.load()
+
+        let operation = await store.createDraft(
+            brief: "Prepare account plan",
+            desiredOutcome: "A reviewed mobile plan"
+        )
+
+        guard case .prepared(let receipt) = operation else {
+            return XCTFail("Expected a prepared-work receipt")
+        }
+        XCTAssertEqual(receipt.title, "Work prepared")
+        XCTAssertEqual(receipt.run.phase, .planned)
+        XCTAssertTrue(receipt.detail.localizedCaseInsensitiveContains("does not execute"))
+        XCTAssertEqual(store.briefing?.activeRuns.first?.id, receipt.run.id)
+        XCTAssertEqual(store.draftOperation, operation)
+    }
+
+    @MainActor
     func testStoreRecordsDecisionReviewAndUpdatesBriefing() async {
         let store = AtlasWorkspaceStore()
         await store.load()

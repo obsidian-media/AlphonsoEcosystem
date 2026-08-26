@@ -154,6 +154,27 @@ struct AtlasRun: Codable, Equatable, Identifiable {
     }
 }
 
+struct AtlasDraftPreparationReceipt: Equatable {
+    let run: AtlasRun
+
+    var title: String { "Work prepared" }
+    var detail: String {
+        "\(run.phaseLabel) record \(run.traceID) is ready in \(run.posture.rawValue). This prepares work only; it does not execute a task."
+    }
+}
+
+enum AtlasDraftOperation: Equatable {
+    case idle
+    case preparing
+    case prepared(AtlasDraftPreparationReceipt)
+    case failed(String)
+
+    var isWorking: Bool {
+        if case .preparing = self { return true }
+        return false
+    }
+}
+
 struct AtlasOutcome: Codable, Equatable, Identifiable {
     let id: String
     let title: String
@@ -503,6 +524,7 @@ final class AtlasWorkspaceStore: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var decisionReviewRecorded = false
     @Published private(set) var confirmationReceipt: AtlasDecisionConfirmationReceipt?
+    @Published private(set) var draftOperation: AtlasDraftOperation = .idle
     @Published private(set) var auditReceipts: [AtlasAuditReceipt] = []
     @Published private(set) var isLoadingAuditReceipts = false
     @Published private(set) var auditReceiptError: String?
@@ -586,8 +608,14 @@ final class AtlasWorkspaceStore: ObservableObject {
         errorMessage = nil
     }
 
-    func createDraft(brief: String, desiredOutcome: String) async {
+    func resetDraftOperation() {
+        draftOperation = .idle
+    }
+
+    @discardableResult
+    func createDraft(brief: String, desiredOutcome: String) async -> AtlasDraftOperation {
         errorMessage = nil
+        draftOperation = .preparing
         do {
             let draft = try await repository.createDraftRun(
                 workspaceID: workspaceID,
@@ -595,7 +623,11 @@ final class AtlasWorkspaceStore: ObservableObject {
                 desiredOutcome: desiredOutcome,
                 posture: selectedPosture
             )
-            guard var current = briefing else { return }
+            guard var current = briefing else {
+                let failure = "The workspace briefing is unavailable. Refresh the workspace, then try again."
+                draftOperation = .failed(failure)
+                return draftOperation
+            }
             current = AtlasBriefing(
                 workspace: current.workspace,
                 freshness: current.freshness,
@@ -605,8 +637,14 @@ final class AtlasWorkspaceStore: ObservableObject {
                 refreshedAt: Date()
             )
             briefing = current
+            let receipt = AtlasDraftPreparationReceipt(run: draft)
+            draftOperation = .prepared(receipt)
+            return draftOperation
         } catch {
-            errorMessage = error.localizedDescription
+            let message = error.localizedDescription
+            errorMessage = message
+            draftOperation = .failed(message)
+            return draftOperation
         }
     }
 
