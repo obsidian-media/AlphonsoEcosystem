@@ -9,6 +9,7 @@ struct AtlasMobileRoot: View {
     @State private var selection: AtlasDestination = .home
     @State private var showingCreateWork = false
     @State private var showingAuditTrail = false
+    @State private var showingAccount = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -31,7 +32,8 @@ struct AtlasMobileRoot: View {
 
             AtlasMoreView(
                 openLegacyCompanion: openLegacyCompanion,
-                openAuditTrail: { showingAuditTrail = true }
+                openAuditTrail: { showingAuditTrail = true },
+                openAccount: { showingAccount = true }
             )
                 .tabItem { Label("More", systemImage: "square.grid.2x2") }
                 .tag(AtlasDestination.more)
@@ -52,6 +54,8 @@ struct AtlasMobileRoot: View {
         .onChange(of: identity.state) { newState in
             if case .enrolled = newState {
                 store.startLiveUpdates()
+            } else {
+                store.stopLiveUpdates()
             }
         }
         .onDisappear {
@@ -71,6 +75,11 @@ struct AtlasMobileRoot: View {
             AtlasAuditTrailView()
                 .environmentObject(store)
                 .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showingAccount) {
+            AtlasAccountCloudView()
+                .environmentObject(identity)
+                .presentationDetents([.medium, .large])
         }
     }
 }
@@ -639,6 +648,7 @@ private struct AtlasChatStudioView: View {
 private struct AtlasMoreView: View {
     let openLegacyCompanion: () -> Void
     let openAuditTrail: () -> Void
+    let openAccount: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -653,6 +663,11 @@ private struct AtlasMoreView: View {
                 }
 
                 AtlasSectionHeader("Workspace")
+                Button(action: openAccount) {
+                    AtlasMoreRow(symbol: "person.crop.circle", title: "Account & Cloud", detail: "Session status, device trust, and safe recovery")
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens Atlas account connection and device-trust status")
                 AtlasMoreRow(symbol: "person.3", title: "Team", detail: "Roles, availability, and contribution traces")
                 AtlasMoreRow(symbol: "bubble.left.and.bubble.right", title: "Boardroom", detail: "Collaborative decisions and session records")
                 AtlasMoreRow(symbol: "books.vertical", title: "Knowledge", detail: "Workspace memory, evidence, and research")
@@ -680,6 +695,112 @@ private struct AtlasMoreView: View {
                 .padding(.vertical, AtlasTheme.Spacing.md)
             }
             .navigationBarHidden(true)
+        }
+    }
+}
+
+private struct AtlasAccountCloudView: View {
+    @EnvironmentObject private var identity: AtlasIdentityService
+    @Environment(\.dismiss) private var dismiss
+    @State private var isReconnecting = false
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    Text("Account & Cloud")
+                        .font(AtlasTheme.Type.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("A clear view of this device’s Atlas connection. Credentials and device identifiers remain private to the secure system boundary.")
+                        .font(AtlasTheme.Type.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                AtlasSectionHeader("Connection status")
+                statusRecord
+
+                AtlasSectionHeader("Trust boundary", detail: "Atlas keeps the current access token in a dedicated ThisDeviceOnly Keychain entry before requesting server enrollment.")
+                AtlasRunFact(label: "Control plane", value: controlPlaneLabel)
+                AtlasRunFact(label: "Device trust", value: deviceTrustLabel)
+                AtlasRunFact(label: "Sensitive actions", value: "Policy review, server challenge, local biometric handoff, and a non-executing receipt remain separate steps.")
+
+                recoveryControl
+
+                AtlasSectionHeader("Recovery note")
+                Text("This surface can reconnect the existing authenticated session and device enrollment. It does not replace the dedicated Atlas sign-in system still required for production rollout.")
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+            }
+        }
+    }
+
+    private var statusRecord: some View {
+        let status = identity.state.accountStatus
+        return HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: status.symbol)
+                .font(.title2)
+                .foregroundStyle(status.isConnected ? AtlasTheme.ColorToken.moss : status.canReconnect ? AtlasTheme.ColorToken.amber : AtlasTheme.ColorToken.quietInk)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xxs) {
+                Text(status.title)
+                    .font(AtlasTheme.Type.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(status.detail)
+                    .font(AtlasTheme.Type.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(AtlasTheme.Spacing.md)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var recoveryControl: some View {
+        let status = identity.state.accountStatus
+        if status.canReconnect {
+            AtlasPrimaryButton(
+                title: isReconnecting ? "Reconnecting…" : "Reconnect Cloud",
+                symbol: isReconnecting ? "clock" : "arrow.clockwise",
+                action: reconnect
+            )
+            .disabled(isReconnecting)
+            .opacity(isReconnecting ? 0.65 : 1)
+            .padding(.top, AtlasTheme.Spacing.lg)
+            .accessibilityHint("Refreshes the existing authenticated session and requests device enrollment. It does not execute work or an external action.")
+        } else if case .unavailable = identity.state {
+            AtlasEmptyState(
+                symbol: "rectangle.dashed",
+                title: "Cloud configuration is absent",
+                detail: "Add a valid HTTPS AtlasControlPlaneURL in a controlled build configuration before enabling Cloud workspaces."
+            )
+        }
+    }
+
+    private var controlPlaneLabel: String {
+        if case .unavailable = identity.state { return "Not configured in this build" }
+        return "Configured HTTPS endpoint"
+    }
+
+    private var deviceTrustLabel: String {
+        if case .enrolled(let deviceTrust) = identity.state { return "Enrolled · \(deviceTrust) trust" }
+        return "Not enrolled for Atlas Cloud"
+    }
+
+    private func reconnect() {
+        Task { @MainActor in
+            isReconnecting = true
+            defer { isReconnecting = false }
+            try? await identity.restoreAndEnroll()
         }
     }
 }

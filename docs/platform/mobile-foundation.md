@@ -14,7 +14,7 @@ This is deliberately a migration seam, not a claim of backend parity. Atlas now 
 | `Atlas/AtlasMobileRoot.swift` | Atlas navigation and store-driven Home/Work/Inbox/Chat/More screens, focused decision review, and create-work sheet. |
 | `Atlas/AtlasDomain.swift` | Typed Workspace, Briefing, Run, Decision, and Outcome models; async repository protocol; fixture repository; observable workspace store. |
 | `Atlas/AtlasCloudRepository.swift` | Versioned HTTPS v1 client, `ThisDeviceOnly` Keychain token/device-ID providers, transport seam, response DTOs, typed error mapping, and fixture-aware repository factory. |
-| `Atlas/AtlasIdentityService.swift` | Shared Cloud Voice session handoff, refreshed-token mirroring, Atlas device enrollment client, and observable device-trust state. |
+| `Atlas/AtlasIdentityService.swift` | Shared Cloud Voice session handoff, refreshed-token mirroring, Atlas device enrollment client, observable device-trust state, and typed Account & Cloud presentation state. |
 | `ContentView.swift` | Reversible `@AppStorage` migration switch between Atlas and the legacy local companion. |
 | `AlphonsoCompanionUITests/AlphonsoCompanionUITests.swift` | Smoke coverage for the Atlas default experience and the legacy return path. |
 
@@ -51,6 +51,7 @@ The diagram source is maintained in `atlas-mobile-ecosystem-architecture.mmd`. I
 
 | Atlas surface | Current foundation source | Target contract |
 |---|---|---|
+| Account & Cloud | Read-only Account & Cloud screen with safe reconnect of the existing authenticated session, Cloud configuration status, and device-trust state | Dedicated Atlas sign-in/session UI, explicit account management, durable device enrollment/revocation, and a device-bound session policy. |
 | Device trust | `AtlasIdentityService`, existing Cloud Voice session, and Atlas-specific Keychain device ID | `POST /api/v1/devices/enroll`, durable device enrollment/revocation, and a device-bound session policy. |
 | Workspace ribbon | `AtlasWorkspaceStore` via a factory that falls back to `AtlasFixtureRepository` when Cloud is unconfigured | `WorkspaceSummary` plus health and execution-posture events. |
 | Home | `AtlasBriefing` and correlated `AtlasRun`/`AtlasOutcome` records | `GET /v1/workspaces/{id}/briefing` and typed briefing events. |
@@ -61,6 +62,6 @@ The diagram source is maintained in `atlas-mobile-ecosystem-architecture.mmd`. I
 
 ## Non-negotiable implementation rules
 
-Atlas components use semantic design tokens and Dynamic Type rather than raw feature-level colours, fixed body font sizes, or decorative agent-card presentation. Every future run, decision, or message state must display execution posture, freshness, and a recovery path when those concepts apply.
+Atlas components use semantic design tokens and Dynamic Type rather than raw feature-level colours, fixed body font sizes, or decorative agent-card presentation. Every future run, decision, message, and account state must display execution posture, freshness, and a recovery path when those concepts apply. Account recovery must never display credentials, raw device IDs, or imply that reconnecting enables final execution.
 
 A client-side UI state is never proof that a sensitive action happened. Approval, cancellation, Connector actions, and Hybrid worker dispatch must be confirmed by the control plane and recorded as an auditable receipt before Atlas presents a completed state.

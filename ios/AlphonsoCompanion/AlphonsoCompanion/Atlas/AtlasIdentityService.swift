@@ -14,6 +14,14 @@ struct AtlasDeviceEnrollmentResponse: Decodable, Equatable {
     }
 }
 
+struct AtlasAccountStatus: Equatable {
+    let title: String
+    let detail: String
+    let symbol: String
+    let isConnected: Bool
+    let canReconnect: Bool
+}
+
 enum AtlasEnrollmentError: LocalizedError, Equatable {
     case notConfigured
     case invalidResponse
@@ -161,6 +169,53 @@ final class AtlasIdentityService: ObservableObject {
         try? AtlasKeychainAccessTokenProvider.remove()
         try? AtlasKeychainDeviceIdentifierProvider.remove()
         state = AtlasCloudConfiguration.fromBundle() == nil ? .unavailable : .signedOut
+    }
+}
+
+extension AtlasIdentityService.State {
+    var accountStatus: AtlasAccountStatus {
+        switch self {
+        case .unavailable:
+            return AtlasAccountStatus(
+                title: "Fixture mode",
+                detail: "This build has no configured Atlas Cloud endpoint. Workspace records remain local fixtures, not a production Cloud control plane.",
+                symbol: "rectangle.dashed",
+                isConnected: false,
+                canReconnect: false
+            )
+        case .signedOut:
+            return AtlasAccountStatus(
+                title: "Cloud not connected",
+                detail: "Reconnect through the existing authenticated session to enroll this device with Atlas Cloud.",
+                symbol: "person.crop.circle.badge.questionmark",
+                isConnected: false,
+                canReconnect: true
+            )
+        case .enrolling:
+            return AtlasAccountStatus(
+                title: "Securing this device",
+                detail: "Atlas is refreshing the account session and requesting device trust from the configured control plane.",
+                symbol: "lock.shield",
+                isConnected: false,
+                canReconnect: false
+            )
+        case .enrolled(let deviceTrust):
+            return AtlasAccountStatus(
+                title: "Cloud connected",
+                detail: "This device is enrolled with \(deviceTrust) trust. Sensitive records remain subject to server policy and accountability checks.",
+                symbol: "checkmark.shield",
+                isConnected: true,
+                canReconnect: true
+            )
+        case .failed(let message):
+            return AtlasAccountStatus(
+                title: "Cloud needs attention",
+                detail: message,
+                symbol: "exclamationmark.shield",
+                isConnected: false,
+                canReconnect: true
+            )
+        }
     }
 }
 

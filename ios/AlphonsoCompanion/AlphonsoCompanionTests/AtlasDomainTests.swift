@@ -69,6 +69,32 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertTrue(run.nextAction.contains("verified update"))
     }
 
+    func testAccountStatusMakesFixtureAndEnrollmentBoundariesExplicit() {
+        let fixture = AtlasIdentityService.State.unavailable.accountStatus
+        XCTAssertEqual(fixture.title, "Fixture mode")
+        XCTAssertFalse(fixture.isConnected)
+        XCTAssertFalse(fixture.canReconnect)
+        XCTAssertTrue(fixture.detail.localizedCaseInsensitiveContains("not a production"))
+
+        let enrolled = AtlasIdentityService.State.enrolled(deviceTrust: "verified").accountStatus
+        XCTAssertEqual(enrolled.title, "Cloud connected")
+        XCTAssertTrue(enrolled.isConnected)
+        XCTAssertTrue(enrolled.canReconnect)
+        XCTAssertTrue(enrolled.detail.contains("verified trust"))
+    }
+
+    func testAccountStatusExposesSafeRecoveryForSignedOutAndFailedStates() {
+        let signedOut = AtlasIdentityService.State.signedOut.accountStatus
+        XCTAssertFalse(signedOut.isConnected)
+        XCTAssertTrue(signedOut.canReconnect)
+        XCTAssertEqual(signedOut.symbol, "person.crop.circle.badge.questionmark")
+
+        let failed = AtlasIdentityService.State.failed("Session expired").accountStatus
+        XCTAssertFalse(failed.isConnected)
+        XCTAssertTrue(failed.canReconnect)
+        XCTAssertEqual(failed.detail, "Session expired")
+    }
+
     @MainActor
     func testStoreRecordsDecisionReviewAndUpdatesBriefing() async {
         let store = AtlasWorkspaceStore()
