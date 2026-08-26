@@ -755,7 +755,6 @@ private struct AtlasChatStudioView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
     let createWork: (String) -> Void
     @State private var input = ""
-    @State private var activeMode: StudioMode = .write
 
     var body: some View {
         NavigationStack {
@@ -845,23 +844,21 @@ private struct AtlasChatStudioView: View {
     }
 
     private var composer: some View {
-        VStack(spacing: AtlasTheme.Spacing.xs) {
-            Picker("Composer mode", selection: $activeMode) {
-                ForEach(StudioMode.allCases) { mode in
-                    Image(systemName: mode.symbol).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .accessibilityLabel("Create work mode")
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+            Text("TYPED DIRECTION")
+                .font(AtlasTheme.Type.proof)
+                .tracking(1)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
 
             HStack(alignment: .bottom, spacing: AtlasTheme.Spacing.sm) {
-                TextField(activeMode.placeholder, text: $input, axis: .vertical)
+                TextField("State the work you want to prepare…", text: $input, axis: .vertical)
                     .font(AtlasTheme.Type.body)
                     .lineLimit(1...4)
                     .padding(.horizontal, AtlasTheme.Spacing.sm)
                     .padding(.vertical, 10)
                     .background(AtlasTheme.ColorToken.sheet)
                     .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+                    .accessibilityLabel("Typed direction for a work brief")
 
                 Button {
                     createWork(input.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -873,8 +870,12 @@ private struct AtlasChatStudioView: View {
                         .frame(width: 44, height: 44)
                 }
                 .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel("Turn direction into a work brief")
+                .accessibilityLabel("Turn typed direction into a work brief")
             }
+            Text("Voice capture, file intake, and generated suggestions will appear only when their authenticated mobile contracts are available.")
+                .font(AtlasTheme.Type.metadata)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, AtlasTheme.Spacing.md)
         .padding(.vertical, AtlasTheme.Spacing.sm)
@@ -1198,33 +1199,6 @@ private struct AtlasStudioBlock: View {
         .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.sheet, style: .continuous))
         .overlay(alignment: .leading) {
             Rectangle().fill(accent).frame(width: 3)
-        }
-    }
-}
-
-private enum StudioMode: CaseIterable, Hashable, Identifiable {
-    case write
-    case speak
-    case attach
-    case suggest
-
-    var id: Self { self }
-
-    var symbol: String {
-        switch self {
-        case .write: return "square.and.pencil"
-        case .speak: return "mic"
-        case .attach: return "paperclip"
-        case .suggest: return "sparkles"
-        }
-    }
-
-    var placeholder: String {
-        switch self {
-        case .write: return "Direct Alphonso…"
-        case .speak: return "Record a direction…"
-        case .attach: return "Describe the file you want to add…"
-        case .suggest: return "Ask for a suggested next step…"
         }
     }
 }
