@@ -9,7 +9,10 @@ from fastapi.responses import StreamingResponse
 
 from app.config import Settings
 from app.atlas_control_plane import (
+    AtlasActionChallengeResponse,
     AtlasBriefingResponse,
+    AtlasDecisionActionConfirmationRequest,
+    AtlasDecisionActionConfirmationResponse,
     AtlasDecisionResponse,
     AtlasDecisionReviewRequest,
     AtlasDemoControlPlane,
@@ -137,9 +140,51 @@ async def atlas_record_decision_review(
     x_alphonso_api_version: str | None = Header(default=None),
     x_alphonso_device_id: str | None = Header(default=None),
 ) -> AtlasDecisionResponse:
-    del payload  # Reserved for a future server-issued action-challenge receipt.
+    del payload
     user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
     return await atlas_demo_control_plane.record_review(user.id, workspace_id, decision_id)
+
+
+@app.post(
+    "/api/v1/workspaces/{workspace_id}/decisions/{decision_id}/action-challenges",
+    response_model=AtlasActionChallengeResponse,
+)
+async def atlas_issue_action_challenge(
+    workspace_id: str,
+    decision_id: str,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
+) -> AtlasActionChallengeResponse:
+    user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
+    return await atlas_demo_control_plane.issue_action_challenge(
+        user.id,
+        workspace_id,
+        decision_id,
+        x_alphonso_device_id or "",
+    )
+
+
+@app.post(
+    "/api/v1/workspaces/{workspace_id}/decisions/{decision_id}/action-confirmations",
+    response_model=AtlasDecisionActionConfirmationResponse,
+)
+async def atlas_confirm_action_challenge(
+    workspace_id: str,
+    decision_id: str,
+    payload: AtlasDecisionActionConfirmationRequest,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
+) -> AtlasDecisionActionConfirmationResponse:
+    user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
+    return await atlas_demo_control_plane.confirm_action_challenge(
+        user.id,
+        workspace_id,
+        decision_id,
+        x_alphonso_device_id or "",
+        payload,
+    )
 
 
 @app.post("/v1/voice/devices/enroll")

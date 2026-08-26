@@ -11,6 +11,7 @@ struct AtlasWorkspaceEvent: Equatable, Identifiable {
         case workspaceSnapshot = "workspace.snapshot"
         case runCreated = "run.created"
         case decisionReviewed = "decision.reviewed"
+        case decisionConfirmed = "decision.confirmed"
     }
 }
 

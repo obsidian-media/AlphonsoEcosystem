@@ -46,6 +46,8 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Alphonso uses Face ID to confirm high-risk decision receipts. Confirmation records intent and does not execute an external action.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Alphonso needs local network access to connect to your desktop app for remote control and real-time updates.</string>
 	<key>NSBonjourServices</key>

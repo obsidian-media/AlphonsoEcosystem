@@ -299,6 +299,42 @@ struct AtlasCloudRepository: AtlasWorkspaceRepository {
         }
     }
 
+    func requestActionChallenge(workspaceID: String, decisionID: String) async throws -> AtlasActionChallenge {
+        let request = try authorizedRequest(
+            path: ["workspaces", workspaceID, "decisions", decisionID, "action-challenges"],
+            method: "POST"
+        )
+        let data = try await execute(request)
+        do {
+            return try Self.decoder.decode(AtlasActionChallengeResponse.self, from: data).domain
+        } catch {
+            throw AtlasCloudRepositoryError.invalidPayload
+        }
+    }
+
+    func recordActionConfirmation(
+        workspaceID: String,
+        decisionID: String,
+        challengeID: String
+    ) async throws -> AtlasDecisionConfirmationReceipt {
+        let request = try authorizedRequest(
+            path: ["workspaces", workspaceID, "decisions", decisionID, "action-confirmations"],
+            method: "POST",
+            body: try Self.encoder.encode(
+                AtlasDecisionActionConfirmationRequest(
+                    challengeID: challengeID,
+                    localAuthenticationCompleted: true
+                )
+            )
+        )
+        let data = try await execute(request)
+        do {
+            return try Self.decoder.decode(AtlasDecisionActionConfirmationResponse.self, from: data).domain
+        } catch {
+            throw AtlasCloudRepositoryError.invalidPayload
+        }
+    }
+
     private func authorizedRequest(path: [String], method: String, body: Data? = nil) throws -> URLRequest {
         var request = URLRequest(url: configuration.endpoint(pathComponents: path))
         request.httpMethod = method
@@ -385,6 +421,46 @@ private struct AtlasCreateDraftRequest: Encodable {
 }
 
 private struct AtlasDecisionReviewRequest: Encodable {}
+
+private struct AtlasDecisionActionConfirmationRequest: Encodable {
+    let challengeID: String
+    let localAuthenticationCompleted: Bool
+}
+
+struct AtlasActionChallengeResponse: Decodable {
+    let id: String
+    let decisionID: String
+    let policyCode: String
+    let statement: String
+    let requiresLocalAuthentication: Bool
+    let status: String
+    let expiresAt: Date
+
+    var domain: AtlasActionChallenge {
+        AtlasActionChallenge(
+            id: id,
+            decisionID: decisionID,
+            policyCode: policyCode,
+            statement: statement,
+            requiresLocalAuthentication: requiresLocalAuthentication,
+            expiresAt: expiresAt
+        )
+    }
+}
+
+struct AtlasDecisionActionConfirmationResponse: Decodable {
+    let receiptID: String
+    let decision: AtlasDecisionResponse
+    let executionStatus: String
+
+    var domain: AtlasDecisionConfirmationReceipt {
+        AtlasDecisionConfirmationReceipt(
+            id: receiptID,
+            decision: decision.domain,
+            executionStatus: executionStatus
+        )
+    }
+}
 
 struct AtlasBriefingResponse: Decodable {
     let workspace: AtlasWorkspaceResponse

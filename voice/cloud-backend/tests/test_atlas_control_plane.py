@@ -4,11 +4,17 @@ import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from app.atlas_control_plane import AtlasDemoControlPlane, AtlasDeviceEnrollmentRequest, AtlasDraftRunRequest
+from app.atlas_control_plane import (
+    AtlasDecisionActionConfirmationRequest,
+    AtlasDemoControlPlane,
+    AtlasDeviceEnrollmentRequest,
+    AtlasDraftRunRequest,
+)
 from app.main import app, atlas_demo_control_plane
 from app.supabase_auth import SupabaseUser
 
@@ -186,6 +192,57 @@ def test_atlas_unknown_workspace_never_creates_state():
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Workspace record is unavailable"
+
+
+def test_action_challenge_requires_review_and_confirmation_never_executes():
+    async def scenario() -> None:
+        control_plane = AtlasDemoControlPlane()
+        user_id = "user-challenge-test"
+        workspace_id = "workspace-northstar"
+        decision_id = "decision-release-brief"
+        await control_plane.enroll_device(
+            user_id,
+            AtlasDeviceEnrollmentRequest(device_id=DEVICE_ID, display_name="Atlas iPhone"),
+        )
+
+        await control_plane.record_review(user_id, workspace_id, decision_id)
+        challenge = await control_plane.issue_action_challenge(user_id, workspace_id, decision_id, DEVICE_ID)
+        repeat_challenge = await control_plane.issue_action_challenge(user_id, workspace_id, decision_id, DEVICE_ID)
+        assert challenge.id == repeat_challenge.id
+        assert challenge.requires_local_authentication is True
+        assert challenge.status == "pending_confirmation"
+        assert "does not execute an action" in challenge.statement
+
+        receipt = await control_plane.confirm_action_challenge(
+            user_id,
+            workspace_id,
+            decision_id,
+            DEVICE_ID,
+            AtlasDecisionActionConfirmationRequest(
+                challenge_id=challenge.id,
+                local_authentication_completed=True,
+            ),
+        )
+        assert receipt.execution_status == "not_executed"
+        assert receipt.decision.state == "confirmation_recorded"
+
+        try:
+            await control_plane.confirm_action_challenge(
+                user_id,
+                workspace_id,
+                decision_id,
+                DEVICE_ID,
+                AtlasDecisionActionConfirmationRequest(
+                    challenge_id=challenge.id,
+                    local_authentication_completed=True,
+                ),
+            )
+            assert False, "Expected a single-use challenge"
+        except HTTPException as error:
+            assert error.status_code == 409
+            assert error.detail == "Action challenge has already been confirmed"
+
+    asyncio.run(scenario())
 
 
 def test_atlas_event_subscription_reconciles_snapshot_and_draft_change():

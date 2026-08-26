@@ -91,10 +91,9 @@ private struct AtlasHomeView: View {
             }
             .navigationBarHidden(true)
             .sheet(item: $selectedDecision) { decision in
-                AtlasDecisionReviewSheet(decision: decision) { reviewedDecision in
-                    Task { @MainActor in await store.recordDecisionReview(reviewedDecision) }
-                }
-                .presentationDetents([.large])
+                AtlasDecisionReviewSheet(decision: decision)
+                    .environmentObject(store)
+                    .presentationDetents([.large])
             }
         }
     }
@@ -383,10 +382,9 @@ private struct AtlasInboxView: View {
             }
             .navigationBarHidden(true)
             .sheet(item: $selectedDecision) { decision in
-                AtlasDecisionReviewSheet(decision: decision) { reviewedDecision in
-                    Task { @MainActor in await store.recordDecisionReview(reviewedDecision) }
-                }
-                .presentationDetents([.large])
+                AtlasDecisionReviewSheet(decision: decision)
+                    .environmentObject(store)
+                    .presentationDetents([.large])
             }
         }
     }
@@ -712,15 +710,18 @@ private struct AtlasCreateWorkSheet: View {
 
 private struct AtlasDecisionReviewSheet: View {
     let decision: AtlasDecision
-    let recordReview: (AtlasDecision) -> Void
+    @EnvironmentObject private var store: AtlasWorkspaceStore
     @Environment(\.dismiss) private var dismiss
-    @State private var confirmed = false
+    @State private var challenge: AtlasActionChallenge?
+    @State private var receipt: AtlasDecisionConfirmationReceipt?
+    @State private var isWorking = false
+    @State private var localError: String?
 
     var body: some View {
         NavigationStack {
             AtlasPage(focus: true) {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
-                    AtlasSectionHeader("Decision review", detail: "A higher-impact action requires a deliberate review.", focus: true)
+                    AtlasSectionHeader("Decision review", detail: "Review, challenge, and confirmation are separate accountability steps.", focus: true)
                     Text(decision.title)
                         .font(AtlasTheme.Type.display)
                         .foregroundStyle(AtlasTheme.ColorToken.focusInk)
@@ -733,26 +734,18 @@ private struct AtlasDecisionReviewSheet: View {
                     AtlasDecisionFact(label: "Why review is required", value: decision.policyReason)
                     AtlasDecisionFact(label: "Expires", value: decision.expiryLabel)
 
-                    AtlasSectionHeader("Evidence", detail: "Review the record before confirming.", focus: true)
+                    AtlasSectionHeader("Evidence", detail: "Review the record before requesting a confirmation challenge.", focus: true)
                     Text(decision.evidenceSummary)
                         .font(AtlasTheme.Type.body)
                         .foregroundStyle(AtlasTheme.ColorToken.focusMutedInk)
 
-                    Button {
-                        confirmed = true
-                        recordReview(decision)
-                    } label: {
-                        Label(confirmed ? "Review recorded" : confirmationTitle, systemImage: confirmed ? "checkmark.seal.fill" : confirmationSymbol)
-                            .font(AtlasTheme.Type.section)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, AtlasTheme.Spacing.md)
+                    confirmationControl
+
+                    if let localError {
+                        Text(localError)
+                            .font(AtlasTheme.Type.body)
+                            .foregroundStyle(AtlasTheme.ColorToken.clay)
                     }
-                    .foregroundStyle(AtlasTheme.ColorToken.focusCanvas)
-                    .background(confirmed ? AtlasTheme.ColorToken.focusMutedInk : AtlasTheme.ColorToken.sheet)
-                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
-                    .padding(.top, AtlasTheme.Spacing.md)
-                    .disabled(confirmed)
-                    .accessibilityHint("Foundation interaction only. A future increment will request system biometric authentication and a server action challenge.")
                 }
             }
             .toolbar {
@@ -765,12 +758,73 @@ private struct AtlasDecisionReviewSheet: View {
         .preferredColorScheme(.dark)
     }
 
-    private var confirmationTitle: String {
-        decision.risk.isStepUpRequired ? "Confirm with Face ID" : "Record review"
+    @ViewBuilder
+    private var confirmationControl: some View {
+        if let receipt {
+            AtlasStudioBlock(
+                kind: "CONFIRMATION RECORDED",
+                symbol: "checkmark.seal.fill",
+                title: receipt.isNonExecuting ? "Intent recorded — not executed" : "Confirmation recorded",
+                detail: receipt.isNonExecuting
+                    ? "The control plane stored a receipt only. No external action, dispatch, publication, or approval was executed."
+                    : "The control plane recorded this confirmation.",
+                accent: AtlasTheme.ColorToken.moss
+            )
+        } else if let challenge {
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                AtlasDecisionFact(label: "Server challenge", value: challenge.statement)
+                AtlasDecisionFact(label: "Challenge expires", value: challenge.expiresAt.formatted(.relative(presentation: .named)))
+                focusButton(
+                    title: challenge.requiresLocalAuthentication ? "Confirm with Face ID" : "Record confirmation",
+                    symbol: challenge.requiresLocalAuthentication ? "faceid" : "checkmark.shield"
+                ) {
+                    confirm(challenge)
+                }
+                .accessibilityHint("Records a confirmation receipt only. It does not execute an external action.")
+            }
+        } else {
+            focusButton(title: "Record review & request challenge", symbol: "checkmark.shield") {
+                requestChallenge()
+            }
+            .accessibilityHint("Records your review, then requests a short-lived server confirmation challenge. No action is executed.")
+        }
     }
 
-    private var confirmationSymbol: String {
-        decision.risk.isStepUpRequired ? "faceid" : "checkmark.shield"
+    private func focusButton(title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(isWorking ? "Working…" : title, systemImage: isWorking ? "clock" : symbol)
+                .font(AtlasTheme.Type.section)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, AtlasTheme.Spacing.md)
+        }
+        .foregroundStyle(AtlasTheme.ColorToken.focusCanvas)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .padding(.top, AtlasTheme.Spacing.md)
+        .disabled(isWorking)
+    }
+
+    private func requestChallenge() {
+        Task { @MainActor in
+            isWorking = true
+            defer { isWorking = false }
+            challenge = await store.prepareActionConfirmation(decision)
+        }
+    }
+
+    private func confirm(_ challenge: AtlasActionChallenge) {
+        Task { @MainActor in
+            isWorking = true
+            defer { isWorking = false }
+            do {
+                if challenge.requiresLocalAuthentication {
+                    try await AtlasLocalAuthenticator().authenticate(reason: challenge.statement)
+                }
+                receipt = await store.recordActionConfirmation(decision: decision, challenge: challenge)
+            } catch {
+                localError = error.localizedDescription
+            }
+        }
     }
 }
 

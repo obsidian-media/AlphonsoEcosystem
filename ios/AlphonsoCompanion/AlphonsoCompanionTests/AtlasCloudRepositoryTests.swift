@@ -109,6 +109,87 @@ final class AtlasCloudRepositoryTests: XCTestCase {
         XCTAssertEqual(object["display_name"], "Atlas iPhone")
     }
 
+    func testActionChallengeAndConfirmationUseTypedV1Contract() async throws {
+        let challengeTransport = StubTransport(data: fixtureChallengeData, statusCode: 200)
+        let repository = AtlasCloudRepository(
+            configuration: try XCTUnwrap(AtlasCloudConfiguration(baseURL: URL(string: "https://control.alphonso.test")!)),
+            accessTokenProvider: StubTokenProvider(token: "unit-token"),
+            deviceIdentifierProvider: StubDeviceIdentifierProvider(deviceID: "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"),
+            transport: challengeTransport
+        )
+
+        let challenge = try await repository.requestActionChallenge(
+            workspaceID: "workspace-northstar",
+            decisionID: "decision-release-brief"
+        )
+
+        XCTAssertEqual(challenge.id, "challenge-001")
+        XCTAssertTrue(challenge.requiresLocalAuthentication)
+        XCTAssertEqual(
+            challengeTransport.lastRequest?.url?.absoluteString,
+            "https://control.alphonso.test/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/action-challenges"
+        )
+
+        let confirmationTransport = StubTransport(data: fixtureConfirmationData, statusCode: 200)
+        let confirmationRepository = AtlasCloudRepository(
+            configuration: try XCTUnwrap(AtlasCloudConfiguration(baseURL: URL(string: "https://control.alphonso.test")!)),
+            accessTokenProvider: StubTokenProvider(token: "unit-token"),
+            deviceIdentifierProvider: StubDeviceIdentifierProvider(deviceID: "1d0df3b2-4b9c-4c4c-b7d4-06bc88bde2d8"),
+            transport: confirmationTransport
+        )
+
+        let receipt = try await confirmationRepository.recordActionConfirmation(
+            workspaceID: "workspace-northstar",
+            decisionID: "decision-release-brief",
+            challengeID: challenge.id
+        )
+
+        XCTAssertEqual(receipt.id, "receipt-001")
+        XCTAssertTrue(receipt.isNonExecuting)
+        XCTAssertEqual(receipt.decision.state, .confirmationRecorded)
+        let payload = try XCTUnwrap(confirmationTransport.lastRequest?.httpBody)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        XCTAssertEqual(object["challenge_id"] as? String, "challenge-001")
+        XCTAssertEqual(object["local_authentication_completed"] as? Bool, true)
+    }
+
+    private var fixtureChallengeData: Data {
+        Data("""
+        {
+          "id": "challenge-001",
+          "decision_id": "decision-release-brief",
+          "policy_code": "P-017",
+          "statement": "Confirm your reviewed decision. This records intent only; it does not execute an action.",
+          "requires_local_authentication": true,
+          "status": "pending_confirmation",
+          "expires_at": "2026-08-26T15:00:00.000Z"
+        }
+        """.utf8)
+    }
+
+    private var fixtureConfirmationData: Data {
+        Data("""
+        {
+          "receipt_id": "receipt-001",
+          "execution_status": "not_executed",
+          "decision": {
+            "id": "decision-release-brief",
+            "title": "Approve the release brief",
+            "summary": "Release brief is ready.",
+            "affected_resource": "Northstar / Release communications",
+            "execution_detail": "Cloud workspace",
+            "policy_code": "P-017",
+            "policy_reason": "External communication requires review.",
+            "evidence_summary": "Verification is complete.",
+            "risk": "high",
+            "state": "confirmation_recorded",
+            "expires_at": "2026-08-26T15:00:00.000Z",
+            "run_id": "run-release-brief"
+          }
+        }
+        """.utf8)
+    }
+
     private var fixtureEnrollmentData: Data {
         Data("""
         {

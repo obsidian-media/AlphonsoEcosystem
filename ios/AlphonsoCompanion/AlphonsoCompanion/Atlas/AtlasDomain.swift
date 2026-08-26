@@ -155,6 +155,7 @@ enum AtlasDecisionRisk: String, Codable, CaseIterable, Equatable {
 enum AtlasDecisionState: String, Codable, CaseIterable, Equatable {
     case awaitingReview
     case reviewRecordedPendingConfirmation
+    case confirmationRecorded
     case approved
     case rejected
     case expired
@@ -164,6 +165,7 @@ enum AtlasDecisionState: String, Codable, CaseIterable, Equatable {
         switch self {
         case .awaitingReview: return "awaiting_review"
         case .reviewRecordedPendingConfirmation: return "review_recorded_pending_confirmation"
+        case .confirmationRecorded: return "confirmation_recorded"
         case .approved: return "approved"
         case .rejected: return "rejected"
         case .expired: return "expired"
@@ -186,6 +188,24 @@ enum AtlasDecisionState: String, Codable, CaseIterable, Equatable {
     }
 
     var canReview: Bool { self == .awaitingReview }
+    var needsConfirmation: Bool { self == .reviewRecordedPendingConfirmation }
+}
+
+struct AtlasActionChallenge: Codable, Equatable, Identifiable {
+    let id: String
+    let decisionID: String
+    let policyCode: String
+    let statement: String
+    let requiresLocalAuthentication: Bool
+    let expiresAt: Date
+}
+
+struct AtlasDecisionConfirmationReceipt: Codable, Equatable, Identifiable {
+    let id: String
+    let decision: AtlasDecision
+    let executionStatus: String
+
+    var isNonExecuting: Bool { executionStatus == "not_executed" }
 }
 
 struct AtlasDecision: Codable, Equatable, Identifiable {
@@ -235,6 +255,32 @@ protocol AtlasWorkspaceRepository {
         workspaceID: String,
         decisionID: String
     ) async throws -> AtlasDecision
+    func requestActionChallenge(
+        workspaceID: String,
+        decisionID: String
+    ) async throws -> AtlasActionChallenge
+    func recordActionConfirmation(
+        workspaceID: String,
+        decisionID: String,
+        challengeID: String
+    ) async throws -> AtlasDecisionConfirmationReceipt
+}
+
+extension AtlasWorkspaceRepository {
+    func requestActionChallenge(
+        workspaceID: String,
+        decisionID: String
+    ) async throws -> AtlasActionChallenge {
+        throw AtlasRepositoryError.decisionUnavailable
+    }
+
+    func recordActionConfirmation(
+        workspaceID: String,
+        decisionID: String,
+        challengeID: String
+    ) async throws -> AtlasDecisionConfirmationReceipt {
+        throw AtlasRepositoryError.decisionUnavailable
+    }
 }
 
 enum AtlasRepositoryError: LocalizedError, Equatable {
@@ -373,6 +419,7 @@ final class AtlasWorkspaceStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var decisionReviewRecorded = false
+    @Published private(set) var confirmationReceipt: AtlasDecisionConfirmationReceipt?
     @Published var selectedPosture: AtlasExecutionPosture = .cloud
 
     private let repository: any AtlasWorkspaceRepository
@@ -436,7 +483,9 @@ final class AtlasWorkspaceStore: ObservableObject {
         guard event.workspaceID == workspaceID else { return }
         briefing = event.briefing
         selectedPosture = event.briefing.workspace.posture
-        decisionReviewRecorded = event.briefing.decisions.contains { $0.state == .reviewRecordedPendingConfirmation }
+        decisionReviewRecorded = event.briefing.decisions.contains {
+            $0.state == .reviewRecordedPendingConfirmation || $0.state == .confirmationRecorded
+        }
         errorMessage = nil
     }
 
@@ -475,19 +524,62 @@ final class AtlasWorkspaceStore: ObservableObject {
                 workspaceID: workspaceID,
                 decisionID: decision.id
             )
-            guard var current = briefing else { return }
-            current = AtlasBriefing(
-                workspace: current.workspace,
-                freshness: current.freshness,
-                activeRuns: current.activeRuns,
-                outcomes: current.outcomes,
-                decisions: current.decisions.map { $0.id == reviewed.id ? reviewed : $0 },
-                refreshedAt: Date()
-            )
-            briefing = current
+            applyDecision(reviewed)
             decisionReviewRecorded = true
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func prepareActionConfirmation(_ decision: AtlasDecision) async -> AtlasActionChallenge? {
+        errorMessage = nil
+        do {
+            let reviewed = try await repository.recordDecisionReview(
+                workspaceID: workspaceID,
+                decisionID: decision.id
+            )
+            applyDecision(reviewed)
+            decisionReviewRecorded = true
+            return try await repository.requestActionChallenge(
+                workspaceID: workspaceID,
+                decisionID: reviewed.id
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func recordActionConfirmation(
+        decision: AtlasDecision,
+        challenge: AtlasActionChallenge
+    ) async -> AtlasDecisionConfirmationReceipt? {
+        errorMessage = nil
+        do {
+            let receipt = try await repository.recordActionConfirmation(
+                workspaceID: workspaceID,
+                decisionID: decision.id,
+                challengeID: challenge.id
+            )
+            applyDecision(receipt.decision)
+            confirmationReceipt = receipt
+            return receipt
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    private func applyDecision(_ updatedDecision: AtlasDecision) {
+        guard var current = briefing else { return }
+        current = AtlasBriefing(
+            workspace: current.workspace,
+            freshness: current.freshness,
+            activeRuns: current.activeRuns,
+            outcomes: current.outcomes,
+            decisions: current.decisions.map { $0.id == updatedDecision.id ? updatedDecision : $0 },
+            refreshedAt: Date()
+        )
+        briefing = current
     }
 }

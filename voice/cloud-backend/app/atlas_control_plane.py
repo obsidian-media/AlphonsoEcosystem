@@ -21,6 +21,7 @@ WorkspaceID = Annotated[str, StringConstraints(strip_whitespace=True, min_length
 AtlasText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2_000)]
 RunID = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
 DecisionID = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
+ActionChallengeID = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
 ExecutionPosture = Literal["cloud", "hybrid", "local", "on_device"]
 RunPhase = Literal[
     "planned",
@@ -36,6 +37,7 @@ DecisionRisk = Literal["routine", "elevated", "high"]
 DecisionState = Literal[
     "awaiting_review",
     "review_recorded_pending_confirmation",
+    "confirmation_recorded",
     "approved",
     "rejected",
     "expired",
@@ -101,7 +103,7 @@ class AtlasBriefingResponse(BaseModel):
 
 class AtlasWorkspaceEvent(BaseModel):
     id: str
-    type: Literal["workspace.snapshot", "run.created", "decision.reviewed"]
+    type: Literal["workspace.snapshot", "run.created", "decision.reviewed", "decision.confirmed"]
     workspace_id: str
     occurred_at: datetime
     briefing: AtlasBriefingResponse
@@ -125,7 +127,29 @@ class AtlasDeviceEnrollmentResponse(BaseModel):
 
 
 class AtlasDecisionReviewRequest(BaseModel):
-    """Reserved for a future action-challenge receipt; body is intentionally empty today."""
+    """A review marker. It does not issue a challenge or authorize an action."""
+
+
+class AtlasActionChallengeResponse(BaseModel):
+    id: str
+    decision_id: str
+    policy_code: str
+    statement: str
+    requires_local_authentication: bool
+    status: Literal["pending_confirmation", "confirmed"]
+    expires_at: datetime
+    confirmation_receipt_id: str | None = None
+
+
+class AtlasDecisionActionConfirmationRequest(BaseModel):
+    challenge_id: ActionChallengeID
+    local_authentication_completed: Literal[True]
+
+
+class AtlasDecisionActionConfirmationResponse(BaseModel):
+    receipt_id: str
+    decision: AtlasDecisionResponse
+    execution_status: Literal["not_executed"]
 
 
 class AtlasDemoControlPlane:
@@ -215,6 +239,97 @@ class AtlasDemoControlPlane:
                 raise HTTPException(status_code=404, detail="Decision record is unavailable")
         await self._publish_event(user_id, workspace_id, workspace, "decision.reviewed")
         return recorded
+
+    async def issue_action_challenge(
+        self,
+        user_id: str,
+        workspace_id: str,
+        decision_id: str,
+        device_id: str,
+    ) -> AtlasActionChallengeResponse:
+        workspace = await self._workspace_for(user_id, workspace_id)
+        now = _utc_now()
+        async with self._lock:
+            decisions: list[AtlasDecisionResponse] = workspace["decisions"]
+            decision = next((item for item in decisions if item.id == decision_id), None)
+            if decision is None:
+                raise HTTPException(status_code=404, detail="Decision record is unavailable")
+            if decision.state != "review_recorded_pending_confirmation":
+                raise HTTPException(status_code=409, detail="Record review before requesting an action challenge")
+            if decision.expires_at <= now:
+                raise HTTPException(status_code=409, detail="This decision has expired")
+
+            challenges: dict[str, dict[str, object]] = workspace["challenges"]
+            for stored in challenges.values():
+                challenge: AtlasActionChallengeResponse = stored["challenge"]
+                if (
+                    challenge.decision_id == decision_id
+                    and stored["device_id"] == device_id
+                    and challenge.status == "pending_confirmation"
+                    and challenge.expires_at > now
+                ):
+                    return challenge
+
+            challenge = AtlasActionChallengeResponse(
+                id=f"challenge-{uuid4()}",
+                decision_id=decision.id,
+                policy_code=decision.policy_code,
+                statement=f"Confirm your reviewed decision for {decision.title}. This records intent only; it does not execute an action.",
+                requires_local_authentication=decision.risk == "high",
+                status="pending_confirmation",
+                expires_at=min(decision.expires_at, now + timedelta(minutes=5)),
+            )
+            challenges[challenge.id] = {"device_id": device_id, "challenge": challenge}
+            return challenge
+
+    async def confirm_action_challenge(
+        self,
+        user_id: str,
+        workspace_id: str,
+        decision_id: str,
+        device_id: str,
+        payload: AtlasDecisionActionConfirmationRequest,
+    ) -> AtlasDecisionActionConfirmationResponse:
+        workspace = await self._workspace_for(user_id, workspace_id)
+        now = _utc_now()
+        async with self._lock:
+            challenges: dict[str, dict[str, object]] = workspace["challenges"]
+            stored = challenges.get(payload.challenge_id)
+            if stored is None:
+                raise HTTPException(status_code=404, detail="Action challenge is unavailable")
+            if stored["device_id"] != device_id:
+                raise HTTPException(status_code=403, detail="Action challenge belongs to a different device")
+            challenge: AtlasActionChallengeResponse = stored["challenge"]
+            if challenge.decision_id != decision_id:
+                raise HTTPException(status_code=409, detail="Action challenge does not match this decision")
+            if challenge.status != "pending_confirmation":
+                raise HTTPException(status_code=409, detail="Action challenge has already been confirmed")
+            if challenge.expires_at <= now:
+                raise HTTPException(status_code=409, detail="Action challenge has expired")
+
+            decisions: list[AtlasDecisionResponse] = workspace["decisions"]
+            for index, decision in enumerate(decisions):
+                if decision.id != decision_id:
+                    continue
+                if decision.state != "review_recorded_pending_confirmation":
+                    raise HTTPException(status_code=409, detail="Decision is not ready for confirmation")
+                confirmed_decision = decision.model_copy(update={"state": "confirmation_recorded"})
+                decisions[index] = confirmed_decision
+                break
+            else:
+                raise HTTPException(status_code=404, detail="Decision record is unavailable")
+
+            receipt_id = f"receipt-{uuid4()}"
+            stored["challenge"] = challenge.model_copy(
+                update={"status": "confirmed", "confirmation_receipt_id": receipt_id}
+            )
+        await self._publish_event(user_id, workspace_id, workspace, "decision.confirmed")
+        return AtlasDecisionActionConfirmationResponse(
+            receipt_id=receipt_id,
+            decision=confirmed_decision,
+            execution_status="not_executed",
+        )
+
     async def subscribe_events(
         self,
         user_id: str,
@@ -266,7 +381,7 @@ class AtlasDemoControlPlane:
         user_id: str,
         workspace_id: str,
         workspace: dict[str, object],
-        event_type: Literal["run.created", "decision.reviewed"],
+        event_type: Literal["run.created", "decision.reviewed", "decision.confirmed"],
     ) -> None:
         key = self._workspace_key(user_id, workspace_id)
         async with self._lock:
@@ -287,7 +402,7 @@ class AtlasDemoControlPlane:
         self,
         workspace_id: str,
         workspace: dict[str, object],
-        event_type: Literal["workspace.snapshot", "run.created", "decision.reviewed"],
+        event_type: Literal["workspace.snapshot", "run.created", "decision.reviewed", "decision.confirmed"],
     ) -> AtlasWorkspaceEvent:
         self._event_sequence += 1
         return AtlasWorkspaceEvent(
@@ -351,6 +466,7 @@ def _seed_workspace() -> dict[str, object]:
                 trace_id="OUT/RA-009",
             )
         ],
+        "challenges": {},
         "decisions": [
             AtlasDecisionResponse(
                 id="decision-release-brief",
