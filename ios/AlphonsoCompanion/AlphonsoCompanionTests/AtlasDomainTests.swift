@@ -1,6 +1,32 @@
 import XCTest
 @testable import AlphonsoCompanion
 
+private struct DecisionFailureRepository: AtlasWorkspaceRepository {
+    private let fixture = AtlasFixtureRepository()
+
+    func loadBriefing(workspaceID: String) async throws -> AtlasBriefing {
+        try await fixture.loadBriefing(workspaceID: workspaceID)
+    }
+
+    func createDraftRun(
+        workspaceID: String,
+        brief: String,
+        desiredOutcome: String,
+        posture: AtlasExecutionPosture
+    ) async throws -> AtlasRun {
+        try await fixture.createDraftRun(
+            workspaceID: workspaceID,
+            brief: brief,
+            desiredOutcome: desiredOutcome,
+            posture: posture
+        )
+    }
+
+    func recordDecisionReview(workspaceID: String, decisionID: String) async throws -> AtlasDecision {
+        throw AtlasRepositoryError.decisionUnavailable
+    }
+}
+
 final class AtlasDomainTests: XCTestCase {
     func testFixtureRepositoryLoadsTypedBriefing() async throws {
         let repository = AtlasFixtureRepository()
@@ -121,6 +147,20 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertFalse(failed.isConnected)
         XCTAssertTrue(failed.canReconnect)
         XCTAssertEqual(failed.detail, "Session expired")
+    }
+
+    @MainActor
+    func testStoreExposesChallengeFailureForReviewRecovery() async {
+        let store = AtlasWorkspaceStore(repository: DecisionFailureRepository())
+        await store.load()
+        guard let decision = store.briefing?.nextDecision else {
+            return XCTFail("Expected a reviewable fixture decision")
+        }
+
+        let challenge = await store.prepareActionConfirmation(decision)
+
+        XCTAssertNil(challenge)
+        XCTAssertEqual(store.errorMessage, AtlasRepositoryError.decisionUnavailable.errorDescription)
     }
 
     @MainActor

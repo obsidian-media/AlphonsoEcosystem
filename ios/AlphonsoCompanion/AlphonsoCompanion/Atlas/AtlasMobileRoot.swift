@@ -1388,9 +1388,13 @@ private struct AtlasDecisionReviewSheet: View {
                     confirmationControl
 
                     if let localError {
-                        Text(localError)
-                            .font(AtlasTheme.Type.body)
-                            .foregroundStyle(AtlasTheme.ColorToken.clay)
+                        AtlasStudioBlock(
+                            kind: "RECOVERY REQUIRED",
+                            symbol: "exclamationmark.shield.fill",
+                            title: "Review was not recorded",
+                            detail: localError,
+                            accent: AtlasTheme.ColorToken.clay
+                        )
                     }
                 }
             }
@@ -1451,14 +1455,19 @@ private struct AtlasDecisionReviewSheet: View {
     }
 
     private func requestChallenge() {
+        localError = nil
         Task { @MainActor in
             isWorking = true
             defer { isWorking = false }
             challenge = await store.prepareActionConfirmation(decision)
+            if challenge == nil {
+                localError = store.errorMessage ?? "Atlas could not record this review or request a confirmation challenge. Refresh the workspace and try again."
+            }
         }
     }
 
     private func confirm(_ challenge: AtlasActionChallenge) {
+        localError = nil
         Task { @MainActor in
             isWorking = true
             defer { isWorking = false }
@@ -1467,6 +1476,9 @@ private struct AtlasDecisionReviewSheet: View {
                     try await AtlasLocalAuthenticator().authenticate(reason: challenge.statement)
                 }
                 receipt = await store.recordActionConfirmation(decision: decision, challenge: challenge)
+                if receipt == nil {
+                    localError = store.errorMessage ?? "Atlas could not record this confirmation. Refresh the workspace and request a new challenge if needed."
+                }
             } catch {
                 localError = error.localizedDescription
             }
