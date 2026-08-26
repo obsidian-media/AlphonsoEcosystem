@@ -14,6 +14,8 @@ from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
+
+from app.atlas_audit import AtlasAuditReceipt, AtlasAuditRepository, InMemoryAtlasAuditRepository
 from pydantic import BaseModel, Field, StringConstraints
 from typing_extensions import Annotated
 
@@ -152,11 +154,38 @@ class AtlasDecisionActionConfirmationResponse(BaseModel):
     execution_status: Literal["not_executed"]
 
 
+class AtlasAuditReceiptResponse(BaseModel):
+    id: str
+    workspace_id: str
+    decision_id: str | None
+    challenge_id: str | None
+    device_id: str | None
+    event_type: Literal["review_recorded", "challenge_issued", "confirmation_recorded"]
+    execution_status: Literal["not_executed"]
+    correlation_id: str
+    occurred_at: datetime
+
+    @classmethod
+    def from_receipt(cls, receipt: AtlasAuditReceipt) -> "AtlasAuditReceiptResponse":
+        return cls(
+            id=receipt.id,
+            workspace_id=receipt.workspace_id,
+            decision_id=receipt.decision_id,
+            challenge_id=receipt.challenge_id,
+            device_id=receipt.device_id,
+            event_type=receipt.event_type,
+            execution_status=receipt.execution_status,
+            correlation_id=receipt.correlation_id,
+            occurred_at=receipt.occurred_at,
+        )
+
+
 class AtlasDemoControlPlane:
     """Ephemeral user-scoped control-plane data for non-production mobile integration."""
 
-    def __init__(self) -> None:
+    def __init__(self, audit_repository: AtlasAuditRepository | None = None) -> None:
         self._workspaces_by_user: dict[str, dict[str, object]] = {}
+        self._audit_repository = audit_repository or InMemoryAtlasAuditRepository()
         self._devices_by_user: dict[str, dict[str, str]] = {}
         self._event_subscribers: dict[str, set[asyncio.Queue[AtlasWorkspaceEvent]]] = {}
         self._event_sequence = 0
@@ -223,6 +252,7 @@ class AtlasDemoControlPlane:
         user_id: str,
         workspace_id: str,
         decision_id: str,
+        device_id: str | None = None,
     ) -> AtlasDecisionResponse:
         workspace = await self._workspace_for(user_id, workspace_id)
         async with self._lock:
@@ -237,6 +267,15 @@ class AtlasDemoControlPlane:
                 break
             else:
                 raise HTTPException(status_code=404, detail="Decision record is unavailable")
+        await self._audit_repository.append(
+            workspace_id=workspace_id,
+            decision_id=recorded.id,
+            challenge_id=None,
+            actor_user_id=user_id,
+            device_id=device_id,
+            event_type="review_recorded",
+            payload={"policy_code": recorded.policy_code, "decision_state": recorded.state},
+        )
         await self._publish_event(user_id, workspace_id, workspace, "decision.reviewed")
         return recorded
 
@@ -280,7 +319,16 @@ class AtlasDemoControlPlane:
                 expires_at=min(decision.expires_at, now + timedelta(minutes=5)),
             )
             challenges[challenge.id] = {"device_id": device_id, "challenge": challenge}
-            return challenge
+        await self._audit_repository.append(
+            workspace_id=workspace_id,
+            decision_id=decision.id,
+            challenge_id=challenge.id,
+            actor_user_id=user_id,
+            device_id=device_id,
+            event_type="challenge_issued",
+            payload={"policy_code": challenge.policy_code, "expires_at": challenge.expires_at.isoformat()},
+        )
+        return challenge
 
     async def confirm_action_challenge(
         self,
@@ -323,6 +371,16 @@ class AtlasDemoControlPlane:
             stored["challenge"] = challenge.model_copy(
                 update={"status": "confirmed", "confirmation_receipt_id": receipt_id}
             )
+        await self._audit_repository.append(
+            workspace_id=workspace_id,
+            decision_id=confirmed_decision.id,
+            challenge_id=payload.challenge_id,
+            actor_user_id=user_id,
+            device_id=device_id,
+            event_type="confirmation_recorded",
+            payload={"decision_state": confirmed_decision.state, "execution_status": "not_executed"},
+            receipt_id=receipt_id,
+        )
         await self._publish_event(user_id, workspace_id, workspace, "decision.confirmed")
         return AtlasDecisionActionConfirmationResponse(
             receipt_id=receipt_id,
@@ -358,12 +416,17 @@ class AtlasDemoControlPlane:
             if not subscribers:
                 self._event_subscribers.pop(key, None)
 
+    async def audit_receipts(self, user_id: str, workspace_id: str) -> list[AtlasAuditReceipt]:
+        await self._workspace_for(user_id, workspace_id)
+        return await self._audit_repository.list_for_workspace(workspace_id, user_id)
+
     async def reset_for_tests(self) -> None:
         async with self._lock:
             self._workspaces_by_user.clear()
             self._devices_by_user.clear()
             self._event_subscribers.clear()
             self._event_sequence = 0
+        await self._audit_repository.reset_for_tests()
 
     async def _workspace_for(self, user_id: str, workspace_id: str) -> dict[str, object]:
         if workspace_id != "workspace-northstar":

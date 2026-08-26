@@ -33,6 +33,7 @@ Atlas remains fixture-backed by default. A build activates the Cloud repository 
 | Enroll device | `POST /api/v1/devices/enroll` | Matching `X-Alphonso-Device-Id` header/body pair; returns a device-trust receipt. |
 | Workspace briefing | `GET /api/v1/workspaces/{workspace_id}/briefing` | Requires bearer token and enrolled device; returns typed workspace, freshness, active runs, outcomes, decisions, and refresh timestamp. |
 | Live workspace feed | `GET /api/v1/workspaces/{workspace_id}/events` | Authenticated server-sent events. The first event is `workspace.snapshot`; each follow-on event contains a complete authoritative briefing for store reconciliation. |
+| Audit receipts | `GET /api/v1/workspaces/{workspace_id}/audit-receipts` | Read-only, user/workspace-scoped records for review, challenge, and confirmation. Every current receipt reports `not_executed`. |
 | Create draft work | `POST /api/v1/workspaces/{workspace_id}/runs/drafts` | Typed run, with snake-case `execution_posture` in the request. |
 | Record decision review | `POST /api/v1/workspaces/{workspace_id}/decisions/{decision_id}/reviews` | Typed review state. It is neither an approval nor a challenge issuance endpoint. |
 | Issue confirmation challenge | `POST /api/v1/workspaces/{workspace_id}/decisions/{decision_id}/action-challenges` | Requires recorded review and returns a short-lived, device-bound challenge statement. |
@@ -44,7 +45,7 @@ The client sends `Authorization: Bearer <access-token>`, `X-Alphonso-Device-Id`,
 
 ![Atlas mobile ecosystem architecture](atlas-mobile-ecosystem-architecture.png)
 
-The diagram source is maintained in `atlas-mobile-ecosystem-architecture.mmd`. It separates the full mobile product shell, secure identity and Keychain boundary, HTTPS control plane, optional Hybrid worker, and external authentication provider.
+The diagram source is maintained in `atlas-mobile-ecosystem-architecture.mmd`. It separates the full mobile product shell, secure identity and Keychain boundary, HTTPS control plane, optional Hybrid worker, and external authentication provider. The durable storage and audit design is documented in [Atlas Persistence Foundation](atlas-persistence-foundation.md).
 
 ## Planned replacement of fixture-backed state
 

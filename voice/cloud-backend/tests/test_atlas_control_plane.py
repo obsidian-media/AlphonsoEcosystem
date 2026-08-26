@@ -194,6 +194,46 @@ def test_atlas_unknown_workspace_never_creates_state():
     assert response.json()["detail"] == "Workspace record is unavailable"
 
 
+def test_audit_receipts_endpoint_returns_ordered_non_executing_records():
+    reset_demo_state()
+    with patch.dict(os.environ, ENV, clear=False), patch(
+        "app.main.SupabaseDeviceRegistry.user_from_authorization", new=AsyncMock(return_value=USER)
+    ):
+        client = TestClient(app)
+        enroll(client)
+        review = client.post(
+            "/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/reviews",
+            headers=HEADERS,
+            json={},
+        )
+        assert review.status_code == 200
+        challenge = client.post(
+            "/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/action-challenges",
+            headers=HEADERS,
+        )
+        assert challenge.status_code == 200
+        confirmation = client.post(
+            "/api/v1/workspaces/workspace-northstar/decisions/decision-release-brief/action-confirmations",
+            headers=HEADERS,
+            json={"challenge_id": challenge.json()["id"], "local_authentication_completed": True},
+        )
+        assert confirmation.status_code == 200
+        audit = client.get(
+            "/api/v1/workspaces/workspace-northstar/audit-receipts",
+            headers=HEADERS,
+        )
+
+    assert audit.status_code == 200
+    receipts = audit.json()
+    assert [receipt["event_type"] for receipt in receipts] == [
+        "confirmation_recorded",
+        "challenge_issued",
+        "review_recorded",
+    ]
+    assert receipts[0]["id"] == confirmation.json()["receipt_id"]
+    assert all(receipt["execution_status"] == "not_executed" for receipt in receipts)
+
+
 def test_action_challenge_requires_review_and_confirmation_never_executes():
     async def scenario() -> None:
         control_plane = AtlasDemoControlPlane()
@@ -225,6 +265,14 @@ def test_action_challenge_requires_review_and_confirmation_never_executes():
         )
         assert receipt.execution_status == "not_executed"
         assert receipt.decision.state == "confirmation_recorded"
+        audit = await control_plane.audit_receipts(user_id, workspace_id)
+        assert [item.event_type for item in audit] == [
+            "confirmation_recorded",
+            "challenge_issued",
+            "review_recorded",
+        ]
+        assert audit[0].id == receipt.receipt_id
+        assert all(item.execution_status == "not_executed" for item in audit)
 
         try:
             await control_plane.confirm_action_challenge(

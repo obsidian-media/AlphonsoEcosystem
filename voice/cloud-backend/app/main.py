@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from app.config import Settings
 from app.atlas_control_plane import (
     AtlasActionChallengeResponse,
+    AtlasAuditReceiptResponse,
     AtlasBriefingResponse,
     AtlasDecisionActionConfirmationRequest,
     AtlasDecisionActionConfirmationResponse,
@@ -94,6 +95,21 @@ async def atlas_briefing(
     return await atlas_demo_control_plane.briefing(user.id, workspace_id)
 
 
+@app.get(
+    "/api/v1/workspaces/{workspace_id}/audit-receipts",
+    response_model=list[AtlasAuditReceiptResponse],
+)
+async def atlas_audit_receipts(
+    workspace_id: str,
+    authorization: str | None = Header(default=None),
+    x_alphonso_api_version: str | None = Header(default=None),
+    x_alphonso_device_id: str | None = Header(default=None),
+) -> list[AtlasAuditReceiptResponse]:
+    user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
+    receipts = await atlas_demo_control_plane.audit_receipts(user.id, workspace_id)
+    return [AtlasAuditReceiptResponse.from_receipt(receipt) for receipt in receipts]
+
+
 @app.get("/api/v1/workspaces/{workspace_id}/events")
 async def atlas_workspace_events(
     workspace_id: str,
@@ -142,7 +158,12 @@ async def atlas_record_decision_review(
 ) -> AtlasDecisionResponse:
     del payload
     user = await _atlas_enrolled_user(authorization, x_alphonso_api_version, x_alphonso_device_id)
-    return await atlas_demo_control_plane.record_review(user.id, workspace_id, decision_id)
+    return await atlas_demo_control_plane.record_review(
+        user.id,
+        workspace_id,
+        decision_id,
+        x_alphonso_device_id or "",
+    )
 
 
 @app.post(
