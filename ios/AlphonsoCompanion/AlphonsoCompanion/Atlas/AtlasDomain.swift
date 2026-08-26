@@ -571,6 +571,34 @@ struct AtlasFixtureRepository: AtlasWorkspaceRepository {
             expiresAt: now.addingTimeInterval(18 * 60),
             runID: "run-release-brief"
         )
+        let confirmationDecision = AtlasDecision(
+            id: "decision-partner-brief",
+            title: "Review partner brief exception",
+            summary: "The evidence review is recorded and awaits a fresh confirmation challenge.",
+            affectedResource: "Northstar / Partner communications",
+            executionDetail: "Cloud workspace · scoped external communication review",
+            policyCode: "P-024",
+            policyReason: "The partner brief exception requires a challenge-bound confirmation record.",
+            evidenceSummary: "The exception rationale and partner evidence trail are attached to the workspace record.",
+            risk: .elevated,
+            state: .reviewRecordedPendingConfirmation,
+            expiresAt: now.addingTimeInterval(10 * 60),
+            runID: "run-partner-brief"
+        )
+        let recordedDecision = AtlasDecision(
+            id: "decision-research-archive",
+            title: "Archive evidence retention",
+            summary: "The evidence retention confirmation has been recorded for the completed research archive.",
+            affectedResource: "Northstar / Research archive",
+            executionDetail: "Cloud workspace · retained accountability evidence",
+            policyCode: "P-006",
+            policyReason: "Research retention policy requires a recorded accountable confirmation.",
+            evidenceSummary: "The source archive is complete and its immutable outcome trace is available in the Work Library.",
+            risk: .routine,
+            state: .confirmationRecorded,
+            expiresAt: now.addingTimeInterval(-600),
+            runID: "run-research-synthesis"
+        )
         return AtlasBriefing(
             workspace: fixtureWorkspace,
             freshness: .current,
@@ -605,7 +633,7 @@ struct AtlasFixtureRepository: AtlasWorkspaceRepository {
                     traceID: "OUT/RA-009"
                 )
             ],
-            decisions: [decision],
+            decisions: [decision, confirmationDecision, recordedDecision],
             refreshedAt: now
         )
     }
