@@ -51,8 +51,13 @@ export async function hydrateComposioApiKeyFromKeychain(): Promise<void> {
   const blob = readConfigBlob();
   if (blob.apiKey) {
     _apiKeyCache = blob.apiKey;
-    await secureSet(COMPOSIO_API_KEY_STORAGE_KEY, blob.apiKey);
-    localStorage.setItem(COMPOSIO_CONFIG_KEY, JSON.stringify({ ...blob, apiKey: '' }));
+    const migrated = await secureSet(COMPOSIO_API_KEY_STORAGE_KEY, blob.apiKey);
+    // Only strip the plaintext blob field once the keychain actually has the
+    // value — stripping unconditionally would lose the key outright if the
+    // keychain write failed (browser dev mode, OS keychain access denied).
+    if (migrated) {
+      localStorage.setItem(COMPOSIO_CONFIG_KEY, JSON.stringify({ ...blob, apiKey: '' }));
+    }
   }
 }
 

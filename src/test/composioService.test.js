@@ -410,6 +410,22 @@ describe('hydrateComposioApiKeyFromKeychain', () => {
     expect(blobAfter.enabled).toBe(true); // non-secret fields preserved
   });
 
+  it('does NOT strip the legacy blob apiKey when the keychain write fails during migration (would otherwise lose the key)', async () => {
+    localStorageStore['alphonso_composio_config_v1'] = JSON.stringify({
+      enabled: true, apiKey: 'legacy-key', userId: 'user'
+    });
+    invokeMock.mockResolvedValueOnce(null); // keychain get: nothing yet
+    invokeMock.mockRejectedValueOnce(new Error('keychain unavailable')); // keychain set: fails
+
+    await hydrateComposioApiKeyFromKeychain();
+
+    // Still usable this session via the in-memory cache...
+    expect(getComposioConfig().apiKey).toBe('legacy-key');
+    // ...and NOT wiped from the only place it's actually durably stored.
+    const blobAfter = JSON.parse(localStorageStore['alphonso_composio_config_v1']);
+    expect(blobAfter.apiKey).toBe('legacy-key');
+  });
+
   it('does nothing when neither the keychain nor the legacy blob has a key', async () => {
     invokeMock.mockResolvedValueOnce(null);
     await hydrateComposioApiKeyFromKeychain();
