@@ -2286,6 +2286,7 @@ pub fn run() {
       connector_queue_comfyui_video,
       connector_get_comfyui_history,
       connector_check_local_runtime_health,
+      connector_hermes_agent_request,
       workspace::transcribe_audio_file,
       workspace::read_workspace_file,
       write_temp_audio_file,

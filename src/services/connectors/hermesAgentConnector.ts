@@ -1,8 +1,70 @@
+import { invoke } from '@tauri-apps/api/core';
 import { getConnectorCredential, saveConnectorCredential } from './connectorAuth';
 import { evaluatePolicyGate } from '../policyEnforcementService';
 import { appendConnectorAudit } from '../connectorRegistryService';
 import * as rateLimiter from '../connectorRateLimiterService';
 import * as circuitBreaker from '../connectorCircuitBreakerService';
+
+function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && Boolean((window as unknown as Record<string, unknown>).__TAURI_INTERNALS__);
+}
+
+interface HermesHttpResponse {
+  ok: boolean;
+  status: number;
+  text: () => Promise<string>;
+  // Mirrors native Response.json()'s own (unvalidated, caller-narrowed) return type.
+  json: () => Promise<any>;
+}
+
+/**
+ * Issues one HTTP request to a Hermes Agent profile.
+ *
+ * Inside Tauri (every real install), this goes through the native
+ * `connector_hermes_agent_request` Rust command instead of the webview's
+ * own `fetch()`. Hermes Agent is a third-party process the user runs on
+ * their own arbitrary local port and was never built with this integration
+ * in mind, so it has no reason to send CORS headers — a browser `fetch()`
+ * from the Tauri webview (a different origin, e.g. `http://tauri.localhost`)
+ * to that port is cross-origin, and without an `Access-Control-Allow-Origin`
+ * response header the browser silently blocks it. Every call then surfaces
+ * as the exact same uninformative `TypeError: Failed to fetch` regardless
+ * of whether the real cause was CORS, a wrong port, or the profile being
+ * genuinely offline — this was reported live as "Hermes ain't running and
+ * usable" even with a real profile running and reachable by curl. A native
+ * request has no browser and is not subject to CORS at all.
+ *
+ * Outside Tauri (browser dev mode, and this file's unit tests, which mock
+ * `fetch` directly) falls back to a plain `fetch()` — unchanged behavior.
+ */
+async function hermesHttpRequest(
+  url: string,
+  method: 'GET' | 'POST',
+  headers: Record<string, string>,
+  body: string | undefined,
+  timeoutMs: number
+): Promise<HermesHttpResponse> {
+  if (isTauriRuntime()) {
+    const proof = await invoke<{ ok: boolean; httpStatus: number | null; body: string | null; error: string | null }>(
+      'connector_hermes_agent_request',
+      { url, method, headers, body: body ?? null, timeoutMs }
+    );
+    if (proof.httpStatus === null) {
+      throw new Error(proof.error || 'Hermes request failed');
+    }
+    const bodyText = proof.body ?? '';
+    return {
+      ok: proof.ok,
+      status: proof.httpStatus,
+      text: async () => bodyText,
+      json: async () => JSON.parse(bodyText)
+    };
+  }
+  const init: RequestInit = { method, signal: AbortSignal.timeout(timeoutMs) };
+  if (Object.keys(headers).length > 0) init.headers = headers;
+  if (body !== undefined) init.body = body;
+  return fetch(url, init);
+}
 
 const CONNECTOR_ID = 'hermes_agents';
 
@@ -190,7 +252,7 @@ export async function getHermesAgentHealth(agentId: string): Promise<{ ok: boole
   const { url } = getHermesAgentEndpoint(agentId);
   if (!url) return { ok: false, error: 'No endpoint configured' };
   try {
-    const r = await fetch(`${normalizeBaseUrl(url)}/health`, { signal: AbortSignal.timeout(5000) });
+    const r = await hermesHttpRequest(`${normalizeBaseUrl(url)}/health`, 'GET', {}, undefined, 5000);
     if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
     return { ok: true };
   } catch (error) {
@@ -203,10 +265,7 @@ export async function listHermesAgentModels(agentId: string): Promise<string[]> 
   const { url, key } = getHermesAgentEndpoint(agentId);
   if (!url || !key) throw new Error(`Hermes endpoint not configured for agent "${agentId}"`);
 
-  const r = await fetch(`${normalizeBaseUrl(url)}/v1/models`, {
-    headers: { Authorization: `Bearer ${key}` },
-    signal: AbortSignal.timeout(10000)
-  });
+  const r = await hermesHttpRequest(`${normalizeBaseUrl(url)}/v1/models`, 'GET', { Authorization: `Bearer ${key}` }, undefined, 10000);
   if (!r.ok) {
     const err = await r.text();
     throw new Error(`Hermes API error ${r.status}: ${err}`);
@@ -250,24 +309,25 @@ export async function sendHermesAgentMessage(
   const sessionHeader: Record<string, string> =
     sessionMode === 'persistent' && sessionId ? { 'X-Hermes-Session-Id': resolveSecureSessionId(sessionId) } : {};
 
-  let r: Response;
+  let r: HermesHttpResponse;
   try {
-    r = await fetch(`${normalizeBaseUrl(url)}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
+    r = await hermesHttpRequest(
+      `${normalizeBaseUrl(url)}/v1/chat/completions`,
+      'POST',
+      {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
         ...sessionHeader
       },
-      body: JSON.stringify({
+      JSON.stringify({
         model,
         messages,
         max_tokens: maxTokens,
         temperature,
         stream: false
       }),
-      signal: AbortSignal.timeout(120000)
-    });
+      120000
+    );
   } catch (error) {
     circuitBreaker.recordFailure(CONNECTOR_ID);
     const message = error instanceof Error ? error.message : String(error);
