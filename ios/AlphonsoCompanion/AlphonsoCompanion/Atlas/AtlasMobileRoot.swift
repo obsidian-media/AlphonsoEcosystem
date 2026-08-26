@@ -86,6 +86,11 @@ struct AtlasMobileRoot: View {
                     showingCreateWork = false
                     workSegment = 1
                     selection = .work
+                },
+                refreshPreparedWork: {
+                    showingCreateWork = false
+                    selection = .home
+                    Task { @MainActor in await store.load() }
                 }
             )
             .presentationDetents([.medium, .large])
@@ -1207,6 +1212,7 @@ private struct AtlasCreateWorkSheet: View {
     let posture: AtlasExecutionPosture
     let created: (String, String) async -> AtlasDraftOperation
     let viewPreparedWork: () -> Void
+    let refreshPreparedWork: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var brief: String
     @State private var outcome = ""
@@ -1216,11 +1222,13 @@ private struct AtlasCreateWorkSheet: View {
         posture: AtlasExecutionPosture,
         initialBrief: String = "",
         created: @escaping (String, String) async -> AtlasDraftOperation,
-        viewPreparedWork: @escaping () -> Void
+        viewPreparedWork: @escaping () -> Void,
+        refreshPreparedWork: @escaping () -> Void
     ) {
         self.posture = posture
         self.created = created
         self.viewPreparedWork = viewPreparedWork
+        self.refreshPreparedWork = refreshPreparedWork
         _brief = State(initialValue: initialBrief)
     }
 
@@ -1284,11 +1292,21 @@ private struct AtlasCreateWorkSheet: View {
                     detail: receipt.detail,
                     accent: AtlasTheme.ColorToken.moss
                 )
-                AtlasPrimaryButton(title: "View prepared work", symbol: "checklist", action: {
-                    viewPreparedWork()
-                    dismiss()
-                })
-                .accessibilityHint("Opens the Work runbook. The record is prepared only and has not executed a task.")
+                AtlasPrimaryButton(
+                    title: receipt.requiresWorkspaceRefresh ? "Refresh workspace" : "View prepared work",
+                    symbol: receipt.requiresWorkspaceRefresh ? "arrow.clockwise" : "checklist",
+                    action: {
+                        if receipt.requiresWorkspaceRefresh {
+                            refreshPreparedWork()
+                        } else {
+                            viewPreparedWork()
+                        }
+                        dismiss()
+                    }
+                )
+                .accessibilityHint(receipt.requiresWorkspaceRefresh
+                    ? "Refreshes the authoritative workspace after a prepared record was accepted. It does not execute a task."
+                    : "Opens the Work runbook. The record is prepared only and has not executed a task.")
             }
             .padding(.top, AtlasTheme.Spacing.lg)
         case .failed(let message):

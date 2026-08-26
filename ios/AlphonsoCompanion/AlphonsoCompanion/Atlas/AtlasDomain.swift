@@ -156,10 +156,19 @@ struct AtlasRun: Codable, Equatable, Identifiable {
 
 struct AtlasDraftPreparationReceipt: Equatable {
     let run: AtlasRun
+    let requiresWorkspaceRefresh: Bool
+
+    init(run: AtlasRun, requiresWorkspaceRefresh: Bool = false) {
+        self.run = run
+        self.requiresWorkspaceRefresh = requiresWorkspaceRefresh
+    }
 
     var title: String { "Work prepared" }
     var detail: String {
-        "\(run.phaseLabel) record \(run.traceID) is ready in \(run.posture.rawValue). This prepares work only; it does not execute a task."
+        if requiresWorkspaceRefresh {
+            return "\(run.phaseLabel) record \(run.traceID) was accepted in \(run.posture.rawValue). Refresh the authoritative workspace before continuing. This prepares work only; it does not execute a task."
+        }
+        return "\(run.phaseLabel) record \(run.traceID) is ready in \(run.posture.rawValue). This prepares work only; it does not execute a task."
     }
 }
 
@@ -685,8 +694,8 @@ final class AtlasWorkspaceStore: ObservableObject {
                 posture: selectedPosture
             )
             guard var current = briefing else {
-                let failure = "The workspace briefing is unavailable. Refresh the workspace, then try again."
-                draftOperation = .failed(failure)
+                let receipt = AtlasDraftPreparationReceipt(run: draft, requiresWorkspaceRefresh: true)
+                draftOperation = .prepared(receipt)
                 return draftOperation
             }
             current = AtlasBriefing(

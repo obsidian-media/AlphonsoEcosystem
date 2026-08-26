@@ -1,6 +1,34 @@
 import XCTest
 @testable import AlphonsoCompanion
 
+private struct DraftWithoutBriefingRepository: AtlasWorkspaceRepository {
+    func loadBriefing(workspaceID: String) async throws -> AtlasBriefing {
+        throw AtlasRepositoryError.workspaceUnavailable
+    }
+
+    func createDraftRun(
+        workspaceID: String,
+        brief: String,
+        desiredOutcome: String,
+        posture: AtlasExecutionPosture
+    ) async throws -> AtlasRun {
+        AtlasRun(
+            id: "accepted-draft",
+            title: brief,
+            summary: desiredOutcome,
+            owner: "You",
+            phase: .planned,
+            posture: posture,
+            updatedAt: Date(),
+            traceID: "DRAFT/ACCEPTED"
+        )
+    }
+
+    func recordDecisionReview(workspaceID: String, decisionID: String) async throws -> AtlasDecision {
+        throw AtlasRepositoryError.decisionUnavailable
+    }
+}
+
 private struct DecisionFailureRepository: AtlasWorkspaceRepository {
     private let fixture = AtlasFixtureRepository()
 
@@ -161,6 +189,23 @@ final class AtlasDomainTests: XCTestCase {
 
         XCTAssertNil(challenge)
         XCTAssertEqual(store.errorMessage, AtlasRepositoryError.decisionUnavailable.errorDescription)
+    }
+
+    @MainActor
+    func testAcceptedDraftWithoutBriefingRequestsRefreshInsteadOfRetry() async {
+        let store = AtlasWorkspaceStore(repository: DraftWithoutBriefingRepository())
+
+        let operation = await store.createDraft(
+            brief: "Prepare recovery plan",
+            desiredOutcome: "A durable draft"
+        )
+
+        guard case .prepared(let receipt) = operation else {
+            return XCTFail("Expected accepted draft to remain prepared")
+        }
+        XCTAssertTrue(receipt.requiresWorkspaceRefresh)
+        XCTAssertTrue(receipt.detail.localizedCaseInsensitiveContains("refresh the authoritative workspace"))
+        XCTAssertNil(store.briefing)
     }
 
     @MainActor
