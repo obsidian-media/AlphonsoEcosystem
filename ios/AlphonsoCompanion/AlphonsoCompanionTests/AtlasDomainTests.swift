@@ -88,6 +88,43 @@ private final class ReviewThenChallengeRepository: AtlasWorkspaceRepository {
     }
 }
 
+private final class DecisionRemovalAfterRefreshRepository: AtlasWorkspaceRepository {
+    private let fixture = AtlasFixtureRepository()
+    private var loadCount = 0
+
+    func loadBriefing(workspaceID: String) async throws -> AtlasBriefing {
+        let briefing = try await fixture.loadBriefing(workspaceID: workspaceID)
+        defer { loadCount += 1 }
+        guard loadCount > 0 else { return briefing }
+        return AtlasBriefing(
+            workspace: briefing.workspace,
+            freshness: briefing.freshness,
+            activeRuns: briefing.activeRuns,
+            outcomes: briefing.outcomes,
+            decisions: briefing.decisions.filter { $0.id != "decision-release-brief" },
+            refreshedAt: briefing.refreshedAt
+        )
+    }
+
+    func createDraftRun(
+        workspaceID: String,
+        brief: String,
+        desiredOutcome: String,
+        posture: AtlasExecutionPosture
+    ) async throws -> AtlasRun {
+        try await fixture.createDraftRun(
+            workspaceID: workspaceID,
+            brief: brief,
+            desiredOutcome: desiredOutcome,
+            posture: posture
+        )
+    }
+
+    func recordDecisionReview(workspaceID: String, decisionID: String) async throws -> AtlasDecision {
+        throw AtlasRepositoryError.decisionUnavailable
+    }
+}
+
 private struct DecisionFailureRepository: AtlasWorkspaceRepository {
     private let fixture = AtlasFixtureRepository()
 
@@ -414,6 +451,18 @@ final class AtlasDomainTests: XCTestCase {
         await store.load()
 
         XCTAssertTrue(store.decisionReviewRecorded)
+    }
+
+    @MainActor
+    func testStoreRecognizesDecisionRemovedByAuthoritativeRefresh() async {
+        let store = AtlasWorkspaceStore(repository: DecisionRemovalAfterRefreshRepository())
+
+        await store.load()
+        XCTAssertFalse(store.isDecisionMissingFromCurrentBriefing("decision-release-brief"))
+
+        await store.load()
+        XCTAssertTrue(store.isDecisionMissingFromCurrentBriefing("decision-release-brief"))
+        XCTAssertFalse(store.isDecisionMissingFromCurrentBriefing("decision-research-archive"))
     }
 
     @MainActor

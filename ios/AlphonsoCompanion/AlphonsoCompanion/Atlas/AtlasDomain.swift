@@ -788,6 +788,11 @@ final class AtlasWorkspaceStore: ObservableObject {
         return decision.state == .reviewRecordedPendingConfirmation || decision.state == .confirmationRecorded
     }
 
+    func isDecisionMissingFromCurrentBriefing(_ decisionID: String) -> Bool {
+        guard let briefing else { return false }
+        return !briefing.decisions.contains(where: { $0.id == decisionID })
+    }
+
     private func hasRecordedReview(in briefing: AtlasBriefing) -> Bool {
         briefing.decisions.contains {
             $0.state == .reviewRecordedPendingConfirmation || $0.state == .confirmationRecorded

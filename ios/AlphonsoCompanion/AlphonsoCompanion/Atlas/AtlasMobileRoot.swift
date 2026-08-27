@@ -1572,9 +1572,25 @@ private struct AtlasDecisionReviewSheet: View {
         needsFreshChallenge || currentDecision.state.needsConfirmation
     }
 
+    private var isMissingFromCurrentBriefing: Bool {
+        store.isDecisionMissingFromCurrentBriefing(decision.id)
+    }
+
     @ViewBuilder
     private var confirmationControl: some View {
-        if currentDecision.isActionableExpired() {
+        if isMissingFromCurrentBriefing {
+            AtlasStudioBlock(
+                kind: "DECISION UNAVAILABLE",
+                symbol: "rectangle.dashed",
+                title: "This decision changed after refresh",
+                detail: "The authoritative workspace briefing no longer includes this decision. Atlas will not use the prior local record for review, challenge, or confirmation.",
+                accent: AtlasTheme.ColorToken.amber
+            )
+            focusButton(title: "Return to Inbox", symbol: "tray") {
+                dismiss()
+            }
+            .accessibilityHint("Closes this outdated decision record and returns to the current Inbox. No action is executed.")
+        } else if currentDecision.isActionableExpired() {
             AtlasStudioBlock(
                 kind: "DECISION EXPIRED",
                 symbol: "clock.badge.exclamationmark",
