@@ -207,6 +207,8 @@ final class AtlasDomainTests: XCTestCase {
             occurredAt: Date(timeIntervalSince1970: 1_000)
         )
 
+        XCTAssertEqual(receipt.evidenceLabel, "DECISION decision-release-brief · TRACE AUD/CH-204")
+        XCTAssertFalse(receipt.evidenceLabel.contains("device-atlas"))
         XCTAssertTrue(receipt.matchesLocalQuery("Challenge issued"))
         XCTAssertTrue(receipt.matchesLocalQuery("decision-release device-atlas"))
         XCTAssertTrue(receipt.matchesLocalQuery("AUD/CH-204"))

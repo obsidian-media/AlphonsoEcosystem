@@ -425,6 +425,11 @@ struct AtlasAuditReceipt: Codable, Equatable, Identifiable {
 
     var isNonExecuting: Bool { executionStatus == "not_executed" }
 
+    var evidenceLabel: String {
+        let decision = decisionID.map { "DECISION \($0)" }
+        return [decision, "TRACE \(correlationID)"].compactMap { $0 }.joined(separator: " · ")
+    }
+
     func matchesLocalQuery(_ query: String) -> Bool {
         AtlasLocalSearch.matches(query, fields: [
             eventType.label,

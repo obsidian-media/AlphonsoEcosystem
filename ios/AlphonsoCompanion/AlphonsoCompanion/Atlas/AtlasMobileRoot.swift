@@ -1343,6 +1343,10 @@ private struct AtlasAuditReceiptRow: View {
                 Text(receipt.eventType.detail)
                     .font(AtlasTheme.Type.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                Text(receipt.evidenceLabel)
+                    .font(AtlasTheme.Type.proof.monospaced())
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: AtlasTheme.Spacing.sm) {
                     Text("NO ACTION EXECUTED")
                         .font(AtlasTheme.Type.proof)
