@@ -773,6 +773,13 @@ final class AtlasWorkspaceStore: ObservableObject {
         syncStatus = .live(freshness: event.briefing.freshness, refreshedAt: event.briefing.refreshedAt)
     }
 
+    func hasRecordedReview(for decisionID: String) -> Bool {
+        guard let decision = briefing?.decisions.first(where: { $0.id == decisionID }) else {
+            return false
+        }
+        return decision.state == .reviewRecordedPendingConfirmation || decision.state == .confirmationRecorded
+    }
+
     private func hasRecordedReview(in briefing: AtlasBriefing) -> Bool {
         briefing.decisions.contains {
             $0.state == .reviewRecordedPendingConfirmation || $0.state == .confirmationRecorded

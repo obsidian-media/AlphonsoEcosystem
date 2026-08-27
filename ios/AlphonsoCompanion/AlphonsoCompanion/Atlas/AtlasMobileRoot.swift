@@ -1639,8 +1639,9 @@ private struct AtlasDecisionReviewSheet: View {
             defer { isWorking = false }
             challenge = await store.prepareActionConfirmation(currentDecision)
             if challenge == nil {
-                needsFreshChallenge = store.decisionReviewRecorded
-                localErrorTitle = store.decisionReviewRecorded ? "Challenge was not issued" : "Review or challenge was not recorded"
+                let reviewIsRecorded = store.hasRecordedReview(for: currentDecision.id)
+                needsFreshChallenge = reviewIsRecorded
+                localErrorTitle = reviewIsRecorded ? "Challenge was not issued" : "Review or challenge was not recorded"
                 localError = store.errorMessage ?? "Atlas could not record this review or request a confirmation challenge. Refresh the workspace and try again."
             } else {
                 needsFreshChallenge = false
