@@ -1592,6 +1592,20 @@ private struct AtlasDecisionReviewSheet: View {
                     : "The control plane recorded this confirmation.",
                 accent: AtlasTheme.ColorToken.moss
             )
+        } else if let challenge, challenge.isExpired() {
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                AtlasStudioBlock(
+                    kind: "CHALLENGE EXPIRED",
+                    symbol: "clock.badge.exclamationmark",
+                    title: "Request a fresh confirmation challenge",
+                    detail: "This server challenge has expired. Atlas will not request local authentication or record a confirmation from it.",
+                    accent: AtlasTheme.ColorToken.amber
+                )
+                focusButton(title: "Request a new confirmation challenge", symbol: "arrow.clockwise") {
+                    requestChallenge()
+                }
+                .accessibilityHint("Requests a fresh short-lived server challenge. No action is executed.")
+            }
         } else if let challenge {
             VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                 AtlasDecisionFact(label: "Server challenge", value: challenge.statement)
@@ -1650,6 +1664,14 @@ private struct AtlasDecisionReviewSheet: View {
     }
 
     private func confirm(_ challenge: AtlasActionChallenge) {
+        guard !challenge.isExpired() else {
+            self.challenge = nil
+            needsFreshChallenge = true
+            localErrorTitle = "Confirmation challenge expired"
+            localError = "Atlas did not start local authentication because this server challenge has expired. Request a fresh challenge before recording confirmation."
+            return
+        }
+
         localError = nil
         localErrorTitle = "Confirmation was not recorded"
         Task { @MainActor in
@@ -1661,7 +1683,7 @@ private struct AtlasDecisionReviewSheet: View {
                 }
                 receipt = await store.recordActionConfirmation(decision: currentDecision, challenge: challenge)
                 if receipt == nil {
-                    challenge = nil
+                    self.challenge = nil
                     needsFreshChallenge = true
                     localError = store.errorMessage ?? "Atlas could not record this confirmation. Refresh the workspace and request a new challenge if needed."
                 }

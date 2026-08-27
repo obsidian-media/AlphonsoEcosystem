@@ -368,6 +368,10 @@ struct AtlasActionChallenge: Codable, Equatable, Identifiable {
     let statement: String
     let requiresLocalAuthentication: Bool
     let expiresAt: Date
+
+    func isExpired(at referenceDate: Date = .now) -> Bool {
+        expiresAt <= referenceDate
+    }
 }
 
 struct AtlasDecisionConfirmationReceipt: Codable, Equatable, Identifiable {

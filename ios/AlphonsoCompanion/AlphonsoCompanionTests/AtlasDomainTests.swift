@@ -157,6 +157,29 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertTrue(reviewDecision.matchesLocalQuery("   "))
     }
 
+    func testActionChallengeDetectsExpiryAgainstReferenceDate() {
+        let referenceDate = Date(timeIntervalSince1970: 1_000)
+        let expired = AtlasActionChallenge(
+            id: "challenge-expired",
+            decisionID: "decision-release-brief",
+            policyCode: "P-017",
+            statement: "Recorded confirmation intent only",
+            requiresLocalAuthentication: true,
+            expiresAt: referenceDate.addingTimeInterval(-1)
+        )
+        let active = AtlasActionChallenge(
+            id: "challenge-active",
+            decisionID: "decision-release-brief",
+            policyCode: "P-017",
+            statement: "Recorded confirmation intent only",
+            requiresLocalAuthentication: true,
+            expiresAt: referenceDate.addingTimeInterval(1)
+        )
+
+        XCTAssertTrue(expired.isExpired(at: referenceDate))
+        XCTAssertFalse(active.isExpired(at: referenceDate))
+    }
+
     func testDecisionInboxPresentationStates() {
         XCTAssertTrue(AtlasDecisionState.awaitingReview.canReview)
         XCTAssertEqual(AtlasDecisionState.awaitingReview.inboxLabel, "Needs review")
