@@ -1634,7 +1634,7 @@ private struct AtlasDecisionReviewSheet: View {
                 detail: "The authoritative workspace briefing no longer includes this decision. Atlas will not use the prior local record for review, challenge, or confirmation.",
                 accent: AtlasTheme.ColorToken.amber
             )
-            focusButton(title: "Return to Inbox", symbol: "tray") {
+            focusButton(title: "Return to Inbox", symbol: "tray", identifier: "atlas.decision.returnInbox") {
                 dismiss()
             }
             .accessibilityHint("Closes this outdated decision record and returns to the current Inbox. No action is executed.")
@@ -1664,7 +1664,7 @@ private struct AtlasDecisionReviewSheet: View {
                 detail: "\(currentDecision.state.inboxDetail) Atlas will not start a review, challenge, or confirmation handoff from this authoritative state.",
                 accent: AtlasTheme.ColorToken.amber
             )
-            focusButton(title: "Return to Inbox", symbol: "tray") {
+            focusButton(title: "Return to Inbox", symbol: "tray", identifier: "atlas.decision.returnInbox") {
                 dismiss()
             }
             .accessibilityHint("Closes this read-only decision record and returns to the current Inbox. No action is executed.")
@@ -1676,7 +1676,7 @@ private struct AtlasDecisionReviewSheet: View {
                 detail: "Atlas needs a current authoritative workspace briefing before it can record review, request a challenge, or start local authentication. \(store.syncStatus.detail)",
                 accent: AtlasTheme.ColorToken.amber
             )
-            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise") {
+            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise", identifier: "atlas.decision.refreshWorkspace") {
                 refreshDecision()
             }
             .accessibilityHint("Requests a fresh authoritative workspace briefing. It does not execute work or an external action.")
@@ -1688,7 +1688,7 @@ private struct AtlasDecisionReviewSheet: View {
                 detail: "This decision deadline has passed. Atlas will not record review, request a challenge, or start local authentication from this stale record.",
                 accent: AtlasTheme.ColorToken.clay
             )
-            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise") {
+            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise", identifier: "atlas.decision.refreshWorkspace") {
                 refreshDecision()
             }
             .accessibilityHint("Requests a fresh authoritative workspace briefing. It does not execute work or an external action.")
@@ -1701,7 +1701,7 @@ private struct AtlasDecisionReviewSheet: View {
                     detail: "This server challenge has expired. Atlas will not request local authentication or record a confirmation from it.",
                     accent: AtlasTheme.ColorToken.amber
                 )
-                focusButton(title: "Request a new confirmation challenge", symbol: "arrow.clockwise") {
+                focusButton(title: "Request a new confirmation challenge", symbol: "arrow.clockwise", identifier: "atlas.decision.requestChallenge") {
                     requestChallenge()
                 }
                 .accessibilityHint("Requests a fresh short-lived server challenge. No action is executed.")
@@ -1712,7 +1712,8 @@ private struct AtlasDecisionReviewSheet: View {
                 AtlasDecisionFact(label: "Challenge expires", value: challenge.expiresAt.formatted(.relative(presentation: .named)))
                 focusButton(
                     title: challenge.requiresLocalAuthentication ? "Confirm with Face ID" : "Record confirmation",
-                    symbol: challenge.requiresLocalAuthentication ? "faceid" : "checkmark.shield"
+                    symbol: challenge.requiresLocalAuthentication ? "faceid" : "checkmark.shield",
+                    identifier: "atlas.decision.confirm"
                 ) {
                     confirm(challenge)
                 }
@@ -1721,7 +1722,8 @@ private struct AtlasDecisionReviewSheet: View {
         } else {
             focusButton(
                 title: requiresFreshChallenge ? "Request a new confirmation challenge" : "Record review & request challenge",
-                symbol: requiresFreshChallenge ? "arrow.clockwise" : "checkmark.shield"
+                symbol: requiresFreshChallenge ? "arrow.clockwise" : "checkmark.shield",
+                identifier: "atlas.decision.requestChallenge"
             ) {
                 requestChallenge()
             }
@@ -1731,7 +1733,12 @@ private struct AtlasDecisionReviewSheet: View {
         }
     }
 
-    private func focusButton(title: String, symbol: String, action: @escaping () -> Void) -> some View {
+    private func focusButton(
+        title: String,
+        symbol: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Label(isWorking ? "Working…" : title, systemImage: isWorking ? "clock" : symbol)
                 .font(AtlasTheme.Type.section)
@@ -1743,6 +1750,7 @@ private struct AtlasDecisionReviewSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
         .padding(.top, AtlasTheme.Spacing.md)
         .disabled(isWorking)
+        .accessibilityIdentifier(identifier)
     }
 
     private func refreshDecision() {

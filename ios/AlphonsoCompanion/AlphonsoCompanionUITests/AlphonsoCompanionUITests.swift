@@ -151,7 +151,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
         let challengeReady = app.buttons["atlas.inbox.decision.decision-partner-brief"]
         XCTAssertTrue(challengeReady.waitForExistence(timeout: 3))
         challengeReady.tap()
-        XCTAssertTrue(app.buttons["Request a new confirmation challenge"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["atlas.decision.requestChallenge"].waitForExistence(timeout: 3))
         app.buttons["Close"].tap()
 
         let recorded = app.buttons["atlas.inbox.decision.decision-research-archive"]
