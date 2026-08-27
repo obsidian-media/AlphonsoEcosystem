@@ -774,33 +774,43 @@ private struct AtlasInboxView: View {
                     query: $query
                 )
 
-                AtlasSectionHeader("Needs your judgement", detail: decisionDetail)
-                if reviewDecisions.isEmpty {
+                if isFiltering && visibleDecisions.isEmpty {
                     AtlasEmptyState(
-                        symbol: "checkmark.circle",
-                        title: query.isEmpty ? "No decisions are waiting" : "No matching decisions",
-                        detail: query.isEmpty ? "Alphonso will surface exceptions, approvals, and assigned follow-ups here." : "Try a decision title, policy, affected resource, or evidence detail from the current workspace briefing."
+                        symbol: "magnifyingglass",
+                        title: "No matching Inbox records",
+                        detail: "Try a decision title, policy, affected resource, or evidence detail from the current workspace briefing."
                     )
                 } else {
-                    decisionRows(reviewDecisions, opensDetail: true)
-                }
+                    if !reviewDecisions.isEmpty || !isFiltering {
+                        AtlasSectionHeader("Needs your judgement", detail: decisionDetail)
+                        if reviewDecisions.isEmpty {
+                            AtlasEmptyState(
+                                symbol: "checkmark.circle",
+                                title: "No decisions are waiting",
+                                detail: "Alphonso will surface exceptions, approvals, and assigned follow-ups here."
+                            )
+                        } else {
+                            decisionRows(reviewDecisions, opensDetail: true)
+                        }
+                    }
 
-                if !confirmationDecisions.isEmpty {
-                    AtlasSectionHeader("Confirmation queue", detail: "These reviews are recorded. Request a fresh server challenge before confirmation.")
-                    decisionRows(confirmationDecisions, opensDetail: true)
-                }
+                    if !confirmationDecisions.isEmpty {
+                        AtlasSectionHeader("Confirmation queue", detail: "These reviews are recorded. Request a fresh server challenge before confirmation.")
+                        decisionRows(confirmationDecisions, opensDetail: true)
+                    }
 
-                AtlasSectionHeader("Recorded", detail: "Read-only accountability records remain visible here; confirmation records are not external execution.")
-                if recordedDecisions.isEmpty {
-                    AtlasEmptyState(
-                        symbol: query.isEmpty ? (store.decisionReviewRecorded ? "checkmark.seal" : "clock") : "magnifyingglass",
-                        title: query.isEmpty ? (store.decisionReviewRecorded ? "Review recorded" : "No recorded decisions in this session") : "No matching records",
-                        detail: query.isEmpty
-                            ? (store.decisionReviewRecorded ? "The control-plane handoff is ready for a fresh confirmation challenge." : "Resolved decisions and auditable receipts will appear here.")
-                            : "Search the local briefing by decision, policy, affected resource, or evidence detail."
-                    )
-                } else {
-                    decisionRows(recordedDecisions, opensDetail: true)
+                    if !recordedDecisions.isEmpty || !isFiltering {
+                        AtlasSectionHeader("Recorded", detail: "Read-only accountability records remain visible here; confirmation records are not external execution.")
+                        if recordedDecisions.isEmpty {
+                            AtlasEmptyState(
+                                symbol: store.decisionReviewRecorded ? "checkmark.seal" : "clock",
+                                title: store.decisionReviewRecorded ? "Review recorded" : "No recorded decisions in this session",
+                                detail: store.decisionReviewRecorded ? "The control-plane handoff is ready for a fresh confirmation challenge." : "Resolved decisions and auditable receipts will appear here."
+                            )
+                        } else {
+                            decisionRows(recordedDecisions, opensDetail: true)
+                        }
+                    }
                 }
             }
             .navigationBarHidden(true)
@@ -829,6 +839,10 @@ private struct AtlasInboxView: View {
             }
             AtlasRule()
         }
+    }
+
+    private var isFiltering: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var visibleDecisions: [AtlasDecision] {

@@ -98,8 +98,9 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertFalse(app.buttons["atlas.inbox.decision.decision-release-brief"].exists)
 
         search.typeText(" unmatched")
-        XCTAssertTrue(app.staticTexts["No matching decisions"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["No matching records"].exists)
+        XCTAssertTrue(app.staticTexts["No matching Inbox records"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.staticTexts["Needs your judgement"].exists)
+        XCTAssertFalse(app.staticTexts["Recorded"].exists)
 
         let clear = app.buttons["atlas.inbox.search.clear"]
         XCTAssertTrue(clear.waitForExistence(timeout: 3))
