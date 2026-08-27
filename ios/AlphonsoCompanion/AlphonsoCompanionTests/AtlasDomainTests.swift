@@ -137,7 +137,9 @@ final class AtlasDomainTests: XCTestCase {
 
         XCTAssertTrue(researchRun.matchesLocalQuery("Hector"))
         XCTAssertTrue(researchRun.matchesLocalQuery("RUN/RS-204"))
+        XCTAssertTrue(researchRun.matchesLocalQuery("Hector RUN/RS-204"))
         XCTAssertTrue(outcome.matchesLocalQuery("Nine verified findings"))
+        XCTAssertTrue(outcome.matchesLocalQuery("Research nine"))
         XCTAssertFalse(researchRun.matchesLocalQuery("unrelated phrase"))
         XCTAssertTrue(outcome.matchesLocalQuery("   "))
     }
@@ -148,6 +150,7 @@ final class AtlasDomainTests: XCTestCase {
         let recordedDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-research-archive" }))
 
         XCTAssertTrue(reviewDecision.matchesLocalQuery("P-017"))
+        XCTAssertTrue(reviewDecision.matchesLocalQuery("P-017 Release communications"))
         XCTAssertTrue(recordedDecision.matchesLocalQuery("Research archive"))
         XCTAssertTrue(recordedDecision.matchesLocalQuery("Confirmation recorded"))
         XCTAssertFalse(reviewDecision.matchesLocalQuery("unrelated phrase"))

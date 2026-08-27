@@ -257,9 +257,12 @@ extension AtlasRun {
 
 private enum AtlasLocalSearch {
     static func matches(_ query: String, fields: [String]) -> Bool {
-        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !needle.isEmpty else { return true }
-        return fields.contains { $0.localizedCaseInsensitiveContains(needle) }
+        let terms = query.split(whereSeparator: { $0.isWhitespace })
+        guard !terms.isEmpty else { return true }
+        let searchableRecord = fields.joined(separator: " ")
+        return terms.allSatisfy { term in
+            searchableRecord.localizedCaseInsensitiveContains(String(term))
+        }
     }
 }
 
