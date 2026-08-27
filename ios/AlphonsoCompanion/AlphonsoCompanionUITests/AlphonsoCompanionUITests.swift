@@ -67,6 +67,10 @@ final class AlphonsoCompanionUITests: XCTestCase {
         search.tap()
         search.typeText("OUT/RA-009")
         XCTAssertTrue(app.buttons["atlas.work.outcome.outcome-research-archive"].waitForExistence(timeout: 3))
+        let clear = app.buttons["atlas.work.search.clear"]
+        XCTAssertTrue(clear.waitForExistence(timeout: 3))
+        clear.tap()
+        XCTAssertFalse(clear.exists)
     }
 
     func testInboxGroupsReviewChallengeAndRecordedDecisions() throws {
@@ -96,6 +100,11 @@ final class AlphonsoCompanionUITests: XCTestCase {
         search.typeText(" unmatched")
         XCTAssertTrue(app.staticTexts["No matching decisions"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["No matching records"].exists)
+
+        let clear = app.buttons["atlas.inbox.search.clear"]
+        XCTAssertTrue(clear.waitForExistence(timeout: 3))
+        clear.tap()
+        XCTAssertTrue(app.buttons["atlas.inbox.decision.decision-research-archive"].waitForExistence(timeout: 3))
     }
 
     func testWorkLibraryOpensVerifiedOutcomeRecord() throws {

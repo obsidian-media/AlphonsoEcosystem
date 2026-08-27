@@ -412,16 +412,13 @@ private struct AtlasWorkView: View {
                 .accessibilityIdentifier("atlas.work.segment")
                 .accessibilityHint("Filters the work runbook")
 
-                TextField("Search work, owner, or trace", text: $query)
-                    .font(AtlasTheme.Type.body)
-                    .padding(.horizontal, AtlasTheme.Spacing.md)
-                    .padding(.vertical, 10)
-                    .background(AtlasTheme.ColorToken.sheet)
-                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityIdentifier("atlas.work.search")
-                    .accessibilityHint("Filters the currently loaded runbook and verified outcomes on this device")
+                AtlasLocalSearchField(
+                    prompt: "Search work, owner, or trace",
+                    accessibilityLabel: "Search current work",
+                    accessibilityHint: "Filters the currently loaded runbook and verified outcomes on this device",
+                    identifier: "atlas.work.search",
+                    query: $query
+                )
 
                 runLedger
 
@@ -530,6 +527,51 @@ private struct AtlasWorkView: View {
     private var emptyDetail: String {
         if !query.isEmpty { return "Try a title, owner, run phase, or trace identifier from the current workspace briefing." }
         return selectedSegment == 2 ? "Delivered workspace outcomes will appear here with their trace records." : selectedSegment == 1 ? "Create a brief or schedule a workflow to build the next run." : "New workspace activity will appear here as it begins."
+    }
+}
+
+private struct AtlasLocalSearchField: View {
+    let prompt: String
+    let accessibilityLabel: String
+    let accessibilityHint: String
+    let identifier: String
+    @Binding var query: String
+
+    var body: some View {
+        HStack(spacing: AtlasTheme.Spacing.xs) {
+            Image(systemName: "magnifyingglass")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                .frame(width: 24, height: 44)
+                .accessibilityHidden(true)
+
+            TextField(prompt, text: $query)
+                .font(AtlasTheme.Type.body)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityLabel(accessibilityLabel)
+                .accessibilityHint(accessibilityHint)
+                .accessibilityIdentifier(identifier)
+
+            if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Clear \(accessibilityLabel.lowercased())")
+                .accessibilityHint("Restores every record in the currently loaded workspace briefing")
+                .accessibilityIdentifier("\(identifier).clear")
+            }
+        }
+        .padding(.leading, AtlasTheme.Spacing.sm)
+        .padding(.trailing, AtlasTheme.Spacing.xxs)
+        .frame(minHeight: 44)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
     }
 }
 
@@ -724,16 +766,13 @@ private struct AtlasInboxView: View {
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
-                TextField("Search decisions, policy, or resource", text: $query)
-                    .font(AtlasTheme.Type.body)
-                    .padding(.horizontal, AtlasTheme.Spacing.md)
-                    .padding(.vertical, 10)
-                    .background(AtlasTheme.ColorToken.sheet)
-                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityIdentifier("atlas.inbox.search")
-                    .accessibilityHint("Filters the currently loaded decision records on this device")
+                AtlasLocalSearchField(
+                    prompt: "Search decisions, policy, or resource",
+                    accessibilityLabel: "Search current decisions",
+                    accessibilityHint: "Filters the currently loaded decision records on this device",
+                    identifier: "atlas.inbox.search",
+                    query: $query
+                )
 
                 AtlasSectionHeader("Needs your judgement", detail: decisionDetail)
                 if reviewDecisions.isEmpty {
