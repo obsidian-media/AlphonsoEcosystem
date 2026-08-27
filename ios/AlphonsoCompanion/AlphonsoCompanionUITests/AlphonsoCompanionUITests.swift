@@ -36,6 +36,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(audit.waitForExistence(timeout: 3))
         audit.tap()
         XCTAssertTrue(app.staticTexts["Audit trail"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["SEARCH ACCOUNTABILITY RECORDS"].exists)
         XCTAssertTrue(app.textFields["atlas.audit.search"].waitForExistence(timeout: 3))
     }
 
@@ -59,6 +60,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Work"].tap()
+        XCTAssertTrue(app.staticTexts["SEARCH CURRENT WORK"].waitForExistence(timeout: 3))
         let segment = app.segmentedControls["atlas.work.segment"]
         XCTAssertTrue(segment.waitForExistence(timeout: 3))
         segment.buttons["Library"].tap()
@@ -91,6 +93,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Inbox"].tap()
+        XCTAssertTrue(app.staticTexts["SEARCH CURRENT DECISIONS"].waitForExistence(timeout: 3))
         let search = app.textFields["atlas.inbox.search"]
         XCTAssertTrue(search.waitForExistence(timeout: 3))
         search.tap()

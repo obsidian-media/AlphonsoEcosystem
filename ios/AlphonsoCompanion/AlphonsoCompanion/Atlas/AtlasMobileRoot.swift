@@ -538,40 +538,48 @@ private struct AtlasLocalSearchField: View {
     @Binding var query: String
 
     var body: some View {
-        HStack(spacing: AtlasTheme.Spacing.xs) {
-            Image(systemName: "magnifyingglass")
-                .font(.body.weight(.semibold))
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xxs) {
+            Text(accessibilityLabel.uppercased())
+                .font(AtlasTheme.Type.proof)
+                .tracking(0.8)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
-                .frame(width: 24, height: 44)
                 .accessibilityHidden(true)
 
-            TextField(prompt, text: $query)
-                .font(AtlasTheme.Type.body)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .accessibilityLabel(accessibilityLabel)
-                .accessibilityHint(accessibilityHint)
-                .accessibilityIdentifier(identifier)
+            HStack(spacing: AtlasTheme.Spacing.xs) {
+                Image(systemName: "magnifyingglass")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    .frame(width: 24, height: 44)
+                    .accessibilityHidden(true)
 
-            if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.body)
-                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
-                        .frame(width: 44, height: 44)
+                TextField(prompt, text: $query)
+                    .font(AtlasTheme.Type.body)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel(accessibilityLabel)
+                    .accessibilityHint(accessibilityHint)
+                    .accessibilityIdentifier(identifier)
+
+                if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        query = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.body)
+                            .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("Clear \(accessibilityLabel.lowercased())")
+                    .accessibilityHint("Restores every record in the currently loaded workspace briefing")
+                    .accessibilityIdentifier("\(identifier).clear")
                 }
-                .accessibilityLabel("Clear \(accessibilityLabel.lowercased())")
-                .accessibilityHint("Restores every record in the currently loaded workspace briefing")
-                .accessibilityIdentifier("\(identifier).clear")
             }
+            .padding(.leading, AtlasTheme.Spacing.sm)
+            .padding(.trailing, AtlasTheme.Spacing.xxs)
+            .frame(minHeight: 44)
+            .background(AtlasTheme.ColorToken.sheet)
+            .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
         }
-        .padding(.leading, AtlasTheme.Spacing.sm)
-        .padding(.trailing, AtlasTheme.Spacing.xxs)
-        .frame(minHeight: 44)
-        .background(AtlasTheme.ColorToken.sheet)
-        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
     }
 }
 
