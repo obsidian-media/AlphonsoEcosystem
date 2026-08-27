@@ -5,10 +5,15 @@ final class AlphonsoCompanionUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testAtlasIsTheDefaultMobileExperience() throws {
+    private func launchAtlasApp() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
+        app.launchArguments = ["-ui-testing", "-alphonso.mobile.experience", "atlas"]
         app.launch()
+        return app
+    }
+
+    func testAtlasIsTheDefaultMobileExperience() throws {
+        let app = launchAtlasApp()
 
         XCTAssertTrue(app.staticTexts["Today"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.tabBars.buttons["Home"].exists)
@@ -21,9 +26,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testAtlasMoreRoutesExposeAccountAndAuditSurfaces() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["More"].tap()
         let account = app.buttons["atlas.more.account"]
@@ -37,13 +40,15 @@ final class AlphonsoCompanionUITests: XCTestCase {
         audit.tap()
         XCTAssertTrue(app.staticTexts["Audit trail"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["SEARCH ACCOUNTABILITY RECORDS"].exists)
+        XCTAssertTrue(app.buttons["Close"].exists)
+        XCTAssertTrue(app.buttons["atlas.audit.refresh"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.textFields["atlas.audit.search"].waitForExistence(timeout: 3))
+        app.buttons["Close"].tap()
+        XCTAssertTrue(audit.waitForExistence(timeout: 3))
     }
 
     func testHomeCreateWorkOpensStructuredPreparation() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         let createWork = app.buttons["atlas.home.createWork"]
         XCTAssertTrue(createWork.waitForExistence(timeout: 3))
@@ -63,9 +68,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testWorkSearchFiltersLoadedOutcomeRecords() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["Work"].tap()
         XCTAssertTrue(app.staticTexts["SEARCH CURRENT WORK"].waitForExistence(timeout: 3))
@@ -85,9 +88,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testInboxGroupsReviewChallengeAndRecordedDecisions() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["Inbox"].tap()
         XCTAssertTrue(app.staticTexts["NEEDS YOUR JUDGEMENT"].waitForExistence(timeout: 3))
@@ -96,9 +97,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testInboxSearchFiltersLoadedDecisionRecords() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["Inbox"].tap()
         XCTAssertTrue(app.staticTexts["SEARCH CURRENT DECISIONS"].waitForExistence(timeout: 3))
@@ -121,9 +120,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testWorkLibraryOpensVerifiedOutcomeRecord() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["Work"].tap()
         let segment = app.segmentedControls["atlas.work.segment"]
@@ -137,9 +134,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testInboxOpensReviewAndChallengeReadyRoutes() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["Inbox"].tap()
         let review = app.buttons["atlas.inbox.decision.decision-release-brief"]
@@ -161,9 +156,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testTypedDirectionOpensPrefilledWorkPreparation() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["Chat"].tap()
         let direction = app.textFields["atlas.chat.direction"]
@@ -183,9 +176,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
     }
 
     func testUserCanEnterAndExitLegacyCompanionMode() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
-        app.launch()
+        let app = launchAtlasApp()
 
         app.tabBars.buttons["More"].tap()
         let openLegacy = app.buttons["Open legacy companion"]

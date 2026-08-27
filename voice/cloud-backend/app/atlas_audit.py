@@ -9,6 +9,7 @@ receipt creation.
 from __future__ import annotations
 
 import asyncio
+from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, Protocol
@@ -34,6 +35,7 @@ class AtlasAuditReceipt:
 
 
 class AtlasAuditRepository(Protocol):
+    @abstractmethod
     async def append(
         self,
         *,
@@ -46,11 +48,16 @@ class AtlasAuditRepository(Protocol):
         payload: dict[str, object],
         receipt_id: str | None = None,
         correlation_id: str | None = None,
-    ) -> AtlasAuditReceipt: ...
+    ) -> AtlasAuditReceipt:
+        raise NotImplementedError
 
-    async def list_for_workspace(self, workspace_id: str, actor_user_id: str) -> list[AtlasAuditReceipt]: ...
+    @abstractmethod
+    async def list_for_workspace(self, workspace_id: str, actor_user_id: str) -> list[AtlasAuditReceipt]:
+        raise NotImplementedError
 
-    async def reset_for_tests(self) -> None: ...
+    @abstractmethod
+    async def reset_for_tests(self) -> None:
+        raise NotImplementedError
 
 
 class InMemoryAtlasAuditRepository:

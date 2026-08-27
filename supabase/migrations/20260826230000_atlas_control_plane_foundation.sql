@@ -103,47 +103,59 @@ alter table public.atlas_decisions enable row level security;
 alter table public.atlas_action_challenges enable row level security;
 alter table public.atlas_audit_receipts enable row level security;
 
+-- This helper is deliberately plpgsql (not SQL) so the planner cannot inline a
+-- self-reference to atlas_workspace_members into a policy evaluation. It runs as
+-- the migration owner outside the caller's RLS context, but remains callable only
+-- by authenticated sessions and derives the actor from the JWT-backed auth.uid().
+create or replace function public.atlas_is_workspace_member(requested_workspace_id uuid)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  return exists (
+    select 1
+    from public.atlas_workspace_members as member
+    where member.workspace_id = requested_workspace_id
+      and member.user_id = (select auth.uid())
+  );
+end;
+$$;
+
+revoke all on function public.atlas_is_workspace_member(uuid) from public;
+grant execute on function public.atlas_is_workspace_member(uuid) to authenticated;
+
 create policy "Atlas members can read workspace metadata"
   on public.atlas_workspaces for select to authenticated
-  using (exists (
-    select 1 from public.atlas_workspace_members member
-    where member.workspace_id = atlas_workspaces.id and member.user_id = (select auth.uid())
-  ));
+  using (public.atlas_is_workspace_member(atlas_workspaces.id));
 
 create policy "Atlas members can read memberships"
   on public.atlas_workspace_members for select to authenticated
-  using (user_id = (select auth.uid()) or exists (
-    select 1 from public.atlas_workspace_members member
-    where member.workspace_id = atlas_workspace_members.workspace_id and member.user_id = (select auth.uid())
-  ));
+  using (
+    user_id = (select auth.uid())
+    or public.atlas_is_workspace_member(atlas_workspace_members.workspace_id)
+  );
 
 create policy "Atlas members can read workspace runs"
   on public.atlas_runs for select to authenticated
-  using (exists (
-    select 1 from public.atlas_workspace_members member
-    where member.workspace_id = atlas_runs.workspace_id and member.user_id = (select auth.uid())
-  ));
+  using (public.atlas_is_workspace_member(atlas_runs.workspace_id));
 
 create policy "Atlas members can read workspace decisions"
   on public.atlas_decisions for select to authenticated
-  using (exists (
-    select 1 from public.atlas_workspace_members member
-    where member.workspace_id = atlas_decisions.workspace_id and member.user_id = (select auth.uid())
-  ));
+  using (public.atlas_is_workspace_member(atlas_decisions.workspace_id));
 
 create policy "Atlas members can read own action challenges"
   on public.atlas_action_challenges for select to authenticated
-  using (user_id = (select auth.uid()) and exists (
-    select 1 from public.atlas_workspace_members member
-    where member.workspace_id = atlas_action_challenges.workspace_id and member.user_id = (select auth.uid())
-  ));
+  using (
+    user_id = (select auth.uid())
+    and public.atlas_is_workspace_member(atlas_action_challenges.workspace_id)
+  );
 
 create policy "Atlas members can read workspace audit receipts"
   on public.atlas_audit_receipts for select to authenticated
-  using (exists (
-    select 1 from public.atlas_workspace_members member
-    where member.workspace_id = atlas_audit_receipts.workspace_id and member.user_id = (select auth.uid())
-  ));
+  using (public.atlas_is_workspace_member(atlas_audit_receipts.workspace_id));
 
 -- Audit receipts are append-only, including for privileged application roles.
 create or replace function public.atlas_reject_audit_receipt_mutation()

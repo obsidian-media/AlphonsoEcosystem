@@ -1279,7 +1279,8 @@ private struct AtlasAuditTrailView: View {
                 AtlasSectionHeader("Accountability record", detail: summary)
                 content
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Audit trail")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", action: { dismiss() })

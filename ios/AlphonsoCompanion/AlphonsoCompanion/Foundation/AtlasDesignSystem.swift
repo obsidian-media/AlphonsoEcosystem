@@ -304,7 +304,7 @@ struct AtlasLedgerRow: View {
                         Label(posture.rawValue, systemImage: posture.symbol)
                             .font(AtlasTheme.Typography.metadata.weight(.semibold))
                     }
-                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
                 .padding(.bottom, AtlasTheme.Spacing.lg)
             }

@@ -454,6 +454,8 @@ class AtlasDemoControlPlane:
                     try:
                         queue.get_nowait()
                     except asyncio.QueueEmpty:
+                        # A concurrent consumer drained the bounded queue after full() returned.
+                        # The current event can still be safely enqueued below.
                         pass
                 queue.put_nowait(event)
 
