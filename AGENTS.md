@@ -39,7 +39,7 @@ ios/                   iOS companion app (SwiftUI)
     Services/                     — WebSocketService.swift, MDNSService.swift
     Models/                       — ConnectionState.swift
   src-tauri/             Rust backend
-  src/lib.rs           ~1,132 lines, 110 Tauri commands (across 35 modules)
+  src/lib.rs           ~794 lines, 110 Tauri commands (across 37 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -82,7 +82,7 @@ npm run test:e2e         # Playwright smoke test (needs dev server + Ollama)
 
 # From src-tauri/
 cargo check              # Verify Rust compiles
-cargo test                # 117 Rust `#[test]`-attributed unit tests (across 35 modules; cargo test itself reports slightly more passing due to a handful of #[tokio::test] async tests this static count doesn't match)
+cargo test                # 117 Rust `#[test]`-attributed unit tests (across 37 modules; cargo test itself reports slightly more passing due to a handful of #[tokio::test] async tests this static count doesn't match)
 cargo clippy -- -D warnings  # Lint Rust (CI enforces zero warnings)
 ```
 
