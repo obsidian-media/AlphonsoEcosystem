@@ -442,7 +442,7 @@ private struct AtlasDecisionActionConfirmationRequest: Encodable {
 
 struct AtlasActionChallengeResponse: Decodable {
     let id: String
-    let decisionID: String
+    let decisionId: String
     let policyCode: String
     let statement: String
     let requiresLocalAuthentication: Bool
@@ -452,7 +452,7 @@ struct AtlasActionChallengeResponse: Decodable {
     var domain: AtlasActionChallenge {
         AtlasActionChallenge(
             id: id,
-            decisionID: decisionID,
+            decisionID: decisionId,
             policyCode: policyCode,
             statement: statement,
             requiresLocalAuthentication: requiresLocalAuthentication,
@@ -462,13 +462,13 @@ struct AtlasActionChallengeResponse: Decodable {
 }
 
 struct AtlasDecisionActionConfirmationResponse: Decodable {
-    let receiptID: String
+    let receiptId: String
     let decision: AtlasDecisionResponse
     let executionStatus: String
 
     var domain: AtlasDecisionConfirmationReceipt {
         AtlasDecisionConfirmationReceipt(
-            id: receiptID,
+            id: receiptId,
             decision: decision.domain,
             executionStatus: executionStatus
         )
@@ -477,25 +477,25 @@ struct AtlasDecisionActionConfirmationResponse: Decodable {
 
 struct AtlasAuditReceiptResponse: Decodable {
     let id: String
-    let workspaceID: String
-    let decisionID: String?
-    let challengeID: String?
-    let deviceID: String?
+    let workspaceId: String
+    let decisionId: String?
+    let challengeId: String?
+    let deviceId: String?
     let eventType: AtlasAuditEventType
     let executionStatus: String
-    let correlationID: String
+    let correlationId: String
     let occurredAt: Date
 
     var domain: AtlasAuditReceipt {
         AtlasAuditReceipt(
             id: id,
-            workspaceID: workspaceID,
-            decisionID: decisionID,
-            challengeID: challengeID,
-            deviceID: deviceID,
+            workspaceID: workspaceId,
+            decisionID: decisionId,
+            challengeID: challengeId,
+            deviceID: deviceId,
             eventType: eventType,
             executionStatus: executionStatus,
-            correlationID: correlationID,
+            correlationID: correlationId,
             occurredAt: occurredAt
         )
     }
