@@ -52,6 +52,23 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(app.buttons["atlas.create.prepare"].exists)
     }
 
+    func testWorkSearchFiltersLoadedOutcomeRecords() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.tabBars.buttons["Work"].tap()
+        let segment = app.segmentedControls["atlas.work.segment"]
+        XCTAssertTrue(segment.waitForExistence(timeout: 3))
+        segment.buttons["Library"].tap()
+
+        let search = app.textFields["atlas.work.search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 3))
+        search.tap()
+        search.typeText("OUT/RA-009")
+        XCTAssertTrue(app.buttons["atlas.work.outcome.outcome-research-archive"].waitForExistence(timeout: 3))
+    }
+
     func testInboxGroupsReviewChallengeAndRecordedDecisions() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
@@ -61,6 +78,24 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Needs your judgement"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["Confirmation queue"].exists)
         XCTAssertTrue(app.staticTexts["Recorded"].exists)
+    }
+
+    func testInboxSearchFiltersLoadedDecisionRecords() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.tabBars.buttons["Inbox"].tap()
+        let search = app.textFields["atlas.inbox.search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 3))
+        search.tap()
+        search.typeText("P-006")
+        XCTAssertTrue(app.buttons["atlas.inbox.decision.decision-research-archive"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["atlas.inbox.decision.decision-release-brief"].exists)
+
+        search.typeText(" unmatched")
+        XCTAssertTrue(app.staticTexts["No matching decisions"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["No matching records"].exists)
     }
 
     func testWorkLibraryOpensVerifiedOutcomeRecord() throws {

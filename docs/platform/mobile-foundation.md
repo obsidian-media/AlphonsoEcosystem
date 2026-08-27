@@ -20,7 +20,7 @@ This is deliberately a migration seam, not a claim of backend parity. Atlas now 
 | `Atlas/AtlasCloudRepository.swift` | Versioned HTTPS v1 client, `ThisDeviceOnly` Keychain token/device-ID providers, transport seam, response DTOs, typed error mapping, and fixture-aware repository factory. |
 | `Atlas/AtlasIdentityService.swift` | Shared Cloud Voice session handoff, refreshed-token mirroring, Atlas device enrollment client, observable device-trust state, and typed Account & Cloud presentation state. |
 | `ContentView.swift` | Reversible `@AppStorage` migration switch between Atlas and the legacy local companion. |
-| `AlphonsoCompanionUITests/AlphonsoCompanionUITests.swift` | Smoke coverage for the Atlas default experience, workspace health, Home work initiation, Work Library outcome records, Account & Cloud, audit trail, typed-direction preparation handoff, and the legacy return path. |
+| `AlphonsoCompanionUITests/AlphonsoCompanionUITests.swift` | Smoke coverage for the Atlas default experience, workspace health, Home work initiation, local Work and Inbox filtering, Work Library outcome records, Account & Cloud, audit trail, typed-direction preparation handoff, and the legacy return path. |
 
 ## Migration contract
 

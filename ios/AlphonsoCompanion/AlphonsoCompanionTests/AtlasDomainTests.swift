@@ -144,8 +144,8 @@ final class AtlasDomainTests: XCTestCase {
 
     func testDecisionRecordsMatchTypedLocalSearch() async throws {
         let briefing = try await AtlasFixtureRepository().loadBriefing(workspaceID: "workspace-northstar")
-        let reviewDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-release-summary" }))
-        let recordedDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-archive-access" }))
+        let reviewDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-release-brief" }))
+        let recordedDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-research-archive" }))
 
         XCTAssertTrue(reviewDecision.matchesLocalQuery("P-017"))
         XCTAssertTrue(recordedDecision.matchesLocalQuery("Research archive"))
