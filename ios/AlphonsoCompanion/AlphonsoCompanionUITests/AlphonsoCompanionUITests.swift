@@ -95,6 +95,12 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(challengeReady.waitForExistence(timeout: 3))
         challengeReady.tap()
         XCTAssertTrue(app.buttons["Request a new confirmation challenge"].waitForExistence(timeout: 3))
+        app.buttons["Close"].tap()
+
+        let recorded = app.buttons["atlas.inbox.decision.decision-research-archive"]
+        XCTAssertTrue(recorded.waitForExistence(timeout: 3))
+        recorded.tap()
+        XCTAssertTrue(app.staticTexts["Intent recorded — not executed"].waitForExistence(timeout: 3))
     }
 
     func testTypedDirectionOpensPrefilledWorkPreparation() throws {

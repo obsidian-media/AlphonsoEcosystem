@@ -707,12 +707,12 @@ private struct AtlasInboxView: View {
                 if reviewDecisions.isEmpty {
                     AtlasEmptyState(symbol: "checkmark.circle", title: "No decisions are waiting", detail: "Alphonso will surface exceptions, approvals, and assigned follow-ups here.")
                 } else {
-                    decisionRows(reviewDecisions, actionable: true)
+                    decisionRows(reviewDecisions, opensDetail: true)
                 }
 
                 if !confirmationDecisions.isEmpty {
                     AtlasSectionHeader("Confirmation queue", detail: "These reviews are recorded. Request a fresh server challenge before confirmation.")
-                    decisionRows(confirmationDecisions, actionable: true)
+                    decisionRows(confirmationDecisions, opensDetail: true)
                 }
 
                 AtlasSectionHeader("Recorded", detail: "Read-only accountability records remain visible here; confirmation records are not external execution.")
@@ -723,7 +723,7 @@ private struct AtlasInboxView: View {
                         detail: store.decisionReviewRecorded ? "The control-plane handoff is ready for a fresh confirmation challenge." : "Resolved decisions and auditable receipts will appear here."
                     )
                 } else {
-                    decisionRows(recordedDecisions, actionable: false)
+                    decisionRows(recordedDecisions, opensDetail: true)
                 }
             }
             .navigationBarHidden(true)
@@ -736,15 +736,17 @@ private struct AtlasInboxView: View {
     }
 
     @ViewBuilder
-    private func decisionRows(_ decisions: [AtlasDecision], actionable: Bool) -> some View {
+    private func decisionRows(_ decisions: [AtlasDecision], opensDetail: Bool) -> some View {
         ForEach(decisions) { decision in
-            if actionable {
+            if opensDetail {
                 Button { selectedDecision = decision } label: {
                     AtlasInboxDecisionRow(decision: decision, showsNavigation: true)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("atlas.inbox.decision.\(decision.id)")
-                .accessibilityHint("Opens evidence and policy details. Recording a confirmation does not execute an external action.")
+                .accessibilityHint(decision.state.canReview || decision.state.needsConfirmation
+                    ? "Opens evidence and policy details. Recording a confirmation does not execute an external action."
+                    : "Opens a read-only accountability record. No action can be executed from this decision state.")
             } else {
                 AtlasInboxDecisionRow(decision: decision, showsNavigation: false)
             }
