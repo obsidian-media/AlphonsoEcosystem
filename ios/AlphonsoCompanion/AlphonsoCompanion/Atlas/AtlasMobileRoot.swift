@@ -477,6 +477,7 @@ private struct AtlasWorkView: View {
                         AtlasOutcomeRow(outcome: outcome)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("atlas.work.outcome.\(outcome.id)")
                     .accessibilityHint("Opens the verified outcome record and its trace")
                     if outcome.id != outcomes.last?.id { AtlasRule() }
                 }

@@ -63,6 +63,22 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Recorded"].exists)
     }
 
+    func testWorkLibraryOpensVerifiedOutcomeRecord() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.tabBars.buttons["Work"].tap()
+        let segment = app.segmentedControls["atlas.work.segment"]
+        XCTAssertTrue(segment.waitForExistence(timeout: 3))
+        segment.buttons["Library"].tap()
+
+        let outcome = app.buttons["atlas.work.outcome.outcome-research-archive"]
+        XCTAssertTrue(outcome.waitForExistence(timeout: 3))
+        outcome.tap()
+        XCTAssertTrue(app.staticTexts["Outcome record"].waitForExistence(timeout: 3))
+    }
+
     func testTypedDirectionOpensPrefilledWorkPreparation() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
