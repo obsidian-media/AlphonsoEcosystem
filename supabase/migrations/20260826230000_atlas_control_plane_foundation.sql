@@ -103,6 +103,22 @@ alter table public.atlas_decisions enable row level security;
 alter table public.atlas_action_challenges enable row level security;
 alter table public.atlas_audit_receipts enable row level security;
 
+-- Mobile clients consume read-only workspace records. State changes remain reserved
+-- for scoped server-side adapters or validated security-definer RPCs.
+revoke all on table public.atlas_workspaces from anon, authenticated;
+revoke all on table public.atlas_workspace_members from anon, authenticated;
+revoke all on table public.atlas_runs from anon, authenticated;
+revoke all on table public.atlas_decisions from anon, authenticated;
+revoke all on table public.atlas_action_challenges from anon, authenticated;
+revoke all on table public.atlas_audit_receipts from anon, authenticated;
+
+grant select on table public.atlas_workspaces to authenticated;
+grant select on table public.atlas_workspace_members to authenticated;
+grant select on table public.atlas_runs to authenticated;
+grant select on table public.atlas_decisions to authenticated;
+grant select on table public.atlas_action_challenges to authenticated;
+grant select on table public.atlas_audit_receipts to authenticated;
+
 -- This helper is deliberately plpgsql (not SQL) so the planner cannot inline a
 -- self-reference to atlas_workspace_members into a policy evaluation. It runs as
 -- the migration owner outside the caller's RLS context, but remains callable only
