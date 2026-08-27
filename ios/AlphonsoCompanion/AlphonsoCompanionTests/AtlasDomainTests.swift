@@ -357,6 +357,15 @@ final class AtlasDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testStoreDerivesRecordedReviewStateFromLoadedBriefing() async {
+        let store = AtlasWorkspaceStore()
+
+        await store.load()
+
+        XCTAssertTrue(store.decisionReviewRecorded)
+    }
+
+    @MainActor
     func testStoreRecordsDecisionReviewAndUpdatesBriefing() async {
         let store = AtlasWorkspaceStore()
         await store.load()

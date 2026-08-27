@@ -707,6 +707,7 @@ final class AtlasWorkspaceStore: ObservableObject {
             let loadedBriefing = try await repository.loadBriefing(workspaceID: workspaceID)
             briefing = loadedBriefing
             selectedPosture = loadedBriefing.workspace.posture
+            decisionReviewRecorded = hasRecordedReview(in: loadedBriefing)
             syncStatus = .snapshot(freshness: loadedBriefing.freshness, refreshedAt: loadedBriefing.refreshedAt)
         } catch {
             let message = error.localizedDescription
@@ -764,11 +765,15 @@ final class AtlasWorkspaceStore: ObservableObject {
         guard event.workspaceID == workspaceID else { return }
         briefing = event.briefing
         selectedPosture = event.briefing.workspace.posture
-        decisionReviewRecorded = event.briefing.decisions.contains {
-            $0.state == .reviewRecordedPendingConfirmation || $0.state == .confirmationRecorded
-        }
+        decisionReviewRecorded = hasRecordedReview(in: event.briefing)
         errorMessage = nil
         syncStatus = .live(freshness: event.briefing.freshness, refreshedAt: event.briefing.refreshedAt)
+    }
+
+    private func hasRecordedReview(in briefing: AtlasBriefing) -> Bool {
+        briefing.decisions.contains {
+            $0.state == .reviewRecordedPendingConfirmation || $0.state == .confirmationRecorded
+        }
     }
 
     func resetDraftOperation() {
