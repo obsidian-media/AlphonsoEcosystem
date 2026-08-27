@@ -91,9 +91,11 @@ Use an Inbox decision only in the isolated demo workspace. This sequence verifie
 The current UI suite uses stable identifiers for workspace health, Account & Cloud, Audit trail, typed Chat direction, and Create work fields/actions. On macOS, run the full iOS test target and confirm these smoke flows pass:
 
 1. Atlas launches as the default mobile shell with a workspace-health record.
-2. More opens Account & Cloud and Audit trail.
-3. Typed Chat direction opens a prefilled Create work sheet.
-4. The legacy compatibility path can be entered and returned from without changing the default Atlas selection.
+2. Home opens the structured Create work sheet, and typed Chat direction opens the same sheet with a prefilled brief.
+3. Work Library opens a verified outcome record with its trace.
+4. Inbox opens both a review-required decision and a challenge-ready decision route without performing an external action.
+5. More opens Account & Cloud and Audit trail.
+6. The legacy compatibility path can be entered and returned from without changing the default Atlas selection.
 
 ## Completion record
 

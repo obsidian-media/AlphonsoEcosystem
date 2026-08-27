@@ -79,6 +79,24 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Outcome record"].waitForExistence(timeout: 3))
     }
 
+    func testInboxOpensReviewAndChallengeReadyRoutes() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        app.tabBars.buttons["Inbox"].tap()
+        let review = app.buttons["atlas.inbox.decision.decision-release-brief"]
+        XCTAssertTrue(review.waitForExistence(timeout: 3))
+        review.tap()
+        XCTAssertTrue(app.staticTexts["Decision review"].waitForExistence(timeout: 3))
+        app.buttons["Close"].tap()
+
+        let challengeReady = app.buttons["atlas.inbox.decision.decision-partner-brief"]
+        XCTAssertTrue(challengeReady.waitForExistence(timeout: 3))
+        challengeReady.tap()
+        XCTAssertTrue(app.buttons["Request a new confirmation challenge"].waitForExistence(timeout: 3))
+    }
+
     func testTypedDirectionOpensPrefilledWorkPreparation() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]

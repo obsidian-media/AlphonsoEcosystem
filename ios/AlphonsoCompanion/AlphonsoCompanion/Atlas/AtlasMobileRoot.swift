@@ -743,6 +743,7 @@ private struct AtlasInboxView: View {
                     AtlasInboxDecisionRow(decision: decision, showsNavigation: true)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("atlas.inbox.decision.\(decision.id)")
                 .accessibilityHint("Opens evidence and policy details. Recording a confirmation does not execute an external action.")
             } else {
                 AtlasInboxDecisionRow(decision: decision, showsNavigation: false)
