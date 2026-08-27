@@ -457,6 +457,10 @@ struct AtlasDecision: Codable, Equatable, Identifiable {
             state.inboxLabel
         ])
     }
+
+    func isActionableExpired(at referenceDate: Date = .now) -> Bool {
+        (state.canReview || state.needsConfirmation) && expiresAt <= referenceDate
+    }
 }
 
 struct AtlasBriefing: Codable, Equatable {

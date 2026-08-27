@@ -157,6 +157,31 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertTrue(reviewDecision.matchesLocalQuery("   "))
     }
 
+    func testDecisionDetectsOnlyActionableExpiry() async throws {
+        let briefing = try await AtlasFixtureRepository().loadBriefing(workspaceID: "workspace-northstar")
+        let referenceDate = Date(timeIntervalSince1970: 1_000)
+        let reviewDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-release-brief" }))
+        let recordedDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-research-archive" }))
+        let expiredReview = AtlasDecision(
+            id: reviewDecision.id,
+            title: reviewDecision.title,
+            summary: reviewDecision.summary,
+            affectedResource: reviewDecision.affectedResource,
+            executionDetail: reviewDecision.executionDetail,
+            policyCode: reviewDecision.policyCode,
+            policyReason: reviewDecision.policyReason,
+            evidenceSummary: reviewDecision.evidenceSummary,
+            risk: reviewDecision.risk,
+            state: reviewDecision.state,
+            expiresAt: referenceDate.addingTimeInterval(-1),
+            runID: reviewDecision.runID
+        )
+
+        XCTAssertTrue(expiredReview.isActionableExpired(at: referenceDate))
+        XCTAssertFalse(reviewDecision.isActionableExpired(at: referenceDate))
+        XCTAssertFalse(recordedDecision.isActionableExpired(at: referenceDate.addingTimeInterval(10_000_000)))
+    }
+
     func testActionChallengeDetectsExpiryAgainstReferenceDate() {
         let referenceDate = Date(timeIntervalSince1970: 1_000)
         let expired = AtlasActionChallenge(

@@ -1574,7 +1574,19 @@ private struct AtlasDecisionReviewSheet: View {
 
     @ViewBuilder
     private var confirmationControl: some View {
-        if currentDecision.state == .confirmationRecorded {
+        if currentDecision.isActionableExpired() {
+            AtlasStudioBlock(
+                kind: "DECISION EXPIRED",
+                symbol: "clock.badge.exclamationmark",
+                title: "Refresh before reviewing",
+                detail: "This decision deadline has passed. Atlas will not record review, request a challenge, or start local authentication from this stale record.",
+                accent: AtlasTheme.ColorToken.clay
+            )
+            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise") {
+                refreshDecision()
+            }
+            .accessibilityHint("Requests a fresh authoritative workspace briefing. It does not execute work or an external action.")
+        } else if currentDecision.state == .confirmationRecorded {
             AtlasStudioBlock(
                 kind: "CONFIRMATION RECORDED",
                 symbol: "checkmark.seal.fill",
@@ -1643,6 +1655,19 @@ private struct AtlasDecisionReviewSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
         .padding(.top, AtlasTheme.Spacing.md)
         .disabled(isWorking)
+    }
+
+    private func refreshDecision() {
+        localError = nil
+        Task { @MainActor in
+            isWorking = true
+            defer { isWorking = false }
+            await store.load()
+            if let message = store.errorMessage {
+                localErrorTitle = "Workspace refresh did not complete"
+                localError = message
+            }
+        }
     }
 
     private func requestChallenge() {
