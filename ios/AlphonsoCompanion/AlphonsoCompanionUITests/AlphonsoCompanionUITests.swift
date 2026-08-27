@@ -38,6 +38,20 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Audit trail"].waitForExistence(timeout: 3))
     }
 
+    func testHomeCreateWorkOpensStructuredPreparation() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+
+        let createWork = app.buttons["atlas.home.createWork"]
+        XCTAssertTrue(createWork.waitForExistence(timeout: 3))
+        createWork.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["atlas.create.brief"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["atlas.create.outcome"].exists)
+        XCTAssertTrue(app.buttons["atlas.create.prepare"].exists)
+    }
+
     func testInboxGroupsReviewChallengeAndRecordedDecisions() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
