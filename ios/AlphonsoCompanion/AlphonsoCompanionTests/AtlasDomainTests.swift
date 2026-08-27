@@ -142,6 +142,18 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertTrue(outcome.matchesLocalQuery("   "))
     }
 
+    func testDecisionRecordsMatchTypedLocalSearch() async throws {
+        let briefing = try await AtlasFixtureRepository().loadBriefing(workspaceID: "workspace-northstar")
+        let reviewDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-release-summary" }))
+        let recordedDecision = try XCTUnwrap(briefing.decisions.first(where: { $0.id == "decision-archive-access" }))
+
+        XCTAssertTrue(reviewDecision.matchesLocalQuery("P-017"))
+        XCTAssertTrue(recordedDecision.matchesLocalQuery("Research archive"))
+        XCTAssertTrue(recordedDecision.matchesLocalQuery("Confirmation recorded"))
+        XCTAssertFalse(reviewDecision.matchesLocalQuery("unrelated phrase"))
+        XCTAssertTrue(reviewDecision.matchesLocalQuery("   "))
+    }
+
     func testDecisionInboxPresentationStates() {
         XCTAssertTrue(AtlasDecisionState.awaitingReview.canReview)
         XCTAssertEqual(AtlasDecisionState.awaitingReview.inboxLabel, "Needs review")
@@ -152,8 +164,8 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertEqual(AtlasDecisionState.reviewRecordedPendingConfirmation.inboxStatus, .awaitingDecision)
 
         XCTAssertEqual(AtlasDecisionState.confirmationRecorded.inboxLabel, "Confirmation recorded")
-        XCTAssertEqual(AtlasDecisionState.confirmationRecorded.inboxStatus, .completed)
-        XCTAssertEqual(AtlasDecisionState.expired.inboxStatus, .blocked)
+        XCTAssertEqual(AtlasDecisionState.confirmationRecorded.inboxStatus, .delivered)
+        XCTAssertEqual(AtlasDecisionState.expired.inboxStatus, .failed)
     }
 
     func testFixtureRepositoryRejectsUnknownWorkspace() async {

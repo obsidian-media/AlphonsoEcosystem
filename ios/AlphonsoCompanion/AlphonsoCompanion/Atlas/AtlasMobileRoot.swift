@@ -710,6 +710,7 @@ private struct AtlasRunFact: View {
 private struct AtlasInboxView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
     @State private var selectedDecision: AtlasDecision?
+    @State private var query = ""
 
     var body: some View {
         NavigationStack {
@@ -723,9 +724,24 @@ private struct AtlasInboxView: View {
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
+                TextField("Search decisions, policy, or resource", text: $query)
+                    .font(AtlasTheme.Type.body)
+                    .padding(.horizontal, AtlasTheme.Spacing.md)
+                    .padding(.vertical, 10)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("atlas.inbox.search")
+                    .accessibilityHint("Filters the currently loaded decision records on this device")
+
                 AtlasSectionHeader("Needs your judgement", detail: decisionDetail)
                 if reviewDecisions.isEmpty {
-                    AtlasEmptyState(symbol: "checkmark.circle", title: "No decisions are waiting", detail: "Alphonso will surface exceptions, approvals, and assigned follow-ups here.")
+                    AtlasEmptyState(
+                        symbol: "checkmark.circle",
+                        title: query.isEmpty ? "No decisions are waiting" : "No matching decisions",
+                        detail: query.isEmpty ? "Alphonso will surface exceptions, approvals, and assigned follow-ups here." : "Try a decision title, policy, affected resource, or evidence detail from the current workspace briefing."
+                    )
                 } else {
                     decisionRows(reviewDecisions, opensDetail: true)
                 }
@@ -738,9 +754,11 @@ private struct AtlasInboxView: View {
                 AtlasSectionHeader("Recorded", detail: "Read-only accountability records remain visible here; confirmation records are not external execution.")
                 if recordedDecisions.isEmpty {
                     AtlasEmptyState(
-                        symbol: store.decisionReviewRecorded ? "checkmark.seal" : "clock",
-                        title: store.decisionReviewRecorded ? "Review recorded" : "No recorded decisions in this session",
-                        detail: store.decisionReviewRecorded ? "The control-plane handoff is ready for a fresh confirmation challenge." : "Resolved decisions and auditable receipts will appear here."
+                        symbol: query.isEmpty ? (store.decisionReviewRecorded ? "checkmark.seal" : "clock") : "magnifyingglass",
+                        title: query.isEmpty ? (store.decisionReviewRecorded ? "Review recorded" : "No recorded decisions in this session") : "No matching records",
+                        detail: query.isEmpty
+                            ? (store.decisionReviewRecorded ? "The control-plane handoff is ready for a fresh confirmation challenge." : "Resolved decisions and auditable receipts will appear here.")
+                            : "Search the local briefing by decision, policy, affected resource, or evidence detail."
                     )
                 } else {
                     decisionRows(recordedDecisions, opensDetail: true)
@@ -774,16 +792,20 @@ private struct AtlasInboxView: View {
         }
     }
 
+    private var visibleDecisions: [AtlasDecision] {
+        (store.briefing?.decisions ?? []).filter { $0.matchesLocalQuery(query) }
+    }
+
     private var reviewDecisions: [AtlasDecision] {
-        (store.briefing?.decisions ?? []).filter(\.state.canReview)
+        visibleDecisions.filter(\.state.canReview)
     }
 
     private var confirmationDecisions: [AtlasDecision] {
-        (store.briefing?.decisions ?? []).filter(\.state.needsConfirmation)
+        visibleDecisions.filter(\.state.needsConfirmation)
     }
 
     private var recordedDecisions: [AtlasDecision] {
-        (store.briefing?.decisions ?? []).filter { !$0.state.canReview && !$0.state.needsConfirmation }
+        visibleDecisions.filter { !$0.state.canReview && !$0.state.needsConfirmation }
     }
 
     private var decisionDetail: String {

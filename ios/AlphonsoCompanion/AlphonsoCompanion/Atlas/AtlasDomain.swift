@@ -352,8 +352,8 @@ enum AtlasDecisionState: String, Codable, CaseIterable, Equatable {
     var inboxStatus: AtlasRunStatus {
         switch self {
         case .awaitingReview, .reviewRecordedPendingConfirmation: return .awaitingDecision
-        case .confirmationRecorded, .approved: return .completed
-        case .rejected, .expired, .unavailable: return .blocked
+        case .confirmationRecorded, .approved: return .delivered
+        case .rejected, .expired, .unavailable: return .failed
         }
     }
 }
@@ -436,6 +436,19 @@ struct AtlasDecision: Codable, Equatable, Identifiable {
     var expiryLabel: String {
         let relative = expiresAt.formatted(.relative(presentation: .named))
         return "Expires \(relative)"
+    }
+
+    func matchesLocalQuery(_ query: String) -> Bool {
+        AtlasLocalSearch.matches(query, fields: [
+            title,
+            summary,
+            affectedResource,
+            executionDetail,
+            policyCode,
+            policyReason,
+            evidenceSummary,
+            state.inboxLabel
+        ])
     }
 }
 
