@@ -385,6 +385,7 @@ private struct AtlasWorkView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
     let createWork: () -> Void
     @Binding var selectedSegment: Int
+    @State private var query = ""
     @State private var selectedRun: AtlasRun?
     @State private var selectedOutcome: AtlasOutcome?
 
@@ -411,6 +412,17 @@ private struct AtlasWorkView: View {
                 .accessibilityIdentifier("atlas.work.segment")
                 .accessibilityHint("Filters the work runbook")
 
+                TextField("Search work, owner, or trace", text: $query)
+                    .font(AtlasTheme.Type.body)
+                    .padding(.horizontal, AtlasTheme.Spacing.md)
+                    .padding(.vertical, 10)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityIdentifier("atlas.work.search")
+                    .accessibilityHint("Filters the currently loaded runbook and verified outcomes on this device")
+
                 runLedger
 
                 AtlasPrimaryButton(title: "Create work", symbol: "plus", action: createWork)
@@ -432,14 +444,16 @@ private struct AtlasWorkView: View {
 
     private var visibleRuns: [AtlasRun] {
         let runs = store.briefing?.activeRuns ?? []
+        let scopedRuns: [AtlasRun]
         switch selectedSegment {
         case 0:
-            return runs.filter { $0.phase.isActive && $0.phase != .planned }
+            scopedRuns = runs.filter { $0.phase.isActive && $0.phase != .planned }
         case 1:
-            return runs.filter { $0.phase == .planned || $0.phase == .queued }
+            scopedRuns = runs.filter { $0.phase == .planned || $0.phase == .queued }
         default:
-            return []
+            scopedRuns = []
         }
+        return scopedRuns.filter { $0.matchesLocalQuery(query) }
     }
 
     @ViewBuilder
@@ -471,25 +485,29 @@ private struct AtlasWorkView: View {
     private var outcomeLibrary: some View {
         VStack(alignment: .leading, spacing: 0) {
             AtlasSectionHeader("Verified outcomes", detail: "Delivered workspace records with traceable source context.")
-            if let outcomes = store.briefing?.outcomes, !outcomes.isEmpty {
-                ForEach(outcomes) { outcome in
+            if !visibleOutcomes.isEmpty {
+                ForEach(visibleOutcomes) { outcome in
                     Button { selectedOutcome = outcome } label: {
                         AtlasOutcomeRow(outcome: outcome)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("atlas.work.outcome.\(outcome.id)")
                     .accessibilityHint("Opens the verified outcome record and its trace")
-                    if outcome.id != outcomes.last?.id { AtlasRule() }
+                    if outcome.id != visibleOutcomes.last?.id { AtlasRule() }
                 }
             } else {
                 AtlasEmptyState(
                     symbol: "archivebox",
-                    title: "No verified outcomes yet",
-                    detail: "Delivered workspace outcomes will appear here with their trace records."
+                    title: query.isEmpty ? "No verified outcomes yet" : "No matching outcomes",
+                    detail: query.isEmpty ? "Delivered workspace outcomes will appear here with their trace records." : "Try a title, result detail, or trace identifier from the current workspace briefing."
                 )
                 .padding(.top, AtlasTheme.Spacing.sm)
             }
         }
+    }
+
+    private var visibleOutcomes: [AtlasOutcome] {
+        (store.briefing?.outcomes ?? []).filter { $0.matchesLocalQuery(query) }
     }
 
     private var sectionTitle: String {
@@ -505,11 +523,13 @@ private struct AtlasWorkView: View {
     }
 
     private var emptyTitle: String {
-        selectedSegment == 2 ? "No verified outcomes yet" : selectedSegment == 1 ? "No planned work yet" : "No active work"
+        if !query.isEmpty { return "No matching work" }
+        return selectedSegment == 2 ? "No verified outcomes yet" : selectedSegment == 1 ? "No planned work yet" : "No active work"
     }
 
     private var emptyDetail: String {
-        selectedSegment == 2 ? "Delivered workspace outcomes will appear here with their trace records." : selectedSegment == 1 ? "Create a brief or schedule a workflow to build the next run." : "New workspace activity will appear here as it begins."
+        if !query.isEmpty { return "Try a title, owner, run phase, or trace identifier from the current workspace briefing." }
+        return selectedSegment == 2 ? "Delivered workspace outcomes will appear here with their trace records." : selectedSegment == 1 ? "Create a brief or schedule a workflow to build the next run." : "New workspace activity will appear here as it begins."
     }
 }
 

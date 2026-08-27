@@ -243,6 +243,24 @@ struct AtlasOutcome: Codable, Equatable, Identifiable {
     let detail: String
     let completedAt: Date
     let traceID: String
+
+    func matchesLocalQuery(_ query: String) -> Bool {
+        AtlasLocalSearch.matches(query, fields: [title, detail, traceID])
+    }
+}
+
+extension AtlasRun {
+    func matchesLocalQuery(_ query: String) -> Bool {
+        AtlasLocalSearch.matches(query, fields: [title, summary, owner, phaseLabel, traceID])
+    }
+}
+
+private enum AtlasLocalSearch {
+    static func matches(_ query: String, fields: [String]) -> Bool {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty else { return true }
+        return fields.contains { $0.localizedCaseInsensitiveContains(needle) }
+    }
 }
 
 // MARK: - Decisions

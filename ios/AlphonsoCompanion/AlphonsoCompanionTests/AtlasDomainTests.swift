@@ -130,6 +130,18 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertEqual(briefing.nextDecision?.state, .awaitingReview)
     }
 
+    func testWorkRecordsMatchTypedLocalSearch() async throws {
+        let briefing = try await AtlasFixtureRepository().loadBriefing(workspaceID: "workspace-northstar")
+        let researchRun = try XCTUnwrap(briefing.activeRuns.first(where: { $0.id == "run-research-synthesis" }))
+        let outcome = try XCTUnwrap(briefing.outcomes.first)
+
+        XCTAssertTrue(researchRun.matchesLocalQuery("Hector"))
+        XCTAssertTrue(researchRun.matchesLocalQuery("RUN/RS-204"))
+        XCTAssertTrue(outcome.matchesLocalQuery("Nine verified findings"))
+        XCTAssertFalse(researchRun.matchesLocalQuery("unrelated phrase"))
+        XCTAssertTrue(outcome.matchesLocalQuery("   "))
+    }
+
     func testDecisionInboxPresentationStates() {
         XCTAssertTrue(AtlasDecisionState.awaitingReview.canReview)
         XCTAssertEqual(AtlasDecisionState.awaitingReview.inboxLabel, "Needs review")
