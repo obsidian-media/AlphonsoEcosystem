@@ -424,6 +424,18 @@ struct AtlasAuditReceipt: Codable, Equatable, Identifiable {
     let occurredAt: Date
 
     var isNonExecuting: Bool { executionStatus == "not_executed" }
+
+    func matchesLocalQuery(_ query: String) -> Bool {
+        AtlasLocalSearch.matches(query, fields: [
+            eventType.label,
+            eventType.detail,
+            decisionID ?? "",
+            challengeID ?? "",
+            deviceID ?? "",
+            executionStatus,
+            correlationID
+        ])
+    }
 }
 
 struct AtlasDecision: Codable, Equatable, Identifiable {

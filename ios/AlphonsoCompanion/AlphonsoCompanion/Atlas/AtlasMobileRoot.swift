@@ -1241,6 +1241,7 @@ private struct AtlasMoreRow: View {
 private struct AtlasAuditTrailView: View {
     @EnvironmentObject private var store: AtlasWorkspaceStore
     @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
 
     var body: some View {
         NavigationStack {
@@ -1253,6 +1254,14 @@ private struct AtlasAuditTrailView: View {
                         .font(AtlasTheme.Type.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
+
+                AtlasLocalSearchField(
+                    prompt: "Search event, decision, or trace",
+                    accessibilityLabel: "Search accountability records",
+                    accessibilityHint: "Filters the currently loaded read-only accountability records on this device",
+                    identifier: "atlas.audit.search",
+                    query: $query
+                )
 
                 AtlasSectionHeader("Accountability record", detail: summary)
                 content
@@ -1287,20 +1296,34 @@ private struct AtlasAuditTrailView: View {
             AtlasEmptyState(symbol: "exclamationmark.shield", title: "Audit trail unavailable", detail: error)
         } else if store.auditReceipts.isEmpty {
             AtlasEmptyState(symbol: "checkmark.seal", title: "No accountability records yet", detail: "Reviews, confirmation challenges, and recorded intent will appear here as work reaches a policy boundary.")
+        } else if filteredReceipts.isEmpty {
+            AtlasEmptyState(
+                symbol: "magnifyingglass",
+                title: "No matching accountability records",
+                detail: "Try an event, decision identifier, device, or correlation trace from the current loaded record."
+            )
         } else {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(store.auditReceipts) { receipt in
+                ForEach(filteredReceipts) { receipt in
                     AtlasAuditReceiptRow(receipt: receipt)
-                    if receipt.id != store.auditReceipts.last?.id { AtlasRule() }
+                    if receipt.id != filteredReceipts.last?.id { AtlasRule() }
                 }
             }
         }
     }
 
+    private var filteredReceipts: [AtlasAuditReceipt] {
+        store.auditReceipts.filter { $0.matchesLocalQuery(query) }
+    }
+
     private var summary: String {
-        let count = store.auditReceipts.count
+        let count = filteredReceipts.count
+        let loadedCount = store.auditReceipts.count
+        let countLabel = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "\(count) record\(count == 1 ? "" : "s")"
+            : "\(count) of \(loadedCount) records"
         let freshness = store.auditReceiptsRefreshedAt.map { "checked \($0.formatted(.relative(presentation: .named)))" } ?? "not refreshed"
-        return "\(count) record\(count == 1 ? "" : "s") · \(freshness) · read only · no action executed"
+        return "\(countLabel) · \(freshness) · read only · no action executed"
     }
 }
 
@@ -1333,6 +1356,7 @@ private struct AtlasAuditReceiptRow: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityIdentifier("atlas.audit.receipt.\(receipt.id)")
         .accessibilityElement(children: .combine)
     }
 }

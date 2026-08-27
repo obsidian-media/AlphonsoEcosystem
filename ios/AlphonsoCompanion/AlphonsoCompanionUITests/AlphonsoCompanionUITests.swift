@@ -36,6 +36,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(audit.waitForExistence(timeout: 3))
         audit.tap()
         XCTAssertTrue(app.staticTexts["Audit trail"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.textFields["atlas.audit.search"].waitForExistence(timeout: 3))
     }
 
     func testHomeCreateWorkOpensStructuredPreparation() throws {

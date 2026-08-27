@@ -194,6 +194,26 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertTrue(reviewDecision.matchesLocalQuery("   "))
     }
 
+    func testAuditReceiptsMatchTypedLocalSearch() {
+        let receipt = AtlasAuditReceipt(
+            id: "receipt-123",
+            workspaceID: "workspace-northstar",
+            decisionID: "decision-release-brief",
+            challengeID: "challenge-456",
+            deviceID: "device-atlas-001",
+            eventType: .challengeIssued,
+            executionStatus: "not_executed",
+            correlationID: "AUD/CH-204",
+            occurredAt: Date(timeIntervalSince1970: 1_000)
+        )
+
+        XCTAssertTrue(receipt.matchesLocalQuery("Challenge issued"))
+        XCTAssertTrue(receipt.matchesLocalQuery("decision-release device-atlas"))
+        XCTAssertTrue(receipt.matchesLocalQuery("AUD/CH-204"))
+        XCTAssertFalse(receipt.matchesLocalQuery("unrelated phrase"))
+        XCTAssertTrue(receipt.matchesLocalQuery("   "))
+    }
+
     func testDecisionDetectsOnlyActionableExpiry() async throws {
         let briefing = try await AtlasFixtureRepository().loadBriefing(workspaceID: "workspace-northstar")
         let referenceDate = Date(timeIntervalSince1970: 1_000)
