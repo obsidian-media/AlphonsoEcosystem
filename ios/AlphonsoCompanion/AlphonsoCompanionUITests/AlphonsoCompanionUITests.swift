@@ -166,12 +166,15 @@ final class AlphonsoCompanionUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Chat"].tap()
-        let direction = app.descendants(matching: .any)["atlas.chat.direction"]
+        let direction = app.textFields["atlas.chat.direction"]
         XCTAssertTrue(direction.waitForExistence(timeout: 3))
-        direction.tap()
-        direction.typeText("Prepare a mobile release checklist")
+        XCTAssertEqual(direction.label, "Typed direction for a work brief")
 
         let prepare = app.buttons["atlas.chat.prepare"]
+        XCTAssertFalse(prepare.isEnabled)
+
+        direction.tap()
+        direction.typeText("Prepare a mobile release checklist")
         XCTAssertTrue(prepare.isEnabled)
         prepare.tap()
 

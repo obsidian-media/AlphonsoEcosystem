@@ -1002,6 +1002,7 @@ private struct AtlasChatStudioView: View {
                 .font(AtlasTheme.Type.section)
                 .foregroundStyle(AtlasTheme.ColorToken.moss)
                 .frame(minHeight: 44, alignment: .leading)
+                .accessibilityHint("Opens a prefilled work-preparation form. It does not execute a task.")
         }
     }
 
@@ -1021,6 +1022,7 @@ private struct AtlasChatStudioView: View {
                     .background(AtlasTheme.ColorToken.sheet)
                     .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
                     .accessibilityLabel("Typed direction for a work brief")
+                    .accessibilityHint("Describe the work you want to prepare. This creates a draft only and does not execute a task.")
                     .accessibilityIdentifier("atlas.chat.direction")
 
                 Button {
@@ -1034,6 +1036,9 @@ private struct AtlasChatStudioView: View {
                 }
                 .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityLabel("Turn typed direction into a work brief")
+                .accessibilityHint(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "Add typed direction before preparing a work brief."
+                    : "Opens a prefilled work-preparation form. It does not execute a task.")
                 .accessibilityIdentifier("atlas.chat.prepare")
             }
             Text("Voice capture, file intake, and generated suggestions will appear only when their authenticated mobile contracts are available.")
