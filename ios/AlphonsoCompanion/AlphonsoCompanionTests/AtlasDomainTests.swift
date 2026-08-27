@@ -252,6 +252,17 @@ final class AtlasDomainTests: XCTestCase {
     }
 
     @MainActor
+    func testStoreRecordsSuccessfulAuditRefreshTime() async {
+        let store = AtlasWorkspaceStore()
+
+        await store.loadAuditReceipts()
+
+        XCTAssertTrue(store.auditReceipts.isEmpty)
+        XCTAssertNil(store.auditReceiptError)
+        XCTAssertNotNil(store.auditReceiptsRefreshedAt)
+    }
+
+    @MainActor
     func testStoreExposesChallengeFailureForReviewRecovery() async {
         let store = AtlasWorkspaceStore(repository: DecisionFailureRepository())
         await store.load()

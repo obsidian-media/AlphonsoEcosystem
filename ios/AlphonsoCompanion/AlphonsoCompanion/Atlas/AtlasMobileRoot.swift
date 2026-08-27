@@ -1168,9 +1168,14 @@ private struct AtlasAuditTrailView: View {
                     Button("Close", action: { dismiss() })
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Refresh") {
+                    Button {
                         Task { @MainActor in await store.loadAuditReceipts() }
+                    } label: {
+                        Label(store.isLoadingAuditReceipts ? "Refreshing…" : "Refresh", systemImage: store.isLoadingAuditReceipts ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
                     }
+                    .disabled(store.isLoadingAuditReceipts)
+                    .accessibilityIdentifier("atlas.audit.refresh")
+                    .accessibilityHint("Refreshes read-only accountability records only. It does not execute an action.")
                 }
             }
             .task { await store.loadAuditReceipts() }
@@ -1199,7 +1204,8 @@ private struct AtlasAuditTrailView: View {
 
     private var summary: String {
         let count = store.auditReceipts.count
-        return "\(count) record\(count == 1 ? "" : "s") · read only · no action executed"
+        let freshness = store.auditReceiptsRefreshedAt.map { "checked \($0.formatted(.relative(presentation: .named)))" } ?? "not refreshed"
+        return "\(count) record\(count == 1 ? "" : "s") · \(freshness) · read only · no action executed"
     }
 }
 

@@ -649,6 +649,7 @@ final class AtlasWorkspaceStore: ObservableObject {
     @Published private(set) var confirmationReceipt: AtlasDecisionConfirmationReceipt?
     @Published private(set) var draftOperation: AtlasDraftOperation = .idle
     @Published private(set) var auditReceipts: [AtlasAuditReceipt] = []
+    @Published private(set) var auditReceiptsRefreshedAt: Date?
     @Published private(set) var isLoadingAuditReceipts = false
     @Published private(set) var auditReceiptError: String?
     @Published var selectedPosture: AtlasExecutionPosture = .cloud
@@ -693,6 +694,7 @@ final class AtlasWorkspaceStore: ObservableObject {
         defer { isLoadingAuditReceipts = false }
         do {
             auditReceipts = try await repository.loadAuditReceipts(workspaceID: workspaceID)
+            auditReceiptsRefreshedAt = Date()
         } catch {
             auditReceiptError = error.localizedDescription
         }
