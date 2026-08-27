@@ -168,10 +168,10 @@ private struct AtlasHomeView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("ALPHONSO / FIELD NOTE")
-                        .font(AtlasTheme.Type.proof)
+                        .font(AtlasTheme.Typography.proof)
                         .tracking(1)
                     Text(store.briefing?.workspace.name ?? "Loading workspace")
-                        .font(AtlasTheme.Type.section)
+                        .font(AtlasTheme.Typography.section)
                 }
                 Spacer()
                 AtlasPostureBadge(store.selectedPosture, freshness: store.briefing?.freshness.label ?? "Loading")
@@ -198,10 +198,10 @@ private struct AtlasHomeView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(status.title)
-                    .font(AtlasTheme.Type.section)
+                    .font(AtlasTheme.Typography.section)
                     .foregroundStyle(AtlasTheme.ColorToken.ink)
                 Text(status.detail)
-                    .font(AtlasTheme.Type.metadata)
+                    .font(AtlasTheme.Typography.metadata)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -212,7 +212,7 @@ private struct AtlasHomeView: View {
                 Button("Refresh") {
                     Task { @MainActor in await store.load() }
                 }
-                .font(AtlasTheme.Type.section)
+                .font(AtlasTheme.Typography.section)
                 .foregroundStyle(AtlasTheme.ColorToken.moss)
                 .frame(minHeight: 44)
                 .padding(.horizontal, AtlasTheme.Spacing.xs)
@@ -240,10 +240,10 @@ private struct AtlasHomeView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
             Text("Today")
-                .font(AtlasTheme.Type.display)
+                .font(AtlasTheme.Typography.display)
                 .foregroundStyle(AtlasTheme.ColorToken.ink)
             Text(headerDetail)
-                .font(AtlasTheme.Type.body)
+                .font(AtlasTheme.Typography.body)
                 .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
         }
         .padding(.top, AtlasTheme.Spacing.xl)
@@ -267,9 +267,9 @@ private struct AtlasHomeView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(decision.title)
-                                    .font(AtlasTheme.Type.title)
+                                    .font(AtlasTheme.Typography.title)
                                 Text(decision.summary)
-                                    .font(AtlasTheme.Type.body)
+                                    .font(AtlasTheme.Typography.body)
                                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                             }
                             Spacer(minLength: AtlasTheme.Spacing.sm)
@@ -281,7 +281,7 @@ private struct AtlasHomeView: View {
                             AtlasStatusLabel(.awaitingDecision)
                             Spacer()
                             Text("POLICY / \(decision.policyCode)")
-                                .font(AtlasTheme.Type.proof)
+                                .font(AtlasTheme.Typography.proof)
                                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                         }
                     }
@@ -342,7 +342,7 @@ private struct AtlasHomeView: View {
             AtlasPrimaryButton(title: "Create work", symbol: "plus", action: createWork)
                 .accessibilityIdentifier("atlas.home.createWork")
             Text("A typed direction begins a new structured work brief.")
-                .font(AtlasTheme.Type.metadata)
+                .font(AtlasTheme.Typography.metadata)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
         }
         .padding(.top, AtlasTheme.Spacing.lg)
@@ -359,14 +359,14 @@ private struct AtlasHomeOutcomeRow: View {
                 .foregroundStyle(AtlasTheme.ColorToken.moss)
             VStack(alignment: .leading, spacing: 4) {
                 Text(outcome.title)
-                    .font(AtlasTheme.Type.title)
+                    .font(AtlasTheme.Typography.title)
                     .foregroundStyle(AtlasTheme.ColorToken.ink)
                 Text(outcome.detail)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("OUTCOME · \(outcome.traceID)")
-                    .font(AtlasTheme.Type.proof)
+                    .font(AtlasTheme.Typography.proof)
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
             }
             Spacer(minLength: AtlasTheme.Spacing.xs)
@@ -395,10 +395,10 @@ private struct AtlasWorkView: View {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                     AtlasPostureBadge(store.selectedPosture, freshness: store.briefing?.freshness.label ?? "Loading")
                     Text("Work")
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                     Text("A runbook for every outcome—plan, proof, decisions, and delivery in one record.")
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
@@ -540,7 +540,7 @@ private struct AtlasLocalSearchField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xxs) {
             Text(accessibilityLabel.uppercased())
-                .font(AtlasTheme.Type.proof)
+                .font(AtlasTheme.Typography.proof)
                 .tracking(0.8)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                 .accessibilityAddTraits(.isHeader)
@@ -553,7 +553,7 @@ private struct AtlasLocalSearchField: View {
                     .accessibilityHidden(true)
 
                 TextField(prompt, text: $query)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .accessibilityLabel(accessibilityLabel)
@@ -594,14 +594,14 @@ private struct AtlasOutcomeRow: View {
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 4) {
                 Text(outcome.title)
-                    .font(AtlasTheme.Type.title)
+                    .font(AtlasTheme.Typography.title)
                     .foregroundStyle(AtlasTheme.ColorToken.ink)
                 Text(outcome.detail)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("COMPLETED \(outcome.completedAt.formatted(.relative(presentation: .named)).uppercased()) · \(outcome.traceID)")
-                    .font(AtlasTheme.Type.proof)
+                    .font(AtlasTheme.Typography.proof)
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
             }
             Spacer(minLength: AtlasTheme.Spacing.xs)
@@ -625,11 +625,11 @@ private struct AtlasOutcomeDetailSheet: View {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                     AtlasPostureBadge(posture, freshness: "Verified outcome")
                     Text("Outcome record")
-                        .font(AtlasTheme.Type.proof)
+                        .font(AtlasTheme.Typography.proof)
                         .tracking(1.1)
                         .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                     Text(outcome.title)
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                 }
 
@@ -643,7 +643,7 @@ private struct AtlasOutcomeDetailSheet: View {
 
                 AtlasSectionHeader("Accountability")
                 Text("This outcome records a verified workspace result. It is not by itself an authorization, execution command, or final external-action receipt.")
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -669,11 +669,11 @@ private struct AtlasRunDetailSheet: View {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                     AtlasPostureBadge(run.posture, freshness: run.timestampLabel)
                     Text("Work record")
-                        .font(AtlasTheme.Type.proof)
+                        .font(AtlasTheme.Typography.proof)
                         .tracking(1.1)
                         .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                     Text(run.title)
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                     AtlasStatusLabel(run.status)
                 }
@@ -688,7 +688,7 @@ private struct AtlasRunDetailSheet: View {
 
                 AtlasSectionHeader("Next accountable step")
                 Text(run.nextAction)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(AtlasTheme.Spacing.md)
@@ -746,11 +746,11 @@ private struct AtlasRunFact: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased())
-                .font(AtlasTheme.Type.proof)
+                .font(AtlasTheme.Typography.proof)
                 .tracking(0.8)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
             Text(value)
-                .font(monospaced ? AtlasTheme.Type.metadata.monospaced() : AtlasTheme.Type.body)
+                .font(monospaced ? AtlasTheme.Typography.metadata.monospaced() : AtlasTheme.Typography.body)
                 .foregroundStyle(AtlasTheme.ColorToken.ink)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -767,10 +767,10 @@ private struct AtlasInboxView: View {
             AtlasPage {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
                     Text("Inbox")
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                     Text("A decision desk for approvals, exceptions, and assignments that require your judgement.")
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
@@ -886,13 +886,13 @@ private struct AtlasInboxDecisionRow: View {
                 .foregroundStyle(decision.risk == .high ? AtlasTheme.ColorToken.clay : AtlasTheme.ColorToken.amber)
             VStack(alignment: .leading, spacing: 6) {
                 Text(decision.title)
-                    .font(AtlasTheme.Type.title)
+                    .font(AtlasTheme.Typography.title)
                     .foregroundStyle(AtlasTheme.ColorToken.ink)
                 Text("\(decision.affectedResource) · \(decision.expiryLabel)")
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 Text(decision.state.inboxDetail)
-                    .font(AtlasTheme.Type.metadata)
+                    .font(AtlasTheme.Typography.metadata)
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                     .fixedSize(horizontal: false, vertical: true)
                 AtlasStatusLabel(decision.state.inboxStatus)
@@ -904,7 +904,7 @@ private struct AtlasInboxDecisionRow: View {
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
             } else {
                 Text(decision.state.inboxLabel.uppercased())
-                    .font(AtlasTheme.Type.proof)
+                    .font(AtlasTheme.Typography.proof)
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
             }
         }
@@ -948,15 +948,15 @@ private struct AtlasChatStudioView: View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
             HStack {
                 Text("Chat")
-                    .font(AtlasTheme.Type.display)
+                    .font(AtlasTheme.Typography.display)
                 Spacer()
                 AtlasPostureBadge(store.selectedPosture, freshness: store.briefing?.freshness.label ?? "Loading")
             }
             Text(store.briefing?.workspace.name ?? "Preparing workspace context")
-                .font(AtlasTheme.Type.section)
+                .font(AtlasTheme.Typography.section)
                 .foregroundStyle(AtlasTheme.ColorToken.moss)
             Text("A working studio. Direction, proof, and outcomes stay connected to the same typed run record.")
-                .font(AtlasTheme.Type.body)
+                .font(AtlasTheme.Typography.body)
                 .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
         }
         .foregroundStyle(AtlasTheme.ColorToken.ink)
@@ -999,7 +999,7 @@ private struct AtlasChatStudioView: View {
             Button("Convert this into a work brief") {
                 createWork(workBriefSeed)
             }
-                .font(AtlasTheme.Type.section)
+                .font(AtlasTheme.Typography.section)
                 .foregroundStyle(AtlasTheme.ColorToken.moss)
                 .frame(minHeight: 44, alignment: .leading)
                 .accessibilityHint("Opens a prefilled work-preparation form. It does not execute a task.")
@@ -1009,13 +1009,13 @@ private struct AtlasChatStudioView: View {
     private var composer: some View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
             Text("TYPED DIRECTION")
-                .font(AtlasTheme.Type.proof)
+                .font(AtlasTheme.Typography.proof)
                 .tracking(1)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
 
             HStack(alignment: .bottom, spacing: AtlasTheme.Spacing.sm) {
                 TextField("State the work you want to prepare…", text: $input, axis: .vertical)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .lineLimit(1...4)
                     .padding(.horizontal, AtlasTheme.Spacing.sm)
                     .padding(.vertical, 10)
@@ -1042,7 +1042,7 @@ private struct AtlasChatStudioView: View {
                 .accessibilityIdentifier("atlas.chat.prepare")
             }
             Text("Voice capture, file intake, and generated suggestions will appear only when their authenticated mobile contracts are available.")
-                .font(AtlasTheme.Type.metadata)
+                .font(AtlasTheme.Typography.metadata)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -1063,10 +1063,10 @@ private struct AtlasMoreView: View {
             AtlasPage {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
                     Text("Atlas")
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                     Text("The connected Alphonso ecosystem, arranged around responsibility and trust.")
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
@@ -1094,12 +1094,12 @@ private struct AtlasMoreView: View {
                 AtlasSectionHeader("Migration")
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                     Text("Legacy companion")
-                        .font(AtlasTheme.Type.title)
+                        .font(AtlasTheme.Typography.title)
                     Text("The existing local companion remains available while the full-mobile control plane is introduced.")
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     Button("Open legacy companion", action: openLegacyCompanion)
-                        .font(AtlasTheme.Type.section)
+                        .font(AtlasTheme.Typography.section)
                         .foregroundStyle(AtlasTheme.ColorToken.moss)
                 }
                 .padding(.vertical, AtlasTheme.Spacing.md)
@@ -1119,10 +1119,10 @@ private struct AtlasAccountCloudView: View {
             AtlasPage {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                     Text("Account & Cloud")
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                     Text("A clear view of this device’s Atlas connection. Credentials and device identifiers remain private to the secure system boundary.")
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
@@ -1138,7 +1138,7 @@ private struct AtlasAccountCloudView: View {
 
                 AtlasSectionHeader("Recovery note")
                 Text("This surface can reconnect the existing authenticated session and device enrollment. It does not replace the dedicated Atlas sign-in system still required for production rollout.")
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1160,10 +1160,10 @@ private struct AtlasAccountCloudView: View {
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xxs) {
                 Text(status.title)
-                    .font(AtlasTheme.Type.title)
+                    .font(AtlasTheme.Typography.title)
                     .foregroundStyle(AtlasTheme.ColorToken.ink)
                 Text(status.detail)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1229,10 +1229,10 @@ private struct AtlasMoreRow: View {
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(AtlasTheme.Type.title)
+                    .font(AtlasTheme.Typography.title)
                     .foregroundStyle(AtlasTheme.ColorToken.ink)
                 Text(detail)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
             }
             Spacer()
@@ -1242,7 +1242,7 @@ private struct AtlasMoreRow: View {
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
             } else {
                 Text("PLANNED")
-                    .font(AtlasTheme.Type.proof)
+                    .font(AtlasTheme.Typography.proof)
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
             }
         }
@@ -1261,10 +1261,10 @@ private struct AtlasAuditTrailView: View {
             AtlasPage {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
                     Text("Audit trail")
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                     Text("A read-only accountability record for reviews, challenges, and confirmations. Atlas records intent here; it does not execute an action.")
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
@@ -1351,22 +1351,22 @@ private struct AtlasAuditReceiptRow: View {
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 5) {
                 Text(receipt.eventType.label)
-                    .font(AtlasTheme.Type.title)
+                    .font(AtlasTheme.Typography.title)
                     .foregroundStyle(AtlasTheme.ColorToken.ink)
                 Text(receipt.eventType.detail)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 Text(receipt.evidenceLabel)
-                    .font(AtlasTheme.Type.proof.monospaced())
+                    .font(AtlasTheme.Typography.proof.monospaced())
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: AtlasTheme.Spacing.sm) {
                     Text("NO ACTION EXECUTED")
-                        .font(AtlasTheme.Type.proof)
+                        .font(AtlasTheme.Typography.proof)
                         .tracking(0.7)
                         .foregroundStyle(AtlasTheme.ColorToken.moss)
                     Text(receipt.occurredAt.formatted(.relative(presentation: .named)).uppercased())
-                        .font(AtlasTheme.Type.proof)
+                        .font(AtlasTheme.Typography.proof)
                         .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                 }
             }
@@ -1388,14 +1388,14 @@ private struct AtlasStudioBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
             Label(kind, systemImage: symbol)
-                .font(AtlasTheme.Type.proof)
+                .font(AtlasTheme.Typography.proof)
                 .tracking(0.8)
                 .foregroundStyle(accent)
             Text(title)
-                .font(AtlasTheme.Type.title)
+                .font(AtlasTheme.Typography.title)
                 .foregroundStyle(AtlasTheme.ColorToken.ink)
             Text(detail)
-                .font(AtlasTheme.Type.body)
+                .font(AtlasTheme.Typography.body)
                 .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
         }
         .padding(AtlasTheme.Spacing.lg)
@@ -1438,16 +1438,16 @@ private struct AtlasCreateWorkSheet: View {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                     AtlasPostureBadge(posture, freshness: posture.detail)
                     Text("Create work")
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.ink)
                     Text("Start with intent. Alphonso will make the plan, execution location, and approval conditions explicit before work begins.")
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                 }
 
                 AtlasSectionHeader("Brief")
                 TextField("What needs to happen?", text: $brief, axis: .vertical)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .accessibilityLabel("Brief")
                     .accessibilityHint("Required. Describe what needs to happen before preparing work.")
                     .accessibilityIdentifier("atlas.create.brief")
@@ -1458,7 +1458,7 @@ private struct AtlasCreateWorkSheet: View {
 
                 AtlasSectionHeader("Desired outcome")
                 TextField("What would a useful result look like?", text: $outcome, axis: .vertical)
-                    .font(AtlasTheme.Type.body)
+                    .font(AtlasTheme.Typography.body)
                     .accessibilityLabel("Desired outcome")
                     .accessibilityHint("Optional. Describe the useful result you expect from prepared work.")
                     .accessibilityIdentifier("atlas.create.outcome")
@@ -1573,7 +1573,7 @@ private struct AtlasDecisionReviewSheet: View {
                 VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
                     AtlasSectionHeader("Decision review", detail: "Review, challenge, and confirmation are separate accountability steps.", focus: true)
                     Text(currentDecision.title)
-                        .font(AtlasTheme.Type.display)
+                        .font(AtlasTheme.Typography.display)
                         .foregroundStyle(AtlasTheme.ColorToken.focusInk)
                     AtlasStatusLabel(currentDecision.state.inboxStatus, focus: true)
                     AtlasRule(focus: true)
@@ -1586,7 +1586,7 @@ private struct AtlasDecisionReviewSheet: View {
 
                     AtlasSectionHeader("Evidence", detail: "Review the record before requesting a confirmation challenge.", focus: true)
                     Text(currentDecision.evidenceSummary)
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.focusMutedInk)
 
                     confirmationControl
@@ -1741,7 +1741,7 @@ private struct AtlasDecisionReviewSheet: View {
     ) -> some View {
         Button(action: action) {
             Label(isWorking ? "Working…" : title, systemImage: isWorking ? "clock" : symbol)
-                .font(AtlasTheme.Type.section)
+                .font(AtlasTheme.Typography.section)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, AtlasTheme.Spacing.md)
         }
@@ -1822,11 +1822,11 @@ private struct AtlasDecisionFact: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased())
-                .font(AtlasTheme.Type.proof)
+                .font(AtlasTheme.Typography.proof)
                 .tracking(0.8)
                 .foregroundStyle(AtlasTheme.ColorToken.focusMutedInk)
             Text(value)
-                .font(AtlasTheme.Type.body)
+                .font(AtlasTheme.Typography.body)
                 .foregroundStyle(AtlasTheme.ColorToken.focusInk)
         }
     }

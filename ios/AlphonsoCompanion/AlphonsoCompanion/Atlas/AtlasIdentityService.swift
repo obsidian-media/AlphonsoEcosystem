@@ -106,7 +106,6 @@ struct AtlasEnrollmentClient {
     private static func serverMessage(_ data: Data) -> String {
         struct ErrorEnvelope: Decodable { let detail: String? }
         if let detail = try? JSONDecoder().decode(ErrorEnvelope.self, from: data).detail,
-           let detail,
            !detail.isEmpty {
             return detail
         }

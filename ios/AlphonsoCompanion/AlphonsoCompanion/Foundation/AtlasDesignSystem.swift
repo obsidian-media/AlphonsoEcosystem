@@ -38,7 +38,7 @@ enum AtlasTheme {
         static let focalSheet: CGFloat = 24
     }
 
-    enum Type {
+    enum Typography {
         static let display = Font.system(.largeTitle, design: .serif).weight(.semibold)
         static let title = Font.system(.title3, design: .default).weight(.semibold)
         static let section = Font.subheadline.weight(.semibold)
@@ -185,12 +185,12 @@ struct AtlasSectionHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xxs) {
             Text(title.uppercased())
-                .font(AtlasTheme.Type.proof)
+                .font(AtlasTheme.Typography.proof)
                 .tracking(1.15)
                 .foregroundStyle(focus ? AtlasTheme.ColorToken.focusMutedInk : AtlasTheme.ColorToken.mutedInk)
             if let detail {
                 Text(detail)
-                    .font(AtlasTheme.Type.metadata)
+                    .font(AtlasTheme.Typography.metadata)
                     .foregroundStyle(focus ? AtlasTheme.ColorToken.focusMutedInk : AtlasTheme.ColorToken.quietInk)
             }
         }
@@ -217,7 +217,7 @@ struct AtlasPostureBadge: View {
             Text("·")
             Text(freshness)
         }
-        .font(AtlasTheme.Type.metadata.weight(.semibold))
+        .font(AtlasTheme.Typography.metadata.weight(.semibold))
         .foregroundStyle(focus ? AtlasTheme.ColorToken.focusInk : posture.color)
         .padding(.horizontal, AtlasTheme.Spacing.sm)
         .padding(.vertical, 7)
@@ -238,7 +238,7 @@ struct AtlasStatusLabel: View {
 
     var body: some View {
         Label(status.rawValue, systemImage: status.symbol)
-            .font(AtlasTheme.Type.metadata.weight(.semibold))
+            .font(AtlasTheme.Typography.metadata.weight(.semibold))
             .foregroundStyle(focus ? AtlasTheme.ColorToken.focusInk : status.color)
             .accessibilityLabel("Status: \(status.rawValue)")
     }
@@ -252,7 +252,7 @@ struct AtlasPrimaryButton: View {
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: symbol)
-                .font(AtlasTheme.Type.section)
+                .font(AtlasTheme.Typography.section)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, AtlasTheme.Spacing.md)
         }
@@ -288,21 +288,21 @@ struct AtlasLedgerRow: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(title)
-                            .font(AtlasTheme.Type.title)
+                            .font(AtlasTheme.Typography.title)
                             .foregroundStyle(AtlasTheme.ColorToken.ink)
                             .multilineTextAlignment(.leading)
                         Spacer(minLength: AtlasTheme.Spacing.sm)
                         AtlasStatusLabel(status)
                     }
                     Text(detail)
-                        .font(AtlasTheme.Type.body)
+                        .font(AtlasTheme.Typography.body)
                         .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
                         .multilineTextAlignment(.leading)
                     HStack(spacing: AtlasTheme.Spacing.xs) {
                         Text(stamp)
-                            .font(AtlasTheme.Type.proof)
+                            .font(AtlasTheme.Typography.proof)
                         Label(posture.rawValue, systemImage: posture.symbol)
-                            .font(AtlasTheme.Type.metadata.weight(.semibold))
+                            .font(AtlasTheme.Typography.metadata.weight(.semibold))
                     }
                     .foregroundStyle(AtlasTheme.ColorToken.quietInk)
                 }
@@ -325,10 +325,10 @@ struct AtlasEmptyState: View {
                 .font(.title2)
                 .foregroundStyle(AtlasTheme.ColorToken.moss)
             Text(title)
-                .font(AtlasTheme.Type.title)
+                .font(AtlasTheme.Typography.title)
                 .foregroundStyle(AtlasTheme.ColorToken.ink)
             Text(detail)
-                .font(AtlasTheme.Type.body)
+                .font(AtlasTheme.Typography.body)
                 .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
