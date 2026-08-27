@@ -1443,6 +1443,8 @@ private struct AtlasCreateWorkSheet: View {
                 AtlasSectionHeader("Brief")
                 TextField("What needs to happen?", text: $brief, axis: .vertical)
                     .font(AtlasTheme.Type.body)
+                    .accessibilityLabel("Brief")
+                    .accessibilityHint("Required. Describe what needs to happen before preparing work.")
                     .accessibilityIdentifier("atlas.create.brief")
                     .lineLimit(3...8)
                     .padding(AtlasTheme.Spacing.md)
@@ -1452,6 +1454,8 @@ private struct AtlasCreateWorkSheet: View {
                 AtlasSectionHeader("Desired outcome")
                 TextField("What would a useful result look like?", text: $outcome, axis: .vertical)
                     .font(AtlasTheme.Type.body)
+                    .accessibilityLabel("Desired outcome")
+                    .accessibilityHint("Optional. Describe the useful result you expect from prepared work.")
                     .accessibilityIdentifier("atlas.create.outcome")
                     .lineLimit(2...6)
                     .padding(AtlasTheme.Spacing.md)
@@ -1528,6 +1532,9 @@ private struct AtlasCreateWorkSheet: View {
     private func prepareButton(title: String, symbol: String) -> some View {
         AtlasPrimaryButton(title: title, symbol: symbol, action: prepareWork)
             .accessibilityIdentifier("atlas.create.prepare")
+            .accessibilityHint(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "Add a brief before preparing work. Preparing work does not execute a task."
+                : "Prepares a work record only. It does not execute a task.")
             .disabled(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .opacity(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
             .padding(.top, AtlasTheme.Spacing.lg)

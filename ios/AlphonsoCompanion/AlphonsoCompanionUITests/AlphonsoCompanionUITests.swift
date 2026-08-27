@@ -49,9 +49,17 @@ final class AlphonsoCompanionUITests: XCTestCase {
         XCTAssertTrue(createWork.waitForExistence(timeout: 3))
         createWork.tap()
 
-        XCTAssertTrue(app.descendants(matching: .any)["atlas.create.brief"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.descendants(matching: .any)["atlas.create.outcome"].exists)
-        XCTAssertTrue(app.buttons["atlas.create.prepare"].exists)
+        let brief = app.textFields["atlas.create.brief"]
+        XCTAssertTrue(brief.waitForExistence(timeout: 3))
+        XCTAssertEqual(brief.label, "Brief")
+
+        let outcome = app.textFields["atlas.create.outcome"]
+        XCTAssertTrue(outcome.exists)
+        XCTAssertEqual(outcome.label, "Desired outcome")
+
+        let prepare = app.buttons["atlas.create.prepare"]
+        XCTAssertTrue(prepare.exists)
+        XCTAssertFalse(prepare.isEnabled)
     }
 
     func testWorkSearchFiltersLoadedOutcomeRecords() throws {
