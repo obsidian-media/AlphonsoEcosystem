@@ -90,9 +90,9 @@ final class AlphonsoCompanionUITests: XCTestCase {
         app.launch()
 
         app.tabBars.buttons["Inbox"].tap()
-        XCTAssertTrue(app.staticTexts["Needs your judgement"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Confirmation queue"].exists)
-        XCTAssertTrue(app.staticTexts["Recorded"].exists)
+        XCTAssertTrue(app.staticTexts["NEEDS YOUR JUDGEMENT"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["CONFIRMATION QUEUE"].exists)
+        XCTAssertTrue(app.staticTexts["RECORDED"].exists)
     }
 
     func testInboxSearchFiltersLoadedDecisionRecords() throws {
@@ -111,8 +111,8 @@ final class AlphonsoCompanionUITests: XCTestCase {
 
         search.typeText(" unmatched")
         XCTAssertTrue(app.staticTexts["No matching Inbox records"].waitForExistence(timeout: 3))
-        XCTAssertFalse(app.staticTexts["Needs your judgement"].exists)
-        XCTAssertFalse(app.staticTexts["Recorded"].exists)
+        XCTAssertFalse(app.staticTexts["NEEDS YOUR JUDGEMENT"].exists)
+        XCTAssertFalse(app.staticTexts["RECORDED"].exists)
 
         let clear = app.buttons["atlas.inbox.search.clear"]
         XCTAssertTrue(clear.waitForExistence(timeout: 3))
@@ -145,7 +145,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
         let review = app.buttons["atlas.inbox.decision.decision-release-brief"]
         XCTAssertTrue(review.waitForExistence(timeout: 3))
         review.tap()
-        XCTAssertTrue(app.staticTexts["Decision review"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["DECISION REVIEW"].waitForExistence(timeout: 3))
         app.buttons["Close"].tap()
 
         let challengeReady = app.buttons["atlas.inbox.decision.decision-partner-brief"]
