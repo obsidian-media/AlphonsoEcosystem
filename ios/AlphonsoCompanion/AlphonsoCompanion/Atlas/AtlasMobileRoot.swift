@@ -543,7 +543,7 @@ private struct AtlasLocalSearchField: View {
                 .font(AtlasTheme.Type.proof)
                 .tracking(0.8)
                 .foregroundStyle(AtlasTheme.ColorToken.quietInk)
-                .accessibilityHidden(true)
+                .accessibilityAddTraits(.isHeader)
 
             HStack(spacing: AtlasTheme.Spacing.xs) {
                 Image(systemName: "magnifyingglass")
