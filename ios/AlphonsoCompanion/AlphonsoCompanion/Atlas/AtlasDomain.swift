@@ -334,8 +334,17 @@ enum AtlasDecisionState: String, Codable, CaseIterable, Equatable {
         try container.encode(wireValue)
     }
 
-    var canReview: Bool { self == .awaitingReview }
-    var needsConfirmation: Bool { self == .reviewRecordedPendingConfirmation }
+    var canReview: Bool {
+        self == .awaitingReview
+    }
+
+    var canStartHandoff: Bool {
+        canReview || needsConfirmation
+    }
+
+    var needsConfirmation: Bool {
+        self == .reviewRecordedPendingConfirmation
+    }
 
     var inboxLabel: String {
         switch self {

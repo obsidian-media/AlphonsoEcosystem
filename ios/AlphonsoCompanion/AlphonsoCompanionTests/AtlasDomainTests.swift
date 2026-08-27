@@ -266,6 +266,13 @@ final class AtlasDomainTests: XCTestCase {
 
     func testDecisionInboxPresentationStates() {
         XCTAssertTrue(AtlasDecisionState.awaitingReview.canReview)
+        XCTAssertTrue(AtlasDecisionState.awaitingReview.canStartHandoff)
+        XCTAssertTrue(AtlasDecisionState.reviewRecordedPendingConfirmation.canStartHandoff)
+        XCTAssertFalse(AtlasDecisionState.confirmationRecorded.canStartHandoff)
+        XCTAssertFalse(AtlasDecisionState.approved.canStartHandoff)
+        XCTAssertFalse(AtlasDecisionState.rejected.canStartHandoff)
+        XCTAssertFalse(AtlasDecisionState.expired.canStartHandoff)
+        XCTAssertFalse(AtlasDecisionState.unavailable.canStartHandoff)
         XCTAssertEqual(AtlasDecisionState.awaitingReview.inboxLabel, "Needs review")
         XCTAssertEqual(AtlasDecisionState.awaitingReview.inboxStatus, .awaitingDecision)
 

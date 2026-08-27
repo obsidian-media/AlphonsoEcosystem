@@ -1638,6 +1638,36 @@ private struct AtlasDecisionReviewSheet: View {
                 dismiss()
             }
             .accessibilityHint("Closes this outdated decision record and returns to the current Inbox. No action is executed.")
+        } else if currentDecision.state == .confirmationRecorded {
+            AtlasStudioBlock(
+                kind: "CONFIRMATION RECORDED",
+                symbol: "checkmark.seal.fill",
+                title: "Intent recorded — not executed",
+                detail: "The authoritative workspace record contains a confirmation receipt only. No external action, dispatch, publication, or approval was executed.",
+                accent: AtlasTheme.ColorToken.moss
+            )
+        } else if let receipt {
+            AtlasStudioBlock(
+                kind: "CONFIRMATION RECORDED",
+                symbol: "checkmark.seal.fill",
+                title: receipt.isNonExecuting ? "Intent recorded — not executed" : "Confirmation recorded",
+                detail: receipt.isNonExecuting
+                    ? "The control plane stored a receipt only. No external action, dispatch, publication, or approval was executed."
+                    : "The control plane recorded this confirmation.",
+                accent: AtlasTheme.ColorToken.moss
+            )
+        } else if !currentDecision.state.canStartHandoff {
+            AtlasStudioBlock(
+                kind: "DECISION CLOSED",
+                symbol: "lock.shield",
+                title: currentDecision.state.inboxLabel,
+                detail: "\(currentDecision.state.inboxDetail) Atlas will not start a review, challenge, or confirmation handoff from this authoritative state.",
+                accent: AtlasTheme.ColorToken.amber
+            )
+            focusButton(title: "Return to Inbox", symbol: "tray") {
+                dismiss()
+            }
+            .accessibilityHint("Closes this read-only decision record and returns to the current Inbox. No action is executed.")
         } else if !store.syncStatus.canStartDecisionHandoff {
             AtlasStudioBlock(
                 kind: "WORKSPACE REFRESH REQUIRED",
@@ -1662,24 +1692,6 @@ private struct AtlasDecisionReviewSheet: View {
                 refreshDecision()
             }
             .accessibilityHint("Requests a fresh authoritative workspace briefing. It does not execute work or an external action.")
-        } else if currentDecision.state == .confirmationRecorded {
-            AtlasStudioBlock(
-                kind: "CONFIRMATION RECORDED",
-                symbol: "checkmark.seal.fill",
-                title: "Intent recorded — not executed",
-                detail: "The authoritative workspace record contains a confirmation receipt only. No external action, dispatch, publication, or approval was executed.",
-                accent: AtlasTheme.ColorToken.moss
-            )
-        } else if let receipt {
-            AtlasStudioBlock(
-                kind: "CONFIRMATION RECORDED",
-                symbol: "checkmark.seal.fill",
-                title: receipt.isNonExecuting ? "Intent recorded — not executed" : "Confirmation recorded",
-                detail: receipt.isNonExecuting
-                    ? "The control plane stored a receipt only. No external action, dispatch, publication, or approval was executed."
-                    : "The control plane recorded this confirmation.",
-                accent: AtlasTheme.ColorToken.moss
-            )
         } else if let challenge, challenge.isExpired() {
             VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
                 AtlasStudioBlock(
