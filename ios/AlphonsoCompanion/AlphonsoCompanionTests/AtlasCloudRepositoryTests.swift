@@ -328,10 +328,14 @@ private struct StubTokenProvider: AtlasAccessTokenProvider {
 }
 
 private struct StubDeviceIdentifierProvider: AtlasDeviceIdentifierProvider {
-    let deviceID: String
+    private let value: String
+
+    init(deviceID: String) {
+        value = deviceID
+    }
 
     func deviceID() throws -> String {
-        deviceID
+        value
     }
 }
 
