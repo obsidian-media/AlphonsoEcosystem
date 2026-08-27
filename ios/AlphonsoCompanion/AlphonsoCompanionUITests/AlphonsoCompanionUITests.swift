@@ -7,7 +7,7 @@ final class AlphonsoCompanionUITests: XCTestCase {
 
     private func launchAtlasApp() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-alphonso.mobile.experience", "atlas"]
+        app.launchArguments = ["-ui-testing"]
         app.launch()
         return app
     }

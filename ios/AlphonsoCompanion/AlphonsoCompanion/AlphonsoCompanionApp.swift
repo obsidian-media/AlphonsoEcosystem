@@ -8,6 +8,9 @@ struct AlphonsoCompanionApp: App {
     @StateObject private var atlasIdentityService: AtlasIdentityService
 
     init() {
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
+            UserDefaults.standard.set("atlas", forKey: "alphonso.mobile.experience")
+        }
         let voiceCloud = VoiceCloudService()
         _voiceCloudService = StateObject(wrappedValue: voiceCloud)
         _atlasIdentityService = StateObject(wrappedValue: AtlasIdentityService(voiceCloudService: voiceCloud))
