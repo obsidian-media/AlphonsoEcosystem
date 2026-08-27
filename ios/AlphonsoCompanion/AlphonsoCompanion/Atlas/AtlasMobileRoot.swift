@@ -1618,6 +1618,18 @@ private struct AtlasDecisionReviewSheet: View {
                 dismiss()
             }
             .accessibilityHint("Closes this outdated decision record and returns to the current Inbox. No action is executed.")
+        } else if !store.syncStatus.canStartDecisionHandoff {
+            AtlasStudioBlock(
+                kind: "WORKSPACE REFRESH REQUIRED",
+                symbol: "arrow.triangle.2.circlepath",
+                title: "Refresh before continuing",
+                detail: "Atlas needs a current authoritative workspace briefing before it can record review, request a challenge, or start local authentication. \(store.syncStatus.detail)",
+                accent: AtlasTheme.ColorToken.amber
+            )
+            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise") {
+                refreshDecision()
+            }
+            .accessibilityHint("Requests a fresh authoritative workspace briefing. It does not execute work or an external action.")
         } else if currentDecision.isActionableExpired() {
             AtlasStudioBlock(
                 kind: "DECISION EXPIRED",

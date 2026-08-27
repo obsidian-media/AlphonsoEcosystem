@@ -351,12 +351,22 @@ final class AtlasDomainTests: XCTestCase {
         XCTAssertEqual(live.title, "Live workspace")
         XCTAssertTrue(live.detail.localizedCaseInsensitiveContains("authenticated workspace updates"))
         XCTAssertTrue(live.canRefresh)
+        XCTAssertTrue(live.canStartDecisionHandoff)
+
+        let delayedSnapshot = AtlasWorkspaceSyncStatus.snapshot(freshness: .delayed(minutes: 3), refreshedAt: Date())
+        XCTAssertTrue(delayedSnapshot.canStartDecisionHandoff)
+
+        let offlineLive = AtlasWorkspaceSyncStatus.live(freshness: .offline(lastConfirmedAt: Date()), refreshedAt: Date())
+        XCTAssertFalse(offlineLive.canStartDecisionHandoff)
+        XCTAssertFalse(AtlasWorkspaceSyncStatus.idle.canStartDecisionHandoff)
+        XCTAssertFalse(AtlasWorkspaceSyncStatus.refreshing.canStartDecisionHandoff)
 
         let failed = AtlasWorkspaceSyncStatus.failed("Network unavailable")
         XCTAssertEqual(failed.title, "Workspace needs attention")
         XCTAssertEqual(failed.detail, "Network unavailable")
         XCTAssertTrue(failed.canRefresh)
         XCTAssertFalse(failed.isWorking)
+        XCTAssertFalse(failed.canStartDecisionHandoff)
     }
 
     func testAccountStatusMakesFixtureAndEnrollmentBoundariesExplicit() {

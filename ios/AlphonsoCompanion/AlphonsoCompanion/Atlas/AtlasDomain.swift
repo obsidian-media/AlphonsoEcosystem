@@ -223,6 +223,15 @@ enum AtlasWorkspaceSyncStatus: Equatable {
         if case .refreshing = self { return true }
         return false
     }
+
+    var canStartDecisionHandoff: Bool {
+        switch self {
+        case .snapshot(let freshness, _), .live(let freshness, _):
+            return freshness.isActionable
+        case .idle, .refreshing, .failed:
+            return false
+        }
+    }
 }
 
 enum AtlasDraftOperation: Equatable {
