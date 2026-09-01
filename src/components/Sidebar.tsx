@@ -20,7 +20,8 @@ import {
   Shield,
   Sparkles,
   Terminal,
-  Trash2
+  Trash2,
+  Activity
 } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
@@ -63,6 +64,7 @@ interface SidebarProps {
   settings: AppSettings;
   pendingApprovalCount?: number;
   onOpenCoach?: () => void;
+  mode?: 'simple' | 'advanced';
 }
 
 const NAV_SECTIONS: NavSection[] = [
@@ -89,6 +91,7 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'miya', icon: Palette, label: 'Creative' },
       { id: 'mission_room', icon: Sparkles, label: 'Boardroom' },
       { id: 'ecosystem', icon: Bot, label: 'All Agents' },
+      { id: 'agent_performance', icon: Activity, label: 'Agent Performance' },
     ]
   },
   {
@@ -101,11 +104,28 @@ const NAV_SECTIONS: NavSection[] = [
   }
 ];
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach }: SidebarProps) {
+const SIMPLE_MODE_ITEMS = new Set([
+  'chat',
+  'mission',
+  'project_execution',
+  'hector',
+  'miya',
+  'content',
+  'settings',
+]);
+
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach, mode = 'simple' }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
   const { theme, toggleTheme } = useTheme();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const filteredSections = mode === 'simple'
+    ? NAV_SECTIONS.map(section => ({
+        ...section,
+        items: section.items.filter(item => SIMPLE_MODE_ITEMS.has(item.id))
+      })).filter(section => section.items.length > 0)
+    : NAV_SECTIONS;
 
   function handleDeleteClick(chatId: string, e: React.MouseEvent) {
     e.stopPropagation();
@@ -145,7 +165,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       {/* Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className={`py-3 px-2 flex flex-col gap-0.5 overflow-y-auto min-h-0 ${isOpen ? 'max-h-[45%]' : 'flex-1'}`}>
-          {NAV_SECTIONS.map((section, sIdx) => (
+          {filteredSections.map((section, sIdx) => (
             <React.Fragment key={sIdx}>
               {isOpen && section.label && (
                 <div className="px-3 pt-4 pb-1.5 section-label">{section.label}</div>
