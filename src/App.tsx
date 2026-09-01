@@ -16,6 +16,9 @@ import { AgentPerformanceView } from './components/AgentPerformanceView';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { useUxMode } from './hooks/useUxMode';
+import { GuidedTour } from './components/GuidedTour';
+import { DigestPanel, DigestItem } from './components/DigestPanel';
 import { OllamaOfflineBanner } from './components/OllamaOfflineBanner';
 import { NotificationCenter, loadPersistedNotifications } from './components/NotificationCenter';
 import { CoachWindow } from './components/CoachWindow';
@@ -167,6 +170,10 @@ function AppShell() {
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
   const { settings, setSettings, operatorMode, setOperatorMode } = useSettings();
+  const [uxMode, setUxMode] = useUxMode();
+  const [showGuidedTour, setShowGuidedTour] = useState(false);
+  const [digestOpen, setDigestOpen] = useState(false);
+  const [digestItems, setDigestItems] = useState<DigestItem[]>([]);
   const { ollamaStatus, desktopBridge, setDesktopBridge, lastCheckedAt, setLastCheckedAt, installedModels, selectedModelMissing, runOllamaCheck, copyTroubleshootingCommand, copyState, ollamaCheckRunRef } = useOllama();
   const { plugins, pluginAudit, pluginSandboxPolicy, diskPluginManifests, lastPluginToolRun, lastManifestValidation, setPlugins, setPluginAudit, setDiskPluginManifests, handleTogglePlugin, handleExecutePluginTool, handleValidatePluginManifest, handleDiscoverPlugins, handleUpdatePluginSandboxPolicy } = usePlugins();
   const { workspaceFoundation, workspaceProof, ocrCapability, workspaceSymbolIndex, lastOcrAdapterRun, handleRunWorkspaceProof, handleCheckOcrCapability, handleBuildSymbolIndex, handleRunOcrAdapter, handleToggleWorkspaceFeature } = useWorkspace();
@@ -813,6 +820,7 @@ function AppShell() {
         settings={settings}
         pendingApprovalCount={pendingApprovalCount}
         onOpenCoach={handleToggleCoachMode}
+        mode={uxMode}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar
@@ -827,6 +835,10 @@ function AppShell() {
           onOpenSettings={() => switchTab('settings')}
           notificationCount={notifications.length}
           onToggleNotifications={() => setNotificationsOpen((v) => !v)}
+          mode={uxMode}
+          onModeChange={setUxMode}
+          onOpenDigest={() => setDigestOpen(true)}
+          digestUnreadCount={digestItems.filter(i => !i.read).length}
         />
         <Suspense fallback={null}>
           <CommandRib activeTab={activeTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} />
@@ -921,6 +933,24 @@ function AppShell() {
       {showKeyboardShortcuts && (
         <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
       )}
+      {showGuidedTour && (
+        <GuidedTour
+          mode={uxMode}
+          onComplete={() => setShowGuidedTour(false)}
+          onDismiss={() => setShowGuidedTour(false)}
+        />
+      )}
+      <DigestPanel
+        isOpen={digestOpen}
+        onClose={() => setDigestOpen(false)}
+        items={digestItems}
+        onMarkAllRead={() => setDigestItems(items => items.map(i => ({ ...i, read: true })))}
+        onItemClick={(item) => {
+          if (item.action) item.action();
+          if (item.navigateTo) switchTab(item.navigateTo);
+          setDigestItems(items => items.map(i => i.id === item.id ? { ...i, read: true } : i));
+        }}
+      />
     </div>
   );
 }
