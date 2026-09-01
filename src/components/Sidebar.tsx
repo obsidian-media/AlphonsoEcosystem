@@ -114,7 +114,7 @@ const SIMPLE_MODE_ITEMS = new Set([
   'settings',
 ]);
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach, mode = 'simple' }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach, mode = 'advanced' }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
   const { theme, toggleTheme } = useTheme();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);

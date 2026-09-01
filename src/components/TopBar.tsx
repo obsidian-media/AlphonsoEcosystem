@@ -65,7 +65,7 @@ export function TopBar({
   onToggleNotifications,
   selectedModelMissing,
   onOpenShortcuts,
-  mode = 'simple',
+  mode = 'advanced',
   onModeChange,
   onOpenDigest,
   digestUnreadCount = 0,
