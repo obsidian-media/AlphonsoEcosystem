@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GripHorizontal, Minus, ChevronDown, Wifi, WifiOff } from 'lucide-react';
 import { listAgentProfiles } from '../agents/agentRegistry';
 import { AgentAvatar } from './AgentAvatar';
+import { CompanionWidget } from './CompanionWidget';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const STORAGE_KEY = 'alphonso_agent_dock_minimized_v1';
@@ -306,6 +307,7 @@ export function AgentDock({ companions, embedded = false }: AgentDockProps) {
               Local AI is offline — start Ollama to enable agent reasoning.
             </div>
           )}
+          <CompanionWidget state={ollamaOnline === false ? 'sleeping' : 'idle'} pinned={false} />
         </div>
       )}
     </div>

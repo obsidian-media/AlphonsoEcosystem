@@ -1,4 +1,5 @@
 import { getConnectorCredential } from './connectors/connectorAuth';
+import { processInbound, verifyWebhook } from './whatsappWebhookService';
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v17.0';
 
@@ -160,4 +161,12 @@ export async function browserPollWhatsAppGateway({ limit = 12 } = {}): Promise<P
     cursor: null,
     trust: 'verified'
   };
+}
+
+export async function processWhatsAppWebhook(body: unknown, options: { commandId?: string | null; packetId?: string | null } = {}): Promise<unknown> {
+  return processInbound(body, options);
+}
+
+export async function verifyWhatsAppWebhook(token: string | null, challenge: string | null): Promise<unknown> {
+  return verifyWebhook(token, challenge);
 }
