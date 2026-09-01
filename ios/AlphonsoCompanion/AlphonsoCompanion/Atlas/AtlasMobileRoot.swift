@@ -1,0 +1,1834 @@
+import SwiftUI
+
+/// The initial full-mobile product shell. It renders through typed domain models
+/// backed by a fixture repository until the Cloud control-plane client is available.
+struct AtlasMobileRoot: View {
+    let openLegacyCompanion: () -> Void
+    @EnvironmentObject private var identity: AtlasIdentityService
+    @StateObject private var store = AtlasWorkspaceStore()
+    @State private var selection: AtlasDestination = .home
+    @State private var workSegment = 0
+    @State private var showingCreateWork = false
+    @State private var draftSeed = ""
+    @State private var showingAuditTrail = false
+    @State private var showingAccount = false
+
+    var body: some View {
+        TabView(selection: $selection) {
+            AtlasHomeView(createWork: {
+                draftSeed = ""
+                showingCreateWork = true
+            })
+                .tabItem { Label("Home", systemImage: "house") }
+                .tag(AtlasDestination.home)
+
+            AtlasWorkView(
+                createWork: {
+                    draftSeed = ""
+                    showingCreateWork = true
+                },
+                selectedSegment: $workSegment
+            )
+                .tabItem { Label("Work", systemImage: "checklist") }
+                .tag(AtlasDestination.work)
+
+            AtlasInboxView()
+                .tabItem { Label("Inbox", systemImage: "tray") }
+                .badge(store.briefing?.decisions.filter(\.state.canReview).count ?? 0)
+                .tag(AtlasDestination.inbox)
+
+            AtlasChatStudioView(createWork: { direction in
+                draftSeed = direction
+                showingCreateWork = true
+            })
+                .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
+                .tag(AtlasDestination.chat)
+
+            AtlasMoreView(
+                openLegacyCompanion: openLegacyCompanion,
+                openAuditTrail: { showingAuditTrail = true },
+                openAccount: { showingAccount = true }
+            )
+                .tabItem { Label("More", systemImage: "square.grid.2x2") }
+                .tag(AtlasDestination.more)
+        }
+        .environmentObject(store)
+        .tint(AtlasTheme.ColorToken.moss)
+        .task {
+            if AtlasCloudConfiguration.fromBundle() != nil {
+                try? await identity.restoreAndEnroll()
+            }
+            if store.briefing == nil {
+                await store.load()
+            }
+            if case .enrolled = identity.state {
+                store.startLiveUpdates()
+            }
+        }
+        .onChange(of: identity.state) { newState in
+            if case .enrolled = newState {
+                store.startLiveUpdates()
+            } else {
+                store.stopLiveUpdates()
+            }
+        }
+        .onDisappear {
+            store.stopLiveUpdates()
+        }
+        .sheet(isPresented: $showingCreateWork) {
+            AtlasCreateWorkSheet(
+                posture: store.selectedPosture,
+                initialBrief: draftSeed,
+                created: { brief, desiredOutcome in
+                    await store.createDraft(brief: brief, desiredOutcome: desiredOutcome)
+                },
+                viewPreparedWork: {
+                    showingCreateWork = false
+                    workSegment = 1
+                    selection = .work
+                },
+                refreshPreparedWork: {
+                    showingCreateWork = false
+                    selection = .home
+                    Task { @MainActor in await store.load() }
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showingAuditTrail) {
+            AtlasAuditTrailView()
+                .environmentObject(store)
+                .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showingAccount) {
+            AtlasAccountCloudView()
+                .environmentObject(identity)
+                .presentationDetents([.medium, .large])
+        }
+    }
+}
+
+enum AtlasDestination: Hashable {
+    case home
+    case work
+    case inbox
+    case chat
+    case more
+}
+
+private struct AtlasHomeView: View {
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    let createWork: () -> Void
+    @State private var selectedDecision: AtlasDecision?
+    @State private var selectedRun: AtlasRun?
+    @State private var selectedOutcome: AtlasOutcome?
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                workspaceRibbon
+                workspaceHealth
+                header
+                nextDecision
+                activeWork
+                recentOutcomes
+                commandDock
+            }
+            .navigationBarHidden(true)
+            .sheet(item: $selectedDecision) { decision in
+                AtlasDecisionReviewSheet(decision: decision)
+                    .environmentObject(store)
+                    .presentationDetents([.large])
+            }
+            .sheet(item: $selectedRun) { run in
+                AtlasRunDetailSheet(run: run)
+                    .environmentObject(store)
+                    .presentationDetents([.large])
+            }
+            .sheet(item: $selectedOutcome) { outcome in
+                AtlasOutcomeDetailSheet(
+                    outcome: outcome,
+                    posture: store.briefing?.workspace.posture ?? store.selectedPosture
+                )
+                .presentationDetents([.large])
+            }
+        }
+    }
+
+    private var workspaceRibbon: some View {
+        Menu {
+            ForEach(AtlasExecutionPosture.allCases) { value in
+                Button {
+                    store.selectPosture(value)
+                } label: {
+                    Label(value.detail, systemImage: value.symbol)
+                }
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ALPHONSO / FIELD NOTE")
+                        .font(AtlasTheme.Typography.proof)
+                        .tracking(1)
+                    Text(store.briefing?.workspace.name ?? "Loading workspace")
+                        .font(AtlasTheme.Typography.section)
+                }
+                Spacer()
+                AtlasPostureBadge(store.selectedPosture, freshness: store.briefing?.freshness.label ?? "Loading")
+            }
+            .foregroundStyle(AtlasTheme.ColorToken.ink)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Changes workspace execution posture")
+    }
+
+    private var workspaceHealth: some View {
+        let status = store.syncStatus
+        return HStack(alignment: .top, spacing: AtlasTheme.Spacing.sm) {
+            Group {
+                if status.isWorking {
+                    ProgressView()
+                        .tint(AtlasTheme.ColorToken.moss)
+                } else {
+                    Image(systemName: status.symbol)
+                        .foregroundStyle(syncTint)
+                }
+            }
+            .frame(width: 22, height: 22)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(status.title)
+                    .font(AtlasTheme.Typography.section)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(status.detail)
+                    .font(AtlasTheme.Typography.metadata)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+
+            if status.canRefresh {
+                Button("Refresh") {
+                    Task { @MainActor in await store.load() }
+                }
+                .font(AtlasTheme.Typography.section)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+                .frame(minHeight: 44)
+                .padding(.horizontal, AtlasTheme.Spacing.xs)
+                .accessibilityHint("Requests a fresh authoritative workspace briefing")
+            }
+        }
+        .padding(AtlasTheme.Spacing.md)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .padding(.top, AtlasTheme.Spacing.md)
+        .accessibilityIdentifier("atlas.home.workspaceHealth")
+        .accessibilityElement(children: .combine)
+    }
+
+    private var syncTint: Color {
+        switch store.syncStatus {
+        case .failed: return AtlasTheme.ColorToken.clay
+        case .live: return AtlasTheme.ColorToken.moss
+        case .snapshot: return AtlasTheme.ColorToken.cobalt
+        case .refreshing: return AtlasTheme.ColorToken.moss
+        case .idle: return AtlasTheme.ColorToken.quietInk
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+            Text("Today")
+                .font(AtlasTheme.Typography.display)
+                .foregroundStyle(AtlasTheme.ColorToken.ink)
+            Text(headerDetail)
+                .font(AtlasTheme.Typography.body)
+                .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+        }
+        .padding(.top, AtlasTheme.Spacing.xl)
+    }
+
+    private var headerDetail: String {
+        guard let briefing = store.briefing else {
+            return store.isLoading ? "Preparing your workspace briefing…" : "Workspace data is not available yet."
+        }
+        let decisionCount = briefing.decisions.filter(\.state.canReview).count
+        let runCount = briefing.activeRuns.filter(\.phase.isActive).count
+        return "\(decisionCount) decision\(decisionCount == 1 ? "" : "s") ready. \(runCount) workstream\(runCount == 1 ? "" : "s") moving with verified workspace context."
+    }
+
+    private var nextDecision: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
+            AtlasSectionHeader("Next decision", detail: store.briefing?.nextDecision?.expiryLabel ?? "No pending review")
+            if let decision = store.briefing?.nextDecision {
+                Button { selectedDecision = decision } label: {
+                    VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(decision.title)
+                                    .font(AtlasTheme.Typography.title)
+                                Text(decision.summary)
+                                    .font(AtlasTheme.Typography.body)
+                                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                            }
+                            Spacer(minLength: AtlasTheme.Spacing.sm)
+                            Image(systemName: "arrow.up.right")
+                                .foregroundStyle(AtlasTheme.ColorToken.clay)
+                        }
+                        AtlasRule()
+                        HStack {
+                            AtlasStatusLabel(.awaitingDecision)
+                            Spacer()
+                            Text("POLICY / \(decision.policyCode)")
+                                .font(AtlasTheme.Typography.proof)
+                                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                        }
+                    }
+                    .padding(AtlasTheme.Spacing.lg)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.focalSheet, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: AtlasTheme.Radius.focalSheet, style: .continuous)
+                            .stroke(AtlasTheme.ColorToken.clay.opacity(0.35), lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens evidence and policy details before approval")
+            } else {
+                AtlasEmptyState(symbol: "checkmark.seal", title: "No decision is waiting", detail: "New approvals and exceptions will appear here when the control plane sends them.")
+            }
+        }
+    }
+
+    private var activeWork: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            AtlasSectionHeader("Active work", detail: "Verified workspace activity")
+            if let briefing = store.briefing, !briefing.activeRuns.isEmpty {
+                ForEach(briefing.activeRuns) { run in
+                    AtlasLedgerRow(
+                        title: run.title,
+                        detail: run.summary,
+                        stamp: run.timestampLabel,
+                        status: run.status,
+                        posture: run.posture,
+                        action: { selectedRun = run }
+                    )
+                }
+            } else {
+                AtlasEmptyState(symbol: "bolt.slash", title: "No active work", detail: "New workspace activity will appear here as it begins.")
+            }
+        }
+    }
+
+    private var recentOutcomes: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+            AtlasSectionHeader("Since you last checked")
+            if let outcome = store.briefing?.outcomes.first {
+                Button { selectedOutcome = outcome } label: {
+                    AtlasHomeOutcomeRow(outcome: outcome)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the verified outcome record and its trace")
+            } else {
+                AtlasEmptyState(symbol: "clock", title: "No new outcomes", detail: "Verified outcomes will appear here after work is delivered.")
+            }
+        }
+    }
+
+    private var commandDock: some View {
+        VStack(spacing: AtlasTheme.Spacing.sm) {
+            AtlasPrimaryButton(title: "Create work", symbol: "plus", action: createWork)
+                .accessibilityIdentifier("atlas.home.createWork")
+            Text("A typed direction begins a new structured work brief.")
+                .font(AtlasTheme.Typography.metadata)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+        }
+        .padding(.top, AtlasTheme.Spacing.lg)
+    }
+}
+
+private struct AtlasHomeOutcomeRow: View {
+    let outcome: AtlasOutcome
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: "checkmark.seal")
+                .font(.title3)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(outcome.title)
+                    .font(AtlasTheme.Typography.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(outcome.detail)
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("OUTCOME · \(outcome.traceID)")
+                    .font(AtlasTheme.Typography.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+        }
+        .padding(AtlasTheme.Spacing.md)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AtlasWorkView: View {
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    let createWork: () -> Void
+    @Binding var selectedSegment: Int
+    @State private var query = ""
+    @State private var selectedRun: AtlasRun?
+    @State private var selectedOutcome: AtlasOutcome?
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    AtlasPostureBadge(store.selectedPosture, freshness: store.briefing?.freshness.label ?? "Loading")
+                    Text("Work")
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("A runbook for every outcome—plan, proof, decisions, and delivery in one record.")
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                Picker("Work view", selection: $selectedSegment) {
+                    Text("Now").tag(0)
+                    Text("Planned").tag(1)
+                    Text("Library").tag(2)
+                }
+                .pickerStyle(.segmented)
+                .padding(.top, AtlasTheme.Spacing.lg)
+                .accessibilityIdentifier("atlas.work.segment")
+                .accessibilityHint("Filters the work runbook")
+
+                AtlasLocalSearchField(
+                    prompt: "Search work, owner, or trace",
+                    accessibilityLabel: "Search current work",
+                    accessibilityHint: "Filters the currently loaded runbook and verified outcomes on this device",
+                    identifier: "atlas.work.search",
+                    query: $query
+                )
+
+                runLedger
+
+                AtlasPrimaryButton(title: "Create work", symbol: "plus", action: createWork)
+                    .padding(.top, AtlasTheme.Spacing.lg)
+            }
+            .navigationBarHidden(true)
+        }
+        .sheet(item: $selectedRun) { run in
+            AtlasRunDetailSheet(run: run)
+                .environmentObject(store)
+        }
+        .sheet(item: $selectedOutcome) { outcome in
+            AtlasOutcomeDetailSheet(
+                outcome: outcome,
+                posture: store.briefing?.workspace.posture ?? store.selectedPosture
+            )
+        }
+    }
+
+    private var visibleRuns: [AtlasRun] {
+        let runs = store.briefing?.activeRuns ?? []
+        let scopedRuns: [AtlasRun]
+        switch selectedSegment {
+        case 0:
+            scopedRuns = runs.filter { $0.phase.isActive && $0.phase != .planned }
+        case 1:
+            scopedRuns = runs.filter { $0.phase == .planned || $0.phase == .queued }
+        default:
+            scopedRuns = []
+        }
+        return scopedRuns.filter { $0.matchesLocalQuery(query) }
+    }
+
+    @ViewBuilder
+    private var runLedger: some View {
+        if selectedSegment == 2 {
+            outcomeLibrary
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                AtlasSectionHeader(sectionTitle, detail: "Open a record to inspect intent, evidence, and next action.")
+                if visibleRuns.isEmpty {
+                    AtlasEmptyState(symbol: emptySymbol, title: emptyTitle, detail: emptyDetail)
+                        .padding(.top, AtlasTheme.Spacing.sm)
+                } else {
+                    ForEach(visibleRuns) { run in
+                        AtlasLedgerRow(
+                            title: run.title,
+                            detail: run.summary,
+                            stamp: run.traceID,
+                            status: run.status,
+                            posture: run.posture,
+                            action: { selectedRun = run }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var outcomeLibrary: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            AtlasSectionHeader("Verified outcomes", detail: "Delivered workspace records with traceable source context.")
+            if !visibleOutcomes.isEmpty {
+                ForEach(visibleOutcomes) { outcome in
+                    Button { selectedOutcome = outcome } label: {
+                        AtlasOutcomeRow(outcome: outcome)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("atlas.work.outcome.\(outcome.id)")
+                    .accessibilityHint("Opens the verified outcome record and its trace")
+                    if outcome.id != visibleOutcomes.last?.id { AtlasRule() }
+                }
+            } else {
+                AtlasEmptyState(
+                    symbol: "archivebox",
+                    title: query.isEmpty ? "No verified outcomes yet" : "No matching outcomes",
+                    detail: query.isEmpty ? "Delivered workspace outcomes will appear here with their trace records." : "Try a title, result detail, or trace identifier from the current workspace briefing."
+                )
+                .padding(.top, AtlasTheme.Spacing.sm)
+            }
+        }
+    }
+
+    private var visibleOutcomes: [AtlasOutcome] {
+        (store.briefing?.outcomes ?? []).filter { $0.matchesLocalQuery(query) }
+    }
+
+    private var sectionTitle: String {
+        switch selectedSegment {
+        case 0: return "Runbook"
+        case 1: return "Planned work"
+        default: return "Verified outcomes"
+        }
+    }
+
+    private var emptySymbol: String {
+        selectedSegment == 2 ? "archivebox" : selectedSegment == 1 ? "calendar" : "bolt.slash"
+    }
+
+    private var emptyTitle: String {
+        if !query.isEmpty { return "No matching work" }
+        return selectedSegment == 2 ? "No verified outcomes yet" : selectedSegment == 1 ? "No planned work yet" : "No active work"
+    }
+
+    private var emptyDetail: String {
+        if !query.isEmpty { return "Try a title, owner, run phase, or trace identifier from the current workspace briefing." }
+        return selectedSegment == 2 ? "Delivered workspace outcomes will appear here with their trace records." : selectedSegment == 1 ? "Create a brief or schedule a workflow to build the next run." : "New workspace activity will appear here as it begins."
+    }
+}
+
+private struct AtlasLocalSearchField: View {
+    let prompt: String
+    let accessibilityLabel: String
+    let accessibilityHint: String
+    let identifier: String
+    @Binding var query: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xxs) {
+            Text(accessibilityLabel.uppercased())
+                .font(AtlasTheme.Typography.proof)
+                .tracking(0.8)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                .accessibilityAddTraits(.isHeader)
+
+            HStack(spacing: AtlasTheme.Spacing.xs) {
+                Image(systemName: "magnifyingglass")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    .frame(width: 24, height: 44)
+                    .accessibilityHidden(true)
+
+                TextField(prompt, text: $query)
+                    .font(AtlasTheme.Typography.body)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel(accessibilityLabel)
+                    .accessibilityHint(accessibilityHint)
+                    .accessibilityIdentifier(identifier)
+
+                if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        query = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.body)
+                            .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("Clear \(accessibilityLabel.lowercased())")
+                    .accessibilityHint("Restores every record in the currently loaded workspace briefing")
+                    .accessibilityIdentifier("\(identifier).clear")
+                }
+            }
+            .padding(.leading, AtlasTheme.Spacing.sm)
+            .padding(.trailing, AtlasTheme.Spacing.xxs)
+            .frame(minHeight: 44)
+            .background(AtlasTheme.ColorToken.sheet)
+            .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        }
+    }
+}
+
+private struct AtlasOutcomeRow: View {
+    let outcome: AtlasOutcome
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: "checkmark.seal")
+                .font(.title3)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(outcome.title)
+                    .font(AtlasTheme.Typography.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(outcome.detail)
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("COMPLETED \(outcome.completedAt.formatted(.relative(presentation: .named)).uppercased()) · \(outcome.traceID)")
+                    .font(AtlasTheme.Typography.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+        }
+        .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AtlasOutcomeDetailSheet: View {
+    let outcome: AtlasOutcome
+    let posture: AtlasExecutionPosture
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    AtlasPostureBadge(posture, freshness: "Verified outcome")
+                    Text("Outcome record")
+                        .font(AtlasTheme.Typography.proof)
+                        .tracking(1.1)
+                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    Text(outcome.title)
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                }
+
+                AtlasRule()
+                AtlasSectionHeader("Verified result")
+                AtlasRunFact(label: "Outcome", value: outcome.detail)
+                AtlasRunFact(label: "Completed", value: outcome.completedAt.formatted(.relative(presentation: .named)))
+
+                AtlasSectionHeader("Record trace", detail: "Reference this immutable identifier when connecting the outcome to workspace evidence.")
+                AtlasRunFact(label: "Trace", value: outcome.traceID, monospaced: true)
+
+                AtlasSectionHeader("Accountability")
+                Text("This outcome records a verified workspace result. It is not by itself an authorization, execution command, or final external-action receipt.")
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+            }
+        }
+    }
+}
+
+private struct AtlasRunDetailSheet: View {
+    let run: AtlasRun
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedDecision: AtlasDecision?
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    AtlasPostureBadge(run.posture, freshness: run.timestampLabel)
+                    Text("Work record")
+                        .font(AtlasTheme.Typography.proof)
+                        .tracking(1.1)
+                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    Text(run.title)
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    AtlasStatusLabel(run.status)
+                }
+
+                AtlasRule()
+
+                AtlasSectionHeader("Intent", detail: "The record preserves why this work exists and who owns the next accountable step.")
+                AtlasRunFact(label: "Objective", value: run.summary)
+                AtlasRunFact(label: "Owner", value: run.owner)
+                AtlasRunFact(label: "State", value: run.phaseLabel)
+                AtlasRunFact(label: "Last verified update", value: run.updatedAt.formatted(.relative(presentation: .named)))
+
+                AtlasSectionHeader("Next accountable step")
+                Text(run.nextAction)
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(AtlasTheme.Spacing.md)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+
+                decisionSection
+
+                AtlasSectionHeader("Record trace", detail: "Use this immutable identifier when referring to the workspace record or its audit trail.")
+                AtlasRunFact(label: "Trace", value: run.traceID, monospaced: true)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+            }
+        }
+        .sheet(item: $selectedDecision) { decision in
+            AtlasDecisionReviewSheet(decision: decision)
+                .environmentObject(store)
+        }
+    }
+
+    @ViewBuilder
+    private var decisionSection: some View {
+        if let decision = linkedDecision {
+            AtlasSectionHeader("Decision checkpoint", detail: "This work remains connected to its evidence and policy record.")
+            AtlasRunFact(label: "Policy", value: decision.policyCode)
+            AtlasRunFact(label: "Evidence", value: decision.evidenceSummary)
+            AtlasPrimaryButton(title: "Open decision review", symbol: "checkmark.shield", action: {
+                selectedDecision = decision
+            })
+            .accessibilityHint("Opens the linked evidence and policy review. Recording a confirmation does not execute an external action.")
+        } else {
+            AtlasSectionHeader("Decision checkpoint")
+            AtlasEmptyState(
+                symbol: "checkmark.shield",
+                title: "No decision is attached",
+                detail: "This record has no policy checkpoint waiting for your review."
+            )
+        }
+    }
+
+    private var linkedDecision: AtlasDecision? {
+        store.briefing?.decisions.first(where: { $0.runID == run.id })
+    }
+}
+
+private struct AtlasRunFact: View {
+    let label: String
+    let value: String
+    var monospaced = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(AtlasTheme.Typography.proof)
+                .tracking(0.8)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            Text(value)
+                .font(monospaced ? AtlasTheme.Typography.metadata.monospaced() : AtlasTheme.Typography.body)
+                .foregroundStyle(AtlasTheme.ColorToken.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AtlasInboxView: View {
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    @State private var selectedDecision: AtlasDecision?
+    @State private var query = ""
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+                    Text("Inbox")
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("A decision desk for approvals, exceptions, and assignments that require your judgement.")
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                AtlasLocalSearchField(
+                    prompt: "Search decisions, policy, or resource",
+                    accessibilityLabel: "Search current decisions",
+                    accessibilityHint: "Filters the currently loaded decision records on this device",
+                    identifier: "atlas.inbox.search",
+                    query: $query
+                )
+
+                if isFiltering && visibleDecisions.isEmpty {
+                    AtlasEmptyState(
+                        symbol: "magnifyingglass",
+                        title: "No matching Inbox records",
+                        detail: "Try a decision title, policy, affected resource, or evidence detail from the current workspace briefing."
+                    )
+                } else {
+                    if !reviewDecisions.isEmpty || !isFiltering {
+                        AtlasSectionHeader("Needs your judgement", detail: decisionDetail)
+                        if reviewDecisions.isEmpty {
+                            AtlasEmptyState(
+                                symbol: "checkmark.circle",
+                                title: "No decisions are waiting",
+                                detail: "Alphonso will surface exceptions, approvals, and assigned follow-ups here."
+                            )
+                        } else {
+                            decisionRows(reviewDecisions, opensDetail: true)
+                        }
+                    }
+
+                    if !confirmationDecisions.isEmpty {
+                        AtlasSectionHeader("Confirmation queue", detail: "These reviews are recorded. Request a fresh server challenge before confirmation.")
+                        decisionRows(confirmationDecisions, opensDetail: true)
+                    }
+
+                    if !recordedDecisions.isEmpty || !isFiltering {
+                        AtlasSectionHeader("Recorded", detail: "Read-only accountability records remain visible here; confirmation records are not external execution.")
+                        if recordedDecisions.isEmpty {
+                            AtlasEmptyState(
+                                symbol: store.decisionReviewRecorded ? "checkmark.seal" : "clock",
+                                title: store.decisionReviewRecorded ? "Review recorded" : "No recorded decisions in this session",
+                                detail: store.decisionReviewRecorded ? "The control-plane handoff is ready for a fresh confirmation challenge." : "Resolved decisions and auditable receipts will appear here."
+                            )
+                        } else {
+                            decisionRows(recordedDecisions, opensDetail: true)
+                        }
+                    }
+                }
+            }
+            .navigationBarHidden(true)
+            .sheet(item: $selectedDecision) { decision in
+                AtlasDecisionReviewSheet(decision: decision)
+                    .environmentObject(store)
+                    .presentationDetents([.large])
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func decisionRows(_ decisions: [AtlasDecision], opensDetail: Bool) -> some View {
+        ForEach(decisions) { decision in
+            if opensDetail {
+                Button { selectedDecision = decision } label: {
+                    AtlasInboxDecisionRow(decision: decision, showsNavigation: true)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("atlas.inbox.decision.\(decision.id)")
+                .accessibilityHint(decision.state.canReview || decision.state.needsConfirmation
+                    ? "Opens evidence and policy details. Recording a confirmation does not execute an external action."
+                    : "Opens a read-only accountability record. No action can be executed from this decision state.")
+            } else {
+                AtlasInboxDecisionRow(decision: decision, showsNavigation: false)
+            }
+            AtlasRule()
+        }
+    }
+
+    private var isFiltering: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var visibleDecisions: [AtlasDecision] {
+        (store.briefing?.decisions ?? []).filter { $0.matchesLocalQuery(query) }
+    }
+
+    private var reviewDecisions: [AtlasDecision] {
+        visibleDecisions.filter(\.state.canReview)
+    }
+
+    private var confirmationDecisions: [AtlasDecision] {
+        visibleDecisions.filter(\.state.needsConfirmation)
+    }
+
+    private var recordedDecisions: [AtlasDecision] {
+        visibleDecisions.filter { !$0.state.canReview && !$0.state.needsConfirmation }
+    }
+
+    private var decisionDetail: String {
+        let count = reviewDecisions.count
+        return "\(count) decision\(count == 1 ? "" : "s") · review before acting"
+    }
+}
+
+private struct AtlasInboxDecisionRow: View {
+    let decision: AtlasDecision
+    let showsNavigation: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: decision.risk == .high ? "exclamationmark.shield" : "checkmark.shield")
+                .font(.title3)
+                .foregroundStyle(decision.risk == .high ? AtlasTheme.ColorToken.clay : AtlasTheme.ColorToken.amber)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(decision.title)
+                    .font(AtlasTheme.Typography.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text("\(decision.affectedResource) · \(decision.expiryLabel)")
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                Text(decision.state.inboxDetail)
+                    .font(AtlasTheme.Typography.metadata)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                AtlasStatusLabel(decision.state.inboxStatus)
+            }
+            Spacer(minLength: AtlasTheme.Spacing.xs)
+            if showsNavigation {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            } else {
+                Text(decision.state.inboxLabel.uppercased())
+                    .font(AtlasTheme.Typography.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
+        }
+        .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AtlasChatStudioView: View {
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    let createWork: (String) -> Void
+    @State private var input = ""
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: AtlasTheme.Spacing.lg) {
+                        context
+                        AtlasRule()
+                        planBlock
+                        evidenceBlock
+                        outcomeBlock
+                    }
+                    .frame(maxWidth: 720, alignment: .leading)
+                    .padding(.horizontal, AtlasTheme.Spacing.lg)
+                    .padding(.vertical, AtlasTheme.Spacing.xl)
+                }
+                .background(AtlasTheme.ColorToken.mineral)
+                composer
+            }
+            .navigationBarHidden(true)
+        }
+    }
+
+    private var highlightedDecision: AtlasDecision? {
+        store.briefing?.nextDecision
+    }
+
+    private var context: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+            HStack {
+                Text("Chat")
+                    .font(AtlasTheme.Typography.display)
+                Spacer()
+                AtlasPostureBadge(store.selectedPosture, freshness: store.briefing?.freshness.label ?? "Loading")
+            }
+            Text(store.briefing?.workspace.name ?? "Preparing workspace context")
+                .font(AtlasTheme.Typography.section)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+            Text("A working studio. Direction, proof, and outcomes stay connected to the same typed run record.")
+                .font(AtlasTheme.Typography.body)
+                .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+        }
+        .foregroundStyle(AtlasTheme.ColorToken.ink)
+    }
+
+    private var planBlock: some View {
+        AtlasStudioBlock(
+            kind: "PLAN",
+            symbol: "list.bullet.clipboard",
+            title: highlightedDecision?.title ?? "No active decision context",
+            detail: highlightedDecision?.summary ?? "Start a new work brief to create a plan and connect it to an auditable run.",
+            accent: AtlasTheme.ColorToken.cobalt
+        )
+    }
+
+    private var evidenceBlock: some View {
+        AtlasStudioBlock(
+            kind: "EVIDENCE",
+            symbol: "checkmark.shield",
+            title: highlightedDecision == nil ? "No evidence has been selected" : "Evidence is available",
+            detail: highlightedDecision?.evidenceSummary ?? "Evidence and source receipts will arrive through the correlated run event stream.",
+            accent: AtlasTheme.ColorToken.moss
+        )
+    }
+
+    private var workBriefSeed: String {
+        let composedDirection = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        return composedDirection.isEmpty ? (highlightedDecision?.summary ?? "") : composedDirection
+    }
+
+    private var outcomeBlock: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+            AtlasStudioBlock(
+                kind: "NEXT ACTION",
+                symbol: highlightedDecision == nil ? "plus.circle" : "exclamationmark.shield",
+                title: highlightedDecision == nil ? "Create a work brief" : "Review before approving",
+                detail: highlightedDecision?.policyReason ?? "Use the command dock to state intent and create the next structured work run.",
+                accent: highlightedDecision == nil ? AtlasTheme.ColorToken.moss : AtlasTheme.ColorToken.clay
+            )
+            Button("Convert this into a work brief") {
+                createWork(workBriefSeed)
+            }
+                .font(AtlasTheme.Typography.section)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+                .frame(minHeight: 44, alignment: .leading)
+                .accessibilityHint("Opens a prefilled work-preparation form. It does not execute a task.")
+        }
+    }
+
+    private var composer: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+            Text("TYPED DIRECTION")
+                .font(AtlasTheme.Typography.proof)
+                .tracking(1)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+
+            HStack(alignment: .bottom, spacing: AtlasTheme.Spacing.sm) {
+                TextField("State the work you want to prepare…", text: $input, axis: .vertical)
+                    .font(AtlasTheme.Typography.body)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, AtlasTheme.Spacing.sm)
+                    .padding(.vertical, 10)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+                    .accessibilityLabel("Typed direction for a work brief")
+                    .accessibilityHint("Describe the work you want to prepare. This creates a draft only and does not execute a task.")
+                    .accessibilityIdentifier("atlas.chat.direction")
+
+                Button {
+                    createWork(input.trimmingCharacters(in: .whitespacesAndNewlines))
+                    input = ""
+                } label: {
+                    Image(systemName: input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "arrow.up.circle" : "arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AtlasTheme.ColorToken.quietInk : AtlasTheme.ColorToken.moss)
+                        .frame(width: 44, height: 44)
+                }
+                .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityLabel("Turn typed direction into a work brief")
+                .accessibilityHint(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "Add typed direction before preparing a work brief."
+                    : "Opens a prefilled work-preparation form. It does not execute a task.")
+                .accessibilityIdentifier("atlas.chat.prepare")
+            }
+            Text("Voice capture, file intake, and generated suggestions will appear only when their authenticated mobile contracts are available.")
+                .font(AtlasTheme.Typography.metadata)
+                .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, AtlasTheme.Spacing.md)
+        .padding(.vertical, AtlasTheme.Spacing.sm)
+        .background(AtlasTheme.ColorToken.mineral)
+        .overlay(alignment: .top) { AtlasRule() }
+    }
+}
+
+private struct AtlasMoreView: View {
+    let openLegacyCompanion: () -> Void
+    let openAuditTrail: () -> Void
+    let openAccount: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+                    Text("Atlas")
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("The connected Alphonso ecosystem, arranged around responsibility and trust.")
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                AtlasSectionHeader("Workspace")
+                Button(action: openAccount) {
+                    AtlasMoreRow(symbol: "person.crop.circle", title: "Account & Cloud", detail: "Session status, device trust, and safe recovery", isNavigable: true)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("atlas.more.account")
+                .accessibilityHint("Opens Atlas account connection and device-trust status")
+                AtlasMoreRow(symbol: "person.3", title: "Team", detail: "Role and contribution records are planned with the future Workspace API.")
+                AtlasMoreRow(symbol: "bubble.left.and.bubble.right", title: "Boardroom", detail: "Collaborative decision sessions are planned for a later control-plane increment.")
+                AtlasMoreRow(symbol: "books.vertical", title: "Knowledge", detail: "Workspace memory and research provenance require the future evidence contract.")
+
+                AtlasSectionHeader("Connections")
+                AtlasMoreRow(symbol: "link", title: "Integrations", detail: "Scoped integration health and approved action policies are not enabled in this foundation.")
+                AtlasMoreRow(symbol: "desktopcomputer", title: "Local Worker", detail: "Private worker pairing awaits the device-bound Hybrid protocol.")
+                Button(action: openAuditTrail) {
+                    AtlasMoreRow(symbol: "lock.shield", title: "Security & Devices", detail: "Sessions, device trust, and accountability records", isNavigable: true)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("atlas.more.auditTrail")
+                .accessibilityHint("Opens the immutable review and confirmation record")
+
+                AtlasSectionHeader("Migration")
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    Text("Legacy companion")
+                        .font(AtlasTheme.Typography.title)
+                    Text("The existing local companion remains available while the full-mobile control plane is introduced.")
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    Button("Open legacy companion", action: openLegacyCompanion)
+                        .font(AtlasTheme.Typography.section)
+                        .foregroundStyle(AtlasTheme.ColorToken.moss)
+                }
+                .padding(.vertical, AtlasTheme.Spacing.md)
+            }
+            .navigationBarHidden(true)
+        }
+    }
+}
+
+private struct AtlasAccountCloudView: View {
+    @EnvironmentObject private var identity: AtlasIdentityService
+    @Environment(\.dismiss) private var dismiss
+    @State private var isReconnecting = false
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    Text("Account & Cloud")
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("A clear view of this device’s Atlas connection. Credentials and device identifiers remain private to the secure system boundary.")
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                AtlasSectionHeader("Connection status")
+                statusRecord
+
+                AtlasSectionHeader("Trust boundary", detail: "Atlas keeps the current access token in a dedicated ThisDeviceOnly Keychain entry before requesting server enrollment.")
+                AtlasRunFact(label: "Control plane", value: controlPlaneLabel)
+                AtlasRunFact(label: "Device trust", value: deviceTrustLabel)
+                AtlasRunFact(label: "Sensitive actions", value: "Policy review, server challenge, local biometric handoff, and a non-executing receipt remain separate steps.")
+
+                recoveryControl
+
+                AtlasSectionHeader("Recovery note")
+                Text("This surface can reconnect the existing authenticated session and device enrollment. It does not replace the dedicated Atlas sign-in system still required for production rollout.")
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+            }
+        }
+    }
+
+    private var statusRecord: some View {
+        let status = identity.state.accountStatus
+        return HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: status.symbol)
+                .font(.title2)
+                .foregroundStyle(status.isConnected ? AtlasTheme.ColorToken.moss : status.canReconnect ? AtlasTheme.ColorToken.amber : AtlasTheme.ColorToken.quietInk)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xxs) {
+                Text(status.title)
+                    .font(AtlasTheme.Typography.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(status.detail)
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(AtlasTheme.Spacing.md)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var recoveryControl: some View {
+        let status = identity.state.accountStatus
+        if status.canReconnect {
+            AtlasPrimaryButton(
+                title: isReconnecting ? "Reconnecting…" : "Reconnect Cloud",
+                symbol: isReconnecting ? "clock" : "arrow.clockwise",
+                action: reconnect
+            )
+            .disabled(isReconnecting)
+            .opacity(isReconnecting ? 0.65 : 1)
+            .padding(.top, AtlasTheme.Spacing.lg)
+            .accessibilityHint("Refreshes the existing authenticated session and requests device enrollment. It does not execute work or an external action.")
+        } else if case .unavailable = identity.state {
+            AtlasEmptyState(
+                symbol: "rectangle.dashed",
+                title: "Cloud configuration is absent",
+                detail: "Add a valid HTTPS AtlasControlPlaneURL in a controlled build configuration before enabling Cloud workspaces."
+            )
+        }
+    }
+
+    private var controlPlaneLabel: String {
+        if case .unavailable = identity.state { return "Not configured in this build" }
+        return "Configured HTTPS endpoint"
+    }
+
+    private var deviceTrustLabel: String {
+        if case .enrolled(let deviceTrust) = identity.state { return "Enrolled · \(deviceTrust) trust" }
+        return "Not enrolled for Atlas Cloud"
+    }
+
+    private func reconnect() {
+        Task { @MainActor in
+            isReconnecting = true
+            defer { isReconnecting = false }
+            try? await identity.restoreAndEnroll()
+        }
+    }
+}
+
+private struct AtlasMoreRow: View {
+    let symbol: String
+    let title: String
+    let detail: String
+    var isNavigable = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.sm) {
+            Image(systemName: symbol)
+                .font(.title3)
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(AtlasTheme.Typography.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(detail)
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+            }
+            Spacer()
+            if isNavigable {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            } else {
+                Text("PLANNED")
+                    .font(AtlasTheme.Typography.proof)
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+            }
+        }
+        .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AtlasAuditTrailView: View {
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.xs) {
+                    Text("Audit trail")
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("A read-only accountability record for reviews, challenges, and confirmations. Atlas records intent here; it does not execute an action.")
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                AtlasLocalSearchField(
+                    prompt: "Search event, decision, or trace",
+                    accessibilityLabel: "Search accountability records",
+                    accessibilityHint: "Filters the currently loaded read-only accountability records on this device",
+                    identifier: "atlas.audit.search",
+                    query: $query
+                )
+
+                AtlasSectionHeader("Accountability record", detail: summary)
+                content
+            }
+            .navigationTitle("Audit trail")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task { @MainActor in await store.loadAuditReceipts() }
+                    } label: {
+                        Label(store.isLoadingAuditReceipts ? "Refreshing…" : "Refresh", systemImage: store.isLoadingAuditReceipts ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                    }
+                    .disabled(store.isLoadingAuditReceipts)
+                    .accessibilityIdentifier("atlas.audit.refresh")
+                    .accessibilityHint("Refreshes read-only accountability records only. It does not execute an action.")
+                }
+            }
+            .task { await store.loadAuditReceipts() }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if store.isLoadingAuditReceipts && store.auditReceipts.isEmpty {
+            ProgressView("Loading accountability record…")
+                .frame(maxWidth: .infinity, minHeight: 160)
+                .tint(AtlasTheme.ColorToken.moss)
+        } else if let error = store.auditReceiptError {
+            AtlasEmptyState(symbol: "exclamationmark.shield", title: "Audit trail unavailable", detail: error)
+        } else if store.auditReceipts.isEmpty {
+            AtlasEmptyState(symbol: "checkmark.seal", title: "No accountability records yet", detail: "Reviews, confirmation challenges, and recorded intent will appear here as work reaches a policy boundary.")
+        } else if filteredReceipts.isEmpty {
+            AtlasEmptyState(
+                symbol: "magnifyingglass",
+                title: "No matching accountability records",
+                detail: "Try an event, decision identifier, device, or correlation trace from the current loaded record."
+            )
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(filteredReceipts) { receipt in
+                    AtlasAuditReceiptRow(receipt: receipt)
+                    if receipt.id != filteredReceipts.last?.id { AtlasRule() }
+                }
+            }
+        }
+    }
+
+    private var filteredReceipts: [AtlasAuditReceipt] {
+        store.auditReceipts.filter { $0.matchesLocalQuery(query) }
+    }
+
+    private var summary: String {
+        let count = filteredReceipts.count
+        let loadedCount = store.auditReceipts.count
+        let countLabel = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "\(count) record\(count == 1 ? "" : "s")"
+            : "\(count) of \(loadedCount) records"
+        let freshness = store.auditReceiptsRefreshedAt.map { "checked \($0.formatted(.relative(presentation: .named)))" } ?? "not refreshed"
+        return "\(countLabel) · \(freshness) · read only · no action executed"
+    }
+}
+
+private struct AtlasAuditReceiptRow: View {
+    let receipt: AtlasAuditReceipt
+
+    var body: some View {
+        HStack(alignment: .top, spacing: AtlasTheme.Spacing.md) {
+            Image(systemName: receipt.eventType.symbol)
+                .font(.title3)
+                .foregroundStyle(receipt.isNonExecuting ? AtlasTheme.ColorToken.moss : AtlasTheme.ColorToken.clay)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(receipt.eventType.label)
+                    .font(AtlasTheme.Typography.title)
+                    .foregroundStyle(AtlasTheme.ColorToken.ink)
+                Text(receipt.eventType.detail)
+                    .font(AtlasTheme.Typography.body)
+                    .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                Text(receipt.evidenceLabel)
+                    .font(AtlasTheme.Typography.proof.monospaced())
+                    .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: AtlasTheme.Spacing.sm) {
+                    Text("NO ACTION EXECUTED")
+                        .font(AtlasTheme.Typography.proof)
+                        .tracking(0.7)
+                        .foregroundStyle(AtlasTheme.ColorToken.moss)
+                    Text(receipt.occurredAt.formatted(.relative(presentation: .named)).uppercased())
+                        .font(AtlasTheme.Typography.proof)
+                        .foregroundStyle(AtlasTheme.ColorToken.quietInk)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, AtlasTheme.Spacing.md)
+        .accessibilityIdentifier("atlas.audit.receipt.\(receipt.id)")
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct AtlasStudioBlock: View {
+    let kind: String
+    let symbol: String
+    let title: String
+    let detail: String
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+            Label(kind, systemImage: symbol)
+                .font(AtlasTheme.Typography.proof)
+                .tracking(0.8)
+                .foregroundStyle(accent)
+            Text(title)
+                .font(AtlasTheme.Typography.title)
+                .foregroundStyle(AtlasTheme.ColorToken.ink)
+            Text(detail)
+                .font(AtlasTheme.Typography.body)
+                .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+        }
+        .padding(AtlasTheme.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.sheet, style: .continuous))
+        .overlay(alignment: .leading) {
+            Rectangle().fill(accent).frame(width: 3)
+        }
+    }
+}
+
+private struct AtlasCreateWorkSheet: View {
+    let posture: AtlasExecutionPosture
+    let created: (String, String) async -> AtlasDraftOperation
+    let viewPreparedWork: () -> Void
+    let refreshPreparedWork: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var brief: String
+    @State private var outcome = ""
+    @State private var operation: AtlasDraftOperation = .idle
+
+    init(
+        posture: AtlasExecutionPosture,
+        initialBrief: String = "",
+        created: @escaping (String, String) async -> AtlasDraftOperation,
+        viewPreparedWork: @escaping () -> Void,
+        refreshPreparedWork: @escaping () -> Void
+    ) {
+        self.posture = posture
+        self.created = created
+        self.viewPreparedWork = viewPreparedWork
+        self.refreshPreparedWork = refreshPreparedWork
+        _brief = State(initialValue: initialBrief)
+    }
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                    AtlasPostureBadge(posture, freshness: posture.detail)
+                    Text("Create work")
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.ink)
+                    Text("Start with intent. Alphonso will make the plan, execution location, and approval conditions explicit before work begins.")
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.mutedInk)
+                }
+
+                AtlasSectionHeader("Brief")
+                TextField("What needs to happen?", text: $brief, axis: .vertical)
+                    .font(AtlasTheme.Typography.body)
+                    .accessibilityLabel("Brief")
+                    .accessibilityHint("Required. Describe what needs to happen before preparing work.")
+                    .accessibilityIdentifier("atlas.create.brief")
+                    .lineLimit(3...8)
+                    .padding(AtlasTheme.Spacing.md)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+
+                AtlasSectionHeader("Desired outcome")
+                TextField("What would a useful result look like?", text: $outcome, axis: .vertical)
+                    .font(AtlasTheme.Typography.body)
+                    .accessibilityLabel("Desired outcome")
+                    .accessibilityHint("Optional. Describe the useful result you expect from prepared work.")
+                    .accessibilityIdentifier("atlas.create.outcome")
+                    .lineLimit(2...6)
+                    .padding(AtlasTheme.Spacing.md)
+                    .background(AtlasTheme.ColorToken.sheet)
+                    .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+
+                preparationFeedback
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: { dismiss() })
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var preparationFeedback: some View {
+        switch operation {
+        case .idle:
+            prepareButton
+        case .preparing:
+            AtlasPrimaryButton(title: "Preparing work…", symbol: "clock", action: {})
+                .disabled(true)
+                .opacity(0.65)
+                .padding(.top, AtlasTheme.Spacing.lg)
+                .accessibilityLabel("Preparing work")
+        case .prepared(let receipt):
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
+                AtlasStudioBlock(
+                    kind: "WORK PREPARED",
+                    symbol: "checkmark.seal.fill",
+                    title: receipt.title,
+                    detail: receipt.detail,
+                    accent: AtlasTheme.ColorToken.moss
+                )
+                AtlasPrimaryButton(
+                    title: receipt.requiresWorkspaceRefresh ? "Refresh workspace" : "View prepared work",
+                    symbol: receipt.requiresWorkspaceRefresh ? "arrow.clockwise" : "checklist",
+                    action: {
+                        if receipt.requiresWorkspaceRefresh {
+                            refreshPreparedWork()
+                        } else {
+                            viewPreparedWork()
+                        }
+                        dismiss()
+                    }
+                )
+                .accessibilityHint(receipt.requiresWorkspaceRefresh
+                    ? "Refreshes the authoritative workspace after a prepared record was accepted. It does not execute a task."
+                    : "Opens the Work runbook. The record is prepared only and has not executed a task.")
+            }
+            .padding(.top, AtlasTheme.Spacing.lg)
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                AtlasStudioBlock(
+                    kind: "PREPARATION NOT RECORDED",
+                    symbol: "exclamationmark.shield.fill",
+                    title: "Work could not be prepared",
+                    detail: message,
+                    accent: AtlasTheme.ColorToken.clay
+                )
+                prepareButton(title: "Try again", symbol: "arrow.clockwise")
+            }
+            .padding(.top, AtlasTheme.Spacing.lg)
+        }
+    }
+
+    private var prepareButton: some View {
+        prepareButton(title: "Prepare work", symbol: "arrow.right")
+    }
+
+    private func prepareButton(title: String, symbol: String) -> some View {
+        AtlasPrimaryButton(title: title, symbol: symbol, action: prepareWork)
+            .accessibilityIdentifier("atlas.create.prepare")
+            .accessibilityHint(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "Add a brief before preparing work. Preparing work does not execute a task."
+                : "Prepares a work record only. It does not execute a task.")
+            .disabled(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity(brief.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
+            .padding(.top, AtlasTheme.Spacing.lg)
+    }
+
+    private func prepareWork() {
+        let trimmedBrief = brief.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedOutcome = outcome.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBrief.isEmpty else { return }
+        operation = .preparing
+        Task { @MainActor in
+            operation = await created(trimmedBrief, trimmedOutcome)
+        }
+    }
+}
+
+private struct AtlasDecisionReviewSheet: View {
+    let decision: AtlasDecision
+    @EnvironmentObject private var store: AtlasWorkspaceStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var challenge: AtlasActionChallenge?
+    @State private var receipt: AtlasDecisionConfirmationReceipt?
+    @State private var isWorking = false
+    @State private var localError: String?
+    @State private var localErrorTitle = "Review or challenge was not recorded"
+    @State private var needsFreshChallenge = false
+
+    var body: some View {
+        NavigationStack {
+            AtlasPage(focus: true) {
+                VStack(alignment: .leading, spacing: AtlasTheme.Spacing.md) {
+                    AtlasSectionHeader("Decision review", detail: "Review, challenge, and confirmation are separate accountability steps.", focus: true)
+                    Text(currentDecision.title)
+                        .font(AtlasTheme.Typography.display)
+                        .foregroundStyle(AtlasTheme.ColorToken.focusInk)
+                    AtlasStatusLabel(currentDecision.state.inboxStatus, focus: true)
+                    AtlasRule(focus: true)
+
+                    AtlasDecisionFact(label: "What will happen", value: currentDecision.summary)
+                    AtlasDecisionFact(label: "Affected resource", value: currentDecision.affectedResource)
+                    AtlasDecisionFact(label: "Execution location", value: currentDecision.executionDetail)
+                    AtlasDecisionFact(label: "Why review is required", value: currentDecision.policyReason)
+                    AtlasDecisionFact(label: "Expires", value: currentDecision.expiryLabel)
+
+                    AtlasSectionHeader("Evidence", detail: "Review the record before requesting a confirmation challenge.", focus: true)
+                    Text(currentDecision.evidenceSummary)
+                        .font(AtlasTheme.Typography.body)
+                        .foregroundStyle(AtlasTheme.ColorToken.focusMutedInk)
+
+                    confirmationControl
+
+                    if let localError {
+                        AtlasStudioBlock(
+                            kind: "RECOVERY REQUIRED",
+                            symbol: "exclamationmark.shield.fill",
+                            title: localErrorTitle,
+                            detail: localError,
+                            accent: AtlasTheme.ColorToken.clay
+                        )
+                    }
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", action: { dismiss() })
+                        .foregroundStyle(AtlasTheme.ColorToken.focusInk)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var currentDecision: AtlasDecision {
+        store.briefing?.decisions.first(where: { $0.id == decision.id }) ?? decision
+    }
+
+    private var requiresFreshChallenge: Bool {
+        needsFreshChallenge || currentDecision.state.needsConfirmation
+    }
+
+    private var isMissingFromCurrentBriefing: Bool {
+        store.isDecisionMissingFromCurrentBriefing(decision.id)
+    }
+
+    @ViewBuilder
+    private var confirmationControl: some View {
+        if isMissingFromCurrentBriefing {
+            AtlasStudioBlock(
+                kind: "DECISION UNAVAILABLE",
+                symbol: "rectangle.dashed",
+                title: "This decision changed after refresh",
+                detail: "The authoritative workspace briefing no longer includes this decision. Atlas will not use the prior local record for review, challenge, or confirmation.",
+                accent: AtlasTheme.ColorToken.amber
+            )
+            focusButton(title: "Return to Inbox", symbol: "tray", identifier: "atlas.decision.returnInbox") {
+                dismiss()
+            }
+            .accessibilityHint("Closes this outdated decision record and returns to the current Inbox. No action is executed.")
+        } else if currentDecision.state == .confirmationRecorded {
+            AtlasStudioBlock(
+                kind: "CONFIRMATION RECORDED",
+                symbol: "checkmark.seal.fill",
+                title: "Intent recorded — not executed",
+                detail: "The authoritative workspace record contains a confirmation receipt only. No external action, dispatch, publication, or approval was executed.",
+                accent: AtlasTheme.ColorToken.moss
+            )
+        } else if let receipt {
+            AtlasStudioBlock(
+                kind: "CONFIRMATION RECORDED",
+                symbol: "checkmark.seal.fill",
+                title: receipt.isNonExecuting ? "Intent recorded — not executed" : "Confirmation recorded",
+                detail: receipt.isNonExecuting
+                    ? "The control plane stored a receipt only. No external action, dispatch, publication, or approval was executed."
+                    : "The control plane recorded this confirmation.",
+                accent: AtlasTheme.ColorToken.moss
+            )
+        } else if !currentDecision.state.canStartHandoff {
+            AtlasStudioBlock(
+                kind: "DECISION CLOSED",
+                symbol: "lock.shield",
+                title: currentDecision.state.inboxLabel,
+                detail: "\(currentDecision.state.inboxDetail) Atlas will not start a review, challenge, or confirmation handoff from this authoritative state.",
+                accent: AtlasTheme.ColorToken.amber
+            )
+            focusButton(title: "Return to Inbox", symbol: "tray", identifier: "atlas.decision.returnInbox") {
+                dismiss()
+            }
+            .accessibilityHint("Closes this read-only decision record and returns to the current Inbox. No action is executed.")
+        } else if !store.syncStatus.canStartDecisionHandoff {
+            AtlasStudioBlock(
+                kind: "WORKSPACE REFRESH REQUIRED",
+                symbol: "arrow.triangle.2.circlepath",
+                title: "Refresh before continuing",
+                detail: "Atlas needs a current authoritative workspace briefing before it can record review, request a challenge, or start local authentication. \(store.syncStatus.detail)",
+                accent: AtlasTheme.ColorToken.amber
+            )
+            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise", identifier: "atlas.decision.refreshWorkspace") {
+                refreshDecision()
+            }
+            .accessibilityHint("Requests a fresh authoritative workspace briefing. It does not execute work or an external action.")
+        } else if currentDecision.isActionableExpired() {
+            AtlasStudioBlock(
+                kind: "DECISION EXPIRED",
+                symbol: "clock.badge.exclamationmark",
+                title: "Refresh before reviewing",
+                detail: "This decision deadline has passed. Atlas will not record review, request a challenge, or start local authentication from this stale record.",
+                accent: AtlasTheme.ColorToken.clay
+            )
+            focusButton(title: "Refresh workspace", symbol: "arrow.clockwise", identifier: "atlas.decision.refreshWorkspace") {
+                refreshDecision()
+            }
+            .accessibilityHint("Requests a fresh authoritative workspace briefing. It does not execute work or an external action.")
+        } else if let challenge, challenge.isExpired() {
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                AtlasStudioBlock(
+                    kind: "CHALLENGE EXPIRED",
+                    symbol: "clock.badge.exclamationmark",
+                    title: "Request a fresh confirmation challenge",
+                    detail: "This server challenge has expired. Atlas will not request local authentication or record a confirmation from it.",
+                    accent: AtlasTheme.ColorToken.amber
+                )
+                focusButton(title: "Request a new confirmation challenge", symbol: "arrow.clockwise", identifier: "atlas.decision.requestChallenge") {
+                    requestChallenge()
+                }
+                .accessibilityHint("Requests a fresh short-lived server challenge. No action is executed.")
+            }
+        } else if let challenge {
+            VStack(alignment: .leading, spacing: AtlasTheme.Spacing.sm) {
+                AtlasDecisionFact(label: "Server challenge", value: challenge.statement)
+                AtlasDecisionFact(label: "Challenge expires", value: challenge.expiresAt.formatted(.relative(presentation: .named)))
+                focusButton(
+                    title: challenge.requiresLocalAuthentication ? "Confirm with Face ID" : "Record confirmation",
+                    symbol: challenge.requiresLocalAuthentication ? "faceid" : "checkmark.shield",
+                    identifier: "atlas.decision.confirm"
+                ) {
+                    confirm(challenge)
+                }
+                .accessibilityHint("Records a confirmation receipt only. It does not execute an external action.")
+            }
+        } else {
+            focusButton(
+                title: requiresFreshChallenge ? "Request a new confirmation challenge" : "Record review & request challenge",
+                symbol: requiresFreshChallenge ? "arrow.clockwise" : "checkmark.shield",
+                identifier: "atlas.decision.requestChallenge"
+            ) {
+                requestChallenge()
+            }
+            .accessibilityHint(requiresFreshChallenge
+                ? "Requests a fresh short-lived server challenge after a confirmation failure. No action is executed."
+                : "Records your review, then requests a short-lived server confirmation challenge. No action is executed.")
+        }
+    }
+
+    private func focusButton(
+        title: String,
+        symbol: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(isWorking ? "Working…" : title, systemImage: isWorking ? "clock" : symbol)
+                .font(AtlasTheme.Typography.section)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, AtlasTheme.Spacing.md)
+        }
+        .foregroundStyle(AtlasTheme.ColorToken.focusCanvas)
+        .background(AtlasTheme.ColorToken.sheet)
+        .clipShape(RoundedRectangle(cornerRadius: AtlasTheme.Radius.control, style: .continuous))
+        .padding(.top, AtlasTheme.Spacing.md)
+        .disabled(isWorking)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func refreshDecision() {
+        localError = nil
+        Task { @MainActor in
+            isWorking = true
+            defer { isWorking = false }
+            await store.load()
+            if let message = store.errorMessage {
+                localErrorTitle = "Workspace refresh did not complete"
+                localError = message
+            }
+        }
+    }
+
+    private func requestChallenge() {
+        localError = nil
+        localErrorTitle = "Review or challenge was not recorded"
+        Task { @MainActor in
+            isWorking = true
+            defer { isWorking = false }
+            challenge = await store.prepareActionConfirmation(currentDecision)
+            if challenge == nil {
+                let reviewIsRecorded = store.hasRecordedReview(for: currentDecision.id)
+                needsFreshChallenge = reviewIsRecorded
+                localErrorTitle = reviewIsRecorded ? "Challenge was not issued" : "Review or challenge was not recorded"
+                localError = store.errorMessage ?? "Atlas could not record this review or request a confirmation challenge. Refresh the workspace and try again."
+            } else {
+                needsFreshChallenge = false
+            }
+        }
+    }
+
+    private func confirm(_ challenge: AtlasActionChallenge) {
+        guard !challenge.isExpired() else {
+            self.challenge = nil
+            needsFreshChallenge = true
+            localErrorTitle = "Confirmation challenge expired"
+            localError = "Atlas did not start local authentication because this server challenge has expired. Request a fresh challenge before recording confirmation."
+            return
+        }
+
+        localError = nil
+        localErrorTitle = "Confirmation was not recorded"
+        Task { @MainActor in
+            isWorking = true
+            defer { isWorking = false }
+            do {
+                if challenge.requiresLocalAuthentication {
+                    try await AtlasLocalAuthenticator().authenticate(reason: challenge.statement)
+                }
+                receipt = await store.recordActionConfirmation(decision: currentDecision, challenge: challenge)
+                if receipt == nil {
+                    self.challenge = nil
+                    needsFreshChallenge = true
+                    localError = store.errorMessage ?? "Atlas could not record this confirmation. Refresh the workspace and request a new challenge if needed."
+                }
+            } catch {
+                localError = error.localizedDescription
+            }
+        }
+    }
+}
+
+private struct AtlasDecisionFact: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(AtlasTheme.Typography.proof)
+                .tracking(0.8)
+                .foregroundStyle(AtlasTheme.ColorToken.focusMutedInk)
+            Text(value)
+                .font(AtlasTheme.Typography.body)
+                .foregroundStyle(AtlasTheme.ColorToken.focusInk)
+        }
+    }
+}

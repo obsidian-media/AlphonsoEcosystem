@@ -1,8 +1,37 @@
 import SwiftUI
 
+/// Selects the new full-mobile product shell while retaining the existing companion
+/// as a reversible compatibility mode during the migration period.
 struct ContentView: View {
+    @AppStorage("alphonso.mobile.experience") private var experience = MobileExperience.atlas.rawValue
+
+    var body: some View {
+        if selectedExperience == .atlas {
+            AtlasMobileRoot {
+                experience = MobileExperience.legacy.rawValue
+            }
+        } else {
+            LegacyCompanionContent {
+                experience = MobileExperience.atlas.rawValue
+            }
+        }
+    }
+
+    private var selectedExperience: MobileExperience {
+        MobileExperience(rawValue: experience) ?? .atlas
+    }
+}
+
+private enum MobileExperience: String {
+    case atlas
+    case legacy
+}
+
+/// The pre-existing local companion is preserved intact behind the migration seam.
+private struct LegacyCompanionContent: View {
     @EnvironmentObject var webSocketService: WebSocketService
     @EnvironmentObject var mdnsService: MDNSService
+    let returnToAtlas: () -> Void
     @State private var selectedTab = 0
 
     var body: some View {
@@ -12,8 +41,8 @@ struct ContentView: View {
             } else {
                 mainContent
             }
-            
-            if let error = webSocketService.errorMessage, 
+
+            if let error = webSocketService.errorMessage,
                webSocketService.connectionState != .connecting {
                 VStack {
                     Spacer()
@@ -22,6 +51,9 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+        .safeAreaInset(edge: .top) {
+            LegacyMigrationBanner(returnToAtlas: returnToAtlas)
         }
         .onAppear {
             webSocketService.getStatus()
@@ -34,7 +66,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private var mainContent: some View {
         TabView(selection: $selectedTab) {
             OperationsView()
@@ -82,9 +114,33 @@ struct ContentView: View {
     }
 }
 
+private struct LegacyMigrationBanner: View {
+    let returnToAtlas: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.triangle.branch")
+                .foregroundStyle(AtlasTheme.ColorToken.moss)
+            Text("Legacy local companion")
+                .font(.caption.weight(.semibold))
+            Spacer()
+            Button("Return to Atlas", action: returnToAtlas)
+                .font(.caption.weight(.semibold))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(AtlasTheme.ColorToken.mineral)
+        .overlay(alignment: .bottom) {
+            AtlasRule()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Returns to the new full-mobile Alphonso experience")
+    }
+}
+
 struct LoadingView: View {
     @State private var isAnimating = false
-    
+
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "antenna.radiowaves.left.and.right")
@@ -95,11 +151,11 @@ struct LoadingView: View {
                     .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
                     value: isAnimating
                 )
-            
-            Text("Connecting to Alphonso...")
+
+            Text("Connecting to Alphonso…")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            
+
             ProgressView()
         }
         .onAppear {
@@ -111,7 +167,7 @@ struct LoadingView: View {
 struct ErrorBanner: View {
     let message: String
     let onDismiss: () -> Void
-    
+
     var body: some View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -129,7 +185,7 @@ struct ErrorBanner: View {
         }
         .padding(12)
         .background(Color.red.opacity(0.9))
-        .cornerRadius(10)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .padding(.horizontal)
         .padding(.bottom, 8)
     }

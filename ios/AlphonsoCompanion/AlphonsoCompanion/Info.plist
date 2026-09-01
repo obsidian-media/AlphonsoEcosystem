@@ -46,6 +46,8 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Alphonso uses Face ID to confirm high-risk decision receipts. Confirmation records intent and does not execute an external action.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Alphonso needs local network access to connect to your desktop app for remote control and real-time updates.</string>
 	<key>NSBonjourServices</key>
@@ -56,6 +58,10 @@
 	<string>Alphonso uses the microphone for voice conversations.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Alphonso uses speech recognition to transcribe your voice.</string>
+	<key>AtlasControlPlaneURL</key>
+	<string></string>
+	<key>AtlasControlPlaneAPIVersion</key>
+	<string>v1</string>
 	<key>CloudVoiceEndpoint</key>
 	<string>https://voice.obsidianmedia.online/v1/voice/respond</string>
 	<key>SupabaseURL</key>
