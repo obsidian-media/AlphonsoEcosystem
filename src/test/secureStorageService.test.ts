@@ -23,22 +23,25 @@ describe('secureStorageService', () => {
   });
 
   describe('secureSet', () => {
-    it('writes to the keychain via secure_credential_set', async () => {
+    it('writes to the keychain via secure_credential_set and resolves true', async () => {
       invokeMock.mockResolvedValueOnce(undefined);
-      await secureSet('my_key', 'my_value');
+      const ok = await secureSet('my_key', 'my_value');
       expect(invokeMock).toHaveBeenCalledWith('secure_credential_set', { key: 'my_key', value: 'my_value' });
+      expect(ok).toBe(true);
     });
 
-    it('also mirrors to localStorage so secureGet has a fallback if the keychain read later fails', async () => {
+    it('clears any localStorage copy once the keychain write succeeds, so the secret does not sit in plaintext', async () => {
+      storage['my_key'] = 'stale-plaintext-copy';
       invokeMock.mockResolvedValueOnce(undefined);
       await secureSet('my_key', 'my_value');
-      expect(storage['my_key']).toBe('my_value');
+      expect(storage['my_key']).toBeUndefined();
     });
 
-    it('still writes to localStorage even when the keychain write throws (outside Tauri)', async () => {
+    it('does NOT fall back to writing localStorage when the keychain write throws — resolves false instead', async () => {
       invokeMock.mockRejectedValueOnce(new Error('not in Tauri'));
-      await secureSet('my_key', 'my_value');
-      expect(storage['my_key']).toBe('my_value');
+      const ok = await secureSet('my_key', 'my_value');
+      expect(ok).toBe(false);
+      expect(storage['my_key']).toBeUndefined();
     });
   });
 

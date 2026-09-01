@@ -122,7 +122,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **117 Rust unit tests across 26 modules** — 110 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **117 Rust unit tests across 37 modules** — 110 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -305,7 +305,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~2,182 lines · 110 Tauri commands · 26 modules   │    │
+│  │  lib.rs ~794 lines · 110 Tauri commands · 37 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -413,7 +413,7 @@ npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
 ```bash
 cd src-tauri
 cargo check                    # Verify compilation
-cargo test                     # 112 static Rust unit tests across 26 modules
+cargo test                     # 112 static Rust unit tests across 37 modules
                                 # (cargo test's own count may run a few more —
                                 # async #[tokio::test] cases, per AGENTS.md)
 cargo clippy -- -D warnings    # Lint (CI enforces zero warnings)

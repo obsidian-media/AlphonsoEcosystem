@@ -15,24 +15,40 @@ import { invoke } from '@tauri-apps/api/core';
  * this is a read-path migration for a value written before this module
  * existed, not a general offline mode. A get that finds nothing in either
  * place returns `null`, same as an empty keychain.
+ *
+ * `secureSet` does NOT fall back to writing the value into localStorage on a
+ * keychain failure — matching the precedent `connectorAuth.ts`'s own
+ * `writeAllCredentials` already established (fire-and-forget the keychain
+ * write, keep the caller's own in-memory state as the only in-session
+ * fallback). Two earlier versions of this function did write to localStorage
+ * on failure (or unconditionally); CodeQL correctly flagged both as
+ * clear-text storage of sensitive data — a value tainted as sensitive
+ * reaching `localStorage.setItem` on any reachable path is a real finding
+ * regardless of which branch guards it. A keychain write failing means the
+ * value isn't durably persisted outside the current session (browser dev
+ * mode, OS keychain access denied); callers that need the value to survive
+ * that already hold it in their own in-memory cache for as long as the
+ * session lasts.
  */
 
-export async function secureSet(key: string, value: string): Promise<void> {
+export async function secureSet(key: string, value: string): Promise<boolean> {
   try {
     await invoke('secure_credential_set', { key, value });
   } catch {
     // Keychain unavailable (browser dev mode, OS keychain access denied,
-    // etc.) — the caller still needs the value to persist somehow.
+    // etc.) — the caller's own in-memory state is the only fallback; see
+    // the module doc comment above for why this doesn't write localStorage.
+    return false;
   }
-  // Always mirror to localStorage too: it's what `secureGet` falls back to
-  // when the keychain entry is missing (e.g. this ran outside Tauri), and
-  // removing it here rather than after a confirmed keychain write would
-  // drop the value with no fallback if the keychain write above failed.
+  // The keychain has it now — clear any localStorage copy so a legacy
+  // pre-migration value (which secureGet's fallback would otherwise keep
+  // finding) doesn't linger in plaintext once it's safely in the keychain.
   try {
-    localStorage.setItem(key, value);
+    localStorage.removeItem(key);
   } catch {
     /* localStorage unavailable */
   }
+  return true;
 }
 
 export async function secureGet(key: string): Promise<string | null> {

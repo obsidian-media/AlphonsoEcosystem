@@ -13,7 +13,7 @@ const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' 
 import { formatModelSize, normalizeEndpoint as _normalizeEndpoint } from '../lib/ollama';
 import { getCustomAvatarDataUrl, removeCustomAvatar, setCustomAvatar } from '../services/agentAvatarService';
 import { getAgentMascotPath } from '../services/agentVisualService';
-import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits } from '../services/composioService';
+import { getComposioConfig, setComposioConfig, isComposioEnabled, getComposioStatus, checkComposioHealth, fetchComposioToolkits, hydrateComposioApiKeyFromKeychain } from '../services/composioService';
 import { listPlugins, togglePlugin } from '../services/pluginRegistryService';
 import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupSizeEstimate, type BackupSizeEstimate } from '../services/backupService';
 import { getAccBridgeConfig, updateAccBridgeConfig } from '../services/agentWorkshop/accBridgeService';
@@ -613,12 +613,23 @@ export function SettingsView({
   };
 
   useEffect(() => {
-    const status = getComposioStatus();
-    if (status.enabled && status.hasApiKey) {
-      checkComposioHealth().then(setComposioHealth);
-      const cached = JSON.parse(localStorage.getItem('alphonso_composio_tools_v1') || 'null');
-      if (cached) setComposioToolkits(cached.toolkits || []);
-    }
+    let cancelled = false;
+    hydrateComposioApiKeyFromKeychain().then(() => {
+      if (cancelled) return;
+      // Re-sync from the now-hydrated cache: the useState initializers above ran
+      // before this resolved, so a key that only lived in the keychain (not the
+      // legacy blob this component's initial read falls back to) wasn't visible yet.
+      const hydrated = getComposioConfig();
+      setComposioApiKey((prev) => prev || hydrated.apiKey || '');
+
+      const status = getComposioStatus();
+      if (status.enabled && status.hasApiKey) {
+        checkComposioHealth().then(setComposioHealth);
+        const cached = JSON.parse(localStorage.getItem('alphonso_composio_tools_v1') || 'null');
+        if (cached) setComposioToolkits(cached.toolkits || []);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
 
   const handleComposioSave = () => {
