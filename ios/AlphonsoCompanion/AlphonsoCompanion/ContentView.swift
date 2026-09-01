@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Selects the new full-mobile product shell while retaining the existing companion
-/// as a reversible compatibility mode during the migration period.
+/// Selects the mobile experience. Atlas (the cloud-first shell) is opt-in preview only —
+/// it talks to a non-production demo control plane, not the user's running desktop app.
+/// The legacy local companion (real WebSocket pairing to the desktop app) stays default
+/// until Atlas is wired to real desktop/task execution instead of the demo backend.
 struct ContentView: View {
-    @AppStorage("alphonso.mobile.experience") private var experience = MobileExperience.atlas.rawValue
+    @AppStorage("alphonso.mobile.experience") private var experience = MobileExperience.legacy.rawValue
 
     var body: some View {
         if selectedExperience == .atlas {
@@ -18,7 +20,7 @@ struct ContentView: View {
     }
 
     private var selectedExperience: MobileExperience {
-        MobileExperience(rawValue: experience) ?? .atlas
+        MobileExperience(rawValue: experience) ?? .legacy
     }
 }
 
