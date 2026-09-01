@@ -1,6 +1,7 @@
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { invoke } from '@tauri-apps/api/core';
 import { persistScopeRows } from './runtimeLedgerService';
+import { verifyPluginSignature } from './pluginSigningService';
 
 const PLUGINS_KEY = 'alphonso_plugins_v1';
 const AUDIT_KEY = 'alphonso_plugin_audit_v1';
@@ -317,4 +318,8 @@ export async function validatePluginManifestDisk(manifestPath: string): Promise<
   return invoke('validate_plugin_manifest_disk', {
     manifestPath
   });
+}
+
+export async function verifyPluginSignatureFromRegistry(manifestObj: Record<string, unknown>): Promise<{ ok: boolean; reason?: string; trusted?: string }> {
+  return verifyPluginSignature(manifestObj);
 }

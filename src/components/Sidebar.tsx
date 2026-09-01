@@ -20,7 +20,8 @@ import {
   Shield,
   Sparkles,
   Terminal,
-  Trash2
+  Trash2,
+  Activity
 } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-icon.svg';
 import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
@@ -89,6 +90,7 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'miya', icon: Palette, label: 'Creative' },
       { id: 'mission_room', icon: Sparkles, label: 'Boardroom' },
       { id: 'ecosystem', icon: Bot, label: 'All Agents' },
+      { id: 'agent_performance', icon: Activity, label: 'Agent Performance' },
     ]
   },
   {

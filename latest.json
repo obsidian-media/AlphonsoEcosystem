@@ -1,0 +1,11 @@
+{
+  "version": "2.6.5",
+  "pub_date": "2026-08-26T18:06:59Z",
+  "notes": "Alphonso 2.6.5 release",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTY0YvRXYrQ0I0TGNCZ3dQbFQzLzJ2ZEpOTWhNRzBwV0pHVWxva2dQbFZ0WnppQ1pJeHpRaHZLeExMR2RXaUNzQktmcGJBMnRxL002MmJtdU5RWnJpQlY0VWFrRnFHemdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3NzY3NjE2CWZpbGU6QWxwaG9uc29fMi42LjVfeDY0LXNldHVwLmV4ZQpraFFYR3RNSkpEVzJ2NFRnM0JLcFV4WENhRUc5Nk5ldlVwOHp6OFE3WWtNdk1FRCtEaVNTWDFlNk1CbnBjQkM2cUVsUXJ6WUwvVkJ6b1laTS81eDNCZz09Cg==",
+      "url": "https://github.com/obsidian-media/AlphonsoEcosystem/releases/download/v2.6.5/Alphonso_2.6.5_x64-setup.exe"
+    }
+  }
+}
