@@ -15,22 +15,23 @@ describe('iOS Companion Integration', () => {
 
   it('checks companion service status via Tauri invoke', async () => {
     invoke.mockResolvedValue({ status: 'running', version: '2.4.4' });
-    const result = await invoke('get_companion_status');
-    expect(invoke).toHaveBeenCalledWith('get_companion_status');
+    const result = await invoke('companion_get_status');
+    expect(invoke).toHaveBeenCalledWith('companion_get_status');
     expect(result.status).toBe('running');
   });
 
-  it('starts companion server from frontend', async () => {
-    invoke.mockResolvedValue({ port: 8765 });
-    const result = await invoke('start_companion_server');
-    expect(invoke).toHaveBeenCalledWith('start_companion_server');
-    expect(result.port).toBe(8765);
+  it('starts companion discovery from frontend', async () => {
+    invoke.mockResolvedValue({ discovery_started: true });
+    const result = await invoke('companion_start_discovery');
+    expect(invoke).toHaveBeenCalledWith('companion_start_discovery');
+    expect(result.discovery_started).toBe(true);
   });
 
-  it('handles stop companion server', async () => {
-    invoke.mockResolvedValue({});
-    await invoke('stop_companion_server');
-    expect(invoke).toHaveBeenCalledWith('stop_companion_server');
+  it('gets companion PIN', async () => {
+    invoke.mockResolvedValue({ pin: '123456' });
+    const result = await invoke('companion_get_pin');
+    expect(invoke).toHaveBeenCalledWith('companion_get_pin');
+    expect(result.pin).toBe('123456');
   });
 
   it('Swift WebSocket service matches Rust JSON-RPC protocol', () => {
@@ -90,15 +91,9 @@ describe('iOS Companion Integration', () => {
     expect(message.params.taskId).toBe('task-xyz');
   });
 
-  it('get_projects returns project list', async () => {
-    invoke.mockResolvedValue({ projects: [{ name: 'Test Project' }] });
-    const result = await invoke('get_projects');
-    expect(result.projects).toBeDefined();
-  });
-
-  it('get_boardroom returns sessions', async () => {
-    invoke.mockResolvedValue({ sessions: [] });
-    const result = await invoke('get_boardroom');
-    expect(result.sessions).toEqual([]);
+  it('companion_get_local_ip returns IP address', async () => {
+    invoke.mockResolvedValue({ ip: '192.168.1.100' });
+    const result = await invoke('companion_get_local_ip');
+    expect(result.ip).toBeDefined();
   });
 });
