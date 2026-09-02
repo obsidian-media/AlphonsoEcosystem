@@ -284,6 +284,7 @@ jobs:
             librsvg2-dev \
             libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev \
+            libfuse2 \
             zstd
 
       - name: Install dependencies
@@ -295,6 +296,13 @@ jobs:
       - name: Build Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # ubuntu-latest's runner has no FUSE userspace mount available, so the
+          # AppImage tooling linuxdeploy/AppRun downloads can't self-mount —
+          # "failed to run linuxdeploy" on every Linux build since at least
+          # 2026-08-27 (continue-on-error hid it). Installing libfuse2 above
+          # isn't sufficient by itself in this sandboxed runner; forcing
+          # extract-and-run mode avoids needing FUSE entirely.
+          APPIMAGE_EXTRACT_AND_RUN: '1'
         run: npm run tauri build
 
       - name: Upload AppImage artifact
