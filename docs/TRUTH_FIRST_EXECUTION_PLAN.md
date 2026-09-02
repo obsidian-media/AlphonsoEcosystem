@@ -768,14 +768,17 @@ dropped.
   **duplicate of D2**, already tracked `BLOCKED` above pending physical
   device access.
 
-- [ ] **G-T11 — Harden KV/localStorage persistence with a real schema +
-  migrations**
-  - **Owner:** Alphonso
-  - No versioned schema or migration path currently exists for the
-    `alphonso_*` localStorage/SQLite keys; ad hoc shape changes rely on
-    defensive reads rather than an explicit migration step.
-  - **Done when:** a schema version is recorded per key family and a
-    migration runs (and is tested) when an older shape is detected.
+- [x] **G-T11 — Harden KV/localStorage persistence with a real schema +
+  migrations** — **closed by `52f2ad0`, 2026-07-21** (checkbox corrected
+  2026-09-02 during a doc-drift pass; the fix had been live for over a month
+  before this was checked off).
+  - `src/lib/durableStore.js` has `DURABLE_SCHEMA_VERSION`, an ordered
+    `runDurableMigrations()` runner (idempotent, stops-and-retries at the
+    first failed step rather than skipping it), a corrupted-version-string
+    guard in `readVersion()`, and read-back recovery
+    (`hydrateKeyFromDurable`/`reconcileKey`) so the SQLite backup is an
+    actual recovery path, not just a write-only sink. Tests in
+    `src/test/durableStore.test.js`.
 
 - [ ] **G-T12 — Review connector policy DSL default posture**
   - **Owner:** Sentinel
@@ -792,59 +795,86 @@ dropped.
 
 - [ ] **G-T14 — Split `lib.rs` + lint-enforce `CREATE_NO_WINDOW`**
   - **Owner:** Alphonso
-  - **Status note:** `cf2d9ef` extracted 6 modules out of `lib.rs`, but the
-    file is still 2,206 lines (measured 2026-07-26) — larger than the
-    2,024-line figure this task was originally scoped against, not smaller.
-    No CI lint currently enforces `CREATE_NO_WINDOW` on new
-    `Command::new()`/`TokioCommand::new()` call sites (see CLAUDE.md's
-    "CREATE_NO_WINDOW on all Windows process spawns" note) — it depends on a
-    human remembering.
-  - **Done when:** `lib.rs` is reduced via further extraction, and a CI check
-    (clippy lint, grep-based check, or custom script) fails a new Windows
-    process spawn that skips the shared `no_window()` helper.
+  - **Status note (updated 2026-09-02):** PRs #194–#197 extracted
+    filesystem/picker, runtime-launcher, restore/handoff, OCR,
+    jose-decompose, update-check, system, bridge, and clipboard/url/
+    notification commands into their own modules. `lib.rs` is now **837
+    lines** (measured 2026-09-02, verified via `wc -l`) — down from the
+    2,206-line figure this task was last tracked against, and now well
+    under the original 2,024-line baseline. The split half of this task is
+    substantially done. The lint half is not: no CI check currently enforces
+    `CREATE_NO_WINDOW` on new `Command::new()`/`TokioCommand::new()` call
+    sites (see CLAUDE.md's "CREATE_NO_WINDOW on all Windows process spawns"
+    note) — it still depends on a human remembering.
+  - **Done when:** a CI check (clippy lint, grep-based check, or custom
+    script) fails a new Windows process spawn that skips the shared
+    `no_window()` helper.
 
 - [ ] **G-T17 — Add observability to cloud sidecars (gateways, MCP server,
   bridge)**
   - **Owner:** Alphonso
-  - `gateway/whatsapp-cloud/`, `gateway/generic-webhook/`, `mcp-server/`, and
-    `bridge/` have no structured logging/metrics/error-tracking wired in;
-    failures are only visible via Railway's raw logs or silent failure.
+  - **Status note (updated 2026-09-02):** `gateway/whatsapp-cloud/` and
+    `gateway/generic-webhook/` already had structured logging via a
+    `safeLog()` convention before this task was written. PR #203 (2026-09-02,
+    explicitly titled "G-T17 partial") extended the same convention to
+    `bridge/server.js` and `mcp-server/server.js` — both now emit one JSON
+    line per request (method/path/status/duration) to stdout. What's still
+    missing: a documented way to inspect these logs without shell access to
+    the host (the DoD's second half) — today that still means SSH/Railway
+    raw logs, no aggregation or viewer.
   - **Done when:** each service emits structured logs for request/response
-    and error paths, with a documented way to inspect them without shell
-    access to the host.
+    and error paths (done), with a documented way to inspect them without
+    shell access to the host (not done).
 
 - [ ] **G-T19 — Auto-generate the "Do Not Duplicate" map**
   - **Owner:** Echo
   - CLAUDE.md's "Do Not Duplicate" table is hand-maintained and already
     large; it drifts from source the same way doc counts did before
     `verify:docs`/`verify:skill-matrix` existed.
+  - **Status note (updated 2026-09-02):** PR #201 wired a checker
+    (`scripts/verify-dnd-coverage.mjs`) into `ci.yml` as an **advisory**
+    step (`continue-on-error: true`) — it doesn't generate the table, it
+    only flags gaps. Running it live (2026-09-02) found **124 files**
+    missing from the table. That number is the real, current size of this
+    task, not the auto-generator itself — the generator half described
+    below has not been built.
   - **Done when:** a generator (similar in spirit to
     `scripts/generate-skill-permission-matrix.mjs`) derives at least the
     service-existence half of the table from `src/services/` + component
-    exports, with a `--check` mode wired into CI doc-freshness.
+    exports, with a `--check` mode wired into CI doc-freshness (the current
+    advisory grep-and-list checker is a step toward this, not the finished
+    task).
 
 - [ ] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
   hidden features**
   - **Owner:** Jose (budget), Echo (discoverability)
   - No cost/token ceiling exists for Boardroom `@mention` chains or other
     multi-agent fan-out paths beyond the existing `MAX_CHAIN_DEPTH=3` hop
-    cap; and several real, working features (Operator Dashboard, Agent
-    Pairing, Ecosystem Maturity panels) remain sunk 2+ clicks deep behind
-    generic tab labels per the 2026-07-02 discoverability audit.
+    cap (confirmed still the only limiter, 2026-09-02); and several real,
+    working features (Operator Dashboard, Agent Pairing, Ecosystem Maturity
+    panels) remain sunk 2+ clicks deep behind generic tab labels per the
+    2026-07-02 discoverability audit.
+  - **Status note (updated 2026-09-02):** PR #202 added an Operator Dashboard
+    nav-sidebar entry, closing that one item of the discoverability half.
+    Agent Pairing and Ecosystem Maturity panels are still undiscoverable by
+    the same standard. The budget/ceiling half has not been started at all.
   - **Done when:** a measurable budget/ceiling exists for agent fan-out
-    costs, and the flagged low-discoverability surfaces have a nav entry or
-    equivalent promotion — or each is explicitly re-scoped with reasoning.
+    costs, and the remaining flagged low-discoverability surfaces (Agent
+    Pairing, Ecosystem Maturity) have a nav entry or equivalent promotion —
+    or each is explicitly re-scoped with reasoning.
 
 - [ ] **G-OTHER1 — iOS companion Rust↔Swift end-to-end pairing test**
   - Full backend + React pairing UI exist and were live-device-confirmed
     working (see Ground Truth §11, 2026-07-25 PR #121), but no automated
     end-to-end test exercises the real pairing handshake — still open.
 
-- [ ] **G-OTHER2 — `ios-build.yml` never runs `AlphonsoCompanionTests`**
-  - The iOS CI workflow archives and exports an IPA but has no
-    `xcodebuild test` step; all 5 existing test files under
-    `AlphonsoCompanionTests/` have never executed in CI (found 2026-07-25
-    while verifying the websocket-URL fix in PR #121).
+- [x] **G-OTHER2 — `ios-build.yml` never runs `AlphonsoCompanionTests`** —
+  **closed 2026-08-14, PR #146** (checkbox corrected 2026-09-02; the fix had
+  been live for 3 weeks before this was checked off — see CLAUDE.md's
+  2026-08-14 entry, which already documented it).
+  - `ci(ios): run AlphonsoCompanionTests before archive/sign/upload` added
+    the `xcodebuild test` step; further split into a dedicated native-test
+    job by `c7911cf` (2026-08-27).
 
 - [x] **G-OTHER3 — `companionIntegration.test.js` asserts against fabricated
   Tauri command names** — **closed 2026-07-26 by PR #124.**
@@ -855,15 +885,22 @@ dropped.
   - Fixed: replaced tautological mDNS assertion with format checks and
     duplicate start-server test with actual command routing test.
 
-- [ ] **G-OTHER4 — Function-level coverage still low (~5.88%)**
-  - Line/statement coverage is healthy (~38%+) but function coverage is not;
-    the CI threshold was lowered to 0 to unblock builds rather than raising
-    real coverage. Real gap, not cosmetic.
+- [x] **G-OTHER4 — Function-level coverage still low (~5.88%)** — **closed
+  2026-08-20** (checkbox corrected 2026-09-02).
+  - `vitest.config.js`'s `functions` floor was raised from the placeholder
+    `0` to `30` (measured actual: lines 53.08%/branches 41.06%/functions
+    44.86%/statements 50.91%, all with real margin above their enforced
+    floors) — see CLAUDE.md's 2026-08-20 coverage entry.
 
-- [ ] **G-OTHER5 — Voice OS Python prerequisite has no auto-install path**
-  - Voice OS requires Python 3.10+ on PATH; Runtime Hub can auto-install
-    other prerequisites (Git, Ollama) via winget/brew/apt but not Python
-    itself. Still open.
+- [x] **G-OTHER5 — Voice OS Python prerequisite has no auto-install path** —
+  **stale claim, corrected 2026-09-02.**
+  - `runtime_install_prerequisite` in `runtime_manager.rs` has installed
+    `python` via winget/brew/apt alongside `git`/`ollama` since 2026-06-23
+    (`053c641`), and `RuntimeManagerView.tsx`'s `PrereqPanel` surfaces a real
+    "Install Python" button. This item was never true as originally
+    described by the time it was written — `VoiceView.tsx`'s own prereq row
+    is detect-only (links out to Runtime Hub rather than installing inline),
+    which is a minor UX gap, not "no auto-install path."
 
 ### H. Voice operationalization (Windows-executable)
 
@@ -1263,4 +1300,5 @@ dropped.
 | 2026-08-20 | PR #151 merged (hook-test-coverage recovery, all 6 originally/newly-flagged files fixed, 345/345 in `src/test/hooks/`); doc counts refreshed repo-wide to 279 files / 4,199 tests after confirming the full local suite completes (previously documented as timing out — not reproduced this run). Added J2: PaperClip (`paperclipai/paperclip`) concept-sourcing notes. | PR #151 (merged, all required CI green); `docs/STRATEGY_PAPERCLIP_REFERENCE.md` (gitignored); `docs/governance/DEFERRED_WORK.md` 2026-08-20 entry. |
 | 2026-08-21 | PR #167 merged (PaperClip docs tracking + a pre-existing `clippy::useless_format` fix that was blocking CI, unrelated to this repo's own changes + 2 CodeRabbit review fixes). | PR #167 (merged). |
 | 2026-08-21 | Closed **I1** for real: live-verified Phase 1a against the actual running Hector Hermes profile (spawned via the `hermes-fleet-scripts` lazy-spawn mechanism, confirmed via Hermes' own `agent.log` that a real chat completion round-tripped through Nous Research inference). Closed **I2** (Hermes Phase 1b hardening): circuit-breaker `configure()` API, rate-limiter/circuit-breaker tuning, audit logging on every call path, `hermes_agents` classified high-risk in the policy gate (with the real "Approval Mode now blocks Hermes by default, no call site passes `approved:true` yet" nuance flagged, not hidden — tracked as a new deferred item in `docs/governance/DEFERRED_WORK.md`), session continuity (`X-Hermes-Session-Id`, derived as a fresh `crypto.randomUUID()` per logical unit of work rather than sent raw — a real CodeQL `js/insecure-randomness` finding caught and fixed mid-review, since the raw threadId/packetId are `Math.random()`-generated and were never previously used in a security-sensitive context — wired into 2 of 9 call sites), and `backend`/`model` exposed on `generateAgentLlmResponse`'s result (also fixed a related bug this surfaced: `boardroomFacilitatorService.ts`'s `generateAgentResponse` was returning the requested model instead of the provider-resolved one). Also flagged, not fixed (tracked as a separate deferred item): `hermes_agents` bypasses Zero-Cost Mode for any saved endpoint, including a non-loopback one — pre-existing since PR 1a, surfaced by a 1b test that documented rather than fixed it. 113 targeted tests across touched files + 525 regression-verified tests across every file importing a touched module, `tsc --noEmit` clean, lint clean. | PR #168; this file's I1/I2 entries above for full per-subsection evidence; `docs/governance/DEFERRED_WORK.md`'s 2026-08-21 entries; `src/test/hermesAgentConnector.test.js` (27), `src/test/connectorCircuitBreakerService.test.js` (17 incl. 3 new), `src/test/policyEnforcementService.test.js` (4 incl. 3 new hermes tests), `src/test/connectorHealthCheckService.test.js` (5 new), `src/test/generateAgentLlmResponse.test.js` (1 new), `src/test/services/boardroomFacilitatorService.test.ts` (1 new). |
+| 2026-09-02 | Doc-drift reconciliation pass, requested after confirming PR #204 (Linux AppImage bundling fix) landed green on `main`. Checked every `[ ]` item in Section G against current code rather than trusting the existing notes, and closed 4 that were stale: **G-T11** (persistence schema/migrations — done since `52f2ad0`, 2026-07-21), **G-OTHER2** (`ios-build.yml` xcodebuild test step — done since PR #146, 2026-08-14), **G-OTHER4** (function coverage floor — raised since 2026-08-20), **G-OTHER5** (Voice OS Python auto-install — has existed since `053c641`, 2026-06-23; the item's own premise was already false when written). Updated status notes (not closed, still genuinely open) on **G-T14** (`lib.rs` split: 2,206→837 lines via PRs #194–#197; CI lint enforcement still missing), **G-T17** (bridge/MCP server structured logging added by PR #203; log-inspection docs still missing), **G-T19** (advisory CI checker wired by PR #201; found 124 undocumented files; the actual generator is not built), **G-T20** (Operator Dashboard nav entry added by PR #202; Agent Pairing/Ecosystem Maturity discoverability and the fan-out budget are still untouched). Also updated `CLAUDE.md` (test-count header, ios-build.yml gap note, Voice OS Python note, a new consolidated "Last verified: 2026-09-02" entry bridging the previously-undocumented 2026-08-14→2026-09-02 gap covering PRs #184–#204) and appended a resolution note to `docs/governance/DEFERRED_WORK.md`'s Linux-installer entry. **Not attempted:** hand-writing the 124 missing "Do Not Duplicate" entries G-T19 surfaced — flagged as real, substantial follow-up work rather than rushed through with low-quality one-liners; building G-T19's own generator is the better use of that effort. | This row; `CLAUDE.md`'s 2026-09-02 entry; `docs/governance/DEFERRED_WORK.md`'s 2026-09-02 entry; `npm run verify:docs` (clean before and after), `npm run verify:dnd-coverage` (124 files, confirmed still failing/advisory), `git log`/`gh pr view` for every PR number cited above. |
 
