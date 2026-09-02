@@ -9,6 +9,26 @@ import express from 'express';
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
+// Structured request/response logging — one JSON line per request to stdout,
+// readable from any log viewer without shell access to the host. Mirrors the
+// gateways' safeLog() convention (see gateway/*/src/security.js).
+function safeLog(message, details = {}) {
+  process.stdout.write(`[alphonso-bridge] ${message} ${JSON.stringify(details)}\n`);
+}
+
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    safeLog('request', {
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt
+    });
+  });
+  next();
+});
+
 // Default port 4444; override with ALPHONSO_BRIDGE_PORT env var
 const PORT = Number(process.env.ALPHONSO_BRIDGE_PORT || process.env.BRIDGE_PORT || 4444);
 const OLLAMA_BASE = process.env.OLLAMA_BASE || 'http://localhost:11434';

@@ -21,6 +21,26 @@ const PORT = Number(process.env.MCP_SERVER_PORT || process.env.MCP_PORT || 3333)
 const BRIDGE_URL = process.env.ALPHONSO_BRIDGE_URL || 'http://localhost:4444';
 const MCP_SECRET = process.env.MCP_SECRET || '';
 
+// Structured request/response logging — one JSON line per request to stdout,
+// readable from any log viewer without shell access to the host. Mirrors the
+// gateways' safeLog() convention (see gateway/*/src/security.js).
+function safeLog(message, details = {}) {
+  process.stdout.write(`[alphonso-mcp-server] ${message} ${JSON.stringify(details)}\n`);
+}
+
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    safeLog('request', {
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt
+    });
+  });
+  next();
+});
+
 // ── Auth middleware ───────────────────────────────────────────────────────────
 // If MCP_SECRET is set, require Bearer token on tool call routes.
 // If MCP_SECRET is not set, restrict to 127.0.0.1 connections only.
