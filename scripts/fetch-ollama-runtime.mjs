@@ -226,19 +226,36 @@ async function main() {
   await pruneCudaVariant(VENDOR_DIR, CUDA_VARIANT_TO_DROP);
   // Linux-only, additional to the cuda_v13 drop above: linuxdeploy (the
   // AppImage bundler) failed every Linux desktop build since 2026-08-27
-  // with "ERROR: Could not find dependency: libggml-base.so.0" while
-  // walking cuda_v12/libggml-cuda.so's dependencies — that library's RPATH
-  // can't be resolved back to its sibling in lib/ollama/ by linuxdeploy's
-  // dependency walker (confirmed via `tauri build --verbose`, which is not
-  // the default and had been hiding this exact error behind a generic
-  // "failed to run linuxdeploy" for months). Windows already ships cuda_v12
-  // successfully (see the note above), so this prune is Linux-specific —
-  // Linux users temporarily lose bundled NVIDIA GPU acceleration in the
-  // AppImage; CPU-only Ollama inference still works. Revisit if linuxdeploy
-  // adds a way to skip strict dependency resolution for specific files, or
-  // if patchelf-ing the RPATH proves reliable across CI runs.
+  // with "ERROR: Could not find dependency: libggml-base.so.0" — confirmed
+  // via `tauri build --verbose` (not the default; had been hiding this
+  // exact error behind a generic "failed to run linuxdeploy" for months).
+  // Root cause: any lib/ollama/<subdir>/*.so backend (cuda_v12, then after
+  // pruning that, vulkan/ — discovered one CI run at a time as each was
+  // pruned and the *next* subdirectory hit the same wall) references
+  // libggml-base.so.0 via an RPATH that points to its own directory, not
+  // the parent lib/ollama/ where that library actually lives — a
+  // resolution limit in linuxdeploy's dependency walker, not something
+  // fixable by installing a missing tool. Rather than prune subdirectories
+  // by name one at a time as each is discovered, prune every subdirectory
+  // under lib/ollama/ generically — covers whatever ships today (cuda_v12,
+  // vulkan) and any future GPU backend directory a later Ollama release
+  // adds, without needing another round of "which one broke it this time".
+  // Windows keeps every backend (already proven working there — see the
+  // note above). Linux users temporarily lose bundled GPU acceleration
+  // (CUDA and Vulkan) in the AppImage; CPU-only Ollama inference is
+  // unaffected. Revisit if linuxdeploy adds a way to skip strict dependency
+  // resolution for specific files, or if patchelf-ing every backend .so's
+  // RPATH to add $ORIGIN/.. proves reliable across CI runs.
   if (platformKey === 'linux-amd64') {
-    await pruneCudaVariant(VENDOR_DIR, 'cuda_v12');
+    const ollamaLibDir = join(VENDOR_DIR, 'lib', 'ollama');
+    const libEntries = existsSync(ollamaLibDir)
+      ? await readdir(ollamaLibDir, { withFileTypes: true })
+      : [];
+    for (const entry of libEntries) {
+      if (entry.isDirectory()) {
+        await pruneCudaVariant(VENDOR_DIR, entry.name);
+      }
+    }
   }
   await rm(DOWNLOAD_DIR, { recursive: true, force: true });
 
