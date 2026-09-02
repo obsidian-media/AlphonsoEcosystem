@@ -47,12 +47,11 @@ const relativeSrcFiles = activeFiles.map(f => {
 const missingFromDoc = relativeSrcFiles.filter(f => !docPaths.has(f));
 
 if (missingFromDoc.length > 0) {
-  console.warn(`\n[verify-dnd-coverage] Found ${missingFromDoc.length} files missing from CLAUDE.md "Do Not Duplicate" list:`);
-  missingFromDoc.forEach(f => console.warn(`  - ${f}`));
-  console.warn('\nPlease add them to CLAUDE.md\'s "Do Not Duplicate" table with their respective purpose and descriptions.');
-  console.warn('This check is non-blocking to support gradual documentation of new structures.\n');
+  console.error(`\n[verify-dnd-coverage] Found ${missingFromDoc.length} files missing from CLAUDE.md "Do Not Duplicate" list:`);
+  missingFromDoc.forEach(f => console.error(`  - ${f}`));
+  console.error('\nAdd them to CLAUDE.md\'s "Do Not Duplicate" table with their respective purpose and descriptions.');
+  process.exit(1);
 } else {
   console.log('[verify-dnd-coverage] All components and services are fully documented in CLAUDE.md. ✓');
+  process.exit(0);
 }
-
-process.exit(0);

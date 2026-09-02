@@ -355,6 +355,9 @@ jobs:
       - name: Verify agent skill-pack permission matrix is fresh
         run: npm run verify:skill-matrix
 
+      - name: Verify "Do Not Duplicate" table covers every service/component
+        run: npm run verify:dnd-coverage
+
   e2e:
     name: Playwright E2E Smoke Test
     needs: [test]
