@@ -224,6 +224,22 @@ async function main() {
 
   await normalizeLayout(extractedPath, VENDOR_DIR);
   await pruneCudaVariant(VENDOR_DIR, CUDA_VARIANT_TO_DROP);
+  // Linux-only, additional to the cuda_v13 drop above: linuxdeploy (the
+  // AppImage bundler) failed every Linux desktop build since 2026-08-27
+  // with "ERROR: Could not find dependency: libggml-base.so.0" while
+  // walking cuda_v12/libggml-cuda.so's dependencies — that library's RPATH
+  // can't be resolved back to its sibling in lib/ollama/ by linuxdeploy's
+  // dependency walker (confirmed via `tauri build --verbose`, which is not
+  // the default and had been hiding this exact error behind a generic
+  // "failed to run linuxdeploy" for months). Windows already ships cuda_v12
+  // successfully (see the note above), so this prune is Linux-specific —
+  // Linux users temporarily lose bundled NVIDIA GPU acceleration in the
+  // AppImage; CPU-only Ollama inference still works. Revisit if linuxdeploy
+  // adds a way to skip strict dependency resolution for specific files, or
+  // if patchelf-ing the RPATH proves reliable across CI runs.
+  if (platformKey === 'linux-amd64') {
+    await pruneCudaVariant(VENDOR_DIR, 'cuda_v12');
+  }
   await rm(DOWNLOAD_DIR, { recursive: true, force: true });
 
   // normalizeLayout() wipes VENDOR_DIR before repopulating it, which also
