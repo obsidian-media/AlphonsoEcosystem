@@ -1920,8 +1920,7 @@ pub(crate) async fn transcribe_audio_file(
     "--output_dir",
     out_dir.to_str().unwrap_or("."),
   ]);
-  #[cfg(target_os = "windows")]
-  whisper_cmd.creation_flags(0x0800_0000);
+  crate::utils::no_window_async(&mut whisper_cmd);
   let output = whisper_cmd
     .output()
     .await

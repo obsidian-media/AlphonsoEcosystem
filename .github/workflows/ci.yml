@@ -94,6 +94,9 @@ jobs:
         run: cargo fmt --all -- --check
         working-directory: src-tauri
 
+      - name: Verify CREATE_NO_WINDOW coverage on all process spawns (T14)
+        run: node scripts/verify-no-window-coverage.mjs
+
       - name: Cargo tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
@@ -367,15 +370,12 @@ jobs:
       - name: Verify agent skill-pack permission matrix is fresh
         run: npm run verify:skill-matrix
 
-      # ADVISORY, not blocking: fixing the checker itself (it silently found
-      # 0 files on Windows due to a path-separator bug, masking the real gap)
-      # surfaced 124 genuinely undocumented files. Documenting all 124
-      # accurately is real follow-up work, not something to rush through to
-      # turn CI green — tracked as G-T19 in TRUTH_FIRST_EXECUTION_PLAN.md.
-      # Flip continue-on-error to false once that backlog is cleared.
+      # Blocking as of 2026-09-02: the 124-file backlog this check surfaced
+      # (see G-T19 in TRUTH_FIRST_EXECUTION_PLAN.md) has been fully documented
+      # in CLAUDE.md's "Do Not Duplicate" table. Keep this blocking — a new
+      # undocumented file should fail CI immediately, not accumulate again.
       - name: Verify "Do Not Duplicate" table covers every service/component
         run: npm run verify:dnd-coverage
-        continue-on-error: true
 
   e2e:
     name: Playwright E2E Smoke Test
