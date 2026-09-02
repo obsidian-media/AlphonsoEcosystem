@@ -604,6 +604,24 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   outside of Tauri's bundler, or add `RUST_LOG=debug`/`--verbose` to
   `tauri build` if supported) before assuming it's the same size issue.
 
+  **RESOLVED 2026-09-02, PR #204** ("fix(ci): fix Linux AppImage bundling (5
+  attempts, real root cause found)"). The resume hint above — get real
+  stderr out of linuxdeploy instead of guessing from Tauri's generic
+  bundler error — is what actually found the fix; 5 rounds of
+  trial-and-error were needed before the verbose output pointed at the real
+  cause. Changed `.github/workflows/ci.yml` (14 lines) and rewrote
+  `scripts/fetch-ollama-runtime.mjs` (541 lines) to prune every
+  `lib/ollama` subdirectory on Linux, not just `cuda_v12` (an earlier, only
+  partially-effective attempt on this same branch — see commit
+  `bcdad19`). Verified against a real CI run, not just a passing PR check:
+  the `main`-branch push run for the merge commit (`d773ef8`) shows **`Tauri
+  Desktop Build (Linux)`: success**, alongside every other job (Windows,
+  macOS, Rust, E2E, secrets scan, doc freshness) — confirmed via
+  `gh run view --json jobs` on 2026-09-02, not inferred from the merge
+  succeeding alone. All three desktop platforms (Windows, macOS, Linux) now
+  have a working installer build on `main` for the first time since
+  2026-08-16.
+
 - [2026-08-18] Hermes agent-backend delegation (per-agent Ollama/NVIDIA/Gemini/Hermes
   provider picker, wiring 9 in-app agents to a separate live Hermes Agent
   install the user runs on this machine): **planned, not started, no code
