@@ -11,9 +11,14 @@ import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { AgentPerformanceView } from './components/AgentPerformanceView';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { useUxMode } from './hooks/useUxMode';
+import { GuidedTour } from './components/GuidedTour';
+import { DigestPanel, DigestItem } from './components/DigestPanel';
 import { OllamaOfflineBanner } from './components/OllamaOfflineBanner';
 import { NotificationCenter, loadPersistedNotifications } from './components/NotificationCenter';
 import { CoachWindow } from './components/CoachWindow';
@@ -83,14 +88,15 @@ const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
+const BoardroomLegacyView = lazy(() => import('./components/BoardroomView').then((mod) => ({ default: mod.BoardroomView })));
 
 function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprovalRequest: () => void }) {
-  const [subTab, setSubTab] = React.useState<'mission' | 'boardroom'>('mission');
+  const [subTab, setSubTab] = React.useState<'mission' | 'boardroom' | 'boardroom_legacy'>('mission');
   const approval = useRequestApprovalBridge();
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex items-center gap-1 px-5 pt-3 pb-0 border-b border-[var(--border)] shrink-0">
-        {(['mission', 'boardroom'] as const).map((t) => (
+        {(['mission', 'boardroom', 'boardroom_legacy'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setSubTab(t)}
@@ -100,13 +106,15 @@ function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprova
                 : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
             }`}
           >
-            {t === 'mission' ? 'Mission Room' : 'Boardroom Sessions'}
+            {t === 'mission' ? 'Mission Room' : t === 'boardroom' ? 'Boardroom Sessions' : 'Boardroom Legacy'}
           </button>
         ))}
       </div>
       <div className="flex-1 overflow-hidden">
         {subTab === 'mission' ? (
           <MissionRoom onCreateApprovalRequest={onCreateApprovalRequest} />
+        ) : subTab === 'boardroom_legacy' ? (
+          <Suspense fallback={null}><BoardroomLegacyView /></Suspense>
         ) : (
           <Suspense fallback={null}><BoardroomView requestApproval={approval?.requestApproval} /></Suspense>
         )}
@@ -162,6 +170,10 @@ function AppShell() {
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
   const { settings, setSettings, operatorMode, setOperatorMode } = useSettings();
+  const [uxMode, setUxMode] = useUxMode();
+  const [showGuidedTour, setShowGuidedTour] = useState(false);
+  const [digestOpen, setDigestOpen] = useState(false);
+  const [digestItems, setDigestItems] = useState<DigestItem[]>([]);
   const { ollamaStatus, desktopBridge, setDesktopBridge, lastCheckedAt, setLastCheckedAt, installedModels, selectedModelMissing, runOllamaCheck, copyTroubleshootingCommand, copyState, ollamaCheckRunRef } = useOllama();
   const { plugins, pluginAudit, pluginSandboxPolicy, diskPluginManifests, lastPluginToolRun, lastManifestValidation, setPlugins, setPluginAudit, setDiskPluginManifests, handleTogglePlugin, handleExecutePluginTool, handleValidatePluginManifest, handleDiscoverPlugins, handleUpdatePluginSandboxPolicy } = usePlugins();
   const { workspaceFoundation, workspaceProof, ocrCapability, workspaceSymbolIndex, lastOcrAdapterRun, handleRunWorkspaceProof, handleCheckOcrCapability, handleBuildSymbolIndex, handleRunOcrAdapter, handleToggleWorkspaceFeature } = useWorkspace();
@@ -808,6 +820,7 @@ function AppShell() {
         settings={settings}
         pendingApprovalCount={pendingApprovalCount}
         onOpenCoach={handleToggleCoachMode}
+        mode={uxMode}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar
@@ -822,6 +835,10 @@ function AppShell() {
           onOpenSettings={() => switchTab('settings')}
           notificationCount={notifications.length}
           onToggleNotifications={() => setNotificationsOpen((v) => !v)}
+          mode={uxMode}
+          onModeChange={setUxMode}
+          onOpenDigest={() => setDigestOpen(true)}
+          digestUnreadCount={digestItems.filter(i => !i.read).length}
         />
         <Suspense fallback={null}>
           <CommandRib activeTab={activeTab} settings={settings} setSettings={setSettings} ollamaStatus={ollamaStatus} />
@@ -835,6 +852,7 @@ function AppShell() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-cyan-500/4 blur-[120px] rounded-full pointer-events-none" />
           {/* AgentDock moved to RightPanel → Agents tab */}
           <div className="h-full relative z-10">
+            <ErrorBoundary label="main-shell">
             <ViewErrorBoundary label={activeTab} key={activeTab}>
               <Suspense fallback={<ViewLoadingState activeTab={activeTab} />}>
                 {activeTab === 'mission' && (
@@ -898,6 +916,7 @@ function AppShell() {
                 )}
               </Suspense>
             </ViewErrorBoundary>
+            </ErrorBoundary>
           </div>
         </main>
       </div>
@@ -915,6 +934,24 @@ function AppShell() {
       {showKeyboardShortcuts && (
         <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
       )}
+      {showGuidedTour && (
+        <GuidedTour
+          mode={uxMode}
+          onComplete={() => setShowGuidedTour(false)}
+          onDismiss={() => setShowGuidedTour(false)}
+        />
+      )}
+      <DigestPanel
+        isOpen={digestOpen}
+        onClose={() => setDigestOpen(false)}
+        items={digestItems}
+        onMarkAllRead={() => setDigestItems(items => items.map(i => ({ ...i, read: true })))}
+        onItemClick={(item) => {
+          if (item.action) item.action();
+          if (item.navigateTo) switchTab(item.navigateTo);
+          setDigestItems(items => items.map(i => i.id === item.id ? { ...i, read: true } : i));
+        }}
+      />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Bell, WifiOff, Sun, Moon, Keyboard, ArrowUpCircle } from 'lucide-react';
+import { Bell, WifiOff, Sun, Moon, Keyboard, ArrowUpCircle, Inbox } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { useTheme } from '../hooks/useTheme';
+import { ModeToggle } from './ModeToggle';
 
 interface Settings {
   selectedModel?: string;
@@ -26,6 +27,10 @@ interface TopBarProps {
   onToggleNotifications?: () => void;
   selectedModelMissing?: boolean;
   onOpenShortcuts?: () => void;
+  mode?: 'simple' | 'advanced';
+  onModeChange?: (mode: 'simple' | 'advanced') => void;
+  onOpenDigest?: () => void;
+  digestUnreadCount?: number;
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -60,6 +65,10 @@ export function TopBar({
   onToggleNotifications,
   selectedModelMissing,
   onOpenShortcuts,
+  mode = 'advanced',
+  onModeChange,
+  onOpenDigest,
+  digestUnreadCount = 0,
 }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
 
@@ -87,6 +96,26 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
+        {onModeChange && (
+          <ModeToggle mode={mode} onModeChange={onModeChange} />
+        )}
+
+        {onOpenDigest && (
+          <button
+            onClick={onOpenDigest}
+            className="relative p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
+            aria-label="Digest"
+            title="Digest (Ctrl+Shift+D)"
+          >
+            <Inbox className="w-4 h-4" />
+            {digestUnreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[var(--accent)] text-[10px] font-bold text-[var(--surface-0)] flex items-center justify-center leading-none">
+                {digestUnreadCount > 9 ? '9+' : digestUnreadCount}
+              </span>
+            )}
+          </button>
+        )}
+
         <button
           onClick={toggleTheme}
           className="p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
