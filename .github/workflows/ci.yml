@@ -297,19 +297,16 @@ jobs:
       - name: Build Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          # ubuntu-latest's runner has no FUSE userspace mount available, so the
-          # AppImage tooling linuxdeploy/AppRun downloads can't self-mount —
-          # "failed to run linuxdeploy" on every Linux build since at least
-          # 2026-08-27 (continue-on-error hid it). Installing libfuse2 above
-          # isn't sufficient by itself in this sandboxed runner; forcing
-          # extract-and-run mode avoids needing FUSE entirely.
+          # ubuntu-latest's runner has no FUSE userspace mount available;
+          # forcing extract-and-run mode avoids needing FUSE for the
+          # downloaded linuxdeploy/AppRun AppImage tools.
           APPIMAGE_EXTRACT_AND_RUN: '1'
-        # --verbose: the first fix attempt (libfuse2 + APPIMAGE_EXTRACT_AND_RUN)
-        # did not resolve this — still "failed to run linuxdeploy" with no
-        # underlying reason surfaced. Tauri's bundler swallows the real
-        # subprocess stderr at normal verbosity; --verbose exposes it so the
-        # actual cause (missing tool, permission, network) can be diagnosed
-        # instead of guessed at again.
+        # --verbose: Tauri's bundler swallows the real subprocess stderr at
+        # normal verbosity, which hid the actual Linux AppImage bundling
+        # failure (an RPATH resolution limit in linuxdeploy, fixed in
+        # scripts/fetch-ollama-runtime.mjs — see that file's comment) behind
+        # a generic "failed to run linuxdeploy" for months. Kept for future
+        # diagnosability.
         run: npm run tauri build -- --verbose
 
       - name: Upload AppImage artifact
@@ -369,6 +366,16 @@ jobs:
 
       - name: Verify agent skill-pack permission matrix is fresh
         run: npm run verify:skill-matrix
+
+      # ADVISORY, not blocking: fixing the checker itself (it silently found
+      # 0 files on Windows due to a path-separator bug, masking the real gap)
+      # surfaced 124 genuinely undocumented files. Documenting all 124
+      # accurately is real follow-up work, not something to rush through to
+      # turn CI green — tracked as G-T19 in TRUTH_FIRST_EXECUTION_PLAN.md.
+      # Flip continue-on-error to false once that backlog is cleared.
+      - name: Verify "Do Not Duplicate" table covers every service/component
+        run: npm run verify:dnd-coverage
+        continue-on-error: true
 
   e2e:
     name: Playwright E2E Smoke Test
