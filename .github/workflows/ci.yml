@@ -285,6 +285,7 @@ jobs:
             libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev \
             libfuse2 \
+            patchelf \
             zstd
 
       - name: Install dependencies
@@ -303,7 +304,13 @@ jobs:
           # isn't sufficient by itself in this sandboxed runner; forcing
           # extract-and-run mode avoids needing FUSE entirely.
           APPIMAGE_EXTRACT_AND_RUN: '1'
-        run: npm run tauri build
+        # --verbose: the first fix attempt (libfuse2 + APPIMAGE_EXTRACT_AND_RUN)
+        # did not resolve this — still "failed to run linuxdeploy" with no
+        # underlying reason surfaced. Tauri's bundler swallows the real
+        # subprocess stderr at normal verbosity; --verbose exposes it so the
+        # actual cause (missing tool, permission, network) can be diagnosed
+        # instead of guessed at again.
+        run: npm run tauri build -- --verbose
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
