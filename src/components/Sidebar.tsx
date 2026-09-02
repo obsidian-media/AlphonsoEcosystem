@@ -7,6 +7,7 @@ import {
   Cpu,
   Database,
   FileText,
+  Gauge,
   GitBranch,
   LayoutDashboard,
   MessageSquare,
@@ -100,6 +101,7 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'runtimes', icon: Cpu, label: 'Runtimes' },
       { id: 'voice', icon: Mic, label: 'Voice' },
       { id: 'connectors', icon: Plug, label: 'Connectors', showStatusDot: true },
+      { id: 'operator', icon: Gauge, label: 'Operator' },
     ]
   }
 ];
