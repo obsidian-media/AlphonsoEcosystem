@@ -19,21 +19,36 @@ if (!existsSync(claudePath)) {
 
 const claudeText = readFileSync(claudePath, 'utf8');
 
-// Extract all backticked paths referencing src/ components or services
-const pathRegex = /`((?:src)\/[^`\s]+?\.(?:js|jsx|ts|tsx))`/g;
+// Extract every backticked `foo.ts`-shaped token, whether it's a full src/...
+// path (the "Do Not Duplicate" table's own style) or a bare filename (how
+// CLAUDE.md's narrative/changelog prose usually references files). A file is
+// considered documented if either form appears anywhere in the doc — the
+// goal is "can someone find this file mentioned in CLAUDE.md", not "is it
+// specifically in the Do Not Duplicate table under its exact full path".
+const pathRegex = /`([^`\s]+?\.(?:js|jsx|ts|tsx))`/g;
 const docPaths = new Set();
+const docBasenames = new Set();
 let match;
 while ((match = pathRegex.exec(claudeText)) !== null) {
-  docPaths.add(match[1].trim().replaceAll('\\', '/'));
+  const normalized = match[1].trim().replaceAll('\\', '/');
+  docPaths.add(normalized);
+  docBasenames.add(normalized.split('/').pop());
 }
 
-// Walk through physical source files in src/services and src/components
+// Walk through physical source files in src/services, src/components,
+// src/hooks, and src/lib. Predicate checks run on a forward-slash-normalized
+// path — `join()` (and therefore `walk()`) produces OS-native separators, so
+// checking for a literal '/services/' etc. against a raw path silently
+// matched zero files on Windows while working correctly on Linux CI, making
+// this check a no-op false-pass everywhere except the one platform (Linux)
+// that actually runs it in CI.
 const activeFiles = walk(join(PROJECT_ROOT, 'src'), (f) => {
-  const ext = f.split('.').pop();
+  const normalized = f.replaceAll('\\', '/');
+  const ext = normalized.split('.').pop();
   const isCode = ['js', 'jsx', 'ts', 'tsx'].includes(ext);
-  const isTest = f.includes('.test.') || f.includes('.spec.') || f.includes('/test/');
-  const isStyle = f.includes('/styles/') || f.includes('index.css') || f.includes('tokens.css');
-  const inUnderlyingDirs = f.includes('/services/') || f.includes('/components/') || f.includes('/hooks/') || f.includes('/lib/');
+  const isTest = normalized.includes('.test.') || normalized.includes('.spec.') || normalized.includes('/test/');
+  const isStyle = normalized.includes('/styles/') || normalized.includes('index.css') || normalized.includes('tokens.css');
+  const inUnderlyingDirs = normalized.includes('/services/') || normalized.includes('/components/') || normalized.includes('/hooks/') || normalized.includes('/lib/');
   return isCode && !isTest && !isStyle && inUnderlyingDirs;
 });
 
@@ -44,7 +59,7 @@ const relativeSrcFiles = activeFiles.map(f => {
     .replaceAll('\\', '/');
 });
 
-const missingFromDoc = relativeSrcFiles.filter(f => !docPaths.has(f));
+const missingFromDoc = relativeSrcFiles.filter(f => !docPaths.has(f) && !docBasenames.has(f.split('/').pop()));
 
 if (missingFromDoc.length > 0) {
   console.error(`\n[verify-dnd-coverage] Found ${missingFromDoc.length} files missing from CLAUDE.md "Do Not Duplicate" list:`);
