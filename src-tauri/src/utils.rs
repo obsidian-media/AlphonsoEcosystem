@@ -17,6 +17,14 @@ pub(crate) fn no_window(cmd: &mut Command) -> &mut Command {
   cmd
 }
 
+/// `no_window` for `tokio::process::Command` spawns — same rationale, see above.
+#[allow(unused_variables)]
+pub(crate) fn no_window_async(cmd: &mut tokio::process::Command) -> &mut tokio::process::Command {
+  #[cfg(target_os = "windows")]
+  cmd.creation_flags(CREATE_NO_WINDOW);
+  cmd
+}
+
 pub(crate) fn now_ms() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)

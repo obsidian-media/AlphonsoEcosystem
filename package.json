@@ -28,6 +28,7 @@
     "export:ground-truth": "node scripts/export-ground-truth.mjs",
     "verify:docs": "node scripts/verify-doc-counts.mjs",
     "verify:dnd-coverage": "node scripts/verify-dnd-coverage.mjs",
+    "verify:no-window-coverage": "node scripts/verify-no-window-coverage.mjs",
     "generate:skill-matrix": "node scripts/generate-skill-permission-matrix.mjs",
     "verify:skill-matrix": "node scripts/generate-skill-permission-matrix.mjs --check",
     "proof:native-selfdev": "node scripts/proof-native-selfdev.mjs",
