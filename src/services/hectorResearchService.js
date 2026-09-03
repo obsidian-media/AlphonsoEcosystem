@@ -10,6 +10,7 @@ import { pushMemoryItem } from './memoryService';
 import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceService';
+import { addNode, addEdge } from './memoryGraphService';
 
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
@@ -784,6 +785,21 @@ export function createResearchDraft({
     confidence: TRUST_STATES.TEMPORARY,
     verificationState: TRUST_STATES.UNVERIFIED
   });
+
+  addNode('research_report', report.id).then((reportNodeId) => {
+    if (!reportNodeId) return;
+    sources.forEach((source) => {
+      addNode('source', source.url).then((sourceNodeId) => {
+        if (!sourceNodeId) return;
+        addEdge(reportNodeId, sourceNodeId, 'cites', {
+          confidence: source.confidence,
+          createdBy: AGENTS.HECTOR,
+          createdEvent: report.id
+        });
+      }).catch(() => {});
+    });
+  }).catch(() => {});
+
   return report;
 }
 

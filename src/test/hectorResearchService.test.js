@@ -11,6 +11,11 @@ vi.stubGlobal('fetch', vi.fn(async (url) => {
 
 let braveEnabled = false;
 
+vi.mock('../services/memoryGraphService', () => ({
+  addNode: vi.fn((nodeType, refId) => Promise.resolve(`${nodeType}:${refId}`)),
+  addEdge: vi.fn().mockResolvedValue('mock-edge-id')
+}));
+
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (command, args) => {
     if (command === 'check_env_vars_presence') {
@@ -164,6 +169,52 @@ describe('hector research provider failover', () => {
     braveEnabled = false;
     const result = await isBraveSearchConfigured();
     expect(result).toBe(false);
+  });
+});
+
+describe('createResearchDraft graph integration', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it('writes a research_report node and cites edges to each source URL', async () => {
+    const graph = await import('../services/memoryGraphService');
+
+    const report = createResearchDraft({
+      researchQuestion: 'What is Tauri?',
+      sourceUrls: ['https://tauri.app/docs', 'https://github.com/tauri-apps/tauri']
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(graph.addNode).toHaveBeenCalledWith('research_report', report.id);
+    expect(graph.addNode).toHaveBeenCalledWith('source', 'https://tauri.app/docs');
+    expect(graph.addNode).toHaveBeenCalledWith('source', 'https://github.com/tauri-apps/tauri');
+    expect(graph.addEdge).toHaveBeenCalledWith(
+      `research_report:${report.id}`,
+      'source:https://tauri.app/docs',
+      'cites',
+      expect.objectContaining({ createdBy: 'hector', createdEvent: report.id })
+    );
+    expect(graph.addEdge).toHaveBeenCalledWith(
+      `research_report:${report.id}`,
+      'source:https://github.com/tauri-apps/tauri',
+      'cites',
+      expect.objectContaining({ createdBy: 'hector', createdEvent: report.id })
+    );
+  });
+
+  it('writes no cites edges when sourceUrls is empty', async () => {
+    const graph = await import('../services/memoryGraphService');
+
+    createResearchDraft({ researchQuestion: 'No sources yet' });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(graph.addEdge).not.toHaveBeenCalled();
   });
 });
 
