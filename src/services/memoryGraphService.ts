@@ -18,6 +18,12 @@ export interface AddEdgeOptions {
   createdEvent?: string;
 }
 
+export type TraversalDirection = 'forward' | 'backward' | 'both';
+
+export interface GraphEdgeWithDepth extends GraphEdge {
+  depth: number;
+}
+
 /**
  * Creates (or no-ops if it already exists) a graph node for the given
  * node type + ref id pair. Node ids are deterministic ("{nodeType}:{refId}"),
@@ -59,12 +65,38 @@ export async function addEdge(
 }
 
 /**
- * Phase 1 query capability: direct (one-hop) neighbors only. Multi-hop
- * traversal is a Phase 2 addition to this same function, not a new one.
+ * One-hop neighbors only. Multi-hop traversal is `queryRelatedDeep` (Phase
+ * 2), a separate function — not an extension of this one. This function's
+ * behavior and signature are unchanged since Phase 1.
  */
 export async function queryRelated(nodeId: string): Promise<GraphEdge[]> {
   try {
     const rows = await invoke<GraphEdge[]>('memory_graph_query_related', { nodeId });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Phase 2 query capability: multi-hop traversal via the backend's
+ * `WITH RECURSIVE` implementation. `maxDepth` and `direction` are required,
+ * not optional/defaulted — every call site must state its own intent
+ * rather than inherit an invisible default. There is no ceiling on
+ * `maxDepth`; the backend's cycle protection (visited-edge tracking) is
+ * what prevents a runaway query, not a depth cap.
+ */
+export async function queryRelatedDeep(
+  nodeId: string,
+  maxDepth: number,
+  direction: TraversalDirection
+): Promise<GraphEdgeWithDepth[]> {
+  try {
+    const rows = await invoke<GraphEdgeWithDepth[]>('memory_graph_query_related_deep', {
+      nodeId,
+      maxDepth,
+      direction
+    });
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];

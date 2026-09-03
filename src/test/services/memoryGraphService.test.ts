@@ -95,4 +95,36 @@ describe('memoryGraphService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('queryRelatedDeep', () => {
+    it('passes nodeId, maxDepth, and direction through to the backend', async () => {
+      const edges = [{
+        id: 'e-1', fromNodeId: 'A', toNodeId: 'B', edgeType: 'next',
+        confidence: 'verified', createdBy: 'jose', createdEvent: null, createdAtMs: 123, depth: 1
+      }];
+      invoke.mockResolvedValue(edges);
+      const { queryRelatedDeep } = await import('../../services/memoryGraphService');
+      const result = await queryRelatedDeep('A', 3, 'forward');
+      expect(result).toEqual(edges);
+      expect(invoke).toHaveBeenCalledWith('memory_graph_query_related_deep', {
+        nodeId: 'A',
+        maxDepth: 3,
+        direction: 'forward'
+      });
+    });
+
+    it('returns an empty array instead of throwing when invoke fails', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { queryRelatedDeep } = await import('../../services/memoryGraphService');
+      const result = await queryRelatedDeep('A', 3, 'both');
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array if the backend returns something non-array', async () => {
+      invoke.mockResolvedValue(null);
+      const { queryRelatedDeep } = await import('../../services/memoryGraphService');
+      const result = await queryRelatedDeep('A', 3, 'backward');
+      expect(result).toEqual([]);
+    });
+  });
 });
