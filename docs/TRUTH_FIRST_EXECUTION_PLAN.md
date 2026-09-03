@@ -793,22 +793,24 @@ dropped.
     categories) confirms fail-closed behavior, or a genuine gap is found and
     fixed.
 
-- [ ] **G-T14 — Split `lib.rs` + lint-enforce `CREATE_NO_WINDOW`**
+- [x] **G-T14 — Split `lib.rs` + lint-enforce `CREATE_NO_WINDOW`** — CLOSED 2026-09-02, PR #206
   - **Owner:** Alphonso
-  - **Status note (updated 2026-09-02):** PRs #194–#197 extracted
+  - **Status note (closed 2026-09-02):** PRs #194–#197 extracted
     filesystem/picker, runtime-launcher, restore/handoff, OCR,
     jose-decompose, update-check, system, bridge, and clipboard/url/
     notification commands into their own modules. `lib.rs` is now **837
-    lines** (measured 2026-09-02, verified via `wc -l`) — down from the
-    2,206-line figure this task was last tracked against, and now well
-    under the original 2,024-line baseline. The split half of this task is
-    substantially done. The lint half is not: no CI check currently enforces
-    `CREATE_NO_WINDOW` on new `Command::new()`/`TokioCommand::new()` call
-    sites (see CLAUDE.md's "CREATE_NO_WINDOW on all Windows process spawns"
-    note) — it still depends on a human remembering.
+    lines** — down from the 2,206-line figure this task was last tracked
+    against, and now well under the original 2,024-line baseline. PR #206
+    then closed the lint half: `scripts/verify-no-window-coverage.mjs`
+    scans every `Command::new()`/`TokioCommand::new()` spawn site in
+    `src-tauri/src`, wired as a **blocking** `Rust Tests & Clippy` CI step
+    (not advisory). Added `no_window_async()` for tokio spawns and migrated
+    `workspace.rs`'s whisper-transcription spawn off a raw inline
+    `creation_flags(0x0800_0000)` onto the shared helper, so the lint has
+    one consistent pattern to check for.
   - **Done when:** a CI check (clippy lint, grep-based check, or custom
     script) fails a new Windows process spawn that skips the shared
-    `no_window()` helper.
+    `no_window()` helper. — met.
 
 - [ ] **G-T17 — Add observability to cloud sidecars (gateways, MCP server,
   bridge)**
@@ -826,42 +828,61 @@ dropped.
     and error paths (done), with a documented way to inspect them without
     shell access to the host (not done).
 
-- [ ] **G-T19 — Auto-generate the "Do Not Duplicate" map**
+- [x] **G-T19a — Close the 124-file "Do Not Duplicate" documentation backlog + flip checker to blocking** — CLOSED 2026-09-02, PR #206
   - **Owner:** Echo
-  - CLAUDE.md's "Do Not Duplicate" table is hand-maintained and already
-    large; it drifts from source the same way doc counts did before
-    `verify:docs`/`verify:skill-matrix` existed.
-  - **Status note (updated 2026-09-02):** PR #201 wired a checker
-    (`scripts/verify-dnd-coverage.mjs`) into `ci.yml` as an **advisory**
-    step (`continue-on-error: true`) — it doesn't generate the table, it
-    only flags gaps. Running it live (2026-09-02) found **124 files**
-    missing from the table. That number is the real, current size of this
-    task, not the auto-generator itself — the generator half described
-    below has not been built.
+  - **Status note (closed 2026-09-02):** All 124 files `verify:dnd-coverage`
+    (PR #201) flagged are now documented in CLAUDE.md's table — roughly a
+    third were stale `.jsx`/`.js` extension references left over from the
+    earlier 100%-`.tsx` component migration, the rest were genuinely
+    undocumented subsystems (Agent Workshop / Project Execution Mode,
+    Hector Research Desk, the `ui/` primitive kit, the `useAppEffects` hook
+    split, the skill-pack content split, and more). `verify:dnd-coverage`
+    flipped from advisory (`continue-on-error: true`) to **blocking** in
+    `ci.yml` — a new undocumented file now fails CI immediately instead of
+    accumulating again.
+  - **Done when:** `npm run verify:dnd-coverage` passes clean and the job
+    blocks merges. — met, verified live 2026-09-03.
+
+- [ ] **G-T19b — Auto-generate the "Do Not Duplicate" map (the actual generator)**
+  - **Owner:** Echo
+  - **Still genuinely open, not closed by PR #206.** `scripts/verify-dnd-coverage.mjs`
+    is a **checker**: it confirms every file is *mentioned* somewhere in
+    CLAUDE.md (a backticked filename match), it does not derive or write
+    table rows from source. The 124-file backlog it flagged was closed by
+    a human writing the entries by hand (G-T19a), not by a generator. Do
+    not conflate the two — closing G-T19a does not close this item.
   - **Done when:** a generator (similar in spirit to
     `scripts/generate-skill-permission-matrix.mjs`) derives at least the
     service-existence half of the table from `src/services/` + component
-    exports, with a `--check` mode wired into CI doc-freshness (the current
-    advisory grep-and-list checker is a step toward this, not the finished
-    task).
+    exports, with a `--check` mode wired into CI doc-freshness.
 
 - [ ] **G-T20 — Add a token/cost budget to multi-agent fan-out; surface
   hidden features**
   - **Owner:** Jose (budget), Echo (discoverability)
   - No cost/token ceiling exists for Boardroom `@mention` chains or other
     multi-agent fan-out paths beyond the existing `MAX_CHAIN_DEPTH=3` hop
-    cap (confirmed still the only limiter, 2026-09-02); and several real,
+    cap (confirmed still the only limiter, 2026-09-03); and several real,
     working features (Operator Dashboard, Agent Pairing, Ecosystem Maturity
     panels) remain sunk 2+ clicks deep behind generic tab labels per the
     2026-07-02 discoverability audit.
-  - **Status note (updated 2026-09-02):** PR #202 added an Operator Dashboard
-    nav-sidebar entry, closing that one item of the discoverability half.
-    Agent Pairing and Ecosystem Maturity panels are still undiscoverable by
-    the same standard. The budget/ceiling half has not been started at all.
+  - **Status note (corrected 2026-09-03):** PR #202 added an Operator
+    Dashboard nav-sidebar entry, closing that one item of the discoverability
+    half. Re-checked the "still undiscoverable" claim for Agent Pairing and
+    Ecosystem Maturity directly against `App.tsx`/`Sidebar.tsx`/`EcosystemHub.tsx`
+    rather than trusting the prior note: both live inside `EcosystemHub.tsx`
+    (reached via the sidebar's "All Agents" item), under its own `TABS` array
+    with clearly labeled entries — `Pairings` and (maturity/readiness content
+    under) `Advanced`/`Overview` — not generic tab labels. This is 2 clicks
+    deep (nav → tab), same as most subviews in this app, not orphaned or
+    hidden. The prior "undiscoverable" framing overstated the gap; downgraded
+    to a minor UX nice-to-have (the sidebar's "All Agents" label doesn't hint
+    at what its tabs contain), not a functional discoverability defect. The
+    budget/ceiling half has not been started at all and is the real remaining
+    scope of this item.
   - **Done when:** a measurable budget/ceiling exists for agent fan-out
-    costs, and the remaining flagged low-discoverability surfaces (Agent
-    Pairing, Ecosystem Maturity) have a nav entry or equivalent promotion —
-    or each is explicitly re-scoped with reasoning.
+    costs. The discoverability half is downgraded to optional polish, not a
+    blocking condition for closing this item — re-scope to a pure budget/
+    ceiling task if the discoverability half is dropped.
 
 - [ ] **G-OTHER1 — iOS companion Rust↔Swift end-to-end pairing test**
   - Full backend + React pairing UI exist and were live-device-confirmed
