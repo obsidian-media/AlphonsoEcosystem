@@ -30,6 +30,7 @@ mod companion_server;
 mod companion_types;
 mod connector_commands;
 mod kv_store;
+mod memory_graph;
 mod memory_store;
 mod meta_publish;
 mod native_proof;
