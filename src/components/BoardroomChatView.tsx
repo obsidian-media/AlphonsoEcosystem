@@ -180,7 +180,8 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
   async function handleSend() {
     if (!activeThreadId || !activeThread || !composerText.trim() || generationAbortControllerRef.current) return;
     const text = composerText.trim();
-    addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
+    const userMessage = addThreadMessage({ threadId: activeThreadId, speaker: composerSpeaker, content: text });
+    let previousMessageId: string | undefined = userMessage?.id;
     setMessages(listThreadMessages(activeThreadId));
     setComposerText('');
 
@@ -254,18 +255,20 @@ export function BoardroomChatView({ requestApproval }: { requestApproval?: (labe
       }
 
       const replyText = result.ok ? result.text : `${agentId} couldn't respond: ${result.error}`;
-      addThreadMessage({
+      const replyMessage = addThreadMessage({
         threadId: activeThreadId,
         speaker: agentId,
         content: replyText,
         kind: result.ok ? 'message' : 'failure',
         retryContext: result.ok ? undefined : text,
         model: result.ok ? result.model : undefined,
-        latencyMs: result.ok ? result.latencyMs : undefined
+        latencyMs: result.ok ? result.latencyMs : undefined,
+        informedByMessageId: previousMessageId
       });
       setMessages(listThreadMessages(activeThreadId));
 
       if (result.ok) {
+        previousMessageId = replyMessage?.id;
         if (detectLowConfidence(replyText)) {
           addThreadMessage({
             threadId: activeThreadId,
