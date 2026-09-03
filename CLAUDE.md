@@ -215,6 +215,7 @@ Before writing any new service, component, or feature, check this list:
 | Agent metrics panel | `src/components/AgentMetricsPanel.tsx` + `src/services/agentMetricsService.js` — success rate, confidence, 7-day trend. |
 | Marketing landing page | `src/components/MarketingLandingPage.tsx` — in-app marketing/landing page component. |
 | Memory search UI | `src/components/MemorySearch.tsx` + `src/services/searchService.js` — memory/project search with Ctrl+P shortcut. |
+| Memory knowledge graph service | `src/services/memoryGraphService.ts` — Phase 1 relationship layer over `memory_nodes`/`memory_edges` SQLite tables (`src-tauri/src/memory_graph.rs`). `addNode`/`addEdge`/`queryRelated` (one-hop only in Phase 1). Writers (Phase 1, exactly two): `unifiedMemoryService.js`'s `pushMemory` and `boardroomThreadService.ts`'s `addThreadMessage`. Read access (`queryRelated`) is open to every agent regardless of writer count. See `docs/superpowers/specs/2026-09-03-memory-knowledge-graph-design.md` for the full design and roadmap. |
 | Smart voice button | `src/components/SmartVoiceButton.tsx` — unified voice input; prefers Voice OS WebSocket (Jarvis), falls back to browser SpeechRecognition. Do NOT add another voice button. |
 | Session history view | `src/components/SessionHistoryView.tsx` — orchestration session history with search/filter/expand. |
 | Orchestrator queue view | `src/components/OrchestratorQueueView.tsx` — live dead-letter queue dashboard with 5s auto-refresh. |

@@ -122,7 +122,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **117 Rust unit tests across 37 modules** — 110 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **121 Rust unit tests across 38 modules** — 113 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -305,7 +305,7 @@ npm run tauri build    # Native installer (src-tauri/target/release/bundle/)
 │           Tauri v2 (Rust 1.77) — IPC Bridge                      │
 │                             ▼                                     │
 │  ┌──────────────────────────────────────────────────────────┐    │
-│  │  lib.rs ~794 lines · 110 Tauri commands · 37 modules   │    │
+│  │  lib.rs ~801 lines · 113 Tauri commands · 38 modules   │    │
 │  │  ├── kv_store.rs          SQLite KV store (WAL mode)     │    │
 │  │  ├── policy_gate.rs       Policy enforcement backend     │    │
 │  │  ├── audit_log.rs         Immutable audit chain          │    │
@@ -401,7 +401,7 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 4,199 tests across 286 files
+npm run test           # 4,199 tests across 287 files
 npm run test:coverage  # Coverage report (~38%+; threshold 35%)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
@@ -482,7 +482,7 @@ blocker.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 188 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 189 services already exist.
 
 ## Security
 

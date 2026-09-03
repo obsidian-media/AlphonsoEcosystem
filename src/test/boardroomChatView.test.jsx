@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 
 vi.mock('../agents/agentRegistry', () => ({
   listAgentProfiles: () => [
@@ -14,6 +14,14 @@ vi.mock('../services/boardroomFacilitatorService', () => ({
   generateAgentResponse: vi.fn().mockResolvedValue({ ok: true, text: 'default agent reply' }),
   detectLowConfidence: vi.fn().mockReturnValue(false)
 }));
+
+vi.mock('../services/boardroomThreadService', async () => {
+  const actual = await vi.importActual('../services/boardroomThreadService');
+  return {
+    ...actual,
+    addThreadMessage: vi.fn(actual.addThreadMessage)
+  };
+});
 
 describe('BoardroomChatView', () => {
   beforeEach(() => {
@@ -566,5 +574,31 @@ describe('BoardroomChatView', () => {
 
     await screen.findByText('On it.');
     expect(await screen.findByText(/llama3\.2:3b · 2\.3s/i)).toBeInTheDocument();
+  });
+
+  it('passes informedByMessageId through the @mention chain to addThreadMessage', async () => {
+    const threadService = await import('../services/boardroomThreadService');
+    const facilitator = await import('../services/boardroomFacilitatorService');
+    facilitator.generateAgentResponse.mockResolvedValue({ ok: true, text: 'On it.' });
+
+    const { BoardroomChatView } = await import('../components/BoardroomChatView');
+    render(<BoardroomChatView />);
+
+    fireEvent.change(screen.getByPlaceholderText(/new thread topic/i), { target: { value: 'Chain Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /new thread/i }));
+    await screen.findByText('Chain Test');
+
+    fireEvent.change(screen.getByPlaceholderText(/message the room/i), { target: { value: '@Hector please look at this' } });
+    fireEvent.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await screen.findByText('On it.');
+
+    await waitFor(() => {
+      const replyCall = threadService.addThreadMessage.mock.calls.find(
+        ([args]) => args.speaker === 'hector' && args.kind === 'message'
+      );
+      expect(replyCall).toBeDefined();
+      expect(replyCall[0].informedByMessageId).toBeDefined();
+    });
   });
 });
