@@ -14,6 +14,16 @@ vi.mock('../services/approval/approvalService', () => ({
   requireApproval: requireApprovalMock
 }));
 
+// appendOrchestrationReceipt (called by sendToolConnectionMessage) writes a
+// fire-and-forget graph node via memoryGraphService.addNode, which calls the
+// same real invoke() this file mocks globally above -- without this mock,
+// that extra invoke() call pollutes invokeMock's call count/args assertions
+// below, which are specifically about the tool-connection webhook call.
+vi.mock('../services/memoryGraphService', () => ({
+  addNode: vi.fn().mockResolvedValue('mock-node'),
+  addEdge: vi.fn().mockResolvedValue('mock-edge-id')
+}));
+
 import {
   buildToolConnectionPayload,
   listToolConnectionAudit,

@@ -15,6 +15,11 @@ vi.mock('../../services/toolNotificationDispatcher', () => ({
   dispatchReceiptNotifications: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../../services/memoryGraphService', () => ({
+  addNode: vi.fn((nodeType: string, refId: string) => Promise.resolve(`${nodeType}:${refId}`)),
+  addEdge: vi.fn().mockResolvedValue('mock-edge-id')
+}));
+
 import {
   listOrchestrationReceipts,
   appendOrchestrationReceipt,
@@ -146,6 +151,45 @@ describe('orchestrationReceiptService', () => {
   describe('ORCHESTRATION_RECEIPT_SCOPE', () => {
     it('has correct scope value', () => {
       expect(ORCHESTRATION_RECEIPT_SCOPE).toBe('orchestration_receipts_v1');
+    });
+  });
+
+  describe('appendOrchestrationReceipt graph integration', () => {
+    it('writes a receipt node and a belongs_to edge when packetId is present', async () => {
+      const graph = await import('../../services/memoryGraphService');
+      const receipt = appendOrchestrationReceipt({ eventType: 'test_event', packetId: 'packet-1' });
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(graph.addNode).toHaveBeenCalledWith('receipt', receipt.id);
+      expect(graph.addNode).toHaveBeenCalledWith('packet', 'packet-1');
+      expect(graph.addEdge).toHaveBeenCalledWith(
+        `receipt:${receipt.id}`,
+        'packet:packet-1',
+        'belongs_to',
+        expect.objectContaining({ createdBy: receipt.agent, createdEvent: receipt.id })
+      );
+    });
+
+    it('falls back to commandId when packetId is absent', async () => {
+      const graph = await import('../../services/memoryGraphService');
+      appendOrchestrationReceipt({ eventType: 'test_event', commandId: 'cmd-1' });
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(graph.addNode).toHaveBeenCalledWith('packet', 'cmd-1');
+    });
+
+    it('writes no edge when neither packetId nor commandId is present', async () => {
+      const graph = await import('../../services/memoryGraphService');
+      appendOrchestrationReceipt({ eventType: 'test_event' });
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(graph.addEdge).not.toHaveBeenCalled();
     });
   });
 });
