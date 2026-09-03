@@ -1,4 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../../services/memoryGraphService', () => ({
+  addNode: vi.fn().mockResolvedValue('boardroom_message:mock-node'),
+  addEdge: vi.fn().mockResolvedValue('mock-edge-id')
+}));
 
 describe('boardroomThreadService', () => {
   beforeEach(() => {
@@ -230,6 +235,54 @@ describe('boardroomThreadService', () => {
       migrateLegacySessions();
       expect(listThreads()).toHaveLength(0);
     });
+  });
+});
+
+describe('addThreadMessage graph integration', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it('writes a boardroom_message node for every message', async () => {
+    const graph = await import('../../services/memoryGraphService');
+    const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+    const thread = createThread({ topic: 'Test', participants: ['jose'] });
+    const msg = addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'Hello.' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(graph.addNode).toHaveBeenCalledWith('boardroom_message', msg?.id);
+  });
+
+  it('writes an informed_by edge when informedByMessageId is provided', async () => {
+    const graph = await import('../../services/memoryGraphService');
+    const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+    const thread = createThread({ topic: 'Test', participants: ['jose'] });
+    const first = addThreadMessage({ threadId: thread.id, speaker: 'alphonso', content: '@hector look into this' });
+    const reply = addThreadMessage({
+      threadId: thread.id,
+      speaker: 'hector',
+      content: 'On it.',
+      informedByMessageId: first?.id
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(graph.addEdge).toHaveBeenCalledWith(
+      'boardroom_message:mock-node',
+      `boardroom_message:${first?.id}`,
+      'informed_by',
+      expect.objectContaining({ createdBy: 'hector', createdEvent: reply?.id })
+    );
+  });
+
+  it('does not write an edge when informedByMessageId is not provided', async () => {
+    const graph = await import('../../services/memoryGraphService');
+    const { createThread, addThreadMessage } = await import('../../services/boardroomThreadService');
+    const thread = createThread({ topic: 'Test', participants: ['jose'] });
+    addThreadMessage({ threadId: thread.id, speaker: 'jose', content: 'Standalone message.' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(graph.addEdge).not.toHaveBeenCalled();
   });
 });
 
