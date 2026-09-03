@@ -119,6 +119,132 @@ pub fn memory_graph_query_related(
   Ok(result)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GraphEdgeRowWithDepth {
+  pub(crate) id: String,
+  pub(crate) from_node_id: String,
+  pub(crate) to_node_id: String,
+  pub(crate) edge_type: String,
+  pub(crate) confidence: String,
+  pub(crate) created_by: String,
+  pub(crate) created_event: Option<String>,
+  #[serde(rename = "createdAtMs")]
+  pub(crate) created_at: i64,
+  pub(crate) depth: i64,
+}
+
+// Cycle protection tracks *visited edge ids*, not visited node ids. Tracking
+// nodes would also exclude any edge that points back at an already-seen
+// node (e.g. the edge that closes a cycle back to the origin) -- a real,
+// legitimate edge, not an infinite-loop risk. Tracking edges instead still
+// guarantees termination (a finite graph has finitely many edges, so a walk
+// that never repeats an edge must end) while still surfacing every real
+// edge in a cycle exactly once.
+const SQL_TRAVERSE_FORWARD: &str = "
+  WITH RECURSIVE traverse(current_node, depth, visited, edge_id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at) AS (
+    SELECT ?1, 0, ',', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+    UNION ALL
+    SELECT e.to_node_id, t.depth + 1, t.visited || e.id || ',',
+           e.id, e.from_node_id, e.to_node_id, e.edge_type, e.confidence, e.created_by, e.created_event, e.created_at
+    FROM traverse t
+    JOIN memory_edges e ON e.from_node_id = t.current_node
+    WHERE t.depth < ?2
+      AND INSTR(t.visited, ',' || e.id || ',') = 0
+  )
+  SELECT edge_id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at, MIN(depth) AS depth
+  FROM traverse
+  WHERE edge_id IS NOT NULL
+  GROUP BY edge_id
+  ORDER BY depth ASC, edge_id ASC
+";
+
+const SQL_TRAVERSE_BACKWARD: &str = "
+  WITH RECURSIVE traverse(current_node, depth, visited, edge_id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at) AS (
+    SELECT ?1, 0, ',', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+    UNION ALL
+    SELECT e.from_node_id, t.depth + 1, t.visited || e.id || ',',
+           e.id, e.from_node_id, e.to_node_id, e.edge_type, e.confidence, e.created_by, e.created_event, e.created_at
+    FROM traverse t
+    JOIN memory_edges e ON e.to_node_id = t.current_node
+    WHERE t.depth < ?2
+      AND INSTR(t.visited, ',' || e.id || ',') = 0
+  )
+  SELECT edge_id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at, MIN(depth) AS depth
+  FROM traverse
+  WHERE edge_id IS NOT NULL
+  GROUP BY edge_id
+  ORDER BY depth ASC, edge_id ASC
+";
+
+const SQL_TRAVERSE_BOTH: &str = "
+  WITH RECURSIVE traverse(current_node, depth, visited, edge_id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at) AS (
+    SELECT ?1, 0, ',', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+    UNION ALL
+    SELECT
+      (CASE WHEN e.from_node_id = t.current_node THEN e.to_node_id ELSE e.from_node_id END),
+      t.depth + 1,
+      t.visited || e.id || ',',
+      e.id, e.from_node_id, e.to_node_id, e.edge_type, e.confidence, e.created_by, e.created_event, e.created_at
+    FROM traverse t
+    JOIN memory_edges e ON (e.from_node_id = t.current_node OR e.to_node_id = t.current_node)
+    WHERE t.depth < ?2
+      AND INSTR(t.visited, ',' || e.id || ',') = 0
+  )
+  SELECT edge_id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at, MIN(depth) AS depth
+  FROM traverse
+  WHERE edge_id IS NOT NULL
+  GROUP BY edge_id
+  ORDER BY depth ASC, edge_id ASC
+";
+
+pub(crate) fn query_related_deep_sql(
+  conn: &Connection,
+  node_id: &str,
+  max_depth: i64,
+  direction: &str,
+) -> Result<Vec<GraphEdgeRowWithDepth>, String> {
+  let sql = match direction {
+    "forward" => SQL_TRAVERSE_FORWARD,
+    "backward" => SQL_TRAVERSE_BACKWARD,
+    "both" => SQL_TRAVERSE_BOTH,
+    other => return Err(format!("unknown traversal direction: {other}")),
+  };
+  let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+  let rows = stmt
+    .query_map(params![node_id, max_depth], |row| {
+      Ok(GraphEdgeRowWithDepth {
+        id: row.get(0)?,
+        from_node_id: row.get(1)?,
+        to_node_id: row.get(2)?,
+        edge_type: row.get(3)?,
+        confidence: row.get(4)?,
+        created_by: row.get(5)?,
+        created_event: row.get(6)?,
+        created_at: row.get(7)?,
+        depth: row.get(8)?,
+      })
+    })
+    .map_err(|e| e.to_string())?;
+  let mut result = Vec::new();
+  for row in rows {
+    result.push(row.map_err(|e| e.to_string())?);
+  }
+  Ok(result)
+}
+
+#[tauri::command]
+pub fn memory_graph_query_related_deep(
+  app: tauri::AppHandle,
+  node_id: String,
+  max_depth: i64,
+  direction: String,
+) -> Result<Vec<GraphEdgeRowWithDepth>, String> {
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
+  ensure_memory_graph_tables(&conn)?;
+  query_related_deep_sql(&conn, &node_id, max_depth, &direction)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -259,5 +385,103 @@ mod tests {
       .collect();
 
     assert_eq!(ids, vec!["edge-a".to_string(), "edge-b".to_string()]);
+  }
+
+  fn seed_chain(conn: &Connection) {
+    // A -> B -> C -> D, each edge_type "next"
+    let now = crate::now_ms() as i64;
+    for (id, from, to) in [("e-ab", "A", "B"), ("e-bc", "B", "C"), ("e-cd", "C", "D")] {
+      conn
+        .execute(
+          "INSERT INTO memory_edges (id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at)
+           VALUES (?1, ?2, ?3, 'next', 'verified', 'test', NULL, ?4)",
+          params![id, from, to, now],
+        )
+        .expect("seed edge insert");
+    }
+  }
+
+  #[test]
+  fn query_related_deep_forward_respects_max_depth() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_chain(&conn);
+
+    let results = query_related_deep_sql(&conn, "A", 2, "forward").expect("query");
+    let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+    assert_eq!(
+      ids,
+      vec!["e-ab".to_string(), "e-bc".to_string()],
+      "depth 2 forward from A should reach e-ab and e-bc but not e-cd"
+    );
+    assert_eq!(results.iter().find(|r| r.id == "e-ab").unwrap().depth, 1);
+    assert_eq!(results.iter().find(|r| r.id == "e-bc").unwrap().depth, 2);
+  }
+
+  #[test]
+  fn query_related_deep_backward_follows_edges_in_reverse() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_chain(&conn);
+
+    let results = query_related_deep_sql(&conn, "C", 5, "backward").expect("query");
+    let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+    assert_eq!(
+      ids,
+      vec!["e-bc".to_string(), "e-ab".to_string()],
+      "backward from C should reach e-bc (depth 1) then e-ab (depth 2)"
+    );
+  }
+
+  #[test]
+  fn query_related_deep_both_finds_edges_regardless_of_direction() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_chain(&conn);
+
+    let results = query_related_deep_sql(&conn, "B", 1, "both").expect("query");
+    let mut ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+    ids.sort();
+    assert_eq!(
+      ids,
+      vec!["e-ab".to_string(), "e-bc".to_string()],
+      "'both' from B should find the incoming edge (e-ab) and outgoing edge (e-bc) at depth 1"
+    );
+  }
+
+  #[test]
+  fn query_related_deep_terminates_on_a_cycle() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    let now = crate::now_ms() as i64;
+    // A -> B -> C -> A (cycle)
+    for (id, from, to) in [("e-ab", "A", "B"), ("e-bc", "B", "C"), ("e-ca", "C", "A")] {
+      conn
+        .execute(
+          "INSERT INTO memory_edges (id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at)
+           VALUES (?1, ?2, ?3, 'next', 'verified', 'test', NULL, ?4)",
+          params![id, from, to, now],
+        )
+        .expect("seed edge insert");
+    }
+
+    // max_depth is deliberately generous (50) -- without cycle protection this
+    // would either loop forever or return each edge many times.
+    let results = query_related_deep_sql(&conn, "A", 50, "forward").expect("query");
+    let mut ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+    ids.sort();
+    assert_eq!(
+      ids,
+      vec!["e-ab".to_string(), "e-bc".to_string(), "e-ca".to_string()],
+      "each edge in the cycle should appear exactly once"
+    );
+  }
+
+  #[test]
+  fn query_related_deep_rejects_unknown_direction() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    let result = query_related_deep_sql(&conn, "A", 5, "sideways");
+    assert!(result.is_err(), "an unrecognized direction string should be rejected, not silently treated as one of the 3 valid values");
   }
 }

@@ -92,6 +92,7 @@ pub(crate) use connector_commands::*;
 pub(crate) use kv_store::{kv_delete, kv_get, kv_set, load_settings, save_settings};
 pub(crate) use memory_graph::{
   memory_graph_add_edge, memory_graph_add_node, memory_graph_query_related,
+  memory_graph_query_related_deep,
 };
 pub(crate) use memory_store::*;
 pub(crate) use meta_publish::*;
@@ -739,6 +740,7 @@ pub fn run() {
       memory_graph_add_node,
       memory_graph_add_edge,
       memory_graph_query_related,
+      memory_graph_query_related_deep,
       secure_credential_set,
       secure_credential_get,
       secure_credential_delete,
