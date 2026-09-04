@@ -39,4 +39,15 @@ describe('Modal', () => {
     const closeBtn = screen.getByText('×');
     expect(closeBtn).toBeTruthy();
   });
+
+  it('size="full" renders with its own class and not the sm/md/lg max-w classes', () => {
+    render(
+      <Modal open onClose={() => {}} size="full" title="Test">
+        <div>content</div>
+      </Modal>
+    );
+    const dialog = screen.getByText('Test').closest('div.relative');
+    expect(dialog?.className).toContain('max-w-[95vw]');
+    expect(dialog?.className).not.toMatch(/max-w-(sm|lg|2xl)/);
+  });
 });
