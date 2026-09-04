@@ -29,6 +29,23 @@ describe('memoryGraphService', () => {
       const id = await addNode('memory_item', 'mem-1');
       expect(id).toBeNull();
     });
+
+    it('fires a scoped, capped inference pass after a successful add, without blocking the return', async () => {
+      invoke.mockResolvedValue('memory_item:mem-1');
+      const { addNode } = await import('../../services/memoryGraphService');
+      await addNode('memory_item', 'mem-1');
+      expect(invoke).toHaveBeenCalledWith('memory_graph_infer_edges', {
+        scopeNodeIds: ['memory_item:mem-1'],
+        maxSuggestions: 5
+      });
+    });
+
+    it('does not fire inference when the add itself failed', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { addNode } = await import('../../services/memoryGraphService');
+      await addNode('memory_item', 'mem-1');
+      expect(invoke).not.toHaveBeenCalledWith('memory_graph_infer_edges', expect.anything());
+    });
   });
 
   describe('addEdge', () => {
@@ -65,6 +82,26 @@ describe('memoryGraphService', () => {
       const { addEdge } = await import('../../services/memoryGraphService');
       const id = await addEdge('a', 'b', 'mentions', { confidence: 'verified', createdBy: 'jose' });
       expect(id).toBeNull();
+    });
+
+    it('fires a scoped, capped inference pass covering both endpoints after a successful add', async () => {
+      invoke.mockResolvedValue('edge-999');
+      const { addEdge } = await import('../../services/memoryGraphService');
+      await addEdge('memory_item:mem-1', 'memory_item:mem-2', 'mentions', {
+        confidence: 'user_confirmed',
+        createdBy: 'echo'
+      });
+      expect(invoke).toHaveBeenCalledWith('memory_graph_infer_edges', {
+        scopeNodeIds: ['memory_item:mem-1', 'memory_item:mem-2'],
+        maxSuggestions: 5
+      });
+    });
+
+    it('does not fire inference when the add itself failed', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { addEdge } = await import('../../services/memoryGraphService');
+      await addEdge('a', 'b', 'mentions', { confidence: 'verified', createdBy: 'jose' });
+      expect(invoke).not.toHaveBeenCalledWith('memory_graph_infer_edges', expect.anything());
     });
   });
 
@@ -177,6 +214,37 @@ describe('memoryGraphService', () => {
       invoke.mockResolvedValue(null);
       const { listAllEdges } = await import('../../services/memoryGraphService');
       const result = await listAllEdges(1000);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('inferEdges', () => {
+    it('calls the backend with scope and max suggestions, and returns the created edges', async () => {
+      const edges = [{
+        id: 'edge-inf-1', fromNodeId: 'A', toNodeId: 'C', edgeType: 'related',
+        confidence: 'inferred', createdBy: 'system:inference', createdEvent: null, createdAtMs: 123
+      }];
+      invoke.mockResolvedValue(edges);
+      const { inferEdges } = await import('../../services/memoryGraphService');
+      const result = await inferEdges(['A', 'B'], 5);
+      expect(result).toEqual(edges);
+      expect(invoke).toHaveBeenCalledWith('memory_graph_infer_edges', {
+        scopeNodeIds: ['A', 'B'],
+        maxSuggestions: 5
+      });
+    });
+
+    it('returns an empty array instead of throwing when invoke fails', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { inferEdges } = await import('../../services/memoryGraphService');
+      const result = await inferEdges(['A'], 5);
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array if the backend returns something non-array', async () => {
+      invoke.mockResolvedValue(null);
+      const { inferEdges } = await import('../../services/memoryGraphService');
+      const result = await inferEdges(['A'], 5);
       expect(result).toEqual([]);
     });
   });
