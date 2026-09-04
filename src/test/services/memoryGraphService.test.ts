@@ -127,4 +127,57 @@ describe('memoryGraphService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('listAllNodes', () => {
+    it('returns the nodes array from the backend', async () => {
+      const nodes = [{ id: 'memory_item:a', nodeType: 'memory_item', refId: 'a', createdAtMs: 123 }];
+      invoke.mockResolvedValue(nodes);
+      const { listAllNodes } = await import('../../services/memoryGraphService');
+      const result = await listAllNodes(500);
+      expect(result).toEqual(nodes);
+      expect(invoke).toHaveBeenCalledWith('memory_graph_list_nodes', { limit: 500 });
+    });
+
+    it('returns an empty array instead of throwing when invoke fails', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { listAllNodes } = await import('../../services/memoryGraphService');
+      const result = await listAllNodes(500);
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array if the backend returns something non-array', async () => {
+      invoke.mockResolvedValue(null);
+      const { listAllNodes } = await import('../../services/memoryGraphService');
+      const result = await listAllNodes(500);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('listAllEdges', () => {
+    it('returns the edges array from the backend', async () => {
+      const edges = [{
+        id: 'edge-1', fromNodeId: 'a', toNodeId: 'b', edgeType: 'mentions',
+        confidence: 'verified', createdBy: 'jose', createdEvent: null, createdAtMs: 123
+      }];
+      invoke.mockResolvedValue(edges);
+      const { listAllEdges } = await import('../../services/memoryGraphService');
+      const result = await listAllEdges(1000);
+      expect(result).toEqual(edges);
+      expect(invoke).toHaveBeenCalledWith('memory_graph_list_edges', { limit: 1000 });
+    });
+
+    it('returns an empty array instead of throwing when invoke fails', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { listAllEdges } = await import('../../services/memoryGraphService');
+      const result = await listAllEdges(1000);
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array if the backend returns something non-array', async () => {
+      invoke.mockResolvedValue(null);
+      const { listAllEdges } = await import('../../services/memoryGraphService');
+      const result = await listAllEdges(1000);
+      expect(result).toEqual([]);
+    });
+  });
 });

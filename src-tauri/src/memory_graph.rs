@@ -245,6 +245,85 @@ pub fn memory_graph_query_related_deep(
   query_related_deep_sql(&conn, &node_id, max_depth, &direction)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GraphNodeRow {
+  pub(crate) id: String,
+  pub(crate) node_type: String,
+  pub(crate) ref_id: String,
+  #[serde(rename = "createdAtMs")]
+  pub(crate) created_at: i64,
+}
+
+pub(crate) fn list_nodes_sql(conn: &Connection, limit: i64) -> Result<Vec<GraphNodeRow>, String> {
+  let mut stmt = conn
+    .prepare("SELECT id, node_type, ref_id, created_at FROM memory_nodes ORDER BY created_at DESC LIMIT ?1")
+    .map_err(|e| e.to_string())?;
+  let rows = stmt
+    .query_map(params![limit], |row| {
+      Ok(GraphNodeRow {
+        id: row.get(0)?,
+        node_type: row.get(1)?,
+        ref_id: row.get(2)?,
+        created_at: row.get(3)?,
+      })
+    })
+    .map_err(|e| e.to_string())?;
+  let mut result = Vec::new();
+  for row in rows {
+    result.push(row.map_err(|e| e.to_string())?);
+  }
+  Ok(result)
+}
+
+pub(crate) fn list_edges_sql(conn: &Connection, limit: i64) -> Result<Vec<GraphEdgeRow>, String> {
+  let mut stmt = conn
+    .prepare(
+      "SELECT id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at
+       FROM memory_edges ORDER BY created_at DESC LIMIT ?1",
+    )
+    .map_err(|e| e.to_string())?;
+  let rows = stmt
+    .query_map(params![limit], |row| {
+      Ok(GraphEdgeRow {
+        id: row.get(0)?,
+        from_node_id: row.get(1)?,
+        to_node_id: row.get(2)?,
+        edge_type: row.get(3)?,
+        confidence: row.get(4)?,
+        created_by: row.get(5)?,
+        created_event: row.get(6)?,
+        created_at: row.get(7)?,
+      })
+    })
+    .map_err(|e| e.to_string())?;
+  let mut result = Vec::new();
+  for row in rows {
+    result.push(row.map_err(|e| e.to_string())?);
+  }
+  Ok(result)
+}
+
+#[tauri::command]
+pub fn memory_graph_list_nodes(
+  app: tauri::AppHandle,
+  limit: i64,
+) -> Result<Vec<GraphNodeRow>, String> {
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
+  ensure_memory_graph_tables(&conn)?;
+  list_nodes_sql(&conn, limit)
+}
+
+#[tauri::command]
+pub fn memory_graph_list_edges(
+  app: tauri::AppHandle,
+  limit: i64,
+) -> Result<Vec<GraphEdgeRow>, String> {
+  let (conn, _) = crate::memory_store::open_memory_db(&app)?;
+  ensure_memory_graph_tables(&conn)?;
+  list_edges_sql(&conn, limit)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -483,5 +562,62 @@ mod tests {
     ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
     let result = query_related_deep_sql(&conn, "A", 5, "sideways");
     assert!(result.is_err(), "an unrecognized direction string should be rejected, not silently treated as one of the 3 valid values");
+  }
+
+  #[test]
+  fn list_nodes_respects_limit_and_orders_newest_first() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    for (id, node_type, ref_id, created_at) in [
+      ("memory_item:a", "memory_item", "a", 100),
+      ("memory_item:b", "memory_item", "b", 200),
+      ("memory_item:c", "memory_item", "c", 300),
+    ] {
+      conn
+        .execute(
+          "INSERT INTO memory_nodes (id, node_type, ref_id, created_at) VALUES (?1, ?2, ?3, ?4)",
+          params![id, node_type, ref_id, created_at],
+        )
+        .expect("seed node insert");
+    }
+
+    let rows = list_nodes_sql(&conn, 2).expect("query");
+    let ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    assert_eq!(
+      ids,
+      vec!["memory_item:c".to_string(), "memory_item:b".to_string()],
+      "limit 2, newest first"
+    );
+  }
+
+  #[test]
+  fn list_nodes_returns_empty_vec_not_error_when_table_is_empty() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    let rows = list_nodes_sql(&conn, 500).expect("query");
+    assert_eq!(rows.len(), 0);
+  }
+
+  #[test]
+  fn list_edges_respects_limit_and_orders_newest_first() {
+    let conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    for (id, created_at) in [("edge-a", 100), ("edge-b", 200), ("edge-c", 300)] {
+      conn
+        .execute(
+          "INSERT INTO memory_edges (id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at)
+           VALUES (?1, 'node-x', 'node-y', 'mentions', 'verified', 'test', NULL, ?2)",
+          params![id, created_at],
+        )
+        .expect("seed edge insert");
+    }
+
+    let rows = list_edges_sql(&conn, 2).expect("query");
+    let ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+    assert_eq!(
+      ids,
+      vec!["edge-c".to_string(), "edge-b".to_string()],
+      "limit 2, newest first"
+    );
   }
 }

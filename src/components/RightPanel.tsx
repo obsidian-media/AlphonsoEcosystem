@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Bot, ChevronLeft, ChevronRight, Cpu, RefreshCw, Shield } from 'lucide-react';
+import { Activity, Bot, ChevronLeft, ChevronRight, Cpu, Network, RefreshCw, Shield } from 'lucide-react';
 import { AgentStatusStrip } from './AgentStatusStrip';
 import { AgentDock } from './AgentDock';
 import { formatModelSize } from '../lib/ollama';
@@ -8,6 +8,8 @@ import { getAuditLog } from '../services/agentAuditService';
 import { SentinelFindingModal } from './SentinelFindingModal';
 import { SentinelAllowlistPanel } from './SentinelAllowlistPanel';
 import { Badge } from './ui/Badge';
+import { Modal } from './ui/Modal';
+import { MemoryGraphViewer } from './MemoryGraphViewer';
 
 type ConnectionState = 'connected' | 'connecting' | 'warning' | 'disconnected' | 'idle' | 'model_missing' | 'no_models';
 
@@ -132,6 +134,7 @@ export function RightPanel({
 }: RightPanelProps) {
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('alphonso_right_panel_collapsed_v1') === 'true');
   const [activeTab, setActiveTab] = useState<'system' | 'audit' | 'agents'>('system');
+  const [graphModalOpen, setGraphModalOpen] = useState(false);
   const setPanelCollapsed = (value: boolean) => {
     setCollapsed(value);
     localStorage.setItem('alphonso_right_panel_collapsed_v1', String(value));
@@ -233,6 +236,7 @@ export function RightPanel({
   const scannedLabel = scannedAt ? `Last scan: ${relativeTime(scannedAt)}` : null;
 
   return (
+    <>
     <aside className="w-72 bg-[var(--surface-1)] border-l border-[var(--border)] flex flex-col shrink-0 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border)]">
         <div className="flex gap-1">
@@ -368,6 +372,15 @@ export function RightPanel({
             <p className="section-label mb-2">Allowlist</p>
             <SentinelAllowlistPanel />
           </div>
+          <div className="mt-3 pt-3 border-t border-[var(--border)] px-3">
+            <button
+              onClick={() => setGraphModalOpen(true)}
+              className="flex items-center gap-2 text-xs text-[var(--text-2)] hover:text-[var(--text-1)]"
+            >
+              <Network className="w-3.5 h-3.5" />
+              View memory graph →
+            </button>
+          </div>
         </>
       )}
 
@@ -403,5 +416,9 @@ export function RightPanel({
         </div>
       )}
     </aside>
+    <Modal open={graphModalOpen} onClose={() => setGraphModalOpen(false)} size="full" title="Memory Knowledge Graph">
+      <MemoryGraphViewer size="full" />
+    </Modal>
+    </>
   );
 }
