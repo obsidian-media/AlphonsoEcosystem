@@ -2,6 +2,8 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
+import { Modal } from './ui/Modal';
+import { MemoryGraphViewer } from './MemoryGraphViewer';
 
 const LEGACY_COLOR_TO_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent'> = {
   green: 'success',
@@ -591,6 +593,7 @@ export function SettingsView({
   const outputFolderPickerRef = useRef<HTMLInputElement>(null);
   const comfyuiDirPickerRef = useRef<HTMLInputElement>(null);
 
+  const [graphModalOpen, setGraphModalOpen] = useState(false);
   const [composioApiKey, setComposioApiKey] = useState<string>(() => getComposioConfig().apiKey || '');
   const [composioUserId, setComposioUserId] = useState<string>(() => getComposioConfig().userId || 'alphonso-user');
   const [composioHealth, setComposioHealth] = useState<ComposioHealth | null>(null);
@@ -1446,6 +1449,16 @@ export function SettingsView({
         <EchoTimeline />
       </section>
       <section className="space-y-4">
+        <SectionHeader icon={Database} label="Memory Knowledge Graph" />
+        <MemoryGraphViewer size="compact" />
+        <button
+          onClick={() => setGraphModalOpen(true)}
+          className="text-xs text-[var(--accent)] hover:underline"
+        >
+          Expand to fullscreen →
+        </button>
+      </section>
+      <section className="space-y-4">
         <SectionHeader icon={Database} label="Session History" />
         <SessionHistoryView />
       </section>
@@ -1581,6 +1594,9 @@ export function SettingsView({
     </div>
   )}
       </div>
+      <Modal open={graphModalOpen} onClose={() => setGraphModalOpen(false)} size="full" title="Memory Knowledge Graph">
+        <MemoryGraphViewer size="full" />
+      </Modal>
     </div>
   );
 }
