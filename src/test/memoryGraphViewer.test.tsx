@@ -17,7 +17,7 @@ vi.mock('../services/memoryGraphService', () => ({
 }));
 
 import { listAllNodes, listAllEdges } from '../services/memoryGraphService';
-import { MemoryGraphViewer } from '../components/MemoryGraphViewer';
+import { MemoryGraphViewer, NODE_TYPE_COLORS } from '../components/MemoryGraphViewer';
 
 describe('MemoryGraphViewer', () => {
   beforeEach(() => {
@@ -60,5 +60,23 @@ describe('MemoryGraphViewer', () => {
 
     await waitFor(() => expect(listAllNodes).toHaveBeenCalledWith(500));
     expect(listAllEdges).toHaveBeenCalledWith(1000);
+  });
+
+  it('colors nodes by node type, with a fallback for unmapped types', async () => {
+    vi.mocked(listAllNodes).mockResolvedValue([
+      { id: 'memory_item:a', nodeType: 'memory_item', refId: 'a', createdAtMs: 100 },
+      { id: 'research_report:b', nodeType: 'research_report', refId: 'b', createdAtMs: 100 },
+      { id: 'mystery:c', nodeType: 'some_future_type', refId: 'c', createdAtMs: 100 }
+    ]);
+    vi.mocked(listAllEdges).mockResolvedValue([]);
+
+    render(<MemoryGraphViewer size="compact" />);
+
+    await waitFor(() => expect(mockForceGraph3D).toHaveBeenCalled());
+    const props = mockForceGraph3D.mock.calls[mockForceGraph3D.mock.calls.length - 1][0];
+    expect(typeof props.nodeColor).toBe('function');
+    expect(props.nodeColor({ nodeType: 'memory_item' })).toBe(NODE_TYPE_COLORS.memory_item);
+    expect(props.nodeColor({ nodeType: 'research_report' })).toBe(NODE_TYPE_COLORS.research_report);
+    expect(props.nodeColor({ nodeType: 'some_future_type' })).toBe(NODE_TYPE_COLORS.default);
   });
 });

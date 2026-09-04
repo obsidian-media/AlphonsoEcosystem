@@ -5,6 +5,20 @@ import { listAllNodes, listAllEdges, type GraphNode, type GraphEdge } from '../s
 const NODE_LIMIT = 500;
 const EDGE_LIMIT = 1000;
 
+export const NODE_TYPE_COLORS: Record<string, string> = {
+  memory_item: '#6366f1',
+  boardroom_message: '#f59e0b',
+  research_report: '#06b6d4',
+  source: '#84cc16',
+  receipt: '#ec4899',
+  packet: '#8b5cf6',
+  default: '#71717a'
+};
+
+function colorForNodeType(nodeType: string): string {
+  return NODE_TYPE_COLORS[nodeType] || NODE_TYPE_COLORS.default;
+}
+
 interface MemoryGraphViewerProps {
   size: 'compact' | 'full';
 }
@@ -73,7 +87,11 @@ export function MemoryGraphViewer({ size }: MemoryGraphViewerProps) {
 
   return (
     <div className={size === 'full' ? 'h-full w-full' : 'h-60 w-full'}>
-      <ForceGraph3D graphData={graphData} height={height} />
+      <ForceGraph3D
+        graphData={graphData}
+        height={height}
+        nodeColor={(node: ForceGraphNode) => colorForNodeType(node.nodeType)}
+      />
     </div>
   );
 }
