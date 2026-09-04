@@ -135,3 +135,23 @@ export async function listAllEdges(limit: number): Promise<GraphEdge[]> {
     return [];
   }
 }
+
+/**
+ * Runs one bounded structural-inference pass (common-neighbor + shared-event
+ * link prediction, computed entirely server-side in Rust) scoped to the
+ * given node ids, and returns whatever new edges it created. Every created
+ * edge carries confidence: 'inferred' -- callers never need to guess which
+ * edges came from this vs. a manual write. Fail-soft like every other
+ * function in this file: returns [] instead of throwing.
+ */
+export async function inferEdges(scopeNodeIds: string[], maxSuggestions: number): Promise<GraphEdge[]> {
+  try {
+    const rows = await invoke<GraphEdge[]>('memory_graph_infer_edges', {
+      scopeNodeIds,
+      maxSuggestions
+    });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}

@@ -180,4 +180,35 @@ describe('memoryGraphService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('inferEdges', () => {
+    it('calls the backend with scope and max suggestions, and returns the created edges', async () => {
+      const edges = [{
+        id: 'edge-inf-1', fromNodeId: 'A', toNodeId: 'C', edgeType: 'related',
+        confidence: 'inferred', createdBy: 'system:inference', createdEvent: null, createdAtMs: 123
+      }];
+      invoke.mockResolvedValue(edges);
+      const { inferEdges } = await import('../../services/memoryGraphService');
+      const result = await inferEdges(['A', 'B'], 5);
+      expect(result).toEqual(edges);
+      expect(invoke).toHaveBeenCalledWith('memory_graph_infer_edges', {
+        scopeNodeIds: ['A', 'B'],
+        maxSuggestions: 5
+      });
+    });
+
+    it('returns an empty array instead of throwing when invoke fails', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { inferEdges } = await import('../../services/memoryGraphService');
+      const result = await inferEdges(['A'], 5);
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array if the backend returns something non-array', async () => {
+      invoke.mockResolvedValue(null);
+      const { inferEdges } = await import('../../services/memoryGraphService');
+      const result = await inferEdges(['A'], 5);
+      expect(result).toEqual([]);
+    });
+  });
 });
