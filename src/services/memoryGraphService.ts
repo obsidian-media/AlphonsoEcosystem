@@ -24,6 +24,13 @@ export interface GraphEdgeWithDepth extends GraphEdge {
   depth: number;
 }
 
+export interface GraphNode {
+  id: string;
+  nodeType: string;
+  refId: string;
+  createdAtMs: number;
+}
+
 /**
  * Creates (or no-ops if it already exists) a graph node for the given
  * node type + ref id pair. Node ids are deterministic ("{nodeType}:{refId}"),
@@ -97,6 +104,32 @@ export async function queryRelatedDeep(
       maxDepth,
       direction
     });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetches up to `limit` nodes, most recently created first. Every other
+ * query function in this file starts from a single node id -- this and
+ * `listAllEdges` are the only way to see the whole graph.
+ */
+export async function listAllNodes(limit: number): Promise<GraphNode[]> {
+  try {
+    const rows = await invoke<GraphNode[]>('memory_graph_list_nodes', { limit });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetches up to `limit` edges, most recently created first.
+ */
+export async function listAllEdges(limit: number): Promise<GraphEdge[]> {
+  try {
+    const rows = await invoke<GraphEdge[]>('memory_graph_list_edges', { limit });
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];
