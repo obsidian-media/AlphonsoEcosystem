@@ -40,7 +40,11 @@ export interface GraphNode {
  */
 export async function addNode(nodeType: string, refId: string): Promise<string | null> {
   try {
-    return await invoke<string>('memory_graph_add_node', { nodeType, refId });
+    const nodeId = await invoke<string>('memory_graph_add_node', { nodeType, refId });
+    if (nodeId) {
+      inferEdges([nodeId], 5).catch(() => {});
+    }
+    return nodeId;
   } catch {
     return null;
   }
@@ -48,8 +52,9 @@ export async function addNode(nodeType: string, refId: string): Promise<string |
 
 /**
  * Records a typed, directed edge between two already-known node ids.
- * Phase 1 is manual-only: callers must only invoke this at a moment they
- * already know a real relationship exists — no inference happens here.
+ * On success, also fires a small scoped structural-inference pass covering
+ * both endpoints (see inferEdges) -- fire-and-forget, never blocks the
+ * caller or affects this function's return value.
  */
 export async function addEdge(
   fromNodeId: string,
@@ -58,7 +63,7 @@ export async function addEdge(
   opts: AddEdgeOptions
 ): Promise<string | null> {
   try {
-    return await invoke<string>('memory_graph_add_edge', {
+    const edgeId = await invoke<string>('memory_graph_add_edge', {
       fromNodeId,
       toNodeId,
       edgeType,
@@ -66,6 +71,10 @@ export async function addEdge(
       createdBy: opts.createdBy,
       createdEvent: opts.createdEvent ?? null
     });
+    if (edgeId) {
+      inferEdges([fromNodeId, toNodeId], 5).catch(() => {});
+    }
+    return edgeId;
   } catch {
     return null;
   }

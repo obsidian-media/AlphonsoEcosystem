@@ -29,6 +29,23 @@ describe('memoryGraphService', () => {
       const id = await addNode('memory_item', 'mem-1');
       expect(id).toBeNull();
     });
+
+    it('fires a scoped, capped inference pass after a successful add, without blocking the return', async () => {
+      invoke.mockResolvedValue('memory_item:mem-1');
+      const { addNode } = await import('../../services/memoryGraphService');
+      await addNode('memory_item', 'mem-1');
+      expect(invoke).toHaveBeenCalledWith('memory_graph_infer_edges', {
+        scopeNodeIds: ['memory_item:mem-1'],
+        maxSuggestions: 5
+      });
+    });
+
+    it('does not fire inference when the add itself failed', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { addNode } = await import('../../services/memoryGraphService');
+      await addNode('memory_item', 'mem-1');
+      expect(invoke).not.toHaveBeenCalledWith('memory_graph_infer_edges', expect.anything());
+    });
   });
 
   describe('addEdge', () => {
@@ -65,6 +82,26 @@ describe('memoryGraphService', () => {
       const { addEdge } = await import('../../services/memoryGraphService');
       const id = await addEdge('a', 'b', 'mentions', { confidence: 'verified', createdBy: 'jose' });
       expect(id).toBeNull();
+    });
+
+    it('fires a scoped, capped inference pass covering both endpoints after a successful add', async () => {
+      invoke.mockResolvedValue('edge-999');
+      const { addEdge } = await import('../../services/memoryGraphService');
+      await addEdge('memory_item:mem-1', 'memory_item:mem-2', 'mentions', {
+        confidence: 'user_confirmed',
+        createdBy: 'echo'
+      });
+      expect(invoke).toHaveBeenCalledWith('memory_graph_infer_edges', {
+        scopeNodeIds: ['memory_item:mem-1', 'memory_item:mem-2'],
+        maxSuggestions: 5
+      });
+    });
+
+    it('does not fire inference when the add itself failed', async () => {
+      invoke.mockRejectedValue(new Error('not in tauri'));
+      const { addEdge } = await import('../../services/memoryGraphService');
+      await addEdge('a', 'b', 'mentions', { confidence: 'verified', createdBy: 'jose' });
+      expect(invoke).not.toHaveBeenCalledWith('memory_graph_infer_edges', expect.anything());
     });
   });
 
