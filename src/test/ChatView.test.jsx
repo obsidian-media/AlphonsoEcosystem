@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { setAgentProvider } from '../services/modelSelectionService';
 
 // ── Core Tauri mock ───────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -71,8 +72,27 @@ vi.mock('../services/connectors/nvidiaNimConnector', () => ({
 
 vi.mock('../services/connectors/geminiConnector', () => ({
   isGeminiConfigured: vi.fn().mockReturnValue(true),
-  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-2.5-flash-lite', provider: 'gemini' })
+  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-3.5-flash-lite', provider: 'gemini' })
 }));
+
+vi.mock('../services/connectors/hermesAgentConnector', () => ({
+  isHermesAgentConfigured: vi.fn().mockReturnValue(true),
+  sendHermesAgentMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Hermes', model: 'hermes-agent', usage: null, provider: 'hermes' })
+}));
+
+// Stateful, not a fixed return -- ChatView's syncLegacyProviderIntoAgentStore
+// writes settings.selectedProvider into this store via setAgentProvider, and
+// its own selectedProvider derivation reads it back via getAgentProvider.
+// A fixed-return mock would break every existing test that sets
+// settings.selectedProvider to something other than 'ollama', since that
+// value would never reach the derived selectedProvider.
+vi.mock('../services/modelSelectionService', () => {
+  const store = {};
+  return {
+    getAgentProvider: vi.fn((agentId) => store[agentId] || { provider: 'ollama' }),
+    setAgentProvider: vi.fn((agentId, config) => { store[agentId] = config; })
+  };
+});
 
 // ── Lazy / heavy sub-component mocks ─────────────────────────────────────────
 vi.mock('../components/MarkdownMessage', () => ({
@@ -120,6 +140,7 @@ import { generateOllamaChatStream } from '../lib/ollama';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
 import { isGeminiConfigured } from '../services/connectors/geminiConnector';
+import { isHermesAgentConfigured, sendHermesAgentMessage } from '../services/connectors/hermesAgentConnector';
 import { nextMsgId } from '../lib/chatUtils';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -149,6 +170,11 @@ function makeProps(overrides = {}) {
 describe('ChatView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // vi.clearAllMocks() clears call history but not the stateful mock's
+    // internal store closure -- reset it explicitly so a test that sets
+    // settings.selectedProvider can't leak its choice into a later test
+    // that uses makeProps()'s default (undefined) selectedProvider.
+    setAgentProvider('alphonso', { provider: 'ollama' });
   });
 
   it('renders without crashing', () => {
@@ -273,6 +299,71 @@ describe('ChatView', () => {
       expect(sendNvidiaMessage).toHaveBeenCalled();
       expect(generateOllamaChatStream).not.toHaveBeenCalled();
       expect(screen.getByText('Hello from NVIDIA')).toBeTruthy();
+    });
+  });
+
+  it('routes generation through sendHermesAgentMessage for the alphonso agent when hermes is selected', async () => {
+    nextMsgId.mockReturnValueOnce('msg-hermes-user').mockReturnValueOnce('msg-hermes-assistant');
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedModel: 'hermes-agent', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(sendHermesAgentMessage).toHaveBeenCalledWith('alphonso', expect.anything(), expect.objectContaining({ model: 'hermes-agent' }));
+      expect(generateOllamaChatStream).not.toHaveBeenCalled();
+      expect(screen.getByText('Hello from Hermes')).toBeTruthy();
+    });
+  });
+
+  it('blocks send with a clear message when Hermes is selected but not configured', async () => {
+    nextMsgId.mockReturnValueOnce('msg-hermes-unconf');
+    isHermesAgentConfigured.mockReturnValue(false);
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedModel: 'hermes-agent', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hermes is not configured/i)).toBeTruthy();
+    });
+    isHermesAgentConfigured.mockReturnValue(true);
+  });
+
+  it('shows a policy-blocked message distinct from a generic error when Hermes reports blocked:true', async () => {
+    nextMsgId.mockReturnValueOnce('msg-hermes-blocked-user').mockReturnValueOnce('msg-hermes-blocked-assistant');
+    sendHermesAgentMessage.mockResolvedValueOnce({ ok: false, blocked: true, message: 'Approval Mode requires confirmation', provider: 'hermes' });
+    setAgentProvider('alphonso', { provider: 'hermes' });
+    render(
+      <ChatView
+        {...makeProps({
+          settings: { selectedModel: 'hermes-agent', colorScheme: 'dark' }
+        })}
+      />
+    );
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('kv_get', expect.anything()));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/blocked by policy/i)).toBeTruthy();
     });
   });
 

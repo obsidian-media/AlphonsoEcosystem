@@ -343,11 +343,12 @@ interface ModelProviderPickerProps {
   onModelChange: (name: string) => void;
   ollamaPicker: React.ReactNode;
   /**
-   * Which agent this picker controls. Omitted (the default, ChatView's
-   * existing usage) means the legacy global/Alphonso picker — Hermes is not
-   * offered there since it has no single "the app's" Hermes profile, only
-   * per-agent ones. Passed explicitly (the new per-agent Settings UI) adds a
-   * Hermes tab, gated on isHermesAgentConfigured(agentId).
+   * Which agent this picker controls, gating whether a Hermes tab appears
+   * (via isHermesAgentConfigured(agentId)) since Hermes has no single
+   * "the app's" profile, only per-agent ones. ChatView passes 'alphonso'
+   * (its main chat surface IS the Alphonso agent, so Hermes is offered
+   * there too, same as any other agent); the per-agent Settings UI passes
+   * whichever agent's row it's rendering. Omitted entirely disables Hermes.
    */
   agentId?: string;
 }

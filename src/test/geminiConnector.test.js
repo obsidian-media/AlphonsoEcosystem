@@ -45,14 +45,14 @@ describe('geminiConnector', () => {
     expect(body.contents[0]).toEqual({ role: 'user', parts: [{ text: 'Hello' }] });
   });
 
-  it('sends the default model as gemini-2.5-flash-lite (2.5-era, not retired 1.5)', async () => {
+  it('sends the default model as gemini-3.5-flash-lite (2.5-era default retired 2026-09-04)', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({ candidates: [{ content: { parts: [{ text: 'ack' }] } }] })
     });
     await sendGeminiMessage([{ role: 'user', content: 'Hi' }]);
-    expect(fetch.mock.calls[0][0]).toContain('/models/gemini-2.5-flash-lite:generateContent');
+    expect(fetch.mock.calls[0][0]).toContain('/models/gemini-3.5-flash-lite:generateContent');
   });
 
   it('maps a system message to Gemini systemInstruction instead of dropping it', async () => {
