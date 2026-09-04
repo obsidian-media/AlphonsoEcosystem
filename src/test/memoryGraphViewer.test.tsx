@@ -16,7 +16,7 @@ vi.mock('../services/memoryGraphService', () => ({
   queryRelated: vi.fn()
 }));
 
-import { listAllNodes, listAllEdges } from '../services/memoryGraphService';
+import { listAllNodes, listAllEdges, queryRelated } from '../services/memoryGraphService';
 import { MemoryGraphViewer, NODE_TYPE_COLORS } from '../components/MemoryGraphViewer';
 
 describe('MemoryGraphViewer', () => {
@@ -78,5 +78,54 @@ describe('MemoryGraphViewer', () => {
     expect(props.nodeColor({ nodeType: 'memory_item' })).toBe(NODE_TYPE_COLORS.memory_item);
     expect(props.nodeColor({ nodeType: 'research_report' })).toBe(NODE_TYPE_COLORS.research_report);
     expect(props.nodeColor({ nodeType: 'some_future_type' })).toBe(NODE_TYPE_COLORS.default);
+  });
+
+  it('opens a detail panel with the node fields and its direct connections when a node is clicked', async () => {
+    vi.mocked(listAllNodes).mockResolvedValue([
+      { id: 'memory_item:a', nodeType: 'memory_item', refId: 'a', createdAtMs: 100 },
+      { id: 'memory_item:b', nodeType: 'memory_item', refId: 'b', createdAtMs: 200 }
+    ]);
+    vi.mocked(listAllEdges).mockResolvedValue([]);
+    vi.mocked(queryRelated).mockResolvedValue([
+      { id: 'edge-1', fromNodeId: 'memory_item:a', toNodeId: 'memory_item:b', edgeType: 'mentions', confidence: 'verified', createdBy: 'echo', createdEvent: null, createdAtMs: 150 }
+    ]);
+
+    render(<MemoryGraphViewer size="compact" />);
+    await waitFor(() => expect(mockForceGraph3D).toHaveBeenCalled());
+
+    const props = mockForceGraph3D.mock.calls[mockForceGraph3D.mock.calls.length - 1][0];
+    props.onNodeClick({ id: 'memory_item:a', nodeType: 'memory_item', refId: 'a', createdAtMs: 100 });
+
+    expect(await screen.findByText('memory_item')).toBeInTheDocument();
+    expect(await screen.findByText(/mentions/i)).toBeInTheDocument();
+    expect(queryRelated).toHaveBeenCalledWith('memory_item:a');
+  });
+
+  it('selects the other node when a listed connection is clicked, without re-fetching graph data', async () => {
+    vi.mocked(listAllNodes).mockResolvedValue([
+      { id: 'memory_item:a', nodeType: 'memory_item', refId: 'a', createdAtMs: 100 },
+      { id: 'research_report:b', nodeType: 'research_report', refId: 'b', createdAtMs: 200 }
+    ]);
+    vi.mocked(listAllEdges).mockResolvedValue([]);
+    vi.mocked(queryRelated).mockImplementation(async (nodeId: string) => {
+      if (nodeId === 'memory_item:a') {
+        return [{ id: 'edge-1', fromNodeId: 'memory_item:a', toNodeId: 'research_report:b', edgeType: 'mentions', confidence: 'verified', createdBy: 'echo', createdEvent: null, createdAtMs: 150 }];
+      }
+      return [];
+    });
+
+    render(<MemoryGraphViewer size="compact" />);
+    await waitFor(() => expect(mockForceGraph3D).toHaveBeenCalled());
+
+    const props = mockForceGraph3D.mock.calls[mockForceGraph3D.mock.calls.length - 1][0];
+    props.onNodeClick({ id: 'memory_item:a', nodeType: 'memory_item', refId: 'a', createdAtMs: 100 });
+    await screen.findByText(/mentions/i);
+
+    const connectionButton = await screen.findByRole('button', { name: /research_report:b/i });
+    connectionButton.click();
+
+    expect(await screen.findByText('research_report')).toBeInTheDocument();
+    expect(listAllNodes).toHaveBeenCalledTimes(1);
+    expect(listAllEdges).toHaveBeenCalledTimes(1);
   });
 });
