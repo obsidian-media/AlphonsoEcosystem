@@ -324,6 +324,143 @@ pub fn memory_graph_list_edges(
   list_edges_sql(&conn, limit)
 }
 
+fn build_common_neighbor_sql(scope_len: usize) -> String {
+  let list: Vec<String> = (1..=scope_len).map(|i| format!("?{}", i)).collect();
+  let list = list.join(", ");
+  format!(
+    "SELECT DISTINCT e1.from_node_id AS a, e2.to_node_id AS b
+     FROM memory_edges e1
+     JOIN memory_edges e2 ON e1.to_node_id = e2.from_node_id
+     WHERE e1.from_node_id != e2.to_node_id
+       AND (e1.from_node_id IN ({list}) OR e2.to_node_id IN ({list}))"
+  )
+}
+
+fn build_shared_event_sql(scope_len: usize) -> String {
+  let list: Vec<String> = (1..=scope_len).map(|i| format!("?{}", i)).collect();
+  let list = list.join(", ");
+  format!(
+    "SELECT DISTINCT e1.from_node_id AS a, e2.from_node_id AS b
+     FROM memory_edges e1
+     JOIN memory_edges e2
+       ON e1.created_event = e2.created_event AND e1.id != e2.id
+     WHERE e1.created_event IS NOT NULL
+       AND e1.from_node_id != e2.from_node_id
+       AND (e1.from_node_id IN ({list}) OR e2.from_node_id IN ({list}))"
+  )
+}
+
+// Core, directly-testable logic -- takes a plain &mut Connection (not an
+// AppHandle) so it can run against an in-memory db in unit tests, matching
+// the query_related_deep_sql / memory_graph_query_related_deep split above.
+// &mut is required because building the transaction needs it.
+pub(crate) fn infer_edges_sql(
+  conn: &mut Connection,
+  scope_node_ids: &[String],
+  max_suggestions: i64,
+) -> Result<Vec<GraphEdgeRow>, String> {
+  if scope_node_ids.is_empty() {
+    return Ok(Vec::new());
+  }
+
+  let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+  let mut candidates: Vec<(String, String)> = Vec::new();
+  for sql in [
+    build_common_neighbor_sql(scope_node_ids.len()),
+    build_shared_event_sql(scope_node_ids.len()),
+  ] {
+    let mut stmt = tx.prepare(&sql).map_err(|e| e.to_string())?;
+    // Each numbered placeholder (?1..?N) appears twice in the SQL text (once
+    // per side of the OR) but SQLite treats a numbered parameter as ONE
+    // binding slot no matter how many times it's referenced -- bind the
+    // scope ids exactly once, not doubled.
+    let params: Vec<&dyn rusqlite::ToSql> = scope_node_ids
+      .iter()
+      .map(|s| s as &dyn rusqlite::ToSql)
+      .collect();
+    let rows = stmt
+      .query_map(params.as_slice(), |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+      })
+      .map_err(|e| e.to_string())?;
+    for row in rows {
+      candidates.push(row.map_err(|e| e.to_string())?);
+    }
+  }
+
+  let mut created: Vec<GraphEdgeRow> = Vec::new();
+  let mut seen: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+
+  for (from_id, to_id) in candidates {
+    if from_id == to_id {
+      continue;
+    }
+    let key = if from_id < to_id {
+      (from_id.clone(), to_id.clone())
+    } else {
+      (to_id.clone(), from_id.clone())
+    };
+    if seen.contains(&key) {
+      continue;
+    }
+    seen.insert(key);
+
+    let exists: bool = tx
+      .query_row(
+        "SELECT EXISTS(SELECT 1 FROM memory_edges WHERE
+           (from_node_id = ?1 AND to_node_id = ?2) OR
+           (from_node_id = ?2 AND to_node_id = ?1))",
+        params![from_id, to_id],
+        |row| row.get(0),
+      )
+      .map_err(|e| e.to_string())?;
+    if exists {
+      continue;
+    }
+
+    if created.len() as i64 >= max_suggestions {
+      break;
+    }
+
+    let id = crate::utils::generate_id();
+    let created_at = crate::now_ms() as i64;
+    tx.execute(
+      "INSERT INTO memory_edges
+         (id, from_node_id, to_node_id, edge_type, confidence,
+          created_by, created_event, created_at)
+       VALUES (?1, ?2, ?3, 'related', 'inferred', 'system:inference', NULL, ?4)",
+      params![id, from_id, to_id, created_at],
+    )
+    .map_err(|e| e.to_string())?;
+
+    created.push(GraphEdgeRow {
+      id,
+      from_node_id: from_id,
+      to_node_id: to_id,
+      edge_type: "related".to_string(),
+      confidence: "inferred".to_string(),
+      created_by: "system:inference".to_string(),
+      created_event: None,
+      created_at,
+    });
+  }
+
+  tx.commit().map_err(|e| e.to_string())?;
+  Ok(created)
+}
+
+#[tauri::command]
+pub fn memory_graph_infer_edges(
+  app: tauri::AppHandle,
+  scope_node_ids: Vec<String>,
+  max_suggestions: i64,
+) -> Result<Vec<GraphEdgeRow>, String> {
+  let (mut conn, _) = crate::memory_store::open_memory_db(&app)?;
+  ensure_memory_graph_tables(&conn)?;
+  infer_edges_sql(&mut conn, &scope_node_ids, max_suggestions)
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -618,6 +755,181 @@ mod tests {
       ids,
       vec!["edge-c".to_string(), "edge-b".to_string()],
       "limit 2, newest first"
+    );
+  }
+
+  fn seed_edge(conn: &Connection, id: &str, from: &str, to: &str, created_event: Option<&str>) {
+    let now = crate::now_ms() as i64;
+    conn
+      .execute(
+        "INSERT INTO memory_edges (id, from_node_id, to_node_id, edge_type, confidence, created_by, created_event, created_at)
+         VALUES (?1, ?2, ?3, 'mentions', 'verified', 'test', ?4, ?5)",
+        params![id, from, to, created_event, now],
+      )
+      .expect("seed edge insert");
+  }
+
+  #[test]
+  fn infer_edges_finds_a_common_neighbor_pair() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    // A -> B -> C means A and C share neighbor B but have no direct edge.
+    seed_edge(&conn, "e-ab", "A", "B", None);
+    seed_edge(&conn, "e-bc", "B", "C", None);
+
+    let created = infer_edges_sql(&mut conn, &["A".to_string()], 10).expect("infer");
+    assert_eq!(
+      created.len(),
+      1,
+      "should suggest exactly the A-C common-neighbor pair"
+    );
+    assert_eq!(created[0].from_node_id, "A");
+    assert_eq!(created[0].to_node_id, "C");
+    assert_eq!(created[0].edge_type, "related");
+    assert_eq!(created[0].confidence, "inferred");
+    assert_eq!(created[0].created_by, "system:inference");
+    assert_eq!(created[0].created_event, None);
+  }
+
+  #[test]
+  fn infer_edges_finds_a_shared_event_pair() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    // Two edges stamped with the same created_event but pointing from
+    // otherwise-unconnected source nodes.
+    seed_edge(&conn, "e-1", "X", "P", Some("pkt-1"));
+    seed_edge(&conn, "e-2", "Y", "Q", Some("pkt-1"));
+
+    let created = infer_edges_sql(&mut conn, &["X".to_string()], 10).expect("infer");
+    assert_eq!(created.len(), 1, "should suggest the X-Y shared-event pair");
+    let pair = (
+      created[0].from_node_id.clone(),
+      created[0].to_node_id.clone(),
+    );
+    assert!(
+      pair == ("X".to_string(), "Y".to_string()) || pair == ("Y".to_string(), "X".to_string()),
+      "expected an X-Y pair, got {:?}",
+      pair
+    );
+  }
+
+  #[test]
+  fn infer_edges_does_not_fire_on_null_created_event() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_edge(&conn, "e-1", "X", "P", None);
+    seed_edge(&conn, "e-2", "Y", "Q", None);
+
+    let created = infer_edges_sql(&mut conn, &["X".to_string()], 10).expect("infer");
+    assert_eq!(
+      created.len(),
+      0,
+      "NULL created_event must never match another NULL"
+    );
+  }
+
+  #[test]
+  fn infer_edges_skips_a_pair_that_already_has_a_direct_edge() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_edge(&conn, "e-ab", "A", "B", None);
+    seed_edge(&conn, "e-bc", "B", "C", None);
+    // A and C already have a direct edge (in the reverse direction) -- must not duplicate.
+    seed_edge(&conn, "e-ca", "C", "A", None);
+
+    let created = infer_edges_sql(&mut conn, &["A".to_string()], 10).expect("infer");
+    assert_eq!(
+      created.len(),
+      0,
+      "A-C already connected (as C-A), should not be re-suggested"
+    );
+  }
+
+  #[test]
+  fn infer_edges_never_proposes_a_self_loop() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    // A -> B -> A: common-neighbor logic could otherwise suggest A-A.
+    seed_edge(&conn, "e-ab", "A", "B", None);
+    seed_edge(&conn, "e-ba", "B", "A", None);
+
+    let created = infer_edges_sql(&mut conn, &["A".to_string()], 10).expect("infer");
+    assert!(
+      created.iter().all(|e| e.from_node_id != e.to_node_id),
+      "no created edge should connect a node to itself"
+    );
+  }
+
+  #[test]
+  fn infer_edges_respects_max_suggestions_cap() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    // The scope filter matches a candidate pair's *endpoints* (e1.from /
+    // e2.to), not an intermediate node -- so to generate many candidates
+    // that actually touch scoped node "A", A must be a chain endpoint, not
+    // a common-neighbor middleman. 5 independent 2-hop chains A -> Mi -> Li
+    // each yield one (A, Li) candidate -- 5 candidates, far more than the
+    // cap of 3.
+    for (i, mid) in ["M1", "M2", "M3", "M4", "M5"].iter().enumerate() {
+      let leaf = format!("L{}", i);
+      seed_edge(&conn, &format!("e-a-{}", i), "A", mid, None);
+      seed_edge(&conn, &format!("e-m-{}", i), mid, &leaf, None);
+    }
+
+    let created = infer_edges_sql(&mut conn, &["A".to_string()], 3).expect("infer");
+    assert_eq!(
+      created.len(),
+      3,
+      "cap of 3 must be respected even though more candidates exist"
+    );
+  }
+
+  #[test]
+  fn infer_edges_only_considers_pairs_touching_the_scope() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    // A-B-C is a valid common-neighbor pair, but scope is ["Z"] (unrelated) --
+    // nothing here should touch Z, so no suggestions should fire.
+    seed_edge(&conn, "e-ab", "A", "B", None);
+    seed_edge(&conn, "e-bc", "B", "C", None);
+
+    let created = infer_edges_sql(&mut conn, &["Z".to_string()], 10).expect("infer");
+    assert_eq!(
+      created.len(),
+      0,
+      "scope Z shares no edges with the A-B-C chain"
+    );
+  }
+
+  #[test]
+  fn infer_edges_returns_empty_for_empty_scope() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_edge(&conn, "e-ab", "A", "B", None);
+
+    let created = infer_edges_sql(&mut conn, &[], 10).expect("infer");
+    assert_eq!(created.len(), 0);
+  }
+
+  #[test]
+  fn infer_edges_actually_persists_the_inserted_rows() {
+    let mut conn = Connection::open_in_memory().expect("in-memory db");
+    ensure_memory_graph_tables(&conn).expect("ensure_memory_graph_tables");
+    seed_edge(&conn, "e-ab", "A", "B", None);
+    seed_edge(&conn, "e-bc", "B", "C", None);
+
+    infer_edges_sql(&mut conn, &["A".to_string()], 10).expect("infer");
+
+    let count: i64 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM memory_edges WHERE edge_type = 'related' AND confidence = 'inferred'",
+        [],
+        |row| row.get(0),
+      )
+      .expect("count query");
+    assert_eq!(
+      count, 1,
+      "the suggested edge must actually be committed to the table"
     );
   }
 }

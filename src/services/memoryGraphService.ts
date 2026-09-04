@@ -40,7 +40,11 @@ export interface GraphNode {
  */
 export async function addNode(nodeType: string, refId: string): Promise<string | null> {
   try {
-    return await invoke<string>('memory_graph_add_node', { nodeType, refId });
+    const nodeId = await invoke<string>('memory_graph_add_node', { nodeType, refId });
+    if (nodeId) {
+      inferEdges([nodeId], 5).catch(() => {});
+    }
+    return nodeId;
   } catch {
     return null;
   }
@@ -48,8 +52,9 @@ export async function addNode(nodeType: string, refId: string): Promise<string |
 
 /**
  * Records a typed, directed edge between two already-known node ids.
- * Phase 1 is manual-only: callers must only invoke this at a moment they
- * already know a real relationship exists — no inference happens here.
+ * On success, also fires a small scoped structural-inference pass covering
+ * both endpoints (see inferEdges) -- fire-and-forget, never blocks the
+ * caller or affects this function's return value.
  */
 export async function addEdge(
   fromNodeId: string,
@@ -58,7 +63,7 @@ export async function addEdge(
   opts: AddEdgeOptions
 ): Promise<string | null> {
   try {
-    return await invoke<string>('memory_graph_add_edge', {
+    const edgeId = await invoke<string>('memory_graph_add_edge', {
       fromNodeId,
       toNodeId,
       edgeType,
@@ -66,6 +71,10 @@ export async function addEdge(
       createdBy: opts.createdBy,
       createdEvent: opts.createdEvent ?? null
     });
+    if (edgeId) {
+      inferEdges([fromNodeId, toNodeId], 5).catch(() => {});
+    }
+    return edgeId;
   } catch {
     return null;
   }
@@ -130,6 +139,26 @@ export async function listAllNodes(limit: number): Promise<GraphNode[]> {
 export async function listAllEdges(limit: number): Promise<GraphEdge[]> {
   try {
     const rows = await invoke<GraphEdge[]>('memory_graph_list_edges', { limit });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Runs one bounded structural-inference pass (common-neighbor + shared-event
+ * link prediction, computed entirely server-side in Rust) scoped to the
+ * given node ids, and returns whatever new edges it created. Every created
+ * edge carries confidence: 'inferred' -- callers never need to guess which
+ * edges came from this vs. a manual write. Fail-soft like every other
+ * function in this file: returns [] instead of throwing.
+ */
+export async function inferEdges(scopeNodeIds: string[], maxSuggestions: number): Promise<GraphEdge[]> {
+  try {
+    const rows = await invoke<GraphEdge[]>('memory_graph_infer_edges', {
+      scopeNodeIds,
+      maxSuggestions
+    });
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];

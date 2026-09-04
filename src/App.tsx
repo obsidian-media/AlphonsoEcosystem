@@ -458,6 +458,24 @@ function AppShell() {
     return () => { try { watcherStop?.(); } catch { /* ignore */ } };
   }, []);
 
+  // Memory graph inference scheduler
+  useEffect(() => {
+    (async () => {
+      try {
+        const { startMemoryGraphInferenceScheduler } = await import('./services/memoryGraphInferenceService');
+        startMemoryGraphInferenceScheduler();
+      } catch { /* non-critical */ }
+    })();
+    return () => {
+      (async () => {
+        try {
+          const { stopMemoryGraphInferenceScheduler } = await import('./services/memoryGraphInferenceService');
+          stopMemoryGraphInferenceScheduler();
+        } catch { /* ignore */ }
+      })();
+    };
+  }, []);
+
   // Generic webhook gateway poller — drains gateway/generic-webhook/ if configured.
   // See ALPHONSOTOTHEMOON.md Sprint 2 item #8.
   useEffect(() => {

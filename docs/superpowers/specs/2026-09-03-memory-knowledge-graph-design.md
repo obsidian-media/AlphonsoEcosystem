@@ -157,7 +157,7 @@ calls, skill packs — anything the open-ended schema already supports).
 remain manual — by this point there's enough real graph density to validate
 an inference pass against, which is what Phase 3 does.
 
-**Phase 3 — Intelligence & Visualization**
+**Phase 3 — Intelligence & Visualization** — **CLOSED**
 Automated/inferred edge-suggestion turns on, checked against the real graph
 built in Phases 1–2 rather than guessed from nothing. A browsable, node-link
 visual graph viewer ships here — **nodes colored by authoring agent**,
@@ -166,6 +166,17 @@ reusing the existing per-agent color convention already defined in
 The `created_by` provenance field added in Phase 1 is what makes this
 possible without extra plumbing — it was added specifically so this would
 be "read a field that already exists," not "add tracking retroactively."
+
+Shipped in two halves, each with its own design doc: the visual viewer
+(`docs/superpowers/specs/2026-09-03-memory-knowledge-graph-visual-viewer-design.md`)
+— nodes ended up colored by `node_type`, not authoring agent, since
+`memory_nodes` has no `created_by` field (only edges do); and the inferred
+edges half (`docs/superpowers/specs/2026-09-04-memory-knowledge-graph-inferred-edges-design.md`)
+— pure structural link prediction (common-neighbor + shared-`created_event`),
+not content-based, auto-written with `confidence: 'inferred'` rather than a
+separate review queue. Both deviations from this section's original
+aspirational text are deliberate design decisions made during each half's
+own brainstorm, not drift.
 
 **Phase 4 — Governance**
 Retention/pruning tied into Echo's existing retention-tier logic (the same
