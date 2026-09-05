@@ -224,8 +224,10 @@ Owns all three export formats, called from `ResearchReportPanel.tsx`'s export ro
 
 - `src/services/hectorResearchService.js` — add `synthesizeHectorResearch`; wire into
   `runHectorLiveResearch` only (auto + re-synthesize), updating `summary` to `synthesis.overview`
-  on success (`createResearchBrief` improves automatically, no separate wiring needed); remove
-  `inferredPoints` construction (superseded by `keyFindings`).
+  on success (`createResearchBrief` improves automatically, no separate wiring needed).
+  `verifiedFacts`/`inferredPoints` construction is **left exactly as-is** — it's the fallback
+  content when synthesis fails (see Error Handling), not something this spec removes; `synthesis`
+  is purely additive alongside it.
 - `src/services/hectorExportService.ts` (new) — Markdown/PDF/PowerPoint export, dynamic imports.
 - `src/components/hector/ResearchReportPanel.tsx` — depth toggle, export row, collapsed Source
   Proofs disclosure, Re-synthesize action.
