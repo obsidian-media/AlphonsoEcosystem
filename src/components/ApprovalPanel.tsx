@@ -1,7 +1,6 @@
 import React from 'react';
 import { useState } from 'react';
 import { Shield, ShieldAlert, Check, X } from 'lucide-react';
-import { approvePacket, rejectPacket, getPacketById } from '../services/agentBusService';
 
 const RISK_STYLES: Record<string, { badge: string; dot: string; label: string }> = {
   high: { badge: 'border-red-500/40 bg-red-500/10 text-red-300', dot: 'bg-red-400', label: 'High' },
@@ -9,28 +8,23 @@ const RISK_STYLES: Record<string, { badge: string; dot: string; label: string }>
   low: { badge: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300', dot: 'bg-emerald-400', label: 'Low' }
 };
 
-interface Assignment {
-  riskLevel?: string;
-  actionType?: string;
-  agent?: string;
-}
-
-interface Packet {
-  payload?: {
-    assignment?: Assignment;
-  };
-}
-
-interface PendingApproval {
-  packetId: string;
-  agent?: string;
+export interface PendingApprovalItem {
+  itemId: string;
   actionType?: string;
   reason?: string;
   previewContent?: string | null;
+  agent?: string;
+  riskLevel?: string;
 }
 
-interface ResolvedItem {
-  packetId: string;
+export interface ApprovalItemDetail {
+  agent?: string;
+  actionType?: string;
+  riskLevel?: string;
+}
+
+interface ResolvedApprovalItem {
+  itemId: string;
   agent: string;
   actionType: string;
   riskLevel: string;
@@ -38,56 +32,69 @@ interface ResolvedItem {
   previewContent: string | null;
 }
 
-function inferRisk(assignment: Assignment) {
-  const risk = String(assignment?.riskLevel || '').toLowerCase();
+function inferRisk(detail: ApprovalItemDetail) {
+  const risk = String(detail?.riskLevel || '').toLowerCase();
   if (risk === 'high' || risk === 'critical') return 'high';
   if (risk === 'low') return 'low';
-  const action = String(assignment?.actionType || '').toLowerCase();
+  const action = String(detail?.actionType || '').toLowerCase();
   if (/external_publish|upload|post|delete|destroy/.test(action)) return 'high';
   if (/read|list|check|verify/.test(action)) return 'low';
   return 'medium';
 }
 
-function resolveAssignment(item: PendingApproval): ResolvedItem {
-  const packet = getPacketById(item.packetId) as Packet | null;
-  const assignment = packet?.payload?.assignment || {};
+function resolveItem(
+  item: PendingApprovalItem,
+  getItemDetail?: (itemId: string) => ApprovalItemDetail | null
+): ResolvedApprovalItem {
+  // Project Execution's ApprovalRequest items already carry riskLevel directly --
+  // no indirection needed. ChatView's items don't, so fall back to getItemDetail
+  // (which resolves a real AgentPacket's assignment) + risk inference.
+  const detail = item.riskLevel ? null : (getItemDetail?.(item.itemId) ?? null);
+  const merged: ApprovalItemDetail = {
+    agent: item.agent ?? detail?.agent,
+    actionType: item.actionType ?? detail?.actionType,
+    riskLevel: item.riskLevel ?? detail?.riskLevel
+  };
   return {
-    packetId: item.packetId,
-    agent: item.agent || assignment?.agent || 'unknown',
-    actionType: item.actionType || assignment?.actionType || 'unknown',
-    riskLevel: inferRisk(assignment),
+    itemId: item.itemId,
+    agent: merged.agent || 'unknown',
+    actionType: merged.actionType || 'unknown',
+    riskLevel: item.riskLevel || inferRisk(merged),
     reason: item.reason || '',
     previewContent: item.previewContent || null
   };
 }
 
 interface Props {
-  pendingApprovals?: PendingApproval[];
+  pendingApprovals?: PendingApprovalItem[];
   commandId?: string;
+  onApprove: (itemId: string) => void;
+  onReject: (itemId: string, reason?: string) => void;
+  getItemDetail?: (itemId: string) => ApprovalItemDetail | null;
   onAllResolved?: (commandId: string | undefined, resolved: Record<string, string>) => void;
 }
 
-export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved }: Props) {
+export function ApprovalPanel({ pendingApprovals = [], commandId, onApprove, onReject, getItemDetail, onAllResolved }: Props) {
   const [resolved, setResolved] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const items = pendingApprovals.map(resolveAssignment);
-  const allResolved = items.length > 0 && items.every((item) => resolved[item.packetId]);
+  const items = pendingApprovals.map((item) => resolveItem(item, getItemDetail));
+  const allResolved = items.length > 0 && items.every((item) => resolved[item.itemId]);
 
-  const handleApprove = (packetId: string) => {
+  const handleApprove = (itemId: string) => {
     try {
-      approvePacket(packetId, 'chatview-inline');
-      setResolved((prev) => ({ ...prev, [packetId]: 'approved' }));
+      onApprove(itemId);
+      setResolved((prev) => ({ ...prev, [itemId]: 'approved' }));
       setError(null);
     } catch (err) {
       setError(`Approve failed: ${String((err as Error)?.message || err)}`);
     }
   };
 
-  const handleReject = (packetId: string) => {
+  const handleReject = (itemId: string) => {
     try {
-      rejectPacket(packetId, 'Rejected from chat inline approval');
-      setResolved((prev) => ({ ...prev, [packetId]: 'rejected' }));
+      onReject(itemId);
+      setResolved((prev) => ({ ...prev, [itemId]: 'rejected' }));
       setError(null);
     } catch (err) {
       setError(`Reject failed: ${String((err as Error)?.message || err)}`);
@@ -117,13 +124,13 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved 
 
       <div className="space-y-2">
         {items.map((item) => {
-          const status = resolved[item.packetId];
+          const status = resolved[item.itemId];
           const risk = RISK_STYLES[item.riskLevel] || RISK_STYLES.medium;
           const RiskIcon = item.riskLevel === 'high' ? ShieldAlert : Shield;
 
           return (
             <div
-              key={item.packetId}
+              key={item.itemId}
               className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
                 status === 'approved'
                   ? 'border-emerald-500/30 bg-emerald-500/5'
@@ -160,13 +167,13 @@ export function ApprovalPanel({ pendingApprovals = [], commandId, onAllResolved 
               ) : (
                 <div className="flex gap-1.5">
                   <button
-                    onClick={() => handleReject(item.packetId)}
+                    onClick={() => handleReject(item.itemId)}
                     className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-400 bg-zinc-800 border border-white/10 hover:bg-zinc-700 transition-colors"
                   >
                     Deny
                   </button>
                   <button
-                    onClick={() => handleApprove(item.packetId)}
+                    onClick={() => handleApprove(item.itemId)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white transition-colors ${
                       item.riskLevel === 'high'
                         ? 'bg-red-700 hover:bg-red-600'

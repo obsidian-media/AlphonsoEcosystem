@@ -18,7 +18,7 @@ import { ProjectIntakePanel } from '../agentWorkshop/ProjectIntakePanel';
 import { AgentAssignmentBoard } from '../agentWorkshop/AgentAssignmentBoard';
 import { AgentOutputPanel } from '../agentWorkshop/AgentOutputPanel';
 import { ExecutionTimeline } from '../agentWorkshop/ExecutionTimeline';
-import { ApprovalGatePanel } from '../agentWorkshop/ApprovalGatePanel';
+import { ApprovalPanel } from '../ApprovalPanel';
 import { FinalExecutionPacket } from '../agentWorkshop/FinalExecutionPacket';
 import { ProjectRiskRegister } from './ProjectRiskRegister';
 import { ProjectVerificationChecklist } from './ProjectVerificationChecklist';
@@ -29,10 +29,14 @@ import { SystemHealthPanel } from '../agentWorkshop/SystemHealthPanel';
 import {
   AGENT_MODES,
   getAgentMode,
-  getExecutionApprovalState,
-  setAgentMode,
-  setExecutionApprovalState
+  setAgentMode
 } from '../../services/agentWorkshop/executionModeService';
+import {
+  listPendingApprovalsByTrace,
+  listApprovalsByTrace,
+  approveRequest,
+  rejectRequest
+} from '../../services/approval/approvalService';
 import { getTraceSummary } from '../../services/agentWorkshop/traceabilityService';
 import { listDiffProposals } from '../../services/agentWorkshop/diffProposalService';
 import { listWorkContracts, signWorkContract, archiveWorkContract } from '../../services/agentWorkshop/workContractService';
@@ -57,6 +61,7 @@ const PAGE_TABS = [
   { id: 'setup', label: 'Setup' },
   { id: 'agents', label: 'Agents' },
   { id: 'execution', label: 'Execution' },
+  { id: 'approval', label: 'Approval' },
   { id: 'results', label: 'Results' },
 ] as const;
 
@@ -142,7 +147,6 @@ export function ProjectExecutionMode(): React.JSX.Element {
   const [selectedAgentId, setSelectedAgentId] = useState('jose');
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [mode, setMode] = useState<string>(getAgentMode());
-  const [execState, setExecState] = useState<Record<string, boolean>>(getExecutionApprovalState());
   const [opMode, setOpMode] = useState<Record<string, unknown>>(getOperationalMode());
   const [researchBrief, setResearchBrief] = useState<Record<string, unknown> | null>(null);
   const [researchLoading, setResearchLoading] = useState(false);
@@ -180,10 +184,19 @@ export function ProjectExecutionMode(): React.JSX.Element {
       source: 'project_execution_mode',
       tags: ['project_execution', 'jose', 'packet']
     });
-    setActiveTab('results');
+    const traceId = (workshop as { traceId?: string }).traceId;
+    const pending = traceId ? listPendingApprovalsByTrace(traceId) : [];
+    setActiveTab(pending.length > 0 ? 'approval' : 'results');
   };
 
   const traceSummary = result?.traceId ? getTraceSummary(result.traceId as string) : null;
+  const pendingGates = result?.traceId
+    ? (listPendingApprovalsByTrace(result.traceId as string) as { id: string; actionType: string; riskLevel: string; reason: string }[])
+    : [];
+  const hasDeniedGate = result?.traceId
+    ? (listApprovalsByTrace(result.traceId as string) as { status: string }[]).some((g) => g.status === 'rejected')
+    : false;
+  const resultsLocked = pendingGates.length > 0;
   const proposals = (listDiffProposals() as unknown[]).slice(0, 6) as Record<string, unknown>[];
   const contracts = result?.traceId ? (listWorkContracts({ traceId: result.traceId as string }) as Record<string, unknown>[]) : [];
   const chains = result?.traceId ? (listVerificationChains({ traceId: result.traceId as string }) as Record<string, unknown>[]) : [];
@@ -226,12 +239,16 @@ export function ProjectExecutionMode(): React.JSX.Element {
         </header>
 
         <div className="flex gap-1">
-          {PAGE_TABS.map((tab) => (
-            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${activeTab === tab.id ? 'bg-indigo-500/15 text-indigo-200 border border-indigo-400/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent'}`}>
-              {tab.label}
-            </button>
-          ))}
+          {PAGE_TABS.map((tab) => {
+            const disabled = tab.id === 'results' && resultsLocked;
+            return (
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} disabled={disabled}
+                title={disabled ? 'Resolve pending approval gates on the Approval tab before viewing Results' : undefined}
+                className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === tab.id ? 'bg-indigo-500/15 text-indigo-200 border border-indigo-400/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent'}`}>
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         <AnimatePresence mode="wait">
@@ -269,14 +286,6 @@ export function ProjectExecutionMode(): React.JSX.Element {
                     className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${mode === AGENT_MODES.PROPOSAL ? 'border-indigo-400/25 bg-indigo-500/10 text-indigo-200' : 'border-white/[0.07] text-zinc-500 hover:text-zinc-300'}`}>Proposal</button>
                   <button type="button" onClick={() => { setAgentMode(AGENT_MODES.EXECUTION); setMode(AGENT_MODES.EXECUTION); }}
                     className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${mode === AGENT_MODES.EXECUTION ? 'border-amber-400/25 bg-amber-500/10 text-amber-200' : 'border-white/[0.07] text-zinc-500 hover:text-zinc-300'}`}>Execution</button>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {([['approved', 'Approval'], ['audited', 'Audit'], ['verified', 'Verification'], ['dependenciesChecked', 'Dependencies']] as [string, string][]).map(([key, label]) => (
-                    <button key={key} type="button" onClick={() => { const next = { ...execState, [key]: !execState[key] }; setExecutionApprovalState(next); setExecState(next); }}
-                      className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors ${execState[key] ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-white/[0.07] bg-zinc-900/50 text-zinc-500'}`}>
-                      {label} {execState[key] ? '✓' : '·'}
-                    </button>
-                  ))}
                 </div>
               </div>
             </Card>
@@ -365,6 +374,30 @@ export function ProjectExecutionMode(): React.JSX.Element {
           </div>
         )}
 
+        {activeTab === 'approval' && (
+          <div className="space-y-4">
+            <Card label="Execution Approval Gates">
+              {!result ? (
+                <EmptyState text="Generate an execution packet first." />
+              ) : pendingGates.length === 0 ? (
+                <div className="text-[12px] text-zinc-500">
+                  {hasDeniedGate
+                    ? 'All gates resolved — at least one was denied. See Results for the blocked packet.'
+                    : 'All gates resolved. See Results for the full packet.'}
+                </div>
+              ) : (
+                <ApprovalPanel
+                  pendingApprovals={pendingGates.map((g) => ({ itemId: g.id, actionType: g.actionType, reason: g.reason, riskLevel: g.riskLevel }))}
+                  commandId={result.traceId as string}
+                  onApprove={approveRequest}
+                  onReject={rejectRequest}
+                  onAllResolved={() => setActiveTab('results')}
+                />
+              )}
+            </Card>
+          </div>
+        )}
+
         {activeTab === 'results' && (
           <div className="space-y-4">
             {!result ? (
@@ -374,13 +407,18 @@ export function ProjectExecutionMode(): React.JSX.Element {
               </div>
             ) : (
               <>
+                {hasDeniedGate && (
+                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4">
+                    <div className="text-sm font-semibold text-red-300">BLOCKED — one or more approval gates were denied</div>
+                    <p className="mt-1 text-[12px] text-red-200/80">Review the denied gate(s) on the Approval tab before proceeding with this packet.</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <Card label="Assignments"><AgentAssignmentBoard packets={safeCast(result.packets, 'result.packets')} /></Card>
                   <Card label="Agent Outputs"><AgentOutputPanel outputs={safeCast(result.outputs, 'result.outputs')} /></Card>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <Card label="Timeline"><ExecutionTimeline timeline={safeCast(result.sequence, 'result.sequence')} /></Card>
-                  <Card label="Approval Gates"><ApprovalGatePanel gates={safeCast(result.approvalGates, 'result.approvalGates')} /></Card>
                   <Card label="Final Packet"><FinalExecutionPacket finalPacket={safeCast(result.finalPacket, 'result.finalPacket')} /></Card>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

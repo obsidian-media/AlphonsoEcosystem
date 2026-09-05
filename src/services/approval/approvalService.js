@@ -246,3 +246,11 @@ export function listPendingApprovals() {
 export function listAllApprovals() {
   return readRows();
 }
+
+export function listPendingApprovalsByTrace(traceId) {
+  return listPendingApprovals().filter((r) => r.metadata?.traceId === traceId);
+}
+
+export function listApprovalsByTrace(traceId) {
+  return listAllApprovals().filter((r) => r.metadata?.traceId === traceId);
+}
