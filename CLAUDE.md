@@ -15,7 +15,7 @@ or documentation work, select/update a task and follow its evidence rules.
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 4,777+ tests across 307 files — all should pass
+npm run test             # Run all 4,815+ tests across 317 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command

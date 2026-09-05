@@ -21,9 +21,9 @@ against the code (`docs/governance/DEFERRED_WORK.md`'s 2026-09-05 entry has the 
   discarded twice before anything could use it.
 
 `runMultiSourceResearch()` / `createResearchBrief()` (a separate, lighter-weight path used by
-`ChatView.tsx`'s inline Hector briefing card and `ProjectExecutionMode.tsx`'s research brief) has
-the identical shape: it merges results from up to 4 providers into one deduplicated list and
-stops there.
+`ProjectExecutionMode.tsx`'s research brief — `ChatView.tsx`'s Hector briefing card is unrelated,
+see the corrected consumer-tracing note below) has the identical shape: it merges results from up
+to 4 providers into one deduplicated list and stops there.
 
 Net effect: nothing in Hector's research subsystem takes N successfully-fetched sources' actual
 content and asks an LLM (or any deterministic logic) to read them together and produce one
@@ -92,16 +92,41 @@ design and dropped as redundant.
   **"Re-synthesize"** action instead of auto-rerunning — it becomes visible exactly when
   `report.sources.length > report.synthesisSourceCount`, and re-running updates both `synthesis`
   and `synthesisSourceCount` together.
-- **`runMultiSourceResearch()` / `createResearchBrief()`** (ChatView's inline briefing card,
-  ProjectExecutionMode's research brief): calls the identical `synthesizeHectorResearch` function
-  over whatever sources that path collected. The caller only ever reads `synthesis.overview` back
-  out — no toggle, no export UI, no other fields rendered there. The backend logic is genuinely
-  shared between both flows; only how much of the result each UI surface shows differs.
+- **`runMultiSourceResearch()` / `createResearchBrief()`** (ProjectExecutionMode's research
+  brief — see the corrected consumer note below): calls the identical `synthesizeHectorResearch`
+  function over whatever sources that path collected.
 
 Both call sites route through `generateAgentLlmResponse('hector', ...)` — the same shared
 per-agent LLM dispatcher Maria/Echo/Sentinel/Nova already use — so Hector's per-agent provider
 selection (Ollama/NVIDIA/Gemini/Hermes, via `modelSelectionService.ts`) is respected automatically
 with no new plumbing.
+
+### One field, not two: `summary` becomes the synthesized overview
+
+Rather than introduce a second summary-shaped field that every existing consumer of
+`report.summary` would need to be updated to read instead, `runHectorLiveResearch` updates its
+**existing** top-level `summary` field to be `synthesis.overview` once synthesis succeeds (the
+richer `synthesis` object is added alongside it, purely additive, for the new UI's Structured/
+Medium views and exports). This was found late, tracing real consumers rather than assuming:
+
+- `createResearchBrief()` already returns `summary: report.summary || ...` — improves automatically,
+  no code change.
+- `joseExecutionEngineService.ts`'s `executeHectorAssignment` (Jose's real orchestration pipeline
+  — the actual path that produces the summary text a user sees in chat) already reads
+  `report?.summary` into its own `contextSnippet`. Once that value is a real synthesis, this
+  function's *second*, separate `generateAgentLlmResponse('hector', ...)` call — which re-summarizes
+  `report.summary` through a generic, non-Hector-aware `draftPrompt` template — becomes not just
+  redundant but actively risky (re-summarizing a good synthesis through a generic prompt could make
+  it worse). **This spec removes that second call entirely**: `executeHectorAssignment` uses
+  `report.summary` directly as its returned `summary`, one LLM call in the whole path instead of two.
+- `ChatView.tsx`'s `hectorBriefing` (the sky-tinted card) is a **separate, source-link-only widget**
+  — set from `hectorReceipt.details.sources` at `ChatView.tsx:726`, never from any summary field.
+  It shows the top 3 source links and nothing else. It is genuinely unaffected by this fix and
+  needs no change — explicitly decided not to expand its scope to also show synthesis text.
+
+Net effect: `ChatView.tsx` needs **no changes at all**. `ProjectExecutionMode.tsx` needs **no
+changes at all**. The one real call-site change outside `hectorResearchService.js` itself is
+simplifying `executeHectorAssignment` in `joseExecutionEngineService.ts`.
 
 ### Source-text budget: dynamic, bounded, no new fetch infrastructure needed
 
@@ -133,12 +158,6 @@ before shipping — flagged as adjustable if real usage shows it's off.
   the synthesis.
 - A "Re-synthesize" action, visible only when the report's source count has grown since
   `synthesis` was last generated.
-
-### ChatView / ProjectExecutionMode inline surfaces
-
-No new UI. Both already render a short summary string today (`hectorBriefing`'s sky-tinted card
-in `ChatView.tsx`, the research-brief panel in `ProjectExecutionMode.tsx`); they simply now
-receive `synthesis.overview` instead of the old un-synthesized aggregate string as that value.
 
 ### Export: `hectorExportService.ts` (new)
 
@@ -190,25 +209,39 @@ Owns all three export formats, called from `ResearchReportPanel.tsx`'s export ro
 - `src-tauri/src/search.rs`: extend existing tests to confirm the 420-char truncation is gone
   (full stripped text returned, bounded only by the pre-existing 200KB raw-fetch limit) and the
   10-source cap (`.take(10)`) still holds.
+- `joseExecutionEngineService.test.ts` (existing file): `executeHectorAssignment` no longer calls
+  `generateAgentLlmResponse` a second time — asserts it's called exactly once overall (inside
+  `runHectorLiveResearch`'s own synthesis step, mocked at the service boundary) and that the
+  returned `summary` equals `report.summary` directly, not a re-derived value.
 
 ## Files touched
 
 - `src/services/hectorResearchService.js` — add `synthesizeHectorResearch`; wire into
-  `runHectorLiveResearch` (auto + re-synthesize) and `runMultiSourceResearch`/
-  `createResearchBrief`; remove `inferredPoints` construction (superseded by `keyFindings`).
+  `runHectorLiveResearch` (auto + re-synthesize), updating `summary` to `synthesis.overview` on
+  success; wire into `runMultiSourceResearch`/`createResearchBrief` the same way; remove
+  `inferredPoints` construction (superseded by `keyFindings`).
 - `src/services/hectorExportService.ts` (new) — Markdown/PDF/PowerPoint export, dynamic imports.
 - `src/components/hector/ResearchReportPanel.tsx` — depth toggle, export row, collapsed Source
   Proofs disclosure, Re-synthesize action.
-- `src/components/ChatView.tsx` — `hectorBriefing` reads `synthesis.overview` instead of the old
-  aggregate string (no structural change).
-- `src/components/projectExecution/ProjectExecutionMode.tsx` — research brief reads
-  `synthesis.overview` (no structural change).
+- `src/services/joseExecutionEngineService.ts` — `executeHectorAssignment` drops its own second
+  `generateAgentLlmResponse` call; uses `report.summary` directly.
 - `src-tauri/src/search.rs` — remove the 420-char truncation in `fetch_research_sources`.
 - `package.json` — add `jspdf`, `pptxgenjs`.
 - Test files listed above.
 
+**Explicitly NOT touched, verified rather than assumed:** `src/components/ChatView.tsx` and
+`src/components/projectExecution/ProjectExecutionMode.tsx` — both already read `report.summary`
+(via `createResearchBrief`'s return object) or don't read a summary field at all
+(`hectorBriefing`), so they improve automatically or are correctly out of scope. An earlier draft
+of this spec claimed both needed code changes; that was wrong, corrected during self-review by
+tracing the real call sites rather than assuming.
+
 ## What this does not fix (tracked separately, not silently dropped)
 
+- `ChatView.tsx`'s `hectorBriefing` sky-card stays a source-link-only widget — explicitly decided
+  not to add synthesis text to it, to keep this spec's scope from growing further. If a future
+  need for synthesized text inline in chat surfaces, that's a separate, small follow-up (the
+  `summary` value is already available by then), not a gap in this spec.
 - `synthesizeHectorFallbackReport()`'s zero-sources-found path is untouched — still a cautious
   guess with no source content, which is the correct behavior for that specific case (nothing to
   synthesize).
