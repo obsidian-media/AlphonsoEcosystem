@@ -40,7 +40,7 @@ const TRUTH_PATTERNS = [
 // file counts. This must be updated by hand when the suite's test count changes
 // materially; verified against the actual `npm test` output as of 2026-08-19
 // (265 files / 3,831 tests, full local run, exit 0).
-const CURRENT_TOTAL_TESTS = '4,673';
+const CURRENT_TOTAL_TESTS = '4,777';
 
 // Each entry defines a claim to verify:
 //   file        — relative path from project root

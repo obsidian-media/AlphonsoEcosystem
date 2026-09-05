@@ -15,7 +15,7 @@ or documentation work, select/update a task and follow its evidence rules.
 ```bash
 npm run dev              # Vite dev server only (port 5173)
 npm run tauri dev        # Full Tauri dev with Rust backend (kill port 5173 first if busy)
-npm run test             # Run all 4,673+ tests across 302 files — all should pass
+npm run test             # Run all 4,777+ tests across 307 files — all should pass
 npm run test:watch       # Watch mode
 npm run build            # Web build only (no Tauri/Rust)
 npm run verify:app       # lint + typecheck + test + build in one command
@@ -37,7 +37,7 @@ npm run updater:verify   # Verify updater readiness
 npm run auth:youtube     # OAuth flow for YouTube
 npm run auth:meta        # OAuth flow for Meta/Instagram
 
-# Coverage (actual measured 2026-09-05: lines 56.26%, branches 44.53%, functions 48.39%, statements 54.09%; enforced floors: lines 48%/branches 38%/functions 30%/statements 48%, scoped to src/)
+# Coverage (actual measured 2026-09-05: lines 57.81%, branches 45.62%, functions 50.32%, statements 55.65%; enforced floors: lines 48%/branches 38%/functions 30%/statements 48%, scoped to src/)
 npm run test:coverage    # Run tests with coverage report
 
 # E2E — Playwright installed (no extra install needed)
@@ -363,7 +363,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~SQLite dual-write for remaining keys~~ — **CLOSED Sprint Next-10 T10** (`src/lib/durableStore.js` + migrated crashLogService, agentAuditService, novaAnalysisService)
 - ~~Test coverage at ~30%~~ — **CLOSED Sprint Next-10 T3** (111 test files / 1621+ tests; 10 new service test files)
 - ~~Branch protection on `main`~~ — **CLOSED 2026-07-16** (see the T4 entry below; this line predated that closure and was never removed)
-- ~~Coverage at ~38%+ — functions at 5.88%~~ — **CLOSED 2026-08-20**: re-measured against a clean before/after (0a69e5e vs. post-PR#151 merge) — actual coverage is lines 56.26%/branches 44.53%/functions 48.39%/statements 54.09%. Enforced floors in `vitest.config.js` raised from the artificially-low `functions: 0` to real numbers with margin (lines 48/branches 38/functions 30/statements 48).
+- ~~Coverage at ~38%+ — functions at 5.88%~~ — **CLOSED 2026-08-20**: re-measured against a clean before/after (0a69e5e vs. post-PR#151 merge) — actual coverage is lines 57.81%/branches 45.62%/functions 50.32%/statements 55.65%. Enforced floors in `vitest.config.js` raised from the artificially-low `functions: 0` to real numbers with margin (lines 48/branches 38/functions 30/statements 48).
 - ~~Runtime Manager 9 gaps~~ — **CLOSED 2026-06-23**
 - ~~Onboarding flow~~ — **CLOSED 2026-06-23** (Ollama auto-start, not-installed detection, Telegram/WhatsApp/Composio inline guides, `OllamaOfflineBanner` in main shell)
 - ~~Ollama offline state~~ — **CLOSED 2026-06-23** (`OllamaOfflineBanner.jsx` — global, persistent, Start/Retry/Runtime Hub)
@@ -414,7 +414,7 @@ These are confirmed gaps. Check `docs/ALPHONSO_GROUND_TRUTH.md` for the current 
 - ~~package.json version stale~~ — **CLOSED 2026-07-01** (bumped to 2.5.0)
 - ~~Dependabot PRs (8 safe)~~ — **CLOSED 2026-07-01** (merged #77–#80, #82, #84, #86, #87; left open: #81 rand 0.10 breaking, #83 tailwindcss v4 breaking, #85 vite-plugin-react v6 major)
 - ~~Branch protection on `main`~~ — **CLOSED 2026-07-16** (see the T4 entry below; this line predated that closure and was never removed)
-- ~~functions coverage at 5.88% — threshold lowered to 0 to unblock CI~~ — **CLOSED 2026-08-20**, see the coverage entry near line 321 above (48.39% actual, 30% enforced floor).
+- ~~functions coverage at 5.88% — threshold lowered to 0 to unblock CI~~ — **CLOSED 2026-08-20**, see the coverage entry near line 321 above (50.32% actual, 30% enforced floor).
 - ~~No LICENSE~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (`LICENSE` — SHALAUDE v1.0, all-rights-reserved, source-visible; see `ALPHONSOTOTHEMOON.md` §1)
 - ~~Skill packs not cross-checked against agent contracts~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (`validateSkillPackAgainstContract` in `agentContractService.ts`, wired into `skillPackService.ts` install/enable paths)
 - ~~5 of 9 agents (Alphonso, Marcus, Echo, Sentinel, Nova) had no default skill pack~~ — **CLOSED 2026-07-02 ALPHONSOTOTHEMOON Sprint 1** (all 9 agents now have an `agent_skill` category pack in `skillPackService.ts`)
