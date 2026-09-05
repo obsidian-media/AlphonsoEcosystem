@@ -97,20 +97,51 @@ Severity tier first (`critical` > `high` > `medium` > `low`), then timestamp des
 
 Per Phase 1 spec §8 (added during the self-critique pass earlier this session): a real empty state, not a hidden/blank section. Uses the current room's `Zone` mood (`neutral` for Home) and plain-language copy (e.g. "Nothing needs you right now" — exact copy is an implementation-time detail, not fixed here), not a bare "no items" default.
 
-## Visual layer (from Draft A, unchanged, applied here for real)
+## Visual layer — SUPERSEDED, see "Visual Pass Design" section below
 
-- Top nav: brand mark, curated primary tabs, right-cluster search/bell/theme/avatar (bell's badge count now sources from `getAttentionItems().length`, but the sidebar wiring itself is a separate task per Scope above — this page just needs the service to exist and be callable).
-- Agent status strip below nav: real agent portraits, breathing-glow animation on genuinely active agents (needs a real "is this agent currently active" signal — likely `agentActivityService.ts`, to be confirmed during implementation, not assumed here).
-- Attention list rendered inside a `Zone` (mood: `neutral` for Home), one row per `AttentionItem`, using `StatusDot`/`Badge` primitives already in `ui/` for severity color-coding (per Phase 1's accessibility requirement: color is paired with text/icon, never color-only).
+This section originally described a top-nav skeleton (brand mark, curated tabs, right-cluster search/bell/theme/avatar) — that skeleton was explicitly rejected during later brainstorming (see `draft-a-power-user-direction.md`'s Revision History) in favor of the Arc/Notion-style sidebar. Read the "Visual Pass Design" section below instead of this one for the current, real design. Left here struck-through-in-spirit rather than deleted so the rejection reasoning isn't lost.
 
 ## Testing approach (TDD, per the executing-plans convention already used in Phase 1)
 
 1. Unit tests for `attentionAggregatorService.ts`'s merge/normalize/sort logic, mocking all 4 source functions — covering: correct severity mapping per source, correct sort order (severity then recency), correct `actionable`/`onApprove`/`onReject` wiring only for the two approval sources, **one source throwing does not prevent the other 3's items from being returned** (self-critique fix #3), and **a connector with `isOpen() === false` never produces an item regardless of its `deriveConnectorStatus()` category** (self-critique fix #1 — the regression test for the exact bug this fix corrects). All implemented and passing — see `08-phase2-attention-aggregator-plan.md`.
 2. Component test for the Mission Control page consuming the service (mocked), covering: rendering items, empty state, inline approve/reject triggering the right underlying call for the right source, and **dismissing a non-actionable item removes it from view but a fresh poll with a genuinely new item's `id` still shows that new one** (self-critique fix #4). Not yet implemented — part of the follow-up page-visual plan.
 
+## Visual Pass Design (locked via live brainstorming, backend half already shipped)
+
+Backend half (`attentionAggregatorService.ts`, 3 sources: `approval-chat`/`approval-project`/`connector`) and the functional page-wiring (`MissionControlHome.tsx`'s next-actions list) are both already implemented and committed — see `08-phase2-attention-aggregator-plan.md` and `09-phase2-mission-control-page-wiring-plan.md`. This section specs the remaining visual rewrite: replacing the page's current bordered-card treatment with Draft A's Home room language.
+
+### Skeleton change
+
+- **Full replacement of the hero banner** (currently a static image with `ALPHONSO_BANNER.webp`/`ALPHONSO_LOGO.webp`) with Draft A's agent-portrait strip: all 9 real agent portraits, horizontally laid out, idle agents dimmed/desaturated, genuinely active agents (real signal, not illustrative — see Open Items below) get the breathing-glow animation.
+- **Sidebar present** (the locked Arc/Notion-style sidebar from `draft-a-power-user-direction.md`'s Revision 2 "Rooms" skeleton — NOT the earlier, explicitly-rejected top-nav-with-dropdowns version). Home space's sidebar list gets 2 more real destinations beyond the original Dashboard/Chat: **Session History** (`SessionHistoryView.tsx` — a real, existing component with no current obvious home) and **Digest** (`DigestPanel.tsx` — same). This was a judgment call made during brainstorming, not independently confirmed as definitely correct — flagged as an open item below.
+- Local AI online/offline status moves from a big stat tile to a **small persistent status dot** next to the sidebar's search field — always visible regardless of what else is happening, since it's arguably the single most consequential piece of status on this page (agent reasoning degrades without it).
+
+### Stats
+
+Down from 4 tiles to **2**, each carrying real context instead of a bare count:
+- **Approvals** — real count from `attentionAggregatorService`'s actionable items, plus "oldest waiting {duration}" computed from the oldest item's `timestamp` field (real data already available, not new to fetch).
+- **Active agents** — real count of agents with recent activity (see Open Items — exact signal/threshold not yet finalized) out of 9, plus a contextual sub-line (exact wording like "busier than your daily average" needs a real baseline to compare against — see Open Items, this is illustrative copy from the mockup, not a designed feature yet).
+
+Memory and Coach counts explicitly removed from this row (were present in the original page, deemed "too big/bold for their importance" during brainstorming) — not relocated anywhere in this spec; if that data still matters somewhere, it's an explicit future decision, not assumed to belong on Home.
+
+### Empty state (required by Phase 1 spec §8, designed here for the first time)
+
+When `getAttentionItems()` returns nothing: the "What to do next" Zone is replaced by a distinct empty-state Zone (cool-mood wash), centered icon + title ("Nothing needs you right now") + plain-language sub-copy pointing at Quick Launch. Stats still render (showing real zeros with honest context: "queue clear", "idle") rather than being hidden.
+
+### Dynamic greeting
+
+"Good morning"/"Good afternoon"/"Good evening" based on real local time, replacing the current hardcoded "Executor online." headline. Exact time boundaries (e.g. is 5pm "afternoon" or "evening") are an implementation-time judgment call, not specified further here.
+
+### Zone sections (Quick Launch, What to do next) — unchanged from earlier mockup rounds
+
+Both use the `Zone` primitive (warm wash for "What to do next," cool wash for "Quick Launch"), matching the already-committed `ui/Zone.tsx` from Phase 1 — no new primitive needed, this page is `Zone`'s first real consumer.
+
 ## Explicitly open / deferred (not resolved by this spec)
 
-- Exact "is this agent active" signal for the breathing-glow strip — needs confirming against `agentActivityService.ts` during implementation, not assumed here.
-- Exact empty-state copy — a real implementation-time decision, not fixed in this spec.
+- **Exact "is this agent active" signal** for the breathing-glow strip and the "Active agents X/9" stat — `MissionControlHome.tsx` already imports `listAgentActivity()` from `agentActivityService.ts` (real, confirmed), but the exact recency threshold that counts as "active" (mockups used an illustrative "3 of 9" throughout) needs a real decision during implementation — not assumed here.
+- **"Busier than your daily average" is illustrative copy from the mockup, not a designed feature.** Computing a real daily-average baseline to compare against is real, separate logic (would need historical activity data over time) — do not implement literal copy like this without either building that baseline for real or replacing it with something honest that doesn't imply a comparison that doesn't exist.
+- **Session History / Digest as new Home-sidebar destinations** — a judgment call made during brainstorming (both are real, existing, currently-homeless components), not independently confirmed as definitely the right 2 additions. Worth a final gut-check before implementation, not treated as fully locked.
+- Exact empty-state copy — a real implementation-time decision, not fixed in this spec (mockup text — "Nothing needs you right now" — is illustrative, not final).
 - Sidebar badge/ambient-dot wiring — separate task, explicitly out of scope (see Scope section).
 - Dark-mode tokens for the Home room — Phase 1 spec already flagged this as unresolved (only light-mode was mocked); this page's implementation will need a real decision here too, not deferred silently a second time.
+- **Local AI status dot** placement/behavior (next to sidebar search) is new to this pass — needs a real data source check (`ollamaStatus` prop, already passed into this component today) before implementation, not assumed to already exist in the right shape.
