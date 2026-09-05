@@ -19,9 +19,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Build & Publish Release
+  determine-tag:
+    name: Determine release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Determine release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ inputs.version }}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "No release tag provided" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "Release tag: $TAG"
+          echo "Version: $VERSION"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  build-windows:
+    name: Build & Sign (Windows)
+    needs: determine-tag
     runs-on: windows-latest
+    outputs:
+      installer_name: ${{ steps.collect.outputs.installer_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -52,25 +81,6 @@ jobs:
           cargo test
           cargo clippy -- -D warnings
 
-      - name: Determine release tag
-        id: tag
-        shell: pwsh
-        run: |
-          if ("${{ github.ref_type }}" -eq "tag") {
-            $tag = "${{ github.ref_name }}"
-          } else {
-            $tag = "${{ inputs.version }}"
-          }
-          if (-not $tag) {
-            Write-Error "No release tag provided"
-            exit 1
-          }
-          $version = $tag -replace '^v', ''
-          Write-Host "Release tag: $tag"
-          Write-Host "Version: $version"
-          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-
       - name: Fetch bundled Ollama runtime
         run: node scripts/fetch-ollama-runtime.mjs windows-amd64
 
@@ -84,7 +94,6 @@ jobs:
         id: collect
         shell: pwsh
         run: |
-          $version = "${{ steps.tag.outputs.version }}"
           $nsisDir = "src-tauri/target/release/bundle/nsis"
           $installer = Get-ChildItem -LiteralPath $nsisDir -Filter "*_x64-setup.exe" | Select-Object -First 1
           if (-not $installer) {
@@ -98,75 +107,193 @@ jobs:
           }
           Write-Host "Installer: $($installer.Name)"
           Write-Host "Signature: $($sig.Name)"
-          "installer_path=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "sig_path=$($sig.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Copy-Item $installer.FullName "./$($installer.Name)"
+          Copy-Item $sig.FullName "./$($sig.Name)"
           "installer_name=$($installer.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "sig_name=$($sig.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Generate updater manifest
-        id: manifest
-        shell: pwsh
+      - name: Upload Windows release assets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: windows-release-assets
+          path: |
+            ${{ steps.collect.outputs.installer_name }}
+            ${{ steps.collect.outputs.sig_name }}
+          retention-days: 1
+
+  build-linux:
+    name: Build & Sign (Linux)
+    needs: determine-tag
+    runs-on: ubuntu-latest
+    outputs:
+      installer_name: ${{ steps.collect.outputs.installer_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Tauri Linux dependencies
         run: |
-          $tag = "${{ steps.tag.outputs.tag }}"
-          $version = "${{ steps.tag.outputs.version }}"
-          $installerName = "${{ steps.collect.outputs.installer_name }}"
-          $sigContent = Get-Content "${{ steps.collect.outputs.sig_path }}" -Raw
-          $sigContent = $sigContent.Trim()
-          $baseUrl = "https://github.com/obsidian-media/AlphonsoEcosystem/releases/download/$tag"
-          $manifest = @{
-            version = $version
-            notes = "Alphonso $version release"
-            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-            platforms = @{
-              "windows-x86_64" = @{
-                signature = $sigContent
-                url = "$baseUrl/$installerName"
-              }
-            }
-          } | ConvertTo-Json -Depth 4
-          $manifestPath = "latest.json"
-          Set-Content -Path $manifestPath -Value $manifest
-          Write-Host "Manifest:"
-          Get-Content $manifestPath
-          "manifest_path=$manifestPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libfuse2 \
+            patchelf \
+            zstd
 
-      - name: Validate updater manifest
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch bundled Ollama runtime
+        run: node scripts/fetch-ollama-runtime.mjs linux-amd64
+
+      - name: Build signed Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # ubuntu-latest's runner has no FUSE userspace mount available;
+          # forcing extract-and-run mode avoids needing FUSE for the
+          # downloaded linuxdeploy/AppRun AppImage tools. Same fix as
+          # ci.yml's desktop-linux job.
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: npm run tauri build -- --verbose
+
+      - name: Collect artifacts
+        id: collect
         shell: bash
         run: |
-          MANIFEST="latest.json"
-          if [ ! -f "$MANIFEST" ]; then
-            echo "ERROR: latest.json not found"
+          appimageDir="src-tauri/target/release/bundle/appimage"
+          installer=$(find "$appimageDir" -maxdepth 1 -name "*.AppImage" | head -n 1)
+          if [ -z "$installer" ]; then
+            echo "AppImage not found in $appimageDir" >&2
             exit 1
           fi
-          # Validate it's parseable JSON
-          python3 -c "import json,sys; d=json.load(open('$MANIFEST')); required=['version','platforms']; missing=[k for k in required if k not in d]; sys.exit(1) if missing else print('Manifest OK:', d['version'])"
-          echo "Updater manifest validated successfully"
+          sig="${installer}.sig"
+          if [ ! -f "$sig" ]; then
+            echo "Signature file not found: $sig" >&2
+            exit 1
+          fi
+          echo "Installer: $(basename "$installer")"
+          echo "Signature: $(basename "$sig")"
+          cp "$installer" "./$(basename "$installer")"
+          cp "$sig" "./$(basename "$sig")"
+          echo "installer_name=$(basename "$installer")" >> "$GITHUB_OUTPUT"
+          echo "sig_name=$(basename "$sig")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Linux release assets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linux-release-assets
+          path: |
+            ${{ steps.collect.outputs.installer_name }}
+            ${{ steps.collect.outputs.sig_name }}
+          retention-days: 1
+
+  publish:
+    name: Publish GitHub Release
+    needs: [determine-tag, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows release assets
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: windows-release-assets
+          path: dist/windows
+
+      - name: Download Linux release assets
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: linux-release-assets
+          path: dist/linux
+
+      - name: Generate combined updater manifest
+        id: manifest
+        shell: bash
+        run: |
+          TAG="${{ needs.determine-tag.outputs.tag }}"
+          VERSION="${{ needs.determine-tag.outputs.version }}"
+          BASE_URL="https://github.com/obsidian-media/AlphonsoEcosystem/releases/download/$TAG"
+
+          WIN_INSTALLER="${{ needs.build-windows.outputs.installer_name }}"
+          WIN_SIG=$(cat "dist/windows/${WIN_INSTALLER}.sig")
+
+          LINUX_INSTALLER="${{ needs.build-linux.outputs.installer_name }}"
+          LINUX_SIG=$(cat "dist/linux/${LINUX_INSTALLER}.sig")
+
+          python3 - "$VERSION" "$WIN_SIG" "$WIN_INSTALLER" "$LINUX_SIG" "$LINUX_INSTALLER" "$BASE_URL" <<'PYEOF'
+          import json, sys, datetime
+          version, win_sig, win_installer, linux_sig, linux_installer, base_url = sys.argv[1:7]
+          manifest = {
+              "version": version,
+              "notes": f"Alphonso {version} release",
+              "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "platforms": {
+                  "windows-x86_64": {
+                      "signature": win_sig.strip(),
+                      "url": f"{base_url}/{win_installer}"
+                  },
+                  "linux-x86_64": {
+                      "signature": linux_sig.strip(),
+                      "url": f"{base_url}/{linux_installer}"
+                  }
+              }
+          }
+          with open("latest.json", "w") as f:
+              json.dump(manifest, f, indent=2)
+          print(json.dumps(manifest, indent=2))
+          PYEOF
+          echo "manifest_path=latest.json" >> "$GITHUB_OUTPUT"
+
+      - name: Validate updater manifest
+        run: |
+          python3 -c "import json,sys; d=json.load(open('latest.json')); required=['version','platforms']; missing=[k for k in required if k not in d]; assert not missing, missing; assert 'windows-x86_64' in d['platforms']; assert 'linux-x86_64' in d['platforms']; print('Manifest OK:', d['version'])"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: Alphonso ${{ steps.tag.outputs.version }}
+          tag_name: ${{ needs.determine-tag.outputs.tag }}
+          name: Alphonso ${{ needs.determine-tag.outputs.version }}
           body: |
-            ## Alphonso ${{ steps.tag.outputs.version }}
+            ## Alphonso ${{ needs.determine-tag.outputs.version }}
 
             ### Installation
-            1. Download `Alphonso_${{ steps.tag.outputs.version }}_x64-setup.exe`
-            2. Run the installer
-            3. Launch Alphonso
+            **Windows:** Download `${{ needs.build-windows.outputs.installer_name }}`, run the installer, launch Alphonso.
+
+            **Linux:** Download `${{ needs.build-linux.outputs.installer_name }}`, mark it executable (`chmod +x`), and run it.
 
             ### Auto-Update
             If you have a previous version installed, Alphonso will prompt you to update automatically.
           draft: false
           prerelease: false
           files: |
-            ${{ steps.collect.outputs.installer_path }}
-            ${{ steps.collect.outputs.sig_path }}
-            ${{ steps.manifest.outputs.manifest_path }}
+            dist/windows/${{ needs.build-windows.outputs.installer_name }}
+            dist/windows/${{ needs.build-windows.outputs.installer_name }}.sig
+            dist/linux/${{ needs.build-linux.outputs.installer_name }}
+            dist/linux/${{ needs.build-linux.outputs.installer_name }}.sig
+            latest.json
 
       - name: Summary
-        shell: pwsh
         run: |
-          Write-Host "Release published: Alphonso ${{ steps.tag.outputs.version }}"
-          Write-Host "Tag: ${{ steps.tag.outputs.tag }}"
-          Write-Host "Installer: ${{ steps.collect.outputs.installer_name }}"
-          Write-Host "Updater endpoint: https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest/download/latest.json"
+          echo "Release published: Alphonso ${{ needs.determine-tag.outputs.version }}"
+          echo "Tag: ${{ needs.determine-tag.outputs.tag }}"
+          echo "Windows installer: ${{ needs.build-windows.outputs.installer_name }}"
+          echo "Linux installer: ${{ needs.build-linux.outputs.installer_name }}"
+          echo "Updater endpoint: https://github.com/obsidian-media/AlphonsoEcosystem/releases/latest/download/latest.json"
