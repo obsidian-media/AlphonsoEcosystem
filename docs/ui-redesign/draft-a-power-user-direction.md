@@ -1,14 +1,33 @@
 # Draft A — Power-User Visual Direction
 
-Status: **Draft, locked as a finalist** (not yet spec'd into Phase 1). Captured from live brainstorming with real mockups in the visual companion browser tool, iterated across ~10 rounds.
+Status: **Draft, in progress, skeleton superseded once (see Revision 2 below).** Captured from live brainstorming with real mockups in the visual companion browser tool, iterated across ~15+ rounds total, including two full structural rejections and one course-correction anchored to real reference apps.
 
-## Skeleton (structure)
+## Revision history (do not silently discard — later rounds found real problems in earlier ones)
 
-- No sidebar. Top nav bar instead: brand mark (left) + curated primary tabs (center, ~5-6 max) + utility cluster (right).
-- Everything beyond the curated top tabs (Agent Pairing, Ecosystem Hub, Operator Dashboard, etc. — the ~20 buried/secondary destinations) is reached through **one unified command palette**, bound to the app's existing `Ctrl+P` shortcut (do NOT introduce a new `Ctrl+K` — collides with the real `toggle_search` binding already in `useKeyboardShortcuts.js`). This directly answers the ground-truth doc's documented complaint that Agent Pairing/Ecosystem Maturity are "2+ clicks deep, undiscoverable."
-- Top nav right cluster: search/palette trigger with visible shortcut hint, notification bell **with a real approval-count badge** (highest-priority glanceable element in a control-plane app), light/dark toggle, user/agent avatar menu.
-- Below the top nav: an optional horizontal agent-status strip (avatar row, active agents visually distinguished from idle) — validated as a real live-status device, not just decoration.
-- Content areas use **section "zones"**, not cards: soft color-graded gradient washes (e.g. warm amber wash for "needs approval," cool blue wash for "connectors") separate regions instead of bordered/shadowed boxes.
+1. **Original skeleton (below, superseded):** top nav bar with curated tabs + command palette for everything else. Tested against real page structure (Home/Work/Agents/System groups pulled from the actual `Sidebar.tsx`) with a dropdown-per-group mega-menu. **Rejected outright** — not a details problem, the user rejected the grouping, the dropdown mechanic, AND called it "still a generic SaaS nav bar" regardless of specifics.
+2. **Zero-chrome/search-first attempt:** dropped all persistent nav, home screen doubles as navigation via clickable content blocks, Ctrl+P for everything else. **Also rejected outright** — too sparse/empty, search-as-primary-nav was the wrong idea, and the home-feed-as-nav concept itself didn't land.
+3. **Anchored to real reference apps** (user named these directly, not guessed): **Arc browser's sidebar** (personalized, collapsible, icon/favicon-driven, "Spaces" that tint the app per context), **Notion's sidebar** (a page tree the user owns, icons per item, huge whitespace), **Superhuman** (command-palette/keyboard speed layered ON TOP of real persistent structure, not instead of it). Synthesis confirmed correct by the user before building: bring back a sidebar, but make it Arc/Notion-style — portraits instead of text labels, collapsible, organized into a small number of "Spaces" that each tint the whole app when active, plus Ctrl+P for speed.
+4. **Current skeleton (Revision 2, "Rooms"):** see below — this is what's actually locked-in-progress now.
+
+## Skeleton (structure) — Revision 2, "Rooms" concept
+
+- **Real sidebar, Arc/Notion-style** — not a flat gray list of text nav links. ~216px wide, collapsible to icon-only. Top of sidebar: search field bound to the app's real existing `Ctrl+P` shortcut (do NOT introduce a new `Ctrl+K` — collides with `toggle_search` in `useKeyboardShortcuts.js`).
+- **4 "Space" pills** at the top of the sidebar, mapped to the app's real existing nav groups (confirmed from `Sidebar.tsx`): **Home** (Dashboard, Chat), **Research** (Hector's Research Desk, Reports, Bookmarks), **Boardroom** (chat threads), **System** (Orchestrator, Connectors, Agent Performance, Runtimes, Voice, Operator).
+- **Switching Space genuinely changes the room's mood** — not a faint tint, a real distinct atmosphere per space:
+  - **Home:** calm, light blue-dust neutral (the original Draft A tint decision, preserved here)
+  - **Research:** warm parchment/library — serif display headlines (Fraunces), citation-card content style with source/confidence metadata, evokes "library" the way Hector's own portrait does (surrounded by books)
+  - **Boardroom:** deep plum/violet, conversational, softer
+  - **System:** this is where the earlier-descoped **"Live Ops Wall" language actually belongs** — color-accent left-border rules, monospace numbering, dense — validated as correct once given a real, scoped home rather than being the app-wide theme
+- Sidebar items use **agent portraits or icons, never plain text-only rows** — e.g. "Research Desk" shows Hector's portrait, "#launch-planning" thread shows Jose's (he routes it).
+- Sidebar polish details that were explicitly missing in the first pass and added in the fix: a colored accent bar next to the active item (color-matched to the current room), small live-status dots on agent portraits, a visible collapse control, real padding/spacing rhythm instead of cramped default spacing.
+- Command palette (Ctrl+P) still reaches the ~20 secondary pages not directly in a Space's sidebar list (Agent Pairing, Ecosystem Hub, etc.) — this part of the original reasoning survived the rejection of the top-nav skeleton.
+- Top nav right cluster concept (search trigger, notification bell with real approval-count badge, theme toggle, avatar menu) — **not yet re-validated against the new sidebar skeleton**, was designed against the rejected top-nav version. Needs a fresh pass to confirm it still makes sense once the sidebar itself carries search.
+
+## What's explicitly rejected (persists across revisions)
+
+- No cards, no box-shadows, no hard borders/edges anywhere in the base theme.
+- No solid-black pill-tab nav / no top-nav-with-dropdowns (see Revision History #1 — this whole family of "nav bar" pattern was rejected, not just styled wrong).
+- No search-only/zero-persistent-chrome approach either (Revision History #2) — real structure is wanted, just not a flat generic one.
 
 ## What's explicitly rejected
 
@@ -53,7 +72,9 @@ An earlier direction — color-coded left accent border rules per row, big monos
 ## Explicitly open / unresolved
 
 - Normal-user (non-power-user) design direction — not started yet.
-- Whether "Studio" (this direction's working name) needs further validation against more page types beyond Mission Control / Connectors / Boardroom Chat (only 3 tested).
-- Exact top-nav primary tab list (mockups used an illustrative "Home, Chat, Boardroom, Automation, Connectors, Settings" — not yet checked against the real, full page inventory).
+- Top-right utility cluster (search/bell/theme/avatar) needs re-validation now that the sidebar itself carries search — likely redundant or needs a different role once the sidebar owns navigation.
+- Whether all 4 "Rooms" (Home/Research/Boardroom/System) hold up against every real page in each group, not just the one representative page mocked per room — Research so far only shown against the Research Desk itself, not Reports/Bookmarks; System only shown against Orchestrator, not Connectors/Agent Performance/Runtimes/Voice/Operator.
+- Whether "Work" (Projects/Content/Automation — currently absent from the 4-Space list) needs its own Space, or folds into one of the existing 4 — not yet decided; the 4 Spaces mocked so far map to Home/Agents(partially)/System from the real sidebar groups, but "Work" wasn't represented at all.
 - Real agent portrait crop/production pipeline (see above).
 - Real connector brand SVG sourcing (licensing/attribution check not yet done).
+- Desktop-specific constraints noted earlier (resizable-window collapse behavior, Coach Mode's separate webview window) still apply and haven't been re-checked against the new sidebar skeleton specifically.
