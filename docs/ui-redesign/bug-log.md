@@ -15,15 +15,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 
 ---
 
-## OPEN
+## CLOSED (stale finding, corrected after a later rebase)
 
-### 2. CLAUDE.md's Do-Not-Duplicate table claims `ApprovalGatePanel.tsx` was deleted — it's still live
+### 2. ~~CLAUDE.md's Do-Not-Duplicate table claims `ApprovalGatePanel.tsx` was deleted — it's still live~~ — WAS TRUE AT THE TIME, NOW ACTUALLY FALSE
 
-- **Where:** CLAUDE.md's "Project Execution Mode / Agent Workshop subsystem" row states the approval gate design "supersed[ed]... the deleted `agentWorkshop/ApprovalGatePanel.tsx` read-only card (both removed)."
-- **What's actually true:** `src/components/agentWorkshop/ApprovalGatePanel.tsx` still exists on disk, was never deleted in git history (`git log --diff-filter=D` on that path returns nothing), and is **actively imported and rendered** — `src/components/projectExecution/ProjectExecutionMode.tsx:21,383` (`<Card label="Approval Gates"><ApprovalGatePanel gates={...} /></Card>`) and referenced in `EcosystemHub.tsx` too.
-- **How found:** while updating `02-pages-inventory.md` note #4 for the real PR #225 approval gate (see below) — almost repeated CLAUDE.md's "deleted" claim verbatim, caught it by verifying against the actual filesystem/git history/grep first instead of trusting the doc.
-- **Impact for Phase 2:** whoever redesigns Project Execution Mode's page needs to actually resolve which approval UI survives — the new real Approval tab (per PR #225, wraps `approvalService.js`'s real `approveRequest`/`rejectRequest`) or this still-live old panel — not assume the old one is already gone, since it isn't.
-- **Status:** OPEN. This is a CLAUDE.md doc-drift bug, not a UI-redesign-specific one — worth surfacing to whoever maintains that file next, in addition to Phase 2 needing to resolve the actual duplication.
+- **Original finding:** at the time this was written, this worktree's rebase point predated PR #225's `d3b265b` commit ("wire the real approval gate, remove dead Setup toggle and ApprovalGatePanel") actually merging into `origin/main`. Against that older commit, `ApprovalGatePanel.tsx` genuinely still existed and was imported in `ProjectExecutionMode.tsx` — the finding was real and correctly verified *against the code available at the time*.
+- **Re-verified after a later rebase onto current `origin/main`:** `src/components/agentWorkshop/ApprovalGatePanel.tsx` no longer exists on disk, and `grep -rn "ApprovalGatePanel" src/` returns zero matches anywhere. CLAUDE.md's "deleted" claim is now genuinely correct — PR #225 actually did remove it, just not yet as of this file's original writing.
+- **Lesson, not just a correction:** this is exactly the risk of a long session against a shared, actively-moving `main` — a real, correctly-verified finding can go stale within the same session if not re-checked after rebasing. Caught here by re-verifying after noticing a commit message (`d3b265b`) that directly contradicted the original finding, not by routine habit — worth being more deliberate about re-checking bug-log entries after every rebase going forward, not just trusting them once verified.
+- **Status:** CLOSED — the underlying duplication this bug was about no longer exists; Phase 2's Project Execution Mode redesign only has the new real Approval tab to design around now, not two competing panels.
 
 ### 3. Heads-up for Phase 2's Research room design: Hector's pipeline doesn't synthesize (real, confirmed, not yet fixed)
 
