@@ -895,7 +895,7 @@ async function executeMiyaAssignment(commandText: any, assignment: any, options:
   };
 }
 
-async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
+async function executeHectorAssignment(commandText: any, assignment: any) {
   const action = String(assignment?.actionType || '').toLowerCase();
   if (action.includes('external_publish_handoff')) {
     return {
@@ -914,33 +914,15 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
     sourceType: 'official_docs',
     riskLevel: assignment?.riskLevel || 'medium'
   });
+  // runHectorLiveResearch already runs a real synthesis pass over the fetched
+  // sources (see synthesizeHectorResearch) and folds the result into
+  // report.summary when it succeeds -- no second, generic-prompt LLM call is
+  // needed here to "improve" an already-synthesized summary.
   const report = await runHectorLiveResearch(draft.id);
   const sourceRefs = Array.isArray(report?.sources) ? report.sources.map((item) => item?.url).filter(Boolean) : [];
 
-  let summary = report?.summary || 'Hector research run completed.';
-  if (!options.draftDisabled) {
-    try {
-      const contextSnippet = [summary, options.retrievedContext?.snippet].filter(Boolean).join('\n');
-      const prompt = draftPrompt('hector', commandText, { snippet: contextSnippet });
-      const response = await generateAgentLlmResponse('hector', {
-        endpoint: options.endpoint,
-        model: options.model || PREFERRED_MODEL,
-        prompt,
-        sessionId: assignment?.packetId ? resolveSecureSessionId(assignment.packetId) : undefined,
-        // Safe unconditionally: isBlockedByHermesApproval already routed this
-        // packet to pending_approval and stopped before reaching here if
-        // Hector is Hermes-backed and Approval Mode is on — see that gate's comment.
-        approved: true
-      });
-      const llmSummary = String(response?.response || '').trim();
-      if (llmSummary.length > 20) {
-        summary = llmSummary;
-      }
-    } catch { /* fall through to existing summary */ }
-  }
-
   return {
-    summary,
+    summary: report?.summary || 'Hector research run completed.',
     resultState: report?.confidenceLevel === TRUST_STATES.VERIFIED ? 'verified' : 'pending_review',
     resultUrl: null,
     artifacts: [{ type: 'hector_report', reportId: report?.id || draft.id }],
@@ -1174,7 +1156,7 @@ async function executeAssignment(packet: any, assignment: any, commandText: any,
     return executeMiyaAssignment(commandText, assignment, options);
   }
   if (assignment?.agent === AGENTS.HECTOR) {
-    return executeHectorAssignment(commandText, assignment, options);
+    return executeHectorAssignment(commandText, assignment);
   }
   if (assignment?.agent === AGENTS.MARIA) {
     return executeMariaAssignment(commandText, assignment);

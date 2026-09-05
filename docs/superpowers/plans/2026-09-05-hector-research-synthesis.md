@@ -594,7 +594,7 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
 with:
 
 ```ts
-async function executeHectorAssignment(commandText: any, assignment: any, options: any = {}) {
+async function executeHectorAssignment(commandText: any, assignment: any) {
   const action = String(assignment?.actionType || '').toLowerCase();
   if (action.includes('external_publish_handoff')) {
     return {
@@ -616,7 +616,11 @@ async function executeHectorAssignment(commandText: any, assignment: any, option
   // runHectorLiveResearch already runs a real synthesis pass over the fetched
   // sources (see synthesizeHectorResearch) and folds the result into
   // report.summary when it succeeds -- no second, generic-prompt LLM call is
-  // needed here to "improve" an already-synthesized summary.
+  // needed here to "improve" an already-synthesized summary. The `options`
+  // parameter this function used to take is dropped entirely -- nothing in
+  // this body needs it anymore, matching the sibling executeJoseAssignment's
+  // existing 2-parameter signature (found while implementing, not planned
+  // for up front -- the unused param would otherwise sit dead).
   const report = await runHectorLiveResearch(draft.id);
   const sourceRefs = Array.isArray(report?.sources) ? report.sources.map((item) => item?.url).filter(Boolean) : [];
 
@@ -637,7 +641,21 @@ Run: `npx vitest run src/test/joseExecutionEngineService.test.js`
 Expected: PASS (the new test, plus every pre-existing test in the file — none of them exercised the removed code path directly, per the earlier research showing no test called `executeHectorAssignment`'s LLM branch).
 
 Run: `npx tsc --noEmit`
-Expected: 0 errors (confirms no other call site depended on the removed local variables/behavior).
+Expected: TS2554 at the one call site inside `runJoseCommandExecutionPipeline` (search for
+`return executeHectorAssignment(commandText, assignment, options);`, near the sibling
+`AGENTS.MARIA`/`AGENTS.ECHO` branches) — TypeScript enforces arity even under `any` typing when
+there's no default value for the dropped parameter. Fix by updating that one call site to drop
+the third argument, matching the existing `executeMariaAssignment(commandText, assignment)`
+pattern right below it (Maria's function keeps an `options: any = {}` default so it isn't a type
+error there; Hector's no longer has a default because it no longer has the parameter at all):
+
+```ts
+  if (assignment?.agent === AGENTS.HECTOR) {
+    return executeHectorAssignment(commandText, assignment);
+  }
+```
+
+Re-run `npx tsc --noEmit` — expected: 0 errors.
 
 - [ ] **Step 5: Commit**
 
