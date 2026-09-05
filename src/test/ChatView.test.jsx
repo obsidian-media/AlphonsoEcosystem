@@ -48,6 +48,13 @@ vi.mock('../services/joseExecutionEngineService', () => ({
   runJoseCommandExecutionPipeline: vi.fn().mockResolvedValue({ commandId: null, executionReceipts: [] })
 }));
 
+// ── Agent bus service mock ───────────────────────────────────────────────────
+vi.mock('../services/agentBusService', () => ({
+  approvePacket: vi.fn(),
+  rejectPacket: vi.fn(),
+  getPacketById: vi.fn()
+}));
+
 // ── Orchestration receipt service mock ────────────────────────────────────────
 vi.mock('../services/orchestrationReceiptService', () => ({
   listOrchestrationReceipts: vi.fn().mockReturnValue([])
@@ -105,8 +112,13 @@ vi.mock('../components/ModelSwitcher', () => ({
   ModelProviderPicker: ({ ollamaPicker }) => <div data-testid="model-provider-picker">{ollamaPicker}</div>
 }));
 
+const approvalPanelCalls = vi.hoisted(() => ({ props: null }));
+
 vi.mock('../components/ApprovalPanel', () => ({
-  ApprovalPanel: () => <div data-testid="approval-panel" />
+  ApprovalPanel: (props) => {
+    approvalPanelCalls.props = props;
+    return <div data-testid="approval-panel" />;
+  }
 }));
 
 vi.mock('../components/PipelineResultCard', () => ({
@@ -137,6 +149,8 @@ vi.mock('../components/ConnectorStatusIndicators', () => ({
 // ── Component under test ──────────────────────────────────────────────────────
 import { ChatView } from '../components/ChatView';
 import { generateOllamaChatStream } from '../lib/ollama';
+import { isJoseIntakeCommand, runJoseCommandExecutionPipeline } from '../services/joseExecutionEngineService';
+import { approvePacket, rejectPacket, getPacketById } from '../services/agentBusService';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
 import { isGeminiConfigured } from '../services/connectors/geminiConnector';
@@ -455,5 +469,44 @@ describe('ChatView', () => {
       expect(screen.getByText(/Gemini is not configured/i)).toBeTruthy();
     });
     isGeminiConfigured.mockReturnValue(true);
+  });
+
+  it('maps pendingApprovals to itemId and wires approve/reject/detail callbacks for ApprovalPanel', async () => {
+    isJoseIntakeCommand.mockReturnValueOnce(true);
+    runJoseCommandExecutionPipeline.mockResolvedValueOnce({
+      commandId: 'cmd-1',
+      pendingApprovalCount: 1,
+      executionReceipts: [
+        { packetId: 'pkt-1', agent: 'marcus', status: 'approval_required', reason: 'External publish requires approval' }
+      ]
+    });
+    getPacketById.mockReturnValue({
+      id: 'pkt-1',
+      payload: { assignment: { agent: 'marcus', actionType: 'external_publish', riskLevel: 'high' } }
+    });
+
+    render(<ChatView {...makeProps()} />);
+    // Wait for the async chat-history hydration effect to settle before sending --
+    // otherwise its setMessages([]) can land after our send and wipe the messages
+    // this test is about to add.
+    await screen.findByText('What can I help you build?');
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'do the risky thing' } });
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await screen.findByTestId('approval-panel');
+
+    const props = approvalPanelCalls.props;
+    expect(props.pendingApprovals).toEqual([
+      expect.objectContaining({ itemId: 'pkt-1', packetId: 'pkt-1', agent: 'marcus' })
+    ]);
+
+    props.onApprove('pkt-1');
+    expect(approvePacket).toHaveBeenCalledWith('pkt-1', 'chatview-inline');
+
+    props.onReject('pkt-1');
+    expect(rejectPacket).toHaveBeenCalledWith('pkt-1', 'Rejected from chat inline approval');
+
+    expect(props.getItemDetail('pkt-1')).toEqual({ agent: 'marcus', actionType: 'external_publish', riskLevel: 'high' });
   });
 });

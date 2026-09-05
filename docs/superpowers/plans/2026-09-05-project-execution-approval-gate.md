@@ -39,39 +39,49 @@ const {
 } = await import('../../services/approval/approvalService');
 ```
 
-Add a new `describe` block anywhere after the existing ones (e.g. right before the file's closing):
+Add a new `describe` block anywhere after the existing ones (e.g. right before the file's closing). This file's `localStorageMock.getItem` is a static per-test mock (not backed by a real in-memory store — `setItem` is a no-op `vi.fn()`), so — matching the file's own established convention (see the existing `listPendingApprovals` tests above) — seed fixture rows directly via `getItem.mockReturnValue(...)` rather than building state through `createApprovalRequest` + a later read:
 
 ```js
 describe('listPendingApprovalsByTrace', () => {
   it('returns only pending items matching the given traceId', () => {
-    createApprovalRequest({ actionType: 'file_write', metadata: { traceId: 'trace-a' } });
-    createApprovalRequest({ actionType: 'deployment', metadata: { traceId: 'trace-b' } });
+    localStorageMock.getItem.mockReturnValue(JSON.stringify([
+      { id: 'a', status: 'pending', actionType: 'file_write', metadata: { traceId: 'trace-a' } },
+      { id: 'b', status: 'pending', actionType: 'deployment', metadata: { traceId: 'trace-b' } }
+    ]));
     const rows = listPendingApprovalsByTrace('trace-a');
     expect(rows).toHaveLength(1);
     expect(rows[0].actionType).toBe('file_write');
   });
 
   it('excludes approved/rejected items even if the trace matches', () => {
-    const request = createApprovalRequest({ actionType: 'file_write', metadata: { traceId: 'trace-c' } });
-    approveRequest(request.id);
+    localStorageMock.getItem.mockReturnValue(JSON.stringify([
+      { id: 'c', status: 'approved', actionType: 'file_write', metadata: { traceId: 'trace-c' } }
+    ]));
     expect(listPendingApprovalsByTrace('trace-c')).toHaveLength(0);
   });
 
   it('returns an empty array for an unknown traceId', () => {
+    localStorageMock.getItem.mockReturnValue(JSON.stringify([
+      { id: 'd', status: 'pending', actionType: 'file_write', metadata: { traceId: 'trace-d' } }
+    ]));
     expect(listPendingApprovalsByTrace('does-not-exist')).toEqual([]);
   });
 });
 
 describe('listApprovalsByTrace', () => {
   it('returns matching-trace items regardless of status', () => {
-    const request = createApprovalRequest({ actionType: 'deployment', metadata: { traceId: 'trace-d' } });
-    rejectRequest(request.id);
-    const rows = listApprovalsByTrace('trace-d');
+    localStorageMock.getItem.mockReturnValue(JSON.stringify([
+      { id: 'e', status: 'rejected', actionType: 'deployment', metadata: { traceId: 'trace-e' } }
+    ]));
+    const rows = listApprovalsByTrace('trace-e');
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('rejected');
   });
 
   it('returns an empty array for an unknown traceId', () => {
+    localStorageMock.getItem.mockReturnValue(JSON.stringify([
+      { id: 'f', status: 'pending', actionType: 'file_write', metadata: { traceId: 'trace-f' } }
+    ]));
     expect(listApprovalsByTrace('does-not-exist')).toEqual([]);
   });
 });
@@ -545,6 +555,11 @@ it('maps pendingApprovals to itemId and wires approve/reject/detail callbacks fo
   });
 
   render(<ChatView {...makeProps()} />);
+  // Wait for the async chat-history hydration effect to settle before sending --
+  // otherwise its setMessages([]) can land after our send and wipe the messages
+  // this test is about to add (found live during Task 3 execution, not assumed).
+  await screen.findByText('What can I help you build?');
+
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'do the risky thing' } });
   fireEvent.click(screen.getByRole('button', { name: /send message/i }));
 

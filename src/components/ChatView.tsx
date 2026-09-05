@@ -36,6 +36,7 @@ import { getAgentProvider, setAgentProvider } from '../services/modelSelectionSe
 import { listConnectors } from '../services/connectorRegistryService';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
+import { approvePacket, rejectPacket, getPacketById } from '../services/agentBusService';
 import { PipelineResultCard } from './PipelineResultCard';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
@@ -1330,8 +1331,14 @@ export function ChatView({
             {isLastAssistantMessage && pendingApprovals.length > 0 && !isGenerating && (
               <div className="w-full mt-2">
                 <ApprovalPanel
-                  pendingApprovals={pendingApprovals}
+                  pendingApprovals={pendingApprovals.map((p: Record<string, unknown>) => ({ ...p, itemId: p.packetId as string }))}
                   commandId={approvalCommandId}
+                  onApprove={(itemId) => approvePacket(itemId, 'chatview-inline')}
+                  onReject={(itemId) => rejectPacket(itemId, 'Rejected from chat inline approval')}
+                  getItemDetail={(itemId) => {
+                    const packet = getPacketById(itemId) as { payload?: { assignment?: { agent?: string; actionType?: string; riskLevel?: string } } } | null;
+                    return packet?.payload?.assignment ?? null;
+                  }}
                   onAllResolved={async (cmdId, results) => {
                     if (approvalTimeoutRef.current) {
                       clearTimeout(approvalTimeoutRef.current);
