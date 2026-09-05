@@ -22,7 +22,7 @@ import type { LucideIcon } from 'lucide-react';
 const TrustReceiptBrowser = lazy(() => import('./TrustReceiptBrowser').then((mod) => ({ default: mod.TrustReceiptBrowser })));
 const NotionSyncPanel = lazy(() => import('./NotionSyncPanel').then((mod) => ({ default: mod.NotionSyncPanel })));
 const OllamaPreflightPanel = lazy(() => import('./OllamaPreflightPanel').then((mod) => ({ default: mod.OllamaPreflightPanel })));
-const BoardroomPanel = lazy(() => import('./BoardroomPanel'));
+const ProjectBatchPanel = lazy(() => import('./ProjectBatchPanel'));
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -792,7 +792,7 @@ export function OperatorDashboard({
       <OperatorSection title="Boardroom Orchestrator" id="boardroom" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 gap-3">
         <Suspense fallback={<div className="text-[11px] text-zinc-500">Loading boardroom panel…</div>}>
-          <BoardroomPanel />
+          <ProjectBatchPanel />
         </Suspense>
       </div>
       </OperatorSection>

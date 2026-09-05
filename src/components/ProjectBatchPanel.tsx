@@ -280,7 +280,7 @@ function TaskRow({ task }: TaskRowProps) {
   );
 }
 
-export default function BoardroomPanel() {
+export default function ProjectBatchPanel() {
   const [goal, setGoal] = useState(() => getActiveGoal());
   const [batches, setBatches] = useState(() => goal ? listBatches(goal.id) : []);
   const [activeBatch, setActiveBatch] = useState(() => goal ? getActiveBatch(goal.id) : null);
