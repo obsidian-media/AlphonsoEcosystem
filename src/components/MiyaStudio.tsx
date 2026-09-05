@@ -9,7 +9,7 @@ import {
   Palette,
   Sparkles
 } from 'lucide-react';
-import miyaMascot from '../assets/miya-mascot-main.webp';
+import miyaMascot from '../assets/agents/miya/portrait.jpg';
 import { createAgentPacket, AGENTS } from '../services/agentBusService';
 import { appendSessionEvent } from '../services/sessionIntelligenceService';
 import { pushMiyaMemory, upsertBrandKit } from '../services/miyaMemoryService';

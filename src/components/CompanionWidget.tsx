@@ -6,7 +6,7 @@ import {
   Shield,
   Sparkles,
 } from 'lucide-react';
-import mascotImage from '../assets/alphonso-mascot.webp';
+import mascotImage from '../assets/agents/alphonso/portrait.jpg';
 
 const stateStyles: Record<string, {
   ring: string;

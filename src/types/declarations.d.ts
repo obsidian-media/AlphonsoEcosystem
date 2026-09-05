@@ -8,6 +8,11 @@ declare module '*.webp' {
   export default src;
 }
 
+declare module '*.jpg' {
+  const src: string;
+  export default src;
+}
+
 declare module '*/sessionIntelligenceService' {
   export const SESSION_EVENT_SCOPE: string;
   export function appendSessionEvent(event: {
