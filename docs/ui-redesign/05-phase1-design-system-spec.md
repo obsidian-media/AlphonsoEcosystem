@@ -2,6 +2,23 @@
 
 Formalizes everything locked in Draft A (power-user) and Draft B (normal-user) into concrete, buildable tokens and primitives. This is the foundation Phase 2's page-by-page work builds on. Expect edits as Phase 2 surfaces real constraints — this is a living spec, not frozen on approval.
 
+## 0. Reconciliation with the real, already-live `src/styles/tokens.css`
+
+**Found late, after this spec was first written — a real process gap, not a footnote.** `src/styles/tokens.css` already exists as a mature, actively-used OKLCH token system (imported across 11+ real components: `Modal.tsx`, `Sidebar.tsx`, `ApprovalModal.tsx`, `NotificationCenter.tsx`, `BoardroomChatView.tsx`, and more). It was not checked before the color/shadow decisions below were made from scratch during brainstorming. Two real conflicts, resolved here per explicit decisions:
+
+1. **Shadows already exist and are live** (`--shadow-sm/md/lg`, `--shadow-glow-accent`), contradicting this spec's "no shadows, ever" rule. **Resolved: "no shadows" applies only to new Zone/Room primitives built for this redesign. Existing shadow usage in already-live components is left untouched until each page is individually redesigned in Phase 2** — not blanket-removed now.
+2. **Per-agent identity colors already exist and are fixed:** Alphonso=cyan, Jose=amber, Hector=**indigo**, Miya=**violet**, Maria=teal, Marcus=orange, Echo=blue-violet, Sentinel=**red** (collides with the `--error` status hue — pre-existing, not introduced by this redesign), Nova=lime. **Resolved: these are adopted as ground truth. The room-mood color mapping in §2.1 below is revised to derive from them, not the independently-invented amber/plum scheme from earlier mockups.**
+
+### Revised room-mood mapping (supersedes the table in §2.1 for actual hue values — structure/layout decisions from Draft A are unaffected)
+
+| Room | Derived from | Rationale |
+|---|---|---|
+| Home | `--accent` (cyan, Alphonso's color) | Alphonso is the general/orchestrating presence; Home is the neutral hub — reusing the existing accent token instead of a new invented blue keeps one source of truth |
+| Work | `--agent-miya` (violet) | Miya (Creative) lives in Work alongside Projects/Content/Automation; no other Work-room agent has a fixed identity color, so the room takes hers |
+| Research | `--agent-hector` (indigo) | Directly Hector's real, already-existing color — replaces the invented amber/parchment mood. Fraunces serif headline treatment is kept as a separate, independent detail (typography, not color) |
+| Boardroom | **not mapped to a single agent color** | Boardroom is inherently multi-agent (any of the 9 can post), so tying its room-wide mood to one agent's color would misrepresent it. Uses neutral surface tokens (`--surface-1..3`) instead; per-message color still comes from each speaking agent's own identity color via their avatar/name, which already carries the variety. This is a deliberate change from the earlier plum mood mockup, not an oversight. |
+| System | `--surface-0` (near-black) + `--success`/`--warning`/`--error` directly | Infra/ops room, not owned by any single agent — consumes the existing semantic status tokens directly instead of the invented `#50d296`-style hex values from mockups, so System room and every other status indicator in the app stay period-correct with each other |
+
 ---
 
 ## 1. Two separate visual systems, one shared foundation
@@ -58,7 +75,9 @@ Both user tracks get a selectable accent theme, independent of light/dark mode: 
 
 **Real conflict this creates, resolved here rather than left implicit:** status colors (`live` = green `#3ecf8e`/`#50d296`, `needs-review` = amber, `error/off` = red) are semantic and fixed — they mean the same thing regardless of which accent theme is active. If a user picks the Green accent theme, their brand color and the "this connector is live" signal would collide if they shared one token. **Fix: accent hue and status hue are two independent token layers, never merged.** Accent theme only touches non-semantic UI — active-nav indicators, primary buttons/links, the per-room "active" pill highlight, avatar ring colors. It never touches a status dot, a live/review/error badge, or anything whose color currently carries meaning about system state. When Green accent is active, status-green and accent-green will look similar — mitigate with a distinct saturation/lightness offset between the two (status green stays exactly as specified above; accent green is a different, clearly distinguishable shade), not by changing what status green means.
 
-Room-mood colors (Draft A's Research=amber, Work=sage, Boardroom=plum) are a third, separate layer from both accent and status — they don't change when the user picks a different accent theme. Whether room-mood colors should also respect a user's accent choice (e.g. a Purple-accent user gets a slightly purple-shifted Research room) is an open item, not decided here — default assumption is rooms stay as designed regardless of accent theme, to avoid five-way color conflicts across three independent token layers.
+Room-mood colors (§0's revised mapping: Home=cyan/accent, Work=Miya's violet, Research=Hector's indigo, Boardroom=neutral, System=status tokens directly) are a third, separate layer from both accent and status — they don't change when the user picks a different accent theme, since they're derived from fixed per-agent identity colors, not from the user's theme preference. Whether room-mood colors should also respect a user's accent choice is an open item, not decided here — default assumption is rooms stay as designed regardless of accent theme.
+
+**Implementation should follow the existing `[data-theme="light"]` attribute pattern already established in `tokens.css`**, not a new mechanism — e.g. `[data-accent="green"]`/`[data-accent="purple"]` blocks overriding `--accent`/`--accent-hover`/`--accent-dim`/`--accent-border`/`--accent-glow`/`--accent-muted` only, composable with the existing light/dark attribute. This keeps one consistent theming mechanism instead of two competing ones.
 
 ## 3. Component primitives — what to build/extend
 
