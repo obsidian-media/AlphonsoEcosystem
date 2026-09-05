@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: Security audit (npm)
-        run: npm audit --audit-level=high
+        run: npm run verify:npm-audit
 
       - name: Lint check
         run: npm run lint --if-present
