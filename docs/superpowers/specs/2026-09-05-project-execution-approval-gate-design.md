@@ -115,13 +115,16 @@ contract:
   items in: `itemId`. `ChatView.tsx` maps its packets (`{ ...p, itemId: p.packetId }`) and
   `ProjectExecutionMode.tsx` maps its requests (`{ ...r, itemId: r.id }`) at the call site; the
   component only ever reads `item.itemId`.
-- **Detail resolution / `agent` field.** ChatView's items need indirection through
-  `getPacketById` to reach `payload.assignment.agent`/`riskLevel`/`actionType`, with risk
-  *inferred* from those via `inferRisk()`. Project Execution's `ApprovalRequest` objects already
-  carry `riskLevel`/`actionType`/`reason` directly on the item — no indirection or inference
-  needed — but have no per-agent concept at all (gates are project-level, not per-agent).
-  `ResolvedItem.agent` is therefore optional (`agent?: string`); when absent the panel renders a
-  static `'project'` label in that slot instead of an agent name.
+- **Detail resolution / `agent` field.** ChatView's items carry no `riskLevel` of their own and
+  need indirection through `getPacketById` to reach `payload.assignment.agent`/`riskLevel`/
+  `actionType`, with risk *inferred* from those via `inferRisk()`. Project Execution's
+  `ApprovalRequest` objects already carry `riskLevel`/`actionType`/`reason` directly on the item
+  (`PendingApprovalItem.riskLevel`) — no indirection or inference needed — but have no
+  per-agent concept at all (gates are project-level, not per-agent). The panel's resolution
+  logic is therefore: if `item.riskLevel` is already present, use the item as-is (Project
+  Execution path); otherwise call `getItemDetail(item.itemId)` and run `inferRisk()` over the
+  result (ChatView path). `ResolvedItem.agent` is optional (`agent?: string`); when absent the
+  panel renders a static `'project'` label in that slot instead of an agent name.
 
 ```ts
 interface PendingApprovalItem {
@@ -130,6 +133,7 @@ interface PendingApprovalItem {
   reason?: string;
   previewContent?: string | null;
   agent?: string;
+  riskLevel?: string;
 }
 
 interface ResolvedItem {
