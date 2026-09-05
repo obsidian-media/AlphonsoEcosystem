@@ -20,10 +20,13 @@ against the code (`docs/governance/DEFERRED_WORK.md`'s 2026-09-05 entry has the 
   again to 220. The content needed for real synthesis is fetched and briefly available, then
   discarded twice before anything could use it.
 
-`runMultiSourceResearch()` / `createResearchBrief()` (a separate, lighter-weight path used by
-`ProjectExecutionMode.tsx`'s research brief — `ChatView.tsx`'s Hector briefing card is unrelated,
-see the corrected consumer-tracing note below) has the identical shape: it merges results from up
-to 4 providers into one deduplicated list and stops there.
+`createResearchBrief()` (`ProjectExecutionMode.tsx`'s research brief; `ChatView.tsx`'s Hector
+briefing card is unrelated, see the corrected consumer-tracing note below) calls
+`runHectorLiveResearch` directly, so it has the identical gap. A separate function,
+`runMultiSourceResearch()`, has the same shape (merges results from up to 4 providers into one
+deduplicated list and stops there) but — checked directly, not assumed — **has no real caller
+anywhere in the app**; only its own test file exercises it. It's dead code, not part of this fix's
+scope (see Non-goals).
 
 Net effect: nothing in Hector's research subsystem takes N successfully-fetched sources' actual
 content and asks an LLM (or any deterministic logic) to read them together and produce one
@@ -33,9 +36,12 @@ page doesn't.
 ## Non-goals (explicitly out of scope)
 
 - **No changes to source discovery or fetching mechanics** beyond relaxing the truncation limit.
-  `discoverResearchSourcesWithFailover`, the Brave/Tavily/DeepSeek/Rust-backend provider chain in
-  `runMultiSourceResearch`, and the 10-source cap in `fetch_research_sources` (`.take(10)`) are
-  unchanged.
+  `discoverResearchSourcesWithFailover` and the 10-source cap in `fetch_research_sources`
+  (`.take(10)`) are unchanged.
+- **No synthesis wiring into `runMultiSourceResearch()`.** Confirmed via grep across every
+  component/service in the app: it has no real caller anywhere, only its own test file. Wiring
+  synthesis into unreachable code would be pure waste — if it ever gains a real caller later,
+  that's a small follow-up (the function already exists and works the same way), not a gap here.
 - **No changes to `synthesizeHectorFallbackReport()`'s existing zero-sources fallback behavior.**
   It still asks the model for a cautious guess when nothing was found — that's a different,
   already-correct code path, not part of this fix.
@@ -92,11 +98,11 @@ design and dropped as redundant.
   **"Re-synthesize"** action instead of auto-rerunning — it becomes visible exactly when
   `report.sources.length > report.synthesisSourceCount`, and re-running updates both `synthesis`
   and `synthesisSourceCount` together.
-- **`runMultiSourceResearch()` / `createResearchBrief()`** (ProjectExecutionMode's research
-  brief — see the corrected consumer note below): calls the identical `synthesizeHectorResearch`
-  function over whatever sources that path collected.
+- **`createResearchBrief()`** (`ProjectExecutionMode.tsx`'s research brief): calls
+  `runHectorLiveResearch` internally, so it needs no separate wiring — it improves automatically
+  the moment `runHectorLiveResearch` does (see the corrected consumer note below).
 
-Both call sites route through `generateAgentLlmResponse('hector', ...)` — the same shared
+The one call site routes through `generateAgentLlmResponse('hector', ...)` — the same shared
 per-agent LLM dispatcher Maria/Echo/Sentinel/Nova already use — so Hector's per-agent provider
 selection (Ollama/NVIDIA/Gemini/Hermes, via `modelSelectionService.ts`) is respected automatically
 with no new plumbing.
@@ -217,8 +223,8 @@ Owns all three export formats, called from `ResearchReportPanel.tsx`'s export ro
 ## Files touched
 
 - `src/services/hectorResearchService.js` — add `synthesizeHectorResearch`; wire into
-  `runHectorLiveResearch` (auto + re-synthesize), updating `summary` to `synthesis.overview` on
-  success; wire into `runMultiSourceResearch`/`createResearchBrief` the same way; remove
+  `runHectorLiveResearch` only (auto + re-synthesize), updating `summary` to `synthesis.overview`
+  on success (`createResearchBrief` improves automatically, no separate wiring needed); remove
   `inferredPoints` construction (superseded by `keyFindings`).
 - `src/services/hectorExportService.ts` (new) — Markdown/PDF/PowerPoint export, dynamic imports.
 - `src/components/hector/ResearchReportPanel.tsx` — depth toggle, export row, collapsed Source
