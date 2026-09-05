@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { getAllStatus, stopTool } from '../services/runtimeManagerService';
 
 interface UpdaterNotificationProps {
   version: string | null | undefined;
@@ -26,6 +27,19 @@ export function UpdaterNotification({ version, onDismiss }: UpdaterNotificationP
         return;
       }
       setUpdate(u);
+
+      // Real bug found via live testing against v2.7.0: the NSIS installer
+      // aborted mid-extraction ("error writing to file ...cublasLt64_12.dll")
+      // because Alphonso's own Runtime-Hub-managed Ollama process was still
+      // running and holding a lock on its bundled CUDA DLLs -- the installer
+      // overwrites those exact files in place. Stop every tool Alphonso
+      // itself started (tracked by PID, so this can't touch a process the
+      // user runs independently) before the installer ever runs.
+      try {
+        const statuses = await getAllStatus();
+        const running = statuses.filter((s) => s.running);
+        await Promise.all(running.map((s) => stopTool(s.name).catch(() => {})));
+      } catch { /* best-effort -- do not block the update on this */ }
 
       await u.downloadAndInstall((event) => {
         if (event.event === 'Progress' && event.data) {
