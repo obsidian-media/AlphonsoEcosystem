@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 describe('ProjectBatchPanel rename (resolves Boardroom naming collision)', () => {
   it('the renamed file exists and exports ProjectBatchPanel as its default export', () => {

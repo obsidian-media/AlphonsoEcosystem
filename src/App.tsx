@@ -12,7 +12,6 @@ import { UpdaterNotification } from './components/UpdaterNotification';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { AgentPerformanceView } from './components/AgentPerformanceView';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
