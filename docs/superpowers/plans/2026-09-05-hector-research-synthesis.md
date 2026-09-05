@@ -706,22 +706,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockJsPdfSave = vi.fn();
 const mockJsPdfText = vi.fn();
-const mockJsPdfConstructor = vi.fn(() => ({
-  text: mockJsPdfText,
-  save: mockJsPdfSave,
-  splitTextToSize: (text: string) => [text],
-  internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } },
-  addPage: vi.fn()
-}));
+// Regular function expression, not an arrow function -- the real code calls
+// `new jsPDF()`, and arrow functions can never be used as constructors.
+const mockJsPdfConstructor = vi.fn(function MockJsPdf() {
+  return {
+    text: mockJsPdfText,
+    save: mockJsPdfSave,
+    splitTextToSize: (text: string) => [text],
+    internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } },
+    addPage: vi.fn()
+  };
+});
 vi.mock('jspdf', () => ({ jsPDF: mockJsPdfConstructor }));
 
 const mockPptxWriteFile = vi.fn();
 const mockPptxAddText = vi.fn();
 const mockPptxAddSlide = vi.fn(() => ({ addText: mockPptxAddText }));
-const mockPptxConstructor = vi.fn(() => ({
-  addSlide: mockPptxAddSlide,
-  writeFile: mockPptxWriteFile
-}));
+const mockPptxConstructor = vi.fn(function MockPptxGenJS() {
+  return {
+    addSlide: mockPptxAddSlide,
+    writeFile: mockPptxWriteFile
+  };
+});
 vi.mock('pptxgenjs', () => ({ default: mockPptxConstructor }));
 
 vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock-url'), revokeObjectURL: vi.fn() });
