@@ -136,6 +136,7 @@ const AgentDock = lazy(() => import('./components/AgentDock').then((mod) => ({ d
 const SettingsView = lazy(() => import('./components/SettingsView').then((mod) => ({ default: mod.SettingsView })));
 const RightPanel = lazy(() => import('./components/RightPanel').then((mod) => ({ default: mod.RightPanel })));
 const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then((mod) => ({ default: mod.AgentActivityLog })));
+const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceView').then((mod) => ({ default: mod.AgentPerformanceView })));
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -930,6 +931,11 @@ function AppShell() {
                 {activeTab === 'activity' && (
                   <Suspense fallback={null}>
                     <AgentActivityLog />
+                  </Suspense>
+                )}
+                {activeTab === 'agent_performance' && (
+                  <Suspense fallback={null}>
+                    <AgentPerformanceView />
                   </Suspense>
                 )}
               </Suspense>
