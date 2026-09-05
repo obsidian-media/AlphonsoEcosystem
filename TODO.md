@@ -81,19 +81,18 @@ re-derive them from 12 separate plan docs:
   command names (`get_companion_status`, `start_companion_server`) that
   don't match any real registered command. Test-quality issue, not a
   production bug. Found 2026-07-10, not yet fixed.
-- [ ] Full in-app auto-updater is merged (PR #98) and code-complete but
-  **not yet verified against a real signed release** — needs an actual
-  version bump + tag to test the `check()` → `downloadAndInstall()` →
-  `relaunch()` flow end-to-end against a real GitHub Release artifact.
-  **Update 2026-09-04:** live-tested against the real v2.7.0 release —
-  notification/download/progress-UI/Later button all worked correctly
-  for the first time, but the NSIS installer aborted mid-extraction
-  because Alphonso's own running Ollama process held a lock on a
-  bundled CUDA DLL the in-place upgrade overwrites. Fixed in
-  `UpdaterNotification.tsx` (stop every running Runtime Hub tool before
-  `downloadAndInstall()` runs) — see `docs/governance/DEFERRED_WORK.md`'s
-  2026-09-04 entry and PR #221. Still needs a second live update attempt
-  to confirm the installer no longer aborts before this item can close.
+- [x] Full in-app auto-updater is merged (PR #98) and code-complete —
+  **now live-verified against a real signed release.** Live-tested
+  against v2.7.0 first: notification/download/progress-UI/Later button
+  all worked correctly for the first time, but the NSIS installer
+  aborted mid-extraction because Alphonso's own running Ollama process
+  held a lock on a bundled CUDA DLL the in-place upgrade overwrites.
+  Fixed in `UpdaterNotification.tsx` (stop every running Runtime Hub
+  tool before `downloadAndInstall()` runs), shipped in v2.7.1 (PR
+  #221). **Update 2026-09-05:** retested against the real v2.7.1
+  release — confirmed working end-to-end (install succeeded, app
+  relaunched on the new version). See
+  `docs/governance/DEFERRED_WORK.md`'s 2026-09-04/09-05 entries.
 - [ ] macOS support — deferred until Windows reaches full maturity (see
   `docs/ALPHONSO_GROUND_TRUTH.md` §11 "Gap 5" for the full checklist of
   what's needed when the time comes).
