@@ -181,10 +181,18 @@ Two small, additive exports — no changes to existing exported functions' behav
 export function listPendingApprovalsByTrace(traceId) {
   return listPendingApprovals().filter((r) => r.metadata?.traceId === traceId);
 }
+
+// List every approval request (any status) filtered to a specific trace/run.
+// Used to detect a denied gate after all items resolve, for the Results tab's
+// blocked-state banner (Design step 4) — listPendingApprovalsByTrace alone
+// cannot answer this since a resolved item is no longer 'pending'.
+export function listApprovalsByTrace(traceId) {
+  return listAllApprovals().filter((r) => r.metadata?.traceId === traceId);
+}
 ```
 
-`listPendingApprovals()` already exists and is unchanged. `approveRequest(id)` /
-`rejectRequest(id)` already exist and are unchanged.
+`listPendingApprovals()` and `listAllApprovals()` already exist and are unchanged.
+`approveRequest(id)` / `rejectRequest(id)` already exist and are unchanged.
 
 ### Data flow
 
@@ -219,7 +227,9 @@ Approval tab renders <ApprovalPanel> sourced from listPendingApprovalsByTrace(re
 
 - `src/test/services/approvalService.test.js` (existing file) — add tests for
   `listPendingApprovalsByTrace`: returns only matching-trace pending items, excludes
-  approved/rejected items, returns `[]` for an unknown trace.
+  approved/rejected items, returns `[]` for an unknown trace. Add tests for
+  `listApprovalsByTrace`: returns matching-trace items regardless of status, returns `[]` for
+  an unknown trace.
 - `src/components/ApprovalPanel.tsx` — new/updated component test covering the generalized
   props contract: renders from injected `pendingApprovals`, calls the injected `onApprove`/
   `onReject` (not a hardcoded import), calls `onAllResolved` once every item is resolved,
