@@ -24,10 +24,30 @@ attentionAggregatorService.ts
   ├─ reads: services/approval/approvalService.js (real Project Execution approvals, made real by PR #225)
   ├─ reads: sentinelSecurityService (scanForThreats results)
   ├─ reads: coachHistoryService (fired coach signals)
-  └─ reads: connectorHealthCheckService / connectorStatusService (degraded/disabled connectors)
+  └─ reads: connectorCircuitBreakerService.getAll() (real tripped-circuit state — see §Connector normalization fix below; deliberately NOT connectorHealthCheckService, see §No fresh expensive operations)
 ```
 
 This mirrors `RightPanel.tsx`'s existing polling pattern in this codebase (chosen over an event-driven rewrite of all 5 source services, and over page-level direct queries — see the brainstorming session's SWOT comparison for the full reasoning). Poll interval: 60s, matching `proactiveAgentService.js`'s existing convention rather than inventing a new number.
+
+### No fresh expensive operations (self-critique fix #2)
+
+`getAttentionItems()` must only read each source's **already-computed, cached, last-known state** — it must never trigger a new operation itself. This matters concretely for two of the five sources:
+- **Sentinel:** read whatever the last `scanForThreats()` result already sitting in the app's existing scheduled-scan state is (the same data `RightPanel.tsx` already displays) — do not call `scanForThreats()` fresh from inside the aggregator.
+- **Connectors:** verified that `connectorHealthCheckService.ts`'s `checkConnectorHealth()` performs a real live network ping per call (confirmed: real `fetch`-style calls per connector, e.g. `checkGitHubConnection()`, `checkSlackConnection()`, etc.). Calling this for every configured connector on every 60s poll would mean a live network ping storm every minute across potentially dozens of connectors — a real cost/rate-limit risk, not a style preference. The aggregator must never call this service. Use `connectorCircuitBreakerService.getAll()` instead (see next section) — it's a passive read of state already recorded by real connector usage elsewhere in the app, zero new network calls.
+
+### Connector normalization fix (self-critique fix #1)
+
+Originally this spec mapped any `disabled` connector (per `connectorStatusService.ts`'s `deriveConnectorStatus()`) to `medium` severity. **This was a real bug, not a style choice:** verified `deriveConnectorStatus()`'s real categories — `'live' | 'missing_config' | 'foundation_only' | 'placeholder' | 'disabled'` — and none of them distinguish "the user never configured this" from "this broke." This app has 14 disabled connectors today per its own real connector-status counts; treating all of them as "needs attention" would flood the list with noise from connectors nobody ever intended to use, burying whatever actually matters.
+
+**Fixed approach:** only connectors whose circuit is currently open in `connectorCircuitBreakerService.ts` (`isOpen(connectorId)` returns `true`, populated by real `recordFailure()` calls from actual connector usage elsewhere in the app) produce an `AttentionItem`. This is a genuine "was working, now failing" signal, not a static configuration category — a connector the user never set up will never trip a circuit breaker, so it correctly never appears. Severity for these: `medium` (unchanged from before, still the roughest tier in this table since circuit-breaker state doesn't carry its own severity scale either, but at least the *inclusion criterion* is now correct).
+
+### Failure isolation across the 5 sources (self-critique fix #3)
+
+Each source is fetched independently (`Promise.allSettled`, not `Promise.all`) so one source's failure doesn't take down the whole list. If, say, Sentinel's read throws, `getAttentionItems()` logs the failure (via the existing `crashLogService.ts` pattern used elsewhere in this codebase) and returns the other 4 sources' items — never an empty list or a thrown error just because one of five sources had a problem.
+
+### Dismissal / acknowledgment (self-critique fix #4)
+
+Approval items need no dismissal mechanic — they naturally leave the list once approved or rejected via the real underlying call. Sentinel/Coach/Connector items have no such natural resolution and would otherwise resurface on every single 60s poll forever, even after a user has seen and consciously decided to ignore one. Fix: a small `dismissedAttentionItems` set, keyed by each item's stable `id`, persisted the same way `agentAuditService.ts`'s audit log already persists (durable localStorage-backed, matching this codebase's established pattern rather than inventing a new storage mechanism) — a dismissed item is suppressed from the rendered list until the underlying condition actually changes (a new/different `id` is generated, e.g. a new Sentinel finding or a different connector's circuit tripping), not permanently silenced regardless of new problems. Dismissal is a page-level UI action (not part of `attentionAggregatorService.ts` itself, which stays a pure read — dismissal filtering happens in the component consuming it), so the service itself stays simple and the same raw list is available to future consumers (sidebar badge/dots) that may want their own, different dismissal behavior.
 
 ## Data model
 
@@ -59,7 +79,7 @@ export function getAttentionItems(): Promise<AttentionItem[]>;
 | Sentinel (`sentinelSecurityService.ts`) | `severity: 'critical' \| 'high' \| 'medium' \| 'low'` (confirmed in `THREAT_PATTERNS`) | Direct passthrough — native match |
 | Approvals, both systems (`agentBusService.ts`, `approvalService.js`) | `riskLevel: string` (defaults `'medium'`, confirmed in both files) | Direct passthrough |
 | Coach (`coachEngineService.ts`) | `severity: 'critical' \| 'warning' \| 'neutral' \| 'positive'`, but only `critical`/`warning` ever actually fire (confirmed: `if (signal.severity !== 'critical' && signal.severity !== 'warning') return null`) | `critical` → `critical`; `warning` → `medium` (Coach's "warning" isn't equivalent to a medium-risk approval, but avoids inventing a 6th severity tier for one source alone) |
-| Connectors (`connectorHealthCheckService.ts` / `connectorStatusService.ts`) | **No native severity field** — only a status category (`live`/`foundation_only`/`placeholder`/`disabled`) + optional `disabledReason` string | A `disabled` connector with a reason, or any confirmed-degraded state, maps to `medium`. This is the roughest mapping in this table — flagged honestly, not a principled scale, because connectors don't carry a real severity concept today. |
+| Connectors (`connectorCircuitBreakerService.ts`) | **No native severity field**, and — verified, not assumed — `connectorStatusService.ts`'s static config categories (`live`/`missing_config`/`foundation_only`/`placeholder`/`disabled`) cannot distinguish "never configured" from "broke," so those are NOT used for inclusion (see the Connector normalization fix section above). Only a connector with `isOpen(connectorId) === true` (a real, currently-tripped circuit from actual recent failures) qualifies at all. | `medium`. Still the roughest severity in this table since circuit-breaker state carries no native severity scale either, but the *inclusion criterion* is now a genuine degradation signal instead of a static configuration category. |
 
 ## Sorting
 
@@ -82,8 +102,8 @@ Per Phase 1 spec §8 (added during the self-critique pass earlier this session):
 
 ## Testing approach (TDD, per the executing-plans convention already used in Phase 1)
 
-1. Unit tests for `attentionAggregatorService.ts`'s merge/normalize/sort logic, mocking all 5 source functions — covering: correct severity mapping per source, correct sort order (severity then recency), correct `actionable`/`onApprove`/`onReject` wiring only for the two approval sources.
-2. Component test for the Mission Control page consuming the service (mocked), covering: rendering items, empty state, inline approve/reject triggering the right underlying call for the right source.
+1. Unit tests for `attentionAggregatorService.ts`'s merge/normalize/sort logic, mocking all 5 source functions — covering: correct severity mapping per source, correct sort order (severity then recency), correct `actionable`/`onApprove`/`onReject` wiring only for the two approval sources, **one source throwing does not prevent the other 4's items from being returned** (self-critique fix #3), and **a connector with `isOpen() === false` never produces an item regardless of its `deriveConnectorStatus()` category** (self-critique fix #1 — the regression test for the exact bug this fix corrects).
+2. Component test for the Mission Control page consuming the service (mocked), covering: rendering items, empty state, inline approve/reject triggering the right underlying call for the right source, and **dismissing a non-actionable item removes it from view but a fresh poll with a genuinely new item's `id` still shows that new one** (self-critique fix #4).
 
 ## Explicitly open / deferred (not resolved by this spec)
 
