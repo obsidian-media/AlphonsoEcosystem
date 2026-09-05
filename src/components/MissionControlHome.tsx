@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { listApprovalQueue, listAgentPackets } from '../services/agentBusService';
 import { listAgentActivity } from '../services/agentActivityService';
+import { getAttentionItems, type AttentionItem } from '../services/attentionAggregatorService';
 import alphonsoBanner from '../../logo-banner-thumbnail-media/ALPHONSO_BANNER.webp';
 import alphonsoIcon from '../../logo-banner-thumbnail-media/ALPHONSO_ICON.webp';
 import alphonsoLogo from '../../logo-banner-thumbnail-media/ALPHONSO_LOGO.webp';
@@ -64,6 +65,27 @@ export function MissionControlHome({
     return { approvals, packets, activity, recentLogs };
   }, [verificationLogs]);
 
+  const [attentionItems, setAttentionItems] = React.useState<AttentionItem[]>([]);
+  React.useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      const items = await getAttentionItems();
+      if (!cancelled) setAttentionItems(items);
+    };
+    poll();
+    const id = window.setInterval(poll, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const ATTENTION_SOURCE_META: Record<AttentionItem['source'], { tab: string; cta: string; icon: React.ComponentType<{ className?: string }> }> = {
+    'approval-chat': { tab: 'orchestrator', cta: 'Open Jose', icon: Crown },
+    'approval-project': { tab: 'project_execution', cta: 'Open Project Exec', icon: Sparkles },
+    connector: { tab: 'connectors', cta: 'Open Connectors', icon: RadioTower },
+  };
+
   const nextActions = useMemo(() => {
     const items: Array<{
       title: string;
@@ -73,9 +95,19 @@ export function MissionControlHome({
       icon: React.ComponentType<{ className?: string }>;
       accent: string;
     }> = [];
-    if (snapshot.approvals.length > 0) {
-      items.push({ title: 'Review approvals', detail: `${snapshot.approvals.length} agent handoff${snapshot.approvals.length === 1 ? '' : 's'} need a decision`, cta: 'Open Jose', tab: 'orchestrator', icon: Crown, accent: 'text-[var(--warning)]' });
-    }
+
+    attentionItems.forEach((item) => {
+      const meta = ATTENTION_SOURCE_META[item.source];
+      items.push({
+        title: item.title,
+        detail: item.detail || 'Needs a decision',
+        cta: meta.cta,
+        tab: meta.tab,
+        icon: meta.icon,
+        accent: 'text-[var(--warning)]',
+      });
+    });
+
     if (coachIntervention?.level === 'hard' || coachIntervention?.level === 'firm') {
       items.push({ title: 'Coach intervention', detail: coachIntervention.message || 'Active protective intervention', cta: 'Open Operator', tab: 'operator', icon: Shield, accent: 'text-[var(--error)]' });
     }
@@ -85,7 +117,7 @@ export function MissionControlHome({
     items.push({ title: 'Continue your mission', detail: 'Use Project Execution for structured work packets and proof-first planning', cta: 'Open Project Exec', tab: 'project_execution', icon: Sparkles, accent: 'text-[var(--accent)]' });
     items.push({ title: 'Talk to Alphonso', detail: 'Direct commands, research, and Jose delegation', cta: 'Open Chat', tab: 'chat', icon: MessageSquare, accent: 'text-cyan-400' });
     return items.slice(0, 4);
-  }, [snapshot.approvals.length, coachIntervention, ollamaStatus]);
+  }, [attentionItems, coachIntervention, ollamaStatus]);
 
   const feed = useMemo(() => {
     const activityItems = snapshot.activity.map((item: { agent?: string; action?: string; detail?: string; ts?: number }) => ({
