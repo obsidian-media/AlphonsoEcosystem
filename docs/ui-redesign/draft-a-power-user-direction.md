@@ -1,6 +1,6 @@
 # Draft A — Power-User Visual Direction
 
-Status: **Draft, in progress, skeleton superseded once (see Revision 2 below).** Captured from live brainstorming with real mockups in the visual companion browser tool, iterated across ~15+ rounds total, including two full structural rejections and one course-correction anchored to real reference apps.
+Status: **Locked for Phase 1 spec.** Validated against real nested-tab pages (Connectors' real live/foundation_only/placeholder/disabled status categories + zero-cost-mode blocking; Automation's real 4 internal tabs Overview/Builder/Schedules/Dead Letter) — the 5-room skeleton holds up against real page complexity, not just illustrative content. Full page-by-page pixel-accurate design is explicitly still ahead in Phase 2 — this lock covers skeleton + visual language only, not every page's exact layout. Captured from live brainstorming with real mockups in the visual companion browser tool, iterated across ~15+ rounds total, including two full structural rejections and one course-correction anchored to real reference apps.
 
 ## Revision history (do not silently discard — later rounds found real problems in earlier ones)
 
