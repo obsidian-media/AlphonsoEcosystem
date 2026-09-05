@@ -9,3 +9,4 @@ export { StatusDot } from './StatusDot';
 export { Spinner, LoadingState } from './LoadingState';
 export { ProgressRing } from './ProgressRing';
 export { Skeleton, SkeletonList, SkeletonCard } from './Skeleton';
+export { Zone } from './Zone';
