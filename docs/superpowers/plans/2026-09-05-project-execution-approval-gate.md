@@ -715,8 +715,12 @@ vi.mock('../components/research/HectorResearchPanel', () => ({ HectorResearchPan
 vi.mock('../components/agentWorkshop/SystemHealthPanel', () => ({ SystemHealthPanel: () => <div data-testid="system-health" /> }));
 
 import { ProjectExecutionMode } from '../components/projectExecution/ProjectExecutionMode';
-import { runProjectWorkshop } from '../services/agentWorkshop/agentRunnerService';
+// vi.mocked() gives the mocked import its Mock type back -- TS otherwise infers
+// the real function's type from agentRunnerService.js and rejects .mockImplementation.
+import { runProjectWorkshop as runProjectWorkshopImport } from '../services/agentWorkshop/agentRunnerService';
 import { createApprovalRequest } from '../services/approval/approvalService';
+
+const runProjectWorkshop = vi.mocked(runProjectWorkshopImport);
 
 function makeWorkshopResult(traceId) {
   return {
@@ -742,10 +746,15 @@ function mockWorkshop(traceId, gateSpecs) {
   });
 }
 
-function generatePacket() {
+// AnimatePresence (mode="wait") delays mounting the next tab's content until the
+// previous tab's exit transition completes, which takes real wall-clock time even
+// in jsdom (found live during Task 4/5 execution, not assumed) -- so each tab
+// switch needs an async wait via findBy*, not an immediate query.
+async function generatePacket() {
   fireEvent.change(screen.getByTestId('project-name-input'), { target: { value: 'Test Project' } });
   fireEvent.click(screen.getByRole('button', { name: /Continue to Execution/i }));
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+  const generateBtn = await screen.findByRole('button', { name: 'Generate' });
+  fireEvent.click(generateBtn);
 }
 
 describe('ProjectExecutionMode — approval gate', () => {
@@ -754,48 +763,51 @@ describe('ProjectExecutionMode — approval gate', () => {
     vi.clearAllMocks();
   });
 
-  it('routes to the Approval tab (not Results) after Generate when gates are pending, and disables Results', () => {
+  it('routes to the Approval tab (not Results) after Generate when gates are pending, and disables Results', async () => {
     mockWorkshop('trace-1', [{ actionType: 'file_write', riskLevel: 'high', reason: 'Prevent unsupervised writes.' }]);
     render(<ProjectExecutionMode />);
-    generatePacket();
+    await generatePacket();
 
-    expect(screen.getByText('1 item awaiting approval')).toBeTruthy();
+    expect(await screen.findByText('1 item awaiting approval')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Results' })).toBeDisabled();
   });
 
-  it('does not navigate to Results when the disabled Results tab is clicked directly', () => {
+  it('does not navigate to Results when the disabled Results tab is clicked directly', async () => {
     mockWorkshop('trace-2', [{ actionType: 'deployment', riskLevel: 'critical', reason: 'Needs approval.' }]);
     render(<ProjectExecutionMode />);
-    generatePacket();
+    await generatePacket();
+    await screen.findByText('1 item awaiting approval');
 
     fireEvent.click(screen.getByRole('button', { name: 'Results' }));
     expect(screen.queryByText('No execution packet yet.')).toBeNull();
     expect(screen.getByText('1 item awaiting approval')).toBeTruthy();
   });
 
-  it('enables and reveals Results with the full packet once every gate is approved', () => {
+  it('enables and reveals Results with the full packet once every gate is approved', async () => {
     mockWorkshop('trace-3', [{ actionType: 'file_write', riskLevel: 'high', reason: 'Needs approval.' }]);
     render(<ProjectExecutionMode />);
-    generatePacket();
+    await generatePacket();
+    await screen.findByText('1 item awaiting approval');
 
     fireEvent.click(screen.getByRole('button', { name: /Approve/i }));
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
 
+    expect(await screen.findByTestId('final-packet')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Results' })).not.toBeDisabled();
-    expect(screen.getByTestId('final-packet')).toBeTruthy();
     expect(screen.queryByText(/BLOCKED/i)).toBeNull();
   });
 
-  it('shows a blocked banner in Results when a gate is denied', () => {
+  it('shows a blocked banner in Results when a gate is denied', async () => {
     mockWorkshop('trace-4', [{ actionType: 'deployment', riskLevel: 'critical', reason: 'Needs approval.' }]);
     render(<ProjectExecutionMode />);
-    generatePacket();
+    await generatePacket();
+    await screen.findByText('1 item awaiting approval');
 
     fireEvent.click(screen.getByRole('button', { name: /Deny/i }));
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
 
+    expect(await screen.findByText(/BLOCKED — one or more approval gates were denied/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Results' })).not.toBeDisabled();
-    expect(screen.getByText(/BLOCKED — one or more approval gates were denied/i)).toBeTruthy();
   });
 
   it('no longer renders the Setup-tab approval/audit/verification/dependencies toggle group', () => {
@@ -805,15 +817,17 @@ describe('ProjectExecutionMode — approval gate', () => {
     expect(screen.queryByText(/Verification/i)).toBeNull();
     expect(screen.queryByText(/^Audit/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Proposal' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Execution' })).toBeTruthy();
+    // Two "Execution" buttons are expected: the top-nav Execution tab and the
+    // Proposal/Execution mode toggle -- both must survive the toggle-group removal.
+    expect(screen.getAllByRole('button', { name: 'Execution' }).length).toBe(2);
   });
 
-  it('no longer renders an Approval Gates card in Results', () => {
+  it('no longer renders an Approval Gates card in Results', async () => {
     mockWorkshop('trace-6', []);
     render(<ProjectExecutionMode />);
-    generatePacket();
+    await generatePacket();
 
-    expect(screen.getByTestId('final-packet')).toBeTruthy();
+    expect(await screen.findByTestId('final-packet')).toBeTruthy();
     expect(screen.queryByText('Approval Gates')).toBeNull();
   });
 });
@@ -1113,18 +1127,39 @@ with:
 git rm src/components/agentWorkshop/ApprovalGatePanel.tsx
 ```
 
+`npx tsc --noEmit` will then surface a second importer this plan's earlier grep missed:
+`src/components/EcosystemHub.tsx` renders `<ApprovalGatePanel gates={[]} />` inside its
+static "Workshop" showcase tab (a demo panel with all-empty dummy data — `packets={[]}`,
+`outputs={[]}`, etc. — not a real data path). Remove that one line and its import too:
+
+```tsx
+import { ApprovalGatePanel } from './agentWorkshop/ApprovalGatePanel';
+```
+→ delete this import line entirely.
+
+```tsx
+              <AgentOutputPanel outputs={[]} />
+              <ApprovalGatePanel gates={[]} />
+              <ExecutionTimeline timeline={[]} />
+```
+→
+```tsx
+              <AgentOutputPanel outputs={[]} />
+              <ExecutionTimeline timeline={[]} />
+```
+
 - [ ] **Step 9: Run the tests to verify they pass**
 
 Run: `npx vitest run src/test/ProjectExecutionMode.test.tsx`
 Expected: PASS (all 6 tests from Task 4).
 
 Run: `npx tsc --noEmit`
-Expected: 0 errors (confirms no dangling reference to the deleted `ApprovalGatePanel` or removed `execState`/`getExecutionApprovalState`/`setExecutionApprovalState`).
+Expected: 0 errors (confirms no dangling reference to the deleted `ApprovalGatePanel` or removed `execState`/`getExecutionApprovalState`/`setExecutionApprovalState`). If the mocked `runProjectWorkshop` import in the test file surfaces `.mockImplementation`/`.mockReturnValue` type errors, wrap it with `vi.mocked()` (TS otherwise infers the real function's much wider return type from `agentRunnerService.js` and rejects the mock calls) and cast `makeWorkshopResult`'s return value through `as unknown as ReturnType<typeof runProjectWorkshopImport>` rather than reproducing that whole real shape in the test fixture.
 
 - [ ] **Step 10: Commit**
 
 ```bash
-git add src/components/projectExecution/ProjectExecutionMode.tsx
+git add src/components/projectExecution/ProjectExecutionMode.tsx src/components/EcosystemHub.tsx
 git commit -m "feat(project-execution): wire the real approval gate, remove dead Setup toggle and ApprovalGatePanel"
 ```
 

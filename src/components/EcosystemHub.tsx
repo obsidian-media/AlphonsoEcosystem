@@ -45,7 +45,6 @@ import { AgentPairingView } from './AgentPairingView';
 import { ProjectIntakePanel } from './agentWorkshop/ProjectIntakePanel';
 import { AgentAssignmentBoard } from './agentWorkshop/AgentAssignmentBoard';
 import { AgentOutputPanel } from './agentWorkshop/AgentOutputPanel';
-import { ApprovalGatePanel } from './agentWorkshop/ApprovalGatePanel';
 import { ExecutionTimeline } from './agentWorkshop/ExecutionTimeline';
 import { FinalExecutionPacket } from './agentWorkshop/FinalExecutionPacket';
 import { SystemHealthPanel } from './agentWorkshop/SystemHealthPanel';
@@ -407,7 +406,6 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
               />
               <AgentAssignmentBoard packets={[]} />
               <AgentOutputPanel outputs={[]} />
-              <ApprovalGatePanel gates={[]} />
               <ExecutionTimeline timeline={[]} />
               <FinalExecutionPacket finalPacket={null} />
             </div>
