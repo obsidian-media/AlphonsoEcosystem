@@ -6,6 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.7.1] — 2026-09-05 (auto-updater installer fix)
+
+- **Fixed a real, live-discovered auto-updater bug**: the first ever live
+  end-to-end test of the v2.7.0 in-app auto-updater (PR #98) confirmed the
+  notification banner, real download, progress UI, and Later button all
+  work correctly, but the NSIS installer then aborted mid-extraction with
+  `error writing to file ollama\lib\ollama\cuda_v12\cublasLt64_12.dll`.
+  Root cause: Alphonso's own Runtime-Hub-managed Ollama process was still
+  running and holding a lock on its bundled CUDA DLLs, which the in-place
+  upgrade overwrites. `UpdaterNotification.tsx` now stops every currently
+  running Runtime Hub tool (via `getAllStatus()`/`stopTool()`, best-effort,
+  never blocking the update on failure) before `downloadAndInstall()` runs.
+  `stopTool()` only kills PIDs Alphonso itself tracked as spawned, so this
+  cannot touch a process the user runs independently. See
+  `docs/governance/DEFERRED_WORK.md`'s 2026-09-04 entry for the full
+  incident record; PR #221.
+- This release exists specifically so the fix above can be live-verified
+  against a real signed installer — do not consider the auto-updater item
+  closed until that second live test confirms the installer no longer
+  aborts.
+
+---
+
 ## [2.7.0] — 2026-09-04 (memory knowledge graph, Gemini/Hermes fixes)
 
 - **Memory knowledge graph, full 4-phase roadmap through Phase 3**:
