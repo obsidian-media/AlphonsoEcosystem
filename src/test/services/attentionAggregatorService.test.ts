@@ -10,9 +10,6 @@ vi.mock('../../services/approval/approvalService.js', () => ({
   approveRequest: vi.fn(),
   rejectRequest: vi.fn(),
 }));
-vi.mock('../../services/coachHistoryService', () => ({
-  getCoachHistory: vi.fn(),
-}));
 vi.mock('../../services/connectorCircuitBreakerService', () => ({
   getAll: vi.fn(),
   isOpen: vi.fn(),
@@ -23,7 +20,6 @@ vi.mock('../../services/connectors/connectorRegistry.js', () => ({
 
 import { listApprovalQueue, approvePacket, rejectPacket } from '../../services/agentBusService';
 import { listPendingApprovals, approveRequest, rejectRequest } from '../../services/approval/approvalService.js';
-import { getCoachHistory } from '../../services/coachHistoryService';
 import { getAll, isOpen } from '../../services/connectorCircuitBreakerService';
 import { getAttentionItems } from '../../services/attentionAggregatorService';
 
@@ -32,7 +28,6 @@ describe('attentionAggregatorService', () => {
     vi.clearAllMocks();
     (listApprovalQueue as any).mockReturnValue([]);
     (listPendingApprovals as any).mockReturnValue([]);
-    (getCoachHistory as any).mockReturnValue([]);
     (getAll as any).mockReturnValue({});
     (isOpen as any).mockReturnValue(false);
   });
@@ -91,31 +86,6 @@ describe('attentionAggregatorService', () => {
     expect(rejectRequest).toHaveBeenCalledWith('approval-2');
   });
 
-  it('maps a Coach critical signal to critical severity, non-actionable', async () => {
-    (getCoachHistory as any).mockReturnValue([
-      { id: 'coach-1', severity: 'critical', message: 'Repeated pipeline failure detected', detectedAtMs: 2000 },
-    ]);
-    const items = await getAttentionItems();
-    expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({
-      id: 'coach-coach-1',
-      source: 'coach',
-      severity: 'critical',
-      title: 'Repeated pipeline failure detected',
-      timestamp: 2000,
-      actionable: false,
-    });
-    expect(items[0].onApprove).toBeUndefined();
-  });
-
-  it('maps a Coach warning signal to medium severity (not a native match, documented mapping)', async () => {
-    (getCoachHistory as any).mockReturnValue([
-      { id: 'coach-2', severity: 'warning', message: 'Approval theater detected', detectedAtMs: 2000 },
-    ]);
-    const items = await getAttentionItems();
-    expect(items[0].severity).toBe('medium');
-  });
-
   it('only includes a connector whose circuit is actually open, using DEFAULT_CONNECTORS for its display name', async () => {
     (getAll as any).mockReturnValue({
       github: { state: 'open', failures: 5, lastFailure: 3000 },
@@ -138,31 +108,30 @@ describe('attentionAggregatorService', () => {
     (listApprovalQueue as any).mockReturnValue([
       { id: 'low-old', title: 'Low, old', riskLevel: 'low', createdAtMs: 100 },
       { id: 'high-new', title: 'High, new', riskLevel: 'high', createdAtMs: 500 },
-    ]);
-    (getCoachHistory as any).mockReturnValue([
-      { id: 'crit-1', severity: 'critical', message: 'Critical', detectedAtMs: 200 },
+      { id: 'crit-1', title: 'Critical', riskLevel: 'critical', createdAtMs: 200 },
     ]);
     const items = await getAttentionItems();
     expect(items.map((i) => i.id)).toEqual([
-      'coach-crit-1',
+      'approval-chat-crit-1',
       'approval-chat-high-new',
       'approval-chat-low-old',
     ]);
   });
 
-  it('isolates a failing source — one source throwing does not prevent the other 3 sources from returning items', async () => {
+  it('isolates a failing source — one source throwing does not prevent the other 2 sources from returning items', async () => {
     (listApprovalQueue as any).mockImplementation(() => {
       throw new Error('agentBusService is down');
     });
-    (getCoachHistory as any).mockReturnValue([
-      { id: 'coach-1', severity: 'critical', message: 'Still works', detectedAtMs: 1000 },
-    ]);
+    (getAll as any).mockReturnValue({
+      github: { state: 'open', failures: 5, lastFailure: 1000 },
+    });
+    (isOpen as any).mockReturnValue(true);
     const items = await getAttentionItems();
     expect(items).toHaveLength(1);
-    expect(items[0].id).toBe('coach-coach-1');
+    expect(items[0].id).toBe('connector-github');
   });
 
-  it('returns an empty array when all 4 sources have nothing', async () => {
+  it('returns an empty array when all 3 sources have nothing', async () => {
     const items = await getAttentionItems();
     expect(items).toEqual([]);
   });

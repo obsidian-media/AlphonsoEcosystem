@@ -1,10 +1,15 @@
 import { listApprovalQueue, approvePacket, rejectPacket } from './agentBusService';
 import { listPendingApprovals, approveRequest, rejectRequest } from './approval/approvalService.js';
-import { getCoachHistory } from './coachHistoryService';
 import { getAll as getAllCircuits, isOpen as isCircuitOpen } from './connectorCircuitBreakerService';
 import { DEFAULT_CONNECTORS } from './connectors/connectorRegistry.js';
 
-export type AttentionSource = 'approval-chat' | 'approval-project' | 'coach' | 'connector';
+// Coach was deliberately dropped as a source (see Bug Log #5): tracing
+// CoachContext.jsx revealed 3 distinct, unreconciled "coach signal" paths
+// (local detector state, coachHistoryService's log, and a separate external
+// engine-event store) with no durable "resolved" concept anywhere —
+// reconciling that is real Coach-subsystem work, not something this
+// aggregator should invent a fix for.
+export type AttentionSource = 'approval-chat' | 'approval-project' | 'connector';
 export type AttentionSeverity = 'critical' | 'high' | 'medium' | 'low';
 
 export interface AttentionItem {
@@ -48,22 +53,6 @@ function fromProjectApprovals(): AttentionItem[] {
   }));
 }
 
-// Coach's severity vocabulary ('critical'/'warning'/'neutral'/'positive') is
-// not the same scale as the shared AttentionSeverity — only 'critical' and
-// 'warning' ever actually fire (coachEngineService.ts's own gate), and
-// 'warning' maps to 'medium' rather than inventing a 6th shared tier for one
-// source. See 07-phase2-mission-control-spec.md's severity table.
-function fromCoach(): AttentionItem[] {
-  return getCoachHistory().map((signal) => ({
-    id: `coach-${signal.id}`,
-    source: 'coach' as const,
-    severity: signal.severity === 'critical' ? 'critical' : 'medium',
-    title: signal.message,
-    timestamp: signal.detectedAtMs,
-    actionable: false,
-  }));
-}
-
 // Only a connector whose circuit is genuinely open (tripped by real recent
 // failures) qualifies — never a merely-unconfigured/disabled connector. See
 // 07-phase2-mission-control-spec.md's "Connector normalization fix" section
@@ -97,7 +86,6 @@ export async function getAttentionItems(): Promise<AttentionItem[]> {
   const results = await Promise.allSettled([
     safeCollect(fromChatApprovals),
     safeCollect(fromProjectApprovals),
-    safeCollect(fromCoach),
     safeCollect(fromConnectors),
   ]);
 

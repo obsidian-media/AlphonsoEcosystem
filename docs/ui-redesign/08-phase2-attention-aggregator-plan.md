@@ -8,7 +8,9 @@
 
 **Tech Stack:** TypeScript, Vitest.
 
-**Scope note:** Sentinel security findings were dropped from this build — verified that `sentinelSecurityService.ts`'s only real caller (`RightPanel.tsx`'s `runQuickScan`) calls `scanForThreats('', {})`, which can never match any pattern against an empty string, so there is currently no real Sentinel finding to surface. Logged as a separate real bug (Bug Log #4) rather than building a source around it. 4 sources are in this plan, not 5.
+**Scope note:** Sentinel security findings were dropped from this build — verified that `sentinelSecurityService.ts`'s only real caller (`RightPanel.tsx`'s `runQuickScan`) calls `scanForThreats('', {})`, which can never match any pattern against an empty string, so there is currently no real Sentinel finding to surface. Logged as a separate real bug (Bug Log #4) rather than building a source around it.
+
+**AMENDMENT (post-write, during Task 2 execution): Coach was also dropped from this build.** Everything below this line — the goal statement above, Task 2's real-API list, its code, and its tests — was written and initially implemented against a 4-source design (both approvals, Coach, connectors). Tracing the Coach subsystem live during implementation surfaced 3 distinct, unreconciled "coach signal" paths with no durable "resolved" concept anywhere (Bug Log #5) — pulling from any of them risked resurfacing an already-dismissed intervention. **The actually-committed code has 3 sources, not 4** (`approval-chat`, `approval-project`, `connector` — no `coach`). The code/test blocks below are preserved as written for an honest record of what was planned and initially built, not edited to pretend Coach was never in scope — but do not copy them as-is; read `src/services/attentionAggregatorService.ts` and `src/test/services/attentionAggregatorService.test.ts` directly for the real, current, 3-source implementation.
 
 ---
 
