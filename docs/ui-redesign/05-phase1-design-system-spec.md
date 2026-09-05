@@ -52,6 +52,14 @@ Radius: 0 as the base assumption for structural elements (dividers, section boun
 
 ---
 
+## 2.4 Multi-theme: accent hue is a separate token layer from status hue
+
+Both user tracks get a selectable accent theme, independent of light/dark mode: **Blue, Green, Purple**, each with a light and dark variant — 6 combinations total (Blue-light/dark, Green-light/dark, Purple-light/dark), available to both power-user and normal-user tracks.
+
+**Real conflict this creates, resolved here rather than left implicit:** status colors (`live` = green `#3ecf8e`/`#50d296`, `needs-review` = amber, `error/off` = red) are semantic and fixed — they mean the same thing regardless of which accent theme is active. If a user picks the Green accent theme, their brand color and the "this connector is live" signal would collide if they shared one token. **Fix: accent hue and status hue are two independent token layers, never merged.** Accent theme only touches non-semantic UI — active-nav indicators, primary buttons/links, the per-room "active" pill highlight, avatar ring colors. It never touches a status dot, a live/review/error badge, or anything whose color currently carries meaning about system state. When Green accent is active, status-green and accent-green will look similar — mitigate with a distinct saturation/lightness offset between the two (status green stays exactly as specified above; accent green is a different, clearly distinguishable shade), not by changing what status green means.
+
+Room-mood colors (Draft A's Research=amber, Work=sage, Boardroom=plum) are a third, separate layer from both accent and status — they don't change when the user picks a different accent theme. Whether room-mood colors should also respect a user's accent choice (e.g. a Purple-accent user gets a slightly purple-shifted Research room) is an open item, not decided here — default assumption is rooms stay as designed regardless of accent theme, to avoid five-way color conflicts across three independent token layers.
+
 ## 3. Component primitives — what to build/extend
 
 Existing shared kit: `src/components/ui/` (`Badge`, `Button`, `Card`, `EmptyState`, `Input`, `LoadingState`, `Modal`, `ProgressRing`, `Skeleton`, `StatusDot`, `Tabs`), re-exported from `index.ts`. Per repo convention, extend this barrel, don't create a second one.
@@ -95,6 +103,14 @@ These were found during Phase 0 discovery and are cheap to fix while already tou
 Both systems use color to carry real meaning (status dots, badges, mood washes). WCAG 2.2 requires this not be color-only — every status indicator needs a paired icon or text label, not color alone, so colorblind users aren't excluded from approval-gate information. This applies to the ambient status dots (§ Draft A RightPanel decision) especially, since those are deliberately small.
 
 ---
+
+## 8. Decisions from self-critique (user agreed with all except keeping 2 systems, which stays as-is)
+
+- **"Days together" streak — cut from default scope.** Borrowed uncritically from Duolingo without a real justification for a productivity/control-plane tool; gamifying engagement here risks reading as manipulative rather than charming, especially once real approvals/security actions are involved. **Removed from Phase 1/2 scope** unless a real product reason for it surfaces later — don't build it by default.
+- **Mascot tone vs. governance seriousness — required Phase 2 validation, with a proposed hedge.** Cute agent portraits are charming for Hector's research or Miya's creative work, but may undercut the seriousness of Maria's risk audits or Sentinel's security scans. Proposed hedge to test in Phase 2: governance-heavy agents (Maria, Sentinel, Marcus) get a slightly more composed/serious crop or framing of their existing portrait for high-stakes moments (an actual approval dialog), while the full charming illustration stays for low-stakes contexts (chat, the agent-shortcut row). Not designed yet — flagged as a required test, not assumed resolved.
+- **5-room coherence — required Phase 2 pressure-test, with a mitigation.** Distinct per-room moods risk reading as five stitched-together apps rather than one product. Mitigation to carry into Phase 2: keep a consistent "spine" across all 5 rooms regardless of color — same typography scale/weights, same spacing rhythm, same motion language (the breathing-glow timing, transition easing) — so rooms differ in color mood but feel structurally like one app. Explicitly test this by moving between rooms in a real build, not just static per-room screenshots (which is all that's been validated so far).
+- **Zone/wash scaling — required stress-test, not assumed to hold.** Only validated at illustrative scale (2-3 sections). Required Phase 2 stress-test cases: the real Connectors page (25 connectors) and System room's five real sub-pages. If washes become visually noisy past a handful of sections, the fallback is plain hairline-divided rows for high-density lists, reserving washes for genuinely small groupings (2-4 sections) only.
+- **Empty / loading / error states — added as a real Phase 1 deliverable, not deferred.** Every mockup so far showed only the happy path. Concrete direction now specified: `EmptyState` uses the current room's mood wash + a friendly icon/illustration slot (no jargon copy); `Skeleton`/`LoadingState` use a subtle pulse animation, never a hard-edged gray box (would violate the no-cards rule); error states pair the status-red color with an icon and plain-language text per the §7 accessibility requirement (never color alone). These need real mockups in Phase 2 before any page is called done — a page redesign that only shows its happy-path state isn't complete.
 
 ## Open items carried forward (not resolved by this spec, for Phase 2 to pick up)
 
