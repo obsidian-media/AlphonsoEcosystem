@@ -1109,6 +1109,15 @@ export async function runHectorLiveResearch(reportId, onProgress) {
   });
   onProgress?.(updated);
 
+  let finalReport = updated;
+  if (successProofs.length > 0) {
+    const synthesis = await synthesizeHectorResearch(workingReport.researchQuestion, successProofs);
+    if (synthesis) {
+      finalReport = updateReport(reportId, { synthesis, summary: synthesis.overview });
+      onProgress?.(finalReport);
+    }
+  }
+
   successProofs.forEach((proof) => {
     pushMemoryItem({
       title: `Hector verified source: ${proof.title || proof.url}`,
@@ -1143,6 +1152,21 @@ export async function runHectorLiveResearch(reportId, onProgress) {
     confidence: successProofs.length ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED,
     verificationState: successProofs.length ? TRUST_STATES.VERIFIED : TRUST_STATES.FAILED
   });
+  return finalReport;
+}
+
+export async function resynthesizeHectorReport(reportId, onProgress) {
+  const report = listHectorReports().find((item) => item.id === reportId);
+  if (!report) throw new Error('Hector report not found.');
+  const successProofs = Array.isArray(report.sourceProofs) ? report.sourceProofs.filter((p) => p.ok) : [];
+  if (successProofs.length === 0) return null;
+
+  const synthesis = await synthesizeHectorResearch(report.researchQuestion, successProofs);
+  if (!synthesis) return null;
+
+  const updated = updateReport(reportId, { synthesis, summary: synthesis.overview });
+  onProgress?.(updated);
+  recordHectorActivity('synthesis_retried', { reportId });
   return updated;
 }
 

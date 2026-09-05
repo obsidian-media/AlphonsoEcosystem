@@ -267,7 +267,10 @@ describe('runHectorLiveResearch synthesis wiring', () => {
     mockGenerateAgentLlmResponse.mockResolvedValue({
       response: JSON.stringify({ overview: 'Synthesized overview.', keyFindings: ['f1'], disagreements: [], gaps: [] })
     });
-    const draft = createResearchDraft({ researchQuestion: 'How does Alphonso verify WhatsApp webhooks?' });
+    const draft = createResearchDraft({
+      researchQuestion: 'Does Alphonso verify webhooks?',
+      sourceUrls: ['https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks']
+    });
     const report = await runHectorLiveResearch(draft.id);
 
     expect(report.synthesis).toEqual({ overview: 'Synthesized overview.', keyFindings: ['f1'], disagreements: [], gaps: [] });
@@ -276,7 +279,10 @@ describe('runHectorLiveResearch synthesis wiring', () => {
 
   it('keeps todays fallback verifiedFacts/inferredPoints and summary when synthesis fails', async () => {
     mockGenerateAgentLlmResponse.mockRejectedValue(new Error('ollama down'));
-    const draft = createResearchDraft({ researchQuestion: 'How does Alphonso verify WhatsApp webhooks?' });
+    const draft = createResearchDraft({
+      researchQuestion: 'Does Alphonso verify webhooks?',
+      sourceUrls: ['https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks']
+    });
     const report = await runHectorLiveResearch(draft.id);
 
     expect(report.synthesis).toBeUndefined();
@@ -293,7 +299,10 @@ describe('resynthesizeHectorReport', () => {
 
   it('re-runs synthesis from stored sourceProofs without re-fetching', async () => {
     mockGenerateAgentLlmResponse.mockRejectedValueOnce(new Error('ollama down'));
-    const draft = createResearchDraft({ researchQuestion: 'How does Alphonso verify WhatsApp webhooks?' });
+    const draft = createResearchDraft({
+      researchQuestion: 'Does Alphonso verify webhooks?',
+      sourceUrls: ['https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks']
+    });
     const failedReport = await runHectorLiveResearch(draft.id);
     expect(failedReport.synthesis).toBeUndefined();
 

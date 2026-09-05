@@ -434,3 +434,68 @@ describe('synthesizeHectorResearch', () => {
     expect(mockGenerateAgentLlmResponse).not.toHaveBeenCalled();
   });
 });
+
+describe('runHectorLiveResearch synthesis wiring', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockGenerateAgentLlmResponse.mockReset();
+  });
+
+  it('sets report.synthesis and updates summary to the overview on successful synthesis', async () => {
+    mockGenerateAgentLlmResponse.mockResolvedValue({
+      response: JSON.stringify({ overview: 'Synthesized overview.', keyFindings: ['f1'], disagreements: [], gaps: [] })
+    });
+    const draft = createResearchDraft({
+      researchQuestion: 'Does Alphonso verify webhooks?',
+      sourceUrls: ['https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks']
+    });
+    const report = await runHectorLiveResearch(draft.id);
+
+    expect(report.synthesis).toEqual({ overview: 'Synthesized overview.', keyFindings: ['f1'], disagreements: [], gaps: [] });
+    expect(report.summary).toBe('Synthesized overview.');
+  });
+
+  it('keeps todays fallback verifiedFacts/inferredPoints and summary when synthesis fails', async () => {
+    mockGenerateAgentLlmResponse.mockRejectedValue(new Error('ollama down'));
+    const draft = createResearchDraft({
+      researchQuestion: 'Does Alphonso verify webhooks?',
+      sourceUrls: ['https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks']
+    });
+    const report = await runHectorLiveResearch(draft.id);
+
+    expect(report.synthesis).toBeUndefined();
+    expect(report.verifiedFacts.length).toBeGreaterThan(0);
+    expect(report.summary).toContain('Fetched');
+  });
+});
+
+describe('resynthesizeHectorReport', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockGenerateAgentLlmResponse.mockReset();
+  });
+
+  it('re-runs synthesis from stored sourceProofs without re-fetching', async () => {
+    mockGenerateAgentLlmResponse.mockRejectedValueOnce(new Error('ollama down'));
+    const draft = createResearchDraft({
+      researchQuestion: 'Does Alphonso verify webhooks?',
+      sourceUrls: ['https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks']
+    });
+    const failedReport = await runHectorLiveResearch(draft.id);
+    expect(failedReport.synthesis).toBeUndefined();
+
+    mockGenerateAgentLlmResponse.mockResolvedValueOnce({
+      response: JSON.stringify({ overview: 'Retry succeeded.', keyFindings: [], disagreements: [], gaps: [] })
+    });
+    const retried = await resynthesizeHectorReport(draft.id);
+
+    expect(retried.synthesis.overview).toBe('Retry succeeded.');
+    expect(retried.summary).toBe('Retry succeeded.');
+  });
+
+  it('returns null when the report has no successful sourceProofs', async () => {
+    const draft = createResearchDraft({ researchQuestion: 'no sources question' });
+    const result = await resynthesizeHectorReport(draft.id);
+    expect(result).toBeNull();
+  });
+});
