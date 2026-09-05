@@ -120,7 +120,7 @@ Backend half (`attentionAggregatorService.ts`, 3 sources: `approval-chat`/`appro
 
 Down from 4 tiles to **2**, each carrying real context instead of a bare count:
 - **Approvals** — real count from `attentionAggregatorService`'s actionable items, plus "oldest waiting {duration}" computed from the oldest item's `timestamp` field (real data already available, not new to fetch).
-- **Active agents** — real count of agents with recent activity (see Open Items — exact signal/threshold not yet finalized) out of 9, plus a contextual sub-line (exact wording like "busier than your daily average" needs a real baseline to compare against — see Open Items, this is illustrative copy from the mockup, not a designed feature yet).
+- **Active agents** — real count of agents with recent activity (see Open Items — exact signal/threshold not yet finalized) out of 9, plus a sub-line naming which agents (e.g. "Alphonso, Jose, Hector") — **decided:** this replaces the mockup's "busier than your daily average" copy, which implied a historical baseline that doesn't exist. Naming the active agents uses only real, already-available data (the same list the breathing-glow strip already computes) rather than inventing a comparison.
 
 Memory and Coach counts explicitly removed from this row (were present in the original page, deemed "too big/bold for their importance" during brainstorming) — not relocated anywhere in this spec; if that data still matters somewhere, it's an explicit future decision, not assumed to belong on Home.
 
@@ -139,8 +139,7 @@ Both use the `Zone` primitive (warm wash for "What to do next," cool wash for "Q
 ## Explicitly open / deferred (not resolved by this spec)
 
 - **Exact "is this agent active" signal** for the breathing-glow strip and the "Active agents X/9" stat — `MissionControlHome.tsx` already imports `listAgentActivity()` from `agentActivityService.ts` (real, confirmed), but the exact recency threshold that counts as "active" (mockups used an illustrative "3 of 9" throughout) needs a real decision during implementation — not assumed here.
-- **"Busier than your daily average" is illustrative copy from the mockup, not a designed feature.** Computing a real daily-average baseline to compare against is real, separate logic (would need historical activity data over time) — do not implement literal copy like this without either building that baseline for real or replacing it with something honest that doesn't imply a comparison that doesn't exist.
-- **Session History / Digest as new Home-sidebar destinations** — a judgment call made during brainstorming (both are real, existing, currently-homeless components), not independently confirmed as definitely the right 2 additions. Worth a final gut-check before implementation, not treated as fully locked.
+- **Session History / Digest as new Home-sidebar destinations — CONFIRMED, keeping them.** Both are real, existing, currently-homeless components; this is a reasonable first placement, not deferred further.
 - Exact empty-state copy — a real implementation-time decision, not fixed in this spec (mockup text — "Nothing needs you right now" — is illustrative, not final).
 - Sidebar badge/ambient-dot wiring — separate task, explicitly out of scope (see Scope section).
 - Dark-mode tokens for the Home room — Phase 1 spec already flagged this as unresolved (only light-mode was mocked); this page's implementation will need a real decision here too, not deferred silently a second time.
