@@ -53,9 +53,18 @@ describe('synthesizeHectorResearch', () => {
     expect(prompt).not.toContain('A'.repeat(2001));
   });
 
-  it('gives a single source up to the full 6000-char budget', () => {
+  it('does not clip a single source when its text is shorter than the full budget', () => {
+    // SOURCES[0]'s snippet is 3000 chars; with only 1 source the budget is
+    // 6000, so the full 3000 chars should pass through unclipped.
     const prompt = buildHectorSynthesisPrompt('test question', [SOURCES[0]]);
-    expect((prompt.match(/A{6000}/) || [])[0]).toBeTruthy();
+    expect((prompt.match(/A{3000}/) || [])[0]).toBeTruthy();
+  });
+
+  it('clips a single source to the total budget when its text exceeds it', () => {
+    const longSource = { url: 'https://long.example.com', title: 'Long', snippet: 'Z'.repeat(9000) };
+    const prompt = buildHectorSynthesisPrompt('test question', [longSource]);
+    expect((prompt.match(/Z{6000}/) || [])[0]).toBeTruthy();
+    expect(prompt).not.toContain('Z'.repeat(6001));
   });
 
   it('divides the budget across 10 sources (the fetch_research_sources cap) without erroring', () => {

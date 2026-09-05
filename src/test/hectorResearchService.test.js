@@ -108,6 +108,12 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: vi.fn().mockReturnValue(false)
 }));
 
+const mockGenerateAgentLlmResponse = vi.fn();
+vi.mock('../lib/ollama', () => ({
+  generateAgentLlmResponse: (...args) => mockGenerateAgentLlmResponse(...args),
+  PREFERRED_MODEL: 'llama3.2:3b'
+}));
+
 import {
   createResearchDraft,
   fetchRssSources,
@@ -117,7 +123,11 @@ import {
   RSS_FEED_CATALOG,
   runHectorLiveResearch,
   runMultiSourceResearch,
-  scoreRssFeed
+  scoreRssFeed,
+  buildHectorSynthesisPrompt,
+  parseHectorSynthesisResponse,
+  synthesizeHectorResearch,
+  resynthesizeHectorReport
 } from '../services/hectorResearchService';
 
 describe('hector research provider failover', () => {
@@ -315,5 +325,112 @@ describe('runMultiSourceResearch Tavily and fallback', () => {
     expect(result.providerChain).toContain('tavily');
     expect(result.sources.length).toBeGreaterThan(0);
     expect(result.sources.some((s) => s.provider === 'tavily')).toBe(true);
+  });
+});
+
+describe('synthesizeHectorResearch', () => {
+  beforeEach(() => {
+    mockGenerateAgentLlmResponse.mockReset();
+  });
+
+  const SOURCES = [
+    { url: 'https://a.example.com', title: 'Source A', snippet: 'A'.repeat(3000) },
+    { url: 'https://b.example.com', title: 'Source B', snippet: 'B'.repeat(3000) },
+    { url: 'https://c.example.com', title: 'Source C', snippet: 'C'.repeat(3000) }
+  ];
+
+  it('divides the 6000-char total budget evenly across sources in the built prompt', () => {
+    const prompt = buildHectorSynthesisPrompt('test question', SOURCES);
+    expect((prompt.match(/A{2000}/) || [])[0]).toBeTruthy();
+    expect(prompt).not.toContain('A'.repeat(2001));
+  });
+
+  it('does not clip a single source when its text is shorter than the full budget', () => {
+    // SOURCES[0]'s snippet is 3000 chars; with only 1 source the budget is
+    // 6000, so the full 3000 chars should pass through unclipped.
+    const prompt = buildHectorSynthesisPrompt('test question', [SOURCES[0]]);
+    expect((prompt.match(/A{3000}/) || [])[0]).toBeTruthy();
+  });
+
+  it('clips a single source to the total budget when its text exceeds it', () => {
+    const longSource = { url: 'https://long.example.com', title: 'Long', snippet: 'Z'.repeat(9000) };
+    const prompt = buildHectorSynthesisPrompt('test question', [longSource]);
+    expect((prompt.match(/Z{6000}/) || [])[0]).toBeTruthy();
+    expect(prompt).not.toContain('Z'.repeat(6001));
+  });
+
+  it('divides the budget across 10 sources (the fetch_research_sources cap) without erroring', () => {
+    const tenSources = Array.from({ length: 10 }, (_, i) => ({
+      url: `https://source${i}.example.com`,
+      title: `Source ${i}`,
+      snippet: 'X'.repeat(3000)
+    }));
+    const prompt = buildHectorSynthesisPrompt('test question', tenSources);
+    expect((prompt.match(/X{600}/) || [])[0]).toBeTruthy();
+    expect(prompt).not.toContain('X'.repeat(601));
+  });
+
+  it('always includes the thin-coverage instruction in the prompt regardless of source count', () => {
+    const prompt = buildHectorSynthesisPrompt('test question', SOURCES);
+    expect(prompt).toContain('If fewer sources succeeded than expected, or coverage looks thin, say so explicitly in gaps.');
+  });
+
+  it('parses a valid JSON response into the four-field shape', () => {
+    const result = parseHectorSynthesisResponse(JSON.stringify({
+      overview: 'Overview text.',
+      keyFindings: ['finding 1'],
+      disagreements: ['disagreement 1'],
+      gaps: ['gap 1']
+    }));
+    expect(result).toEqual({
+      overview: 'Overview text.',
+      keyFindings: ['finding 1'],
+      disagreements: ['disagreement 1'],
+      gaps: ['gap 1']
+    });
+  });
+
+  it('parses a fence-wrapped JSON response', () => {
+    const result = parseHectorSynthesisResponse('```json\n{"overview":"Fenced.","keyFindings":[],"disagreements":[],"gaps":[]}\n```');
+    expect(result.overview).toBe('Fenced.');
+  });
+
+  it('returns null for malformed JSON', () => {
+    expect(parseHectorSynthesisResponse('not json at all')).toBeNull();
+  });
+
+  it('returns null for an empty response', () => {
+    expect(parseHectorSynthesisResponse('')).toBeNull();
+  });
+
+  it('returns null for JSON missing a non-empty overview', () => {
+    expect(parseHectorSynthesisResponse(JSON.stringify({ overview: '', keyFindings: [] }))).toBeNull();
+  });
+
+  it('calls generateAgentLlmResponse with agent id hector and returns the parsed result', async () => {
+    mockGenerateAgentLlmResponse.mockResolvedValue({
+      response: JSON.stringify({ overview: 'Real overview.', keyFindings: [], disagreements: [], gaps: [] })
+    });
+    const result = await synthesizeHectorResearch('test question', SOURCES);
+    expect(mockGenerateAgentLlmResponse).toHaveBeenCalledWith('hector', expect.objectContaining({ prompt: expect.any(String) }));
+    expect(result.overview).toBe('Real overview.');
+  });
+
+  it('returns null when generateAgentLlmResponse throws', async () => {
+    mockGenerateAgentLlmResponse.mockRejectedValue(new Error('ollama down'));
+    const result = await synthesizeHectorResearch('test question', SOURCES);
+    expect(result).toBeNull();
+  });
+
+  it('returns null when generateAgentLlmResponse returns unparseable content', async () => {
+    mockGenerateAgentLlmResponse.mockResolvedValue({ response: 'garbage' });
+    const result = await synthesizeHectorResearch('test question', SOURCES);
+    expect(result).toBeNull();
+  });
+
+  it('returns null for an empty sources array without calling the LLM', async () => {
+    const result = await synthesizeHectorResearch('test question', []);
+    expect(result).toBeNull();
+    expect(mockGenerateAgentLlmResponse).not.toHaveBeenCalled();
   });
 });

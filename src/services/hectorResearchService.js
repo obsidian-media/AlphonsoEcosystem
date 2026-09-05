@@ -11,6 +11,7 @@ import { appendSessionEvent } from './sessionIntelligenceService';
 import { TRUST_STATES, timestampMs } from './trustModel';
 import { scoreSourceConfidence, sourceExpiryForType } from './sourceConfidenceService';
 import { addNode, addEdge } from './memoryGraphService';
+import { generateAgentLlmResponse, PREFERRED_MODEL } from '../lib/ollama';
 
 const REPORT_KEY = 'alphonso_hector_reports_v1';
 const ACTIVITY_KEY = 'alphonso_hector_activity_v1';
@@ -337,6 +338,69 @@ async function synthesizeHectorFallbackReport(researchQuestion, sourceType, prov
     proof,
     trust: proof?.trust || TRUST_STATES.TEMPORARY
   };
+}
+
+const HECTOR_SYNTHESIS_TOTAL_BUDGET = 6000;
+
+export function buildHectorSynthesisPrompt(researchQuestion, sources) {
+  const n = Math.max(1, sources.length);
+  const perSourceBudget = Math.floor(HECTOR_SYNTHESIS_TOTAL_BUDGET / n);
+  const sourceBlocks = sources.map((s, i) => {
+    const text = String(s.snippet || s.summary || '').slice(0, perSourceBudget);
+    return `Source ${i + 1}: ${s.title || s.url}\nURL: ${s.url}\n${text}`;
+  }).join('\n\n');
+
+  return [
+    'You are Hector, a research analyst for a local AI desktop companion.',
+    'Read the fetched sources below and synthesize them into one combined, reasoned report.',
+    'Do not just restate each source in turn -- group related points by theme.',
+    'Return ONLY valid JSON with exactly these keys (no extra keys, no markdown fences):',
+    '{',
+    '  "overview": "2-4 sentence executive summary",',
+    '  "keyFindings": ["finding grouped by theme, not by source", ...],',
+    '  "disagreements": ["Source A claims X, Source B claims Y", ...],',
+    '  "gaps": ["what the question asked that no source covered", ...]',
+    '}',
+    'If fewer sources succeeded than expected, or coverage looks thin, say so explicitly in gaps.',
+    '',
+    `Research question: ${researchQuestion}`,
+    '',
+    sourceBlocks
+  ].join('\n');
+}
+
+export function parseHectorSynthesisResponse(text) {
+  try {
+    const raw = String(text || '').trim();
+    const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const jsonMatch = fenceMatch ? null : raw.match(/\{[\s\S]*\}/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : jsonMatch ? jsonMatch[0] : raw;
+    const parsed = JSON.parse(cleaned);
+    if (!parsed || typeof parsed.overview !== 'string' || !parsed.overview.trim()) return null;
+    return {
+      overview: parsed.overview,
+      keyFindings: Array.isArray(parsed.keyFindings) ? parsed.keyFindings : [],
+      disagreements: Array.isArray(parsed.disagreements) ? parsed.disagreements : [],
+      gaps: Array.isArray(parsed.gaps) ? parsed.gaps : []
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function synthesizeHectorResearch(researchQuestion, sources, options = {}) {
+  if (!Array.isArray(sources) || sources.length === 0) return null;
+  try {
+    const prompt = buildHectorSynthesisPrompt(researchQuestion, sources);
+    const response = await generateAgentLlmResponse('hector', {
+      endpoint: options.endpoint,
+      model: options.model || PREFERRED_MODEL,
+      prompt
+    });
+    return parseHectorSynthesisResponse(response?.response);
+  } catch {
+    return null;
+  }
 }
 
 export async function isBraveSearchConfigured() {
