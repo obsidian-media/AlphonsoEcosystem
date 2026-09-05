@@ -85,6 +85,9 @@ re-derive them from 12 separate plan docs:
   **not yet verified against a real signed release** — needs an actual
   version bump + tag to test the `check()` → `downloadAndInstall()` →
   `relaunch()` flow end-to-end against a real GitHub Release artifact.
+  **Update 2026-09-04:** the 2.7.0 release this same session's work is
+  part of is intended to be exactly that real signed release — check
+  whether this item can close once 2.7.0 actually ships and gets tested.
 - [ ] macOS support — deferred until Windows reaches full maturity (see
   `docs/ALPHONSO_GROUND_TRUTH.md` §11 "Gap 5" for the full checklist of
   what's needed when the time comes).

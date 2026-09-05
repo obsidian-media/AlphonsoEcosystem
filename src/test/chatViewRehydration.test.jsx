@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { setAgentProvider } from '../services/modelSelectionService';
 
 // Regression test for a real QA finding (Q&A E2E Test.md, Round 2 N-1):
 // "chat history is saved but never restored — messages sit in storage after
@@ -64,8 +65,22 @@ vi.mock('../services/connectors/nvidiaNimConnector', () => ({
 
 vi.mock('../services/connectors/geminiConnector', () => ({
   isGeminiConfigured: vi.fn().mockReturnValue(true),
-  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-2.5-flash-lite', provider: 'gemini' })
+  sendGeminiMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Gemini', model: 'gemini-3.5-flash-lite', provider: 'gemini' })
 }));
+
+vi.mock('../services/connectors/hermesAgentConnector', () => ({
+  isHermesAgentConfigured: vi.fn().mockReturnValue(true),
+  sendHermesAgentMessage: vi.fn().mockResolvedValue({ ok: true, content: 'Hello from Hermes', model: 'hermes-agent', usage: null, provider: 'hermes' })
+}));
+
+// Stateful, not a fixed return -- see ChatView.test.jsx for why.
+vi.mock('../services/modelSelectionService', () => {
+  const store = {};
+  return {
+    getAgentProvider: vi.fn((agentId) => store[agentId] || { provider: 'ollama' }),
+    setAgentProvider: vi.fn((agentId, config) => { store[agentId] = config; })
+  };
+});
 
 vi.mock('../components/MarkdownMessage', () => ({
   MarkdownMessage: ({ content }) => <span data-testid="markdown-message">{content}</span>
@@ -131,6 +146,7 @@ describe('ChatView chat history rehydration (real localStorage)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    setAgentProvider('alphonso', { provider: 'ollama' });
   });
 
   afterEach(() => {
@@ -155,6 +171,7 @@ describe('ChatView clears messages when activeChatId changes (New Chat isolation
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    setAgentProvider('alphonso', { provider: 'ollama' });
   });
 
   afterEach(() => {

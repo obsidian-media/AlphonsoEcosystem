@@ -91,13 +91,14 @@ export function setAgentProvider(agentId: string, config: AgentProviderConfig): 
 }
 
 // Curated, not enumerated via API — Gemini has no bulk free-tier-catalog
-// endpoint the way NVIDIA does. gemini-1.5-* and Gemini 2.0 Flash/Flash-Lite
-// are retired as of 2026-07-25; Pro-tier models are paid-only since
-// 2026-04-01. This list must stay in sync with geminiConnector.ts's
-// DEFAULT_MODEL. Reconfirm against ai.google.dev/gemini-api/docs before
-// assuming these stay free-tier-eligible — Google's lineup shifts often.
-// See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §4.
-const GEMINI_FREE_TIER_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+// endpoint the way NVIDIA does. gemini-1.5-*, Gemini 2.0 Flash/Flash-Lite,
+// and (as of a live check on 2026-09-04) the entire gemini-2.5-* line are
+// all now retired; Pro-tier models are paid-only since 2026-04-01. This
+// list must stay in sync with geminiConnector.ts's DEFAULT_MODEL. Reconfirm
+// against ai.google.dev/gemini-api/docs before assuming these stay
+// free-tier-eligible — Google has retired this lineup twice in under two
+// months. See docs/superpowers/plans/2026-07-23-free-tier-cloud-providers.md §4.
+const GEMINI_FREE_TIER_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash'];
 
 interface ModelPreferences {
   selected: string;

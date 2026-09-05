@@ -6,6 +6,66 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.7.0] — 2026-09-04 (memory knowledge graph, Gemini/Hermes fixes)
+
+- **Memory knowledge graph, full 4-phase roadmap through Phase 3**:
+  - Phase 1 (Foundation): `memory_graph.rs`/`memoryGraphService.ts` schema,
+    manual edges, one-hop reads (`queryRelated`) available to every agent
+    regardless of writer count; 2 initial writers
+    (`unifiedMemoryService.js`, `boardroomThreadService.ts`).
+  - Phase 2 (Expansion): 3 more writers (`hectorResearchService.js`,
+    `orchestrationReceiptService.ts`, `mariaAuditService.ts`); multi-hop
+    traversal (`queryRelatedDeep`) via SQLite `WITH RECURSIVE`, cycle-safe
+    via visited-edge-id tracking, direction-aware
+    (forward/backward/both).
+  - Phase 3a (Visualization): a 3D force-directed graph viewer
+    (`MemoryGraphViewer.tsx`, `react-force-graph-3d`), reachable from both
+    Settings and the RightPanel, compact/full size modes, click-to-select
+    detail panel with clickable connections.
+  - Phase 3b (Intelligence): automated structural edge inference
+    (`memory_graph_infer_edges` — common-neighbor + shared-event link
+    prediction, no content inspection), auto-written with
+    `confidence: 'inferred'`. One bounded primitive called from three
+    triggers: fire-and-forget on every successful `addNode`/`addEdge`
+    (scoped to touched nodes, cap 5), a 30-min scheduled pass over a
+    random node batch (cap 20), and a "Suggest connections" button in the
+    viewer (scoped to the loaded graph, cap 50). Links in the viewer are
+    now colored by confidence.
+  - Phase 4 (Governance — retention/pruning, temporal edge validity) is
+    explicitly **not** part of this release; recorded as open in
+    `docs/governance/DEFERRED_WORK.md`.
+- **Fixed: Gemini's default model was silently retired again.**
+  `gemini-2.5-flash-lite` (the shipped default since 2026-07-25) and
+  `gemini-2.5-flash` both now return 404 "no longer available to new
+  users" — confirmed live against the real API with a real key. Switched
+  to `gemini-3.5-flash-lite`/`gemini-3.6-flash` (Google's own recommended
+  replacements). This also confirms the `?key=` query-param auth style is
+  correct, closing a year-old unconfirmed deferred-work item.
+- **Fixed: Hermes had no toggle or send-routing in the main chat view.**
+  `ChatView.tsx`'s provider picker previously offered only
+  Ollama/NVIDIA/Gemini — Hermes was reachable only via Settings' per-agent
+  picker, with zero code path to actually send a message through it even
+  if selected. Wired `agentId="alphonso"` into the picker and added a real
+  `sendHermesAgentMessage` branch to the send path (mirroring the existing
+  NVIDIA/Gemini branches, including Hermes's two extra result shapes —
+  `blocked` and `circuitOpen` — those connectors don't have). Also found
+  and fixed a deeper pre-existing bug while wiring this: `ChatView`'s
+  `settings.selectedProvider` and the per-agent provider store
+  (`getAgentProvider('alphonso')`, used by Settings) were never actually
+  synchronized with each other, despite a code comment claiming they were.
+- Doc-count freshness fixes: 11 stale numeric claims across
+  README.md/ARCHITECTURE.md/AGENTS.md (lib.rs line count, Tauri command
+  count, service count, test file count) that drifted during this same
+  release and were caught by CI's `Doc Count Freshness` gate rather than
+  local verification.
+- package.json / tauri.conf.json / Cargo.toml / Cargo.lock version: 2.7.0
+  (all four in sync). Note: 2.6.5 was never tagged as a distinct release —
+  the version files sat at 2.6.5 as work-in-progress through the memory
+  graph project's Phases 1-3a; this entry covers everything shipped since
+  2.6.4 in one honest release rather than fabricating a phantom 2.6.5 log.
+
+---
+
 ## [2.6.4] — 2026-08-23 (live post-install bug batch)
 
 - **Restored `useAppEffects`**, dead since 2026-06-15 (2+ months, 44+

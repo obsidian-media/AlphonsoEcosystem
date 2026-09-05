@@ -31,6 +31,8 @@ import {
 import { OllamaModelPicker, ModelProviderPicker, type ModelProviderId } from './ModelSwitcher';
 import { isNvidiaConfigured, sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
 import { isGeminiConfigured, sendGeminiMessage } from '../services/connectors/geminiConnector';
+import { isHermesAgentConfigured, sendHermesAgentMessage } from '../services/connectors/hermesAgentConnector';
+import { getAgentProvider, setAgentProvider } from '../services/modelSelectionService';
 import { listConnectors } from '../services/connectorRegistryService';
 import { MarkdownMessage } from './MarkdownMessage';
 import { ApprovalPanel } from './ApprovalPanel';
@@ -52,6 +54,31 @@ const JOSE_PIPELINE_STORAGE_PREFIX = 'alphonso_jose_pipeline_v1';
 function getJosePipelineStorageKey(chatId: string | null): string | null {
   if (!chatId) return null;
   return `${JOSE_PIPELINE_STORAGE_PREFIX}_${chatId}`;
+}
+
+function getProviderLabel(provider: ModelProviderId): string {
+  if (provider === 'nvidia_nim') return 'NVIDIA NIM';
+  if (provider === 'gemini') return 'Gemini';
+  if (provider === 'hermes') return 'Hermes';
+  return 'Ollama';
+}
+
+// settings.selectedProvider (a persisted-settings-blob value, e.g. set by
+// onboarding) and getAgentProvider('alphonso')'s localStorage-backed
+// per-agent store were never actually kept in sync -- a stale comment in
+// modelSelectionService.ts claimed ChatView's picker already used the
+// latter, but it only ever read/wrote settings.selectedProvider directly.
+// This pushes a legacy (non-hermes) settings value into the per-agent
+// store so getAgentProvider('alphonso') -- now the single source of truth
+// for ChatView too -- doesn't silently lose it. Never clobbers an explicit
+// Hermes choice, which only ever lives in the per-agent store.
+function syncLegacyProviderIntoAgentStore(legacyProvider: unknown): void {
+  if (legacyProvider !== 'ollama' && legacyProvider !== 'nvidia_nim' && legacyProvider !== 'gemini') return;
+  const current = getAgentProvider('alphonso');
+  if (current.provider === 'hermes') return;
+  if (current.provider !== legacyProvider) {
+    setAgentProvider('alphonso', { provider: legacyProvider });
+  }
 }
 
 // D2T9: Connector degradation banner — shown when Ollama is online but connectors are unavailable
@@ -519,10 +546,44 @@ export function ChatView({
     }
   }, [messages, isGenerating, settings.autoScroll]);
 
-  const selectedProvider = ((settings.selectedProvider as string) || 'ollama') as ModelProviderId;
+  // getAgentProvider('alphonso') is the source of truth -- it already checks
+  // the per-agent map for a 'hermes' override before falling back to the
+  // legacy settings.selectedProvider value, since 'hermes' isn't part of
+  // that legacy ModelProvider union and can't be stored there.
+  const [alphonsoProvider, setAlphonsoProviderState] = useState<ModelProviderId>(() => {
+    syncLegacyProviderIntoAgentStore(settings.selectedProvider);
+    return getAgentProvider('alphonso').provider as ModelProviderId;
+  });
+  useEffect(() => {
+    syncLegacyProviderIntoAgentStore(settings.selectedProvider);
+    setAlphonsoProviderState(getAgentProvider('alphonso').provider as ModelProviderId);
+  }, [settings.selectedProvider]);
+  const selectedProvider = alphonsoProvider;
+
+  function handleProviderChange(provider: ModelProviderId) {
+    try {
+      setAgentProvider('alphonso', { provider });
+    } catch {
+      // Rejected (e.g. Hermes not configured/reachable) -- ModelProviderPicker
+      // already disables the button for an unconfigured provider, so this is
+      // a defensive no-op path, not the primary guard.
+      return;
+    }
+    setAlphonsoProviderState(provider);
+    // setAgentProvider('alphonso', ...) already persists ollama/nvidia_nim/gemini
+    // into the legacy settings.selectedProvider key itself; 'hermes' is
+    // deliberately NOT forwarded to onProviderChange since that legacy
+    // union can't represent it and other settings.selectedProvider readers
+    // assume only ollama/nvidia_nim/gemini.
+    if (provider !== 'hermes') {
+      onProviderChange?.(provider);
+    }
+  }
+
   const modelReady = useMemo(() => {
     const cloudProviderConfigured = selectedProvider === 'nvidia_nim' ? isNvidiaConfigured()
       : selectedProvider === 'gemini' ? isGeminiConfigured()
+      : selectedProvider === 'hermes' ? isHermesAgentConfigured('alphonso')
       : true;
     return selectedProvider === 'ollama'
       ? Boolean(settings.selectedModel) && !selectedModelMissing
@@ -727,13 +788,15 @@ export function ChatView({
     }
 
     if (!modelReady) {
-      const providerLabel = selectedProvider === 'nvidia_nim' ? 'NVIDIA NIM' : 'Gemini';
+      const providerLabel = getProviderLabel(selectedProvider);
       setMessages((current) => [...current, {
         id: nextMsgId(),
         role: 'assistant',
         isError: true,
         content: selectedProvider !== 'ollama'
-          ? `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
+          ? selectedProvider === 'hermes'
+            ? `Hermes is not configured or unreachable for Alphonso. Add its endpoint in Settings → Connectors, or switch back to Ollama.`
+            : `${providerLabel} is not configured. Add a free API key in Settings → Connectors, or switch back to Ollama.`
           : selectedModelMissing
             ? `Model not found: ${settings.selectedModel}. Choose one of the installed models: ${installedModels.map((model) => model.name).join(', ')}.`
             : 'No Ollama model is selected. Run Check Ollama and choose an installed model.'
@@ -784,18 +847,32 @@ export function ChatView({
         }));
         onTaskComplete();
       } else {
-        // NVIDIA NIM / Gemini free-tier connectors are single-shot (no SSE
-        // streaming) — deliver the full reply in one update rather than
-        // faking a token stream.
-        const providerLabel = selectedProvider === 'nvidia_nim' ? 'NVIDIA NIM' : 'Gemini';
+        // NVIDIA NIM / Gemini / Hermes are single-shot (no SSE streaming) —
+        // deliver the full reply in one update rather than faking a token
+        // stream.
+        const providerLabel = getProviderLabel(selectedProvider);
         const result = selectedProvider === 'nvidia_nim'
           ? await sendNvidiaMessage(chatMessages, { model: settings.selectedModel as string })
-          : await sendGeminiMessage(chatMessages, { model: settings.selectedModel as string });
+          : selectedProvider === 'hermes'
+            ? await sendHermesAgentMessage('alphonso', chatMessages, { model: settings.selectedModel as string })
+            : await sendGeminiMessage(chatMessages, { model: settings.selectedModel as string });
         if (!abortRef.current) return; // aborted while the cloud request was in flight — drop the result
         if (!result.ok && 'rateLimited' in result && result.rateLimited) {
           setMessages((current) => current.map((msg) =>
             msg.id === assistantMsgId
               ? { ...msg, isError: true, content: `${providerLabel} is rate-limited right now (free tier). Try again shortly, or switch to Ollama.` }
+              : msg
+          ));
+        } else if (!result.ok && 'blocked' in result && result.blocked) {
+          setMessages((current) => current.map((msg) =>
+            msg.id === assistantMsgId
+              ? { ...msg, isError: true, content: `${providerLabel} request blocked by policy: ${result.message}` }
+              : msg
+          ));
+        } else if (!result.ok && 'circuitOpen' in result && result.circuitOpen) {
+          setMessages((current) => current.map((msg) =>
+            msg.id === assistantMsgId
+              ? { ...msg, isError: true, content: `${providerLabel} is temporarily unavailable after repeated failures. Try again shortly.` }
               : msg
           ));
         } else if (!result.ok) {
@@ -820,7 +897,7 @@ export function ChatView({
         // Persist the user message offline so it can be retried when Ollama comes back
         saveMessageOffline({ role: 'user', content: cleanInput }).catch(() => {});
       } else {
-        const providerLabel = selectedProvider === 'nvidia_nim' ? 'NVIDIA NIM' : 'Gemini';
+        const providerLabel = getProviderLabel(selectedProvider);
         setMessages((current) => current.map((msg) =>
           msg.id === assistantMsgId
             ? { ...msg, isError: true, content: `${providerLabel} request failed.\n\n${String(error)}` }
@@ -917,8 +994,9 @@ export function ChatView({
         <div className="h-12 flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <ModelProviderPicker
+              agentId="alphonso"
               provider={selectedProvider}
-              onProviderChange={(provider) => onProviderChange?.(provider)}
+              onProviderChange={handleProviderChange}
               selectedModel={settings.selectedModel as string || ''}
               onModelChange={(model) => onModelChange?.(model)}
               ollamaPicker={
