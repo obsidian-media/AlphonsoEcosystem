@@ -34,6 +34,17 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 
 ---
 
+### 4. `RightPanel.tsx`'s Sentinel "Threat Level" badge always shows clean — it never actually scans anything
+
+- **Where:** `src/components/RightPanel.tsx:162-164`, `runQuickScan()` calls `scanForThreats('', {})` — empty command text, empty prior outputs — every time it fires (once on mount, then every 10 minutes via `setInterval`).
+- **What's broken:** `sentinelSecurityService.ts`'s `scanForThreats(commandText, priorOutputs)` builds `allText` by concatenating `commandText` and `priorOutputs`' summaries, then tests each of 8 threat regexes against `allText`. Verified directly: with `commandText=''` and `priorOutputs={}`, `allText` is always the empty string, no regex in `THREAT_PATTERNS` can match an empty string, and there are no `priorOutputs` entries to check for failed agents either. `findings` is therefore always `[]` and `riskScore` is always `0` — structurally guaranteed, not just "usually."
+- **Impact:** the "Security → Threat Level: clean" badge users see in `RightPanel.tsx` is not a real live security check — it will say "clean" regardless of what's actually happening in the app, because it's scanning nothing. Sentinel's actual design purpose — scanning a *specific proposed command* before execution — appears to have no real caller that feeds it real command text for this dashboard-level "quick scan" use case; `runQuickScan` looks like an incomplete wiring rather than an intentional no-op.
+- **How verified:** read `RightPanel.tsx`'s real call site and `sentinelSecurityService.ts`'s real matching logic directly, not assumed from a UI screenshot description.
+- **Impact on this redesign:** directly caused the Mission Control attention-aggregator (`08-phase2-attention-aggregator-plan.md`) to drop Sentinel from its list of real sources — there is currently no real Sentinel finding to surface, so building a source around it would just be another always-empty pathway, not a fix.
+- **Status:** OPEN, not fixed — out of scope for this redesign to fix (it's a pre-existing Sentinel/RightPanel bug, not a UI-redesign task). Flagging for whoever maintains Sentinel next; a real fix needs `runQuickScan` to either scan something real (recent command history? recent agent outputs?) or for the feature's actual intent here to be reconsidered.
+
+---
+
 ## Notes on discovery method
 
 Bugs logged here were found through direct verification (grep + read the actual code), never assumed from documentation. If CLAUDE.md's Do-Not-Duplicate table describes a feature as working and this document contradicts it, trust this document's direct-verification note, and re-check CLAUDE.md's claim before relying on it further.
