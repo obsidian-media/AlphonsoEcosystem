@@ -18,12 +18,18 @@ with each other:
 3. **Results tab** — an "Approval Gates" card (`ApprovalGatePanel.tsx`) that is purely read-only
    display. It has no buttons, no actions, and cannot influence anything.
 
-Root cause: `runWorkshop()` calls `runProjectWorkshop()`, which synchronously computes the
-entire result (tasks, outputs, final packet, and a fixed list of 4 "approval gate" records via
-`createApprovalRequest`) and returns it in one call. The UI then unconditionally does
-`setResult(next); setActiveTab('results')` — the approval records exist in
-`services/approval/approvalService.js`'s store, but nothing ever checks their status before
-advancing.
+Root cause: `runWorkshop()` calls `runProjectWorkshop()` (`agentRunnerService.js`), which
+synchronously computes the entire result (tasks, outputs, final packet) in one call. Within
+that same function, after `joseOrchestrationService.js`'s `produceApprovalGates(project)`
+returns a fixed list of 4 local gate descriptors (itself pure — it never touches the approval
+store), `runProjectWorkshop()` maps over them and calls `createApprovalRequest` once per gate
+(`agentRunnerService.js` ~line 191), passing `metadata: { projectId, traceId, gateId }`. So the
+4 approval records do land in `services/approval/approvalService.js`'s store, correctly tagged
+with this run's `traceId` — the store side is fine. The bug is entirely on the UI side: the
+component then unconditionally does `setResult(next); setActiveTab('results')` — nothing ever
+checks those records' status before advancing, and (see Design step 4 below) nothing stops the
+user from reaching Results directly regardless of navigation, since the tab bar itself has no
+gating logic at all.
 
 This is separate from the real Jose orchestration pipeline's approval system
 (`agentBusService.ts`'s `AgentPacket` + `ApprovalModal.tsx` / `ApprovalPanel.tsx`), which
@@ -65,9 +71,19 @@ safe. What changes is what happens *after* computation and *before* the user see
 3. If any are still pending, the UI navigates to a new **"Approval" tab** (inserted between
    "Execution" and "Results" in `PAGE_TABS`) instead of "Results". This tab renders the single
    real gate.
-4. Once every pending item for this run is approved or denied, the Results tab becomes
-   reachable. If everything was approved, results render as today. If anything was denied, the
-   Results tab shows a clear "blocked" state instead of the full packet (mirroring the existing
+4. **The gate is enforced at the tab bar, not just at auto-navigation time.** Today
+   `PAGE_TABS.map(...)` renders every tab (including "Results") as an unconditionally clickable
+   button (`ProjectExecutionMode.tsx` ~line 229) — nothing currently stops a user from clicking
+   "Results" directly regardless of pending approvals. Patching only `runWorkshop()`'s
+   auto-navigation target would leave that click-through open, reproducing the same class of bug
+   this spec exists to fix. So: the Results tab button is `disabled` whenever
+   `result?.traceId` has any entries from `listPendingApprovalsByTrace(result.traceId)`, with a
+   `title` tooltip explaining why (mirroring the existing disabled-button pattern already used
+   for "Continue to Execution" at line 248, which disables on `!intake.projectName`). Once every
+   pending item for this run is approved or denied, the Results tab becomes enabled and
+   reachable by either path (auto-nav from the Approval tab's "Continue", or a direct click). If
+   everything was approved, results render as today. If anything was denied, the Results tab
+   shows a clear "blocked" state instead of the full packet (mirroring the existing
    `aiReviewGate`'s PASS/BLOCKED card pattern already in `ProjectExecutionMode.tsx`).
 5. The Setup-tab 4-button toggle group is **removed**. It never gated anything real in the
    default mode and duplicates the concept the new Approval tab now owns for real. The
@@ -88,27 +104,69 @@ interaction this needs: a list of pending items with per-item Approve/Deny, and 
 `approvePacket`/`rejectPacket`/`getPacketById` from `agentBusService.ts` directly, so it only
 works for the real Jose pipeline (used from `ChatView.tsx`).
 
-This spec generalizes it via props instead of forking a second copy:
+This spec generalizes it via props instead of forking a second copy. Two data-shape details
+that today's hardcoded implementation papers over need to become explicit in the generalized
+contract:
+
+- **Key field.** The current component hardcodes `packetId` as the item identity — used as the
+  React `key`, in `resolveAssignment`, in the `resolved` state map, and in every callback.
+  `approvalService.js`'s `ApprovalRequest` objects use `id`, not `packetId`. Rather than teach
+  the component two key names, both call sites normalize to one neutral field before passing
+  items in: `itemId`. `ChatView.tsx` maps its packets (`{ ...p, itemId: p.packetId }`) and
+  `ProjectExecutionMode.tsx` maps its requests (`{ ...r, itemId: r.id }`) at the call site; the
+  component only ever reads `item.itemId`.
+- **Detail resolution / `agent` field.** ChatView's items need indirection through
+  `getPacketById` to reach `payload.assignment.agent`/`riskLevel`/`actionType`, with risk
+  *inferred* from those via `inferRisk()`. Project Execution's `ApprovalRequest` objects already
+  carry `riskLevel`/`actionType`/`reason` directly on the item — no indirection or inference
+  needed — but have no per-agent concept at all (gates are project-level, not per-agent).
+  `ResolvedItem.agent` is therefore optional (`agent?: string`); when absent the panel renders a
+  static `'project'` label in that slot instead of an agent name.
 
 ```ts
+interface PendingApprovalItem {
+  itemId: string;
+  actionType?: string;
+  reason?: string;
+  previewContent?: string | null;
+  agent?: string;
+}
+
+interface ResolvedItem {
+  itemId: string;
+  agent?: string;
+  actionType: string;
+  riskLevel: string;
+  reason: string;
+  previewContent: string | null;
+}
+
 interface ApprovalPanelProps {
   pendingApprovals: PendingApprovalItem[];
   commandId?: string;
-  onApprove: (id: string) => void;
-  onReject: (id: string, reason?: string) => void;
-  getItemDetail?: (id: string) => ResolvedItem | null;
+  onApprove: (itemId: string) => void;
+  onReject: (itemId: string, reason?: string) => void;
+  getItemDetail?: (itemId: string) => ResolvedItem | null;
   onAllResolved?: (commandId: string | undefined, resolved: Record<string, string>) => void;
 }
 ```
 
-- `ChatView.tsx`'s existing call site passes `onApprove={approvePacket}`,
-  `onReject={rejectPacket}`, `getItemDetail={getPacketById}` — behavior unchanged.
-- `ProjectExecutionMode.tsx`'s new Approval tab passes `onApprove={approveRequest}`,
-  `onReject={rejectRequest}`, sourcing items from `approvalService.js`'s
-  `listPendingApprovals()` — no import of `agentBusService.ts` anywhere in this file.
+- `ChatView.tsx`'s existing call site maps packets to include `itemId` and passes
+  `onApprove={(id) => approvePacket(id, 'chatview-inline')}`,
+  `onReject={(id) => rejectPacket(id, 'Rejected from chat inline approval')}`,
+  `getItemDetail={getPacketById}` — the two reason-string literals are hardcoded inside
+  `ApprovalPanel.tsx` today (not passed in); they move to this call site as the wrapping
+  closures shown, so ChatView's actual on-disk behavior is unchanged. (An earlier draft of this
+  spec showed `onApprove={approvePacket}` directly — that does not compile against
+  `approvePacket(packetId, approver)`'s real signature and was corrected here.)
+- `ProjectExecutionMode.tsx`'s new Approval tab maps requests to include `itemId` and passes
+  `onApprove={approveRequest}`, `onReject={rejectRequest}`, sourcing items from
+  `approvalService.js`'s `listPendingApprovalsByTrace(result.traceId)` — no `getItemDetail`
+  needed (items are already flat) and no import of `agentBusService.ts` anywhere in this file.
 
 One component, one visual language, two independent data sources behind props. Neither real
-call site's underlying data model changes.
+call site's underlying data model changes — only the small `itemId`-mapping wrapper each call
+site now supplies.
 
 ### `approvalService.js` additions
 
@@ -166,10 +224,12 @@ Approval tab renders <ApprovalPanel> sourced from listPendingApprovalsByTrace(re
   usage still passes with the new prop-based contract (regression guard for the one real
   production call site).
 - `src/components/projectExecution/ProjectExecutionMode.tsx` — new test(s): after `Generate`,
-  the Approval tab (not Results) is shown while gates are pending; approving all gates reveals
-  Results; denying at least one gate shows the blocked-state Results view instead of the full
-  packet; the Setup tab no longer renders the 4-button toggle group; the Results tab no longer
-  renders `ApprovalGatePanel`.
+  the Approval tab (not Results) is shown while gates are pending; the Results tab button is
+  `disabled` while any gate for the current `traceId` is pending, **and clicking it directly
+  does not change `activeTab`** (the click-through this spec exists to close); approving all
+  gates enables the Results tab and reveals it; denying at least one gate shows the blocked-state
+  Results view instead of the full packet; the Setup tab no longer renders the 4-button toggle
+  group; the Results tab no longer renders `ApprovalGatePanel`.
 - `ApprovalGatePanel.tsx` and its existing test (if any) are deleted along with its Results-tab
   usage.
 
