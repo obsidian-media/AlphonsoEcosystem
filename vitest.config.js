@@ -25,7 +25,7 @@ export default defineConfig({
       exclude: ['src/test/**', 'src/**/*.test.{js,jsx}', 'src/**/*.spec.{js,jsx}'],
       thresholds: {
         // Real measured coverage as of 2026-09-05 (post test-coverage-gap
-        // remediation, 341 files / 5,057 tests): lines 57.81%, branches 45.62%,
+        // remediation, 346 files / 5,094 tests): lines 57.81%, branches 45.62%,
         // functions 50.32%, statements 55.65%. Floors below set with margin
         // to lock in the gain without being fragile to minor fluctuation.
         // `functions` was previously hard-set to 0 to unblock CI years ago
