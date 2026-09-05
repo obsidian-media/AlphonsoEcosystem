@@ -421,7 +421,11 @@ In `src-tauri/src/search.rs`, inside `mod tests` (after the existing `strip_html
   fn build_snippet_keeps_long_text_in_full() {
     let long_text = "a".repeat(5000);
     let snippet = build_snippet(&long_text).unwrap();
-    assert_eq!(snippet.len(), 5000, "snippet should no longer be capped at 420 chars");
+    assert_eq!(
+      snippet.len(),
+      5000,
+      "snippet should no longer be capped at 420 chars"
+    );
   }
 
   #[test]
