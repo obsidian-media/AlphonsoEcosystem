@@ -69,6 +69,12 @@ An earlier direction — color-coded left accent border rules per row, big monos
 - `"resizable": true` — top nav must have a real collapse-to-overflow behavior for narrow window widths; the 5-6-tab mockups assumed a comfortable fixed width and have NOT been tested against a narrow resize yet.
 - Coach Mode opens as a **separate Tauri webview window** (`coachModeService.ts`, `new WebviewWindow('coach', ...)`) — whatever design system Phase 1 specs must explicitly extend to that second window, or it will visually clash with the main window. Not yet designed against in this draft.
 
+## RightPanel decision (real 3rd region, previously omitted from every mockup)
+
+**Real gap found:** every Rooms mockup up to this point only accounted for sidebar + main content — two regions. The actual current app has a **third persistent region**, `RightPanel.tsx`, always visible with real live props (Ollama connection state, installed model list with sizes, desktop bridge status, security scan/threat level, audit log, agent status strip) across its own System/Audit/Agents tabs. This was found only because the user pushed back and asked whether mockups were illustrative or final — a real process lesson: check the actual running layout's full real surface area before calling any skeleton locked.
+
+**Decision:** fold `RightPanel`'s always-open panel into the System room (no permanent 3rd panel pinned open at all times) — **but** preserve ambient safety awareness with a small number of persistent status indicators (e.g. a connection dot, a security dot) living in the sidebar's bottom/collapse area, visible from every room. Rationale: this is a control-plane app with approval gates and live security scanning — losing all ambient "is anything wrong right now" visibility in exchange for a cleaner layout would be a real functional regression, not just a look. The compromise keeps the visual cleanliness of removing the panel while keeping a real problem (Ollama disconnected, security threat found) glanceable from any room, not just System.
+
 ## Explicitly open / unresolved
 
 - Normal-user (non-power-user) design direction — not started yet.
