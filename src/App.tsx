@@ -845,6 +845,7 @@ function AppShell() {
         onOpenCoach={handleToggleCoachMode}
         mode={uxMode}
         onToggleSearch={() => setShowMemorySearch((prev) => !prev)}
+        ollamaConnected={ollamaStatus?.state === 'connected'}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar

@@ -26,6 +26,7 @@ const baseProps = {
   onDeleteChat: vi.fn(),
   settings: {},
   onToggleSearch: vi.fn(),
+  ollamaConnected: false,
 };
 
 describe('Sidebar — 5 Space pills', () => {
@@ -90,5 +91,12 @@ describe('Sidebar — 5 Space pills', () => {
     render(<Sidebar {...baseProps} />);
     fireEvent.click(screen.getByTestId('sidebar-search-trigger'));
     expect(baseProps.onToggleSearch).toHaveBeenCalled();
+  });
+
+  it('shows a persistent Ollama status dot next to the search field, colored by connection state', () => {
+    const { rerender } = render(<Sidebar {...baseProps} ollamaConnected={false} />);
+    expect(screen.getByTestId('sidebar-ollama-dot').className).toMatch(/bg-\[var\(--text-4\)\]/);
+    rerender(<Sidebar {...baseProps} ollamaConnected={true} />);
+    expect(screen.getByTestId('sidebar-ollama-dot').className).toMatch(/bg-\[var\(--success\)\]/);
   });
 });
