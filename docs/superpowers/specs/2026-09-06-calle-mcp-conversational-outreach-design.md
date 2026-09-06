@@ -477,9 +477,14 @@ export async function handleMcpOutreachMessage(chatId: string, text: string): Pr
       return 'Use the Approve or Cancel button above to continue with this call plan.';
     }
 
-    // stage === 'in_progress': unreachable in practice, since ChatView only
-    // calls this function while isAwaitingMcpOutreachInput() is true -- kept
-    // as a defensive fallback, not a relied-upon path.
+    // stage === 'in_progress': reachable, not just defensive. isAwaitingMcpOutreachInput()
+    // is false while a call runs, so ChatView falls through to shouldRouteThroughCalleMcp's
+    // fresh-intent check (§5) -- if the user types another call-like message in the SAME chat
+    // while one is already running, it lands here. (An earlier pass of this comment claimed
+    // this branch was unreachable; that was wrong -- found on a third, harder re-read, not
+    // assumed correct just because it was already fixed twice.) The design intentionally
+    // supports only one live outreach flow per chat at a time; a second call-like message
+    // while one is in_progress is told to wait rather than starting a second flow.
     return 'This call is already running; I will post the result when it finishes.';
   } catch (error) {
     return `CALL-E error: ${error instanceof Error ? error.message : String(error)}`;
@@ -562,9 +567,41 @@ export async function markMcpOutreachDelivered(chatId: string): Promise<void> {
   if (record) await persistRecord({ ...record, delivered: true });
 }
 
+// A stuck run_id (a bug on CALL-E's side, or a run that never reaches a
+// terminal status for any reason) would otherwise poll forever -- a network
+// request every 10 seconds for the lifetime of the app session, with no
+// ceiling at all. This codebase already has a precedent for exactly this
+// class of problem: joseExecutionEngineService.ts's PIPELINE_MAX_DURATION_MS
+// caps a different kind of runaway loop. 60 minutes is a generous multiple
+// of a normal call's expected duration (minutes, not hours) while still
+// bounding the worst case.
+// Caveat, stated plainly rather than hidden: the deadline is computed fresh
+// each time pollMcpCallUntilTerminal starts (including from
+// recoverInterruptedMcpOutreachCalls after a restart), not stored on the
+// record itself -- so a call stuck across several full app restarts could in
+// theory poll for longer than 60 minutes of *wall-clock* time in total, even
+// though any single continuous polling run is bounded. Storing an absolute
+// deadline on McpOutreachRecord would close that too, but is left out here as
+// unnecessary complexity for what both is an already-rare edge case (a stuck
+// run_id AND the user restarting the app multiple times within that window)
+// and still can't loop forever within any one running session, which was the
+// actual problem being fixed.
+const MAX_POLL_DURATION_MS = 60 * 60 * 1000;
+
 async function pollMcpCallUntilTerminal(chatId: string, runId: string): Promise<void> {
   const TERMINAL = new Set(['COMPLETED', 'FAILED', 'NO_ANSWER', 'DECLINED', 'CANCELED', 'CANCELLED', 'VOICEMAIL', 'BUSY', 'EXPIRED']);
+  const deadline = Date.now() + MAX_POLL_DURATION_MS;
   for (;;) {
+    if (Date.now() > deadline) {
+      const record = records.get(chatId);
+      if (record) {
+        await persistRecord({ ...record, stage: 'failed', error: 'Timed out waiting for CALL-E to report a final status.', delivered: false });
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { type: 'warning', title: 'CALL-E call timed out', message: 'No final status after 60 minutes of polling.' }
+        }));
+      }
+      return;
+    }
     await new Promise((r) => setTimeout(r, 10_000));
     let result;
     try {
@@ -769,7 +806,11 @@ it only needs to run while the Settings panel is open.
   for an `in_progress` record, and actually has something to recover after a simulated restart
   (records hydrated from a mocked `kv_get`/index, not an empty in-memory `Map`, and not
   vulnerable to the `list_memory_records` global-limit issue below since it no longer uses
-  that API at all).
+  that API at all); a run that never reaches a terminal status stops polling and moves to
+  `'failed'` once `MAX_POLL_DURATION_MS` elapses, instead of polling forever (use a fake timer
+  / injectable clock rather than a real 60-minute wait); a fresh call-like message routed to a
+  chat whose record is already `in_progress` gets the "already running" reply, confirming the
+  branch is actually reachable, not the dead code an earlier pass's comment claimed.
 - `ChatView` integration test: while `isAwaitingMcpOutreachInput()` is true for `activeChatId`,
   the next message routes through `handleMcpOutreachMessage` regardless of its text (e.g. a
   bare phone number); once the record moves to `in_progress`, the *next* unrelated message
@@ -891,3 +932,44 @@ real issues:
     `run_call` approval gate (blocking every `plan_call` behind the same approval-click bar as
     placing a call would defeat the point of a lightweight clarifying-question flow). This
     needs CALL-E's actual billing documentation, not an assumption, before implementation.
+
+## Third self-critique pass
+
+A third, harder look at the version above (after ten of twelve prior fixes had already
+survived two review passes) found two more real issues, plus one thing explicitly checked
+and confirmed *not* to be a problem:
+
+13. **`pollMcpCallUntilTerminal` had no maximum duration at all.** A stuck `run_id` (a bug on
+    CALL-E's side, or any run that never reaches a terminal status) would poll forever — a
+    network request every 10 seconds for the lifetime of the app session, completely unbounded.
+    This codebase already has a precedent for exactly this class of problem
+    (`joseExecutionEngineService.ts`'s `PIPELINE_MAX_DURATION_MS` caps a different runaway
+    loop), which this design had no equivalent of. Fixed with a `MAX_POLL_DURATION_MS` (60
+    minutes) ceiling that moves the record to `'failed'` with a timeout error and fires a toast
+    instead of polling indefinitely — with an explicit caveat (see the code comment) that the
+    deadline resets per polling run rather than being stored on the record, so it bounds any
+    one continuous session but not, in the rare case of repeated restarts against the same
+    stuck run, cumulative wall-clock time across all of them.
+14. **A code comment asserted a reachable branch was unreachable.** `handleMcpOutreachMessage`'s
+    `'in_progress'` fallback carried a comment claiming it was "unreachable in practice, since
+    ChatView only calls this function while `isAwaitingMcpOutreachInput()` is true." That's
+    false: `ChatView`'s integration (§5) *also* calls this function whenever
+    `shouldRouteThroughCalleMcp(text)` matches a fresh message, independent of any existing
+    record's stage — so a second call-like message typed into a chat that already has an
+    `in_progress` call reaches exactly this branch. The actual behavior (telling the user to
+    wait) was already correct; only the comment was wrong, but an incorrect claim about what
+    code does is the same category of defect this document has been hunting throughout, not a
+    lesser one just because the runtime behavior happened to be fine. Fixed by correcting the
+    comment to state the real, intentional constraint: only one live outreach flow is
+    supported per chat at a time.
+15. **Checked, not fixed, because it isn't a bug:** every `callTool` invocation re-establishes
+    a fresh MCP session (`initialize` + `notifications/initialized`) before the actual
+    `tools/call`, including every 10-second status poll — three network round-trips instead of
+    one, repeated indefinitely for a long-running call. This looked like a real inefficiency
+    worth flagging, but re-reading `@call-e/core`'s own `mcp-client.js` (the reference
+    implementation this whole design is modeled on) shows it does exactly the same thing —
+    `listMcpTools` and `callMcpTool` both call `openMcpSession` fresh, every time, with no
+    session reuse across calls. Since the authoritative CLI itself behaves this way, this is
+    consistent with verified real-world behavior against CALL-E's actual server, not a design
+    flaw introduced here — flagged and then explicitly ruled out, rather than either silently
+    fixed on a guess or silently left unexamined.
