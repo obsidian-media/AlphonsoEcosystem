@@ -1,6 +1,6 @@
 import React from 'react';
 
-type ZoneMood = 'neutral' | 'hector' | 'miya';
+type ZoneMood = 'neutral' | 'hector' | 'miya' | 'warm' | 'cool';
 
 interface ZoneProps {
   mood?: ZoneMood;
@@ -13,6 +13,8 @@ const moodClasses: Record<ZoneMood, string> = {
   neutral: 'bg-surface-2',
   hector: 'bg-agent-hector/10',
   miya: 'bg-agent-miya/10',
+  warm: 'bg-[var(--warning-dim)]',
+  cool: 'bg-[var(--accent-dim)]',
 };
 
 // No border, no shadow, no radius-as-card treatment — hierarchy comes from
