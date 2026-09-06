@@ -47,6 +47,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): renders correctly with real live status data (Python-not-detected, WebSocket-not-listening — genuine current state on this dev machine, not mocked), zero console errors.
 - **Status:** CLOSED.
 
+### 12. `MiyaStudio.tsx` re-skin — the largest single-file re-skin this session (91 hardcoded color refs, 1726 lines)
+
+- **What changed:** the Creative Studio page (6 tabs: Script/Scene/Prompt/Thumbnail/Campaign/Brand Kit, plus 9 internal helper components in the same file) still carried the pre-redesign `fuchsia-*`/`zinc-*`/`amber-*`/`emerald-*`/`red-*`/`indigo-*` palette throughout. Re-skinned onto `--agent-miya` (Miya's reserved per-agent identity token, unused until now — same pattern as `--agent-hector` on the Research Desk), `--success`/`--warning`/`--error`/`--text-*`/`--surface-*`, and `--accent` for the one neutral third-state badge that had no natural semantic home. Dropped the Runway progress bar's `fuchsia-600`→`pink-500` gradient fill in favor of a flat `--agent-miya`, matching every other gradient-drop decision made this session (Content Studio, Voice).
+- **Real gap found during the color audit, not assumed:** the initial grep pattern used for every prior re-skin this session didn't include `red-*`/`pink-*` (only `rose-*`, which is what earlier pages happened to use for errors) — re-run with the wider pattern before finishing, which caught 6 additional real occurrences (an error banner, 3 pipeline-step-indicator colors, 2 success/error status labels) that would otherwise have been silently missed.
+- **Existing test coverage reused + extended:** `src/test/miyaStudioEmptyInputGuard.test.jsx` (4 tests, pre-existing) served as the primary regression guard throughout and stayed green. Added `src/test/miyaStudioTabs.test.jsx` (3 new tests) since the existing suite never exercised tab-switching — using `findByText`/`waitFor` per the same `AnimatePresence mode="wait"`-in-jsdom gotcha documented in bug-log.md #9, confirmed to apply here too.
+- **Live-verified** (Playwright, real dev server): Prompt Builder tab renders fully and correctly (header, all 6 tabs, Production Pipeline panel, Local Media Generators panel) with zero console errors. The Script Studio tab's first screenshot briefly caught a `Suspense` loading fallback ("Loading miya...") — a real but harmless timing artifact of this file's larger lazy-loaded chunk needing slightly more time than the fixed wait used in the screenshot script, not a functional bug; confirmed by the second screenshot (taken later in the same run) showing full, correct render.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
