@@ -694,7 +694,7 @@ not confirmed or policy-level. The three items below were independently
 re-verified against the live files in this session (not merely copied from
 either report) and are real, unfixed as of 2026-07-26.
 
-- [ ] **F1 — Fix timing-unsafe token comparison in Cloud Voice auth**
+- [x] **F1 — Fix timing-unsafe token comparison in Cloud Voice auth**
   - **Owner:** Sentinel; **execution:** Alphonso
   - `voice/cloud-backend/app/auth.py:9` compares the bearer token with `!=`
     instead of a constant-time comparison
@@ -703,10 +703,32 @@ either report) and are real, unfixed as of 2026-07-26.
     Notably, the equivalent Rust companion-auth path already received this
     exact class of fix (`cf2d9ef`); this Python service did not.
   - **Code change closed 2026-07-26 by PR #124:** replaced with
-    `secrets.compare_digest()`. Pending: regression test asserting
-    equal-length near-miss tokens are still rejected, and `pytest` for
-    `voice/cloud-backend` passes (evidence unavailable in this session;
-    pytest runs OOM on this machine).
+    `secrets.compare_digest()`.
+  - **Closed 2026-09-06:** the missing regression test/pytest evidence is no
+    longer blocked — this machine's prior `pytest` OOM was a Python 3.14
+    incompatibility (`pydantic-core` has no prebuilt wheel for 3.14 and
+    PyO3 0.22 can't build one from source on it), not a real memory limit.
+    Created a Python 3.11 venv (`voice/cloud-backend/.venv`, gitignored),
+    installed `requirements-dev.txt` clean, and added
+    `tests/test_auth.py` (7 tests) directly exercising
+    `require_bearer_token()`, including the near-miss-token regression the
+    "Done when" criteria asked for. Full suite: **36/36 passed**.
+  - **Real-world impact finding (2026-09-06):** `require_bearer_token()` —
+    the function this whole item is about — has **zero call sites**
+    anywhere in `voice/cloud-backend` (confirmed via repo-wide grep). The
+    service's actual live auth path (`app/supabase_auth.py`'s
+    `SupabaseDeviceRegistry`) validates the user's bearer token by round-
+    tripping it to Supabase's `/auth/v1/user` endpoint for real signature
+    verification — there is no local string comparison against a static
+    secret anywhere in the reachable code. `auth.py` is dead code (likely a
+    leftover from an earlier shared-secret design later replaced by
+    Supabase JWT auth). The `compare_digest()` fix and this regression test
+    are still correct and worth keeping, but the timing-attack surface this
+    item describes was never actually reachable in production. Not
+    proposing removal of `auth.py` unprompted since it may be intended for
+    a future machine-to-machine endpoint — flagging for a human decision
+    (remove as dead code, or wire it up somewhere) rather than deleting or
+    inventing a call site.
   - **Done when:** the comparison uses `hmac.compare_digest()` (or
     equivalent constant-time check), with a regression test asserting equal-
     length near-miss tokens are still rejected, and `pytest` for
