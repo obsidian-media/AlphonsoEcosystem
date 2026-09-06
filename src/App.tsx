@@ -381,6 +381,18 @@ function AppShell() {
     })();
   }, []);
 
+  // CALL-E MCP conversational outreach recovery: any record left 'in_progress'
+  // from a prior session gets its poll loop restarted (get_call_run only,
+  // never run_call again). See docs/superpowers/specs/2026-09-06-calle-mcp-conversational-outreach-design.md.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { recoverInterruptedMcpOutreachCalls } = await import('./services/calleMcpOutreachService');
+        await recoverInterruptedMcpOutreachCalls();
+      } catch { /* non-critical */ }
+    })();
+  }, []);
+
   // Verify any stored license token at boot so the paid tier is granted only
   // from a valid signature (fail-closed until initLicense resolves).
   useEffect(() => {
