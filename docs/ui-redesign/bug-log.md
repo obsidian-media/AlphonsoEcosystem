@@ -63,6 +63,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, real Ollama connection): full page renders correctly — metric row, warning-tinted active tab and CTA buttons, success-tinted WhatsApp connection indicator, accent-numbered workflow steps — zero console errors. This file's lazy-loaded chunk needed ~4s to resolve in the headless browser (larger than Miya's, consistent with it being the biggest file re-skinned this session by total line count within a single component tree); confirmed harmless once given adequate wait time, same as bug-log.md #12's finding.
 - **Status:** CLOSED.
 
+### 14. `OperatorDashboard.tsx` re-skin — 132 refs, the most of any file this session
+
+- **What changed:** the Operator Mode page (System space — runtime health, identity/privacy, coach mode, screen intelligence, plugin controls, memory/workspace intelligence, recovery/verification logs) carried 132 hardcoded color refs, more than any other file touched this session (surpassing Miya Studio's 91 and Orchestrator's 84). Re-skinned onto `--success`/`--warning`/`--error`/`--accent`/`--text-*`/`--surface-*`. A shared `Badge` helper had a centralized 6-tone color dict (`zinc`/`green`/`blue`/`amber`/`red`/`indigo`) — fixing that one dict closed every `Badge` call site at once, but only accounted for 6 of the 132 raw lines since most of the file's color usage is inlined directly rather than routed through the shared helper.
+- **Real, intentional convergence, not hidden:** the `Badge` dict's `blue` and `indigo` tones were two visually-distinct-but-semantically-identical "neutral info" colors in the original design — both now resolve to the same `--accent`-family tokens, since the token system has no second neutral-accent color to preserve an arbitrary distinction that never carried real meaning (confirmed by reading each call site, not assumed).
+- **Existing test coverage reused:** `src/test/operatorDashboard.test.jsx` (2 tests, pre-existing) stayed green throughout — no new tests needed, matching the proportional-effort precedent for already-covered files (Voice, Miya).
+- **Live-verified** (Playwright, real dev server, real Ollama connection, `alphonso_operator_mode_v1` seeded to bypass the Operator Mode gate): full dense page renders correctly — Operator Mode toggle in success-green, FAILED status badges in error-red, section icons in accent, real live Ollama/audit-chain/screen-intelligence data throughout — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
