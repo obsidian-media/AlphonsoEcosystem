@@ -94,8 +94,8 @@ function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-lime-500/20 bg-lime-500/5 px-4 py-3 space-y-3">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-lime-400">Skip Ollama — Free Cloud Model</div>
+    <div className="mt-3 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 space-y-3">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Skip Ollama — Free Cloud Model</div>
       <p className="text-xs text-[var(--text-3)]">
         Both are genuinely free-tier (rate-limited, not billed), but requests leave your machine and go to{' '}
         {info.label}&apos;s cloud — this is not local like Ollama.
@@ -107,7 +107,7 @@ function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider
             type="button"
             onClick={() => setProvider(p)}
             className={`px-3 py-1 uppercase tracking-widest font-bold transition-colors ${
-              provider === p ? 'bg-lime-500 text-black' : 'bg-[var(--surface-2)] text-[var(--text-4)] hover:text-[var(--text-2)]'
+              provider === p ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface-2)] text-[var(--text-4)] hover:text-[var(--text-2)]'
             }`}
           >
             {CLOUD_SKIP_PROVIDERS[p].label}
@@ -116,19 +116,19 @@ function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider
       </div>
       <ol className="space-y-1.5 text-xs text-[var(--text-3)] list-none">
         <li className="flex gap-2">
-          <span className="text-lime-400 font-bold shrink-0">1.</span>
+          <span className="text-[var(--accent)] font-bold shrink-0">1.</span>
           Get a free key at{' '}
-          <button onClick={() => openExternal(info.url)} className="text-lime-400 underline hover:text-lime-300 transition-colors">
+          <button onClick={() => openExternal(info.url)} className="text-[var(--accent)] underline hover:text-[var(--accent-hover)] transition-colors">
             {info.url.replace('https://', '')}
           </button>.
         </li>
         <li className="flex gap-2">
-          <span className="text-lime-400 font-bold shrink-0">2.</span>
+          <span className="text-[var(--accent)] font-bold shrink-0">2.</span>
           Paste it below and continue — you can change this anytime in Settings → Connectors.
         </li>
       </ol>
       {saved ? (
-        <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--success)]">
           <CheckCircle size={12} /> Key saved — continuing with {info.label}.
         </div>
       ) : (
@@ -138,12 +138,12 @@ function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider
             placeholder={info.placeholder}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-white/10 text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-lime-500/50"
+            className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-white/10 text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
           />
           <button
             onClick={handleSaveAndContinue}
             disabled={!apiKey.trim()}
-            className="px-3 py-1.5 rounded-lg bg-lime-600 hover:bg-lime-500 disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-white text-xs font-bold transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-white text-xs font-bold transition-colors"
           >
             Save & Continue
           </button>
@@ -267,11 +267,11 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
 
   const statusConfig: Record<OllamaCheckStatus, { dot: string; text: string; border: string }> = {
     checking:     { dot: 'bg-[var(--text-4)] animate-pulse', text: 'text-[var(--text-3)]',    border: 'border-white/[0.06] bg-[var(--surface-1)/0.4]' },
-    connected:    { dot: 'bg-emerald-400',             text: 'text-emerald-300', border: 'border-emerald-500/30 bg-emerald-500/10' },
-    no_models:    { dot: 'bg-amber-400',               text: 'text-amber-300',   border: 'border-amber-500/30 bg-amber-500/10' },
-    not_running:  { dot: 'bg-red-400',                 text: 'text-red-300',     border: 'border-red-500/30 bg-red-500/10' },
-    not_installed:{ dot: 'bg-red-400',                 text: 'text-red-300',     border: 'border-red-500/30 bg-red-500/10' },
-    error:        { dot: 'bg-red-400',                 text: 'text-red-300',     border: 'border-red-500/30 bg-red-500/10' },
+    connected:    { dot: 'bg-[var(--success)]',        text: 'text-[var(--success)]', border: 'border-[var(--success)]/30 bg-[var(--success-dim)]' },
+    no_models:    { dot: 'bg-[var(--warning)]',        text: 'text-[var(--warning)]', border: 'border-[var(--warning)]/30 bg-[var(--warning-dim)]' },
+    not_running:  { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error)]/30 bg-[var(--error-dim)]' },
+    not_installed:{ dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error)]/30 bg-[var(--error-dim)]' },
+    error:        { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error)]/30 bg-[var(--error-dim)]' },
   };
   const cfg = statusConfig[status] || statusConfig.checking;
 
@@ -297,7 +297,7 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
         <div>
           <div className={`text-sm font-semibold ${cfg.text}`}>{statusLabel}</div>
           <div className="text-xs text-[var(--text-3)] mt-0.5">{message}</div>
-          {startMsg && <div className="text-xs text-amber-300 mt-1">{startMsg}</div>}
+          {startMsg && <div className="text-xs text-[var(--warning)] mt-1">{startMsg}</div>}
         </div>
       </div>
 
@@ -331,7 +331,7 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
               Start automatically
             </button>
             <div className="text-[10px] text-[var(--text-4)]">Or start manually in a terminal:</div>
-            <div className="font-mono text-xs bg-black/40 border border-white/5 rounded-lg px-4 py-2 text-emerald-400 select-all">
+            <div className="font-mono text-xs bg-black/40 border border-[var(--border)] rounded-lg px-4 py-2 text-[var(--success)] select-all">
               ollama serve
             </div>
           </div>
@@ -432,17 +432,17 @@ function PickModelStep({ onNext }: { onNext: (model: string) => void }) {
       )}
 
       {error && !loading && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-300 mb-4">
+        <div className="rounded-xl border border-[var(--error)]/30 bg-[var(--error-dim)] px-4 py-3 text-xs text-[var(--error)] mb-4">
           Could not load models: {error}
         </div>
       )}
 
       {!loading && !error && models.length === 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-4">
-          <div className="text-xs font-semibold text-amber-300 mb-1">No models installed</div>
+        <div className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-4 py-3 mb-4">
+          <div className="text-xs font-semibold text-[var(--warning)] mb-1">No models installed</div>
           <div className="text-[11px] text-[var(--text-3)] mb-3">
             Download the recommended model or run{' '}
-            <code className="font-mono text-emerald-400">ollama pull {PREFERRED_PRESELECT}</code> in a terminal.
+            <code className="font-mono text-[var(--success)]">ollama pull {PREFERRED_PRESELECT}</code> in a terminal.
           </div>
           <button
             onClick={handlePullModel}
@@ -467,8 +467,8 @@ function PickModelStep({ onNext }: { onNext: (model: string) => void }) {
               )}
             </div>
           )}
-          {pullComplete && <div className="text-[11px] text-emerald-400 mt-2">Model downloaded. Refreshing list...</div>}
-          {pullError && <div className="text-[11px] text-red-400 mt-2">Download failed: {pullError}</div>}
+          {pullComplete && <div className="text-[11px] text-[var(--success)] mt-2">Model downloaded. Refreshing list...</div>}
+          {pullError && <div className="text-[11px] text-[var(--error)] mt-2">Download failed: {pullError}</div>}
         </div>
       )}
 
@@ -547,11 +547,11 @@ function ApprovalModeStep({ onNext }: { onNext: () => void }) {
           onClick={() => setApprovalMode(true)}
           className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
             approvalMode
-              ? 'border-emerald-500/50 bg-emerald-500/10 ring-1 ring-emerald-500/20'
+              ? 'border-[var(--success)]/50 bg-[var(--success-dim)] ring-1 ring-[var(--success)]/20'
               : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
           }`}
         >
-          <div className="mt-0.5">{approvalMode && <CheckCircle className="w-4 h-4 text-emerald-400" />}</div>
+          <div className="mt-0.5">{approvalMode && <CheckCircle className="w-4 h-4 text-[var(--success)]" />}</div>
           <div>
             <div className="text-sm font-semibold text-[var(--text-1)]">Ask before high-risk actions (recommended)</div>
             <div className="text-[11px] text-[var(--text-4)] mt-0.5">
@@ -564,11 +564,11 @@ function ApprovalModeStep({ onNext }: { onNext: () => void }) {
           onClick={() => setApprovalMode(false)}
           className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
             !approvalMode
-              ? 'border-amber-500/50 bg-amber-500/10 ring-1 ring-amber-500/20'
+              ? 'border-[var(--warning)]/50 bg-[var(--warning-dim)] ring-1 ring-[var(--warning)]/20'
               : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
           }`}
         >
-          <div className="mt-0.5">{!approvalMode && <CheckCircle className="w-4 h-4 text-amber-400" />}</div>
+          <div className="mt-0.5">{!approvalMode && <CheckCircle className="w-4 h-4 text-[var(--warning)]" />}</div>
           <div>
             <div className="text-sm font-semibold text-[var(--text-1)]">Act autonomously without asking</div>
             <div className="text-[11px] text-[var(--text-4)] mt-0.5">
@@ -808,7 +808,7 @@ function ConnectChannelStep({ onNext }: { onNext: () => void }) {
                 onClick={() => setSelected(id)}
                 className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 text-left transition-all ${
                   isSelected
-                    ? 'border-emerald-500/50 bg-emerald-500/10 ring-1 ring-emerald-500/20'
+                    ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] ring-1 ring-[var(--accent)]/20'
                     : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10 hover:bg-[var(--surface-2)/0.6]'
                 }`}
               >
@@ -819,7 +819,7 @@ function ConnectChannelStep({ onNext }: { onNext: () => void }) {
                   <div className="text-sm font-semibold text-[var(--text-1)]">{name}</div>
                   <div className="text-[11px] text-[var(--text-4)] mt-0.5">{description}</div>
                 </div>
-                {isSelected && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
+                {isSelected && <CheckCircle className="w-4 h-4 text-[var(--accent)] shrink-0" />}
               </button>
 
               {/* Inline expanded guides when selected */}
@@ -872,8 +872,8 @@ function AdvancedServiceRow({ label, description, checking, ok, hint, onCheck }:
         </button>
       </div>
       {ok !== null && (
-        <div className={`mt-2 flex items-center gap-1.5 text-[11px] ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+        <div className={`mt-2 flex items-center gap-1.5 text-[11px] ${ok ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-[var(--success)]' : 'bg-[var(--warning)]'}`} />
           {ok ? 'Available' : hint}
         </div>
       )}
@@ -969,8 +969,8 @@ function AdvancedServicesStep({ onNext }: { onNext: () => void }) {
 function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinish: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6">
-        <Zap className="w-8 h-8 text-emerald-400" />
+      <div className="w-16 h-16 rounded-2xl bg-[var(--success-dim)] border border-[var(--success)]/20 flex items-center justify-center mb-6">
+        <Zap className="w-8 h-8 text-[var(--success)]" />
       </div>
       <h2 className="text-xl font-bold text-white mb-3">You're ready</h2>
       <p className="text-[var(--text-3)] text-sm leading-relaxed max-w-sm mb-4">
@@ -986,7 +986,7 @@ function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinis
 
       <button
         onClick={onFinish}
-        className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
+        className="flex items-center gap-2 px-6 py-3 bg-[var(--success)] hover:bg-[var(--success)]/90 text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
       >
         Start chatting <ArrowRight className="w-4 h-4" />
       </button>
@@ -1008,12 +1008,12 @@ export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: s
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--surface-0)]">
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-transparent to-cyan-950/20 pointer-events-none" />
+      <div className="absolute inset-0 bg-[var(--accent)]/5 pointer-events-none" />
       <div className="relative w-full max-w-md mx-4">
         <div className="rounded-2xl border border-white/[0.06] bg-[var(--surface-1)]/90 backdrop-blur-xl shadow-2xl p-8">
           {/* Brand header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+            <div className="w-9 h-9 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-[var(--shadow-glow-accent)]">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
