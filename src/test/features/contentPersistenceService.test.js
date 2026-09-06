@@ -36,6 +36,9 @@ describe('contentPersistenceService', () => {
       mockInvoke.mockResolvedValue(JSON.stringify(jobs));
       const result = await hydrateContentJobsFromSqlite();
       expect(result).toEqual(jobs);
+      // A blanket mockResolvedValue would pass even if the real code called
+      // the wrong command/key -- assert it actually reads the right row.
+      expect(mockInvoke).toHaveBeenCalledWith('kv_get', { key: 'content_catalyst_jobs_v1' });
     });
 
     it('returns null when kv_get returns null', async () => {

@@ -218,9 +218,11 @@ describe('useJarvisVoice', () => {
   it('calls stop on unmount', async () => {
     const { result, unmount } = renderHook(() => useJarvisVoice());
     await act(async () => { await result.current.start(); });
+    const ws = wsInstances[wsInstances.length - 1];
     unmount();
-    // After unmount, the useEffect cleanup calls stop()
-    // The result after unmount is stale, but the important thing is no errors thrown
-    expect(true).toBe(true);
+    // The useEffect cleanup should call stop(), which closes the live
+    // WebSocket connection -- assert that actually happened instead of just
+    // checking that unmount didn't throw.
+    expect(ws.close).toHaveBeenCalled();
   });
 });

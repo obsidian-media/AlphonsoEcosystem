@@ -90,6 +90,11 @@ describe('repoAuditService', () => {
       expect(report.blockedCount).toBe(1);
       expect(report.overallStatus).toBe('failed');
       expect(report.filesScanned).toBe(10);
+      // A permissive mock resolving any invoke() call would pass even if the
+      // wrong command or args were sent -- assert the real contract.
+      expect(invoke).toHaveBeenCalledWith('scan_workspace_readiness', {
+        root: '/test', maxFiles: 1200, maxFindings: 240
+      });
     });
     it('returns report with defaults when scan is null', async () => {
       (invoke as any).mockResolvedValueOnce(null);

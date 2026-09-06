@@ -60,9 +60,9 @@ describe('useTheme', () => {
     expect(result.current.theme).toBe('light');
   });
 
-  it('handles corrupted localStorage gracefully', () => {
+  it('falls back to dark when localStorage holds an invalid theme value', () => {
     localStorage.setItem('alphonso_theme_v1', 'not-a-theme');
     const { result } = renderHook(() => useTheme());
-    expect(result.current.theme).toBe('not-a-theme');
+    expect(result.current.theme).toBe('dark');
   });
 });
