@@ -140,6 +140,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, real Ollama connection, 2 screenshots): step 1 "Check Ollama" with a green success-token connected state and the simplified flat-accent brand icon, and the expanded "Skip Ollama — Free Cloud Model" guide now rendering in accent cyan instead of the prior lime — zero console errors throughout.
 - **Status:** CLOSED.
 
+### 23. `ProductionReadinessPanel.tsx` re-skin (660 lines, 111 refs) — a clean, no-carve-out pass, plus a real cross-function inconsistency found and fixed
+
+- **What changed:** `STATE_STYLES` (badge colors) and `readinessRowShellClass` (row background colors) — the two truth-label→color maps driving every badge and card in this panel — plus all structural chrome (header, workspace-root box, live-blockers list, release/updater proof section, readiness matrix, connector matrix). No per-item/per-agent identity anywhere in this file (unlike the last several files) — every color is genuine truth-state semantics, so this is a fully clean, no-carve-out re-skin like EcosystemHub (#17): confirmed/configured/ready→`--success`, foundation_only→`--info`, not_configured/invalid/partial→`--warning`, setup_required→`--accent` (a deliberately milder "not done yet" state, distinct from "something's actively wrong"), blocked/failed→`--error`, unknown→neutral.
+- **Real cross-function inconsistency found and fixed:** `STATE_STYLES` (the badge map) had `not_configured` mapped to indigo, while `readinessRowShellClass` (the row-background map, used for the exact same truth state on the same rows) grouped `not_configured` with `invalid` under amber instead — the badge and the card background it sits on disagreed about whether "not configured" was a warning state or a neutral one. Fixed by aligning both maps onto the same semantic scheme (`not_configured`→`--warning` in both), matching `readinessRowShellClass`'s existing intent since its own inline comment already treats `setup_required` as the deliberately milder bucket, not `not_configured`.
+- **Existing test coverage:** no dedicated component test, but `src/test/ecosystemHub.test.jsx` (8 tests) renders this panel via `EcosystemHub.tsx`'s Advanced tab — reused as the regression guard, stayed green throughout. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, real Ollama connection, 3 screenshots): the "Supervised production readiness truth panel" header, workspace-root box with `SETUP_REQUIRED` badges now in the milder accent tone and `missing` file entries in warning-amber, and the (empty, no report loaded) Readiness Matrix / Connector Readiness Matrix section headers — zero console errors throughout.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
