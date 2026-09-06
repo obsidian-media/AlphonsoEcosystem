@@ -43,9 +43,9 @@ type TabId = typeof PAGE_TABS[number]['id'];
 
 function InfoCell({ label, value }: InfoCellProps): React.JSX.Element {
   return (
-    <div className="rounded-lg border border-white/[0.06] bg-zinc-900/40 p-2.5">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">{label}</div>
-      <div className="mt-1 text-[12px] text-zinc-300">{value}</div>
+    <div className="rounded-lg border border-white/[0.06] bg-[var(--surface-1)] p-2.5">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-4)]">{label}</div>
+      <div className="mt-1 text-[12px] text-[var(--text-2)]">{value}</div>
     </div>
   );
 }
@@ -169,13 +169,13 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
         <header className="pb-5 border-b border-white/[0.06]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-400/70">
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--agent-hector)]">
                 <Compass className="h-3.5 w-3.5" />Research
               </div>
               <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Hector Research Desk</h1>
-              <p className="mt-1 text-[13px] text-zinc-500">Discover and fetch public sources, attach citations, hand off to Jose.</p>
+              <p className="mt-1 text-[13px] text-[var(--text-3)]">Discover and fetch public sources, attach citations, hand off to Jose.</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0 text-[11px] text-zinc-500">
+            <div className="flex items-center gap-2 shrink-0 text-[11px] text-[var(--text-3)]">
               <span className="rounded-full border border-white/[0.07] px-2.5 py-1">{reports.length} reports</span>
             </div>
           </div>
@@ -184,7 +184,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
         <div className="flex gap-1">
           {PAGE_TABS.map((tab) => (
             <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${activeTab === tab.id ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${activeTab === tab.id ? 'bg-white/10 text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}>
               {tab.label}
             </button>
           ))}
@@ -199,19 +199,19 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Research Question</label>
                 <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="What do you want Hector to research?"
-                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-[var(--agent-hector)]/40" />
+                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none focus:border-[var(--agent-hector)]/40" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source Type</label>
                 <select aria-label="Source Type" value={sourceType} onChange={(e) => setSourceType(e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none">
+                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none">
                   {(HECTOR_SOURCE_TYPES as string[]).map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source URLs <span className="text-zinc-600 normal-case font-normal">(optional, one per line)</span></label>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source URLs <span className="text-[var(--text-4)] normal-case font-normal">(optional, one per line)</span></label>
                 <textarea value={sourceUrls} onChange={(e) => setSourceUrls(e.target.value)} rows={3} placeholder="Leave blank for Hector to discover sources, or add specific URLs here."
-                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-[var(--agent-hector)]/40" />
+                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none focus:border-[var(--agent-hector)]/40" />
               </div>
               <button onClick={createDraft} disabled={!question.trim()} className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed">Create Research Draft</button>
             </div>
@@ -224,12 +224,12 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
               {showPermissions && (
                 <div className="border-t border-white/[0.06] px-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400 mb-2">Allowed</div>
-                    <div className="space-y-1">{(HECTOR_ALLOWED_ACTIONS as string[]).map((row) => <div key={row} className="text-[11px] text-zinc-400">{row.replace(/_/g, ' ')}</div>)}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--success)] mb-2">Allowed</div>
+                    <div className="space-y-1">{(HECTOR_ALLOWED_ACTIONS as string[]).map((row) => <div key={row} className="text-[11px] text-[var(--text-3)]">{row.replace(/_/g, ' ')}</div>)}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-widest text-red-400 mb-2">Blocked</div>
-                    <div className="space-y-1">{(HECTOR_BLOCKED_ACTIONS as string[]).map((row) => <div key={row} className="text-[11px] text-zinc-400">{row.replace(/_/g, ' ')}</div>)}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-[var(--error)] mb-2">Blocked</div>
+                    <div className="space-y-1">{(HECTOR_BLOCKED_ACTIONS as string[]).map((row) => <div key={row} className="text-[11px] text-[var(--text-3)]">{row.replace(/_/g, ' ')}</div>)}</div>
                   </div>
                 </div>
               )}
@@ -257,9 +257,9 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                       const rr = report as Record<string, unknown>;
                       return (
                         <button key={rr.id as string} onClick={() => setSelectedId(rr.id as string)}
-                          className={`w-full rounded-xl border p-3 text-left transition-colors ${selectedReport && (selectedReport as { id: string }).id === rr.id ? 'border-[var(--agent-hector)]/30 bg-[var(--agent-hector)]/10' : 'border-white/[0.06] bg-zinc-900/40 hover:bg-zinc-900/60'}`}>
-                          <div className="text-[12px] font-medium text-zinc-200 line-clamp-2">{String(rr.researchQuestion ?? '')}</div>
-                          <div className="mt-1 text-[11px] text-zinc-600">{String(rr.status ?? '')} · {String(rr.confidenceLevel ?? '')}</div>
+                          className={`w-full rounded-xl border p-3 text-left transition-colors ${selectedReport && (selectedReport as { id: string }).id === rr.id ? 'border-[var(--agent-hector)]/30 bg-[var(--agent-hector)]/10' : 'border-white/[0.06] bg-[var(--surface-1)] hover:bg-[var(--surface-2)]'}`}>
+                          <div className="text-[12px] font-medium text-[var(--text-2)] line-clamp-2">{String(rr.researchQuestion ?? '')}</div>
+                          <div className="mt-1 text-[11px] text-[var(--text-4)]">{String(rr.status ?? '')} · {String(rr.confidenceLevel ?? '')}</div>
                         </button>
                       );
                     })}
@@ -274,7 +274,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                       <Download className="h-3.5 w-3.5" /> Export
                     </button>
                   </div>
-                  {fetchError && <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-[11px] text-red-300">{fetchError}</div>}
+                  {fetchError && <div className="rounded-xl border border-[var(--error)]/20 bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">{fetchError}</div>}
                   <SourceBoard report={selectedReport as never} />
                   <CitationPanel report={selectedReport as never} />
                   <ResearchReportPanel report={selectedReport as never} />
@@ -288,31 +288,31 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
         {activeTab === 'live' && (
           <div className="space-y-4">
             {!r ? (
-              <div className="rounded-2xl border border-white/[0.06] bg-zinc-950/50 p-10 text-center">
-                <p className="text-sm text-zinc-500">Select a report first to view live telemetry.</p>
-                <button type="button" onClick={() => setActiveTab('reports')} className="mt-3 text-[11px] font-semibold text-teal-400 hover:text-teal-300">Go to Reports →</button>
+              <div className="rounded-2xl border border-white/[0.06] bg-[var(--surface-1)] p-10 text-center">
+                <p className="text-sm text-[var(--text-3)]">Select a report first to view live telemetry.</p>
+                <button type="button" onClick={() => setActiveTab('reports')} className="mt-3 text-[11px] font-semibold text-[var(--agent-hector)] hover:opacity-80">Go to Reports →</button>
               </div>
             ) : (
               <>
-                <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
-                  <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Selected Report</div>
-                  <div className="text-[12px] font-medium text-zinc-200">{r.researchQuestion}</div>
+                <div className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] p-4">
+                  <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-3)]">Selected Report</div>
+                  <div className="text-[12px] font-medium text-[var(--text-2)]">{r.researchQuestion}</div>
                   <div className="mt-1 grid grid-cols-3 gap-2 mt-3">
                     <InfoCell label="Run State" value={r.runState ?? 'idle'} />
                     <InfoCell label="Status" value={r.status ?? 'draft'} />
                     <InfoCell label="Confidence" value={r.confidenceLevel ?? '—'} />
                   </div>
-                  {r.currentSourceUrl && <div className="mt-2 text-[11px] text-zinc-500 font-mono truncate">↳ {r.currentSourceUrl}</div>}
+                  {r.currentSourceUrl && <div className="mt-2 text-[11px] text-[var(--text-3)] font-mono truncate">↳ {r.currentSourceUrl}</div>}
                 </div>
-                <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 p-4">
-                  <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Run Log</div>
+                <div className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] p-4">
+                  <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-3)]">Run Log</div>
                   <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                     {!r.runLog?.length ? (
-                      <p className="text-[12px] text-zinc-600">No run logs yet. Click "Run Live Research" in the Reports tab to start.</p>
+                      <p className="text-[12px] text-[var(--text-4)]">No run logs yet. Click "Run Live Research" in the Reports tab to start.</p>
                     ) : r.runLog.slice().reverse().map((entry, i) => (
-                      <div key={`${entry.timestampMs ?? 'n'}-${i}`} className="rounded-lg border border-white/[0.06] bg-zinc-900/40 px-3 py-2 text-[11px]">
-                        <div className="font-medium text-zinc-200">{entry.message}</div>
-                        <div className="mt-0.5 text-zinc-600">{(entry.level ?? 'info').toUpperCase()} · {entry.timestampMs ? new Date(entry.timestampMs).toLocaleTimeString() : '—'}</div>
+                      <div key={`${entry.timestampMs ?? 'n'}-${i}`} className="rounded-lg border border-white/[0.06] bg-[var(--surface-1)] px-3 py-2 text-[11px]">
+                        <div className="font-medium text-[var(--text-2)]">{entry.message}</div>
+                        <div className="mt-0.5 text-[var(--text-4)]">{(entry.level ?? 'info').toUpperCase()} · {entry.timestampMs ? new Date(entry.timestampMs).toLocaleTimeString() : '—'}</div>
                       </div>
                     ))}
                   </div>
@@ -326,7 +326,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
         </motion.div>
         </AnimatePresence>
 
-        <p className="text-[11px] text-zinc-700 pb-2">
+        <p className="text-[11px] text-[var(--text-4)] pb-2">
           {(HECTOR_PROFILE as { name: string; allowedSummary?: string }).name}: {(HECTOR_PROFILE as { allowedSummary?: string }).allowedSummary}
         </p>
       </div>
