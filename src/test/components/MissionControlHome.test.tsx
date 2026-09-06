@@ -113,3 +113,40 @@ describe('MissionControlHome — hero (portrait strip + dynamic greeting)', () =
     expect(screen.getByText(/Good (morning|afternoon|evening)/)).toBeTruthy();
   });
 });
+
+describe('MissionControlHome — 2-tile stats row', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows only Approvals and Active agents tiles — no Local AI or Memory or Coach tiles', async () => {
+    (getAttentionItems as any).mockResolvedValue([]);
+    render(<MissionControlHome {...baseProps} />);
+    await waitFor(() => expect(screen.getByText('Approvals')).toBeTruthy());
+    expect(screen.getByText('Active agents')).toBeTruthy();
+    expect(screen.queryByText('Local AI')).toBeNull();
+    expect(screen.queryByText('Memory')).toBeNull();
+    expect(screen.queryByText('Coach')).toBeNull();
+  });
+
+  it('shows the oldest-waiting duration under Approvals when actionable items exist', async () => {
+    (getAttentionItems as any).mockResolvedValue([
+      { id: 'a', source: 'approval-chat', severity: 'high', title: 'Item A', timestamp: Date.now() - 65 * 60_000, actionable: true },
+    ]);
+    render(<MissionControlHome {...baseProps} />);
+    expect(await screen.findByText(/oldest waiting/i)).toBeTruthy();
+  });
+
+  it('shows "queue clear" under Approvals when there are no actionable items', async () => {
+    (getAttentionItems as any).mockResolvedValue([]);
+    render(<MissionControlHome {...baseProps} />);
+    await waitFor(() => expect(screen.getByText('queue clear')).toBeTruthy());
+  });
+
+  it('names the active agents under the Active agents tile', async () => {
+    (getAttentionItems as any).mockResolvedValue([]);
+    render(<MissionControlHome {...baseProps} />);
+    // the mocked AgentStatusStrip (Task 3) always reports jose + hector active
+    expect(await screen.findByText('Jose, Hector')).toBeTruthy();
+  });
+});

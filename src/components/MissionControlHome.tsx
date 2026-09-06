@@ -44,6 +44,13 @@ interface Props {
   onNavigate?: (tab: string) => void;
 }
 
+function formatWaitingDuration(oldestTimestamp: number): string {
+  const minutes = Math.max(1, Math.round((Date.now() - oldestTimestamp) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  return `${hours}h`;
+}
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning.';
@@ -85,6 +92,11 @@ export function MissionControlHome({
       window.clearInterval(id);
     };
   }, []);
+
+  const actionableItems = useMemo(() => attentionItems.filter((item) => item.actionable), [attentionItems]);
+  const oldestActionable = actionableItems.length
+    ? actionableItems.reduce((oldest, item) => (item.timestamp < oldest.timestamp ? item : oldest))
+    : null;
 
   const ATTENTION_SOURCE_META: Record<AttentionItem['source'], { tab: string; cta: string; icon: React.ComponentType<{ className?: string }> }> = {
     'approval-chat': { tab: 'orchestrator', cta: 'Open Jose', icon: Crown },
@@ -142,8 +154,6 @@ export function MissionControlHome({
       .slice(0, 6);
   }, [snapshot.activity, snapshot.recentLogs]);
 
-  const ollamaConnected = ollamaStatus?.state === 'connected';
-
   return (
     <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-6xl px-6 py-8 space-y-10">
@@ -176,42 +186,29 @@ export function MissionControlHome({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          {
-            label: 'Local AI',
-            value: ollamaConnected ? 'Online' : 'Offline',
-            dot: ollamaConnected ? 'bg-[var(--success)]' : 'bg-[var(--text-4)]',
-            sub: ollamaStatus?.label || 'Ollama',
-          },
-          {
-            label: 'Approvals',
-            value: snapshot.approvals.length || '—',
-            dot: snapshot.approvals.length ? 'bg-[var(--warning)]' : 'bg-[var(--border-strong)]',
-            sub: snapshot.approvals.length ? 'waiting' : 'queue clear',
-          },
-          {
-            label: 'Coach',
-            value: coachMode ? 'On' : 'Off',
-            dot: coachIntervention ? 'bg-[var(--error)]' : coachMode ? 'bg-[var(--accent)]' : 'bg-[var(--border-strong)]',
-            sub: coachIntervention ? `${coachIntervention.level} intervention` : 'no intervention',
-          },
-          {
-            label: 'Memory',
-            value: memoryItems.length,
-            dot: 'bg-violet-400',
-            sub: updateCheckState?.available ? 'update ready' : 'up to date',
-          },
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] px-4 py-3.5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)]">{s.label}</span>
-            </div>
-            <div className="text-xl font-bold text-[var(--text-1)]">{s.value}</div>
-            <div className="mt-0.5 text-[11px] text-[var(--text-4)]">{s.sub}</div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] px-4 py-3.5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className={`h-1.5 w-1.5 rounded-full ${actionableItems.length ? 'bg-[var(--warning)]' : 'bg-[var(--border-strong)]'}`} />
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)]">Approvals</span>
           </div>
-        ))}
+          <div className="text-xl font-bold text-[var(--text-1)]">{actionableItems.length || '—'}</div>
+          <div className="mt-0.5 text-[11px] text-[var(--text-4)]">
+            {oldestActionable ? `oldest waiting ${formatWaitingDuration(oldestActionable.timestamp)}` : 'queue clear'}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] px-4 py-3.5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className={`h-1.5 w-1.5 rounded-full ${activeAgents.length ? 'bg-[var(--accent)]' : 'bg-[var(--border-strong)]'}`} />
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)]">Active agents</span>
+          </div>
+          <div className="text-xl font-bold text-[var(--text-1)]">{activeAgents.length}/9</div>
+          <div className="mt-0.5 text-[11px] text-[var(--text-4)] truncate">
+            {activeAgents.length
+              ? activeAgents.map((a) => a.name.charAt(0).toUpperCase() + a.name.slice(1)).join(', ')
+              : 'idle'}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
