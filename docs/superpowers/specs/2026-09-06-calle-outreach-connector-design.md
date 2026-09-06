@@ -71,6 +71,32 @@ matching his "approved outbound distribution actions" role — but nothing
 routes through Jose's assignment pipeline. This removes an entire unscoped
 integration surface and the budget conflict along with it.
 
+**Second self-critique pass caught a related problem this didn't fully fix:**
+removing the Jose dependency stops the *pipeline-budget* conflict, but it
+doesn't answer *who holds the up-to-6-minute poll open*. If the panel's
+"Approve & Place Call" button `await`s `runOutreachCall` end-to-end, a React
+click handler holds an async chain open for up to 6 minutes — and if the
+desktop app is closed during that window, the real call keeps running on
+CALL-E's side (money spent, call placed) while Alphonso's in-memory poll dies
+with the process, leaving the record stuck at `in_progress` forever with no
+way to ever learn the outcome.
+
+**Fix:** `runOutreachCall` only `await`s the fast part (`createCall`, which
+returns in seconds once the call is accepted) and does **not** await
+`pollCallUntilTerminal` — that poll is kicked off but left to run
+independently; the panel discovers progress purely by re-reading
+`listOutreachCalls()` on its own interval (already the plan), not by holding
+open the original promise. This still doesn't survive the app being closed
+mid-call, so a **boot-time recovery check** mirroring the existing
+`recoverInterruptedExecutions()` pattern (`orchestrationQueueService.ts`,
+already wired at app boot) is added: on startup, any `OutreachCallRecord`
+left in `queued`/`in_progress` gets one `getCall` check against CALL-E's API
+(which has its own durable state regardless of whether Alphonso was running)
+to pick up a result that landed while the app was closed, rather than being
+silently stuck forever. If that single check still shows a non-terminal
+status, the record is left as-is (CALL-E is still working it) rather than
+resuming a full poll loop — the user can re-open the panel to keep watching.
+
 ```
 User (via panel) → CalleOutreachPanel.tsx
                        │ submit (creates a 'pending_approval' record)
@@ -81,18 +107,24 @@ User (via panel) → CalleOutreachPanel.tsx
                        ▼
               calleOutreachService.ts (runOutreachCall, approved: true)
                        │ appendAgentActivity({ agent: 'marcus', ... })
+                       │ AWAITS createCall only (fast) -> record becomes 'queued'
                        ▼
               calleConnector.ts ──fetch()──► https://api.heycall-e.com/v1/calls
                        │ evaluatePolicyGate() runs first -- blocks here if
                        │ approved wasn't actually true (defense in depth)
-                       │ poll until terminal (async, does not block the
-                       │ renderer -- the panel polls listOutreachCalls() on
-                       │ its own interval, same as OrchestratorQueueView.tsx)
+                       ▼
+              pollCallUntilTerminal kicked off WITHOUT being awaited by the
+              caller -- runs independently, updates the record as it goes.
+              CalleOutreachPanel.tsx never awaits this; it re-reads
+              listOutreachCalls() on its own interval (matching
+              OrchestratorQueueView.tsx's existing 5s-refresh pattern).
+                       │
                        ▼
               calleOutreachService.ts updates the local record with the result
                        │
                        ▼
-              CalleOutreachPanel.tsx re-renders (status + structured result)
+              On next app boot, any record still 'queued'/'in_progress' gets
+              one getCall() recovery check (mirrors recoverInterruptedExecutions()).
 ```
 
 ### 1. `src/services/connectors/calleConnector.ts` — raw API client
@@ -239,7 +271,17 @@ its history list.
 
 ```ts
 const CALLE_OUTREACH_KEY = 'alphonso_calle_outreach_v1';
-const ESTIMATED_COST_USD = 0.05; // CALL-E's flat per-call rate, shown at approval time
+// Best-effort estimate only, sourced from CALL-E's pricing page as of
+// 2026-09-06 -- that page itself states pricing is "early-stage... subject
+// to change." Shown in the approval prompt as an estimate, never presented
+// as a guaranteed/contractual figure; re-check before the actual demo.
+const ESTIMATED_COST_USD = 0.05;
+
+// PolicyBlockKind distinguishes WHY a call is stuck in 'pending_approval' --
+// the first pass conflated every block reason into one status, which would
+// have told a Zero-Cost-Mode-blocked user to "click Approve again" when what
+// they actually need is to go change a Settings toggle first.
+export type PolicyBlockKind = 'needs_approval_click' | 'zero_cost_mode' | 'license_tier' | null;
 
 export interface OutreachCallRecord {
   id: string;
@@ -248,7 +290,8 @@ export interface OutreachCallRecord {
   phone: string;
   taskType: 'outreach' | 'custom';
   task: string;
-  status: CalleCallStatus | 'pending_approval' | 'failed_to_start';
+  status: CalleCallStatus | 'pending_approval' | 'failed_to_start' | 'dismissed';
+  policyBlockKind: PolicyBlockKind;
   calleCallId: string | null;
   structuredResult: Record<string, unknown> | null;
   summary: string | null;
@@ -264,12 +307,22 @@ export function createOutreachDraft({ businessName, phone, taskType, task }: {
   businessName: string; phone: string; taskType: OutreachCallRecord['taskType']; task: string;
 }): OutreachCallRecord {
   // Duplicate-submission guard: if an existing record for the same `phone`
-  // is not yet in a terminal state (pending_approval/queued/in_progress),
-  // return that record instead of creating a second one. The panel checks
-  // this before showing the form as submittable for a given phone number.
+  // is not yet in a terminal-or-dismissed state (pending_approval/queued/
+  // in_progress), return that record instead of creating a second one. The
+  // panel checks this before showing the form as submittable for a given
+  // phone number -- but see dismissOutreachCall below for the escape hatch,
+  // since without one a record stuck in pending_approval (e.g. blocked by
+  // Zero-Cost Mode until the user changes a Setting) would permanently lock
+  // out that phone number with no way to abandon it.
   // ...generates a fresh idempotencyKey (e.g. `outreach_${generateId()}`),
   // pushes a 'pending_approval' record, returns it.
 }
+
+// Lets the user abandon a stuck/failed/blocked record so the duplicate-
+// submission guard above doesn't permanently lock out that phone number.
+// Does not cancel an in-flight CALL-E call (there's no cancel-call use case
+// here); only clears the LOCAL record out of the way.
+export function dismissOutreachCall(recordId: string): void { /* sets status: 'dismissed', persists */ }
 
 // Called once the panel's "Approve & Place Call" step passes approved: true.
 // Without it, createCall's own evaluatePolicyGate check blocks before
@@ -278,19 +331,41 @@ export function createOutreachDraft({ businessName, phone, taskType, task }: {
 // (his "approved outbound distribution action" role) -- this is a narrative
 // label only, NOT a dependency on Jose's assignment pipeline (see the
 // Architecture section above for why that path was dropped).
-export async function runOutreachCall(recordId: string, options: { approved?: boolean; onProgress?: (record: OutreachCallRecord) => void } = {}): Promise<OutreachCallRecord> {
+//
+// IMPORTANT: this function only AWAITS the fast part (createCall). It does
+// NOT await pollCallUntilTerminal -- that promise is started and left to run
+// independently (fire-and-forget from the caller's perspective), updating
+// the persisted record as it progresses. The panel never awaits this
+// function's full completion; it discovers progress by re-reading
+// listOutreachCalls() on its own interval (see Section 5). This is the fix
+// for the "who holds the 6-minute poll open" problem raised in the
+// Architecture section above.
+export async function runOutreachCall(recordId: string, options: { approved?: boolean } = {}): Promise<OutreachCallRecord> {
   // 1. look up the draft record (has its stable idempotencyKey already)
   // 2. build the single OUTREACH_RESULT_SCHEMA (see below) and interpolate
   //    record.phone directly into the task text if not already present
   // 3. appendAgentActivity({ agent: 'marcus', action: 'calle_outreach_call', detail: record.businessName })
-  // 4. calleConnector.createCall(apiKey, request, record.idempotencyKey, { approved: options.approved })
-  //    -> update record to 'queued'/'in_progress', options.onProgress
-  //    - on policy-gate block (thrown Error), leave record as 'pending_approval' with the block reason, do not treat as a hard failure
-  // 5. calleConnector.pollCallUntilTerminal(...) -> update record with final
-  //    status/result, reading structuredResult/summary/taskCompleted from
-  //    the TASK-LEVEL response fields (not recipients[].*, see calleConnector.ts)
-  // 6. persist + return
+  // 4. await calleConnector.createCall(apiKey, request, record.idempotencyKey, { approved: options.approved })
+  //    -> update record to 'queued', persist, RETURN the updated record here
+  //    - on policy-gate block (thrown Error), set status: 'pending_approval'
+  //      and policyBlockKind from the gate's reason (zero_cost_mode /
+  //      license_tier / needs_approval_click), persist, return -- do not
+  //      treat as a hard failure
+  // 5. (NOT awaited) calleConnector.pollCallUntilTerminal(...).then((call) => {
+  //      update the record with final status/result, reading
+  //      structuredResult/summary/taskCompleted from the TASK-LEVEL response
+  //      fields (not recipients[].*, see calleConnector.ts), persist
+  //    }).catch((error) => { set status: 'failed_to_start' or similar, error: String(error), persist })
 }
+
+// Boot-time recovery, mirroring orchestrationQueueService.ts's
+// recoverInterruptedExecutions() pattern: any record left 'queued' or
+// 'in_progress' from a prior app session gets ONE getCall() check against
+// CALL-E's own durable server-side state, since the in-memory poll loop that
+// was tracking it died when the app closed. If still non-terminal, the
+// record is left as-is (CALL-E is still working it); the user reopening the
+// panel resumes watching it via the normal listOutreachCalls() polling.
+export async function recoverInterruptedOutreachCalls(): Promise<void> { /* ... */ }
 ```
 
 **One unified result schema** — the demo scenario is a single compound task
@@ -364,18 +439,30 @@ this spec.
   `evaluatePolicyGate` before hitting the network (same as
   `discordConnector.ts`'s pattern) and throws on a block, which
   `runOutreachCall`'s try/catch (Section 2) turns into a `pending_approval`
-  record with the block reason attached, not a hard failure. No second
-  approval mechanism is invented: the panel's "Approve & Place Call" button
-  (distinct from the initial "Submit" step, matching `HectorResearchDesk`'s
-  existing confirm-step pattern) is what actually threads `approved: true`
-  down through `runOutreachCall(recordId, { approved: true })` →
-  `calleConnector.createCall(apiKey, request, idempotencyKey, { approved:
-  true })` on retry. Until that explicit second step, the call is created as
-  a local `pending_approval` record only — nothing is ever sent to CALL-E's
-  API without it. The approval prompt shown in the panel displays the
-  estimated cost (`ESTIMATED_COST_USD`, Section 2) alongside the business
-  name/phone/task so the human approving it can see what they're authorizing,
-  not just a bare confirm button.
+  record with a `policyBlockKind` set from the gate's actual reason
+  (`needs_approval_click` / `zero_cost_mode` / `license_tier`), not a hard
+  failure and not one conflated status string — the panel needs to tell these
+  apart because they require different user actions (click Approve again, vs.
+  go change a Settings toggle, vs. upgrade tier).
+  - **The panel's two-step Submit → separate "Approve & Place Call" flow is a
+    deliberate extra safety layer, not just an artifact of following the
+    gate.** Even if Approval Mode were somehow off, this connector still
+    requires an explicit second click before `approved: true` is ever passed
+    — no single form submission can place a real phone call outright. This is
+    intentional given the "governed, careful outreach" narrative the
+    integration is meant to demonstrate, and is worth calling out explicitly
+    rather than leaving it as an implicit side effect of the UI shape.
+  - No second approval *mechanism* is invented though: the panel's "Approve &
+    Place Call" button is what actually threads `approved: true` down through
+    `runOutreachCall(recordId, { approved: true })` →
+    `calleConnector.createCall(apiKey, request, idempotencyKey, { approved:
+    true })` on retry. Until that explicit second step, the call is created
+    as a local `pending_approval` record only — nothing is ever sent to
+    CALL-E's API without it. The approval prompt shown in the panel displays
+    the estimated cost (`ESTIMATED_COST_USD`, Section 2 — an estimate only,
+    see that constant's comment) alongside the business name/phone/task so
+    the human approving it can see what they're authorizing, not just a bare
+    confirm button.
 
 ### 5. `src/components/calle/CalleOutreachPanel.tsx` — basic, functional UI
 
@@ -398,12 +485,24 @@ now, restyled once the redesign lands and a final placement is chosen.
   revised Architecture section).
 - **Approval step**: a distinct "Approve & Place Call" action (not the same
   click as Submit) shows the business name, phone, task, and estimated cost,
-  then calls `runOutreachCall(recordId, { approved: true })`.
+  then calls `runOutreachCall(recordId, { approved: true })`. Since that call
+  only awaits the fast `createCall` step (Section 2), the button's own loading
+  state resolves in seconds, not minutes — it does not sit disabled for the
+  duration of the phone call.
+- **Blocked-record messaging**: a record sitting in `pending_approval` shows
+  different copy depending on `policyBlockKind` — `needs_approval_click`
+  shows the Approve button as the next step; `zero_cost_mode` and
+  `license_tier` instead show a message pointing at the relevant Settings
+  toggle / upgrade link, since clicking Approve again would just re-hit the
+  same gate. Every blocked/failed/dismissable record shows a "Dismiss" action
+  (`dismissOutreachCall`, Section 2) so it never permanently locks the
+  duplicate-submission guard against that phone number.
 - **Live status card**: while a call is in flight, shows a `StatusDot` +
   status label (`queued`/`in_progress`), polling `listOutreachCalls()` on an
   interval (matching `OrchestratorQueueView.tsx`'s existing 5s-refresh
-  pattern) to reflect the background poll happening in
-  `calleOutreachService.ts`.
+  pattern) to reflect the background poll happening independently in
+  `calleOutreachService.ts` (not awaited by anything the panel itself holds
+  open — see the Architecture section's fix for why).
 - **Result card**: once terminal, shows the structured result fields, the
   human-readable `summary`, and a link/expander for the transcript if
   present.
@@ -419,15 +518,21 @@ now, restyled once the redesign lands and a final placement is chosen.
 - Missing/invalid API key: `isCalleConfigured()` gates the panel's Submit
   button (disabled + setup hint), matching every other connector's pattern.
 - Policy gate block (Zero-Cost Mode, Approval Mode, license tier): the record
-  is created but never dispatched; the panel shows the block reason inline
-  (matching `ApprovalPanel`'s existing block-reason display).
+  is created but never dispatched; `policyBlockKind` records which one, and
+  the panel shows kind-specific guidance (see Section 5) rather than one
+  generic "blocked" message.
 - CALL-E API error (4xx/5xx) or poll timeout: record moves to a `failed`-like
   state with `error` populated; panel shows it distinctly (red state, matching
-  `ResearchReportPanel.tsx`'s failed-source styling) with no silent retry.
-- Network failure mid-poll: `pollCallUntilTerminal` lets the exception
-  propagate; `runOutreachCall` catches it, sets `error`, and the record is
-  left in whatever status was last successfully observed (not silently marked
-  complete).
+  `ResearchReportPanel.tsx`'s failed-source styling) with no silent retry, and
+  offers Dismiss.
+- Network failure mid-poll: `pollCallUntilTerminal`'s promise rejects;
+  because `runOutreachCall` does not await it (Architecture section), the
+  rejection is caught by the `.catch()` attached where it's kicked off, which
+  sets `error` and leaves the record in whatever status was last successfully
+  observed (not silently marked complete).
+- App closed mid-call: covered by `recoverInterruptedOutreachCalls()`
+  (Section 2), run once at boot — see the Architecture section for the full
+  reasoning behind why this exists.
 
 ## Testing
 
@@ -444,13 +549,27 @@ mapping, and assert the policy-gate check runs before every request.
   and the timeout-throws case), `isCalleConfigured`.
 - `src/test/services/calleOutreachService.test.ts` — `createOutreachDraft`
   (including the duplicate-submission guard and stable `idempotencyKey`
-  generation), `runOutreachCall` (mocking `calleConnector`, asserting the same
-  `idempotencyKey` is reused across a retry), the result-schema builder,
-  persistence round-trip via `listOutreachCalls`, and the
-  `appendAgentActivity({ agent: 'marcus', ... })` call.
+  generation), `dismissOutreachCall` (frees the phone number for a new
+  draft afterward), `runOutreachCall` (mocking `calleConnector`, asserting:
+  the same `idempotencyKey` is reused across a retry; the function's
+  returned promise resolves as soon as `createCall` resolves, WITHOUT waiting
+  for a mocked slow `pollCallUntilTerminal` to settle — this is the critical
+  regression test proving the fire-and-forget fix actually works and doesn't
+  silently regress back to blocking; each `policyBlockKind` value is set
+  correctly for its corresponding gate-block reason), the result-schema
+  builder, persistence round-trip via `listOutreachCalls`, the
+  `appendAgentActivity({ agent: 'marcus', ... })` call, and
+  `recoverInterruptedOutreachCalls` (a record left `in_progress` gets exactly
+  one `getCall` check; a record already terminal is left untouched; a record
+  still non-terminal after the check is left as `in_progress`, not re-polled
+  in a loop).
 - `src/test/components/calle/CalleOutreachPanel.test.tsx` — form validation,
-  submit dispatches `createOutreachDraft`, status card reflects record state,
-  history list renders past records, disabled-when-unconfigured state.
+  submit dispatches `createOutreachDraft`, duplicate-phone submission is
+  blocked with a pointer to the existing record, the three `policyBlockKind`
+  values each render their own distinct guidance copy (not one generic
+  "blocked" message), Dismiss clears a record and re-enables submission for
+  that phone number, status card reflects record state, history list renders
+  past records, disabled-when-unconfigured state.
 
 ## What this does not fix / build
 
@@ -465,3 +584,9 @@ mapping, and assert the policy-gate check runs before every request.
   implementation are code-complete-but-live-unverified until a real
   `CALLE_API_KEY` is used to place an actual call against a real phone number,
   which should happen before recording the hackathon demo video.
+- **Implementation-plan reminder, not yet decided here**: `recoverInterruptedOutreachCalls()`
+  needs a real boot-time call site. `App.tsx` already has one
+  `recoverInterruptedExecutions()` call in a one-shot boot `useEffect` (see
+  CLAUDE.md's "Crash-recovery checkpoint" row) — the implementation plan
+  should confirm whether this new function is added to that same effect or
+  needs its own, rather than inventing a second boot-recovery mechanism.
