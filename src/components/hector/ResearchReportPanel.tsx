@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { openExternalUrl } from '../../services/browserAutomationService';
 import { exportHectorReportAsMarkdown, exportHectorReportAsPdf, exportHectorReportAsPowerPoint } from '../../services/hectorExportService';
 import { resynthesizeHectorReport } from '../../services/hectorResearchService';
@@ -58,6 +58,17 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [localSynthesis, setLocalSynthesis] = useState<Synthesis | undefined>(report?.synthesis);
+  // The component stays mounted across report switches (HectorResearchDesk.tsx
+  // renders it with no `key`), so localSynthesis must be reset whenever the
+  // selected report changes -- otherwise a retried synthesis from the
+  // previously selected report leaks into the newly selected one.
+  const reportIdRef = useRef(report?.id);
+  useEffect(() => {
+    if (report?.id !== reportIdRef.current) {
+      reportIdRef.current = report?.id;
+      setLocalSynthesis(report?.synthesis);
+    }
+  }, [report?.id, report?.synthesis]);
 
   const synthesis = localSynthesis ?? report?.synthesis;
   const hasSuccessfulSource = Array.isArray(report?.sourceProofs) && report!.sourceProofs!.some((p) => p.ok);
@@ -65,10 +76,15 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
 
   const handleRetry = async () => {
     if (!report?.id) return;
+    const retryingReportId = report.id;
     setRetrying(true);
     try {
-      const updated = await resynthesizeHectorReport(report.id);
-      if (updated?.synthesis) setLocalSynthesis(updated.synthesis);
+      const updated = await resynthesizeHectorReport(retryingReportId);
+      // Ignore a stale completion if the user switched to a different report
+      // while this retry was still in flight.
+      if (updated?.synthesis && reportIdRef.current === retryingReportId) {
+        setLocalSynthesis(updated.synthesis);
+      }
     } finally {
       setRetrying(false);
     }

@@ -38,6 +38,17 @@ function runAudit() {
 }
 
 const report = runAudit();
+
+// A genuine npm error (registry unreachable, auth failure, etc.) produces
+// JSON with an `error` field and no `vulnerabilities` key at all -- treating
+// that as "no vulnerabilities" would silently pass the gate on a report that
+// was never actually generated. Fail loudly instead.
+if (report.error && !report.vulnerabilities) {
+  console.error('npm audit failed to produce a real report:');
+  console.error(JSON.stringify(report.error, null, 2));
+  process.exit(1);
+}
+
 const vulnerabilities = report.vulnerabilities || {};
 
 // `via` entries are either advisory objects (direct findings, carry a

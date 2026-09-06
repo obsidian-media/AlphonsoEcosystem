@@ -2,15 +2,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockJsPdfSave = vi.fn();
 const mockJsPdfText = vi.fn();
+const mockJsPdfAddPage = vi.fn();
+const CHARS_PER_MOCK_LINE = 20;
 // Regular function expression, not an arrow function -- the real code calls
 // `new jsPDF()`, and arrow functions can never be used as constructors.
 const mockJsPdfConstructor = vi.fn(function MockJsPdf() {
   return {
     text: mockJsPdfText,
     save: mockJsPdfSave,
-    splitTextToSize: (text: string) => [text],
+    // Real splitTextToSize wraps to the page width; this mock simulates that
+    // by chunking into fixed-length "lines" so a long enough report actually
+    // produces more lines than fit on one page, exercising pagination.
+    splitTextToSize: (text: string) => {
+      const lines: string[] = [];
+      for (let i = 0; i < text.length; i += CHARS_PER_MOCK_LINE) {
+        lines.push(text.slice(i, i + CHARS_PER_MOCK_LINE));
+      }
+      return lines.length ? lines : [text];
+    },
     internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } },
-    addPage: vi.fn()
+    addPage: mockJsPdfAddPage
   };
 });
 vi.mock('jspdf', () => ({ jsPDF: mockJsPdfConstructor }));
@@ -95,9 +106,33 @@ describe('export functions', () => {
     expect(mockJsPdfSave).toHaveBeenCalled();
   });
 
+  it('exportHectorReportAsPdf adds extra pages instead of running long content off the bottom of one page', async () => {
+    const LONG_REPORT = {
+      ...REPORT,
+      synthesis: {
+        ...REPORT.synthesis,
+        keyFindings: Array.from({ length: 60 }, (_, i) => `Finding number ${i} with enough text to wrap across multiple simulated lines.`)
+      }
+    };
+    await exportHectorReportAsPdf(LONG_REPORT);
+    expect(mockJsPdfAddPage).toHaveBeenCalled();
+  });
+
   it('exportHectorReportAsPowerPoint dynamically imports pptxgenjs and writes a file', async () => {
     await exportHectorReportAsPowerPoint(REPORT);
     expect(mockPptxConstructor).toHaveBeenCalled();
     expect(mockPptxWriteFile).toHaveBeenCalled();
+  });
+
+  it('exportHectorReportAsPowerPoint gives every body text box explicit sizing and shrink-to-fit so long text is not clipped', async () => {
+    await exportHectorReportAsPowerPoint(REPORT);
+    const bodyCalls = mockPptxAddText.mock.calls.filter(([, opts]) => (opts as { fontSize?: number })?.fontSize !== 20 && (opts as { fontSize?: number })?.fontSize !== 18);
+    expect(bodyCalls.length).toBeGreaterThan(0);
+    for (const [, opts] of bodyCalls) {
+      const options = opts as { w?: number; h?: number; fit?: string };
+      expect(options.w).toBeGreaterThan(0);
+      expect(options.h).toBeGreaterThan(0);
+      expect(options.fit).toBe('shrink');
+    }
   });
 });

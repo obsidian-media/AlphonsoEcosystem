@@ -75,8 +75,27 @@ export async function exportHectorReportAsPdf(report: HectorReport): Promise<voi
   const doc = new jsPDF();
   const content = buildHectorReportMarkdown(report);
   const pageWidth = doc.internal.pageSize.getWidth();
-  const lines = doc.splitTextToSize(content, pageWidth - 20);
-  doc.text(lines, 10, 10);
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const lines: string[] = doc.splitTextToSize(content, pageWidth - 20);
+
+  // doc.text() never auto-paginates -- passing the full line array in one call
+  // would silently run content off the bottom of the page for any report
+  // longer than a single page (the common case: overview + findings +
+  // disagreements + gaps + full source list). Walk lines manually and add a
+  // page whenever the next line would clear the bottom margin.
+  const lineHeight = 7;
+  const marginTop = 10;
+  const marginBottom = 10;
+  let y = marginTop;
+  for (const line of lines) {
+    if (y + lineHeight > pageHeight - marginBottom) {
+      doc.addPage();
+      y = marginTop;
+    }
+    doc.text(line, 10, y);
+    y += lineHeight;
+  }
+
   doc.save(`hector-report-${safeFileBaseName(report)}.pdf`);
 }
 
@@ -85,21 +104,30 @@ export async function exportHectorReportAsPowerPoint(report: HectorReport): Prom
   const pptx = new PptxGenJS();
   const s = report.synthesis;
 
+  // Every body text box below gets an explicit w/h covering nearly the full
+  // slide, plus `fit: 'shrink'` -- without a bounding box, pptxgenjs doesn't
+  // wrap or paginate long text across slides, so variable-length synthesis
+  // content (a long overview, many key findings) would silently overflow or
+  // clip. Shrink-to-fit keeps everything visible on one slide per section
+  // rather than attempting full multi-slide pagination, which is
+  // disproportionate effort for what's meant to be a compact export.
+  const bodyBox = { x: 0.5, w: 9, h: 5.5, fit: 'shrink' as const };
+
   const overviewSlide = pptx.addSlide();
   overviewSlide.addText(String(report.researchQuestion ?? 'Hector Research Report'), { x: 0.5, y: 0.3, fontSize: 20, bold: true });
-  overviewSlide.addText(s?.overview ?? report.summary ?? '', { x: 0.5, y: 1.2, fontSize: 14 });
+  overviewSlide.addText(s?.overview ?? report.summary ?? '', { ...bodyBox, y: 1.2, fontSize: 14 });
 
   if (s?.keyFindings.length) {
     const findingsSlide = pptx.addSlide();
     findingsSlide.addText('Key Findings', { x: 0.5, y: 0.3, fontSize: 18, bold: true });
-    findingsSlide.addText(s.keyFindings.map((f) => `• ${f}`).join('\n'), { x: 0.5, y: 1, fontSize: 12 });
+    findingsSlide.addText(s.keyFindings.map((f) => `• ${f}`).join('\n'), { ...bodyBox, y: 1, fontSize: 12 });
   }
 
   if (s?.disagreements.length || s?.gaps.length) {
     const notesSlide = pptx.addSlide();
     notesSlide.addText('Disagreements & Gaps', { x: 0.5, y: 0.3, fontSize: 18, bold: true });
     const body = [...(s.disagreements ?? []), ...(s.gaps ?? [])].map((x) => `• ${x}`).join('\n');
-    notesSlide.addText(body, { x: 0.5, y: 1, fontSize: 12 });
+    notesSlide.addText(body, { ...bodyBox, y: 1, fontSize: 12 });
   }
 
   await pptx.writeFile({ fileName: `hector-report-${safeFileBaseName(report)}.pptx` });

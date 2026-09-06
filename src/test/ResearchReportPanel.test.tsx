@@ -104,4 +104,38 @@ describe('ResearchReportPanel', () => {
     render(<ResearchReportPanel report={REPORT_WITH_SYNTHESIS} />);
     expect(screen.queryByRole('button', { name: /Re-synthesize/i })).toBeNull();
   });
+
+  it('resets localSynthesis when the selected report changes, instead of leaking the previous report\'s synthesis', () => {
+    const REPORT_TWO_NO_SYNTHESIS = {
+      ...REPORT_WITHOUT_SYNTHESIS,
+      id: 'report-2',
+      researchQuestion: 'A different question'
+    };
+    const { rerender } = render(<ResearchReportPanel report={REPORT_WITH_SYNTHESIS} />);
+    expect(screen.getByText('Overview text.')).toBeTruthy();
+
+    rerender(<ResearchReportPanel report={REPORT_TWO_NO_SYNTHESIS} />);
+    expect(screen.queryByText('Overview text.')).toBeNull();
+    expect(screen.getByRole('button', { name: /Re-synthesize/i })).toBeTruthy();
+  });
+
+  it('ignores a resynthesize completion for a report the user has since navigated away from', async () => {
+    let resolveRetry: (value: unknown) => void = () => {};
+    mockResynthesize.mockImplementation(() => new Promise((resolve) => { resolveRetry = resolve; }));
+
+    const REPORT_TWO_NO_SYNTHESIS = {
+      ...REPORT_WITHOUT_SYNTHESIS,
+      id: 'report-2',
+      researchQuestion: 'A different question'
+    };
+    const { rerender } = render(<ResearchReportPanel report={REPORT_WITHOUT_SYNTHESIS} />);
+    fireEvent.click(screen.getByRole('button', { name: /Re-synthesize/i }));
+
+    rerender(<ResearchReportPanel report={REPORT_TWO_NO_SYNTHESIS} />);
+    resolveRetry({ synthesis: { overview: 'Stale retry result.', keyFindings: [], disagreements: [], gaps: [] } });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(screen.queryByText('Stale retry result.')).toBeNull();
+  });
 });
