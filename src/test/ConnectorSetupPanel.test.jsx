@@ -77,6 +77,14 @@ vi.mock('../components/ToolConnectionsPanel', () => ({
   ToolConnectionsPanel: () => <div data-testid="tool-connections-panel" />
 }));
 
+// ── CALL-E MCP auth service mock ──────────────────────────────────────────────
+vi.mock('../services/calleMcpAuthService', () => ({
+  isCalleMcpConfigured: vi.fn().mockResolvedValue(false),
+  startBrokerLogin: vi.fn(),
+  pollBrokerLogin: vi.fn(),
+  disconnectCalleMcp: vi.fn()
+}));
+
 // ── Component under test ──────────────────────────────────────────────────────
 import { ConnectorSetupPanel } from '../components/ConnectorSetupPanel';
 import { listAgentProfiles } from '../agents/agentRegistry';
@@ -154,5 +162,11 @@ describe('ConnectorSetupPanel', () => {
     // There's no amber/error/info notice box visible on first render
     expect(screen.queryByText(/Bot token is required/i)).toBeNull();
     expect(screen.queryByText(/credentials saved/i)).toBeNull();
+  });
+
+  it('shows an MCP Connection status row with a Connect button under the CALL-E section', () => {
+    render(<ConnectorSetupPanel />);
+    expect(screen.getByText(/MCP Connection/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /connect via browser login/i })).toBeTruthy();
   });
 });

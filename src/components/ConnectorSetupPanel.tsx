@@ -1,10 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import {
   RadioTower, CheckCircle2, AlertCircle, Circle, ChevronDown, ChevronUp,
   GitBranch, MessageSquare, Bot, Zap, Database, ListTodo, Phone, Video,
   Cpu, Search, Smartphone, Settings2, MessageCircle, Hash, AtSign, Webhook
 } from 'lucide-react';
 import { ToolConnectionsPanel } from './ToolConnectionsPanel';
+import {
+  isCalleMcpConfigured,
+  startBrokerLogin,
+  pollBrokerLogin,
+  disconnectCalleMcp,
+  type CallePendingLogin
+} from '../services/calleMcpAuthService';
 import {
   createConnectorRoutePacket,
   listConnectorAudit,
@@ -251,6 +259,75 @@ interface HermesAgentRowState {
  * additionally runs the unauthenticated `GET /health` reachability probe so
  * the row shows connected/unreachable rather than just "saved".
  */
+/**
+ * CredentialSection's real prop interface (title/icon/fields/onSave/hint/savedLabel)
+ * has no slot for extra content, so this renders as its own standalone block right
+ * after the CALL-E CredentialSection rather than "inside" it -- same precedent
+ * HermesAgentsSection below sets for custom per-connector UI beyond the basic form.
+ */
+function CalleMcpConnectionBlock(): React.JSX.Element {
+  const [configured, setConfigured] = useState(false);
+  const [pending, setPending] = useState<CallePendingLogin | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    isCalleMcpConfigured().then(setConfigured);
+  }, []);
+
+  const handleConnect = async () => {
+    const session = await startBrokerLogin();
+    setPending(session);
+    invoke('open_url', { url: session.loginUrl }).catch(() => {});
+    setChecking(true);
+    const interval = setInterval(async () => {
+      const result = await pollBrokerLogin(session);
+      if (result === 'authorized') {
+        clearInterval(interval);
+        setChecking(false);
+        setPending(null);
+        setConfigured(true);
+      } else if (result === 'failed') {
+        clearInterval(interval);
+        setChecking(false);
+        setPending(null);
+      }
+    }, session.pollAfterMs || 2000);
+    setTimeout(() => clearInterval(interval), 2 * 60 * 1000);
+  };
+
+  const handleDisconnect = async () => {
+    await disconnectCalleMcp();
+    setConfigured(false);
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-500/8 p-3.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className={`h-1.5 w-1.5 rounded-full ${configured ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+          <span className="text-[11px] font-medium text-zinc-300">
+            MCP Connection: {configured ? 'Connected' : 'Not connected'}
+          </span>
+        </div>
+        {configured ? (
+          <button onClick={handleDisconnect} className="rounded-lg bg-white/5 px-3 py-1.5 text-[10px] font-medium text-zinc-400 hover:bg-white/10">
+            Disconnect
+          </button>
+        ) : (
+          <button
+            onClick={handleConnect}
+            disabled={checking}
+            className="rounded-lg bg-rose-500/10 border border-rose-300/20 px-3 py-1.5 text-[10px] font-medium text-rose-300 hover:bg-rose-500/20"
+          >
+            {checking ? 'Waiting for browser login...' : 'Connect via Browser Login'}
+          </button>
+        )}
+      </div>
+      {pending && <p className="mt-2 text-[10px] text-zinc-500">Complete the login in your browser, then this will update automatically.</p>}
+    </div>
+  );
+}
+
 function HermesAgentsSection(): React.JSX.Element {
   const agents = useMemo(() => listAgentProfiles(), []);
   const [rows, setRows] = useState<Record<string, HermesAgentRowState>>(() => {
@@ -815,6 +892,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('calle', { CALLE_API_KEY: calleApiKey })}
             hint="Real outbound phone calls, ~$0.05 each. Sign up at heycall-e.com and copy your API key from the dashboard."
             savedLabel="CALL-E key saved" />
+          <CalleMcpConnectionBlock />
 
           <CredentialSection title="Generic Webhook" icon={Webhook} borderColor="border-amber-300/20" bgColor="bg-amber-500/8" accentColor="text-amber-400"
             fields={[
