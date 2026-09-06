@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendAgentActivity } from './agentActivityService';
-import { planCall, type PlanCallResult } from './connectors/calleMcpConnector';
+import { planCall, runCall, getCallRun, type PlanCallResult } from './connectors/calleMcpConnector';
+import { evaluatePolicyGate } from './policyEnforcementService';
 
 export type McpOutreachStage = 'clarifying' | 'ready_to_confirm' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
@@ -159,5 +160,113 @@ export async function handleMcpOutreachMessage(chatId: string, text: string): Pr
     return 'This call is already running; I will post the result when it finishes.';
   } catch (error) {
     return `CALL-E error: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+// A double-click (or any rapid re-invocation) between reading
+// existing.stage === 'ready_to_confirm' and the persistRecord call that
+// moves it to 'in_progress' could otherwise call runCall twice for the same
+// plan -- and run_call has NO idempotency mechanism, so that specific race
+// is a direct path to placing two real phone calls from one click.
+const confirmInFlight = new Set<string>();
+
+export async function confirmMcpOutreachCall(chatId: string): Promise<string> {
+  if (confirmInFlight.has(chatId)) {
+    return 'Already placing this call -- please wait.';
+  }
+  confirmInFlight.add(chatId);
+  try {
+    await hydrateRecords();
+    const existing = records.get(chatId);
+    if (!existing || existing.stage !== 'ready_to_confirm') {
+      return 'No pending call plan to confirm.';
+    }
+    const gate = evaluatePolicyGate({ connectorId: 'calle', actionType: 'external_call', approved: true });
+    if (!gate.ok) {
+      return `Blocked: ${gate.reason}`;
+    }
+    appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_run_call', detail: existing.summary ?? '' });
+    const { run_id } = await runCall(existing.planId!, existing.confirmToken!);
+    await persistRecord({ ...existing, stage: 'in_progress', runId: run_id });
+    pollMcpCallUntilTerminal(chatId, run_id).catch((error) => {
+      persistRecord({ ...existing, stage: 'in_progress', runId: run_id, error: error instanceof Error ? error.message : String(error) });
+    });
+    return 'Call started. I will notify you when it finishes.';
+  } catch (error) {
+    return `CALL-E error: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    confirmInFlight.delete(chatId);
+  }
+}
+
+export async function cancelMcpOutreachCall(chatId: string): Promise<string> {
+  await deleteRecord(chatId);
+  return 'Call plan dropped.';
+}
+
+export async function markMcpOutreachDelivered(chatId: string): Promise<void> {
+  const record = records.get(chatId);
+  if (record) await persistRecord({ ...record, delivered: true });
+}
+
+// A stuck run_id would otherwise poll forever -- bounded the same way
+// joseExecutionEngineService.ts's PIPELINE_MAX_DURATION_MS bounds a
+// different runaway loop elsewhere in this codebase.
+const MAX_POLL_DURATION_MS = 60 * 60 * 1000;
+
+async function pollMcpCallUntilTerminal(chatId: string, runId: string): Promise<void> {
+  const TERMINAL = new Set(['COMPLETED', 'FAILED', 'NO_ANSWER', 'DECLINED', 'CANCELED', 'CANCELLED', 'VOICEMAIL', 'BUSY', 'EXPIRED']);
+  const deadline = Date.now() + MAX_POLL_DURATION_MS;
+  for (;;) {
+    if (Date.now() > deadline) {
+      const record = records.get(chatId);
+      if (record) {
+        await persistRecord({ ...record, stage: 'failed', error: 'Timed out waiting for CALL-E to report a final status.', delivered: false });
+        dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: { type: 'warning', title: 'CALL-E call timed out', message: 'No final status after 60 minutes of polling.' }
+        }));
+      }
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 10_000));
+    let result;
+    try {
+      result = await getCallRun(runId);
+    } catch {
+      continue;
+    }
+    const status = String(result.status || '').toUpperCase();
+    if (TERMINAL.has(status)) {
+      const record = records.get(chatId);
+      if (record) {
+        const updated: McpOutreachRecord = {
+          ...record,
+          stage: status === 'COMPLETED' ? 'completed' : 'failed',
+          structuredResult: result.structuredContent,
+          summary: typeof (result as any).summary === 'string' ? (result as any).summary : record.summary,
+          delivered: false
+        };
+        await persistRecord(updated);
+        dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: {
+            type: status === 'COMPLETED' ? 'success' : 'warning',
+            title: status === 'COMPLETED' ? 'CALL-E call completed' : `CALL-E call ${status.toLowerCase()}`,
+            message: updated.summary ?? ''
+          }
+        }));
+      }
+      return;
+    }
+  }
+}
+
+export async function recoverInterruptedMcpOutreachCalls(): Promise<void> {
+  await hydrateRecords();
+  for (const record of records.values()) {
+    if (record.stage === 'in_progress' && record.runId) {
+      pollMcpCallUntilTerminal(record.chatId, record.runId).catch((error) => {
+        persistRecord({ ...record, error: error instanceof Error ? error.message : String(error) });
+      });
+    }
   }
 }

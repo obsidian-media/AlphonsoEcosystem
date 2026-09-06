@@ -30,7 +30,15 @@ vi.mock('../../services/policyEnforcementService', () => ({
 
 vi.stubGlobal('dispatchEvent', vi.fn());
 
-import { getMcpOutreachRecord, handleMcpOutreachMessage, __resetMcpOutreachStateForTests } from '../../services/calleMcpOutreachService';
+import {
+  getMcpOutreachRecord,
+  handleMcpOutreachMessage,
+  confirmMcpOutreachCall,
+  cancelMcpOutreachCall,
+  markMcpOutreachDelivered,
+  recoverInterruptedMcpOutreachCalls,
+  __resetMcpOutreachStateForTests
+} from '../../services/calleMcpOutreachService';
 
 beforeEach(() => {
   for (const key of Object.keys(kvStore)) delete kvStore[key];
@@ -126,5 +134,83 @@ describe('clarifying-question state machine', () => {
     const reply = await handleMcpOutreachMessage('chat-1', 'call Joe\'s Pizza');
     expect(reply).toBe('CALL-E error: network down');
     expect(await getMcpOutreachRecord('chat-1')).toBeNull();
+  });
+});
+
+describe('confirmMcpOutreachCall', () => {
+  async function getToReadyToConfirm(chatId: string) {
+    mockPlanCall.mockResolvedValueOnce({ ready_to_run: true, plan_id: 'p1', confirm_token: 't1', summary: 'Call Joe' });
+    await handleMcpOutreachMessage(chatId, 'call Joe\'s Pizza');
+  }
+
+  it('returns "No pending call plan" when there is nothing ready_to_confirm', async () => {
+    expect(await confirmMcpOutreachCall('chat-x')).toBe('No pending call plan to confirm.');
+  });
+
+  it('checks the policy gate and blocks when it says no', async () => {
+    await getToReadyToConfirm('chat-1');
+    mockEvaluatePolicyGate.mockReturnValueOnce({ ok: false, reason: 'Zero-Cost Mode is on' });
+    const reply = await confirmMcpOutreachCall('chat-1');
+    expect(reply).toContain('Blocked');
+    expect(mockRunCall).not.toHaveBeenCalled();
+  });
+
+  it('places the call, moves to in_progress, and starts polling', async () => {
+    await getToReadyToConfirm('chat-1');
+    mockRunCall.mockResolvedValueOnce({ run_id: 'run1', status: 'QUEUED' });
+    mockGetCallRun.mockResolvedValueOnce({ status: 'COMPLETED', structuredContent: {} });
+    const reply = await confirmMcpOutreachCall('chat-1');
+    expect(reply).toContain('Call started');
+    expect((await getMcpOutreachRecord('chat-1'))?.stage).toBe('in_progress');
+  });
+
+  it('two concurrent confirms for the same chat result in exactly one runCall', async () => {
+    await getToReadyToConfirm('chat-1');
+    mockRunCall.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ run_id: 'run1', status: 'QUEUED' }), 20)));
+    mockGetCallRun.mockResolvedValue({ status: 'COMPLETED' });
+    const [a, b] = await Promise.all([confirmMcpOutreachCall('chat-1'), confirmMcpOutreachCall('chat-1')]);
+    expect(mockRunCall).toHaveBeenCalledTimes(1);
+    expect([a, b].some((r) => r.includes('Already placing'))).toBe(true);
+  });
+});
+
+describe('cancelMcpOutreachCall', () => {
+  it('deletes the record regardless of stage', async () => {
+    mockPlanCall.mockResolvedValueOnce({ ready_to_run: true, plan_id: 'p1', confirm_token: 't1', summary: 's' });
+    await handleMcpOutreachMessage('chat-1', 'call Joe');
+    await cancelMcpOutreachCall('chat-1');
+    expect(await getMcpOutreachRecord('chat-1')).toBeNull();
+  });
+});
+
+describe('markMcpOutreachDelivered', () => {
+  it('sets delivered: true on the persisted record', async () => {
+    mockPlanCall.mockResolvedValueOnce({ ready_to_run: false, clarifying_questions: ['q'] });
+    await handleMcpOutreachMessage('chat-1', 'call Joe');
+    await markMcpOutreachDelivered('chat-1');
+    expect((await getMcpOutreachRecord('chat-1'))?.delivered).toBe(true);
+  });
+});
+
+describe('recoverInterruptedMcpOutreachCalls', () => {
+  it('restarts polling for an in_progress record and never calls runCall', async () => {
+    mockPlanCall.mockResolvedValueOnce({ ready_to_run: true, plan_id: 'p1', confirm_token: 't1', summary: 's' });
+    await handleMcpOutreachMessage('chat-1', 'call Joe');
+    mockRunCall.mockResolvedValueOnce({ run_id: 'run1', status: 'QUEUED' });
+    mockGetCallRun.mockResolvedValue({ status: 'QUEUED' });
+    await confirmMcpOutreachCall('chat-1');
+
+    mockRunCall.mockClear();
+    mockGetCallRun.mockClear();
+    mockGetCallRun.mockResolvedValueOnce({ status: 'COMPLETED' });
+
+    vi.useFakeTimers();
+    recoverInterruptedMcpOutreachCalls();
+    await vi.advanceTimersByTimeAsync(10_000);
+    vi.useRealTimers();
+
+    expect(mockRunCall).not.toHaveBeenCalled();
+    expect(mockGetCallRun).toHaveBeenCalledWith('run1');
+    expect((await getMcpOutreachRecord('chat-1'))?.stage).toBe('completed');
   });
 });
