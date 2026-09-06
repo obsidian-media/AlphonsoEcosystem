@@ -55,13 +55,13 @@ const AGENT_COLORS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
-  executed: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: CheckCircle2 },
-  reported_to_jose: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: CheckCircle2 },
-  pending_approval: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', icon: Clock },
-  approval_required: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', icon: Clock },
-  queued: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', icon: Clock },
-  failed: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', icon: XCircle },
-  dead_letter: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', icon: XCircle }
+  executed: { bg: 'bg-[var(--success-dim)]', text: 'text-[var(--success)]', border: 'border-[var(--success)]/20', icon: CheckCircle2 },
+  reported_to_jose: { bg: 'bg-[var(--success-dim)]', text: 'text-[var(--success)]', border: 'border-[var(--success)]/20', icon: CheckCircle2 },
+  pending_approval: { bg: 'bg-[var(--warning-dim)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning)]/20', icon: Clock },
+  approval_required: { bg: 'bg-[var(--warning-dim)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning)]/20', icon: Clock },
+  queued: { bg: 'bg-[var(--info-dim)]', text: 'text-[var(--info)]', border: 'border-[var(--info)]/20', icon: Clock },
+  failed: { bg: 'bg-[var(--error-dim)]', text: 'text-[var(--error)]', border: 'border-[var(--error)]/20', icon: XCircle },
+  dead_letter: { bg: 'bg-[var(--error-dim)]', text: 'text-[var(--error)]', border: 'border-[var(--error)]/20', icon: XCircle }
 };
 
 interface StatusBadgeProps {
@@ -108,8 +108,8 @@ function AgentCard({ receipt, onRetry }: AgentCardProps) {
           {receipt.riskLevel && receipt.riskLevel !== 'low' && (
             <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
               receipt.riskLevel === 'high' || receipt.riskLevel === 'critical'
-                ? 'bg-red-500/20 text-red-300'
-                : 'bg-amber-500/20 text-amber-300'
+                ? 'bg-[var(--error-dim)] text-[var(--error)]'
+                : 'bg-[var(--warning-dim)] text-[var(--warning)]'
             }`}>
               {receipt.riskLevel}
             </span>
@@ -125,9 +125,9 @@ function AgentCard({ receipt, onRetry }: AgentCardProps) {
             </button>
           )}
         </div>
-        <div className="text-[11px] text-zinc-400 mt-1 truncate">{receipt.actionType || receipt.eventType}</div>
+        <div className="text-[11px] text-[var(--text-3)] mt-1 truncate">{receipt.actionType || receipt.eventType}</div>
         {isFailed && receipt.reason && (
-          <div className="text-[10px] text-red-300/70 mt-0.5 truncate">Error: {receipt.reason}</div>
+          <div className="text-[10px] text-[var(--error)]/70 mt-0.5 truncate">Error: {receipt.reason}</div>
         )}
       </div>
     </div>
@@ -151,8 +151,8 @@ function CreativePackageCard({ artifact }: CreativePackageCardProps) {
   return (
     <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10 space-y-2">
       <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Creative Package — Miya</div>
-      {artifact.title && <div className="text-[13px] text-zinc-100 font-semibold">{artifact.title}</div>}
-      {artifact.hook && <div className="text-[11px] text-zinc-300 italic">{artifact.hook}</div>}
+      {artifact.title && <div className="text-[13px] text-[var(--text-1)] font-semibold">{artifact.title}</div>}
+      {artifact.hook && <div className="text-[11px] text-[var(--text-2)] italic">{artifact.hook}</div>}
       {artifact.script && (
         <div>
           <button
@@ -163,7 +163,7 @@ function CreativePackageCard({ artifact }: CreativePackageCardProps) {
             {scriptOpen ? 'Hide Script' : 'Show Full Script'}
           </button>
           {scriptOpen && (
-            <div className="mt-1.5 p-2 rounded bg-purple-500/5 border border-purple-500/10 text-[11px] text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+            <div className="mt-1.5 p-2 rounded bg-purple-500/5 border border-purple-500/10 text-[11px] text-[var(--text-2)] whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
               {artifact.script}
             </div>
           )}
@@ -173,7 +173,7 @@ function CreativePackageCard({ artifact }: CreativePackageCardProps) {
         <div className="space-y-0.5">
           <div className="text-[9px] font-bold uppercase tracking-wider text-purple-300/60">Scenes</div>
           {artifact.scenes.map((s, i) => (
-            <div key={i} className="text-[11px] text-zinc-400 pl-2 border-l border-purple-500/20">{s}</div>
+            <div key={i} className="text-[11px] text-[var(--text-3)] pl-2 border-l border-purple-500/20">{s}</div>
           ))}
         </div>
       )}
@@ -181,7 +181,7 @@ function CreativePackageCard({ artifact }: CreativePackageCardProps) {
         <div className="space-y-0.5">
           <div className="text-[9px] font-bold uppercase tracking-wider text-purple-300/60">Image Prompts</div>
           {artifact.prompts.map((p, i) => (
-            <div key={i} className="text-[11px] text-zinc-400 pl-2 border-l border-purple-500/20 font-mono">{p}</div>
+            <div key={i} className="text-[11px] text-[var(--text-3)] pl-2 border-l border-purple-500/20 font-mono">{p}</div>
           ))}
         </div>
       )}
@@ -226,7 +226,7 @@ function GeneratedImageCard({ img, index, outputFolder }: GeneratedImageCardProp
   };
 
   return (
-    <div className={`p-2 rounded-lg border ${img.status === 'generated' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+    <div className={`p-2 rounded-lg border ${img.status === 'generated' ? 'bg-[var(--success-dim)] border-[var(--success)]/20' : 'bg-[var(--error-dim)] border-[var(--error)]/20'}`}>
       {img.status === 'generated' ? (
         <>
           {img.previewBase64 && (
@@ -237,27 +237,27 @@ function GeneratedImageCard({ img, index, outputFolder }: GeneratedImageCardProp
             />
           )}
           {img.imageUrls && img.imageUrls.length > 0 && !img.previewBase64 && (
-            <div className="text-[10px] text-emerald-400 mb-1">{img.imageUrls.length} image(s) saved by ComfyUI</div>
+            <div className="text-[10px] text-[var(--success)] mb-1">{img.imageUrls.length} image(s) saved by ComfyUI</div>
           )}
-          <div className="text-[10px] text-zinc-400 truncate">{img.prompt}</div>
-          <div className="text-[9px] text-zinc-600 mt-0.5">{img.provider} · {img.checkpoint || 'default'}</div>
+          <div className="text-[10px] text-[var(--text-3)] truncate">{img.prompt}</div>
+          <div className="text-[9px] text-[var(--text-4)] mt-0.5">{img.provider} · {img.checkpoint || 'default'}</div>
           {img.previewBase64 && outputFolder && (
             <button
               onClick={handleSave}
               disabled={saving || !!savedPath}
-              className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
+              className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--success)] hover:text-[var(--success)]/80 disabled:opacity-50 transition-colors"
             >
               <Download className="w-3 h-3" />
               {savedPath ? 'Saved' : saving ? 'Saving…' : 'Save to Folder'}
             </button>
           )}
-          {savedPath && <div className="text-[9px] text-emerald-500/70 font-mono mt-0.5 break-all">{savedPath}</div>}
+          {savedPath && <div className="text-[9px] text-[var(--success)]/70 font-mono mt-0.5 break-all">{savedPath}</div>}
         </>
       ) : (
-        <div className="text-[11px] text-red-300">
+        <div className="text-[11px] text-[var(--error)]">
           <div className="font-medium">Generation failed</div>
-          <div className="text-[10px] text-zinc-400 mt-0.5 truncate">{img.prompt}</div>
-          <div className="text-[10px] text-red-300/70 mt-0.5">{img.error || 'ComfyUI may be offline. Start it from Settings → Local Services, or paste the prompt above into ComfyUI manually.'}</div>
+          <div className="text-[10px] text-[var(--text-3)] mt-0.5 truncate">{img.prompt}</div>
+          <div className="text-[10px] text-[var(--error)]/70 mt-0.5">{img.error || 'ComfyUI may be offline. Start it from Settings → Local Services, or paste the prompt above into ComfyUI manually.'}</div>
         </div>
       )}
     </div>
@@ -296,9 +296,9 @@ function ArtifactDisplay({ artifacts }: ArtifactDisplayProps) {
           return (
             <div key={idx} className="p-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
               <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Research Report</div>
-              {artifact.summary && <div className="text-[11px] text-zinc-300 mt-1 leading-relaxed">{artifact.summary}</div>}
+              {artifact.summary && <div className="text-[11px] text-[var(--text-2)] mt-1 leading-relaxed">{artifact.summary}</div>}
               {Array.isArray(artifact.sources) && artifact.sources.length > 0 && (
-                <div className="mt-1 text-[10px] text-zinc-500">Sources: {artifact.sources.join(', ')}</div>
+                <div className="mt-1 text-[10px] text-[var(--text-3)]">Sources: {artifact.sources.join(', ')}</div>
               )}
             </div>
           );
@@ -307,8 +307,8 @@ function ArtifactDisplay({ artifacts }: ArtifactDisplayProps) {
           return (
             <div key={idx} className="p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
               <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Governance Audit</div>
-              {artifact.governanceSummary && <div className="text-[11px] text-zinc-400 mt-0.5">{artifact.governanceSummary}</div>}
-              {artifact.resultState && <div className="text-[10px] text-zinc-500 mt-0.5">Status: {artifact.resultState}</div>}
+              {artifact.governanceSummary && <div className="text-[11px] text-[var(--text-3)] mt-0.5">{artifact.governanceSummary}</div>}
+              {artifact.resultState && <div className="text-[10px] text-[var(--text-3)] mt-0.5">Status: {artifact.resultState}</div>}
             </div>
           );
         }
@@ -316,7 +316,7 @@ function ArtifactDisplay({ artifacts }: ArtifactDisplayProps) {
           return (
             <div key={idx} className="p-2 rounded-lg bg-red-500/5 border border-red-500/10">
               <div className="text-[10px] font-bold uppercase tracking-wider text-red-400">Security Review</div>
-              <div className="text-[11px] text-zinc-400 mt-0.5">{artifact.status || 'Reviewed'}</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">{artifact.status || 'Reviewed'}</div>
             </div>
           );
         }
@@ -324,7 +324,7 @@ function ArtifactDisplay({ artifacts }: ArtifactDisplayProps) {
           return (
             <div key={idx} className="p-2 rounded-lg bg-orange-500/5 border border-orange-500/10">
               <div className="text-[10px] font-bold uppercase tracking-wider text-orange-400">Opportunity Score</div>
-              <div className="text-[11px] text-zinc-400 mt-0.5">{artifact.status || 'Scored'}</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">{artifact.status || 'Scored'}</div>
             </div>
           );
         }
@@ -333,7 +333,7 @@ function ArtifactDisplay({ artifacts }: ArtifactDisplayProps) {
             <div key={idx} className="p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
               <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Memory Preserved</div>
               {Array.isArray(artifact.preservedAgents) && artifact.preservedAgents.length > 0 && (
-                <div className="text-[11px] text-zinc-400 mt-0.5">{artifact.preservedAgents.join(', ')}</div>
+                <div className="text-[11px] text-[var(--text-3)] mt-0.5">{artifact.preservedAgents.join(', ')}</div>
               )}
             </div>
           );
@@ -342,9 +342,9 @@ function ArtifactDisplay({ artifacts }: ArtifactDisplayProps) {
           return null;
         }
         return (
-          <div key={idx} className="p-2 rounded-lg bg-zinc-500/5 border border-white/5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{artifact.type || 'Artifact'}</div>
-            <div className="text-[11px] text-zinc-500 mt-0.5">{artifact.status || ''}</div>
+          <div key={idx} className="p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-3)]">{artifact.type || 'Artifact'}</div>
+            <div className="text-[11px] text-[var(--text-3)] mt-0.5">{artifact.status || ''}</div>
           </div>
         );
       })}
@@ -422,17 +422,17 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
 
   return (
     <div
-      className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(24,24,27,0.96),rgba(9,9,11,0.94))] shadow-[0_24px_80px_-36px_rgba(15,23,42,0.95)] backdrop-blur-xl"
+      className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] shadow-[0_24px_80px_-36px_rgba(15,23,42,0.95)] backdrop-blur-xl"
       data-testid="jose-pipeline-result-card"
     >
-      <div className="border-b border-white/[0.05] bg-[linear-gradient(90deg,rgba(99,102,241,0.12),rgba(168,85,247,0.06))] px-4 py-3.5">
+      <div className="border-b border-[var(--border)] bg-[var(--accent-dim)] px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4 text-indigo-300" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-200">Jose Pipeline Result</span>
+              <Bot className="w-4 h-4 text-[var(--accent)]" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Jose Pipeline Result</span>
             </div>
-            <div className="mt-1 text-[11px] leading-relaxed text-zinc-400">
+            <div className="mt-1 text-[11px] leading-relaxed text-[var(--text-3)]">
               Persisted in this chat so you can revisit the routing result, receipts, and follow-up actions later.
             </div>
           </div>
@@ -440,7 +440,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
             <button
               type="button"
               onClick={copySummary}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-200 transition-all hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-2)] transition-all hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]/80 hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40"
               aria-label="Copy summary"
               data-testid="jose-copy-summary-button"
             >
@@ -451,7 +451,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
               type="button"
               onClick={() => { if (commandText) onRerunCommand?.(commandText); }}
               disabled={!commandText || !onRerunCommand}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-400/20 bg-indigo-500/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-100 transition-all hover:-translate-y-0.5 hover:border-indigo-300/30 hover:bg-indigo-500/18 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:bg-[var(--accent-dim)]/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40"
               aria-label="Rerun command"
               data-testid="jose-rerun-command-button"
             >
@@ -461,50 +461,50 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
           </div>
         </div>
         {commandText && (
-          <div className="mt-2 inline-flex max-w-full items-start rounded-2xl border border-white/[0.08] bg-black/20 px-3 py-2 text-[12px] leading-relaxed text-zinc-200">
+          <div className="mt-2 inline-flex max-w-full items-start rounded-2xl border border-[var(--border)] bg-black/20 px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]">
             <span className="line-clamp-2">{commandText}</span>
           </div>
         )}
       </div>
 
-      <div className="border-b border-white/[0.05] px-4 py-3">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Summary</div>
-        <div className="mt-1.5 text-[12px] leading-relaxed text-zinc-300">{summary}</div>
+      <div className="border-b border-[var(--border)] px-4 py-3">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)]">Summary</div>
+        <div className="mt-1.5 text-[12px] leading-relaxed text-[var(--text-2)]">{summary}</div>
         {url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-indigo-400/15 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-medium text-indigo-300 transition-colors hover:bg-indigo-500/15 hover:text-indigo-200">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent-dim)]/80 hover:text-[var(--accent-hover)]">
             <ExternalLink className="w-3 h-3" />
             View Result
           </a>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-2 border-b border-white/[0.05] px-4 py-3 sm:grid-cols-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/15 bg-emerald-500/8 px-3 py-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+      <div className="grid grid-cols-1 gap-2 border-b border-[var(--border)] px-4 py-3 sm:grid-cols-3">
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--success)]/15 bg-[var(--success-dim)] px-3 py-2">
+          <CheckCircle2 className="w-4 h-4 text-[var(--success)] shrink-0" />
           <div className="min-w-0">
-            <div className="text-[12px] font-semibold text-zinc-100">{executedCount}</div>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Executed</div>
+            <div className="text-[12px] font-semibold text-[var(--text-1)]">{executedCount}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-3)]">Executed</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-amber-500/15 bg-amber-500/8 px-3 py-2">
-          <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--warning)]/15 bg-[var(--warning-dim)] px-3 py-2">
+          <Clock className="w-4 h-4 text-[var(--warning)] shrink-0" />
           <div className="min-w-0">
-            <div className="text-[12px] font-semibold text-zinc-100">{pendingCount}</div>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Pending</div>
+            <div className="text-[12px] font-semibold text-[var(--text-1)]">{pendingCount}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-3)]">Pending</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-red-500/15 bg-red-500/8 px-3 py-2">
-          <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--error)]/15 bg-[var(--error-dim)] px-3 py-2">
+          <XCircle className="w-4 h-4 text-[var(--error)] shrink-0" />
           <div className="min-w-0">
-            <div className="text-[12px] font-semibold text-zinc-100">{failedCount}</div>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Failed</div>
+            <div className="text-[12px] font-semibold text-[var(--text-1)]">{failedCount}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-3)]">Failed</div>
           </div>
         </div>
       </div>
 
       {receipts.length > 0 && (
-        <div className="border-b border-white/[0.05] px-4 py-3">
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Agent Activity</div>
+        <div className="border-b border-[var(--border)] px-4 py-3">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Agent Activity</div>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {receipts.map((receipt, idx) => (
               <AgentCard key={receipt.packetId || idx} receipt={receipt} onRetry={onRetryAgent} />
@@ -514,14 +514,14 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
       )}
 
       {artifacts.length > 0 && (
-        <div className="border-b border-white/[0.05] px-4 py-3">
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Outputs</div>
+        <div className="border-b border-[var(--border)] px-4 py-3">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Outputs</div>
           <ArtifactDisplay artifacts={artifacts} />
         </div>
       )}
 
       {artifacts.filter((a) => a.type === 'generated_images').map((imgArtifact, idx) => (
-        <div key={`gen-img-${idx}`} className="border-b border-white/[0.05] px-4 py-3">
+        <div key={`gen-img-${idx}`} className="border-b border-[var(--border)] px-4 py-3">
           <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-purple-300">
             Generated Images ({imgArtifact.count || (imgArtifact.images || []).length})
           </div>
@@ -534,16 +534,16 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
       ))}
 
       {agentReports.length > 0 && (
-        <div className="border-b border-white/[0.05] px-4 py-3">
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Agent Reports</div>
+        <div className="border-b border-[var(--border)] px-4 py-3">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Agent Reports</div>
           <div className="space-y-2">
             {agentReports.map((a, idx) => (
-              <div key={idx} className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+              <div key={idx} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className="text-[10px]">{AGENT_ICONS[a.agent] || '🤖'}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{a.agent}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-3)]">{a.agent}</span>
                 </div>
-                <div className="text-[11px] leading-relaxed whitespace-pre-wrap text-zinc-300">{a.reportSummary}</div>
+                <div className="text-[11px] leading-relaxed whitespace-pre-wrap text-[var(--text-2)]">{a.reportSummary}</div>
               </div>
             ))}
           </div>
@@ -551,7 +551,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
       )}
 
       {result.commandId && (
-        <div className="flex items-center justify-between px-4 py-2 text-[9px] text-zinc-600">
+        <div className="flex items-center justify-between px-4 py-2 text-[9px] text-[var(--text-4)]">
           <span className="font-mono">{result.commandId}</span>
           <span>{new Date().toLocaleTimeString()}</span>
         </div>
