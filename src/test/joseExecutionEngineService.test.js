@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 
 let runtimeReachable = true;
 let ollamaAvailable = true;
@@ -129,6 +131,23 @@ describe('jose intake command detection', () => {
   it('does not match regular prompts', () => {
     expect(isJoseIntakeCommand('explain tauri updater')).toBe(false);
     expect(isJoseIntakeCommand('ask hector for docs')).toBe(false);
+  });
+});
+
+describe('executeHectorAssignment no longer re-summarizes', () => {
+  it('does not call generateAgentLlmResponse a second time inside executeHectorAssignment', () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../services/joseExecutionEngineService.ts'),
+      'utf-8'
+    );
+    const fnStart = source.indexOf('async function executeHectorAssignment(');
+    const fnEnd = source.indexOf('\nasync function executeJoseAssignment(');
+    expect(fnStart).toBeGreaterThan(-1);
+    expect(fnEnd).toBeGreaterThan(fnStart);
+    const fnBody = source.slice(fnStart, fnEnd);
+    expect(fnBody).not.toContain('generateAgentLlmResponse');
+    expect(fnBody).not.toContain('draftPrompt');
+    expect(fnBody).toContain('report?.summary');
   });
 });
 

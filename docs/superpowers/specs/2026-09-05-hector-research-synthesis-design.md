@@ -20,10 +20,13 @@ against the code (`docs/governance/DEFERRED_WORK.md`'s 2026-09-05 entry has the 
   again to 220. The content needed for real synthesis is fetched and briefly available, then
   discarded twice before anything could use it.
 
-`runMultiSourceResearch()` / `createResearchBrief()` (a separate, lighter-weight path used by
-`ProjectExecutionMode.tsx`'s research brief — `ChatView.tsx`'s Hector briefing card is unrelated,
-see the corrected consumer-tracing note below) has the identical shape: it merges results from up
-to 4 providers into one deduplicated list and stops there.
+`createResearchBrief()` (`ProjectExecutionMode.tsx`'s research brief; `ChatView.tsx`'s Hector
+briefing card is unrelated, see the corrected consumer-tracing note below) calls
+`runHectorLiveResearch` directly, so it has the identical gap. A separate function,
+`runMultiSourceResearch()`, has the same shape (merges results from up to 4 providers into one
+deduplicated list and stops there) but — checked directly, not assumed — **has no real caller
+anywhere in the app**; only its own test file exercises it. It's dead code, not part of this fix's
+scope (see Non-goals).
 
 Net effect: nothing in Hector's research subsystem takes N successfully-fetched sources' actual
 content and asks an LLM (or any deterministic logic) to read them together and produce one
@@ -33,9 +36,12 @@ page doesn't.
 ## Non-goals (explicitly out of scope)
 
 - **No changes to source discovery or fetching mechanics** beyond relaxing the truncation limit.
-  `discoverResearchSourcesWithFailover`, the Brave/Tavily/DeepSeek/Rust-backend provider chain in
-  `runMultiSourceResearch`, and the 10-source cap in `fetch_research_sources` (`.take(10)`) are
-  unchanged.
+  `discoverResearchSourcesWithFailover` and the 10-source cap in `fetch_research_sources`
+  (`.take(10)`) are unchanged.
+- **No synthesis wiring into `runMultiSourceResearch()`.** Confirmed via grep across every
+  component/service in the app: it has no real caller anywhere, only its own test file. Wiring
+  synthesis into unreachable code would be pure waste — if it ever gains a real caller later,
+  that's a small follow-up (the function already exists and works the same way), not a gap here.
 - **No changes to `synthesizeHectorFallbackReport()`'s existing zero-sources fallback behavior.**
   It still asks the model for a cautious guess when nothing was found — that's a different,
   already-correct code path, not part of this fix.
@@ -86,17 +92,25 @@ design and dropped as redundant.
 - **`runHectorLiveResearch()`** (Research Desk / `ResearchReportPanel.tsx`): calls
   `synthesizeHectorResearch` once, automatically, right after the existing fetch/verify loop
   completes with at least one successful proof — same trigger point where `verifiedFacts`/
-  `inferredPoints` are built today. The report gains one new top-level field alongside
-  `synthesis` itself: `synthesisSourceCount` (a plain number, snapshotted at generation time). If
-  the user later adds more sources to the same report, the UI exposes an explicit
-  **"Re-synthesize"** action instead of auto-rerunning — it becomes visible exactly when
-  `report.sources.length > report.synthesisSourceCount`, and re-running updates both `synthesis`
-  and `synthesisSourceCount` together.
-- **`runMultiSourceResearch()` / `createResearchBrief()`** (ProjectExecutionMode's research
-  brief — see the corrected consumer note below): calls the identical `synthesizeHectorResearch`
-  function over whatever sources that path collected.
+  `inferredPoints` are built today.
 
-Both call sites route through `generateAgentLlmResponse('hector', ...)` — the same shared
+**Corrected "Re-synthesize" trigger** (found while tracing the real UI, not assumed): the
+original plan was "visible when the user adds more sources to an existing report," but
+`SourceBoard.tsx` is read-only display — checked directly, there is **no existing mechanism to
+add sources to an already-created report** at all (sources are only set at creation time or via
+auto-discovery). That trigger would have been dead UI. The actually-reachable, valuable case is
+different: **retrying synthesis after it failed** (Ollama was down, malformed JSON, etc.) without
+re-fetching every page. New function `resynthesizeHectorReport(reportId, onProgress)` reads the
+report's already-stored `sourceProofs` (no re-fetching), re-runs `synthesizeHectorResearch` over
+the successful ones, and updates `synthesis`/`summary` via `updateReport`. The "Re-synthesize"
+action in the UI is visible whenever the report has at least one successful `sourceProofs` entry
+but `synthesis` is absent (covers both "never attempted" and "failed" — both look identical from
+the UI's perspective, and both are fixed by the same retry).
+- **`createResearchBrief()`** (`ProjectExecutionMode.tsx`'s research brief): calls
+  `runHectorLiveResearch` internally, so it needs no separate wiring — it improves automatically
+  the moment `runHectorLiveResearch` does (see the corrected consumer note below).
+
+The one call site routes through `generateAgentLlmResponse('hector', ...)` — the same shared
 per-agent LLM dispatcher Maria/Echo/Sentinel/Nova already use — so Hector's per-agent provider
 selection (Ollama/NVIDIA/Gemini/Hermes, via `modelSelectionService.ts`) is respected automatically
 with no new plumbing.
@@ -156,8 +170,8 @@ before shipping — flagged as adjustable if real usage shows it's off.
   disclosure toggle (`▸ Sources (N)`) rather than always-expanded — it's still there as
   supporting citations, just demoted from being the entire output to being backup material under
   the synthesis.
-- A "Re-synthesize" action, visible only when the report's source count has grown since
-  `synthesis` was last generated.
+- A "Re-synthesize" action, visible whenever the report has at least one successful
+  `sourceProofs` entry but no `synthesis` yet (covers both "never ran" and "failed").
 
 ### Export: `hectorExportService.ts` (new)
 
@@ -199,9 +213,10 @@ Owns all three export formats, called from `ResearchReportPanel.tsx`'s export ro
   fallback-on-failure produces exactly today's current shape; thin-coverage prompt wording present
   when fewer sources succeed than requested.
 - `ResearchReportPanel.test.tsx`: all three toggle states render correctly from one shared
-  `synthesis` fixture; "Re-synthesize" appears only once source count has grown past the count at
-  last synthesis; export buttons disabled without a `synthesis` present; existing "Source Proofs"
-  content unchanged, now behind a disclosure toggle.
+  `synthesis` fixture; "Re-synthesize" appears when `sourceProofs` has a successful entry but
+  `synthesis` is absent, and disappears once `synthesis` is present; export buttons disabled
+  without a `synthesis` present; existing "Source Proofs" content unchanged, now behind a
+  disclosure toggle.
 - `hectorExportService.test.ts`: each export function produces output with the expected
   structure/sections (mock `jspdf`/`pptxgenjs`, don't generate real binaries in unit tests);
   confirms exports always include all four synthesis fields regardless of a mocked "currently
@@ -216,10 +231,12 @@ Owns all three export formats, called from `ResearchReportPanel.tsx`'s export ro
 
 ## Files touched
 
-- `src/services/hectorResearchService.js` — add `synthesizeHectorResearch`; wire into
-  `runHectorLiveResearch` (auto + re-synthesize), updating `summary` to `synthesis.overview` on
-  success; wire into `runMultiSourceResearch`/`createResearchBrief` the same way; remove
-  `inferredPoints` construction (superseded by `keyFindings`).
+- `src/services/hectorResearchService.js` — add `synthesizeHectorResearch` and
+  `resynthesizeHectorReport`; wire `synthesizeHectorResearch` into `runHectorLiveResearch` only
+  (auto), updating `summary` to `synthesis.overview` on success (`createResearchBrief` improves
+  automatically, no separate wiring needed). `verifiedFacts`/`inferredPoints` construction is
+  **left exactly as-is** — it's the fallback content when synthesis fails (see Error Handling),
+  not something this spec removes; `synthesis` is purely additive alongside it.
 - `src/services/hectorExportService.ts` (new) — Markdown/PDF/PowerPoint export, dynamic imports.
 - `src/components/hector/ResearchReportPanel.tsx` — depth toggle, export row, collapsed Source
   Proofs disclosure, Re-synthesize action.

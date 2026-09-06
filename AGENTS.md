@@ -26,7 +26,7 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (132 .tsx, 39 .jsx — .jsx being migrated)
   agents/              9 agent profiles, permissions, schemas
   components/          118 UI components (.tsx + .tsx subdirs)
-  services/            190 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            191 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
   hooks/               14 custom hooks (useAppShellState, useAppEffects split into 6)
   lib/                 Utilities (ollama.js, chatUtils.js, appStorage.js)

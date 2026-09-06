@@ -25,6 +25,14 @@ export default defineConfig({
           if (id.includes('/react/') && !id.includes('react-dom')) return 'react';
           if (id.includes('framer-motion') || id.includes('motion-dom')) return 'vendor';
           if (id.includes('@tauri-apps/api')) return 'tauri-api';
+          // jspdf/pptxgenjs are only reached via a dynamic import() inside
+          // hectorExportService.ts (the PDF/PowerPoint export buttons) --
+          // the catch-all 'vendor' bucket below lumps every node_modules
+          // package together regardless of static vs. dynamic import, which
+          // silently pulled these two large, rarely-used libraries into the
+          // main eagerly-loaded bundle and pushed it over the 2MB CI cap.
+          // Giving them their own chunk keeps them out of the initial load.
+          if (id.includes('jspdf') || id.includes('pptxgenjs') || id.includes('jszip') || id.includes('image-size')) return 'export-libs';
           return 'vendor';
         }
       }
