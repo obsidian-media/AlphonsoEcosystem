@@ -136,6 +136,7 @@ const SettingsView = lazy(() => import('./components/SettingsView').then((mod) =
 const RightPanel = lazy(() => import('./components/RightPanel').then((mod) => ({ default: mod.RightPanel })));
 const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then((mod) => ({ default: mod.AgentActivityLog })));
 const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceView').then((mod) => ({ default: mod.AgentPerformanceView })));
+const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -935,6 +936,11 @@ function AppShell() {
                 {activeTab === 'agent_performance' && (
                   <Suspense fallback={null}>
                     <AgentPerformanceView />
+                  </Suspense>
+                )}
+                {activeTab === 'session_history' && (
+                  <Suspense fallback={null}>
+                    <SessionHistoryView />
                   </Suspense>
                 )}
               </Suspense>
