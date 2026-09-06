@@ -41,7 +41,6 @@ import { PipelineResultCard } from './PipelineResultCard';
 import { listOrchestrationReceipts } from '../services/orchestrationReceiptService';
 import { useKeyboardShortcuts, getShortcutList } from '../hooks/useKeyboardShortcuts';
 import { startProactiveWatcher } from '../services/proactiveAgentService';
-import { MemorySearch } from './MemorySearch';
 import { runNovaAnalysis, computeOpportunityScores, type NovaOpportunitySchema } from '../services/novaAnalysisService';
 import { saveMessageOffline } from '../services/offlineChatService';
 import { useJarvisVoice } from '../hooks/useJarvisVoice';
@@ -297,7 +296,6 @@ export function ChatView({
   const [streamingStartTime, setStreamingStartTime] = useState(null);
   const [streamingElapsed, setStreamingElapsed] = useState(0);
   const [proactiveSuggestion, setProactiveSuggestion] = useState(null);
-  const [showMemorySearch, setShowMemorySearch] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [novaInsight, setNovaInsight] = useState<NovaOpportunitySchema | null>(null);
   const jarvis = useJarvisVoice();
@@ -382,7 +380,6 @@ export function ChatView({
     },
     focus_input: () => inputRef.current?.focus(),
     abort_generation: handleAbortStream,
-    toggle_search: () => setShowMemorySearch((prev) => !prev),
     show_shortcuts: () => setShowShortcutHelp((prev) => !prev)
   });
 
@@ -1599,16 +1596,6 @@ export function ChatView({
         </div>
       )}
 
-      {/* Memory search modal */}
-      {showMemorySearch && (
-        <MemorySearch
-          onClose={() => setShowMemorySearch(false)}
-          onSelect={(item) => {
-            setInputValue(`Tell me about: ${item.title}`);
-            setShowMemorySearch(false);
-          }}
-        />
-      )}
 
       {/* Keyboard shortcut help modal */}
       {showShortcutHelp && (

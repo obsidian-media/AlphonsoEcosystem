@@ -10,6 +10,8 @@ import { logApprovalEvent } from './services/agentAuditService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { MemorySearch } from './components/MemorySearch';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useToast } from './components/ToastProvider';
@@ -191,6 +193,7 @@ function AppShell() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [pendingApprovalCount, setPendingApprovalCount] = useState<number>(0);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showMemorySearch, setShowMemorySearch] = useState(false);
 
   const addNotification = useCallback((n: Omit<AppNotification, 'id' | 'timestamp'>) => {
     setNotifications((prev) => [
@@ -277,6 +280,7 @@ function AppShell() {
   });
 
   useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab, setShowKeyboardShortcuts });
+  useKeyboardShortcuts({ toggle_search: () => setShowMemorySearch((prev) => !prev) });
   useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
 
   // Restored 2026-08-22 — this whole block (7 hooks) was silently dead since
@@ -962,6 +966,9 @@ function AppShell() {
       )}
       {showKeyboardShortcuts && (
         <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
+      )}
+      {showMemorySearch && (
+        <MemorySearch onClose={() => setShowMemorySearch(false)} onSelect={() => setShowMemorySearch(false)} />
       )}
       {showGuidedTour && (
         <GuidedTour
