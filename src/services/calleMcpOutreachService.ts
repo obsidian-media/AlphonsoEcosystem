@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appendAgentActivity } from './agentActivityService';
-import { planCall } from './connectors/calleMcpConnector';
+import { planCall, type PlanCallResult } from './connectors/calleMcpConnector';
 
 export type McpOutreachStage = 'clarifying' | 'ready_to_confirm' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
@@ -78,6 +78,16 @@ async function deleteRecord(chatId: string): Promise<void> {
   await updateIndex((chatIds) => chatIds.filter((id) => id !== chatId));
 }
 
+// Test-only reset for this module's singleton in-memory cache -- same pattern
+// chatPersistenceService.ts's resetDurableCache() already establishes for the
+// identical class of problem (a module-level cache that must not leak state
+// between test cases, but must behave as a real singleton at runtime).
+export function __resetMcpOutreachStateForTests(): void {
+  records.clear();
+  hydrated = false;
+  indexWriteQueue = Promise.resolve();
+}
+
 export async function getMcpOutreachRecord(chatId: string): Promise<McpOutreachRecord | null> {
   await hydrateRecords();
   return records.get(chatId) ?? null;
@@ -97,14 +107,57 @@ function isPhoneAlreadyInFlight(phoneNumber: string | undefined): boolean {
   return false;
 }
 
-// Placeholder -- real state machine added in Task 4.
-export async function handleMcpOutreachMessage(chatId: string, text: string): Promise<string> {
-  await hydrateRecords();
-  appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_plan_call', detail: text });
-  const plan = await planCall(text);
+async function advancePlan(chatId: string, goal: string, conversationHistory: string[], plan: PlanCallResult): Promise<string> {
+  if (!plan.ready_to_run) {
+    await persistRecord({
+      chatId, stage: 'clarifying', goal, conversationHistory,
+      clarifyingQuestions: plan.clarifying_questions ?? []
+    });
+    return (plan.clarifying_questions ?? []).join('\n');
+  }
+  if (isPhoneAlreadyInFlight(plan.phone_number)) {
+    return `A call to ${plan.phone_number} is already pending or in progress in another chat. Wait for it to finish before starting another.`;
+  }
   await persistRecord({
-    chatId, stage: 'clarifying', goal: text, conversationHistory: [text],
-    clarifyingQuestions: plan.clarifying_questions ?? []
+    chatId, stage: 'ready_to_confirm', goal, conversationHistory,
+    planId: plan.plan_id, confirmToken: plan.confirm_token, phoneNumber: plan.phone_number,
+    summary: plan.summary
   });
-  return (plan.clarifying_questions ?? []).join('\n');
+  return plan.summary ?? 'Ready to place this call.';
+}
+
+export async function handleMcpOutreachMessage(chatId: string, text: string): Promise<string> {
+  try {
+    await hydrateRecords();
+    const existing = records.get(chatId);
+    const lower = text.trim().toLowerCase();
+
+    if (existing && isAwaitingMcpOutreachInput(existing) && lower === 'cancel') {
+      await deleteRecord(chatId);
+      return 'Call plan dropped.';
+    }
+
+    if (!existing || existing.stage === 'completed' || existing.stage === 'failed' || existing.stage === 'cancelled') {
+      appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_plan_call', detail: text });
+      const plan = await planCall(text);
+      return await advancePlan(chatId, text, [text], plan);
+    }
+
+    if (existing.stage === 'clarifying') {
+      const conversationHistory = [...existing.conversationHistory, text];
+      appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_plan_call', detail: text });
+      const plan = await planCall(existing.goal, conversationHistory);
+      return await advancePlan(chatId, existing.goal, conversationHistory, plan);
+    }
+
+    if (existing.stage === 'ready_to_confirm') {
+      return 'Use the Approve or Cancel button above to continue with this call plan.';
+    }
+
+    // stage === 'in_progress': reachable when a fresh call-like message arrives in a chat
+    // that already has one running -- only one live outreach flow is supported per chat.
+    return 'This call is already running; I will post the result when it finishes.';
+  } catch (error) {
+    return `CALL-E error: ${error instanceof Error ? error.message : String(error)}`;
+  }
 }
