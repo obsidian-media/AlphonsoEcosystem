@@ -1315,6 +1315,39 @@ dropped.
     from scratch, it was checked against real source (`resourceCostService.ts`,
     `pluginSandboxService.ts`, `codingAgentService.ts`) before being written.
 
+- [ ] **J3 — CALL-E hackathon integration (idea only, not scoped, not started)**
+  - **Owner:** unassigned
+  - The owner is considering integrating the CALL-E voice-calling platform
+    (`heycall-e.com` — an AI phone-call agent service offering SDK/API/MCP/
+    Skills integration) into AlphonsoEcosystem for the "CALL-E: Your Code
+    Is Calling" Devpost hackathon (`call-e.devpost.com`), submission deadline
+    **2026-09-14** — an unusually tight ~8-day window from when this was
+    logged (2026-09-06).
+  - **Fit assessment (2026-09-06, from the two public pages only — no SDK/
+    API docs pulled yet):** genuinely stronger fit than an average entrant
+    would have, because Alphonso already has the exact shape this needs —
+    a policy-gated connector registry (`connectorRegistry.js`, 25 existing
+    connectors), an approval-gate system (`ApprovalPanel.tsx` +
+    `policyEnforcementService.ts` + `agentAuditService.ts`), and a 9-agent
+    delegation model. A CALL-E connector would slot in the same way GitHub/
+    Slack/Discord already do, rather than requiring new architecture. The
+    differentiating pitch for judging (Real World Impact, Quality of Idea):
+    an outbound-calling agent that is policy-gated, approval-gated for
+    risky actions, and leaves a full audit trail — not just "an agent that
+    calls people," which is what most entries will likely be.
+  - **Real risk, stated plainly:** the deadline is tight for this codebase's
+    actual verification overhead (this session's own PRs each took 10-20+
+    minutes of CI per push, and this dev machine has documented resource
+    contention). Any attempt needs a narrow, single-scenario slice (e.g.
+    one agent placing one kind of approved call), not a broad integration
+    across all 9 agents, or it will not finish in time.
+  - **Not yet done:** pulling CALL-E's actual SDK/API reference (the two
+    pages fetched so far had no code samples) to size real implementation
+    effort; a go/no-go decision from the owner on whether to actually
+    attempt this given the timeline.
+  - **Done when:** nothing yet — this entry exists only to record the idea
+    and the fit assessment before any decision to proceed.
+
 ## Operating procedure for every task
 
 1. Read Ground Truth and this plan; select one unchecked task or a scoped
