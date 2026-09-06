@@ -155,20 +155,33 @@ export interface CalleCallTask {
   object: 'call_task';
   status: CalleCallStatus;
   task: string;
+  // Third self-critique pass: verified directly against CALL-E's OpenAPI spec
+  // that `transcript_turns` exists ONLY under recipients[].attempts[] --
+  // there is no task-level transcript field. structuredResult/summary DO
+  // also exist per-recipient (not just task-level as the previous pass's
+  // comment claimed), but this connector still uses the task-level rollup
+  // for those two -- the ONLY reason recipients[] is read at all is to
+  // surface the transcript, which has nowhere else to come from.
   recipients: Array<{
     id: string;
     phones: string[];
     status: string;
     structuredResult: Record<string, unknown> | null;
     summary: string | null;
+    attempts: Array<{
+      phone: string;
+      status: string;
+      transcriptTurns: Array<{ speaker: 'bot' | 'user' | 'unknown'; text: string }>;
+      startedAt: string | null;
+      completedAt: string | null;
+    }>;
   }>;
   // structuredResult/summary/taskCompleted are read from these TASK-LEVEL
-  // fields, not the per-recipient ones under `recipients[]` -- for a
-  // single-recipient call the task-level fields are CALL-E's own rollup and
-  // are what OutreachCallRecord actually stores (see calleOutreachService.ts
-  // below). The per-recipient fields exist in the response but are unused by
-  // this connector; documented here so a future batch-calling addition knows
-  // where to look instead of guessing.
+  // fields for OutreachCallRecord's own structuredResult/summary (this
+  // connector only ever sends one recipient, so the task-level rollup and
+  // that one recipient's own fields should always agree in practice, but the
+  // task-level fields are CALL-E's authoritative summary across recipients
+  // and are simpler to depend on than assuming array index 0 always exists).
   structuredResult: Record<string, unknown> | null;
   summary: string | null;
   taskCompleted: boolean | null;
@@ -290,12 +303,22 @@ export interface OutreachCallRecord {
   phone: string;
   taskType: 'outreach' | 'custom';
   task: string;
+  // NOTE: 'failed_to_start' means CALL-E rejected createCall itself (a real,
+  // confirmed API failure) -- it is a genuine terminal state. A client-side
+  // POLL TIMEOUT is explicitly NOT one of these statuses; see
+  // runOutreachCall's poll .catch() handling below for why status stays
+  // 'in_progress' in that case instead of a new terminal value.
   status: CalleCallStatus | 'pending_approval' | 'failed_to_start' | 'dismissed';
   policyBlockKind: PolicyBlockKind;
   calleCallId: string | null;
   structuredResult: Record<string, unknown> | null;
   summary: string | null;
-  transcriptAvailable: boolean;
+  // Populated from recipients[0].attempts[].transcriptTurns (the ONLY place
+  // CALL-E's response actually carries transcript text -- verified against
+  // their OpenAPI spec, see calleConnector.ts's CalleCallTask comment above).
+  // Since this connector only ever creates a single-recipient call,
+  // recipients[0] is always the right (and only) entry to read.
+  transcript: Array<{ speaker: 'bot' | 'user' | 'unknown'; text: string }> | null;
   createdAtMs: number;
   completedAtMs: number | null;
   error: string | null;
@@ -352,10 +375,32 @@ export async function runOutreachCall(recordId: string, options: { approved?: bo
   //      license_tier / needs_approval_click), persist, return -- do not
   //      treat as a hard failure
   // 5. (NOT awaited) calleConnector.pollCallUntilTerminal(...).then((call) => {
-  //      update the record with final status/result, reading
-  //      structuredResult/summary/taskCompleted from the TASK-LEVEL response
-  //      fields (not recipients[].*, see calleConnector.ts), persist
-  //    }).catch((error) => { set status: 'failed_to_start' or similar, error: String(error), persist })
+  //      call is a genuine terminal CalleCallTask (completed/failed/canceled
+  //      -- pollCallUntilTerminal only resolves on a real terminal status,
+  //      never on a timeout, see step 6 below). Update the record: status
+  //      from call.status, structuredResult/summary from the TASK-LEVEL
+  //      fields, transcript from call.recipients[0]?.attempts -- flatten
+  //      every attempt's transcriptTurns in order (a call can have multiple
+  //      dial attempts, e.g. a retry after voicemail; concatenating all of
+  //      them, not just the last, keeps the full conversation history
+  //      visible rather than silently dropping earlier attempts). Persist.
+  //    })
+  //    .catch((error) => {
+  //      // pollCallUntilTerminal only throws on a TIMEOUT (its own 5-minute
+  //      // ceiling passing with no terminal status seen), never on a real
+  //      // CALL-E-reported failure -- that case is handled in the .then()
+  //      // above via call.status === 'failed'. A timeout is NOT proof the
+  //      // call itself failed; the real call may still be in progress, or
+  //      // may complete moments later on CALL-E's side. Marking the record
+  //      // terminal here would wrongly foreclose both the duplicate-
+  //      // submission guard and the boot-time recovery check from ever
+  //      // looking at this calleCallId again. So: leave status as
+  //      // 'in_progress' (NOT a new terminal value), just attach
+  //      // error: String(error) as a soft "stopped watching, still checking
+  //      // later" note. recoverInterruptedOutreachCalls() picks this
+  //      // specific case up on the next boot via its own getCall() check.
+  //      persist the record with status unchanged, error: String(error)
+  //    })
 }
 
 // Boot-time recovery, mirroring orchestrationQueueService.ts's
@@ -556,8 +601,17 @@ mapping, and assert the policy-gate check runs before every request.
   for a mocked slow `pollCallUntilTerminal` to settle — this is the critical
   regression test proving the fire-and-forget fix actually works and doesn't
   silently regress back to blocking; each `policyBlockKind` value is set
-  correctly for its corresponding gate-block reason), the result-schema
-  builder, persistence round-trip via `listOutreachCalls`, the
+  correctly for its corresponding gate-block reason); a mocked
+  `pollCallUntilTerminal` resolving with a terminal `completed` call updates
+  the record's `structuredResult`/`summary` from the TASK-LEVEL fields and
+  `transcript` from `recipients[0].attempts[].transcriptTurns` flattened
+  across every attempt, not just the last one; a mocked
+  `pollCallUntilTerminal` REJECTING (simulating a poll timeout, not a real
+  CALL-E failure) leaves the record's `status` unchanged at `in_progress`
+  (NOT transitioned to `failed_to_start` or any other terminal value) with
+  only `error` populated -- this is the regression test for the timeout-vs-
+  real-failure distinction found in the third self-critique pass), the
+  result-schema builder, persistence round-trip via `listOutreachCalls`, the
   `appendAgentActivity({ agent: 'marcus', ... })` call, and
   `recoverInterruptedOutreachCalls` (a record left `in_progress` gets exactly
   one `getCall` check; a record already terminal is left untouched; a record
