@@ -12,6 +12,14 @@ vi.mock('../../services/agentActivityService', () => ({
 vi.mock('../../services/attentionAggregatorService', () => ({
   getAttentionItems: vi.fn(),
 }));
+vi.mock('../../components/AgentStatusStrip', () => ({
+  AgentStatusStrip: ({ onAgentsChange }: { onAgentsChange?: (agents: { name: string; status: string }[]) => void }) => {
+    React.useEffect(() => {
+      onAgentsChange?.([{ name: 'jose', status: 'running' }, { name: 'hector', status: 'running' }]);
+    }, [onAgentsChange]);
+    return <div data-testid="mock-agent-strip" />;
+  },
+}));
 
 import { getAttentionItems } from '../../services/attentionAggregatorService';
 import { MissionControlHome } from '../../components/MissionControlHome';
@@ -84,5 +92,24 @@ describe('MissionControlHome — attention aggregator wiring', () => {
     render(<MissionControlHome {...baseProps} />);
     await waitFor(() => expect(screen.getByText('Item A')).toBeTruthy());
     expect(screen.queryByText('Item E')).toBeNull();
+  });
+});
+
+describe('MissionControlHome — hero (portrait strip + dynamic greeting)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (getAttentionItems as any).mockResolvedValue([]);
+  });
+
+  it('renders the agent portrait strip instead of the static banner image', () => {
+    render(<MissionControlHome {...baseProps} />);
+    expect(screen.getByTestId('mock-agent-strip')).toBeTruthy();
+    expect(screen.queryByAltText('Alphonso')).toBeNull(); // the old static banner img had alt="Alphonso"
+  });
+
+  it('renders a time-of-day greeting instead of the hardcoded "Executor online." headline', () => {
+    render(<MissionControlHome {...baseProps} />);
+    expect(screen.queryByText('Executor online.')).toBeNull();
+    expect(screen.getByText(/Good (morning|afternoon|evening)/)).toBeTruthy();
   });
 });

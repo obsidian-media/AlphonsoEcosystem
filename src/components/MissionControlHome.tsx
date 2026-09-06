@@ -6,9 +6,7 @@ import {
 import { listApprovalQueue, listAgentPackets } from '../services/agentBusService';
 import { listAgentActivity } from '../services/agentActivityService';
 import { getAttentionItems, type AttentionItem } from '../services/attentionAggregatorService';
-import alphonsoBanner from '../../logo-banner-thumbnail-media/ALPHONSO_BANNER.webp';
-import alphonsoIcon from '../../logo-banner-thumbnail-media/ALPHONSO_ICON.webp';
-import alphonsoLogo from '../../logo-banner-thumbnail-media/ALPHONSO_LOGO.webp';
+import { AgentStatusStrip } from './AgentStatusStrip';
 
 interface OllamaStatus {
   state: string;
@@ -46,6 +44,13 @@ interface Props {
   onNavigate?: (tab: string) => void;
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning.';
+  if (hour < 18) return 'Good afternoon.';
+  return 'Good evening.';
+}
+
 export function MissionControlHome({
   settings,
   ollamaStatus,
@@ -66,6 +71,7 @@ export function MissionControlHome({
   }, [verificationLogs]);
 
   const [attentionItems, setAttentionItems] = React.useState<AttentionItem[]>([]);
+  const [activeAgents, setActiveAgents] = React.useState<{ name: string; status: string }[]>([]);
   React.useEffect(() => {
     let cancelled = false;
     const poll = async () => {
@@ -142,46 +148,31 @@ export function MissionControlHome({
     <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-6xl px-6 py-8 space-y-10">
 
-      <div className="relative overflow-hidden rounded-3xl">
-        <img
-          src={alphonsoBanner}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-25 saturate-110"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--surface-0)] via-[var(--surface-0)]/85 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--accent-glow),transparent_50%)]" />
-        <div className="relative px-8 py-6 md:px-12 md:py-8">
-          <div className="flex items-center gap-2.5 mb-6">
-            <img src={alphonsoIcon} alt="" className="h-7 w-7 rounded-full object-cover" />
-            <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-[var(--text-2)]">Alphonso</span>
-            <span className="h-1 w-1 rounded-full bg-[var(--border-strong)]" />
-            <span className={`text-[11px] font-semibold ${ollamaConnected ? 'text-[var(--success)]' : 'text-[var(--text-4)]'}`}>
-              {ollamaConnected ? 'Local AI online' : 'Local AI offline'}
-            </span>
-          </div>
-          <img src={alphonsoLogo} alt="Alphonso" className="mb-5 h-10 object-contain object-left" />
-          <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
-            Executor online.
-          </h1>
-          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[var(--text-2)]">
-            Coordinate your 9 agents, manage approvals, and keep the next move clear.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <button
-              onClick={() => onNavigate?.('chat')}
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--surface-0)] hover:bg-[var(--accent-hover)] transition-colors"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Open Chat
-            </button>
-            <button
-              onClick={() => onNavigate?.('orchestrator')}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white/5 px-5 py-2.5 text-sm font-semibold text-[var(--text-1)] hover:bg-white/10 transition-colors"
-            >
-              <Crown className="h-4 w-4" />
-              Orchestrator
-            </button>
-          </div>
+      <div className="relative overflow-hidden rounded-3xl bg-[var(--surface-1)] px-8 py-6 md:px-12 md:py-8">
+        <div className="mb-6">
+          <AgentStatusStrip variant="portraits" useAutoFeed onAgentsChange={setActiveAgents} />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
+          {getGreeting()}
+        </h1>
+        <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[var(--text-2)]">
+          Coordinate your 9 agents, manage approvals, and keep the next move clear.
+        </p>
+        <div className="mt-7 flex flex-wrap gap-3">
+          <button
+            onClick={() => onNavigate?.('chat')}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--surface-0)] hover:bg-[var(--accent-hover)] transition-colors"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Open Chat
+          </button>
+          <button
+            onClick={() => onNavigate?.('orchestrator')}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white/5 px-5 py-2.5 text-sm font-semibold text-[var(--text-1)] hover:bg-white/10 transition-colors"
+          >
+            <Crown className="h-4 w-4" />
+            Orchestrator
+          </button>
         </div>
       </div>
 
