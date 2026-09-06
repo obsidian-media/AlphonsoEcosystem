@@ -4,10 +4,19 @@ const THEME_KEY = 'alphonso_theme_v1';
 
 export type Theme = 'dark' | 'light';
 
+function isValidTheme(value: string | null): value is Theme {
+  return value === 'dark' || value === 'light';
+}
+
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      return (localStorage.getItem(THEME_KEY) as Theme) || 'dark';
+      const stored = localStorage.getItem(THEME_KEY);
+      // A corrupted/arbitrary stored value (manual edit, a stale key from an
+      // older schema) must not become the live theme -- it would get set as
+      // the `data-theme` attribute verbatim and match neither the dark nor
+      // light CSS, breaking theming silently. Fall back to the safe default.
+      return isValidTheme(stored) ? stored : 'dark';
     } catch {
       return 'dark';
     }

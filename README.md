@@ -401,8 +401,8 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 4,199 tests across 293 files
-npm run test:coverage  # Coverage report (~38%+; threshold 35%)
+npm run test           # 5,147 tests across 353 files
+npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
 npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
