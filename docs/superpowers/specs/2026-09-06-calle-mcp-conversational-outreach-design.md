@@ -227,10 +227,17 @@ export interface PlanCallResult {
   confirm_token?: string;
   clarifying_questions?: string[];
   summary?: string;
+  // Best-effort dedup key (see calleMcpOutreachService's isPhoneAlreadyInFlight).
+  // Whether plan_call's real response actually exposes a resolved phone number
+  // field, and under what name, is unverified -- same category of unknown as
+  // conversation_history above. If it isn't present, dedup-by-phone silently
+  // can't run for that record; this is a best-effort safeguard, not a
+  // guaranteed one, and that's stated plainly rather than assumed solved.
+  phone_number?: string;
 }
 
-export function planCall(goal: string, priorAnswers?: Record<string, string>): Promise<PlanCallResult> {
-  return callTool('plan_call', { goal, ...(priorAnswers ? { answers: priorAnswers } : {}) });
+export function planCall(goal: string, conversationHistory?: string[]): Promise<PlanCallResult> {
+  return callTool('plan_call', { goal, ...(conversationHistory?.length ? { conversation_history: conversationHistory } : {}) });
 }
 
 export function runCall(planId: string, confirmToken: string): Promise<{ run_id: string; status: string }> {
@@ -243,90 +250,247 @@ export function getCallRun(runId: string): Promise<{ status: string; structuredC
 ```
 
 `MCP_PROTOCOL_VERSION` above is confirmed from `@call-e/core/lib/constants.js`. `plan_call`'s
-exact argument shape (`goal`/`answers` above) is CALL-E's own tool schema, not something
-`@call-e/core` defines client-side — it still needs a one-time live confirmation via a real
-`tools/list`/`plan_call` call (blocked on the user's CALL-E account access issue, same
-blocker noted throughout this session) before implementation, since guessing an MCP tool's
-argument names wrong fails loudly at the first real call rather than silently.
+exact argument shape (`goal`/`conversation_history`/`phone_number` above) is CALL-E's own tool
+schema, not something `@call-e/core` defines client-side — it still needs a one-time live
+confirmation via a real `tools/list`/`plan_call` call (blocked on the user's CALL-E account
+access issue, same blocker noted throughout this session) before implementation, since
+guessing an MCP tool's argument names wrong fails loudly at the first real call rather than
+silently.
+
+An earlier draft of this section invented a client-side scheme for tracking clarifying-
+question answers (positional `answer_0`/`answer_1` keys). That was worse than just admitting
+the schema is unverified: it added a *second*, self-invented layer of guessing on top of the
+first, with no way to know which question an answer referenced if the user answered out of
+order or answered two questions in one message. Passing the raw conversation transcript
+instead (`conversation_history: string[]`, each entry one user/assistant turn) makes no
+assumption about CALL-E's internal Q&A bookkeeping — it hands over exactly what a human would
+type, in order, and lets `plan_call`'s own reasoning (which is explicitly described as
+interactive) parse it. This is a smaller, more honest guess: right in shape even if a field
+name needs correcting at implementation time, versus the previous version's structurally
+wrong request.
 
 ### 3. `src/services/calleMcpOutreachService.ts` (new)
 
-The conversational state machine, keyed per chat conversation (so two different chats can
-each have their own in-flight plan without colliding).
+The conversational state machine, keyed by `chatId` (`ChatView.tsx`'s real `activeChatId`
+state — the earlier draft of this doc invented a nonexistent `conversationId` variable
+without checking `ChatView.tsx` first; corrected after self-review, see the critique note at
+the end of this document).
+
+**Critical design correction from self-review:** the record is only ever consulted to decide
+routing while its stage is `'clarifying'` or `'ready_to_confirm'` — i.e. while CALL-E is
+actively waiting on the user's next word. The moment `run_call` succeeds and the stage moves
+to `'in_progress'`, the record stops intercepting chat messages entirely. Without this, a
+single placed call would hijack the *entire* chat thread for however long the call takes
+(minutes), rejecting every unrelated message with "a call is already in progress" — a real bug
+in the first draft, not a hypothetical. The terminal result (completed/failed) is delivered
+via the existing global `alphonso:toast` `CustomEvent` (`window.dispatchEvent(new
+CustomEvent('alphonso:toast', { detail: { type, title, message } }))`, already used by
+`joseSchedulerService.ts`, `CoachContext.jsx`, and others, consumed by `ToastProvider.tsx`) for
+an immediate notice, plus a `delivered: boolean` flag on the durable record so `ChatView`
+posts the real result as an assistant message into that specific chat once the user is
+actually looking at it — not by waiting for the user to say something first.
+
+(An earlier version of this fix cited `toolNotificationDispatcher.ts` for this purpose. That
+was wrong and caught before committing: that service dispatches orchestration *receipts* out
+to external Slack/Discord tool connections — `dispatchReceiptNotifications(receipt)`, gated
+on `IMPORTANT_EVENTS` and a connection's `platform` — it has nothing to do with posting a
+message inside this app's own chat UI. Read the file before reusing it a second time; the
+first guess here repeated exactly the mistake point 1 above was called out for.)
+
+**Second correction:** approving the call is a real UI button click
+(`confirmMcpOutreachCall(chatId)`/`cancelMcpOutreachCall(chatId)`), not a plain-text "confirm"
+match. The first draft's bare string match was a strictly weaker safety bar than Phase 1's own
+REST panel (a distinct button click before any real call), for the identical class of action
+(placing a real outbound phone call) — flagged in self-review as a regression, not a stylistic
+choice, and fixed by rendering the plan summary as a distinguishable assistant message that
+carries `pendingConfirm` data, which `ChatView.tsx` renders with actual `Button` components
+(reusing the `ui/` barrel, same as `CalleOutreachPanel.tsx`) instead of parsing free text.
 
 ```ts
-export type McpOutreachStage = 'clarifying' | 'ready_to_confirm' | 'in_progress' | 'completed' | 'failed';
+import { invoke } from '@tauri-apps/api/core';
+
+export type McpOutreachStage = 'clarifying' | 'ready_to_confirm' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
 export interface McpOutreachRecord {
-  id: string; // conversationId, one live record per conversation at a time
+  chatId: string; // ChatView.tsx's activeChatId; one live record per chat at a time
   stage: McpOutreachStage;
   goal: string;
-  answers: Record<string, string>;
+  conversationHistory: string[]; // raw user turns so far, oldest first
   planId?: string;
   confirmToken?: string;
   runId?: string;
+  phoneNumber?: string; // best-effort, see PlanCallResult.phone_number
   clarifyingQuestions?: string[];
   summary?: string;
   structuredResult?: unknown;
   error?: string;
+  delivered?: boolean; // has the terminal result been posted into this chat yet?
 }
 
-// In-memory + durable via kv_set/kv_get (mirrors chatPersistenceService.ts's
-// dual-write pattern) so a mid-flight conversational plan survives a reload,
-// though the actual live plan_id/confirm_token are short-lived by CALL-E's
-// own design and are not expected to be reusable across app restarts.
+const RECORDS_CATEGORY = 'calle_mcp_outreach';
+
+// Durable from the start via memory_store.rs's upsert_memory_records /
+// list_memory_records Tauri commands -- the SAME real primitive
+// chatPersistenceService.ts already uses (its own `CHAT_CATEGORY` constant,
+// same `invoke('upsert_memory_records', ...)` / `invoke('list_memory_records',
+// { filters: { category, ... } })` shape) -- NOT deferred to a later pass.
+// A call literally in progress is a real, in-flight cost (see Phase 1's
+// ESTIMATED_COST_USD) and must not silently vanish from recovery just
+// because the app closed. An in-memory-only version of this map was the
+// first draft's design; self-review flagged it as functionally equivalent
+// to having no crash recovery at all, since an in-memory Map starts empty
+// on every fresh boot regardless of what recoverInterruptedMcpOutreachCalls
+// claims to do.
+//
+// This corrects a second, separate guess from an earlier pass: kv_store.rs's
+// kv_set/kv_get/kv_delete only support exact-key lookup, not "give me every
+// record in category X" -- there is no listing/enumeration capability there
+// at all. memory_store.rs's list_memory_records is the actual primitive in
+// this codebase that supports category filtering, confirmed by reading both
+// files rather than assuming kv_store.rs could do it.
+//
+// There is also no delete command on either store. "Cancel" therefore
+// persists a terminal `stage: 'cancelled'` record (upsert, same as any other
+// stage transition) rather than removing it -- hydrateRecords/isAwaitingMcpOutreachInput
+// already treat a cancelled record as inactive, so nothing further is needed.
 const records = new Map<string, McpOutreachRecord>();
+let hydrated = false;
 
-export function getMcpOutreachRecord(conversationId: string): McpOutreachRecord | null {
-  return records.get(conversationId) ?? null;
+function recordToMemoryRecord(record: McpOutreachRecord) {
+  return {
+    id: `calle-mcp-outreach-${record.chatId}`,
+    title: `CALL-E MCP outreach: ${record.goal.slice(0, 60)}`,
+    content: record,
+    category: RECORDS_CATEGORY,
+    sourceAgent: 'marcus',
+    source: `calle_mcp:${record.chatId}`,
+    timestampMs: Date.now(),
+    confidence: 'temporary',
+    verificationState: 'unverified',
+    projectReference: record.chatId,
+    expiresAt: null,
+    expiryRule: null
+  };
 }
 
-// Called from ChatView when shouldRouteThroughCalleMcp(text) matches.
+async function hydrateRecords(): Promise<void> {
+  if (hydrated) return;
+  hydrated = true;
+  const stored: any[] = await invoke('list_memory_records', { filters: { category: RECORDS_CATEGORY } }).catch(() => []);
+  for (const memoryRecord of stored) {
+    const record: McpOutreachRecord = memoryRecord.content;
+    records.set(record.chatId, record);
+  }
+}
+
+async function persistRecord(record: McpOutreachRecord): Promise<void> {
+  records.set(record.chatId, record);
+  await invoke('upsert_memory_records', { records: [recordToMemoryRecord(record)] });
+}
+
+async function deleteRecord(chatId: string): Promise<void> {
+  const existing = records.get(chatId);
+  if (existing) await persistRecord({ ...existing, stage: 'cancelled' });
+  records.delete(chatId);
+}
+
+export async function getMcpOutreachRecord(chatId: string): Promise<McpOutreachRecord | null> {
+  await hydrateRecords();
+  return records.get(chatId) ?? null;
+}
+
+// True only when the record is actively waiting on the user's next message.
+// This -- not "record exists" -- is what ChatView checks before intercepting.
+export function isAwaitingMcpOutreachInput(record: McpOutreachRecord | null): boolean {
+  return record !== null && (record.stage === 'clarifying' || record.stage === 'ready_to_confirm');
+}
+
+function isPhoneAlreadyInFlight(phoneNumber: string | undefined): boolean {
+  if (!phoneNumber) return false; // best-effort only, see PlanCallResult.phone_number
+  for (const record of records.values()) {
+    if (record.phoneNumber === phoneNumber && (record.stage === 'ready_to_confirm' || record.stage === 'in_progress')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Called from ChatView when isAwaitingMcpOutreachInput(existingRecord) is true,
+// or when shouldRouteThroughCalleMcp(text) matches with no existing record.
 // Returns the assistant-facing reply text to show in chat.
-export async function handleMcpOutreachMessage(conversationId: string, text: string): Promise<string> {
-  const existing = records.get(conversationId);
-
-  if (!existing || existing.stage === 'completed' || existing.stage === 'failed') {
-    // Fresh request.
-    appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_plan_call', detail: text });
-    const plan = await planCall(text);
-    if (!plan.ready_to_run) {
-      records.set(conversationId, {
-        id: conversationId, stage: 'clarifying', goal: text, answers: {},
-        clarifyingQuestions: plan.clarifying_questions ?? []
-      });
-      return (plan.clarifying_questions ?? []).join('\n');
-    }
-    records.set(conversationId, {
-      id: conversationId, stage: 'ready_to_confirm', goal: text, answers: {},
-      planId: plan.plan_id, confirmToken: plan.confirm_token, summary: plan.summary
-    });
-    return `Ready to place this call: ${plan.summary}\nReply "confirm" to place it, or "cancel" to drop this plan.`;
-  }
-
-  if (existing.stage === 'clarifying') {
-    const answers = { ...existing.answers, [`answer_${Object.keys(existing.answers).length}`]: text };
-    appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_plan_call', detail: text });
-    const plan = await planCall(existing.goal, answers);
-    if (!plan.ready_to_run) {
-      records.set(conversationId, { ...existing, answers, clarifyingQuestions: plan.clarifying_questions ?? [] });
-      return (plan.clarifying_questions ?? []).join('\n');
-    }
-    records.set(conversationId, {
-      ...existing, answers, stage: 'ready_to_confirm',
-      planId: plan.plan_id, confirmToken: plan.confirm_token, summary: plan.summary
-    });
-    return `Ready to place this call: ${plan.summary}\nReply "confirm" to place it, or "cancel" to drop this plan.`;
-  }
-
-  if (existing.stage === 'ready_to_confirm') {
+export async function handleMcpOutreachMessage(chatId: string, text: string): Promise<string> {
+  try {
+    await hydrateRecords();
+    const existing = records.get(chatId);
     const lower = text.trim().toLowerCase();
-    if (lower === 'cancel') {
-      records.delete(conversationId);
+
+    // 'cancel' is an escape hatch at every stage that's still waiting on
+    // input -- the first draft only allowed it once ready_to_confirm, so a
+    // user mid-clarification who wanted out had no way to stop.
+    if (existing && isAwaitingMcpOutreachInput(existing) && lower === 'cancel') {
+      await deleteRecord(chatId);
       return 'Call plan dropped.';
     }
-    if (lower !== 'confirm') {
-      return 'Reply "confirm" to place the call, or "cancel" to drop this plan.';
+
+    if (!existing || existing.stage === 'completed' || existing.stage === 'failed' || existing.stage === 'cancelled') {
+      appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_plan_call', detail: text });
+      const plan = await planCall(text);
+      return await advancePlan(chatId, text, [text], plan);
+    }
+
+    if (existing.stage === 'clarifying') {
+      const conversationHistory = [...existing.conversationHistory, text];
+      appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_plan_call', detail: text });
+      const plan = await planCall(existing.goal, conversationHistory);
+      return await advancePlan(chatId, existing.goal, conversationHistory, plan);
+    }
+
+    // stage === 'ready_to_confirm': no longer reachable via free text at all
+    // (see confirmMcpOutreachCall/cancelMcpOutreachCall below) -- any message
+    // here is the user typing something instead of clicking a button.
+    if (existing.stage === 'ready_to_confirm') {
+      return 'Use the Approve or Cancel button above to continue with this call plan.';
+    }
+
+    // stage === 'in_progress': unreachable in practice, since ChatView only
+    // calls this function while isAwaitingMcpOutreachInput() is true -- kept
+    // as a defensive fallback, not a relied-upon path.
+    return 'This call is already running; I will post the result when it finishes.';
+  } catch (error) {
+    return `CALL-E error: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+async function advancePlan(chatId: string, goal: string, conversationHistory: string[], plan: PlanCallResult): Promise<string> {
+  if (!plan.ready_to_run) {
+    await persistRecord({
+      chatId, stage: 'clarifying', goal, conversationHistory,
+      clarifyingQuestions: plan.clarifying_questions ?? []
+    });
+    return (plan.clarifying_questions ?? []).join('\n');
+  }
+  if (isPhoneAlreadyInFlight(plan.phone_number)) {
+    return `A call to ${plan.phone_number} is already pending or in progress in another chat. Wait for it to finish before starting another.`;
+  }
+  await persistRecord({
+    chatId, stage: 'ready_to_confirm', goal, conversationHistory,
+    planId: plan.plan_id, confirmToken: plan.confirm_token, phoneNumber: plan.phone_number,
+    summary: plan.summary
+  });
+  // ChatView renders this as a card with real Approve/Cancel buttons, not
+  // free text the user has to type a magic word back into.
+  return plan.summary ?? 'Ready to place this call.';
+}
+
+// Called by ChatView's rendered "Approve & Place Call" button -- the actual
+// approval action, matching Phase 1's REST panel's own button-click bar
+// rather than a plain-text "confirm" match.
+export async function confirmMcpOutreachCall(chatId: string): Promise<string> {
+  try {
+    await hydrateRecords();
+    const existing = records.get(chatId);
+    if (!existing || existing.stage !== 'ready_to_confirm') {
+      return 'No pending call plan to confirm.';
     }
     const gate = evaluatePolicyGate({ connectorId: 'calle', actionType: 'external_call', approved: true });
     if (!gate.ok) {
@@ -334,56 +498,87 @@ export async function handleMcpOutreachMessage(conversationId: string, text: str
     }
     appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_run_call', detail: existing.summary ?? '' });
     const { run_id } = await runCall(existing.planId!, existing.confirmToken!);
-    records.set(conversationId, { ...existing, stage: 'in_progress', runId: run_id });
-    pollMcpCallUntilTerminal(conversationId, run_id); // fire-and-forget, same as Phase 1
-    return 'Call started. I will let you know when it finishes.';
+    await persistRecord({ ...existing, stage: 'in_progress', runId: run_id });
+    pollMcpCallUntilTerminal(chatId, run_id).catch((error) => {
+      persistRecord({ ...existing, stage: 'in_progress', runId: run_id, error: error instanceof Error ? error.message : String(error) });
+    });
+    return 'Call started. I will notify you when it finishes.';
+  } catch (error) {
+    return `CALL-E error: ${error instanceof Error ? error.message : String(error)}`;
   }
-
-  return 'A call is already in progress for this conversation.';
 }
 
-async function pollMcpCallUntilTerminal(conversationId: string, runId: string): Promise<void> {
+export async function cancelMcpOutreachCall(chatId: string): Promise<string> {
+  await deleteRecord(chatId);
+  return 'Call plan dropped.';
+}
+
+// Called by ChatView's delivery effect once it has posted the terminal
+// result into the chat, so a later poll doesn't post it a second time.
+export async function markMcpOutreachDelivered(chatId: string): Promise<void> {
+  const record = records.get(chatId);
+  if (record) await persistRecord({ ...record, delivered: true });
+}
+
+async function pollMcpCallUntilTerminal(chatId: string, runId: string): Promise<void> {
   const TERMINAL = new Set(['COMPLETED', 'FAILED', 'NO_ANSWER', 'DECLINED', 'CANCELED', 'CANCELLED', 'VOICEMAIL', 'BUSY', 'EXPIRED']);
   for (;;) {
     await new Promise((r) => setTimeout(r, 10_000));
-    const result = await getCallRun(runId);
+    let result;
+    try {
+      result = await getCallRun(runId);
+    } catch (error) {
+      // Transient network error: keep polling rather than giving up on the
+      // first blip. The first draft had no try/catch here at all, which
+      // meant a single failed fetch threw an unhandled rejection out of a
+      // fire-and-forget call and left the record stuck at 'in_progress'
+      // forever with the user never told.
+      continue;
+    }
     const status = String(result.status || '').toUpperCase();
     if (TERMINAL.has(status)) {
-      const record = records.get(conversationId);
+      const record = records.get(chatId);
       if (record) {
-        records.set(conversationId, {
+        const updated: McpOutreachRecord = {
           ...record,
           stage: status === 'COMPLETED' ? 'completed' : 'failed',
           structuredResult: result.structuredContent,
-          summary: typeof (result as any).summary === 'string' ? (result as any).summary : record.summary
-        });
+          summary: typeof (result as any).summary === 'string' ? (result as any).summary : record.summary,
+          delivered: false
+        };
+        await persistRecord(updated);
+        window.dispatchEvent(new CustomEvent('alphonso:toast', {
+          detail: {
+            type: status === 'COMPLETED' ? 'success' : 'warning',
+            title: status === 'COMPLETED' ? 'CALL-E call completed' : `CALL-E call ${status.toLowerCase()}`,
+            message: updated.summary ?? ''
+          }
+        }));
       }
       return;
     }
   }
 }
 
-// Boot-time recovery, same principle as Phase 1's recoverInterruptedOutreachCalls:
-// a run left 'in_progress' from a prior session gets exactly one get_call_run
-// check. run_call is NEVER retried here -- CALL-E's own docs say not to, and
-// unlike the REST path there is no idempotency key to make a retry safe.
+// Boot-time recovery: any record left 'in_progress' from a prior session
+// (its poll loop died when the app closed) gets its poll loop restarted,
+// which itself calls get_call_run only -- run_call is NEVER retried here.
+// CALL-E's own docs say not to retry run_call on disconnect, and unlike the
+// REST path there is no idempotency key that would make a retry safe.
+// Because records are now durable (upsert_memory_records/list_memory_records,
+// not an in-memory-only Map), this actually has something to recover across
+// a full app restart, unlike the first draft.
 export async function recoverInterruptedMcpOutreachCalls(): Promise<void> {
-  for (const [conversationId, record] of records) {
+  await hydrateRecords();
+  for (const record of records.values()) {
     if (record.stage === 'in_progress' && record.runId) {
-      pollMcpCallUntilTerminal(conversationId, record.runId);
+      pollMcpCallUntilTerminal(record.chatId, record.runId).catch((error) => {
+        persistRecord({ ...record, error: error instanceof Error ? error.message : String(error) });
+      });
     }
   }
 }
 ```
-
-Note: because `records` is an in-memory `Map`, `recoverInterruptedMcpOutreachCalls()` as
-written above only has something to recover within the same app session (e.g. after a
-transient network blip), not across a full app restart — an in-memory map is empty on a
-fresh boot. If recovering across a full restart is wanted, `records` needs the same
-`kv_set`/`kv_get` persistence `chatPersistenceService.ts` already uses; this is called out
-explicitly here rather than silently assumed, and is a one-line decision to make in the
-implementation plan (persist now vs. defer, matching Phase 1's own explicit deferral of a
-similar boot-recovery-wiring decision).
 
 ### 4. `src/lib/chatUtils.js` (modified)
 
@@ -399,25 +594,43 @@ export function shouldRouteThroughCalleMcp(text) {
 }
 ```
 
-This is intentionally broad (a follow-up "confirm"/"cancel" reply, and any mid-clarification
-answer, are routed by `ChatView.tsx` checking `getMcpOutreachRecord(conversationId)` for an
-active record *before* falling back to this fresh-intent matcher — an active record always
-wins, regardless of what the new message's text looks like).
+A follow-up clarification answer is routed by `ChatView.tsx` checking
+`isAwaitingMcpOutreachInput()` on the existing record for `activeChatId` *before* falling back
+to this fresh-intent matcher — an actively-awaiting record always wins, regardless of what the
+new message's text looks like. Once the record moves past that (to `'in_progress'`,
+`'completed'`, or `'failed'`), this matcher is consulted like any other fresh message, and
+normal chat resumes uninterrupted — this is the fix for the chat-thread-monopolization bug
+found in self-review (see the note at the top of §3).
 
 ### 5. `ChatView.tsx` (modified)
 
-Before the existing `shouldRouteThroughJose` check, add:
+Before the existing `shouldRouteThroughJose` check, add (using the real `activeChatId` state,
+not the nonexistent `conversationId` the first draft invented):
 
 ```ts
-const activeMcpOutreach = getMcpOutreachRecord(conversationId);
-if (activeMcpOutreach && activeMcpOutreach.stage !== 'completed' && activeMcpOutreach.stage !== 'failed') {
-  const reply = await handleMcpOutreachMessage(conversationId, text);
-  // post `reply` as an assistant message, return
+const existingMcpOutreach = await getMcpOutreachRecord(activeChatId);
+if (isAwaitingMcpOutreachInput(existingMcpOutreach)) {
+  const reply = await handleMcpOutreachMessage(activeChatId, text);
+  // post `reply` as an assistant message; if existingMcpOutreach.stage is now
+  // 'ready_to_confirm', render it as a card with real Approve/Cancel buttons
+  // (onClick -> confirmMcpOutreachCall(activeChatId) / cancelMcpOutreachCall(activeChatId))
+  // instead of plain text asking the user to type a word back.
+  return;
 } else if (shouldRouteThroughCalleMcp(text)) {
-  const reply = await handleMcpOutreachMessage(conversationId, text);
-  // post `reply` as an assistant message, return
+  const reply = await handleMcpOutreachMessage(activeChatId, text);
+  // same rendering as above
+  return;
 }
 ```
+
+A separate small `useEffect` (mounted once, checked on an interval similar to
+`CalleOutreachPanel.tsx`'s existing 5s poll) checks `getMcpOutreachRecord(activeChatId)`; if it
+finds a `stage` of `'completed'`/`'failed'` with `delivered !== true`, it posts the record's
+`summary` as a plain assistant message into that chat and calls the new exported
+`markMcpOutreachDelivered(chatId)` so the message is posted exactly once, whether
+the user was already looking at the chat when the call finished or opens it later. The
+immediate `alphonso:toast` notification (§3) covers the "user isn't looking at this chat right
+now" case; this covers "the actual result, once they are."
 
 ### 6. `ConnectorSetupPanel.tsx` (modified)
 
@@ -441,20 +654,33 @@ it only needs to run while the Settings panel is open.
 1. User types "call Joe's Pizza and ask if they'd like an updated website" in chat.
 2. `shouldRouteThroughCalleMcp` matches → `handleMcpOutreachMessage` → `planCall(text)`.
 3. CALL-E MCP returns `ready_to_run: false`, `clarifying_questions: ["What phone number should I call?"]`.
-4. Assistant reply shows that question; record stored `stage: 'clarifying'`.
-5. User replies with the phone number.
-6. Active record found → `planCall(goal, {answer_0: phoneNumber})` → now `ready_to_run: true` with a `plan_id`/`confirm_token`/`summary`.
-7. Assistant reply shows the plan summary, asks for "confirm".
-8. User replies "confirm" → policy gate checked (paid + high-risk, same as Phase 1) → `runCall(plan_id, confirm_token)` → `run_id` stored, `stage: 'in_progress'`.
-9. Background poll (`pollMcpCallUntilTerminal`) checks `get_call_run` every 10s until terminal, then updates the record with `structuredContent`/summary.
-10. (Not yet wired to a UI surface for the terminal result — see "What this does not build" below.)
+4. Assistant reply shows that question; record stored `stage: 'clarifying'` (durable).
+5. User replies with the phone number. `isAwaitingMcpOutreachInput()` is true for this chat, so
+   this message routes to `handleMcpOutreachMessage` regardless of what it looks like.
+6. `planCall(goal, [originalText, phoneNumberReply])` → now `ready_to_run: true` with a
+   `plan_id`/`confirm_token`/`summary` (and, best-effort, `phone_number`).
+7. Assistant message renders the plan summary as a card with real **Approve & Place Call** /
+   **Cancel** buttons — not a request to type a word back.
+8. User clicks Approve → `confirmMcpOutreachCall` → policy gate checked (paid + high-risk,
+   same as Phase 1) → `runCall(plan_id, confirm_token)` → `run_id` stored, `stage:
+   'in_progress'`. From this point, `isAwaitingMcpOutreachInput()` is false for this chat —
+   normal conversation resumes immediately, uninterrupted.
+9. Background poll (`pollMcpCallUntilTerminal`) checks `get_call_run` every 10s until terminal,
+   updates the durable record, and fires an `alphonso:toast` notice. A `ChatView` delivery
+   effect then posts the record's summary as a plain assistant message the next time the user
+   is looking at that chat, calling `markMcpOutreachDelivered` so it's posted exactly once —
+   delivered whenever the call actually finishes, not gated on the user saying something first.
 
 ## Error handling
 
-- Network/HTTP failure at any `planCall`/`runCall`/`getCallRun` step surfaces as a plain
-  assistant error message; no partial `McpOutreachRecord` is left in an ambiguous stage (a
-  thrown error before `records.set(...)` runs leaves the prior stage untouched, so the user
-  can retry their last message).
+- Every branch of `handleMcpOutreachMessage`/`confirmMcpOutreachCall` is wrapped in a single
+  top-level try/catch that returns a plain "CALL-E error: ..." string rather than throwing —
+  the first draft had no try/catch anywhere in this function despite this same "Error
+  handling" section already claiming failures surface as a message; that gap is closed here,
+  not just documented differently.
+- No partial `McpOutreachRecord` is left in an ambiguous stage: a thrown error occurs before
+  `persistRecord(...)` runs for that branch, so the prior stage is untouched and the user can
+  retry their last message.
 - Expired token (`isCalleMcpConfigured()` false) at any point returns "CALL-E MCP not
   connected. Connect via Settings first." rather than attempting a browser-login flow from
   inside a chat reply (login requires opening a browser, which belongs in Settings, not an
@@ -463,6 +689,16 @@ it only needs to run while the Settings panel is open.
   `plan_id`/`confirm_token` pair — once `runCall` returns a `run_id` and the record moves to
   `in_progress`, no code path calls `runCall` again for that record. Recovery only ever polls
   `getCallRun`.
+- `pollMcpCallUntilTerminal`'s loop now catches a failed `getCallRun` and keeps polling
+  (transient network blips shouldn't abandon a call that's actually still running), and the
+  fire-and-forget call sites (`confirmMcpOutreachCall`, `recoverInterruptedMcpOutreachCalls`)
+  attach a real `.catch()` that records the error on the durable record instead of producing
+  an unhandled rejection the user never sees. The first draft had neither.
+- Best-effort duplicate-call protection: `isPhoneAlreadyInFlight()` blocks starting a second
+  `ready_to_confirm`/`in_progress` plan to a phone number that already has one, mirroring
+  Phase 1's `hasNonTerminalForPhone` check in `CalleOutreachPanel.tsx` — with the caveat noted
+  on `PlanCallResult.phone_number` that this depends on a field whose presence in CALL-E's
+  real `plan_call` response isn't yet confirmed.
 
 ## Testing
 
@@ -475,25 +711,81 @@ it only needs to run while the Settings panel is open.
 - `chatUtils.test.js`: `shouldRouteThroughCalleMcp` — positive/negative cases, `/jose` prefix
   never matches.
 - `calleMcpOutreachService.test.ts`: full state machine — clarifying → ready_to_confirm →
-  confirm → in_progress → terminal; "cancel" drops the record; policy-gate block path;
-  `recoverInterruptedMcpOutreachCalls` only calls `getCallRun`, never `runCall`, for an
-  `in_progress` record.
-- `ChatView` integration test: an active `McpOutreachRecord` for a conversation routes the
-  next message through `handleMcpOutreachMessage` even when that message's text alone
-  wouldn't match `shouldRouteThroughCalleMcp` (e.g. a bare phone number, or "confirm").
+  confirm (button action, not text) → in_progress → terminal; `isAwaitingMcpOutreachInput()`
+  is false once `in_progress` (regression test for the chat-monopolization bug); `cancel` moves
+  the record to `stage: 'cancelled'` from every awaiting stage, not just `ready_to_confirm`
+  (there is no delete primitive to test against — verify the upserted terminal stage instead);
+  policy-gate block path; `isPhoneAlreadyInFlight` blocks a second plan to the same number; a
+  failed `getCallRun` inside the poll loop doesn't abandon the record; `recoverInterruptedMcpOutreachCalls`
+  only calls `getCallRun`, never `runCall`, for an `in_progress` record, and actually has
+  something to recover after a simulated restart (records hydrated from a mocked
+  `list_memory_records`, not an empty in-memory `Map`).
+- `ChatView` integration test: while `isAwaitingMcpOutreachInput()` is true for `activeChatId`,
+  the next message routes through `handleMcpOutreachMessage` regardless of its text (e.g. a
+  bare phone number); once the record moves to `in_progress`, the *next* unrelated message
+  is answered normally, not intercepted (this is the direct regression test for the
+  self-review finding in §3).
 
 ## What this does not fix / build
 
 - No UI surface yet shows a completed `McpOutreachRecord`'s final summary/transcript beyond
-  a plain assistant chat message — no history list like Phase 1's panel. Deferred, same
-  reasoning as Phase 1's own deferred final-UI-placement decision (pending the in-progress UI
-  redesign).
-- `records` (the conversational state map) is in-memory only in this design; cross-restart
-  recovery is a named, explicit follow-up decision, not a silent gap (see the note under
-  §3 above).
-- `plan_call`'s exact argument schema (`goal`/`answers` above) still needs a one-time live
-  confirmation via `tools/list`/`plan_call` once the user's CALL-E account access issue is
-  resolved — flagged explicitly above, not silently guessed as final. `MCP_PROTOCOL_VERSION`
-  and the broker's session-secret header are already confirmed from `@call-e/core`'s source.
+  the plain assistant chat message the delivery effect posts — no history list like Phase 1's
+  panel. Deferred, same reasoning as Phase 1's own deferred final-UI-placement decision
+  (pending the in-progress UI redesign).
+- `plan_call`'s exact argument schema (`goal`/`conversation_history`/`phone_number` above)
+  still needs a one-time live confirmation via `tools/list`/`plan_call` once the user's
+  CALL-E account access issue is resolved — flagged explicitly above, not silently guessed as
+  final. `MCP_PROTOCOL_VERSION` and the broker's session-secret header are already confirmed
+  from `@call-e/core`'s source. Duplicate-call protection is correspondingly best-effort until
+  `phone_number`'s real field name (or absence) is confirmed.
 - No changes to the Phase 1 REST connector, panel, or its policy/registry wiring — this is
   additive only.
+
+## Self-critique (applied)
+
+A harsh review pass after the first draft found nine real issues, all fixed in this version
+rather than left as caveats:
+
+1. The integration code referenced a `conversationId` variable that doesn't exist in
+   `ChatView.tsx` — the real state is `activeChatId`. Written without checking the file first.
+2. An active record (in *any* non-terminal stage, including `in_progress`) intercepted every
+   subsequent chat message regardless of topic — a real, minutes-long chat-thread hijack for
+   the duration of any placed call. Fixed by narrowing interception to
+   `isAwaitingMcpOutreachInput()` (only `clarifying`/`ready_to_confirm`) and delivering the
+   terminal result via the existing `alphonso:toast` event plus a `delivered`-flag chat post
+   instead — not `toolNotificationDispatcher.ts`, an earlier fix's own wrong guess (that
+   service pushes orchestration receipts to external Slack/Discord connections; it has no
+   path into this app's own chat UI at all — caught on a second read before committing, same
+   category of mistake as point 1).
+3. The clarifying-answer aggregation scheme (`answer_0`/`answer_1` positional keys) was
+   invented with no basis in CALL-E's actual `plan_call` schema, and broke on out-of-order or
+   multi-question answers. Replaced with a raw `conversation_history: string[]` transcript —
+   still an unverified field name, but a structurally sound guess instead of a self-invented
+   bookkeeping scheme layered on top of an already-unverified one.
+4. `cancel` only worked once `ready_to_confirm`; a user mid-clarification had no escape hatch.
+   Fixed — `cancel` now works at any stage `isAwaitingMcpOutreachInput()` is true.
+5. The approval gate was a bare "confirm" string match in chat — strictly weaker than Phase
+   1's own button-click bar for the identical class of action (placing a real call). Fixed
+   with real `confirmMcpOutreachCall`/`cancelMcpOutreachCall` button actions.
+6. No protection against two chats independently calling the same number at once (Phase 1's
+   panel already has this via `hasNonTerminalForPhone`). Fixed with best-effort
+   `isPhoneAlreadyInFlight`, caveated on the same unverified-field-name basis as point 3.
+7. The doc's own "Error handling" section claimed failures surface as a message, but the code
+   had no try/catch anywhere. Fixed with a real top-level try/catch in both entry points.
+8. `pollMcpCallUntilTerminal` had no error handling and was invoked with no `.catch()`, so a
+   single network blip produced an unhandled rejection and silently stuck the record at
+   `in_progress` forever. Fixed with an in-loop catch (keep polling) and `.catch()` at every
+   call site (persist the error on the record).
+9. `records` was an in-memory-only `Map`, making the documented boot-time recovery function
+   recover nothing after a real app restart — functionally equivalent to no crash recovery,
+   understated in the first draft as a "one-line decision to make later." Fixed by making
+   `records` durable via `memory_store.rs`'s `upsert_memory_records`/`list_memory_records`
+   from the start — the same real primitive `chatPersistenceService.ts` already uses, and the
+   one this codebase actually has a category-filtered listing capability on (a further,
+   separate correction: `kv_store.rs`'s `kv_set`/`kv_get`/`kv_delete`, cited in an earlier pass
+   of this same fix, only support exact-key lookup with no listing capability at all, and
+   there is no delete command on either store — "cancel" was redesigned around an upserted
+   terminal `'cancelled'` stage instead of a delete call that doesn't exist). A call genuinely
+   in flight (and costing real money, per Phase 1's `ESTIMATED_COST_USD` convention) is a
+   correctness issue, not a nice-to-have — worth getting the actual storage primitive right,
+   not just picking one that sounded plausible.
