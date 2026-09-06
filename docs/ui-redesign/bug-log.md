@@ -33,6 +33,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, real Ollama connection): New Research tab, Reports tab (empty state + populated with a real created draft), and the new synthesis-gap notice all render correctly with zero console errors.
 - **Status:** CLOSED.
 
+### 10. `BrandHeader.jsx` (Content Catalyst) is dead code — zero import sites anywhere
+
+- **Where:** `src/features/content-catalyst/workspace/BrandHeader.jsx` — a fully-built, already-mostly-tokenized header component (brand name, job counts, Settings/Trends/Analytics toggle buttons).
+- **How verified:** `grep -rn "BrandHeader" src/` (excluding the file's own definition) returns zero matches. `ContentCatalystWorkspace.jsx` (the real Content Studio shell) has its own separate inline `<header>` block instead and never imports this file.
+- **Why not fixed as part of the Content Studio re-skin (`16-phase2-content-studio-spec.md` / `17-content-studio-implementation-plan.md`):** re-skinning dead code is wasted effort. Whether the right fix is wiring it in (replacing the shell's inline header), using it somewhere else entirely, or deleting it outright is a real product decision, not a styling call — left untouched and unrewired this pass.
+- **Status:** OPEN, flagged for a future pass or explicit user decision.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
