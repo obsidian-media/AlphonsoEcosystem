@@ -40,6 +40,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Why not fixed as part of the Content Studio re-skin (`16-phase2-content-studio-spec.md` / `17-content-studio-implementation-plan.md`):** re-skinning dead code is wasted effort. Whether the right fix is wiring it in (replacing the shell's inline header), using it somewhere else entirely, or deleting it outright is a real product decision, not a styling call — left untouched and unrewired this pass.
 - **Status:** OPEN, flagged for a future pass or explicit user decision.
 
+### 11. `VoiceView.tsx` re-skin — small, contained, existing test coverage reused as the regression guard
+
+- **What changed:** the Voice console page still carried the same cyan/violet gradient header pattern + hardcoded `emerald-*`/`amber-*`/`rose-*`/`zinc-*` classes found and fixed on Mission Control/Content Studio — moved onto `--accent`/`--success`/`--warning`/`--error`/`--text-*` tokens, gradient dropped in favor of a flat `--surface-1` + accent-border header (same pattern as Content Studio).
+- **Unlike Hector/Content Catalyst's components, this one already had real test coverage** (`src/test/voiceView.test.jsx`, 7 tests) — no new tests needed; the existing suite served as the regression guard and stayed green throughout.
+- **Live-verified** (Playwright, real dev server): renders correctly with real live status data (Python-not-detected, WebSocket-not-listening — genuine current state on this dev machine, not mocked), zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
