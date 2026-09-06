@@ -344,6 +344,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [githubToken, setGithubToken] = useState(() => getConnectorCredential('github', 'GITHUB_TOKEN'));
   const [slackBotToken, setSlackBotToken] = useState(() => getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
   const [discordBotToken, setDiscordBotToken] = useState(() => getConnectorCredential('discord', 'DISCORD_BOT_TOKEN'));
+  const [calleApiKey, setCalleApiKey] = useState(() => getConnectorCredential('calle', 'CALLE_API_KEY'));
   const [genericWebhookDrainUrl, setGenericWebhookDrainUrl] = useState(() => getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL'));
   const [genericWebhookToken, setGenericWebhookToken] = useState(() => getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_TOKEN'));
   const [anthropicApiKey, setAnthropicApiKey] = useState(() => getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
@@ -385,6 +386,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setGithubToken((prev) => prev || getConnectorCredential('github', 'GITHUB_TOKEN'));
       setSlackBotToken((prev) => prev || getConnectorCredential('slack', 'SLACK_BOT_TOKEN'));
       setDiscordBotToken((prev) => prev || getConnectorCredential('discord', 'DISCORD_BOT_TOKEN'));
+      setCalleApiKey((prev) => prev || getConnectorCredential('calle', 'CALLE_API_KEY'));
       setGenericWebhookDrainUrl((prev) => prev || getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_DRAIN_URL'));
       setGenericWebhookToken((prev) => prev || getConnectorCredential('generic_webhook', 'GENERIC_WEBHOOK_TOKEN'));
       setAnthropicApiKey((prev) => prev || getConnectorCredential('claude', 'ANTHROPIC_API_KEY'));
@@ -807,6 +809,12 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('discord', { DISCORD_BOT_TOKEN: discordBotToken })}
             hint="Create an application at discord.com/developers/applications, add a Bot, enable the Message Content intent, invite it to your server, and copy the Bot Token."
             savedLabel="Discord token saved" />
+
+          <CredentialSection title="CALL-E" icon={Phone} borderColor="border-rose-300/20" bgColor="bg-rose-500/8" accentColor="text-rose-400"
+            fields={[{ label: 'API Key', placeholder: 'calle_live_key from dashboard.heycall-e.com/account/api-keys', value: calleApiKey, onChange: setCalleApiKey, key: 'CALLE_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('calle', { CALLE_API_KEY: calleApiKey })}
+            hint="Real outbound phone calls, ~$0.05 each. Sign up at heycall-e.com and copy your API key from the dashboard."
+            savedLabel="CALL-E key saved" />
 
           <CredentialSection title="Generic Webhook" icon={Webhook} borderColor="border-amber-300/20" bgColor="bg-amber-500/8" accentColor="text-amber-400"
             fields={[
