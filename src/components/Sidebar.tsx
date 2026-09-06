@@ -9,6 +9,7 @@ import {
   FileText,
   Gauge,
   GitBranch,
+  History,
   LayoutDashboard,
   MessageSquare,
   Mic,
@@ -16,6 +17,7 @@ import {
   Palette,
   Plug,
   Plus,
+  Search,
   Settings,
   Sun,
   Shield,
@@ -37,8 +39,12 @@ interface NavItem {
   showApprovalBadge?: boolean;
 }
 
-interface NavSection {
-  label: string | null;
+type SpaceId = 'home' | 'work' | 'research' | 'boardroom' | 'system';
+
+interface Space {
+  id: SpaceId;
+  emoji: string;
+  label: string;
   items: NavItem[];
 }
 
@@ -66,38 +72,61 @@ interface SidebarProps {
   pendingApprovalCount?: number;
   onOpenCoach?: () => void;
   mode?: 'simple' | 'advanced';
+  onToggleSearch: () => void;
 }
 
-const NAV_SECTIONS: NavSection[] = [
+// Regrouping per docs/ui-redesign/draft-a-power-user-direction.md's locked
+// "Rooms" design — deliberately NOT a 1:1 mirror of the old 4 groups. Research
+// and Boardroom are pulled out of their old real groups into their own
+// Spaces, each with exactly one real item today — left honest, not padded
+// with invented items, since neither subsystem has separate real activeTab
+// branches to link to yet.
+const SPACES: Space[] = [
   {
-    label: null,
+    id: 'home',
+    emoji: '\u{1F3E0}',
+    label: 'Home',
     items: [
-      { id: 'chat', icon: MessageSquare, label: 'Chat' },
       { id: 'mission', icon: LayoutDashboard, label: 'Dashboard' },
+      { id: 'chat', icon: MessageSquare, label: 'Chat' },
+      { id: 'session_history', icon: History, label: 'Session History' },
     ]
   },
   {
+    id: 'work',
+    emoji: '\u{1F9F0}',
     label: 'Work',
     items: [
       { id: 'project_execution', icon: Terminal, label: 'Projects' },
-      { id: 'hector', icon: Database, label: 'Research' },
       { id: 'content', icon: FileText, label: 'Content' },
       { id: 'automation', icon: GitBranch, label: 'Automation' },
-    ]
-  },
-  {
-    label: 'Agents',
-    items: [
-      { id: 'orchestrator', icon: Shield, label: 'Orchestrator', showApprovalBadge: true },
       { id: 'miya', icon: Palette, label: 'Creative' },
-      { id: 'mission_room', icon: Sparkles, label: 'Boardroom' },
-      { id: 'ecosystem', icon: Bot, label: 'All Agents' },
-      { id: 'agent_performance', icon: Activity, label: 'Agent Performance' },
     ]
   },
   {
+    id: 'research',
+    emoji: '\u{1F4DA}',
+    label: 'Research',
+    items: [
+      { id: 'hector', icon: Database, label: 'Research Desk' },
+    ]
+  },
+  {
+    id: 'boardroom',
+    emoji: '\u{1F5E3}',
+    label: 'Boardroom',
+    items: [
+      { id: 'mission_room', icon: Sparkles, label: 'Boardroom' },
+    ]
+  },
+  {
+    id: 'system',
+    emoji: '\u{2699}',
     label: 'System',
     items: [
+      { id: 'orchestrator', icon: Shield, label: 'Orchestrator', showApprovalBadge: true },
+      { id: 'ecosystem', icon: Bot, label: 'All Agents' },
+      { id: 'agent_performance', icon: Activity, label: 'Agent Performance' },
       { id: 'runtimes', icon: Cpu, label: 'Runtimes' },
       { id: 'voice', icon: Mic, label: 'Voice' },
       { id: 'connectors', icon: Plug, label: 'Connectors', showStatusDot: true },
@@ -116,18 +145,17 @@ const SIMPLE_MODE_ITEMS = new Set([
   'settings',
 ]);
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach, mode = 'advanced' }: SidebarProps) {
+export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversations, activeChatId, setActiveChatId, onCreateChat, onDeleteChat, settings, pendingApprovalCount = 0, onOpenCoach, mode = 'advanced', onToggleSearch }: SidebarProps) {
   const zeroCostMode = Boolean(settings?.zeroCostMode);
   const { theme, toggleTheme } = useTheme();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeSpace, setActiveSpace] = useState<SpaceId>('home');
 
-  const filteredSections = mode === 'simple'
-    ? NAV_SECTIONS.map(section => ({
-        ...section,
-        items: section.items.filter(item => SIMPLE_MODE_ITEMS.has(item.id))
-      })).filter(section => section.items.length > 0)
-    : NAV_SECTIONS;
+  const currentSpace = SPACES.find((s) => s.id === activeSpace) ?? SPACES[0];
+  const visibleItems = mode === 'simple'
+    ? currentSpace.items.filter((item) => SIMPLE_MODE_ITEMS.has(item.id))
+    : currentSpace.items;
 
   function handleDeleteClick(chatId: string, e: React.MouseEvent) {
     e.stopPropagation();
@@ -159,58 +187,89 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </div>
       </div>
 
-      {/* Agent status strip — shows pulsing badges for agents active in last 30s */}
-      <div className={`border-b border-[var(--border)] min-h-0 ${isOpen ? 'px-3 py-2' : 'px-1.5 py-2 flex justify-center'}`}>
+      {/* Search — real, global (Ctrl+P), lifted to App.tsx */}
+      {isOpen && (
+        <button
+          onClick={onToggleSearch}
+          data-testid="sidebar-search-trigger"
+          className="flex items-center gap-2 mx-3 mt-3 px-3 py-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] text-xs hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+          aria-label="Search"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span>Search</span>
+          <span className="ml-auto text-[10px] font-mono text-[var(--text-4)]">Ctrl+P</span>
+        </button>
+      )}
+
+      {/* Space pills */}
+      {isOpen && (
+        <div className="grid grid-cols-5 gap-1 mx-3 mt-3">
+          {SPACES.map((space) => (
+            <button
+              key={space.id}
+              data-testid={`space-pill-${space.id}`}
+              onClick={() => setActiveSpace(space.id)}
+              title={space.label}
+              className={`text-center py-1.5 rounded-lg text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+                activeSpace === space.id ? 'bg-[var(--accent-muted)]' : 'hover:bg-[var(--surface-3)]'
+              }`}
+              aria-label={space.label}
+              aria-current={activeSpace === space.id ? 'true' : undefined}
+            >
+              {space.emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Agent status strip — dots variant, unchanged */}
+      <div className={`border-b border-[var(--border)] min-h-0 mt-3 ${isOpen ? 'px-3 py-2' : 'px-1.5 py-2 flex justify-center'}`}>
         <AgentStatusStrip compact={!isOpen} useAutoFeed />
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — current Space's items only */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className={`py-3 px-2 flex flex-col gap-0.5 overflow-y-auto min-h-0 ${isOpen ? 'max-h-[45%]' : 'flex-1'}`}>
-          {filteredSections.map((section, sIdx) => (
-            <React.Fragment key={sIdx}>
-              {isOpen && section.label && (
-                <div className="px-3 pt-4 pb-1.5 section-label">{section.label}</div>
+          {isOpen && (
+            <div className="px-3 pt-1 pb-1.5 section-label">{currentSpace.label}</div>
+          )}
+          {visibleItems.map((item) => (
+            <motion.button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.97 }}
+              title={!isOpen ? item.label : undefined}
+              className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+                activeTab === item.id
+                  ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)]'
+                  : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
+              }`}
+              aria-current={activeTab === item.id ? 'page' : undefined}
+              aria-label={!isOpen ? item.label : undefined}
+              data-testid={`sidebar-nav-${item.id}`}
+            >
+              <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-[var(--accent)]' : ''}`} />
+              {isOpen && <span className="font-medium">{item.label}</span>}
+              {isOpen && item.showApprovalBadge && pendingApprovalCount > 0 && (
+                <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-[var(--warning)] text-[8px] font-bold text-[var(--surface-0)] animate-pulse">
+                  {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
+                </span>
               )}
-              {section.items.map((item) => (
-              <motion.button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                  whileHover={{ x: 2 }}
-                  whileTap={{ scale: 0.97 }}
-                  title={!isOpen ? item.label : undefined}
-                className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
-                    activeTab === item.id
-                      ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)]'
-                      : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
-                  }`}
-                  aria-current={activeTab === item.id ? 'page' : undefined}
-                  aria-label={!isOpen ? item.label : undefined}
-                  data-testid={`sidebar-nav-${item.id}`}
-                >
-                  <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.id ? 'text-[var(--accent)]' : ''}`} />
-                  {isOpen && <span className="font-medium">{item.label}</span>}
-                  {isOpen && item.showApprovalBadge && pendingApprovalCount > 0 && (
-                    <span className="ml-auto flex items-center justify-center w-4 h-4 rounded-full bg-[var(--warning)] text-[8px] font-bold text-[var(--surface-0)] animate-pulse">
-                      {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
-                    </span>
-                  )}
-                  {isOpen && item.showStatusDot && (
-                    <ConnectorStatusStrip zeroCostMode={zeroCostMode} />
-                  )}
-                  {!isOpen && item.showStatusDot && (
-                    <span className="absolute top-1 right-1">
-                      <ConnectorStatusDot connectorId="whatsapp" />
-                    </span>
-                  )}
-                </motion.button>
-              ))}
-            </React.Fragment>
+              {isOpen && item.showStatusDot && (
+                <ConnectorStatusStrip zeroCostMode={zeroCostMode} />
+              )}
+              {!isOpen && item.showStatusDot && (
+                <span className="absolute top-1 right-1">
+                  <ConnectorStatusDot connectorId="whatsapp" />
+                </span>
+              )}
+            </motion.button>
           ))}
         </div>
 
-        {/* Chat list */}
-        {isOpen && (
+        {/* Chat list — unchanged, only shown in the Home space (chat itself lives there) */}
+        {isOpen && activeSpace === 'home' && (
           <div className="flex flex-col flex-1 px-2 mt-2 overflow-hidden">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="section-label">Recent Chats</span>
@@ -249,9 +308,9 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer — unchanged */}
       <div className="p-2 border-t border-[var(--border)] space-y-0.5">
-{onOpenCoach && (
+        {onOpenCoach && (
           <button
             onClick={onOpenCoach}
             className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"

@@ -844,6 +844,7 @@ function AppShell() {
         pendingApprovalCount={pendingApprovalCount}
         onOpenCoach={handleToggleCoachMode}
         mode={uxMode}
+        onToggleSearch={() => setShowMemorySearch((prev) => !prev)}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar
