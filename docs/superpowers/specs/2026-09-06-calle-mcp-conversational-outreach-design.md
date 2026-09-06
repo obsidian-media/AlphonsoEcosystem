@@ -327,71 +327,96 @@ export interface McpOutreachRecord {
   delivered?: boolean; // has the terminal result been posted into this chat yet?
 }
 
-const RECORDS_CATEGORY = 'calle_mcp_outreach';
+const RECORD_KEY_PREFIX = 'calle_mcp_outreach:';
+const INDEX_KEY = 'calle_mcp_outreach_index'; // JSON array of chatIds with a live record
 
-// Durable from the start via memory_store.rs's upsert_memory_records /
-// list_memory_records Tauri commands -- the SAME real primitive
-// chatPersistenceService.ts already uses (its own `CHAT_CATEGORY` constant,
-// same `invoke('upsert_memory_records', ...)` / `invoke('list_memory_records',
-// { filters: { category, ... } })` shape) -- NOT deferred to a later pass.
-// A call literally in progress is a real, in-flight cost (see Phase 1's
-// ESTIMATED_COST_USD) and must not silently vanish from recovery just
-// because the app closed. An in-memory-only version of this map was the
-// first draft's design; self-review flagged it as functionally equivalent
-// to having no crash recovery at all, since an in-memory Map starts empty
-// on every fresh boot regardless of what recoverInterruptedMcpOutreachCalls
-// claims to do.
+// Durable via kv_store.rs's kv_set/kv_get/kv_delete -- NOT memory_store.rs's
+// upsert_memory_records/list_memory_records, despite an earlier pass of this
+// same section using exactly that. Reason (found on a second, harsher re-read,
+// not assumed): list_memory_records's real SQL is
+// `SELECT ... FROM memory_records ORDER BY timestamp_ms DESC LIMIT 1000`,
+// with the category filter applied AFTER that global limit, in application
+// code -- not in the WHERE clause. Since chatPersistenceService.ts dual-writes
+// every single chat message through this same table, an active chat session
+// can push 1000+ newer rows past an idle calle_mcp_outreach record within
+// minutes, silently evicting it from every future list_memory_records call
+// regardless of its category filter -- which would have quietly broken the
+// exact crash-recovery guarantee the previous pass added this durable storage
+// to provide, with no error surfaced anywhere.
 //
-// This corrects a second, separate guess from an earlier pass: kv_store.rs's
-// kv_set/kv_get/kv_delete only support exact-key lookup, not "give me every
-// record in category X" -- there is no listing/enumeration capability there
-// at all. memory_store.rs's list_memory_records is the actual primitive in
-// this codebase that supports category filtering, confirmed by reading both
-// files rather than assuming kv_store.rs could do it.
+// kv_store.rs has no such global-ordering behavior at all: kv_get is a plain
+// `SELECT value FROM kv_store WHERE key = ?1 LIMIT 1` -- true exact-key
+// lookup, immune to this class of bug. It also genuinely has kv_delete
+// (`DELETE FROM kv_store WHERE key = ?1`) -- an earlier pass claimed "there
+// is no delete command on either store," which was itself wrong; kv_delete
+// exists and works. What kv_store.rs still doesn't have is a way to
+// enumerate "every key matching a prefix," so a small explicit index record
+// (this file's own INDEX_KEY, a JSON array of chatIds) does that job instead.
 //
-// There is also no delete command on either store. "Cancel" therefore
-// persists a terminal `stage: 'cancelled'` record (upsert, same as any other
-// stage transition) rather than removing it -- hydrateRecords/isAwaitingMcpOutreachInput
-// already treat a cancelled record as inactive, so nothing further is needed.
+// Read-modify-write races on that shared index (two persistRecord/deleteRecord
+// calls for two different chats, both racing to update the same INDEX_KEY) are
+// serialized through indexWriteQueue below -- the same pattern
+// chatPersistenceService.ts already uses (its own `writeQueue`) for the
+// identical class of problem, not a new one invented here.
 const records = new Map<string, McpOutreachRecord>();
 let hydrated = false;
+let indexWriteQueue: Promise<void> = Promise.resolve();
 
-function recordToMemoryRecord(record: McpOutreachRecord) {
-  return {
-    id: `calle-mcp-outreach-${record.chatId}`,
-    title: `CALL-E MCP outreach: ${record.goal.slice(0, 60)}`,
-    content: record,
-    category: RECORDS_CATEGORY,
-    sourceAgent: 'marcus',
-    source: `calle_mcp:${record.chatId}`,
-    timestampMs: Date.now(),
-    confidence: 'temporary',
-    verificationState: 'unverified',
-    projectReference: record.chatId,
-    expiresAt: null,
-    expiryRule: null
-  };
+function recordKey(chatId: string): string {
+  return `${RECORD_KEY_PREFIX}${chatId}`;
+}
+
+async function readIndex(): Promise<string[]> {
+  const raw = await invoke<string | null>('kv_get', { key: INDEX_KEY }).catch(() => null);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function updateIndex(mutate: (chatIds: string[]) => string[]): Promise<void> {
+  indexWriteQueue = indexWriteQueue.then(async () => {
+    const current = await readIndex();
+    const next = mutate(current);
+    await invoke('kv_set', { key: INDEX_KEY, value: JSON.stringify(next) });
+  });
+  return indexWriteQueue;
 }
 
 async function hydrateRecords(): Promise<void> {
   if (hydrated) return;
   hydrated = true;
-  const stored: any[] = await invoke('list_memory_records', { filters: { category: RECORDS_CATEGORY } }).catch(() => []);
-  for (const memoryRecord of stored) {
-    const record: McpOutreachRecord = memoryRecord.content;
-    records.set(record.chatId, record);
+  const chatIds = await readIndex();
+  for (const chatId of chatIds) {
+    const raw = await invoke<string | null>('kv_get', { key: recordKey(chatId) }).catch(() => null);
+    if (!raw) continue;
+    try {
+      records.set(chatId, JSON.parse(raw));
+    } catch {
+      // Corrupt entry -- skip rather than crash hydration for every other record.
+    }
   }
 }
 
 async function persistRecord(record: McpOutreachRecord): Promise<void> {
   records.set(record.chatId, record);
-  await invoke('upsert_memory_records', { records: [recordToMemoryRecord(record)] });
+  await invoke('kv_set', { key: recordKey(record.chatId), value: JSON.stringify(record) });
+  await updateIndex((chatIds) => (chatIds.includes(record.chatId) ? chatIds : [...chatIds, record.chatId]));
 }
 
+// kv_store.rs's real kv_delete makes an actual delete possible here (an
+// earlier pass wrongly believed no delete primitive existed anywhere and
+// worked around it with a persisted 'cancelled' stage instead -- that
+// workaround is no longer needed, though 'cancelled' stays in
+// McpOutreachStage in case a future pass wants an audit trail instead of a
+// hard delete).
 async function deleteRecord(chatId: string): Promise<void> {
-  const existing = records.get(chatId);
-  if (existing) await persistRecord({ ...existing, stage: 'cancelled' });
   records.delete(chatId);
+  await invoke('kv_delete', { key: recordKey(chatId) });
+  await updateIndex((chatIds) => chatIds.filter((id) => id !== chatId));
 }
 
 export async function getMcpOutreachRecord(chatId: string): Promise<McpOutreachRecord | null> {
@@ -482,10 +507,25 @@ async function advancePlan(chatId: string, goal: string, conversationHistory: st
   return plan.summary ?? 'Ready to place this call.';
 }
 
+// A double-click (or any rapid re-invocation) between reading
+// existing.stage === 'ready_to_confirm' and the persistRecord call that
+// moves it to 'in_progress' could otherwise call runCall twice for the same
+// plan -- and run_call has NO idempotency mechanism (stated throughout this
+// doc), so that specific race is a direct path to placing two real phone
+// calls from one click. This guard closes exactly that window; it does not
+// try to solve double-submission in general (a second click after the
+// stage has already moved to 'in_progress' is already rejected by the
+// existing.stage check below, same as before).
+const confirmInFlight = new Set<string>();
+
 // Called by ChatView's rendered "Approve & Place Call" button -- the actual
 // approval action, matching Phase 1's REST panel's own button-click bar
 // rather than a plain-text "confirm" match.
 export async function confirmMcpOutreachCall(chatId: string): Promise<string> {
+  if (confirmInFlight.has(chatId)) {
+    return 'Already placing this call -- please wait.';
+  }
+  confirmInFlight.add(chatId);
   try {
     await hydrateRecords();
     const existing = records.get(chatId);
@@ -505,6 +545,8 @@ export async function confirmMcpOutreachCall(chatId: string): Promise<string> {
     return 'Call started. I will notify you when it finishes.';
   } catch (error) {
     return `CALL-E error: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    confirmInFlight.delete(chatId);
   }
 }
 
@@ -565,9 +607,11 @@ async function pollMcpCallUntilTerminal(chatId: string, runId: string): Promise<
 // which itself calls get_call_run only -- run_call is NEVER retried here.
 // CALL-E's own docs say not to retry run_call on disconnect, and unlike the
 // REST path there is no idempotency key that would make a retry safe.
-// Because records are now durable (upsert_memory_records/list_memory_records,
-// not an in-memory-only Map), this actually has something to recover across
-// a full app restart, unlike the first draft.
+// Because records are now durable (kv_set/kv_get plus the index, not an
+// in-memory-only Map), this actually has something to recover across a full
+// app restart, unlike the first draft -- and unlike the memory_store.rs
+// approach an earlier pass used instead, whose global-limit query could
+// silently miss an idle record (see the self-critique's second pass).
 export async function recoverInterruptedMcpOutreachCalls(): Promise<void> {
   await hydrateRecords();
   for (const record of records.values()) {
@@ -685,10 +729,12 @@ it only needs to run while the Settings panel is open.
   connected. Connect via Settings first." rather than attempting a browser-login flow from
   inside a chat reply (login requires opening a browser, which belongs in Settings, not an
   autonomous action mid-conversation).
-- `run_call`'s lack of idempotency is handled by never calling it more than once per
-  `plan_id`/`confirm_token` pair — once `runCall` returns a `run_id` and the record moves to
-  `in_progress`, no code path calls `runCall` again for that record. Recovery only ever polls
-  `getCallRun`.
+- `run_call`'s lack of idempotency is handled two ways: (1) once `runCall` returns a `run_id`
+  and the record moves to `in_progress`, no code path calls `runCall` again for that record —
+  recovery only ever polls `getCallRun`; (2) `confirmInFlight` (a module-level `Set<string>`)
+  rejects a second concurrent `confirmMcpOutreachCall` for the same `chatId` outright, closing
+  the specific race a double-click could otherwise exploit between the stage check and the
+  stage transition — found on the second self-critique pass, not the first.
 - `pollMcpCallUntilTerminal`'s loop now catches a failed `getCallRun` and keeps polling
   (transient network blips shouldn't abandon a call that's actually still running), and the
   fire-and-forget call sites (`confirmMcpOutreachCall`, `recoverInterruptedMcpOutreachCalls`)
@@ -712,14 +758,18 @@ it only needs to run while the Settings panel is open.
   never matches.
 - `calleMcpOutreachService.test.ts`: full state machine — clarifying → ready_to_confirm →
   confirm (button action, not text) → in_progress → terminal; `isAwaitingMcpOutreachInput()`
-  is false once `in_progress` (regression test for the chat-monopolization bug); `cancel` moves
-  the record to `stage: 'cancelled'` from every awaiting stage, not just `ready_to_confirm`
-  (there is no delete primitive to test against — verify the upserted terminal stage instead);
-  policy-gate block path; `isPhoneAlreadyInFlight` blocks a second plan to the same number; a
-  failed `getCallRun` inside the poll loop doesn't abandon the record; `recoverInterruptedMcpOutreachCalls`
-  only calls `getCallRun`, never `runCall`, for an `in_progress` record, and actually has
-  something to recover after a simulated restart (records hydrated from a mocked
-  `list_memory_records`, not an empty in-memory `Map`).
+  is false once `in_progress` (regression test for the chat-monopolization bug); `cancel`
+  actually deletes the record (verify a subsequent `getMcpOutreachRecord` returns `null`, and
+  that the shared index no longer lists that `chatId`) from every awaiting stage, not just
+  `ready_to_confirm`; **two concurrent `confirmMcpOutreachCall` calls for the same `chatId`
+  result in exactly one `runCall` invocation**, not two (direct regression test for the
+  double-submission finding below); policy-gate block path; `isPhoneAlreadyInFlight` blocks a
+  second plan to the same number; a failed `getCallRun` inside the poll loop doesn't abandon
+  the record; `recoverInterruptedMcpOutreachCalls` only calls `getCallRun`, never `runCall`,
+  for an `in_progress` record, and actually has something to recover after a simulated restart
+  (records hydrated from a mocked `kv_get`/index, not an empty in-memory `Map`, and not
+  vulnerable to the `list_memory_records` global-limit issue below since it no longer uses
+  that API at all).
 - `ChatView` integration test: while `isAwaitingMcpOutreachInput()` is true for `activeChatId`,
   the next message routes through `handleMcpOutreachMessage` regardless of its text (e.g. a
   bare phone number); once the record moves to `in_progress`, the *next* unrelated message
@@ -740,6 +790,11 @@ it only needs to run while the Settings panel is open.
   `phone_number`'s real field name (or absence) is confirmed.
 - No changes to the Phase 1 REST connector, panel, or its policy/registry wiring — this is
   additive only.
+- Whether `plan_call` itself needs a policy/Zero-Cost-Mode gate is an open question, not a
+  decision made here — see point 12 of the second self-critique pass below. Needs CALL-E's
+  actual billing model confirmed (does a `plan_call` invocation that never places a call cost
+  anything?) before deciding whether it needs its own, lighter-weight gate distinct from
+  `confirmMcpOutreachCall`'s approval-click bar.
 
 ## Self-critique (applied)
 
@@ -789,3 +844,50 @@ rather than left as caveats:
    in flight (and costing real money, per Phase 1's `ESTIMATED_COST_USD` convention) is a
    correctness issue, not a nice-to-have — worth getting the actual storage primitive right,
    not just picking one that sounded plausible.
+
+   **This fix was itself found flawed on the second self-critique pass below (point 10) and
+   has been replaced** — `memory_store.rs`'s `list_memory_records` turned out to have its own
+   reliability problem for this specific use case. The corrected version now uses
+   `kv_store.rs` after all, but not the same way an earlier guess assumed: with a small
+   explicit index record to solve the enumeration gap, and with real `kv_delete` (which does
+   exist — the claim above that "there is no delete command on either store" was also wrong).
+
+## Second self-critique pass
+
+A further harsh review of the version above (after applying all nine fixes) found three more
+real issues:
+
+10. **Point 9's own fix was unreliable.** `memory_store.rs`'s `list_memory_records` runs
+    `SELECT ... FROM memory_records ORDER BY timestamp_ms DESC LIMIT 1000` and applies the
+    category filter *after* that global limit, in application code — not in the SQL `WHERE`
+    clause. `chatPersistenceService.ts` dual-writes every chat message through this exact
+    table, so a single active chat session can push 1000+ newer rows past an idle
+    `calle_mcp_outreach` record within minutes, silently evicting it from every future
+    `list_memory_records` call regardless of category — which would have quietly defeated the
+    very crash-recovery guarantee point 9 was fixing, with no error anywhere. Replaced with
+    `kv_store.rs` (true exact-key lookup, no global ordering at all) plus a small explicit
+    index record for enumeration, with index read-modify-write races serialized through a
+    queue mirroring `chatPersistenceService.ts`'s own `writeQueue` pattern. This also corrected
+    a second, compounding error from the same earlier pass: `kv_store.rs` genuinely has
+    `kv_delete` (`DELETE FROM kv_store WHERE key = ?1`) — the claim that neither store supports
+    delete was itself wrong, not just the choice of which store to use.
+11. **No guard against a double-click placing two real calls.** Between reading
+    `existing.stage === 'ready_to_confirm'` and the `persistRecord` call that moves it to
+    `'in_progress'`, a rapid second invocation of `confirmMcpOutreachCall` (double-click, or
+    any other re-entrant call) could call `runCall` twice for the same plan — and `run_call`
+    has no idempotency mechanism, a constraint this document repeats throughout. This is more
+    severe than any single issue found in the first pass: it is a direct path to placing two
+    real phone calls from what looks like one user action. Fixed with a `confirmInFlight` guard
+    that rejects a second concurrent call outright, checked before any `await` in the function.
+12. **Whether `plan_call` itself needs a policy gate is an open question, not a decision.**
+    Phase 1 never makes a network call before its approval gate — `createOutreachDraft` is
+    pure local state, with all network activity deferred to the gated `runOutreachCall` step.
+    Phase 2 structurally can't do that: the `plan_call` round-trip to CALL-E's paid API *is*
+    the clarifying-question mechanism, so it necessarily happens before any gate exists. Left
+    unresolved here rather than guessed: whether CALL-E's billing model charges per `plan_call`
+    invocation (which places no real call) or only per placed call. If the former, Zero-Cost
+    Mode currently does nothing to stop repeated `plan_call` usage from within a chat
+    conversation — that would need its own, probably lighter-weight, gate distinct from the
+    `run_call` approval gate (blocking every `plan_call` behind the same approval-click bar as
+    placing a call would defeat the point of a lightweight clarifying-question flow). This
+    needs CALL-E's actual billing documentation, not an assumption, before implementation.
