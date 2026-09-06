@@ -368,6 +368,19 @@ function AppShell() {
     })();
   }, []);
 
+  // CALL-E outreach recovery: on boot, any outreach call left 'queued'/
+  // 'in_progress' from a prior session (its in-memory poll died when the app
+  // closed) gets one getCall() check against CALL-E's own durable server-side
+  // state. See docs/superpowers/specs/2026-09-06-calle-outreach-connector-design.md.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { recoverInterruptedOutreachCalls } = await import('./services/calleOutreachService');
+        await recoverInterruptedOutreachCalls();
+      } catch { /* non-critical */ }
+    })();
+  }, []);
+
   // Verify any stored license token at boot so the paid tier is granted only
   // from a valid signature (fail-closed until initLicense resolves).
   useEffect(() => {
