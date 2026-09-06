@@ -13,6 +13,18 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Fix:** wired a real `activeTab === 'agent_performance'` branch using the file's established lazy-loading convention, and removed the stale static import. See `06-phase1-implementation-plan.md` Task 1 and its follow-up fix commit.
 - **Status:** CLOSED — fixed, tested (`src/test/appAgentPerformanceNav.test.js`), verified with a clean full-project `tsc --noEmit` and `npm run test` pass, committed to `ui-redesign/phase0-discovery`.
 
+### 7. `SessionHistoryView.tsx` had zero navigation path anywhere — same class of bug as #1
+
+- **Where:** `src/App.tsx` had no lazy import and no `activeTab === 'session_history'` branch for this component, mirroring bug #1's exact shape (a real, working component with no way to reach it).
+- **Fix:** wired per the established convention (`12-sidebar-redesign-plan.md` Task 1) — lazy import + render branch — and added it as a real Home-space nav item in the rebuilt `Sidebar.tsx`.
+- **Status:** CLOSED — `src/test/appSessionHistoryNav.test.js`, `tsc --noEmit` clean, committed.
+
+### 8. Global search (Ctrl+P / sidebar search field) now works from any page — was Chat-only
+
+- **What changed:** `toggle_search`/`showMemorySearch`/`<MemorySearch>` lifted from `ChatView.tsx`-local state to `App.tsx`-global state (`12-sidebar-redesign-plan.md` Task 2), closing the "only works while Chat is mounted" half of bug #6. `show_shortcuts`'s separate hand-rolled-modal duplication (the other half of #6) is untouched — still OPEN, a distinct cleanup.
+- **Honest trade-off accepted, not silently dropped:** the old Chat-local `onSelect` handler populated the chat input with `Tell me about: ${item.title}` when a memory item was selected. The new global handler just closes the modal (`onSelect={() => setShowMemorySearch(false)}`) — `MemorySearch`'s `onSelect` prop is optional and App.tsx has no existing channel to push a value into `ChatView`'s composer from outside it. Wiring that back up (a cross-component prefill mechanism) was judged out of scope for this plan; flagging here in case a future pass wants to restore it specifically for the Chat page.
+- **Status:** CLOSED for the stated scope (global search), with the composer-prefill regression above left as a known, deliberate gap — not a silent loss.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
