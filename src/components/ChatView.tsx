@@ -19,7 +19,15 @@ import { invoke } from '@tauri-apps/api/core';
 import { AlertCircle, Bot, ChevronsDown, ChevronsUp, Copy, Download, Mic, MicOff, Paperclip, Pin, PinOff, Search, Send, Square, Trash2, X, Zap, Lightbulb, ArrowRight, Keyboard } from 'lucide-react';
 import { ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { getStorage, setStorage } from '../lib/appStorage';
-import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose } from '../lib/chatUtils';
+import { nextMsgId, CHAT_ASSISTANT_PROMPT, shouldRouteThroughJose, shouldRouteThroughCalleMcp } from '../lib/chatUtils';
+import {
+  getMcpOutreachRecord,
+  isAwaitingMcpOutreachInput,
+  handleMcpOutreachMessage,
+  confirmMcpOutreachCall,
+  cancelMcpOutreachCall,
+  markMcpOutreachDelivered
+} from '../services/calleMcpOutreachService';
 import { isJoseIntakeCommand, runJoseCommandExecutionPipeline, executeApprovedPackets } from '../services/joseExecutionEngineService';
 import { getRuntimePolicySettings, setRuntimePolicySettings } from '../services/policyEnforcementService';
 import { deleteChatMessages, loadChatMessages, persistChatMessages } from '../services/chatPersistenceService';
@@ -482,6 +490,22 @@ export function ChatView({
     return () => { cancelled = true; };
   }, [activeChatId]);
 
+  // CALL-E MCP outreach delivery: posts a completed/failed call's summary
+  // into this chat the next time it's open, exactly once (markMcpOutreachDelivered
+  // guards against a second post on the next tick). The immediate alphonso:toast
+  // notice (fired from calleMcpOutreachService's poll loop) covers the case
+  // where the user isn't looking at this chat when the call actually finishes.
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const record = await getMcpOutreachRecord(activeChatId);
+      if (record && (record.stage === 'completed' || record.stage === 'failed') && !record.delivered) {
+        setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: record.summary || 'The call has finished.' }]);
+        await markMcpOutreachDelivered(activeChatId);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeChatId]);
+
   useEffect(() => {
     const pipelineKey = getJosePipelineStorageKey(activeChatId);
     if (!pipelineKey) {
@@ -781,6 +805,22 @@ export function ChatView({
       : '';
     const rawInput = effectiveInput.trim() + filesSuffix;
     const cleanInput = directMode ? `[DIRECT:${directAgent}] ${rawInput}` : rawInput;
+
+    const existingMcpOutreach = await getMcpOutreachRecord(activeChatId);
+    if (!directMode && (isAwaitingMcpOutreachInput(existingMcpOutreach) || shouldRouteThroughCalleMcp(cleanInput))) {
+      setMessages((current) => [...current, { id: nextMsgId(), role: 'user', content: cleanInput }]);
+      setInputValue('');
+      const reply = await handleMcpOutreachMessage(activeChatId, cleanInput);
+      const updated = await getMcpOutreachRecord(activeChatId);
+      setMessages((current) => [...current, {
+        id: nextMsgId(),
+        role: 'assistant',
+        content: reply,
+        pendingConfirmChatId: updated?.stage === 'ready_to_confirm' ? activeChatId : undefined
+      }]);
+      return;
+    }
+
     const joseCommand = !directMode && (isJoseIntakeCommand(cleanInput) || shouldRouteThroughJose(cleanInput));
 
     if (joseCommand) {
@@ -1233,6 +1273,29 @@ export function ChatView({
                       >
                         <ArrowRight className="w-3 h-3" />
                         Open Runtime Hub to install ComfyUI or AUTOMATIC1111
+                      </button>
+                    </div>
+                  )}
+                  {/* CALL-E MCP call-plan confirmation -- mirrors the open_runtime_hub action-button pattern above */}
+                  {message.pendingConfirmChatId && (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={async () => {
+                          const reply = await confirmMcpOutreachCall(message.pendingConfirmChatId);
+                          setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: reply }]);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-dim)] border border-[var(--accent-border)] rounded-lg text-xs text-[var(--accent)] hover:bg-[var(--accent-dim)] hover:text-[var(--accent-hover)] transition-colors"
+                      >
+                        Approve &amp; Place Call
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const reply = await cancelMcpOutreachCall(message.pendingConfirmChatId);
+                          setMessages((current) => [...current, { id: nextMsgId(), role: 'assistant', content: reply }]);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-zinc-400 hover:bg-white/10 hover:text-zinc-200 transition-colors"
+                      >
+                        Cancel
                       </button>
                     </div>
                   )}

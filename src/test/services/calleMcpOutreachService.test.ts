@@ -23,7 +23,7 @@ vi.mock('../../services/connectors/calleMcpConnector', () => ({
   getCallRun: (...args: unknown[]) => mockGetCallRun(...args)
 }));
 
-const mockEvaluatePolicyGate = vi.fn(() => ({ ok: true }));
+const mockEvaluatePolicyGate = vi.fn((..._args: unknown[]): { ok: boolean; reason?: string } => ({ ok: true }));
 vi.mock('../../services/policyEnforcementService', () => ({
   evaluatePolicyGate: (...args: unknown[]) => mockEvaluatePolicyGate(...args)
 }));
