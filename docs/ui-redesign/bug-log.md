@@ -54,6 +54,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Impact on this redesign:** Coach was dropped as a source from the Mission Control attention-aggregator (`08-phase2-attention-aggregator-plan.md`) for this reason — pulling from either durable store risks resurfacing an intervention the user already handled via the overlay, with no way to tell.
 - **Status:** OPEN, not fixed — this is real, pre-existing architectural debt in the Coach subsystem (three parallel signal paths that were each built for a different purpose and never reconciled), not something to patch as a side effect of a Mission Control page task. A real fix needs a single durable "coach signal + resolved state" model that all 3 current paths write to and read from — genuine standalone work, flagged here for whoever picks up Coach next.
 
+### 6. Two separate keyboard-shortcuts-help implementations, one of them not even reusing the shared component
+
+- **Where:** `App.tsx` (real, global) renders the shared `KeyboardShortcutsModal.tsx` component, triggered via its own `showKeyboardShortcuts` state. `ChatView.tsx:301,1614` has its own, completely separate `showShortcutHelp` state and a **hand-rolled inline JSX modal** (not an import of `KeyboardShortcutsModal.tsx` at all) for the exact same feature.
+- **Also found in the same investigation:** the entire `useKeyboardShortcuts` hook is only ever called once in the whole app, inside `ChatView.tsx` (`new_chat`/`focus_input`/`abort_generation`/`toggle_search`/`show_shortcuts`), meaning every one of those keyboard shortcuts — not just search — only works while the Chat tab is actually mounted. `App.tsx` never calls `useKeyboardShortcuts` itself.
+- **How found:** while tracing whether the new Sidebar redesign's search field could trigger `Ctrl+P`'s memory search from any page — discovered it currently can't, since the whole mechanism lives inside one conditionally-rendered component.
+- **Impact on this redesign:** the Sidebar/Mission Control plans lift `toggle_search` specifically (and only that binding) out of `ChatView.tsx` into `App.tsx`, so the new sidebar's search field works globally. `show_shortcuts` and its duplicate modal are deliberately left untouched — fixing that duplication is a separate, real cleanup task, not bundled into this redesign work.
+- **Status:** OPEN (the `show_shortcuts` duplication specifically) — flagging for a future pass; not blocking or related to the Sidebar/Mission Control work currently in progress.
+
 ---
 
 ## Notes on discovery method
