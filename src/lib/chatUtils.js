@@ -68,3 +68,10 @@ export function needsHighRiskApproval(actionLabel) {
     'upload', 'post', 'payment', 'charge', 'deploy', 'external', 'secret', 'credential'
   ].some((term) => lower.includes(term));
 }
+
+export function shouldRouteThroughCalleMcp(text) {
+  const lower = String(text || '').toLowerCase().trim();
+  if (!lower) return false;
+  if (lower.startsWith('/jose')) return false;
+  return ['call ', 'phone ', 'ring ', 'dial '].some((term) => lower.startsWith(term) || lower.includes(` ${term}`));
+}
