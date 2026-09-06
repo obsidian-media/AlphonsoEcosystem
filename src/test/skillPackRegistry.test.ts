@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('../services/trustModel', () => ({
   timestampMs: vi.fn(() => 1700000000000),
@@ -100,7 +100,10 @@ describe('skillPackRegistry', () => {
 
     it('blocks install if contract check fails', async () => {
       const { validateSkillPackAgainstContract } = await import('../services/skillPackPermissions');
-      validateSkillPackAgainstContract.mockReturnValueOnce({ ok: false, reason: 'blocked by contract' });
+      // vi.mock intercepts this module at runtime (see the mock above), but
+      // TS infers the type from the real module's signature, which has no
+      // Mock methods -- cast to the actual runtime shape.
+      (validateSkillPackAgainstContract as Mock).mockReturnValueOnce({ ok: false, reason: 'blocked by contract' });
       const result = registry.installSkillPack({
         id: 'pack.bad', name: 'Bad', version: '1.0.0', ownerAgent: 'alphonso', permissions: ['test']
       });

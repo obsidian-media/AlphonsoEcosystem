@@ -42,7 +42,11 @@ function makeProps(overrides = {}) {
   return {
     settings: { workspaceRoot: '/test/workspace' },
     setSettings: vi.fn(),
-    updateCheckState: vi.fn(),
+    // updateCheckState is a plain data object ({ checkedAtMs?: number } |
+    // undefined), not a callback -- the key is required but its value can be
+    // undefined, which is simpler and more correct than a mismatched vi.fn()
+    // that nothing ever asserts calls on.
+    updateCheckState: undefined,
     verificationLogs: [],
     workspaceFoundation: {},
     nativeSelfDevProof: null,

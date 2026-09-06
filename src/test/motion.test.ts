@@ -59,56 +59,60 @@ describe('lib/motion', () => {
 
   it('exports fadeIn variants', () => {
     expect(motion.fadeIn.hidden).toEqual({ opacity: 0 });
-    expect(motion.fadeIn.visible.opacity).toBe(1);
-    expect(motion.fadeIn.exit.opacity).toBe(0);
+    expect((motion.fadeIn.visible as any).opacity).toBe(1);
+    expect((motion.fadeIn.exit as any).opacity).toBe(0);
   });
 
   it('exports fadeUp variants', () => {
     expect(motion.fadeUp.hidden).toEqual({ opacity: 0, y: 8 });
-    expect(motion.fadeUp.visible.opacity).toBe(1);
-    expect(motion.fadeUp.visible.y).toBe(0);
+    expect((motion.fadeUp.visible as any).opacity).toBe(1);
+    expect((motion.fadeUp.visible as any).y).toBe(0);
   });
 
   it('exports slideInRight variants', () => {
     expect(motion.slideInRight.hidden).toEqual({ opacity: 0, x: 16 });
-    expect(motion.slideInRight.visible.x).toBe(0);
+    expect((motion.slideInRight.visible as any).x).toBe(0);
   });
 
   it('exports scaleIn variants', () => {
-    expect(motion.scaleIn.hidden.scale).toBe(0.93);
-    expect(motion.scaleIn.visible.scale).toBe(1);
+    // Framer Motion's `Variant` type is a union with a callable
+    // `TargetResolver` branch that has no own properties, so TypeScript
+    // can't narrow property access from outside lib/motion.ts. Test-only,
+    // no runtime behavior implication -- cast each access explicitly.
+    expect((motion.scaleIn.hidden as any).scale).toBe(0.93);
+    expect((motion.scaleIn.visible as any).scale).toBe(1);
   });
 
   it('exports staggerContainer variants', () => {
     expect(motion.staggerContainer.hidden).toEqual({});
-    expect(motion.staggerContainer.visible.transition.staggerChildren).toBe(0.04);
-    expect(motion.staggerContainer.visible.transition.delayChildren).toBe(0.04);
+    expect((motion.staggerContainer.visible as any).transition.staggerChildren).toBe(0.04);
+    expect((motion.staggerContainer.visible as any).transition.delayChildren).toBe(0.04);
   });
 
   it('exports staggerItem variants', () => {
     expect(motion.staggerItem.hidden).toEqual({ opacity: 0, y: 6 });
-    expect(motion.staggerItem.visible.y).toBe(0);
+    expect((motion.staggerItem.visible as any).y).toBe(0);
   });
 
   it('exports messageIn variants', () => {
     expect(motion.messageIn.hidden).toEqual({ opacity: 0, y: 12, scale: 0.97 });
-    expect(motion.messageIn.visible.scale).toBe(1);
+    expect((motion.messageIn.visible as any).scale).toBe(1);
   });
 
   it('exports panelIn variants', () => {
-    expect(motion.panelIn.hidden.scale).toBe(0.96);
-    expect(motion.panelIn.visible.scale).toBe(1);
-    expect(motion.panelIn.exit.scale).toBe(0.97);
+    expect((motion.panelIn.hidden as any).scale).toBe(0.96);
+    expect((motion.panelIn.visible as any).scale).toBe(1);
+    expect((motion.panelIn.exit as any).scale).toBe(0.97);
   });
 
   it('exports sidebarExpand variants', () => {
-    expect(motion.sidebarExpand.collapsed.width).toBe('3.5rem');
-    expect(motion.sidebarExpand.expanded.width).toBe('13rem');
+    expect((motion.sidebarExpand.collapsed as any).width).toBe('3.5rem');
+    expect((motion.sidebarExpand.expanded as any).width).toBe('13rem');
   });
 
   it('exports agentPulse variants', () => {
-    expect(motion.agentPulse.idle.scale).toBe(1);
-    expect(motion.agentPulse.active.scale).toEqual([1, 1.8, 1]);
-    expect(motion.agentPulse.active.transition.repeat).toBe(Infinity);
+    expect((motion.agentPulse.idle as any).scale).toBe(1);
+    expect((motion.agentPulse.active as any).scale).toEqual([1, 1.8, 1]);
+    expect((motion.agentPulse.active as any).transition.repeat).toBe(Infinity);
   });
 });

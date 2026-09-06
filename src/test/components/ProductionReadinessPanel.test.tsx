@@ -25,7 +25,9 @@ function makeProps(overrides = {}) {
   return {
     settings: { workspaceRoot: '/test/workspace' },
     setSettings: vi.fn(),
-    updateCheckState: vi.fn(),
+    // updateCheckState is a plain UpdateCheckState data object, not a
+    // callback -- omitting it is valid and simpler than a mismatched vi.fn()
+    // that nothing ever asserts calls on.
     verificationLogs: [],
     workspaceFoundation: {},
     ollamaStatus: { label: 'Connected', trust: 'verified' },
@@ -54,24 +56,14 @@ describe('ProductionReadinessPanel', () => {
       <ProductionReadinessPanel
         {...makeProps()}
         nativeSelfDevProof={{
-          runtime: 'native_tauri',
-          proofAuthority: 'rust_engine',
-          proofMode: 'automated',
-          autorun: false,
           state: 'confirmed',
-          workspaceRoot: '/test',
-          workspaceRootValid: true,
-          filesScanned: 100,
+          ok: true,
+          error: undefined,
           p0Count: 0,
           p1Count: 0,
           p2Count: 0,
-          topPackets: [],
-          exportPath: '/export',
-          proofReceiptsWritten: true,
-          rc0Proof: { proofPath: '', readmePath: '', artifacts: [], sentinels: [] },
-          timestampMs: Date.now(),
-          note: 'test',
-          error: null
+          sentinels: [],
+          artifacts: []
         }}
       />
     );

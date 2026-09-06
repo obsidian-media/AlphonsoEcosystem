@@ -14,10 +14,13 @@ let wsInstances = [];
 let audioCtxInstances = [];
 
 class MockWebSocket {
+  static CONNECTING = 0;
   static OPEN = 1;
+  static CLOSING = 2;
   static CLOSED = 3;
   readyState = MockWebSocket.CLOSED;
   binaryType = '';
+  url = '';
   onopen = null;
   onclose = null;
   onerror = null;
@@ -57,6 +60,8 @@ class MockAudioContext {
 }
 
 class MockAudioWorkletNode {
+  port = { onmessage: null };
+  disconnect = vi.fn();
   constructor() {
     this.port = { onmessage: null };
     this.disconnect = vi.fn();
@@ -74,9 +79,12 @@ describe('useJarvisVoice', () => {
     vi.clearAllMocks();
     wsInstances = [];
     audioCtxInstances = [];
-    globalThis.WebSocket = MockWebSocket;
-    globalThis.AudioContext = MockAudioContext;
-    globalThis.AudioWorkletNode = MockAudioWorkletNode;
+    // These mocks intentionally implement only the subset of each Web API
+    // this hook actually uses, not the full real interface -- cast rather
+    // than fleshing out dozens of unused members.
+    globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+    globalThis.AudioContext = MockAudioContext as unknown as typeof AudioContext;
+    globalThis.AudioWorkletNode = MockAudioWorkletNode as unknown as typeof AudioWorkletNode;
     Object.defineProperty(navigator, 'mediaDevices', {
       value: { getUserMedia: vi.fn().mockResolvedValue(new MockMediaStream()) },
       writable: true,

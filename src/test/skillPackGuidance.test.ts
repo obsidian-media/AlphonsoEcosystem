@@ -72,6 +72,9 @@ describe('SHARED_AGENT_SKILL_PACK_IDS', () => {
   });
 
   it('does not share packs for alphonso', () => {
-    expect(SHARED_AGENT_SKILL_PACK_IDS.alphonso).toBeUndefined();
+    // The exported type only declares jose/hector/marcus keys -- 'alphonso'
+    // genuinely isn't a key at all, which is exactly what this test asserts,
+    // but TS won't allow bracket/dot access to an undeclared property.
+    expect((SHARED_AGENT_SKILL_PACK_IDS as Record<string, unknown>).alphonso).toBeUndefined();
   });
 });
