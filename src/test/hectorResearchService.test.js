@@ -109,10 +109,21 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 const mockGenerateAgentLlmResponse = vi.fn();
-vi.mock('../lib/ollama', () => ({
-  generateAgentLlmResponse: (...args) => mockGenerateAgentLlmResponse(...args),
-  PREFERRED_MODEL: 'llama3.2:3b'
-}));
+vi.mock('../lib/ollama', async (importOriginal) => {
+  // Spread the real module's exports first -- chooseHectorOllamaModel() (an
+  // unrelated code path) dynamically imports this same module for
+  // getConfiguredOllamaModel(); a bare `() => ({...})` factory here would
+  // silently replace the WHOLE module and make that call throw (caught by a
+  // try/catch, so it fails quietly as `ok:false` rather than an obvious
+  // crash) -- only override the two exports this file's synthesis tests
+  // actually need to control.
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    generateAgentLlmResponse: (...args) => mockGenerateAgentLlmResponse(...args),
+    PREFERRED_MODEL: 'llama3.2:3b'
+  };
+});
 
 import {
   createResearchDraft,
