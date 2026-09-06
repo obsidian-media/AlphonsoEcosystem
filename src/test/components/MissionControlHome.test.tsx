@@ -150,3 +150,34 @@ describe('MissionControlHome — 2-tile stats row', () => {
     expect(await screen.findByText('Jose, Hector')).toBeTruthy();
   });
 });
+
+describe('MissionControlHome — Zone-wrapped empty state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows the empty-state headline when there is truly nothing to act on', async () => {
+    (getAttentionItems as any).mockResolvedValue([]);
+    render(<MissionControlHome {...baseProps} />);
+    expect(await screen.findByText('Nothing needs you right now')).toBeTruthy();
+    // filler rows still present underneath, per this plan's documented resolution
+    expect(screen.getByText('Continue your mission')).toBeTruthy();
+    expect(screen.getByText('Talk to Alphonso')).toBeTruthy();
+  });
+
+  it('does NOT show the empty-state headline when a real attention item exists', async () => {
+    (getAttentionItems as any).mockResolvedValue([
+      { id: 'a', source: 'approval-chat', severity: 'high', title: 'Item A', timestamp: 1000, actionable: true },
+    ]);
+    render(<MissionControlHome {...baseProps} />);
+    await waitFor(() => expect(screen.getByText('Item A')).toBeTruthy());
+    expect(screen.queryByText('Nothing needs you right now')).toBeNull();
+  });
+
+  it('does NOT show the empty-state headline when a hard coach intervention exists, even with an empty aggregator', async () => {
+    (getAttentionItems as any).mockResolvedValue([]);
+    render(<MissionControlHome {...baseProps} coachIntervention={{ level: 'hard', message: 'Pause recommended' }} />);
+    await waitFor(() => expect(screen.getByText('Coach intervention')).toBeTruthy());
+    expect(screen.queryByText('Nothing needs you right now')).toBeNull();
+  });
+});

@@ -7,6 +7,7 @@ import { listApprovalQueue, listAgentPackets } from '../services/agentBusService
 import { listAgentActivity } from '../services/agentActivityService';
 import { getAttentionItems, type AttentionItem } from '../services/attentionAggregatorService';
 import { AgentStatusStrip } from './AgentStatusStrip';
+import { Zone } from './ui/Zone';
 
 interface OllamaStatus {
   state: string;
@@ -137,6 +138,11 @@ export function MissionControlHome({
     return items.slice(0, 4);
   }, [attentionItems, coachIntervention, ollamaStatus]);
 
+  const isTrulyEmpty = attentionItems.length === 0
+    && coachIntervention?.level !== 'hard'
+    && coachIntervention?.level !== 'firm'
+    && ollamaStatus?.state === 'connected';
+
   const feed = useMemo(() => {
     const activityItems = snapshot.activity.map((item: { agent?: string; action?: string; detail?: string; ts?: number }) => ({
       label: `${item.agent || 'agent'}: ${item.action || 'activity'}`,
@@ -213,10 +219,17 @@ export function MissionControlHome({
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
 
-        <div>
+        <Zone mood={isTrulyEmpty ? 'cool' : 'warm'}>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-3)]">What to do next</h2>
           </div>
+          {isTrulyEmpty && (
+            <div className="mb-4 flex flex-col items-center text-center py-4">
+              <CheckCircle2 className="h-6 w-6 text-[var(--accent)] mb-2" />
+              <div className="text-sm font-semibold text-[var(--text-1)]">Nothing needs you right now</div>
+              <p className="mt-1 max-w-xs text-[12px] text-[var(--text-4)]">Everything's running clean. Try Quick Launch below for something to work on.</p>
+            </div>
+          )}
           <div className="space-y-2">
             {nextActions.map((action) => (
               <button
@@ -237,7 +250,7 @@ export function MissionControlHome({
               </button>
             ))}
           </div>
-        </div>
+        </Zone>
 
         <div>
           <div className="mb-4 flex items-center gap-2">
@@ -262,7 +275,7 @@ export function MissionControlHome({
         </div>
       </div>
 
-      <div>
+      <Zone mood="cool">
         <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-[var(--text-3)]">Quick launch</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {[
@@ -285,7 +298,7 @@ export function MissionControlHome({
             </button>
           ))}
         </div>
-      </div>
+      </Zone>
     </div>
     </div>
   );
