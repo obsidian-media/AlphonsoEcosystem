@@ -87,6 +87,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): header, stats row (success-green running count), category filter pills (accent-highlighted "All"), and the accent "Install all" button all render correctly with zero console errors. Live tool detection returned zero tools in this headless run (an environment/data condition — Tauri backend calls behave differently outside the real desktop app — not a re-skin regression), so the individual `ToolCard`s (including the preserved `TOOL_META` colors) weren't visually re-confirmed this pass; the code-level verification above (grep confirming only the deliberate exclusions remain) stands in for it.
 - **Status:** CLOSED.
 
+### 17. `EcosystemHub.tsx` re-skin — a clean, no-carve-out pass; one accidental class-merge bug found and fixed inline
+
+- **What changed:** the "All Agents" ecosystem page (7 tabs — Overview/Queue/Skills/Workflows/Pairings/Workshop/Advanced — governance, trust/verification, approval center, memory confidence, skill packs, marketplace). No per-item color-palette pattern here (unlike bug-log.md #15/#16) — `indigo` is used consistently throughout as this page's single generic identity/accent color, not a per-agent or per-item differentiator, so this was a straightforward full re-skin onto `--accent`/`--success`/`--warning`/`--error`/`--text-*`/`--surface-*` with no exclusions.
+- **Real bug introduced and caught during this pass, not shipped:** a `replace_all` substitution targeting `"bg-zinc-900 "` (with a trailing space, to avoid also matching `bg-zinc-900/30`-style suffixed variants) consumed the separator space along with the match, silently merging the replacement token directly into the next Tailwind class (`bg-[var(--surface-2)]px-3` instead of `bg-[var(--surface-2)] px-3`) across 5 real call sites. Caught immediately by grepping for merged-class patterns (`\]px`, `\]border`, etc.) right after the substitution, before moving on — a real, verified example of why every batch substitution in this session's re-skins needs a post-edit sanity grep, not just a diff read.
+- **Existing test coverage reused:** `src/test/ecosystemHub.test.jsx` (8 tests, pre-existing) stayed green throughout.
+- **Live-verified** (Playwright, real dev server, real Ollama connection): Overview tab renders correctly — accent-highlighted active tab, color-coded Trust/Verification badges (FAILED in error-red, TEMPORARY in warning-amber), and the Approval Center's 4 stat tiles (Pending/Approved/Rejected/Queued) each in their real corresponding token color — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
