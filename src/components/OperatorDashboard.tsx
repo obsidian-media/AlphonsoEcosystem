@@ -31,12 +31,12 @@ interface BadgeProps {
 
 function Badge({ children, color = 'zinc' }: BadgeProps) {
   const colors: Record<string, string> = {
-    zinc: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
-    green: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    red: 'bg-red-500/10 text-red-400 border-red-500/20',
-    indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+    zinc: 'bg-[var(--surface-2)] text-[var(--text-3)] border-[var(--border)]',
+    green: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success)]/30',
+    blue: 'bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-border)]',
+    amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning)]/30',
+    red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error)]/30',
+    indigo: 'bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-border)]'
   };
   return <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>{children}</span>;
 }
@@ -329,15 +329,15 @@ export function OperatorDashboard({
   if (!operatorMode) {
     return (
       <div className="max-w-3xl mx-auto py-12 px-5">
-        <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-5">
+        <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-xl font-bold text-white">Operator Mode is Off</h1>
-              <p className="text-sm text-zinc-500 mt-1">Enable Operator Mode to access telemetry, proofs, memory dashboards, and supervised runtime tools.</p>
+              <p className="text-sm text-[var(--text-3)] mt-1">Enable Operator Mode to access telemetry, proofs, memory dashboards, and supervised runtime tools.</p>
             </div>
             <button
               onClick={() => setOperatorMode(true)}
-              className="rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 px-4 py-2 text-xs font-bold uppercase tracking-widest"
+              className="rounded-lg bg-[var(--success-dim)] border border-[var(--success)]/30 text-[var(--success)] px-4 py-2 text-xs font-bold uppercase tracking-widest"
             >
               Enable
             </button>
@@ -352,19 +352,19 @@ export function OperatorDashboard({
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-xl font-bold text-white">Operator Mode</h1>
-          <p className="text-sm text-zinc-500">Supervised runtime control, verification logs, memory state, plugin registry, and recovery foundations.</p>
+          <p className="text-sm text-[var(--text-3)]">Supervised runtime control, verification logs, memory state, plugin registry, and recovery foundations.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={toggleFocusMode}
-            className="rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-indigo-100 hover:bg-indigo-500/20"
+            className="rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)]"
           >
             {focusMode ? 'Focus' : 'Full'}
           </button>
           <button
             onClick={() => setOperatorMode(!operatorMode)}
-            className={`w-14 h-7 rounded-full transition-colors relative ${operatorMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+            className={`w-14 h-7 rounded-full transition-colors relative ${operatorMode ? 'bg-[var(--success)]' : 'bg-[var(--surface-2)]'}`}
           >
             <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${operatorMode ? 'right-1' : 'left-1'}`} />
           </button>
@@ -375,23 +375,23 @@ export function OperatorDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
         <Panel icon={Activity} title="Runtime Health">
           <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between"><span className="text-zinc-500">Ollama status</span><span className="font-semibold text-zinc-200">{ollamaStatus.label}</span></div>
-            <div className="flex items-center justify-between"><span className="text-zinc-500">Trust</span><Badge color={trustColor(ollamaStatus.trust || 'unverified') as BadgeProps['color']}>{ollamaStatus.trust || 'unverified'}</Badge></div>
-            <div className="flex items-center justify-between"><span className="text-zinc-500">Last check</span><span className="text-zinc-300">{lastCheckedAt ? new Date(lastCheckedAt).toLocaleTimeString() : 'not checked'}</span></div>
+            <div className="flex items-center justify-between"><span className="text-[var(--text-3)]">Ollama status</span><span className="font-semibold text-[var(--text-2)]">{ollamaStatus.label}</span></div>
+            <div className="flex items-center justify-between"><span className="text-[var(--text-3)]">Trust</span><Badge color={trustColor(ollamaStatus.trust || 'unverified') as BadgeProps['color']}>{ollamaStatus.trust || 'unverified'}</Badge></div>
+            <div className="flex items-center justify-between"><span className="text-[var(--text-3)]">Last check</span><span className="text-[var(--text-2)]">{lastCheckedAt ? new Date(lastCheckedAt).toLocaleTimeString() : 'not checked'}</span></div>
           </div>
           <div className="mt-3 flex gap-2">
             <ActionButton onClick={onVerifyOllama} label="Verify Ollama" icon={RefreshCw} />
             <ActionButton onClick={onVerifyAuditChain} label="Verify Audit Chain" icon={CheckCircle2} />
             <ActionButton onClick={() => onVerifyProcess(['ollama'])} label="Check PID" icon={Command} />
           </div>
-          <div className="mt-3 rounded-lg bg-zinc-900/60 border border-white/10 px-3 py-2 text-[11px] text-zinc-400">
+          <div className="mt-3 rounded-lg bg-[var(--surface-1)] border border-white/10 px-3 py-2 text-[11px] text-[var(--text-3)]">
             {auditChainProof ? `Audit chain: ${auditChainProof.trust} (${auditChainProof.verified_entries || 0}/${auditChainProof.total_entries || 0})` : 'Audit chain has not been verified yet.'}
           </div>
         </Panel>
 
         <Panel icon={Shield} title="Identity + Privacy">
-          <div className="space-y-2 text-sm text-zinc-300">
-            <p className="text-zinc-500">Local-first mode is visible and supervised. No hidden uploads, no hidden recording, no silent actions.</p>
+          <div className="space-y-2 text-sm text-[var(--text-2)]">
+            <p className="text-[var(--text-3)]">Local-first mode is visible and supervised. No hidden uploads, no hidden recording, no silent actions.</p>
             <div className="flex items-center gap-2">
               <Badge color={modes.localOnlyMode ? 'green' : 'zinc'}>{modes.localOnlyMode ? 'local runtime' : 'local mode off'}</Badge>
               <Badge color={modes.approvalMode ? 'indigo' : 'zinc'}>{modes.approvalMode ? 'approval mode' : 'approval off'}</Badge>
@@ -402,8 +402,8 @@ export function OperatorDashboard({
 
         <Panel icon={Brain} title="Coach Mode">
           <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between"><span className="text-zinc-500">Pinned coach window</span><Badge color={coachMode ? 'green' : 'zinc'}>{coachMode ? 'active' : 'inactive'}</Badge></div>
-            <div className="flex items-center justify-between"><span className="text-zinc-500">Always on top</span><Badge color={coachAlwaysOnTop ? 'green' : 'zinc'}>{coachAlwaysOnTop ? 'on' : 'off'}</Badge></div>
+            <div className="flex items-center justify-between"><span className="text-[var(--text-3)]">Pinned coach window</span><Badge color={coachMode ? 'green' : 'zinc'}>{coachMode ? 'active' : 'inactive'}</Badge></div>
+            <div className="flex items-center justify-between"><span className="text-[var(--text-3)]">Always on top</span><Badge color={coachAlwaysOnTop ? 'green' : 'zinc'}>{coachAlwaysOnTop ? 'on' : 'off'}</Badge></div>
           </div>
           <div className="mt-3 flex gap-2">
             <ActionButton onClick={onToggleCoachMode} label={coachMode ? 'Close Coach' : 'Open Coach'} icon={HardDrive} />
@@ -416,21 +416,21 @@ export function OperatorDashboard({
       <OperatorSection title="Screen Intelligence" id="screen" focusMode={false} openSections={openSections} onToggle={toggleSection}>
       <Panel icon={Monitor} title="Screen Intelligence (Visible Only)">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-          <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-            <div className="text-[11px] text-zinc-500 uppercase tracking-widest">Observer Status</div>
-            <div className="text-[11px] text-zinc-200 mt-1">{screenObserverState?.status || 'idle'}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">{screenObserverState?.currentSummary || 'Screen observer is off.'}</div>
+          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+            <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Observer Status</div>
+            <div className="text-[11px] text-[var(--text-2)] mt-1">{screenObserverState?.status || 'idle'}</div>
+            <div className="text-[10px] text-[var(--text-3)] mt-1">{screenObserverState?.currentSummary || 'Screen observer is off.'}</div>
           </div>
-          <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-            <div className="text-[11px] text-zinc-500 uppercase tracking-widest">Permission + Alerts</div>
-            <div className="text-[11px] text-zinc-200 mt-1">permission: {screenObserverState?.permission || 'unknown'}</div>
-            <div className="text-[10px] text-zinc-400 mt-1">alerts: {screenObserverState?.alertsCount || 0}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">last alert: {screenObserverState?.lastAlertAtMs ? new Date(screenObserverState.lastAlertAtMs).toLocaleTimeString() : 'none'}</div>
+          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+            <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Permission + Alerts</div>
+            <div className="text-[11px] text-[var(--text-2)] mt-1">permission: {screenObserverState?.permission || 'unknown'}</div>
+            <div className="text-[10px] text-[var(--text-3)] mt-1">alerts: {screenObserverState?.alertsCount || 0}</div>
+            <div className="text-[10px] text-[var(--text-3)] mt-1">last alert: {screenObserverState?.lastAlertAtMs ? new Date(screenObserverState.lastAlertAtMs).toLocaleTimeString() : 'none'}</div>
           </div>
-          <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-            <div className="text-[11px] text-zinc-500 uppercase tracking-widest">Sampling</div>
-            <div className="text-[11px] text-zinc-200 mt-1">{screenObserverState?.sampleEveryMs || 5000} ms</div>
-            <div className="text-[10px] text-zinc-500 mt-1">Trust: {screenObserverState?.trust || 'unverified'}</div>
+          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+            <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Sampling</div>
+            <div className="text-[11px] text-[var(--text-2)] mt-1">{screenObserverState?.sampleEveryMs || 5000} ms</div>
+            <div className="text-[10px] text-[var(--text-3)] mt-1">Trust: {screenObserverState?.trust || 'unverified'}</div>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-1.5">
@@ -439,12 +439,12 @@ export function OperatorDashboard({
           <ActionButton onClick={onStopScreenObserver} label="Stop Screen Observer" icon={RefreshCw} />
         </div>
         <div className="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-2">
-          <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-            <label className="text-[10px] uppercase tracking-widest text-zinc-500">Sample Interval (ms)</label>
+          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+            <label className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Sample Interval (ms)</label>
             <input
               value={sampleEveryInput}
               onChange={(event) => setSampleEveryInput(event.target.value)}
-              className="mt-1 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono"
+              className="mt-1 w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono"
               placeholder="5000"
             />
             <button
@@ -454,7 +454,7 @@ export function OperatorDashboard({
                 setSampleEveryInput(String(safeMs));
                 onUpdateScreenObserverSettings({ sampleEveryMs: safeMs });
               }}
-              className="mt-2 rounded bg-zinc-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              className="mt-2 rounded bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               Apply
             </button>
@@ -470,22 +470,22 @@ export function OperatorDashboard({
             onToggle={() => onUpdateScreenObserverSettings({ audioAlertEnabled: !(screenObserverState?.audioAlertEnabled === true) })}
           />
         </div>
-        <div className="mt-3 rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-          <div className="text-[11px] text-zinc-500 uppercase tracking-widest">Recent Observation Events</div>
+        <div className="mt-3 rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+          <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Recent Observation Events</div>
           <div className="mt-2 space-y-2 max-h-36 overflow-y-auto pr-1">
             {(!screenObserverLogs || screenObserverLogs.length === 0) && (
-              <div className="text-[11px] text-zinc-500">No observation events yet. Start observer to capture visible-screen telemetry.</div>
+              <div className="text-[11px] text-[var(--text-3)]">No observation events yet. Start observer to capture visible-screen telemetry.</div>
             )}
             {(screenObserverLogs || []).slice().reverse().slice(0, 12).map((event) => (
-              <div key={event.id} className="rounded-lg border border-white/10 bg-zinc-900/50 px-2.5 py-2">
-                <div className="text-xs text-zinc-200">{event.summary}</div>
-                <div className="text-[11px] text-zinc-500 mt-1">
+              <div key={event.id} className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-2.5 py-2">
+                <div className="text-xs text-[var(--text-2)]">{event.summary}</div>
+                <div className="text-[11px] text-[var(--text-3)] mt-1">
                   {event.status} | change {event.changeLevel} | {new Date(event.timestampMs).toLocaleTimeString()}
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[11px] text-zinc-500">
+          <div className="mt-2 text-[11px] text-[var(--text-3)]">
             Local-only visual pattern detection. Semantic app/window understanding remains setup_required.
           </div>
         </div>
@@ -496,8 +496,8 @@ export function OperatorDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         <Panel icon={TerminalSquare} title="Command Verification">
           <div className="space-y-2">
-            <input value={program} onChange={(event) => setProgram(event.target.value)} className="w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-sm" placeholder="program, e.g. ollama" />
-            <input value={args} onChange={(event) => setArgs(event.target.value)} className="w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-sm font-mono" placeholder="args, e.g. list" />
+            <input value={program} onChange={(event) => setProgram(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-sm" placeholder="program, e.g. ollama" />
+            <input value={args} onChange={(event) => setArgs(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-sm font-mono" placeholder="args, e.g. list" />
             <div className="flex flex-wrap gap-2">
               <ActionButton onClick={runCommandProof} label="Run Verified Command" icon={Command} />
               <ActionButton onClick={() => onVerifyPaths(['./src', './src-tauri/tauri.conf.json'])} label="Verify Paths" icon={FolderTree} />
@@ -508,12 +508,12 @@ export function OperatorDashboard({
         <Panel icon={Package} title="Plugin Registry">
           <div className="space-y-2">
             {plugins.map((plugin) => (
-              <div key={plugin.id} className="flex items-center justify-between rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
+              <div key={plugin.id} className="flex items-center justify-between rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
                 <div>
-                  <div className="text-[13px] font-semibold text-zinc-100">{plugin.name}</div>
-                  <div className="text-[10px] text-zinc-500">{plugin.id}</div>
+                  <div className="text-[13px] font-semibold text-[var(--text-1)]">{plugin.name}</div>
+                  <div className="text-[10px] text-[var(--text-3)]">{plugin.id}</div>
                 </div>
-                <button onClick={() => onTogglePlugin(plugin.id, !plugin.enabled)} className={`px-2.5 py-1 rounded text-xs font-bold ${plugin.enabled ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-700 text-zinc-300'}`}>
+                <button onClick={() => onTogglePlugin(plugin.id, !plugin.enabled)} className={`px-2.5 py-1 rounded text-xs font-bold ${plugin.enabled ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-2)]'}`}>
                   {plugin.enabled ? 'Enabled' : 'Disabled'}
                 </button>
               </div>
@@ -523,62 +523,62 @@ export function OperatorDashboard({
             <ActionButton onClick={onDiscoverPlugins} label="Scan Disk Manifests" icon={RefreshCw} />
           </div>
           <div className="mt-3 space-y-2 max-h-36 overflow-y-auto pr-1">
-            {diskPluginManifests.length === 0 && <p className="text-[11px] text-zinc-500">No disk plugin manifests discovered yet.</p>}
+            {diskPluginManifests.length === 0 && <p className="text-[11px] text-[var(--text-3)]">No disk plugin manifests discovered yet.</p>}
             {diskPluginManifests.slice(0, 8).map((manifest, index) => (
-              <div key={`${manifest.manifest_path}-${index}`} className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
+              <div key={`${manifest.manifest_path}-${index}`} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs text-zinc-200 truncate">{manifest.name || manifest.id}</div>
+                  <div className="text-xs text-[var(--text-2)] truncate">{manifest.name || manifest.id}</div>
                   <Badge color={trustColor(manifest.trust || 'unverified') as BadgeProps['color']}>{manifest.trust || 'unverified'}</Badge>
                 </div>
-                <div className="text-[10px] text-zinc-500 mt-1 truncate">{manifest.manifest_path}</div>
+                <div className="text-[10px] text-[var(--text-3)] mt-1 truncate">{manifest.manifest_path}</div>
               </div>
             ))}
           </div>
-          <div className="mt-3 text-[10px] text-zinc-500">Audit: {latestAudit.map((entry) => `${entry.pluginId} ${entry.action}`).join(' | ') || 'no plugin events yet'}</div>
+          <div className="mt-3 text-[10px] text-[var(--text-3)]">Audit: {latestAudit.map((entry) => `${entry.pluginId} ${entry.action}`).join(' | ') || 'no plugin events yet'}</div>
           <div className="mt-3 space-y-2">
-            <input value={pluginManifestPath} onChange={(event) => setPluginManifestPath(event.target.value)} className="w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="manifest path" />
+            <input value={pluginManifestPath} onChange={(event) => setPluginManifestPath(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="manifest path" />
             <div className="grid grid-cols-2 gap-2">
-              <input value={pluginId} onChange={(event) => setPluginId(event.target.value)} className="bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px]" placeholder="plugin id" />
-              <input value={pluginToolId} onChange={(event) => setPluginToolId(event.target.value)} className="bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px]" placeholder="tool id" />
+              <input value={pluginId} onChange={(event) => setPluginId(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px]" placeholder="plugin id" />
+              <input value={pluginToolId} onChange={(event) => setPluginToolId(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px]" placeholder="tool id" />
             </div>
-            <input value={pluginExtraArgs} onChange={(event) => setPluginExtraArgs(event.target.value)} className="w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
+            <input value={pluginExtraArgs} onChange={(event) => setPluginExtraArgs(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
             <ActionButton onClick={runPluginTool} label="Execute Plugin Tool" icon={Command} />
             <ActionButton onClick={() => onValidatePluginManifest(pluginManifestPath.trim())} label="Validate Manifest" icon={CheckCircle2} />
             {lastPluginToolRun && (
-              <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2 text-[11px] text-zinc-400">
+              <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 text-[11px] text-[var(--text-3)]">
                 {lastPluginToolRun.plugin_id}:{lastPluginToolRun.tool_id} | exit {String(lastPluginToolRun.exit_code)}
               </div>
             )}
             {lastManifestValidation && (
-              <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2 text-[11px] text-zinc-400">
+              <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 text-[11px] text-[var(--text-3)]">
                 manifest valid: {String(lastManifestValidation.valid)} | errors: {(lastManifestValidation.errors || []).length} | warnings: {(lastManifestValidation.warnings || []).length}
               </div>
             )}
-            <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2 space-y-2">
-              <div className="text-[11px] uppercase tracking-widest text-zinc-500">Plugin Sandbox Policy</div>
-              <div className="flex items-center justify-between text-[11px] text-zinc-300">
+            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 space-y-2">
+              <div className="text-[11px] uppercase tracking-widest text-[var(--text-3)]">Plugin Sandbox Policy</div>
+              <div className="flex items-center justify-between text-[11px] text-[var(--text-2)]">
                 <span>Require Manifest Validation</span>
                 <button
                   onClick={() => onUpdatePluginSandboxPolicy({ requireManifestValidation: !pluginSandboxPolicy?.requireManifestValidation })}
-                  className={`px-2 py-1 rounded ${pluginSandboxPolicy?.requireManifestValidation ? 'bg-emerald-500/20 text-emerald-200' : 'bg-zinc-700 text-zinc-300'}`}
+                  className={`px-2 py-1 rounded ${pluginSandboxPolicy?.requireManifestValidation ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-2)]'}`}
                 >
                   {pluginSandboxPolicy?.requireManifestValidation ? 'On' : 'Off'}
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-zinc-300">
+              <div className="flex items-center justify-between text-[11px] text-[var(--text-2)]">
                 <span>Max Extra Args</span>
                 <div className="flex gap-1">
-                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxExtraArgs: Math.max(0, (pluginSandboxPolicy?.maxExtraArgs || 0) - 1) })} className="rounded bg-zinc-800 px-2 py-1">-</button>
-                  <span className="px-2 py-1 rounded bg-zinc-800">{pluginSandboxPolicy?.maxExtraArgs ?? '-'}</span>
-                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxExtraArgs: (pluginSandboxPolicy?.maxExtraArgs || 0) + 1 })} className="rounded bg-zinc-800 px-2 py-1">+</button>
+                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxExtraArgs: Math.max(0, (pluginSandboxPolicy?.maxExtraArgs || 0) - 1) })} className="rounded bg-[var(--surface-2)] px-2 py-1">-</button>
+                  <span className="px-2 py-1 rounded bg-[var(--surface-2)]">{pluginSandboxPolicy?.maxExtraArgs ?? '-'}</span>
+                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxExtraArgs: (pluginSandboxPolicy?.maxExtraArgs || 0) + 1 })} className="rounded bg-[var(--surface-2)] px-2 py-1">+</button>
                 </div>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-zinc-300">
+              <div className="flex items-center justify-between text-[11px] text-[var(--text-2)]">
                 <span>Max Arg Length</span>
                 <div className="flex gap-1">
-                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxArgLength: Math.max(20, (pluginSandboxPolicy?.maxArgLength || 20) - 10) })} className="rounded bg-zinc-800 px-2 py-1">-</button>
-                  <span className="px-2 py-1 rounded bg-zinc-800">{pluginSandboxPolicy?.maxArgLength ?? '-'}</span>
-                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxArgLength: (pluginSandboxPolicy?.maxArgLength || 0) + 10 })} className="rounded bg-zinc-800 px-2 py-1">+</button>
+                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxArgLength: Math.max(20, (pluginSandboxPolicy?.maxArgLength || 20) - 10) })} className="rounded bg-[var(--surface-2)] px-2 py-1">-</button>
+                  <span className="px-2 py-1 rounded bg-[var(--surface-2)]">{pluginSandboxPolicy?.maxArgLength ?? '-'}</span>
+                  <button onClick={() => onUpdatePluginSandboxPolicy({ maxArgLength: (pluginSandboxPolicy?.maxArgLength || 0) + 10 })} className="rounded bg-[var(--surface-2)] px-2 py-1">+</button>
                 </div>
               </div>
             </div>
@@ -591,14 +591,14 @@ export function OperatorDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Panel icon={Brain} title="Memory Dashboard">
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            {latestMemory.length === 0 && <p className="text-sm text-zinc-500">No memory records yet.</p>}
+            {latestMemory.length === 0 && <p className="text-sm text-[var(--text-3)]">No memory records yet.</p>}
             {latestMemory.map((item) => (
-              <div key={item.id} className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
+              <div key={item.id} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-300">{item.category}</span>
+                  <span className="text-xs text-[var(--text-2)]">{item.category}</span>
                   <Badge color={trustColor(item.confidence) as BadgeProps['color']}>{item.confidence}</Badge>
                 </div>
-                <p className="text-[11px] text-zinc-500 mt-1">{item.content}</p>
+                <p className="text-[11px] text-[var(--text-3)] mt-1">{item.content}</p>
               </div>
             ))}
           </div>
@@ -618,54 +618,54 @@ export function OperatorDashboard({
             <ActionButton onClick={onBuildSymbolIndex} label="Build Symbol Index" icon={CheckCircle2} />
           </div>
           <div className="mt-3 space-y-2">
-            <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-              <div className="text-[11px] text-zinc-500 uppercase tracking-widest">Workspace Proof</div>
+            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+              <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Workspace Proof</div>
               {workspaceProof ? (
                 <>
-                  <div className="text-[11px] text-zinc-200 mt-1">Files: {workspaceProof.file_count} | Dirs: {workspaceProof.dir_count}</div>
-                  <div className="text-[10px] text-zinc-400 mt-1">Bytes: {workspaceProof.total_bytes}</div>
-                  <div className="text-[10px] text-zinc-500 mt-1">Trust: {workspaceProof.trust}</div>
+                  <div className="text-[11px] text-[var(--text-2)] mt-1">Files: {workspaceProof.file_count} | Dirs: {workspaceProof.dir_count}</div>
+                  <div className="text-[10px] text-[var(--text-3)] mt-1">Bytes: {workspaceProof.total_bytes}</div>
+                  <div className="text-[10px] text-[var(--text-3)] mt-1">Trust: {workspaceProof.trust}</div>
                 </>
               ) : (
-                <div className="text-[10px] text-zinc-500 mt-1">No workspace proof run yet.</div>
+                <div className="text-[10px] text-[var(--text-3)] mt-1">No workspace proof run yet.</div>
               )}
             </div>
-            <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-              <div className="text-[11px] text-zinc-500 uppercase tracking-widest">OCR Capability</div>
+            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+              <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">OCR Capability</div>
               {ocrCapability ? (
                 <>
-                  <div className="text-[11px] text-zinc-200 mt-1">{ocrCapability.available ? 'Available' : 'Unavailable'} ({ocrCapability.engine})</div>
-                  <div className="text-[10px] text-zinc-500 mt-1">{ocrCapability.message}</div>
+                  <div className="text-[11px] text-[var(--text-2)] mt-1">{ocrCapability.available ? 'Available' : 'Unavailable'} ({ocrCapability.engine})</div>
+                  <div className="text-[10px] text-[var(--text-3)] mt-1">{ocrCapability.message}</div>
                 </>
               ) : (
-                <div className="text-[10px] text-zinc-500 mt-1">OCR check not run yet.</div>
+                <div className="text-[10px] text-[var(--text-3)] mt-1">OCR check not run yet.</div>
               )}
             </div>
-            <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-              <div className="text-[11px] text-zinc-500 uppercase tracking-widest">Workspace Symbol Index</div>
+            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+              <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Workspace Symbol Index</div>
               {workspaceSymbolIndex ? (
                 <>
-                  <div className="text-[11px] text-zinc-200 mt-1">Indexed files: {workspaceSymbolIndex.files_indexed}</div>
-                  <div className="text-[10px] text-zinc-400 mt-1">Dependency edges: {workspaceSymbolIndex.dependency_edges}</div>
-                  <div className="text-[10px] text-zinc-500 mt-1">Trust: {workspaceSymbolIndex.trust}</div>
+                  <div className="text-[11px] text-[var(--text-2)] mt-1">Indexed files: {workspaceSymbolIndex.files_indexed}</div>
+                  <div className="text-[10px] text-[var(--text-3)] mt-1">Dependency edges: {workspaceSymbolIndex.dependency_edges}</div>
+                  <div className="text-[10px] text-[var(--text-3)] mt-1">Trust: {workspaceSymbolIndex.trust}</div>
                 </>
               ) : (
-                <div className="text-[10px] text-zinc-500 mt-1">No symbol index built yet.</div>
+                <div className="text-[10px] text-[var(--text-3)] mt-1">No symbol index built yet.</div>
               )}
             </div>
-            <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2 space-y-2">
-              <div className="text-[11px] text-zinc-500 uppercase tracking-widest">OCR Adapter Run</div>
+            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 space-y-2">
+              <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">OCR Adapter Run</div>
               <div className="grid grid-cols-2 gap-2">
-                <select aria-label="OCR adapter" value={ocrAdapter} onChange={(event) => setOcrAdapter(event.target.value)} className="bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px]">
+                <select aria-label="OCR adapter" value={ocrAdapter} onChange={(event) => setOcrAdapter(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px]">
                   <option value="version_check">version_check</option>
                   <option value="tesseract_cli">tesseract_cli</option>
                 </select>
-                <input value={ocrImagePath} onChange={(event) => setOcrImagePath(event.target.value)} className="bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="image path (optional)" />
+                <input value={ocrImagePath} onChange={(event) => setOcrImagePath(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="image path (optional)" />
               </div>
-              <input value={ocrExtraArgs} onChange={(event) => setOcrExtraArgs(event.target.value)} className="w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
+              <input value={ocrExtraArgs} onChange={(event) => setOcrExtraArgs(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
               <ActionButton onClick={runOcr} label="Run OCR Adapter" icon={Brain} />
               {lastOcrAdapterRun && (
-                <div className="text-[10px] text-zinc-400">Adapter {lastOcrAdapterRun.adapter} | exit {String(lastOcrAdapterRun.exit_code)}</div>
+                <div className="text-[10px] text-[var(--text-3)]">Adapter {lastOcrAdapterRun.adapter} | exit {String(lastOcrAdapterRun.exit_code)}</div>
               )}
             </div>
           </div>
@@ -684,9 +684,9 @@ export function OperatorDashboard({
             <ActionButton onClick={() => latestSnapshotId && onRestoreSnapshot(latestSnapshotId)} label="Restore Latest" icon={CheckCircle2} />
           </div>
           <div className="mt-3 space-y-2 max-h-36 overflow-y-auto pr-1">
-            {snapshots.length === 0 && <p className="text-[11px] text-zinc-500">No snapshots yet.</p>}
+            {snapshots.length === 0 && <p className="text-[11px] text-[var(--text-3)]">No snapshots yet.</p>}
             {[...snapshots].reverse().slice(0, 6).map((snapshot) => (
-              <div key={snapshot.id} className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2 text-[11px] text-zinc-400">
+              <div key={snapshot.id} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 text-[11px] text-[var(--text-3)]">
                 <div className="flex items-center justify-between">
                   <span>{snapshot.id}</span>
                   <Badge color={trustColor(snapshot.trust) as BadgeProps['color']}>{snapshot.trust}</Badge>
@@ -694,7 +694,7 @@ export function OperatorDashboard({
                 <div>{new Date(snapshot.timestampMs).toLocaleString()}</div>
                 <button
                   onClick={() => onRestoreSnapshot(snapshot.id)}
-                  className="mt-2 rounded bg-zinc-800 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+                  className="mt-2 rounded bg-[var(--surface-2)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
                 >
                   Restore This
                 </button>
@@ -708,22 +708,22 @@ export function OperatorDashboard({
             <ActionButton onClick={onExportDiagnostics} label="Export Diagnostics" icon={TerminalSquare} />
           </div>
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            {latestLogs.length === 0 && <p className="text-[11px] text-zinc-500">No verification logs yet.</p>}
+            {latestLogs.length === 0 && <p className="text-[11px] text-[var(--text-3)]">No verification logs yet.</p>}
             {latestLogs.map((log) => (
-              <div key={log.id} className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
+              <div key={log.id} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-300">{log.type}</span>
+                  <span className="text-xs text-[var(--text-2)]">{log.type}</span>
                   <Badge color={trustColor(log.trust) as BadgeProps['color']}>{log.trust}</Badge>
                 </div>
-                <div className="text-[10px] text-zinc-500 mt-1">{new Date(log.timestampMs).toLocaleTimeString()} - {log.source}</div>
+                <div className="text-[10px] text-[var(--text-3)] mt-1">{new Date(log.timestampMs).toLocaleTimeString()} - {log.source}</div>
               </div>
             ))}
           </div>
-          <div className="mt-3 rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
+          <div className="mt-3 rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-[11px] text-zinc-500 uppercase tracking-widest">Durable Audit (Backend)</div>
-                <div className="text-[10px] text-zinc-300 mt-0.5">{Array.isArray(durableAuditLogs) ? durableAuditLogs.length : 0} entries</div>
+                <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Durable Audit (Backend)</div>
+                <div className="text-[10px] text-[var(--text-2)] mt-0.5">{Array.isArray(durableAuditLogs) ? durableAuditLogs.length : 0} entries</div>
               </div>
               <button
                 onClick={() => {
@@ -749,7 +749,7 @@ export function OperatorDashboard({
                       URL.revokeObjectURL(url);
                     });
                 }}
-                className="flex items-center gap-1 rounded-lg bg-zinc-800 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-zinc-300 hover:bg-zinc-700"
+                className="flex items-center gap-1 rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
               >
                 <Download className="w-3 h-3" /> Export
               </button>
@@ -772,7 +772,7 @@ export function OperatorDashboard({
       <OperatorSection title="Notion Co-Source Sync" id="notion-sync" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 gap-3">
         <Panel icon={Cloud} title="Notion ↔ Alphonso Sync">
-          <Suspense fallback={<div className="text-[11px] text-zinc-500">Loading Notion sync panel…</div>}>
+          <Suspense fallback={<div className="text-[11px] text-[var(--text-3)]">Loading Notion sync panel…</div>}>
             <NotionSyncPanel />
           </Suspense>
         </Panel>
@@ -782,7 +782,7 @@ export function OperatorDashboard({
       <OperatorSection title="Ollama Preflight Baseline" id="ollama-preflight" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 gap-3">
         <Panel icon={Activity} title="Ollama Preflight Events">
-          <Suspense fallback={<div className="text-[11px] text-zinc-500">Loading Ollama preflight panel…</div>}>
+          <Suspense fallback={<div className="text-[11px] text-[var(--text-3)]">Loading Ollama preflight panel…</div>}>
             <OllamaPreflightPanel />
           </Suspense>
         </Panel>
@@ -791,7 +791,7 @@ export function OperatorDashboard({
 
       <OperatorSection title="Boardroom Orchestrator" id="boardroom" focusMode={focusMode} openSections={openSections} onToggle={toggleSection}>
       <div className="grid grid-cols-1 gap-3">
-        <Suspense fallback={<div className="text-[11px] text-zinc-500">Loading boardroom panel…</div>}>
+        <Suspense fallback={<div className="text-[11px] text-[var(--text-3)]">Loading boardroom panel…</div>}>
           <ProjectBatchPanel />
         </Suspense>
       </div>
@@ -820,16 +820,16 @@ interface OperatorSectionProps {
 function OperatorSection({ title, id, focusMode, openSections, onToggle, children }: OperatorSectionProps) {
   const open = !focusMode || openSections.has(id);
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
+    <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3">
       <button
         type="button"
         onClick={() => onToggle?.(id)}
-        className="flex w-full items-center justify-between gap-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 hover:text-indigo-100"
+        className="flex w-full items-center justify-between gap-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)] hover:text-[var(--accent)]"
       >
         <span>{title}</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
-      {open ? <div className="mt-3">{children}</div> : <div className="mt-2 text-[11px] text-zinc-600">Collapsed in Focus view.</div>}
+      {open ? <div className="mt-3">{children}</div> : <div className="mt-2 text-[11px] text-[var(--text-4)]">Collapsed in Focus view.</div>}
     </section>
   );
 }
@@ -842,9 +842,9 @@ interface PanelProps {
 
 function Panel({ icon: Icon, title, children }: PanelProps) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-zinc-400 font-bold mb-2">
-        <Icon className="w-4 h-4 text-indigo-400" /> {title}
+    <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-2">
+        <Icon className="w-4 h-4 text-[var(--accent)]" /> {title}
       </div>
       {children}
     </section>
@@ -859,7 +859,7 @@ interface ActionButtonProps {
 
 function ActionButton({ onClick, label, icon: Icon }: ActionButtonProps) {
   return (
-    <button onClick={onClick} className="flex items-center gap-2 rounded-lg bg-zinc-800 px-2.5 py-1.5 text-[10px] uppercase tracking-widest font-bold text-zinc-200 hover:bg-zinc-700">
+    <button onClick={onClick} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-[10px] uppercase tracking-widest font-bold text-[var(--text-2)] hover:bg-[var(--surface-3)]">
       <Icon className="w-3.5 h-3.5" /> {label}
     </button>
   );
@@ -875,9 +875,9 @@ interface WorkspaceRowProps {
 function WorkspaceRow({ label, featureKey, foundation, onToggle }: WorkspaceRowProps) {
   const feature = foundation?.[featureKey];
   return (
-    <div className="flex items-center justify-between rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
-      <span className="text-[11px] text-zinc-300">{label}</span>
-      <button onClick={() => onToggle(featureKey, !feature.enabled)} className={`px-2.5 py-1 rounded text-[10px] font-bold ${feature.enabled ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-700 text-zinc-300'}`}>
+    <div className="flex items-center justify-between rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+      <span className="text-[11px] text-[var(--text-2)]">{label}</span>
+      <button onClick={() => onToggle(featureKey, !feature.enabled)} className={`px-2.5 py-1 rounded text-[10px] font-bold ${feature.enabled ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-2)]'}`}>
         {feature.enabled ? 'On' : 'Off'}
       </button>
     </div>
@@ -892,10 +892,10 @@ interface ToggleTileProps {
 
 function ToggleTile({ label, enabled, onToggle }: ToggleTileProps) {
   return (
-    <div className="rounded-lg bg-zinc-900/60 border border-white/10 px-2.5 py-2">
+    <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] text-zinc-300">{label}</span>
-        <button onClick={onToggle} className={`px-2 py-1 rounded text-[10px] font-bold ${enabled ? 'bg-emerald-500/20 text-emerald-200' : 'bg-zinc-700 text-zinc-300'}`}>
+        <span className="text-[10px] text-[var(--text-2)]">{label}</span>
+        <button onClick={onToggle} className={`px-2 py-1 rounded text-[10px] font-bold ${enabled ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-2)]'}`}>
           {enabled ? 'On' : 'Off'}
         </button>
       </div>
@@ -949,27 +949,27 @@ function UnifiedWeeklyReportPanel() {
         <button
           onClick={generateReport}
           disabled={loading}
-          className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
         >
           {loading ? 'Generating...' : 'Generate Report'}
         </button>
         {report && (
           <button
             onClick={copyReport}
-            className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-white/10 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] border border-white/10 transition-colors"
           >
             {copied ? 'Copied!' : 'Copy'}
           </button>
         )}
       </div>
       {error && (
-        <div className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error)]/30 rounded-lg px-3 py-2">
           {error}
         </div>
       )}
       {report && (
-        <div className="rounded-lg border border-white/10 bg-zinc-900/60 p-3">
-          <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap font-mono overflow-auto max-h-96">
+        <div className="rounded-lg border border-white/10 bg-[var(--surface-1)] p-3">
+          <pre className="text-[11px] text-[var(--text-2)] whitespace-pre-wrap font-mono overflow-auto max-h-96">
             {report.markdown}
           </pre>
         </div>
