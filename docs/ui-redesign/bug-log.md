@@ -460,6 +460,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified, via earlier screenshots from this same session:** both states of this exact component were already captured and visually confirmed correct while working on `CoachWindow.tsx` (#51, the "Session Guard / No active intervention" empty state) and `CoachHardInterruptOverlay.tsx` (#54, the "Local Coach Intervention / HARD" card, reached via the real "Demo check-in" button) — not re-screenshotted a third time for this pass since both states were already proven, but noted here for a clear paper trail rather than silently skipped.
 - **Status:** CLOSED.
 
+### 62. `AgentActivityLog.tsx` re-skin (84 lines, 17 refs) — real per-agent-color mismatch fixed for all 9 agents
+
+- **What changed:** header, empty state, and per-entry chrome (timestamp, action text, detail text, hover state) — tokenized onto `--text-*`/`--surface-*`/`--border`.
+- **Real bug found and fixed — `AGENT_COLORS` was a second, independently-hardcoded per-agent palette that had drifted out of sync with the canonical `--agent-*` tokens for 5 of 9 agents:** alphonso (was indigo, token is cyan), miya (was fuchsia, token is violet — same mismatch already found and fixed in `MiyaCompanionWidget.tsx`, #44), hector (was cyan, token is indigo — same mismatch already found and fixed in `HectorCompanionWidget.tsx`, #44), maria (was sky, token is teal), and nova (was emerald, token is lime). Fixed by switching all 9 entries to reference `--agent-alphonso`/`--agent-jose`/`--agent-miya`/`--agent-hector`/`--agent-echo`/`--agent-sentinel`/`--agent-nova`/`--agent-maria`/`--agent-marcus` directly instead of a second palette that could drift again.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** `src/test/AgentActivityLog.test.jsx` — 6/6 passing (`--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, System space → Runtimes → Activity tab): confirmed the header, "0 events" count, and empty state render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
