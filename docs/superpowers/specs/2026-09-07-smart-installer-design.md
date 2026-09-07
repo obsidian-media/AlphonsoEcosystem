@@ -44,10 +44,14 @@ here, follow that entry's resume hint when macOS work starts.
 ## 3. Architecture: same-binary dual-mode, not a separate executable
 
 **Decision:** the Setup experience ships as an additional mode of the
-existing Alphonso binary, using Tauri's own documented "Splashscreen" pattern
-— not a second, separately-built/signed executable.
+existing Alphonso binary — not a second, separately-built/signed executable,
+and (self-critique correction, see below) not Tauri's formal multi-window
+"Splashscreen" pattern either. It reuses the exact same gating mechanism
+`OnboardingWizard.tsx` already uses today.
 
-**Why, in order of how the decision was actually reached:**
+**Why, in order of how the decision was actually reached (kept for the
+record — the reasoning that ruled out a separate binary is still correct,
+only the final mechanism changed on a later self-critique pass):**
 
 1. The user's original requirement was "genuinely separate pre-launch
    bootstrap" (not the existing in-app `OnboardingWizard.tsx`, first-run
@@ -70,30 +74,49 @@ existing Alphonso binary, using Tauri's own documented "Splashscreen" pattern
    nothing runs automatically) and the Linux `.AppImage` (the only Linux
    artifact actually published) **also has no install step** — running the
    AppImage *is* using the app. A mechanism that only exists on one of three
-   platforms can't be the primary design.
-4. Tauri's own documented "Splashscreen" pattern — a hidden `main` window +
-   a shown second window at launch, with a Rust `setup` hook deciding when to
-   swap them — is the mechanism that actually works identically across all
-   platforms, requires no installer-level scripting, and needs zero new Cargo
-   workspace/second binary/second signing pipeline. It's a first-class Tauri
-   pattern, not a workaround.
+   platforms can't be the primary design. This step's conclusion (same
+   binary, not a second one) still holds.
+4. **First self-critique pass** proposed Tauri's documented "Splashscreen"
+   pattern (hidden `main` window + a shown second window, a Rust `setup`
+   hook deciding when to swap them) as the mechanism. This was presented as
+   confirmed/bulletproof at the time — it wasn't wrong exactly, but it was
+   never checked against what this codebase already does for the exact same
+   problem.
+5. **Second self-critique pass (this one) found that check was skipped.**
+   `OnboardingWizard.tsx` — the thing Setup replaces — already solves "show
+   a full-takeover first-run experience instead of the main app" today,
+   verified directly in `App.tsx`:
+   ```
+   showOnboarding initial state = !getStorage('alphonso_onboarding_complete_v1', false)
+   render: if (showOnboarding && !settings.selectedModel) { render <OnboardingWizard/> in place of the entire app shell }
+   ```
+   A plain `localStorage` flag (via `src/lib/appStorage.ts`'s typed
+   wrapper), checked in JS at React state-init, with a top-level conditional
+   render that replaces the whole shell (sidebar, chat, everything) — no
+   Rust involvement, no second Tauri window, no on-disk marker file, no CLI
+   flag. This already delivers a full-takeover "separate" experience; the
+   Tauri Splashscreen pattern would have solved a problem this codebase
+   doesn't have.
 
-**Resulting design:** on every launch, the app checks an on-disk "setup
-completed" marker (exact location/format TBD in the implementation plan —
-likely alongside the existing `%APPDATA%\Alphonso\` settings/autostart-prefs
-files, matching precedent). If absent, show the Setup window/state instead of
-the main chat UI. Once Setup completes (or is explicitly skipped), write the
-marker and transition to the normal app. Windows' `installerHooks` becomes an
-optional accelerator — auto-launch the app in Setup mode immediately after
-NSIS finishes, rather than waiting for the user to double-click — layered on
-top of the marker-file mechanism, never load-bearing for it.
+**Resulting design:** Setup replaces `OnboardingWizard` at the exact same
+gating point, using the same kind of mechanism — very likely extending or
+directly reusing the `alphonso_onboarding_complete_v1` key (naming TBD in
+the implementation plan), not a new Rust marker file. On app boot, if the
+flag is unset, render the Setup flow instead of the app shell, exactly like
+`OnboardingWizard` does today, just fuller (system scan, intent, install
+queue, activation) instead of the current 6 steps. Windows' `installerHooks`
+remains available as an optional accelerator (auto-launch the app
+immediately after NSIS finishes) but is now clearly optional polish, not
+something the core mechanism depends on either way.
 
-This does **not** require a Cargo workspace, a second binary, or a second
-signing/release pipeline. It does require new Rust code inside `src-tauri/`:
-hardware detection (GPU/RAM/disk — none of `find_python`/`find_git`/
-`find_ollama`/`find_docker`/`find_node` cover this; there is no `sysinfo` or
-equivalent crate in `Cargo.toml` today) and the Setup-mode window/state
-wiring itself.
+This does **not** require a Cargo workspace, a second binary, a second
+signing/release pipeline, a second Tauri window, or new boot-sequence Rust
+code for window swapping. It **does** still require new Rust code inside
+`src-tauri/`: hardware detection (GPU/RAM/disk — none of `find_python`/
+`find_git`/`find_ollama`/`find_docker`/`find_node` cover this; there is no
+`sysinfo` or equivalent crate in `Cargo.toml` today) exposed as new Tauri
+commands the existing frontend-gating pattern can call, same as any other
+Runtime Hub command today.
 
 ## 4. Relationship to `OnboardingWizard.tsx`
 
@@ -113,19 +136,25 @@ There is no unique capability a "demoted" wizard would preserve. `--first-run`
 has run; anyone adding capabilities later uses Runtime Hub/Settings like any
 other change, not a wizard.
 
-### 4.1 Marker-write timing (self-critique fix — was unstated)
+### 4.1 Flag-write timing (self-critique fix — was unstated)
 
-The "setup completed" marker must be written **only** on reaching Launch
+The completion flag (§3 — `alphonso_onboarding_complete_v1` or its
+Setup-specific successor) must be written **only** on reaching Launch
 (step 8) or an explicit "Skip Setup" action — never earlier, and never
-optimistically. If the app is killed mid-install (crash, forced close, power
-loss), the marker must not exist yet, so the next launch re-enters Setup
-rather than dumping the user into a half-installed app with no way back to
-finish. This also means Setup's own state (which components were already
-Ready before the crash) should be persisted separately and resumed, not
-re-run from scratch — mirroring the existing `recoverInterruptedExecutions()`/
-`recoverInterruptedOutreachCalls()` precedent already used elsewhere in this
-codebase for exactly this kind of crash-recovery, rather than inventing a new
-pattern.
+optimistically — exactly matching how `OnboardingWizard.tsx`'s `onComplete`
+callback already only fires `setShowOnboarding(false)` once its own flow
+finishes, not partway through. If the app is killed mid-install (crash,
+forced close, power loss), the flag must not be set yet, so the next launch
+re-enters Setup rather than dumping the user into a half-installed app with
+no way back to finish. This also means Setup's own progress state (which
+components were already Ready before the crash) should be persisted
+separately and resumed, not re-run from scratch — the broader
+"recover interrupted work on next boot" shape used by
+`recoverInterruptedExecutions()`/`recoverInterruptedOutreachCalls()`
+elsewhere in this codebase is a reasonable pattern to follow for *that* part
+specifically, though those are JS-side queue/execution recovery, not a
+direct precedent for a UI-gating flag — the gating flag's own precedent is
+`showOnboarding` itself, cited above.
 
 ### 4.2 Existing-install detection on upgrade (self-critique fix — was silently dropped)
 
@@ -183,6 +212,13 @@ steps added (Recommended Setup, Early Exit), agent roster corrected.
 3. **Intent Selection** — replaces the agent-hologram-grid as the first real
    choice. Six large tiles, plain language, no agent jargon: **Chat Only /
    Chat + Images / Chat + Voice / Full Power Mode / Custom**.
+   **Clarification (self-critique fix — this branch was ambiguous):**
+   picking one of the first four tiles proceeds to step 4 (Recommended
+   Setup) as described below. Picking **Custom** skips step 4 entirely and
+   goes straight to the agent-grid (the same grid step 4's "Customize"
+   button also reaches) — there is no meaningful "recommendation" to show
+   without a stated intent to combine with the hardware scan, so Custom is a
+   direct shortcut into the grid, not a degraded version of step 4.
 4. **Recommended Setup** — the "smart" step. Combines scan results + intent
    into an editable, agent-colored line-item list. Each recommendation shows
    *why* inline (folded in from competitive research on LM Studio/Jan/
