@@ -436,6 +436,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `RightPanel.tsx`'s Security section (`selectedFinding` state, set only by clicking a real finding row from a live Sentinel scan). This dev environment's Sentinel scan has consistently reported "Clean, 0 findings" throughout the entire session (confirmed in every prior screenshot's right-panel Security section) — there is no real finding to click. Not chased further (fabricating a fake finding via direct React state injection was judged not worth the added test-double risk for a component this simple); relying on the 6-test suite plus clean `tsc`/`eslint`.
 - **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
 
+### 59. `TrustReceiptBrowser.tsx` re-skin (188 lines, 19 refs) — clean pass, no carve-out
+
+- **What changed:** the Agent/Status filter selects, Refresh button, status banner, and the receipts table (header, rows, empty state) — all tokenized onto `--success`/`--error`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** `src/test/TrustReceiptBrowser.test.jsx` — 1/1 passing. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Operator Dashboard → "Trust Receipts" section): confirmed the filter dropdowns, Refresh button, success-green status banner, and empty-state table row all render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
