@@ -683,6 +683,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): confirmed the "Online" pill's status dot now renders a visible green fill next to the "Dark" theme toggle, at the exact location visible in every prior screenshot this session. Zero console errors.
 - **Status:** CLOSED.
 
+### 89. `Sidebar.tsx` — a second, real previously-invisible bug fixed (delete-chat confirmation state)
+
+- **Where:** the "Recent Chats" list's delete button (`Sidebar.tsx:302-303`), the exact same undefined-Tailwind-class bug just found in `CommandRib.tsx` (#88) — `bg-danger`/`text-danger` are not defined anywhere in `tailwind.config.js`'s theme, so they compiled to nothing.
+- **Real, user-facing impact:** clicking the delete (trash) icon once on a chat is supposed to arm a "click again to confirm" state, visually signaled by turning the button red. Since `bg-danger`/`text-danger` don't exist, that confirmation state has rendered completely invisibly since it was written — a user clicking delete once would see no visual change at all, then a second click deletes the chat with no warning ever shown. Fixed both the armed state and the hover state to `bg-[var(--error-dim)]`/`text-[var(--error)]`.
+- **Scope note:** this fix was made directly in `Sidebar.tsx` (not part of a full file re-skin pass — the rest of `Sidebar.tsx` was already fully tokenized in an earlier session, confirmed by grep showing only these 2 lines using raw/undefined classes) rather than deferred, since it's the same undefined-class defect class as #88 and was found by proactively grepping for `bg-success|bg-danger|text-success|text-danger|border-success|border-danger` across all of `src/components/` immediately after finding it in `CommandRib.tsx`.
+- **Test coverage:** `tsc --noEmit` and `eslint` both clean on the touched file.
+- **Live-verified** (Playwright, real dev server): hovered the "New Chat Session" row, clicked its delete button once, confirmed the button now renders a clearly visible red-tinted background and red trash icon (the armed confirm-delete state). Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)

@@ -299,8 +299,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                     onClick={(e) => handleDeleteClick(chat.id, e)}
                     className={`p-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] focus-visible:opacity-100 ${
                       pendingDeleteId === chat.id
-                        ? 'opacity-100 bg-danger/20 text-danger'
-                        : 'opacity-0 group-hover:opacity-100 hover:bg-danger/20 hover:text-danger'
+                        ? 'opacity-100 bg-[var(--error-dim)] text-[var(--error)]'
+                        : 'opacity-0 group-hover:opacity-100 hover:bg-[var(--error-dim)] hover:text-[var(--error)]'
                     }`}
                     aria-label={pendingDeleteId === chat.id ? `Confirm delete chat: ${chat.title}` : `Delete chat: ${chat.title}`}
                     title={pendingDeleteId === chat.id ? 'Click again to confirm delete' : 'Delete chat'}
