@@ -254,6 +254,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, via sidebar → Session History): search input, status filter dropdown, and Export/Refresh buttons all correctly tokenized — zero console errors.
 - **Status:** CLOSED.
 
+### 38. `WorkflowBuilderView.tsx` re-skin (281 lines, 46 refs) — a 10th carve-out (per-node-type identity)
+
+- **What changed:** all structural chrome tokenized — workflow list sidebar, Create/Save/Run buttons, header, "Add Step" dropdown container, pipeline stage cards, connector arrows, and the node-detail panel, onto `--accent`/`--success`/`--error`/`--surface-*`/`--text-*`/`--border`.
+- **Carve-out kept, not tokenized:** `NODE_STYLE` — a 9-entry map (trigger/ocr/memory/analysis/condition/approval/action/notification/report) each with a distinct bg/border/text color plus an emoji badge, used both in the "Choose step type" picker and (via `node.type`) implicitly informing which pill a user picked. This is genuine per-item visual differentiation across 9 real, semantically distinct step kinds in a visual workflow builder — the same category of carve-out as `PipelineResultCard`'s `AGENT_COLORS` (#21) and `AgentPairingView`'s `ROLE_COLORS` (#34), just per-node-type rather than per-agent/per-role. The 9-color palette is internally consistent with itself but was not cross-checked against any other file's carve-out palette (same accepted limitation as prior carve-outs).
+- **Safety-net catch:** the unconditional `fix-broken-var-opacity.mjs` pass caught one instance of the standing double-alpha mistake — `bg-[var(--success)]/90` on the Run button written during the manual edit pass, corrected to `bg-[var(--success-dim)]` per Rule C. No other file in this pass needed a second look.
+- **Test coverage:** `src/test/components/WorkflowBuilderView.test.tsx` + `src/test/WorkflowBuilderView.test.jsx` (13 tests total) — both passed only with `--pool=threads`; the default `forks` pool hit this session's known, pre-existing vitest worker-startup timeout (documented machine-resource contention, not a regression from this change). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): navigated Sidebar → Work space → Automation → Builder tab, created a test workflow, opened the "Add Step" picker (confirmed all 9 `NODE_STYLE` pills render with distinct colors as intended), added two nodes (Trigger, OCR) and confirmed the pipeline stage cards, connector arrow, and node-detail panel all render correctly tokenized. Zero console errors across all three screenshots.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
