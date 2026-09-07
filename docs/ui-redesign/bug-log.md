@@ -709,6 +709,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** this is the same post-execution RESULTS-tab card family as several prior files this pass — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 92. `agents/AgentCard.tsx` re-skin (29 lines, 5 refs) — clean pass, no carve-out
+
+- **What changed:** the card's active/inactive border+background states (indigo active state, generic "selected" not per-agent identity → `--accent`) and the name/title text — tokenized onto `--accent`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified via an earlier screenshot from this same session, not re-captured:** this is the exact "AGENT DOCK" card grid (Jose/Alphonso/Miya/Hector/Maria/Marcus) already visually confirmed correct in `agents/AgentProfilePanel.tsx`'s (#71) screenshot, where Jose's card renders with the accent-tinted active-selection border.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)

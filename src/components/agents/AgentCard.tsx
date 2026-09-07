@@ -19,11 +19,11 @@ export function AgentCard({ agent, active, onClick }: Props): React.JSX.Element 
       type="button"
       onClick={() => onClick?.(agent.id)}
       className={`w-full rounded-xl border px-3 py-3 text-left transition ${
-        active ? 'border-indigo-400/40 bg-indigo-500/10' : 'border-white/10 bg-zinc-900/40 hover:bg-zinc-900/70'
+        active ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]' : 'border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface-2)]'
       }`}
     >
-      <div className="text-sm font-semibold text-white">{agent.name}</div>
-      <div className="text-[11px] text-zinc-400">{agent.title ?? agent.role}</div>
+      <div className="text-sm font-semibold text-[var(--text-1)]">{agent.name}</div>
+      <div className="text-[11px] text-[var(--text-3)]">{agent.title ?? agent.role}</div>
     </button>
   );
 }
