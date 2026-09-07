@@ -19,6 +19,12 @@ function rpcResponse(result: unknown, headers: Record<string, string> = {}) {
   };
 }
 
+// Wraps a tool's structured payload in the real MCP CallToolResult envelope
+// (content + structuredContent) — matches what tools/call actually returns.
+function toolResult(structuredContent: unknown) {
+  return { content: [{ type: 'text', text: JSON.stringify(structuredContent) }], structuredContent };
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   mockGetCalleMcpToken.mockReset();
@@ -36,7 +42,7 @@ describe('planCall / runCall / getCallRun', () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}, { 'mcp-session-id': 'sess-abc' })) // initialize
       .mockResolvedValueOnce(rpcResponse({})) // notifications/initialized
-      .mockResolvedValueOnce(rpcResponse({ ready_to_run: false, clarifying_questions: ['What phone number?'] })); // tools/call
+      .mockResolvedValueOnce(rpcResponse(toolResult({ ready_to_run: false, clarifying_questions: ['What phone number?'] }))); // tools/call
 
     await planCall('call Joe\'s Pizza');
 
@@ -53,7 +59,7 @@ describe('planCall / runCall / getCallRun', () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}))
       .mockResolvedValueOnce(rpcResponse({}))
-      .mockResolvedValueOnce(rpcResponse({ ready_to_run: false }));
+      .mockResolvedValueOnce(rpcResponse(toolResult({ ready_to_run: false })));
     await planCall('goal only');
     let body = JSON.parse(mockFetch.mock.calls[2][1].body);
     expect(body.params.arguments.conversation_history).toBeUndefined();
@@ -62,7 +68,7 @@ describe('planCall / runCall / getCallRun', () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}))
       .mockResolvedValueOnce(rpcResponse({}))
-      .mockResolvedValueOnce(rpcResponse({ ready_to_run: false }));
+      .mockResolvedValueOnce(rpcResponse(toolResult({ ready_to_run: false })));
     await planCall('goal', ['turn 1', 'turn 2']);
     body = JSON.parse(mockFetch.mock.calls[2][1].body);
     expect(body.params.arguments.conversation_history).toEqual(['turn 1', 'turn 2']);
@@ -72,7 +78,7 @@ describe('planCall / runCall / getCallRun', () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}))
       .mockResolvedValueOnce(rpcResponse({}))
-      .mockResolvedValueOnce(rpcResponse({ run_id: 'r1', status: 'QUEUED' }));
+      .mockResolvedValueOnce(rpcResponse(toolResult({ run_id: 'r1', status: 'QUEUED' })));
     const result = await runCall('plan1', 'token1');
     expect(result.run_id).toBe('r1');
     const body = JSON.parse(mockFetch.mock.calls[2][1].body);
@@ -83,7 +89,7 @@ describe('planCall / runCall / getCallRun', () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}))
       .mockResolvedValueOnce(rpcResponse({}))
-      .mockResolvedValueOnce(rpcResponse({ status: 'COMPLETED' }));
+      .mockResolvedValueOnce(rpcResponse(toolResult({ status: 'COMPLETED' })));
     const result = await getCallRun('r1');
     expect(result.status).toBe('COMPLETED');
     const body = JSON.parse(mockFetch.mock.calls[2][1].body);

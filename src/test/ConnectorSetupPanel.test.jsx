@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
 // ── Tauri mock ────────────────────────────────────────────────────────────────
 vi.mock('@tauri-apps/api/core', () => ({
@@ -168,5 +168,27 @@ describe('ConnectorSetupPanel', () => {
     render(<ConnectorSetupPanel />);
     expect(screen.getByText(/MCP Connection/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /connect via browser login/i })).toBeTruthy();
+  });
+
+  it('re-enables the Connect button after the 2-minute login-poll timeout instead of getting stuck on "Waiting for browser login..."', async () => {
+    const { startBrokerLogin, pollBrokerLogin } = await import('../services/calleMcpAuthService');
+    startBrokerLogin.mockResolvedValue({ sessionId: 's1', sessionSecret: 'secret', loginUrl: 'https://x', status: 'PENDING', pollAfterMs: 2000 });
+    pollBrokerLogin.mockResolvedValue('pending');
+
+    vi.useFakeTimers();
+    render(<ConnectorSetupPanel />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /connect via browser login/i }));
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('button', { name: /waiting for browser login/i })).toBeDisabled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+    });
+
+    expect(screen.getByRole('button', { name: /connect via browser login/i })).not.toBeDisabled();
+    vi.useRealTimers();
   });
 });

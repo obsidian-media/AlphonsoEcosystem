@@ -64,7 +64,10 @@ export async function pollBrokerLogin(pending: CallePendingLogin): Promise<'pend
   if (normalized === 'AUTHORIZED') {
     const exchanged = await exchangeBrokerSession(pending);
     const doc: CalleMcpTokenDocument = { accessToken: exchanged.access_token, expiresAt: exchanged.expires_at ?? null };
-    await secureSet(TOKEN_STORAGE_KEY, JSON.stringify(doc));
+    const stored = await secureSet(TOKEN_STORAGE_KEY, JSON.stringify(doc));
+    if (!stored) {
+      throw new Error('CALL-E login succeeded but the token could not be saved to secure storage.');
+    }
     return 'authorized';
   }
   if (normalized === 'FAILED' || normalized === 'EXPIRED' || normalized === 'EXCHANGED') return 'failed';

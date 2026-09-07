@@ -61,17 +61,24 @@ async function calleRequest(
   apiKey: string,
   body?: Record<string, unknown>,
   approved = false,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  // Only the POST that actually places a call needs the external_call
+  // approval gate. Status reads (getCall, polling, boot recovery) must not be
+  // gated -- otherwise every read after call creation is rejected whenever
+  // approval is required, since `approved` is always false for a read.
+  requiresApprovalGate = false
 ): Promise<any> {
-  const gate = evaluatePolicyGate({
-    connectorId: 'calle',
-    actionType: 'external_call',
-    commandPreview: JSON.stringify({ method, path, body }),
-    approved,
-    auth: { enabled: false, isAuthorized: false }
-  });
-  if (!gate.ok) {
-    throw new Error(gate.reason || 'Policy gate blocked');
+  if (requiresApprovalGate) {
+    const gate = evaluatePolicyGate({
+      connectorId: 'calle',
+      actionType: 'external_call',
+      commandPreview: JSON.stringify({ method, path, body }),
+      approved,
+      auth: { enabled: false, isAuthorized: false }
+    });
+    if (!gate.ok) {
+      throw new Error(gate.reason || 'Policy gate blocked');
+    }
   }
 
   const headers: Record<string, string> = {
@@ -103,17 +110,67 @@ async function calleRequest(
 // Idempotency-Key header specifically to make retries safe. Without it, a
 // double-click on "Approve & Place Call", or any error-handling retry, risks
 // placing a duplicate real phone call to the same business.
+// CALL-E's REST API is snake_case; our internal shape is camelCase. Map
+// explicitly at this boundary rather than trusting the raw response to line
+// up with CalleCallTask's field names.
+function mapCreateCallRequestBody(request: CalleCreateCallRequest): Record<string, unknown> {
+  const body: Record<string, unknown> = { task: request.task };
+  if (request.resultSchema) body.result_schema = request.resultSchema;
+  if (request.metadata) body.metadata = request.metadata;
+  return body;
+}
+
+function mapCallAttempt(raw: any): CalleCallAttempt {
+  return {
+    phone: raw?.phone ?? '',
+    status: raw?.status ?? '',
+    transcriptTurns: Array.isArray(raw?.transcript_turns)
+      ? raw.transcript_turns.map((turn: any) => ({ speaker: turn?.speaker ?? 'unknown', text: turn?.text ?? '' }))
+      : [],
+    startedAt: raw?.started_at ?? null,
+    completedAt: raw?.completed_at ?? null
+  };
+}
+
+function mapCallTaskResponse(raw: any): CalleCallTask {
+  return {
+    id: raw?.id,
+    object: 'call_task',
+    status: raw?.status,
+    task: raw?.task,
+    recipients: Array.isArray(raw?.recipients)
+      ? raw.recipients.map((recipient: any) => ({
+          id: recipient?.id,
+          phones: recipient?.phones ?? [],
+          status: recipient?.status,
+          structuredResult: recipient?.structured_result ?? null,
+          summary: recipient?.summary ?? null,
+          attempts: Array.isArray(recipient?.attempts) ? recipient.attempts.map(mapCallAttempt) : []
+        }))
+      : [],
+    structuredResult: raw?.structured_result ?? null,
+    summary: raw?.summary ?? null,
+    taskCompleted: raw?.task_completed ?? null,
+    failureCode: raw?.failure_code ?? null,
+    failureMessage: raw?.failure_message ?? null,
+    createdAt: raw?.created_at,
+    completedAt: raw?.completed_at ?? null
+  };
+}
+
 export async function createCall(
   apiKey: string,
   request: CalleCreateCallRequest,
   idempotencyKey: string,
   options: { approved?: boolean } = {}
 ): Promise<CalleCallTask> {
-  return calleRequest('POST', '/v1/calls', apiKey, request as unknown as Record<string, unknown>, options.approved ?? false, idempotencyKey);
+  const raw = await calleRequest('POST', '/v1/calls', apiKey, mapCreateCallRequestBody(request), options.approved ?? false, idempotencyKey, true);
+  return mapCallTaskResponse(raw);
 }
 
 export async function getCall(apiKey: string, callId: string): Promise<CalleCallTask> {
-  return calleRequest('GET', `/v1/calls/${callId}`, apiKey);
+  const raw = await calleRequest('GET', `/v1/calls/${callId}`, apiKey);
+  return mapCallTaskResponse(raw);
 }
 
 export async function pollCallUntilTerminal(

@@ -105,6 +105,33 @@ describe('runOutreachCall', () => {
     expect(result.policyBlockKind).toBe('needs_approval_click');
   });
 
+  it('sets status failed_to_start (not pending_approval) when createCall throws a genuine API error', async () => {
+    const draft = createOutreachDraft({ businessName: 'Joe\'s Pizza', phone: '+15550123456', taskType: 'outreach', task: '' });
+    mockCreateCall.mockRejectedValue(new Error('CALL-E API error (400): Invalid phone number'));
+
+    const result = await runOutreachCall(draft.id, { approved: true });
+
+    expect(result.status).toBe('failed_to_start');
+    expect(result.policyBlockKind).toBeNull();
+    expect(result.error).toContain('Invalid phone number');
+  });
+
+  it('persists in_progress status updates as pollCallUntilTerminal reports onProgress, before the terminal result arrives', async () => {
+    const draft = createOutreachDraft({ businessName: 'Joe\'s Pizza', phone: '+15550123456', taskType: 'outreach', task: '' });
+    mockCreateCall.mockResolvedValue({ id: 'call_1', status: 'queued' });
+    let capturedOnProgress: ((call: any) => void) | undefined;
+    mockPollCallUntilTerminal.mockImplementation((_apiKey: string, _callId: string, opts: { onProgress?: (call: any) => void }) => {
+      capturedOnProgress = opts?.onProgress;
+      return new Promise(() => {});
+    });
+
+    await runOutreachCall(draft.id, { approved: true });
+    capturedOnProgress?.({ status: 'in_progress' });
+
+    const updated = listOutreachCalls().find((r) => r.id === draft.id);
+    expect(updated?.status).toBe('in_progress');
+  });
+
   it('calls appendAgentActivity attributed to marcus', async () => {
     const draft = createOutreachDraft({ businessName: 'Joe\'s Pizza', phone: '+15550123456', taskType: 'outreach', task: '' });
     mockCreateCall.mockResolvedValue({ id: 'call_1', status: 'queued' });
@@ -180,7 +207,7 @@ describe('recoverInterruptedOutreachCalls', () => {
     expect(mockGetCall).not.toHaveBeenCalled();
   });
 
-  it('leaves a record still non-terminal after the check as in_progress, not re-polled in a loop', async () => {
+  it('leaves a record still non-terminal after the check as in_progress, checked exactly once via getCall', async () => {
     const draft = createOutreachDraft({ businessName: 'Joe\'s Pizza', phone: '+15550123456', taskType: 'outreach', task: '' });
     const rows = JSON.parse(localStorage.getItem('alphonso_calle_outreach_v1') || '[]');
     rows[0].status = 'in_progress';
@@ -188,11 +215,33 @@ describe('recoverInterruptedOutreachCalls', () => {
     localStorage.setItem('alphonso_calle_outreach_v1', JSON.stringify(rows));
 
     mockGetCall.mockResolvedValue({ id: 'call_1', status: 'in_progress' });
+    mockPollCallUntilTerminal.mockReturnValue(new Promise(() => {}));
 
     await recoverInterruptedOutreachCalls();
 
     expect(mockGetCall).toHaveBeenCalledTimes(1);
     const updated = listOutreachCalls().find((r) => r.id === draft.id);
     expect(updated?.status).toBe('in_progress');
+  });
+
+  it('resumes bounded polling for a record still non-terminal at boot, so it eventually gets its terminal result without another restart', async () => {
+    const draft = createOutreachDraft({ businessName: 'Joe\'s Pizza', phone: '+15550123456', taskType: 'outreach', task: '' });
+    const rows = JSON.parse(localStorage.getItem('alphonso_calle_outreach_v1') || '[]');
+    rows[0].status = 'in_progress';
+    rows[0].calleCallId = 'call_1';
+    localStorage.setItem('alphonso_calle_outreach_v1', JSON.stringify(rows));
+
+    mockGetCall.mockResolvedValue({ id: 'call_1', status: 'in_progress' });
+    let resolvePoll: (value: unknown) => void = () => {};
+    mockPollCallUntilTerminal.mockReturnValue(new Promise((resolve) => { resolvePoll = resolve; }));
+
+    await recoverInterruptedOutreachCalls();
+    expect(mockPollCallUntilTerminal).toHaveBeenCalledWith('test-api-key', 'call_1', expect.objectContaining({ onProgress: expect.any(Function) }));
+
+    resolvePoll({ status: 'completed', structuredResult: { interested_in_website: 'yes' }, summary: 'done', recipients: [] });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const updated = listOutreachCalls().find((r) => r.id === draft.id);
+    expect(updated?.status).toBe('completed');
   });
 });

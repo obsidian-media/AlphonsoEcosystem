@@ -3,7 +3,7 @@ import { appendAgentActivity } from './agentActivityService';
 import { planCall, runCall, getCallRun, type PlanCallResult } from './connectors/calleMcpConnector';
 import { evaluatePolicyGate } from './policyEnforcementService';
 
-export type McpOutreachStage = 'clarifying' | 'ready_to_confirm' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+export type McpOutreachStage = 'clarifying' | 'ready_to_confirm' | 'submitting' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
 export interface McpOutreachRecord {
   chatId: string;
@@ -44,18 +44,45 @@ async function readIndex(): Promise<string[]> {
 }
 
 function updateIndex(mutate: (chatIds: string[]) => string[]): Promise<void> {
-  indexWriteQueue = indexWriteQueue.then(async () => {
+  // Chain off a *recovered* view of the previous queue -- if an earlier write
+  // rejected and left indexWriteQueue permanently rejected, `.then()` on it
+  // would skip every future write's callback (INDEX_KEY would silently stop
+  // receiving updates). Recover the queue for chaining purposes, but still
+  // return the real `operation` promise so this call's own failure reaches
+  // its caller.
+  const operation = indexWriteQueue.catch(() => {}).then(async () => {
     const current = await readIndex();
     const next = mutate(current);
     await invoke('kv_set', { key: INDEX_KEY, value: JSON.stringify(next) });
   });
-  return indexWriteQueue;
+  indexWriteQueue = operation.catch(() => {});
+  return operation;
+}
+
+async function readIndexWithStatus(): Promise<{ chatIds: string[]; ok: boolean }> {
+  let raw: string | null;
+  try {
+    raw = await invoke<string | null>('kv_get', { key: INDEX_KEY });
+  } catch {
+    return { chatIds: [], ok: false };
+  }
+  if (!raw) return { chatIds: [], ok: true };
+  try {
+    const parsed = JSON.parse(raw);
+    return { chatIds: Array.isArray(parsed) ? parsed : [], ok: true };
+  } catch {
+    return { chatIds: [], ok: true };
+  }
 }
 
 async function hydrateRecords(): Promise<void> {
   if (hydrated) return;
-  hydrated = true;
-  const chatIds = await readIndex();
+  // Only mark hydration complete once the index read actually succeeded --
+  // otherwise a transient kv_get failure would permanently skip hydration
+  // for the rest of this session, silently dropping persisted in-progress
+  // records from `records` and from recovery.
+  const { chatIds, ok } = await readIndexWithStatus();
+  if (ok) hydrated = true;
   for (const chatId of chatIds) {
     const raw = await invoke<string | null>('kv_get', { key: recordKey(chatId) }).catch(() => null);
     if (!raw) continue;
@@ -101,7 +128,7 @@ export function isAwaitingMcpOutreachInput(record: McpOutreachRecord | null): bo
 function isPhoneAlreadyInFlight(phoneNumber: string | undefined): boolean {
   if (!phoneNumber) return false;
   for (const record of records.values()) {
-    if (record.phoneNumber === phoneNumber && (record.stage === 'ready_to_confirm' || record.stage === 'in_progress')) {
+    if (record.phoneNumber === phoneNumber && (record.stage === 'ready_to_confirm' || record.stage === 'submitting' || record.stage === 'in_progress')) {
       return true;
     }
   }
@@ -178,6 +205,9 @@ export async function confirmMcpOutreachCall(chatId: string): Promise<string> {
   try {
     await hydrateRecords();
     const existing = records.get(chatId);
+    if (existing?.stage === 'submitting') {
+      return 'This call plan was already submitted to CALL-E and its outcome could not be confirmed. Resubmitting risks placing a duplicate call -- check CALL-E directly before retrying.';
+    }
     if (!existing || existing.stage !== 'ready_to_confirm') {
       return 'No pending call plan to confirm.';
     }
@@ -186,6 +216,13 @@ export async function confirmMcpOutreachCall(chatId: string): Promise<string> {
       return `Blocked: ${gate.reason}`;
     }
     appendAgentActivity({ agent: 'marcus', action: 'calle_mcp_run_call', detail: existing.summary ?? '' });
+    // Persist a durable, unreconciled "submitting" marker BEFORE calling
+    // runCall. run_call has no idempotency mechanism -- if the process
+    // crashes or a later persistRecord fails right after a successful
+    // runCall, a stale 'ready_to_confirm' record would let a later approval
+    // resubmit the same planId and place a duplicate real phone call.
+    // 'submitting' blocks any resubmission until this is manually reconciled.
+    await persistRecord({ ...existing, stage: 'submitting' });
     const { run_id } = await runCall(existing.planId!, existing.confirmToken!);
     await persistRecord({ ...existing, stage: 'in_progress', runId: run_id });
     pollMcpCallUntilTerminal(chatId, run_id).catch((error) => {
@@ -200,6 +237,16 @@ export async function confirmMcpOutreachCall(chatId: string): Promise<string> {
 }
 
 export async function cancelMcpOutreachCall(chatId: string): Promise<string> {
+  await hydrateRecords();
+  const existing = records.get(chatId);
+  // CALL-E's MCP tools expose no cancel operation -- there is no remote call
+  // to stop. Deleting a 'submitting'/'in_progress' record here would report
+  // "dropped" while the real call keeps running, silently losing recovery,
+  // status delivery, and audit tracking for it. Only pre-submission plans
+  // (nothing placed yet) are safe to delete.
+  if (existing && (existing.stage === 'submitting' || existing.stage === 'in_progress')) {
+    return 'This call is already running at CALL-E and cannot be cancelled remotely from here. I will still notify you when it finishes.';
+  }
   await deleteRecord(chatId);
   return 'Call plan dropped.';
 }

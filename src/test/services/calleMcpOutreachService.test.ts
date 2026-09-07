@@ -164,6 +164,20 @@ describe('confirmMcpOutreachCall', () => {
     expect((await getMcpOutreachRecord('chat-1'))?.stage).toBe('in_progress');
   });
 
+  it('persists a durable "submitting" marker before runCall, and blocks any retry after runCall fails -- run_call has no idempotency key, so retrying risks a duplicate call', async () => {
+    await getToReadyToConfirm('chat-1');
+    mockRunCall.mockRejectedValueOnce(new Error('CALL-E API error (500)'));
+
+    const firstReply = await confirmMcpOutreachCall('chat-1');
+    expect(firstReply).toContain('CALL-E error');
+    expect((await getMcpOutreachRecord('chat-1'))?.stage).toBe('submitting');
+
+    mockRunCall.mockClear();
+    const retryReply = await confirmMcpOutreachCall('chat-1');
+    expect(retryReply).toContain('already submitted');
+    expect(mockRunCall).not.toHaveBeenCalled();
+  });
+
   it('two concurrent confirms for the same chat result in exactly one runCall', async () => {
     await getToReadyToConfirm('chat-1');
     mockRunCall.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ run_id: 'run1', status: 'QUEUED' }), 20)));
@@ -175,11 +189,23 @@ describe('confirmMcpOutreachCall', () => {
 });
 
 describe('cancelMcpOutreachCall', () => {
-  it('deletes the record regardless of stage', async () => {
+  it('deletes a pre-submission (ready_to_confirm) record', async () => {
     mockPlanCall.mockResolvedValueOnce({ ready_to_run: true, plan_id: 'p1', confirm_token: 't1', summary: 's' });
     await handleMcpOutreachMessage('chat-1', 'call Joe');
     await cancelMcpOutreachCall('chat-1');
     expect(await getMcpOutreachRecord('chat-1')).toBeNull();
+  });
+
+  it('does NOT delete an in_progress record -- CALL-E has no remote cancel, so dropping it here would silently lose tracking of a call still running', async () => {
+    mockPlanCall.mockResolvedValueOnce({ ready_to_run: true, plan_id: 'p1', confirm_token: 't1', summary: 's' });
+    await handleMcpOutreachMessage('chat-1', 'call Joe');
+    mockRunCall.mockResolvedValueOnce({ run_id: 'run1', status: 'QUEUED' });
+    mockGetCallRun.mockResolvedValue({ status: 'QUEUED' });
+    await confirmMcpOutreachCall('chat-1');
+
+    const reply = await cancelMcpOutreachCall('chat-1');
+    expect(reply).toContain('cannot be cancelled remotely');
+    expect((await getMcpOutreachRecord('chat-1'))?.stage).toBe('in_progress');
   });
 });
 

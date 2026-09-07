@@ -114,7 +114,12 @@ export function dismissOutreachCall(recordId: string): void {
   updateRecord(recordId, { status: 'dismissed' });
 }
 
-function classifyPolicyBlockReason(message: string): PolicyBlockKind {
+// Returns null when `message` isn't a recognized policyEnforcementService
+// block reason (e.g. a genuine "CALL-E API error (400): ..." failure) --
+// callers must not fall back to 'needs_approval_click' for those, or a real
+// API failure gets silently relabeled as an approval prompt the user can
+// retry forever instead of a terminal failed_to_start.
+function classifyPolicyBlockReason(message: string): PolicyBlockKind | null {
   const lower = message.toLowerCase();
   // NOTE: don't match a bare 'pro' substring here -- 'approval' itself
   // contains 'pro' ("ap-PRO-val"), which previously misclassified every
@@ -123,7 +128,8 @@ function classifyPolicyBlockReason(message: string): PolicyBlockKind {
   // actually contains, instead.
   if (lower.includes('zero-cost')) return 'zero_cost_mode';
   if (lower.includes('license') || lower.includes('upgrade')) return 'license_tier';
-  return 'needs_approval_click';
+  if (lower.includes('approval') || lower.includes('allowlist') || lower.includes('policy gate blocked')) return 'needs_approval_click';
+  return null;
 }
 
 export async function runOutreachCall(recordId: string, options: { approved?: boolean } = {}): Promise<OutreachCallRecord> {
@@ -143,11 +149,14 @@ export async function runOutreachCall(recordId: string, options: { approved?: bo
     created = await createCall(apiKey, request, draft.idempotencyKey, { approved: options.approved });
   } catch (error: unknown) {
     const message = String((error as Error)?.message || error);
-    return updateRecord(recordId, {
-      status: 'pending_approval',
-      policyBlockKind: classifyPolicyBlockReason(message),
-      error: message
-    })!;
+    const policyBlockKind = classifyPolicyBlockReason(message);
+    if (policyBlockKind) {
+      return updateRecord(recordId, { status: 'pending_approval', policyBlockKind, error: message })!;
+    }
+    // Not a recognized policy denial -- a real CALL-E API failure (bad phone
+    // number, rate limit, etc.). Report it as a terminal failure instead of
+    // offering another "Approve" action that will fail identically forever.
+    return updateRecord(recordId, { status: 'failed_to_start', policyBlockKind: null, error: message })!;
   }
 
   const queuedRecord = updateRecord(recordId, {
@@ -157,9 +166,27 @@ export async function runOutreachCall(recordId: string, options: { approved?: bo
     error: null
   })!;
 
-  // Fire-and-forget: NOT awaited by this function. Awaiting here would hold
-  // open whatever caller invoked runOutreachCall for up to ~6 minutes.
-  pollCallUntilTerminal(apiKey, created.id)
+  startBackgroundPoll(apiKey, recordId, created.id);
+
+  return queuedRecord;
+}
+
+// Fire-and-forget: NOT awaited by callers. Awaiting would hold open whatever
+// invoked them for up to ~6 minutes. Shared by runOutreachCall (a call just
+// placed) and recoverInterruptedOutreachCalls (a call observed still
+// non-terminal at boot) -- listOutreachCalls() only reads the local
+// persisted record, it never itself polls CALL-E, so without this a
+// non-terminal call recovered at boot would never receive its terminal
+// result until another app restart.
+function startBackgroundPoll(apiKey: string, recordId: string, calleCallId: string): void {
+  pollCallUntilTerminal(apiKey, calleCallId, {
+    onProgress: (call) => {
+      // Persists in_progress/queued status updates as they're observed, so
+      // the panel can show a live state instead of appearing stuck at
+      // whatever status was last written when the call was created.
+      updateRecord(recordId, { status: call.status });
+    }
+  })
     .then((call) => {
       const attempts = call.recipients?.[0]?.attempts ?? [];
       const transcript = attempts.flatMap((a) => a.transcriptTurns ?? []);
@@ -177,8 +204,6 @@ export async function runOutreachCall(recordId: string, options: { approved?: bo
       // recovery can still find it later.
       updateRecord(recordId, { error: String((error as Error)?.message || error) });
     });
-
-  return queuedRecord;
 }
 
 export async function recoverInterruptedOutreachCalls(): Promise<void> {
@@ -199,9 +224,11 @@ export async function recoverInterruptedOutreachCalls(): Promise<void> {
           transcript: transcript.length ? transcript : null,
           completedAtMs: Date.now()
         });
+      } else {
+        // Still non-terminal: resume bounded polling now rather than leaving
+        // the record to wait on a panel that never actually re-checks CALL-E.
+        startBackgroundPoll(apiKey, record.id, record.calleCallId!);
       }
-      // else: still non-terminal, leave as-is -- the user reopening the
-      // panel resumes watching it via listOutreachCalls() polling.
     } catch {
       // non-critical: leave the record as-is, try again on the next boot
     }

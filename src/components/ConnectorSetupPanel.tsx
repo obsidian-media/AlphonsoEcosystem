@@ -292,7 +292,15 @@ function CalleMcpConnectionBlock(): React.JSX.Element {
         setPending(null);
       }
     }, session.pollAfterMs || 2000);
-    setTimeout(() => clearInterval(interval), 2 * 60 * 1000);
+    setTimeout(() => {
+      clearInterval(interval);
+      // Without this, a login that never completes within the 2-minute
+      // window left `checking` true and `pending` set forever -- the
+      // Connect button stayed disabled with "Waiting for browser login..."
+      // with no way to retry short of reloading the app.
+      setChecking(false);
+      setPending(null);
+    }, 2 * 60 * 1000);
   };
 
   const handleDisconnect = async () => {

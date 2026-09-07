@@ -38,6 +38,22 @@ async function openMcpSession(accessToken: string): Promise<McpSession> {
   return { headers: rpcHeaders };
 }
 
+function unwrapToolResult(result: any): any {
+  if (!result) return {};
+  if (result.structuredContent) return result.structuredContent;
+  const textContent = Array.isArray(result.content)
+    ? result.content.find((entry: any) => entry?.type === 'text' && typeof entry.text === 'string')
+    : null;
+  if (textContent) {
+    try {
+      return JSON.parse(textContent.text);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 async function callTool(toolName: string, toolArguments: Record<string, unknown>): Promise<any> {
   const accessToken = await getCalleMcpToken();
   if (!accessToken) throw new Error('CALL-E MCP not connected. Connect via Settings first.');
@@ -46,7 +62,7 @@ async function callTool(toolName: string, toolArguments: Record<string, unknown>
     jsonrpc: '2.0', id: `alphonso-${toolName}`, method: 'tools/call',
     params: { name: toolName, arguments: toolArguments }
   });
-  return response.body?.result ?? {};
+  return unwrapToolResult(response.body?.result);
 }
 
 export interface PlanCallResult {

@@ -1315,8 +1315,23 @@ dropped.
     from scratch, it was checked against real source (`resourceCostService.ts`,
     `pluginSandboxService.ts`, `codingAgentService.ts`) before being written.
 
-- [ ] **J3 — CALL-E hackathon integration (idea only, not scoped, not started)**
+- [~] **J3 — CALL-E hackathon integration (in progress — REST + MCP connectors built, real-account verification still blocked)**
   - **Owner:** unassigned
+  - **Status update (2026-09-06, `feat/calle-outreach-connector`, PR #230):** built in two phases:
+    (1) a REST outreach connector (`calleConnector.ts`/`calleOutreachService.ts`/
+    `CalleOutreachPanel.tsx`) and (2) a conversational MCP outreach flow
+    (`calleMcpAuthService.ts`/`calleMcpConnector.ts`/`calleMcpOutreachService.ts`,
+    wired into `ChatView.tsx`). Both registered as a policy-gated, high-risk
+    connector per the fit assessment below. Still blocked: the owner cannot
+    complete CALL-E account authorization (no visible signup path, login
+    rejects credentials — ticket filed in CALL-E's Discord), so `plan_call`'s
+    exact field names are unverified against a live response, the REST
+    connector has no live smoke test, and the "does CALL-E bill for
+    `plan_call` itself" go/no-go question (below) is still unresolved. See
+    `docs/superpowers/specs/2026-09-06-calle-outreach-connector-design.md`
+    and `docs/superpowers/specs/2026-09-06-calle-mcp-conversational-outreach-design.md`
+    for full design + self-critique history. The go/no-go risks and API
+    questions below remain open work regardless of this progress.
   - The owner is considering integrating the CALL-E voice-calling platform
     (`heycall-e.com` — an AI phone-call agent service offering SDK/API/MCP/
     Skills integration) into AlphonsoEcosystem for the "CALL-E: Your Code

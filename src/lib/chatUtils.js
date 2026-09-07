@@ -73,5 +73,11 @@ export function shouldRouteThroughCalleMcp(text) {
   const lower = String(text || '').toLowerCase().trim();
   if (!lower) return false;
   if (lower.startsWith('/jose')) return false;
-  return ['call ', 'phone ', 'ring ', 'dial '].some((term) => lower.startsWith(term) || lower.includes(` ${term}`));
+  // Requires an explicit CALL-E command: the message must OPEN with the
+  // imperative verb ("call Joe's Pizza..."), not merely contain the word
+  // anywhere. The prior `includes(' call ')`-style check forwarded ordinary
+  // chat like "How do I call a REST API?" straight to CALL-E's planCall
+  // before any confirmation UI appeared (CWE-201: sensitive data exposure —
+  // arbitrary chat text sent to a third-party voice-calling service).
+  return /^(call|phone|ring|dial)\s+\S/.test(lower);
 }

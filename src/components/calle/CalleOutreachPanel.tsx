@@ -48,7 +48,8 @@ export function CalleOutreachPanel(): React.JSX.Element {
   const hasNonTerminalForPhone = records.some(
     (r) => r.phone === phone && ['pending_approval', 'queued', 'in_progress'].includes(r.status)
   );
-  const canSubmit = configured && phoneValid && businessName.trim().length > 0 && !hasNonTerminalForPhone;
+  const taskValid = taskType !== 'custom' || customTask.trim().length > 0;
+  const canSubmit = configured && phoneValid && businessName.trim().length > 0 && taskValid && !hasNonTerminalForPhone;
 
   const handleSubmit = () => {
     createOutreachDraft({ businessName: businessName.trim(), phone, taskType, task: taskType === 'custom' ? customTask : '' });
@@ -111,6 +112,16 @@ export function CalleOutreachPanel(): React.JSX.Element {
                     <Button onClick={() => handleDismiss(record.id)}>Dismiss</Button>
                   )}
                   {record.summary && <p className="text-sm">{record.summary}</p>}
+                  {record.structuredResult && (
+                    <pre className="text-xs whitespace-pre-wrap break-words">{JSON.stringify(record.structuredResult, null, 2)}</pre>
+                  )}
+                  {record.transcript && record.transcript.length > 0 && (
+                    <div className="text-xs text-[--text-3] space-y-1">
+                      {record.transcript.map((turn, index) => (
+                        <div key={index}><strong>{turn.speaker}:</strong> {turn.text}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

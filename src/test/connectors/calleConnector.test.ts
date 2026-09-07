@@ -107,6 +107,26 @@ describe('getCall', () => {
     const headers = mockFetch.mock.calls[0][1].headers;
     expect(headers['Idempotency-Key']).toBeUndefined();
   });
+
+  it('reaches fetch without approval even when Approval Mode blocks unapproved actions (status reads are not gated)', async () => {
+    (evaluatePolicyGate as any).mockReturnValue({ ok: false, blocked: true, reason: 'Approval Mode requires explicit approval for this action.' });
+    mockFetch.mockResolvedValue(mockJsonResponse({ id: 'call_1', status: 'completed' }));
+
+    await getCall('test-api-key', 'call_1');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.heycall-e.com/v1/calls/call_1',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('still blocks an unapproved createCall POST under the same Approval Mode gate', async () => {
+    (evaluatePolicyGate as any).mockReturnValue({ ok: false, blocked: true, reason: 'Approval Mode requires explicit approval for this action.' });
+
+    await expect(createCall('test-api-key', { task: 'task A' }, 'idem-key', { approved: false }))
+      .rejects.toThrow('Approval Mode requires explicit approval for this action.');
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
 });
 
 describe('pollCallUntilTerminal', () => {
@@ -161,6 +181,18 @@ describe('pollCallUntilTerminal', () => {
     const assertion = expect(promise).rejects.toThrow(/did not reach a terminal state/);
     await vi.runAllTimersAsync();
     await assertion;
+  });
+
+  it('keeps polling via getCall without approval even when Approval Mode blocks unapproved actions', async () => {
+    (evaluatePolicyGate as any).mockReturnValue({ ok: false, blocked: true, reason: 'Approval Mode requires explicit approval for this action.' });
+    mockFetch.mockResolvedValue(mockJsonResponse({ id: 'call_1', status: 'completed' }));
+
+    const promise = pollCallUntilTerminal('test-api-key', 'call_1');
+    await vi.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.status).toBe('completed');
+    expect(mockFetch).toHaveBeenCalled();
   });
 });
 

@@ -83,6 +83,33 @@ describe('CalleOutreachPanel', () => {
     mockListOutreachCalls.mockReturnValue([{ id: 'r1', businessName: 'Joe\'s Pizza', phone: '+15550123456', task: '', status: 'completed', structuredResult: { interested_in_website: 'yes' }, summary: 'They are interested.' }]);
     render(<CalleOutreachPanel />);
     expect(screen.getByText('They are interested.')).toBeTruthy();
+    expect(screen.getByText(/interested_in_website/)).toBeTruthy();
+  });
+
+  it('renders the structured result even when summary is null, so a completed call\'s outcome is never hidden entirely', () => {
+    mockListOutreachCalls.mockReturnValue([{ id: 'r1', businessName: 'Joe\'s Pizza', phone: '+15550123456', task: '', status: 'completed', structuredResult: { interested_in_website: 'yes' }, summary: null }]);
+    render(<CalleOutreachPanel />);
+    expect(screen.getByText(/interested_in_website/)).toBeTruthy();
+  });
+
+  it('renders the transcript when present', () => {
+    mockListOutreachCalls.mockReturnValue([{
+      id: 'r1', businessName: 'Joe\'s Pizza', phone: '+15550123456', task: '', status: 'completed',
+      transcript: [{ speaker: 'bot', text: 'Hello, is this Joe\'s Pizza?' }]
+    }]);
+    render(<CalleOutreachPanel />);
+    expect(screen.getByText(/Hello, is this Joe's Pizza\?/)).toBeTruthy();
+  });
+
+  it('requires a non-empty custom task before Submit is enabled for a Custom call', () => {
+    render(<CalleOutreachPanel />);
+    fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: "Joe's Pizza" } });
+    fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: '+15550123456' } });
+    fireEvent.click(screen.getByRole('button', { name: /^custom$/i }));
+    expect(screen.getByRole('button', { name: /submit/i })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/custom task/i), { target: { value: 'Ask about their hours' } });
+    expect(screen.getByRole('button', { name: /submit/i })).not.toBeDisabled();
   });
 
   it('renders past records in a history list', () => {

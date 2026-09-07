@@ -106,6 +106,12 @@ describe('chatUtils', () => {
       expect(shouldRouteThroughCalleMcp('')).toBe(false);
     });
 
+    it('does not forward ordinary chat mentioning "call" as a verb elsewhere in the sentence (CWE-201 regression)', () => {
+      expect(shouldRouteThroughCalleMcp('How do I call a REST API?')).toBe(false);
+      expect(shouldRouteThroughCalleMcp('Can you call the office for me')).toBe(false);
+      expect(shouldRouteThroughCalleMcp('I need to phone my sister later')).toBe(false);
+    });
+
     it('never matches an explicit /jose command even if it mentions "call"', () => {
       expect(shouldRouteThroughCalleMcp('/jose call the research pipeline')).toBe(false);
     });

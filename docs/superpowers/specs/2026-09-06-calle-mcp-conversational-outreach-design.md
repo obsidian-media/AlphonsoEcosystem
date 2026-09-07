@@ -377,6 +377,17 @@ async function readIndex(): Promise<string[]> {
   }
 }
 
+// CORRECTION (post-PR-#230-review, 2026-09-06): the two functions below, as
+// originally specified here, had two real bugs found by code review after
+// implementation: (1) updateIndex chained directly off indexWriteQueue with
+// no recovery, so one failed kv_set left it permanently rejected and every
+// later call's callback silently never ran; (2) hydrateRecords set
+// hydrated = true unconditionally, so a failed kv_get permanently skipped
+// hydration for the session instead of retrying. Both are fixed in the real
+// implementation (src/services/calleMcpOutreachService.ts) -- see that
+// file's updateIndex/readIndexWithStatus/hydrateRecords for the corrected
+// version. The sample below is left as originally written for historical
+// record; do not copy it verbatim.
 function updateIndex(mutate: (chatIds: string[]) => string[]): Promise<void> {
   indexWriteQueue = indexWriteQueue.then(async () => {
     const current = await readIndex();

@@ -10,6 +10,7 @@ vi.mock('../../services/secureStorageService', () => ({
   secureDelete: vi.fn((key: string) => { delete store[key]; return Promise.resolve(); })
 }));
 
+import { secureSet } from '../../services/secureStorageService';
 import {
   startBrokerLogin,
   pollBrokerLogin,
@@ -67,6 +68,16 @@ describe('pollBrokerLogin', () => {
   it('returns "failed" for FAILED/EXPIRED/EXCHANGED', async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ status: 'EXPIRED' }));
     expect(await pollBrokerLogin(pending)).toBe('failed');
+  });
+
+  it('throws rather than reporting "authorized" when secure storage rejects the token', async () => {
+    (secureSet as any).mockResolvedValueOnce(false);
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ status: 'AUTHORIZED' }))
+      .mockResolvedValueOnce(jsonResponse({ access_token: 'tok123', expires_at: null }));
+
+    await expect(pollBrokerLogin(pending)).rejects.toThrow('secure storage');
+    expect(await getCalleMcpToken()).toBeNull();
   });
 });
 
