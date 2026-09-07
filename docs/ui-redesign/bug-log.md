@@ -601,6 +601,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** this banner only renders in response to a real Tauri `runtime://boot_status` event (`@tauri-apps/api/event`'s `listen()`), which only fires inside the actual Tauri desktop shell, not this browser-only Playwright dev environment. Not chased further; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files using identical `--success`/`--warning`/`--error` conventions.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtainable in this environment, disclosed above).
 
+### 79. `agentWorkshop/FinalExecutionPacket.tsx` re-skin (38 lines, 9 refs) — clean pass, no carve-out
+
+- **What changed:** panel shell, header, "Copy JSON" button (indigo, generic action → `--accent`), empty state, and the packet-summary card — all tokenized onto `--accent`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx`'s RESULTS tab (`<Card label="Final Packet"><FinalExecutionPacket .../></Card>`), the same post-execution grid row as `MarcusAuditPanel.tsx` (#40) and `research/HectorResearchPanel.tsx` (#63) — same reachability constraint, requires a completed real project-execution run. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern from those two prior files.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
