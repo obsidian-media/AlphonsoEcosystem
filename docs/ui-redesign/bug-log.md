@@ -209,6 +209,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Not independently screenshotted this pass:** reaching this specific nested tab (Orchestrator → Packets tab → Queue View card) proved awkward to automate reliably (button-vs-stat-label text collisions); rather than keep spending turns on tab navigation, verification relied on the passing smoke test plus the fact that this file's token patterns (`-dim`/`-border` semantic pairs) are byte-for-byte identical to ones already visually confirmed correct in `EcosystemMaturityPanels.tsx`, `ProductionReadinessPanel.tsx`, `WorkflowOperationsDashboard.tsx`, and `SelfDevelopmentPanel.tsx` earlier this session. Flagged honestly rather than claiming a screenshot that wasn't taken.
 - **Status:** CLOSED.
 
+### 32. `ModelSwitcher.tsx` re-skin (411 lines, 57 refs) — clean pass, no carve-out
+
+- **What changed:** `ModelSwitcher`'s AI-model tab strip, `OllamaModelPicker`/`CloudModelPicker`/`HermesModelPicker`'s shared loading/offline/select-shell styling, and `ModelProviderPicker`'s provider tab strip — all onto `--accent`/`--warning`/`--text-*`/`--surface-*`. The amber "selected tab" highlight used identically in both `ModelSwitcher` and `ModelProviderPicker` is a generic "this one's active" state (not per-provider identity — every provider gets the same highlight color when selected), so mapped to `--accent` matching this session's established selected-state convention; amber stays only for genuine warning states (Ollama offline, pull-in-progress).
+- **Existing test coverage reused:** `src/test/ModelSwitcher.test.jsx` (9 tests) stayed green. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, via ChatView's model picker): closed-state model pill renders with correct surface/text tokens — zero console errors. The native `<select>` dropdown's open state isn't independently stylable via CSS, so nothing further to check there.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
