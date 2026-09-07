@@ -9,18 +9,18 @@ interface Props {
 export function CoachMissionBadge({ agent, state, message }: Props) {
   const label = agent === 'miya' ? 'Miya' : agent === 'jose' ? 'Jose' : agent === 'hector' ? 'Hector' : 'Alphonso';
   const tone = state === 'warning' || state === 'approval_required'
-    ? 'text-amber-100 border-amber-300/20 bg-amber-500/10'
+    ? 'text-[var(--warning)] border-[var(--warning-border)] bg-[var(--warning-dim)]'
     : state === 'task_complete'
-      ? 'text-emerald-100 border-emerald-300/20 bg-emerald-500/10'
+      ? 'text-[var(--success)] border-[var(--success-border)] bg-[var(--success-dim)]'
       : state === 'listening'
-        ? 'text-red-100 border-red-300/20 bg-red-500/10'
-        : 'text-cyan-100 border-cyan-300/20 bg-cyan-500/10';
+        ? 'text-[var(--error)] border-[var(--error-border)] bg-[var(--error-dim)]'
+        : 'text-[var(--info)] border-[var(--info-border)] bg-[var(--info-dim)]';
 
   return (
     <div className={`rounded-xl border px-3 py-2 ${tone}`}>
       <div className="text-[10px] font-bold uppercase tracking-widest">{label} mission</div>
       <div className="mt-1 text-xs font-semibold">{state || 'idle'}</div>
-      <div className="mt-1 text-[11px] text-zinc-200/85 truncate">{message || 'Standing by'}</div>
+      <div className="mt-1 text-[11px] text-[var(--text-2)] truncate">{message || 'Standing by'}</div>
     </div>
   );
 }
