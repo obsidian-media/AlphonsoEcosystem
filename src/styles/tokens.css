@@ -102,6 +102,21 @@
   --duration-fast: 100ms;
   --duration-normal: 150ms;
   --duration-slow: 250ms;
+
+  /* Companion Mode (Phase 3 / Draft B) -- a deliberately separate warm
+     visual language from the power-user Draft A tokens above, per
+     docs/ui-redesign/draft-b-normal-user-direction.md. Theme-invariant
+     (like --agent-*) since the draft doc specifies one warm palette with
+     no light/dark variation designed yet. */
+  --companion-surface: oklch(97% 0.015 60);
+  --companion-blob-peach: oklch(85% 0.09 45 / 0.55);
+  --companion-blob-pink: oklch(82% 0.1 350 / 0.5);
+  --companion-blob-lavender: oklch(80% 0.08 300 / 0.5);
+  --companion-bubble-mine: oklch(22% 0.02 280);
+  --companion-bubble-mine-text: oklch(97% 0.005 280);
+  --companion-bubble-theirs: oklch(100% 0 0 / 0.55);
+  --companion-bubble-theirs-text: oklch(20% 0.01 280);
+  --companion-text-muted: oklch(35% 0.02 280 / 0.65);
 }
 
 /* Light mode overrides — applied via .light class OR data-theme attribute */

@@ -87,6 +87,7 @@ const RuntimeManagerView = lazy(() => import('./components/RuntimeManagerView'))
 const VoiceView = lazy(() => import('./components/VoiceView').then((mod) => ({ default: mod.VoiceView })));
 const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then((mod) => ({ default: mod.BootStatusBanner })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
+const CompanionMode = lazy(() => import('./components/CompanionMode').then((mod) => ({ default: mod.CompanionMode })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
 const BoardroomLegacyView = lazy(() => import('./components/BoardroomView').then((mod) => ({ default: mod.BoardroomView })));
@@ -786,6 +787,21 @@ function AppShell() {
             setShowOnboarding(false);
           }}
         />
+      </Suspense>
+    );
+  }
+
+  // activeTab !== 'settings': Companion Mode's Settings icon calls
+  // switchTab('settings') rather than rendering its own settings screen
+  // (see 24-phase3-companion-mode-implementation-plan.md's Non-goals) --
+  // an unconditional uxMode === 'simple' branch here would make that
+  // unreachable, since the real SettingsView only renders inside the full
+  // shell below. Falling through to the full shell while on the settings
+  // tab keeps that real, not a dead button.
+  if (uxMode === 'simple' && activeTab !== 'settings') {
+    return (
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-[var(--companion-surface)] text-[var(--text-3)] text-sm">Loading...</div>}>
+        <CompanionMode uxMode={uxMode} onModeChange={setUxMode} onOpenSettings={() => switchTab('settings')} />
       </Suspense>
     );
   }
