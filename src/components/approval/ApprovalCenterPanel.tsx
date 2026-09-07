@@ -11,7 +11,7 @@ export function ApprovalCenterPanel(): React.JSX.Element {
       ) : (
         <div className="space-y-2">
           {pending.map((item: { id: string; actionType: string; riskLevel: string }) => (
-            <div key={item.id} className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-2 text-xs text-amber-100">
+            <div key={item.id} className="rounded-lg border border-[var(--warning-border)] bg-[var(--warning-dim)] p-2 text-xs text-[var(--warning)]">
               {item.actionType} ({item.riskLevel})
             </div>
           ))}

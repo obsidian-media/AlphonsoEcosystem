@@ -744,6 +744,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Dashboard, scrolled to "Quick launch"): confirmed "Talk to Alphonso" now shows the correct cyan Alphonso-identity icon, "Miya Studio" now shows the correct violet Miya-identity icon, and "Connectors"/"Operator" render their distinct carve-out colors. Zero console errors.
 - **Status:** CLOSED.
 
+### 96. `approval/ApprovalCenterPanel.tsx` re-skin (22 lines, 3 refs) — clean pass, no carve-out
+
+- **What changed:** this file was already fully tokenized except the pending-item card, which was tokenized onto `--warning`/`--warning-dim`/`--warning-border` (a genuine truth-state pending-approval indicator, no carve-out).
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** per CLAUDE.md's own documentation, this is "a separate, older read-only pending list" in the Agent Workshop subsystem, superseded for gating purposes by the real Approval tab (`ApprovalPanel.tsx`) but left in place — it reads from `approvalService.js`'s own store, which requires a real pending approval from Project Execution Mode to populate, the same reachability constraint as several RESULTS-tab files this pass. Not chased further; relying on clean `tsc`/`eslint`.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
