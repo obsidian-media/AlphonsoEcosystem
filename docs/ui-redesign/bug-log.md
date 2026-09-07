@@ -510,6 +510,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** given the above, this modal cannot be reached through any real UI interaction in this build. Not screenshotted; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained — genuinely unreachable UI, disclosed above).
 
+### 68. `OllamaOfflineBanner.tsx` re-skin (82 lines, 13 refs) — clean pass, whole-panel warning treatment
+
+- **What changed:** the global "Ollama offline" banner shown in the main app shell — outer bar, icon, message text, and all 3 action buttons (Start Ollama/Retry/Runtime Hub) — kept its whole-panel warning-tone treatment throughout (a real, deliberate design choice for a persistent degraded-state banner, same pattern as `RuntimeNotice.tsx` and others), but every raw `amber-*` class replaced with `--warning`/`--warning-dim`/`--warning-border` tokens.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** `src/test/OllamaOfflineBanner.test.jsx` — 10/10 passing (`--pool=forks`, after the default `threads` pool hit this session's known pre-existing vitest worker-startup timeout). `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** this banner (`App.tsx`) only renders when Ollama is disconnected or has no models — this dev environment's Ollama has stayed connected throughout the entire session (confirmed in every prior screenshot's right-panel "System" tab), the same reachability constraint as `RuntimeNotice.tsx` (#48). Not chased further; relying on the 10-test suite plus clean `tsc`/`eslint`.
+- **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
