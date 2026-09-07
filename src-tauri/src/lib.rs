@@ -830,6 +830,7 @@ pub fn run() {
       runtime_manager::runtime_stop_tool,
       runtime_manager::runtime_list_tools,
       runtime_manager::runtime_check_prerequisites,
+      runtime_manager::setup_scan_hardware,
       runtime_manager::runtime_install_prerequisite,
       runtime_manager::runtime_get_autostart_prefs,
       runtime_manager::runtime_save_autostart_pref,

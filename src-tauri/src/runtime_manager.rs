@@ -1055,6 +1055,38 @@ async fn ensure_venv(app: &AppHandle, tool: &str, py: &str, dir: &Path) -> Resul
 // Tauri commands
 // ─────────────────────────────────────────────────────────
 
+// camelCase to match every other Tauri-command-returned struct in this
+// file (PrereqStatus, etc.) and the frontend's HardwareProfile TypeScript
+// interface — without this, Tauri would serialize ram_gb/disk_free_gb as
+// snake_case and every frontend field access would be silently undefined
+// instead of erroring, since TS doesn't check JSON shapes at runtime.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HardwareProfile {
+  pub ram_gb: u64,
+  pub disk_free_gb: u64,
+  pub gpu_present: bool,
+  pub gpu_vendor: Option<String>,
+  pub gpu_model: Option<String>,
+}
+
+/// Aggregates RAM/disk/GPU detection into one result for Setup's System
+/// Scan screen. Deliberately separate from `runtime_check_prerequisites`
+/// (Python/Git/Ollama/Docker/Node) rather than merged into it — that
+/// command already has its own established callers and shape; Setup's
+/// frontend calls both in parallel instead.
+#[tauri::command]
+pub fn setup_scan_hardware() -> HardwareProfile {
+  let (gpu_present, gpu_vendor, gpu_model) = detect_gpu();
+  HardwareProfile {
+    ram_gb: detect_ram_gb(),
+    disk_free_gb: detect_disk_free_gb(),
+    gpu_present,
+    gpu_vendor,
+    gpu_model,
+  }
+}
+
 #[tauri::command]
 pub fn runtime_check_prerequisites() -> PrereqStatus {
   let python_path = find_python();
@@ -1936,6 +1968,15 @@ mod tests {
     let (vendor, model) = parse_nvidia_smi_output("Some GPU Name\n").expect("should parse");
     assert_eq!(vendor, "Unknown");
     assert_eq!(model, "Some GPU Name");
+  }
+
+  #[test]
+  fn setup_scan_hardware_returns_populated_profile() {
+    let profile = setup_scan_hardware();
+    // Same real-machine sanity bounds as detect_ram_gb_returns_plausible_value —
+    // this exercises the full command, not just the RAM function in isolation.
+    assert!(profile.ram_gb >= 1);
+    assert!(profile.disk_free_gb < 1_000_000); // sanity upper bound, not a real limit
   }
 
   #[test]
