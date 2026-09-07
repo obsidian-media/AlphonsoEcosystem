@@ -121,7 +121,7 @@ Tauri integration: `src-tauri/src/voice_sidecar.rs` manages a `Child` process vi
 ### Policy & Approval (fail-closed)
 - `policyEnforcementService.ts` — centralized policy gate: zero-cost mode, approval mode, connector risk classification, auth/allowlist checks, license tier validation
 - `licenseService.ts` — license tier system (Free/Pro/Enterprise) with premium connector gates
-- `connectorRegistryService.js` — all **22 connector** send paths run through policy gate before any external call
+- `connectorRegistryService.js` — all **26 connector** send paths run through policy gate before any external call
 
 ### Performance & Execution
 - `parallelExecutionService.ts` — parallel task execution with concurrency control, retry logic, and task queues

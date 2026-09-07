@@ -1,5 +1,56 @@
 # ALPHONSO — Agent Ground Truth & Shared Context
-**Last verified:** 2026-09-04 — v2.7.0 (PRs #210-#215, #219). The memory
+**Last verified:** 2026-09-07 — v2.7.1 (unchanged — no release cut), PR #230 merged (`095f7c4`),
+CALL-E outreach connector (Phase 1 REST + Phase 2 conversational MCP). Two sessions: build,
+then a live-verification + review-fix pass once the user obtained a real `CALLE_API_KEY` and
+completed a real MCP browser login.
+
+**Build:** `src/services/connectors/calleConnector.ts` (REST, `createCall`/`getCall`/
+`pollCallUntilTerminal`, `Idempotency-Key` on every create) + `src/services/calleOutreachService.ts`
+(`OutreachCallRecord` persistence/recovery) + `src/components/calle/CalleOutreachPanel.tsx`
+(Phase 1 UI, not yet wired into nav — deferred until the pending UI redesign lands) +
+`src/services/calleMcpAuthService.ts` (brokered OAuth, no loopback server) +
+`src/services/connectors/calleMcpConnector.ts` (MCP JSON-RPC, no SDK) +
+`src/services/calleMcpOutreachService.ts` (clarifying-question state machine, wired into
+`ChatView.tsx`). Registered as connector #26 in `connectorRegistry.js`, unconditionally
+high-risk/paid in `policyEnforcementService.ts`.
+
+**Review-fix pass (`50bf1d0`/`2af3a16`):** CodeRabbit found 18 real, mostly-severe issues on
+first review, all fixed — highest-impact: `calleMcpConnector.ts` returned the raw MCP
+`CallToolResult` envelope instead of unwrapping `structuredContent`, so every field read by
+`planCall`/`runCall`/`getCallRun` was always `undefined`; `calleConnector.ts` gated `getCall()`
+status reads behind the same approval gate as call creation, blocking all polling/recovery once
+Approval Mode was on; `chatUtils.js`'s `shouldRouteThroughCalleMcp` matched "call" as a bare
+substring anywhere in a message (CWE-201 — forwarded "How do I call a REST API?" straight to
+CALL-E before any confirmation UI); `run_call` had no idempotency-failure recovery path (fixed
+with a durable `submitting` stage, since that tool has zero idempotency key). Also fixed the
+`connectorGitHubSlack.test.ts` connector-count assertion (25→26) and 5 stale doc-count claims.
+
+**Live-verification pass (`5cfc680`), once a real API key + MCP login were available:** a safe
+read-only `GET /v1/calls/{bogus-id}` (404, not 401) confirmed `CALLE_API_KEY` is valid and
+confirmed the REST field mapping is correct. A real authenticated `tools/list` plus a real
+planning-only `plan_call` round trip (via the official `calle` CLI, skills.sh skill — no call
+placed) surfaced **two real design bugs vs. what was built from docs prose alone**: `plan_call`
+has no `conversation_history` parameter at all (it tracks state itself via an opaque `plan_id`
+threaded through each turn's raw `user_input`), and the response never echoes a phone number
+(`isPhoneAlreadyInFlight`'s cross-chat duplicate-call guard was dead code from day one — removed,
+not patched around). Both fixed; 19+9 rewritten tests, 143 total across the CALL-E suite passing.
+
+**Full browser UI walkthrough** (`npm run dev` + Playwright, browser-only — not the native Tauri
+app) confirmed both Phase 1/2 credential UI renders correctly and, sending a real chat message
+("call Joe's Pizza and ask if they'd like a free website audit"), confirmed **the entire Phase 2
+pipeline fires correctly end-to-end** through to a correct "not connected" error with zero stray
+MCP network calls before auth. One false alarm during this pass, root-caused before concluding
+anything: an unrelated 14-hour-old stale dev server process made CALL-E look completely absent
+from the Connectors panel — restarting the server resolved it; not a code bug.
+
+**Not yet verified — needs the native Tauri app:** a real MCP login completed through Alphonso's
+own `calleMcpAuthService.ts` (the CLI's login was a separate session), a credential surviving
+reload via the real OS keychain (confirmed Tauri-native-only, no browser fallback, by design),
+and an actual placed call (`run_call`) — deliberately not attempted without a real recipient and
+explicit go-ahead, since it costs money and rings someone. Full narrative:
+`docs/TRUTH_FIRST_EXECUTION_PLAN.md`'s J3 entry.
+
+**Previous entry (2026-09-04):** v2.7.0 (PRs #210-#215, #219). The memory
 knowledge graph project's full 4-phase roadmap shipped through Phase 3:
 Foundation (schema, manual edges, one-hop reads), Expansion (3 more writers,
 multi-hop traversal), and Intelligence & Visualization (a 3D force-directed
