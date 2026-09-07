@@ -518,6 +518,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** this banner (`App.tsx`) only renders when Ollama is disconnected or has no models — this dev environment's Ollama has stayed connected throughout the entire session (confirmed in every prior screenshot's right-panel "System" tab), the same reachability constraint as `RuntimeNotice.tsx` (#48). Not chased further; relying on the 10-test suite plus clean `tsc`/`eslint`.
 - **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
 
+### 69. `NotificationCenter.tsx` re-skin (101 lines, 13 refs) — clean pass, one test updated to match
+
+- **What changed:** `BORDER_COLOR` (success/warning/error/info — exact 1:1 fit onto the 4 semantic tone tokens), "Clear all" button, notification card chrome, and the dismiss button — all tokenized onto `--success`/`--warning`/`--error`/`--info`/`--text-*`/`--surface-*`/`--border`.
+- **Test updated to match the migration, not a regression:** `src/test/components/NotificationCenter.test.tsx`'s "shows colored border per notification type" test asserted directly on the literal `.bg-zinc-900` class — updated to assert on `bg-[var(--surface-1)]` instead, since the underlying behavior (3 cards share the same background class) is unchanged, only the class name itself moved onto a token.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** `src/test/components/NotificationCenter.test.tsx` — 6/6 passing after the update (`--pool=forks`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): seeded `localStorage`'s `alphonso_notifications_v1` key (the real persistence key `loadPersistedNotifications()` reads on mount) with one notification of each type, then opened the panel via the real bell button (`aria-label="Notifications"` in `TopBar.tsx`) — confirmed all 4 border colors, the notification-count badge, and the "Clear all" button all render correctly. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
