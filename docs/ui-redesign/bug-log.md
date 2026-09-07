@@ -650,6 +650,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified via an earlier screenshot from this same session, not re-captured:** this is the exact "SYSTEM HEALTH" grid (Build Status/Verification/Pending Approvals/etc.) already visually confirmed correct in `agentWorkshop/ProjectIntakePanel.tsx`'s (#72) screenshot, visible on the Setup tab below the intake form.
 - **Status:** CLOSED.
 
+### 85. `agentWorkshop/ExecutionTimeline.tsx` re-skin (30 lines, 6 refs) — clean pass, no carve-out
+
+- **What changed:** panel shell, header, empty state, and each timeline-step card (phase/action/owner) — tokenized onto `--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx:421` (`<Card label="Timeline">`), the same post-execution RESULTS-tab grid as several prior files this pass — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
