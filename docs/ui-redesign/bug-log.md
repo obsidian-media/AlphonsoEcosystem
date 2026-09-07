@@ -469,6 +469,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, System space → Runtimes → Activity tab): confirmed the header, "0 events" count, and empty state render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 63. `research/HectorResearchPanel.tsx` re-skin (88 lines, 16 refs) — clean pass, no carve-out
+
+- **What changed:** header, loading state, empty state, backend-status icon (live → `--success`, error → `--warning`, else → neutral), topic/message/meta text, the Sources list (link color mapped to generic `--accent`, not per-agent branding — confirmed this is a distinct, simpler component from the real `hector/CitationPanel.tsx`/`hector/SourceBoard.tsx` per CLAUDE.md's explicit note that the two shouldn't be confused), and Verified Facts — all tokenized onto `--success`/`--warning`/`--accent`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx` (`<Card label="Research Brief"><HectorResearchPanel .../></Card>`), inside the RESULTS tab's post-execution grid — the same reachability constraint as `MarcusAuditPanel.tsx` (#40), which sits in the identical grid row. Not chased further this pass for the same reason; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
