@@ -966,6 +966,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, light mode, full-page screenshot): Command tab's task pipeline, command form, workflow steps, task routing, and WhatsApp inbound panels all render as clean washes, fully legible. Zero console errors.
 - **Status:** CLOSED for `OrchestratorView.tsx`.
 
+### 114. `OperatorDashboard.tsx` converted to the "no cards" rule too — sixth slice, largest and most repetitive so far
+
+- **Scope:** sixth page conversion. ~47 `border` occurrences, ~41 white/black bugs — almost all of them the exact same literal `border border-white/10` substring repeated across dozens of nested panel rows (Core Runtime, Screen Intelligence, Command + Plugin Controls, Memory + Workspace Intelligence, Recovery + Verification Logs). Confirmed via grep that this literal substring never co-occurred with a `rounded-full` pill anywhere in the file, so it was safe to remove globally in one pass rather than the usual per-line literal list.
+- **What changed:** global removal of `border border-white/10` (dozens of rectangular rows/buttons/inputs at once), plus individual fixes for the `Badge`-like small-tag component's `colors` map (dropped its border from the one render call site — small `rounded` tags, not `rounded-full` pills, so no exception applies) and a handful of remaining one-off rectangular containers. Fixed 2 more `text-white` headings ("Operator Mode is Off", "Operator Mode") — same recurring bug class. Left two things alone as legitimate, not bugs: a toggle switch's white circular knob (`bg-white rounded-full` — a standard toggle-thumb convention, not a readability issue) and a solid-accent-colored button's `text-white` (white text on a solid saturated button, same reasoning as #112's Enable/Disable toggle).
+- **Verification:** `fix-broken-var-opacity.mjs` — no change needed. `npx tsc --noEmit` and `npx eslint` clean. `operatorDashboard.test.jsx` (2 tests) passing.
+- **Live-verified** (Playwright, light mode, Operator Mode enabled, full-page screenshot): Core Runtime, Screen Intelligence, Recovery + Verification Logs panels and every nested stat row/button all render as clean washes, fully legible. Zero console errors.
+- **Status:** CLOSED for `OperatorDashboard.tsx`.
+
 ---
 
 ## Notes on discovery method

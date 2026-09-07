@@ -38,7 +38,7 @@ function Badge({ children, color = 'zinc' }: BadgeProps) {
     red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
     indigo: 'bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-border)]'
   };
-  return <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>{children}</span>;
+  return <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded ${colors[color]}`}>{children}</span>;
 }
 
 interface OllamaStatus {
@@ -329,15 +329,15 @@ export function OperatorDashboard({
   if (!operatorMode) {
     return (
       <div className="max-w-3xl mx-auto py-12 px-5">
-        <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-5">
+        <section className="rounded-2xl bg-[var(--surface-1)] p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold text-white">Operator Mode is Off</h1>
+              <h1 className="text-xl font-bold text-[var(--text-1)]">Operator Mode is Off</h1>
               <p className="text-sm text-[var(--text-3)] mt-1">Enable Operator Mode to access telemetry, proofs, memory dashboards, and supervised runtime tools.</p>
             </div>
             <button
               onClick={() => setOperatorMode(true)}
-              className="rounded-lg bg-[var(--success-dim)] border border-[var(--success-border)] text-[var(--success)] px-4 py-2 text-xs font-bold uppercase tracking-widest"
+              className="rounded-lg bg-[var(--success-dim)] text-[var(--success)] px-4 py-2 text-xs font-bold uppercase tracking-widest"
             >
               Enable
             </button>
@@ -351,14 +351,14 @@ export function OperatorDashboard({
     <div className="max-w-4xl mx-auto py-5 px-4 space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-xl font-bold text-white">Operator Mode</h1>
+          <h1 className="text-xl font-bold text-[var(--text-1)]">Operator Mode</h1>
           <p className="text-sm text-[var(--text-3)]">Supervised runtime control, verification logs, memory state, plugin registry, and recovery foundations.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={toggleFocusMode}
-            className="rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)]"
+            className="rounded-lg bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-muted)]"
           >
             {focusMode ? 'Focus' : 'Full'}
           </button>
@@ -384,7 +384,7 @@ export function OperatorDashboard({
             <ActionButton onClick={onVerifyAuditChain} label="Verify Audit Chain" icon={CheckCircle2} />
             <ActionButton onClick={() => onVerifyProcess(['ollama'])} label="Check PID" icon={Command} />
           </div>
-          <div className="mt-3 rounded-lg bg-[var(--surface-1)] border border-white/10 px-3 py-2 text-[11px] text-[var(--text-3)]">
+          <div className="mt-3 rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
             {auditChainProof ? `Audit chain: ${auditChainProof.trust} (${auditChainProof.verified_entries || 0}/${auditChainProof.total_entries || 0})` : 'Audit chain has not been verified yet.'}
           </div>
         </Panel>
@@ -416,18 +416,18 @@ export function OperatorDashboard({
       <OperatorSection title="Screen Intelligence" id="screen" focusMode={false} openSections={openSections} onToggle={toggleSection}>
       <Panel icon={Monitor} title="Screen Intelligence (Visible Only)">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+          <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
             <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Observer Status</div>
             <div className="text-[11px] text-[var(--text-2)] mt-1">{screenObserverState?.status || 'idle'}</div>
             <div className="text-[10px] text-[var(--text-3)] mt-1">{screenObserverState?.currentSummary || 'Screen observer is off.'}</div>
           </div>
-          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+          <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
             <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Permission + Alerts</div>
             <div className="text-[11px] text-[var(--text-2)] mt-1">permission: {screenObserverState?.permission || 'unknown'}</div>
             <div className="text-[10px] text-[var(--text-3)] mt-1">alerts: {screenObserverState?.alertsCount || 0}</div>
             <div className="text-[10px] text-[var(--text-3)] mt-1">last alert: {screenObserverState?.lastAlertAtMs ? new Date(screenObserverState.lastAlertAtMs).toLocaleTimeString() : 'none'}</div>
           </div>
-          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+          <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
             <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Sampling</div>
             <div className="text-[11px] text-[var(--text-2)] mt-1">{screenObserverState?.sampleEveryMs || 5000} ms</div>
             <div className="text-[10px] text-[var(--text-3)] mt-1">Trust: {screenObserverState?.trust || 'unverified'}</div>
@@ -439,12 +439,12 @@ export function OperatorDashboard({
           <ActionButton onClick={onStopScreenObserver} label="Stop Screen Observer" icon={RefreshCw} />
         </div>
         <div className="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-2">
-          <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+          <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
             <label className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Sample Interval (ms)</label>
             <input
               value={sampleEveryInput}
               onChange={(event) => setSampleEveryInput(event.target.value)}
-              className="mt-1 w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono"
+              className="mt-1 w-full bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px] font-mono"
               placeholder="5000"
             />
             <button
@@ -470,14 +470,14 @@ export function OperatorDashboard({
             onToggle={() => onUpdateScreenObserverSettings({ audioAlertEnabled: !(screenObserverState?.audioAlertEnabled === true) })}
           />
         </div>
-        <div className="mt-3 rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+        <div className="mt-3 rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
           <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Recent Observation Events</div>
           <div className="mt-2 space-y-2 max-h-36 overflow-y-auto pr-1">
             {(!screenObserverLogs || screenObserverLogs.length === 0) && (
               <div className="text-[11px] text-[var(--text-3)]">No observation events yet. Start observer to capture visible-screen telemetry.</div>
             )}
             {(screenObserverLogs || []).slice().reverse().slice(0, 12).map((event) => (
-              <div key={event.id} className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-2.5 py-2">
+              <div key={event.id} className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
                 <div className="text-xs text-[var(--text-2)]">{event.summary}</div>
                 <div className="text-[11px] text-[var(--text-3)] mt-1">
                   {event.status} | change {event.changeLevel} | {new Date(event.timestampMs).toLocaleTimeString()}
@@ -496,8 +496,8 @@ export function OperatorDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         <Panel icon={TerminalSquare} title="Command Verification">
           <div className="space-y-2">
-            <input value={program} onChange={(event) => setProgram(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-sm" placeholder="program, e.g. ollama" />
-            <input value={args} onChange={(event) => setArgs(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-sm font-mono" placeholder="args, e.g. list" />
+            <input value={program} onChange={(event) => setProgram(event.target.value)} className="w-full bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-sm" placeholder="program, e.g. ollama" />
+            <input value={args} onChange={(event) => setArgs(event.target.value)} className="w-full bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-sm font-mono" placeholder="args, e.g. list" />
             <div className="flex flex-wrap gap-2">
               <ActionButton onClick={runCommandProof} label="Run Verified Command" icon={Command} />
               <ActionButton onClick={() => onVerifyPaths(['./src', './src-tauri/tauri.conf.json'])} label="Verify Paths" icon={FolderTree} />
@@ -508,7 +508,7 @@ export function OperatorDashboard({
         <Panel icon={Package} title="Plugin Registry">
           <div className="space-y-2">
             {plugins.map((plugin) => (
-              <div key={plugin.id} className="flex items-center justify-between rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+              <div key={plugin.id} className="flex items-center justify-between rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
                 <div>
                   <div className="text-[13px] font-semibold text-[var(--text-1)]">{plugin.name}</div>
                   <div className="text-[10px] text-[var(--text-3)]">{plugin.id}</div>
@@ -525,7 +525,7 @@ export function OperatorDashboard({
           <div className="mt-3 space-y-2 max-h-36 overflow-y-auto pr-1">
             {diskPluginManifests.length === 0 && <p className="text-[11px] text-[var(--text-3)]">No disk plugin manifests discovered yet.</p>}
             {diskPluginManifests.slice(0, 8).map((manifest, index) => (
-              <div key={`${manifest.manifest_path}-${index}`} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+              <div key={`${manifest.manifest_path}-${index}`} className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs text-[var(--text-2)] truncate">{manifest.name || manifest.id}</div>
                   <Badge color={trustColor(manifest.trust || 'unverified') as BadgeProps['color']}>{manifest.trust || 'unverified'}</Badge>
@@ -536,25 +536,25 @@ export function OperatorDashboard({
           </div>
           <div className="mt-3 text-[10px] text-[var(--text-3)]">Audit: {latestAudit.map((entry) => `${entry.pluginId} ${entry.action}`).join(' | ') || 'no plugin events yet'}</div>
           <div className="mt-3 space-y-2">
-            <input value={pluginManifestPath} onChange={(event) => setPluginManifestPath(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="manifest path" />
+            <input value={pluginManifestPath} onChange={(event) => setPluginManifestPath(event.target.value)} className="w-full bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="manifest path" />
             <div className="grid grid-cols-2 gap-2">
-              <input value={pluginId} onChange={(event) => setPluginId(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px]" placeholder="plugin id" />
-              <input value={pluginToolId} onChange={(event) => setPluginToolId(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px]" placeholder="tool id" />
+              <input value={pluginId} onChange={(event) => setPluginId(event.target.value)} className="bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px]" placeholder="plugin id" />
+              <input value={pluginToolId} onChange={(event) => setPluginToolId(event.target.value)} className="bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px]" placeholder="tool id" />
             </div>
-            <input value={pluginExtraArgs} onChange={(event) => setPluginExtraArgs(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
+            <input value={pluginExtraArgs} onChange={(event) => setPluginExtraArgs(event.target.value)} className="w-full bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
             <ActionButton onClick={runPluginTool} label="Execute Plugin Tool" icon={Command} />
             <ActionButton onClick={() => onValidatePluginManifest(pluginManifestPath.trim())} label="Validate Manifest" icon={CheckCircle2} />
             {lastPluginToolRun && (
-              <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 text-[11px] text-[var(--text-3)]">
+              <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2 text-[11px] text-[var(--text-3)]">
                 {lastPluginToolRun.plugin_id}:{lastPluginToolRun.tool_id} | exit {String(lastPluginToolRun.exit_code)}
               </div>
             )}
             {lastManifestValidation && (
-              <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 text-[11px] text-[var(--text-3)]">
+              <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2 text-[11px] text-[var(--text-3)]">
                 manifest valid: {String(lastManifestValidation.valid)} | errors: {(lastManifestValidation.errors || []).length} | warnings: {(lastManifestValidation.warnings || []).length}
               </div>
             )}
-            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 space-y-2">
+            <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2 space-y-2">
               <div className="text-[11px] uppercase tracking-widest text-[var(--text-3)]">Plugin Sandbox Policy</div>
               <div className="flex items-center justify-between text-[11px] text-[var(--text-2)]">
                 <span>Require Manifest Validation</span>
@@ -593,7 +593,7 @@ export function OperatorDashboard({
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {latestMemory.length === 0 && <p className="text-sm text-[var(--text-3)]">No memory records yet.</p>}
             {latestMemory.map((item) => (
-              <div key={item.id} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+              <div key={item.id} className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-2)]">{item.category}</span>
                   <Badge color={trustColor(item.confidence) as BadgeProps['color']}>{item.confidence}</Badge>
@@ -618,7 +618,7 @@ export function OperatorDashboard({
             <ActionButton onClick={onBuildSymbolIndex} label="Build Symbol Index" icon={CheckCircle2} />
           </div>
           <div className="mt-3 space-y-2">
-            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+            <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
               <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Workspace Proof</div>
               {workspaceProof ? (
                 <>
@@ -630,7 +630,7 @@ export function OperatorDashboard({
                 <div className="text-[10px] text-[var(--text-3)] mt-1">No workspace proof run yet.</div>
               )}
             </div>
-            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+            <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
               <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">OCR Capability</div>
               {ocrCapability ? (
                 <>
@@ -641,7 +641,7 @@ export function OperatorDashboard({
                 <div className="text-[10px] text-[var(--text-3)] mt-1">OCR check not run yet.</div>
               )}
             </div>
-            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+            <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
               <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Workspace Symbol Index</div>
               {workspaceSymbolIndex ? (
                 <>
@@ -653,16 +653,16 @@ export function OperatorDashboard({
                 <div className="text-[10px] text-[var(--text-3)] mt-1">No symbol index built yet.</div>
               )}
             </div>
-            <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 space-y-2">
+            <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2 space-y-2">
               <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">OCR Adapter Run</div>
               <div className="grid grid-cols-2 gap-2">
-                <select aria-label="OCR adapter" value={ocrAdapter} onChange={(event) => setOcrAdapter(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px]">
+                <select aria-label="OCR adapter" value={ocrAdapter} onChange={(event) => setOcrAdapter(event.target.value)} className="bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px]">
                   <option value="version_check">version_check</option>
                   <option value="tesseract_cli">tesseract_cli</option>
                 </select>
-                <input value={ocrImagePath} onChange={(event) => setOcrImagePath(event.target.value)} className="bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="image path (optional)" />
+                <input value={ocrImagePath} onChange={(event) => setOcrImagePath(event.target.value)} className="bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="image path (optional)" />
               </div>
-              <input value={ocrExtraArgs} onChange={(event) => setOcrExtraArgs(event.target.value)} className="w-full bg-[var(--surface-2)] border border-white/10 rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
+              <input value={ocrExtraArgs} onChange={(event) => setOcrExtraArgs(event.target.value)} className="w-full bg-[var(--surface-2)] rounded-lg px-2.5 py-2 text-[11px] font-mono" placeholder="extra args (optional)" />
               <ActionButton onClick={runOcr} label="Run OCR Adapter" icon={Brain} />
               {lastOcrAdapterRun && (
                 <div className="text-[10px] text-[var(--text-3)]">Adapter {lastOcrAdapterRun.adapter} | exit {String(lastOcrAdapterRun.exit_code)}</div>
@@ -686,7 +686,7 @@ export function OperatorDashboard({
           <div className="mt-3 space-y-2 max-h-36 overflow-y-auto pr-1">
             {snapshots.length === 0 && <p className="text-[11px] text-[var(--text-3)]">No snapshots yet.</p>}
             {[...snapshots].reverse().slice(0, 6).map((snapshot) => (
-              <div key={snapshot.id} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2 text-[11px] text-[var(--text-3)]">
+              <div key={snapshot.id} className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2 text-[11px] text-[var(--text-3)]">
                 <div className="flex items-center justify-between">
                   <span>{snapshot.id}</span>
                   <Badge color={trustColor(snapshot.trust) as BadgeProps['color']}>{snapshot.trust}</Badge>
@@ -710,7 +710,7 @@ export function OperatorDashboard({
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {latestLogs.length === 0 && <p className="text-[11px] text-[var(--text-3)]">No verification logs yet.</p>}
             {latestLogs.map((log) => (
-              <div key={log.id} className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+              <div key={log.id} className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-2)]">{log.type}</span>
                   <Badge color={trustColor(log.trust) as BadgeProps['color']}>{log.trust}</Badge>
@@ -719,7 +719,7 @@ export function OperatorDashboard({
               </div>
             ))}
           </div>
-          <div className="mt-3 rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+          <div className="mt-3 rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-[11px] text-[var(--text-3)] uppercase tracking-widest">Durable Audit (Backend)</div>
@@ -820,7 +820,7 @@ interface OperatorSectionProps {
 function OperatorSection({ title, id, focusMode, openSections, onToggle, children }: OperatorSectionProps) {
   const open = !focusMode || openSections.has(id);
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-3">
       <button
         type="button"
         onClick={() => onToggle?.(id)}
@@ -842,7 +842,7 @@ interface PanelProps {
 
 function Panel({ icon: Icon, title, children }: PanelProps) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-3">
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-2">
         <Icon className="w-4 h-4 text-[var(--accent)]" /> {title}
       </div>
@@ -875,7 +875,7 @@ interface WorkspaceRowProps {
 function WorkspaceRow({ label, featureKey, foundation, onToggle }: WorkspaceRowProps) {
   const feature = foundation?.[featureKey];
   return (
-    <div className="flex items-center justify-between rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+    <div className="flex items-center justify-between rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
       <span className="text-[11px] text-[var(--text-2)]">{label}</span>
       <button onClick={() => onToggle(featureKey, !feature.enabled)} className={`px-2.5 py-1 rounded text-[10px] font-bold ${feature.enabled ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-2)]'}`}>
         {feature.enabled ? 'On' : 'Off'}
@@ -892,7 +892,7 @@ interface ToggleTileProps {
 
 function ToggleTile({ label, enabled, onToggle }: ToggleTileProps) {
   return (
-    <div className="rounded-lg bg-[var(--surface-1)] border border-white/10 px-2.5 py-2">
+    <div className="rounded-lg bg-[var(--surface-1)] px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] text-[var(--text-2)]">{label}</span>
         <button onClick={onToggle} className={`px-2 py-1 rounded text-[10px] font-bold ${enabled ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-2)]'}`}>
@@ -956,19 +956,19 @@ function UnifiedWeeklyReportPanel() {
         {report && (
           <button
             onClick={copyReport}
-            className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] border border-white/10 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"
           >
             {copied ? 'Copied!' : 'Copy'}
           </button>
         )}
       </div>
       {error && (
-        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error-border)] rounded-lg px-3 py-2">
+        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] rounded-lg px-3 py-2">
           {error}
         </div>
       )}
       {report && (
-        <div className="rounded-lg border border-white/10 bg-[var(--surface-1)] p-3">
+        <div className="rounded-lg bg-[var(--surface-1)] p-3">
           <pre className="text-[11px] text-[var(--text-2)] whitespace-pre-wrap font-mono overflow-auto max-h-96">
             {report.markdown}
           </pre>
