@@ -180,19 +180,30 @@ steps added (Recommended Setup, Early Exit), agent roster corrected.
    2-3s. Visual direction: **Cyberpunk Ritual** (neon grid lines, glow rings,
    monospace HUD readouts) — confirmed over two alternatives (Minimal Sci-Fi
    Calm, Agent Constellation) that were mocked up and rejected. **Color
-   correction (self-critique fix):** every mockup produced during this
-   design used an invented cyan (`#00D9FF`), carried over uncritically from
-   the superseded Copilot draft's CSS variable. The real, official brand
-   color — sampled directly from the actual shipped app-icon asset at
-   `logo-banner-thumbnail-media/alphonso_app_icon_06_main/` (not
-   `src-tauri/icons/`, which only holds flat packaged-icon exports derived
-   from it) — is **green** (`#8EDB64` lit facet, `#1D5818` shadow) with an
-   **orange** accent (`#F87C02`), not cyan. The Cyberpunk Ritual look (grid
-   lines, scanlines, HUD text) stays; every color reference in this
-   document and its mockups needs to be re-keyed to the real green/orange
-   before implementation. Per-agent tile colors (Miya pink, Marcus red,
-   etc.) are unaffected — this correction is specifically about what
-   "Alphonso brand color" means, which was wrong throughout.
+   correction, refined on a third pass (the first correction overcorrected):**
+   every mockup produced during this design used an invented cyan
+   (`#00D9FF`), carried over uncritically from the superseded Copilot draft's
+   CSS variable. Sampling the real shipped app-icon emblem
+   (`logo-banner-thumbnail-media/alphonso_app_icon_06_main/`) found its true
+   color is green (`#8EDB64` lit facet, `#1D5818` shadow) with an orange
+   accent (`#F87C02`) — that part still stands, and is corrected in step 7
+   below. But checking `src/styles/tokens.css` (skipped in the first color
+   pass) found the app's **existing, established, pervasively-used UI accent
+   token is itself cyan** — `--accent: oklch(78% 0.18 200)`, explicitly
+   commented `/* Accent — cyan (mascot primary) */`, used throughout
+   `OnboardingWizard.tsx`, `SettingsView.tsx`, and the rest of the shipped
+   product (including WCAG-contrast fixes already made against this and
+   adjacent tokens — see that file's own comments). **Resolved split:**
+   general Setup UI chrome (buttons, step indicators, progress-bar "in
+   progress" state, focus rings) should use the existing `var(--accent)`
+   cyan token, matching every other screen in the app rather than
+   introducing a jarring, inconsistent second primary color — only the
+   **Activation Sequence's emblem-reveal moment** (§5 step 7) should use the
+   real sampled green/orange, since that's the one place literally revealing
+   the actual brand mark. Implementation should add new tokens (e.g.
+   `--emblem-green`, `--emblem-orange`) to `src/styles/tokens.css` for that
+   specific use, not replace `--accent` globally. Per-agent tile colors
+   (Miya pink, Marcus red, etc.) are unaffected either way.
 2. **System Scan** — GPU (presence/vendor/VRAM if detectable), RAM, disk free,
    Python, Ollama, **and Docker** (new — required because n8n/ChromaDB/
    OpenHands in Runtime Hub's tool catalogue all launch via `docker run`, not
