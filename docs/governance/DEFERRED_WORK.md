@@ -71,10 +71,21 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   2026-08-22, so this can block unrelated PRs at random.
   **Why deferred:** unrelated to the CALL-E work it surfaced during;
   folding an E2E fix into that PR would have mixed concerns.
-  **Resume hint:** scope the locator to the chat toolbar (or use the mic
-  button's own test id) instead of matching any button named /voice/i;
-  `e2e/voice.spec.js:14-25`. Re-running CI is a workaround, not a fix.
-  — **status: OPEN**
+  **FIXED 2026-09-07 (PR #236).** `SmartVoiceButton.tsx` gained a stable
+  `data-testid="smart-voice-button"` and both tests now target it instead of
+  an accessible name. Diagnosing it turned up a second, worse defect in the
+  same file: `SmartVoiceButton` is lazy-loaded via `ChatView.tsx`, and the
+  "voice button click shows state change" test clicked **without waiting**,
+  so the old locator resolved to the sidebar nav item — that test had been
+  passing while never touching the voice button at all. It now waits for the
+  lazy chunk before clicking. Verified locally: 5/5 in `e2e/voice.spec.js`.
+  **Second finding, worth remembering:** the first local run showed 5
+  failures and a stashed baseline showed 3 — all of it an artifact of
+  Playwright's `reuseExistingServer: true` reusing a preview server whose
+  bundle predated the edits (`scripts/run-e2e-server.mjs` builds once at
+  startup). Kill whatever holds port 5173 before trusting a local E2E
+  result; a stale bundle reads exactly like a real regression.
+  — **status: CLOSED**
 
 - [2026-09-07] **Codacy flagged 1 new issue on PR #234, never triaged.**
   Codacy reported `1 new issue (0 max.) of at least <blank> severity` and
