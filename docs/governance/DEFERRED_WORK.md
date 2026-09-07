@@ -7,6 +7,24 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-09-07] **`OnboardingWizard.tsx` — dark-only-by-design question, not
+  fixed either way.** Found during the ui-redesign worktree's repo-wide raw
+  white/black sweep (`docs/ui-redesign/bug-log.md` #117): every heading and
+  card across all onboarding steps uses `text-white`/`border-white/[0.06]`
+  consistently and exclusively (~35 occurrences). Onboarding is gated in
+  `App.tsx` ahead of the themed main shell and renders before the user has
+  chosen light/dark, and it's a first-run-only, low-frequency screen — a
+  fixed dark "welcome" aesthetic is a legitimate, common pattern, not
+  automatically a bug. Whether it should instead become theme-aware (reading
+  the same `alphonso_theme_v1` key `useTheme()` persists, the same fix
+  applied to `CoachWindow.tsx` in bug-log #119) is a real design call that
+  needs the user's sign-off before any code changes. Resume hint: if the
+  decision is "make it theme-aware," the fix is mechanically identical to
+  #119's `CoachWindow.tsx` fix (call `useTheme()` once at the top of
+  `OnboardingWizard.tsx`, then retokenize the ~35 occurrences the same way
+  `CoachInterventionCard.tsx` was retokenized in the same entry) — not a new
+  investigation. Status: deferred, awaiting user decision.
+
 - [2026-08-22] **`useAppEffects` was fully dead code since 2026-06-15 (44+
   commits, 2+ months) — restored.** Found while triaging a live post-install
   bug report against the fresh v2.6.3 build. Commit `3665b15`

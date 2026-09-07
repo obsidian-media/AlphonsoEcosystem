@@ -3,6 +3,7 @@ import { listCoachSkills } from '../services/coachSkillService';
 import { useCoach } from '../contexts/CoachContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useVoiceInput } from '../hooks/useVoiceInput';
+import { useTheme } from '../hooks/useTheme';
 import { companionStateFromVoice, coachMessageFromVoice, nextCoachCorner } from '../constants/appConstants';
 import { ViewLoadingState } from './ViewLoadingState';
 import { getCoachMessageStyle, setCoachMessageStyle } from '../services/coachEngineService';
@@ -32,6 +33,10 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
     handleCoachInterventionAction, showDemoIntervention
   } = useCoach();
   const { settings } = useSettings();
+  // Coach Mode is a separate Tauri webview/document — it never inherits the
+  // main window's `data-theme` attribute. Sidebar/TopBar apply this in the
+  // main shell; this window has neither, so it must apply it itself.
+  useTheme();
   const voice = useVoiceInput();
   const [messageStyle, setMessageStyle] = React.useState(getCoachMessageStyle);
 
