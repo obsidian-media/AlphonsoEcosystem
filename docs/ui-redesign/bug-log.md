@@ -535,6 +535,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified, via an earlier screenshot from this same session:** this exact component (all 4 instances — Alphonso/Hector/Jose/Miya) was already captured and visually confirmed rendering correctly in its default idle (`--info`, cyan) tone while working on `CoachWindow.tsx` (#51, the "Agent status" panel showing 4 mission cards). Not re-screenshotted for this pass; the other 3 tone states (warning/task_complete/listening) were not independently triggered and confirmed, since doing so would require simulating specific voice/task states not naturally present in this session.
 - **Status:** CLOSED (default-tone rendering re-confirmed from an earlier screenshot; the other 3 tone states verified via code + `tsc`/`eslint` only, disclosed above).
 
+### 71. `agents/AgentProfilePanel.tsx` re-skin (51 lines, 12 refs) — clean pass, no carve-out
+
+- **What changed:** the empty state, header (name/title), purpose text, Strengths/Limitations cards, and the "Professional Skill" card — all tokenized onto `--text-*`/`--surface-*`/`--border`. No carve-out needed.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Work space → Projects → Agents tab): filled in a project name to unlock the Agents tab, clicked into it, and confirmed the "Agent Profile" card renders Jose's real profile data (purpose/strengths/limitations/professional-skill) correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
