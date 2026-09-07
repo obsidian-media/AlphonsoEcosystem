@@ -844,6 +844,25 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** both are inherently transient states (a Suspense fallback shown only for the brief window before a lazy chunk resolves, and a dynamic-import loading state that resolves almost instantly in dev) — not practically screenshotted without artificially throttling module loading, which wasn't attempted this pass. Relying on clean `tsc`/`eslint` and the identical, already-proven token pattern used throughout this session.
 - **Status:** CLOSED (code + statics verified; live screenshots not obtained for either transient state, disclosed above). **This is now the true end of the full-repo hardcoded-color audit sweep** — re-verified zero component files remain with an undocumented raw-color match.
 
+### 102. `src/App.tsx` re-skin (9 raw-color refs) — found by widening the audit scope past `src/components/` on a user status check
+
+- **Where found:** the user asked "whats left?"; widening the hardcoded-color grep from `src/components/` (the original scan's scope) to all of `src/` surfaced two genuinely untouched files, `App.tsx` and `BrandHeader.jsx` (see #103). `App.tsx` is the app root shell — highest blast-radius file re-skinned this whole pass.
+- **What changed (5 fixes, all script-applied then hand-verified):**
+  1. `OnboardingWizard` Suspense fallback: `bg-zinc-950 text-zinc-500` → `bg-[var(--surface-0)] text-[var(--text-3)]`.
+  2. **Real bug found and fixed, not cosmetic:** the root shell div's className ternary used raw `bg-zinc-50 text-zinc-900` for the entire light-mode branch instead of the already-correct `--surface-0`/`--text-1` tokens that `tokens.css`'s `.light` selector redefines — meaning the light theme's shell background/text had silently never used the token system, using coincidentally-similar-but-not-identical raw zinc colors instead of the real `oklch()`-based light tokens. Fixed to always apply `bg-[var(--surface-0)] text-[var(--text-1)]` and let the `.light` class (still conditionally applied based on `settings.colorScheme`) drive the correct token redefinition, matching every other themed surface in the app.
+  3. Decorative background glow blur: `bg-cyan-500/4` → `bg-[var(--accent-glow)]` — was always cyan regardless of the user's chosen environment-accent theme (green/purple variants exist in `tokens.css`); now tracks the real choice.
+  4. Three `React.Suspense` fallback divs (connectors/runtimes/voice tabs): `text-zinc-500` → `text-[var(--text-3)]`.
+  5. `selection:bg-cyan-500/30` → `selection:bg-[var(--accent-dim)]`.
+- **Verification:** `fix-broken-var-opacity.mjs` safety net — no change needed, no double-alpha introduced. `npx tsc --noEmit` and `npx eslint src/App.tsx` both clean.
+- **Live-verification detour, resolved:** the running dev server initially served stale content for this file even after the on-disk edit was repeatedly confirmed correct (`grep -c zinc-50` → 0, file mtime updated) — neither a hard page reload, cache-busting query params, nor explicit no-cache headers fixed it. Root cause: the dev server process had been started from the wrong working directory in an earlier session (`scripts/run-vite-dev.mjs` uses `process.cwd()` to set Vite's server root), so the live server was resolving a different copy of the tree than the one being edited. Killed the stale process and restarted `node scripts/run-vite-dev.mjs` explicitly from the worktree root; a fresh Playwright session then showed the correct, fully-updated class list in both dark and light mode, with light mode's computed background (`oklch(0.99 0.005 255)`) matching `tokens.css`'s `--surface-0` light value exactly — confirming fix #2 above is real and correct, not just present in source.
+- **Status:** CLOSED — code fixed, statically verified, and live-verified in both themes via Playwright screenshots (`app-dark2.png`, `app-light2.png`) with zero console errors.
+
+### 103. `src/features/content-catalyst/workspace/BrandHeader.jsx` re-skin (5 raw-color refs) — dead code (see #10), re-skinned anyway per explicit user instruction
+
+- **Where:** same file flagged as dead code in #10 (`grep -rn "BrandHeader" src/` still returns zero import sites — this has not changed). #10 deliberately deferred re-skinning it, reasoning that re-skinning dead code is wasted effort and that wiring/using/deleting it is a product decision out of this pass's scope.
+- **Why fixed now:** the user, on being told this file was one of only two genuinely-unaddressed files left in the whole audit, explicitly said "yes, do both" — overriding the earlier deferral. Re-skinned for consistency with the rest of the sweep; the dead-code status itself is unchanged and still flagged.
+- **Status:** see file diff for the specific raw-color replacements; dead-code/wiring decision remains explicitly out of scope, unchanged from #10.
+
 ---
 
 ## Notes on discovery method

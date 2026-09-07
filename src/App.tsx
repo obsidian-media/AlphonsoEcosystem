@@ -775,7 +775,7 @@ function AppShell() {
 
   if (showOnboarding && !settings.selectedModel && !isCoachWindow) {
     return (
-      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-3)] text-sm">Loading...</div>}>
         <OnboardingWizard
           onComplete={(chosenModel: string, chosenProvider?: string) => {
             setSettings((current: any) => ({
@@ -791,7 +791,7 @@ function AppShell() {
   }
 
   return (
-    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-cyan-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-[var(--surface-0)] text-[var(--text-1)]'} ${themeClassFromSettings(settings)}`}>
+    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-[var(--accent-dim)] bg-[var(--surface-0)] text-[var(--text-1)] ${settings.colorScheme === 'light' ? 'light' : ''} ${themeClassFromSettings(settings)}`}>
       <UpdaterNotification
         version={updaterVersion}
         onDismiss={() => setUpdaterVersion(null)}
@@ -874,7 +874,7 @@ function AppShell() {
           onOpenRuntimes={() => switchTab('runtimes')}
         />
         <main className="flex-1 overflow-hidden relative bg-[var(--surface-0)]">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-cyan-500/4 blur-[120px] rounded-full pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-[var(--accent-glow)] blur-[120px] rounded-full pointer-events-none" />
           {/* AgentDock moved to RightPanel → Agents tab */}
           <div className="h-full relative z-10">
             <ErrorBoundary label="main-shell">
@@ -919,18 +919,18 @@ function AppShell() {
                 )}
                 {activeTab === 'connectors' && (
                   <div className="h-full overflow-y-auto p-6">
-                    <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading...</div>}>
+                    <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading...</div>}>
                       <ConnectorHealthPanel zeroCostMode={settings.zeroCostMode} />
                     </React.Suspense>
                   </div>
                 )}
                 {activeTab === 'runtimes' && (
-                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading runtimes…</div>}>
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading runtimes…</div>}>
                     <RuntimeManagerView />
                   </React.Suspense>
                 )}
                 {activeTab === 'voice' && (
-                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading voice…</div>}>
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading voice…</div>}>
                     <VoiceView />
                   </React.Suspense>
                 )}
