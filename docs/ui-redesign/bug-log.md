@@ -775,6 +775,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification, partial:** this component is used throughout the app and its real-mascot-image path has been visually confirmed correct in numerous prior screenshots this session (`AgentDock.tsx`, `AgentCard.tsx`, the Coach agent-status cards, etc.) — but all of those used real mascot images successfully, so the fallback initials/icon path (the actual code changed here) was not independently triggered or screenshotted this pass.
 - **Status:** CLOSED (code + statics verified; fallback-path rendering not independently screenshotted, disclosed above).
 
+### 100. `ui/Input.tsx` + `AutomationView.tsx` (1 raw-color ref each) — last 2 files in the initial audit sweep
+
+- **`ui/Input.tsx`:** the error-state border was hardcoded `border-red-500/50` while every other token in the file uses the bare `[--x]` shorthand already confirmed valid in `ui/Badge.tsx` (#90) — fixed to `border-[--error-border]` for consistency. **Real finding, not fixed (out of scope):** grepped for any real import/usage of this shared `Input` primitive across `src/components/` and found none outside its own file and `ui/index.ts`'s barrel re-export — it is exported but currently unused anywhere in the app, the same category of orphaned-primitive finding as `WorkflowPanel.tsx` (#67).
+- **`AutomationView.tsx`:** a lone `text-red-400` create-schedule error message, tokenized to `text-[var(--error)]`.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed on either file.
+- **Test coverage:** `src/test/ui/Input.test.tsx` exists but could not run this pass (`--pool=forks` hit the same worker-startup timeout documented for `ui/Badge.tsx`, #90 — this session's machine-contention issue has gotten worse over its length, not better). `AutomationView.tsx` has no dedicated test for this line. `tsc --noEmit` and `eslint` both clean on both files.
+- **Live-verification:** not obtained for either change — `Input.tsx`'s error state has no real call site to trigger (per the orphaned-primitive finding above), and `AutomationView.tsx`'s create-schedule error message requires a real validation failure not attempted this pass. Relying on `tsc`/`eslint` plus the minimal, single-line nature of both changes.
+- **Status:** CLOSED (code + statics verified; live screenshots not obtained for either file, disclosed above). **This closes the last 2 files from the initial full-repo hardcoded-color audit sweep — every file with a nonzero raw-Tailwind-color count has now been either re-skinned or explicitly documented as an intentional carve-out / out-of-scope surface.**
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)

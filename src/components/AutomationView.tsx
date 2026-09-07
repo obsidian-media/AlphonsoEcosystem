@@ -123,7 +123,7 @@ function JoseSchedulerPanel() {
         </button>
       </div>
       {createError && (
-        <div className="text-xs text-red-400 px-1">{createError}</div>
+        <div className="text-xs text-[var(--error)] px-1">{createError}</div>
       )}
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
