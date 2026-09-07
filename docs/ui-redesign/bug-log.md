@@ -351,6 +351,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `ChatView.tsx`, which only renders this notice when Ollama is disconnected or the selected model is missing (`showNotice = ollamaStatus.state !== 'connected' || selectedModelMissing`) — this dev environment's Ollama is connected throughout this whole session (confirmed in every prior screenshot's right-panel "System" tab), so the notice never renders under normal conditions and forcing a disconnected state solely to screenshot one banner was judged out of proportion. Not chased further; relying on clean `tsc`/`eslint` and the straightforward 1:1 status→tone mapping.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 49. `DeadLetterQueueView.tsx` re-skin (172 lines, 26 refs) — clean pass, no carve-out
+
+- **What changed:** the whole surface is an error/failure view by nature — header, Refresh/Retry-All buttons, the last-result banner (success/error), and each dead-letter item's row (title/failure-reason/timestamp) — all tokenized onto `--success`/`--error`/`--text-*`/`--surface-*`/`--border`. No per-item identity to carve out.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake on 4 spots (Refresh/Retry-All/item-row/Retry buttons' `/80`-suffixed hover states), corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Work space → Automation → Dead Letter tab): confirmed the empty state ("No failed tasks", success-green checkmark), the error-red header icon, and the Refresh button all render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
