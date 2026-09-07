@@ -80,7 +80,7 @@ const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ def
 const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
 const CoachHardInterruptOverlay = lazy(() => import('./components/CoachHardInterruptOverlay').then((mod) => ({ default: mod.CoachHardInterruptOverlay })));
 const ApprovalModal = lazy(() => import('./components/ApprovalModal').then((mod) => ({ default: mod.ApprovalModal })));
-const OnboardingWizard = lazy(() => import('./components/OnboardingWizard').then((mod) => ({ default: mod.OnboardingWizard })));
+const SetupFlow = lazy(() => import('./components/SetupFlow').then((mod) => ({ default: mod.SetupFlow })));
 const ConnectorHealthPanel = lazy(() => import('./components/ConnectorHealthPanel').then((mod) => ({ default: mod.ConnectorHealthPanel })));
 const RuntimeManagerView = lazy(() => import('./components/RuntimeManagerView'));
 const VoiceView = lazy(() => import('./components/VoiceView').then((mod) => ({ default: mod.VoiceView })));
@@ -236,7 +236,7 @@ function AppShell() {
     memoryItems, screenObserverState, screenObserverLogs,
     miyaCompanionState, joseCompanionState, hectorCompanionState,
     snapshots, showWorkflowPanel, approvalRequiredNotice, approvalPending,
-    showOnboarding, nativeSelfDevProof, updateCheckState, braveSearchConfigured,
+    showSetup, nativeSelfDevProof, updateCheckState, braveSearchConfigured,
     approvalResolveRef, idleTimerRef, screenObserverRunRef,
     nativeSelfDevAutorunRef, prevOllamaStateRef,
     switchTab, mergedAgentDockCompanions, nativeProofHooks, writeNativeProofStage,
@@ -244,7 +244,7 @@ function AppShell() {
     setMemoryItems, setScreenObserverState, setScreenObserverLogs,
     setMiyaCompanionState, setJoseCompanionState, setHectorCompanionState,
     setSnapshots, setShowWorkflowPanel, setApprovalRequiredNotice, setApprovalPending,
-    setShowOnboarding, setNativeSelfDevProof, setUpdateCheckState, setBraveSearchConfigured,
+    setShowSetup, setNativeSelfDevProof, setUpdateCheckState, setBraveSearchConfigured,
     setLastTaskCompletedAt, requestApproval, createNewChat, deleteChat,
     handleCreateSnapshot, handleRestoreSnapshot, handleBackupMemory,
     handleRequestScreenObserverPermission, handleStartScreenObserver,
@@ -793,17 +793,17 @@ function AppShell() {
     );
   }
 
-  if (showOnboarding && !settings.selectedModel && !isCoachWindow) {
+  if (showSetup && !isCoachWindow) {
     return (
       <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
-        <OnboardingWizard
-          onComplete={(chosenModel: string, chosenProvider?: string) => {
+        <SetupFlow
+          onComplete={(chosenModel?: string, chosenProvider?: string) => {
             setSettings((current: any) => ({
               ...current,
               ...(chosenModel ? { selectedModel: chosenModel } : {}),
               ...(chosenProvider ? { selectedProvider: chosenProvider } : {})
             }));
-            setShowOnboarding(false);
+            setShowSetup(false);
           }}
         />
       </Suspense>
