@@ -19,22 +19,22 @@ interface Props {
 export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUntilMs }: Props) {
   const level = intervention?.level || 'quiet';
   const tone = level === 'hard'
-    ? 'border-red-300/40 bg-red-500/15 text-red-50 shadow-[0_0_40px_rgba(239,68,68,0.18)]'
+    ? 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)] shadow-[0_0_40px_rgba(239,68,68,0.18)]'
     : level === 'firm'
-      ? 'border-amber-300/35 bg-amber-500/12 text-amber-50 shadow-[0_0_34px_rgba(245,158,11,0.14)]'
-      : 'border-cyan-300/25 bg-cyan-500/10 text-cyan-50';
+      ? 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)] shadow-[0_0_34px_rgba(245,158,11,0.14)]'
+      : 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]';
 
   if (!intervention) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
-        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Session guard</div>
-        <div className="mt-2 text-sm font-semibold text-zinc-200">No active intervention.</div>
-        <div className="mt-1 text-xs leading-relaxed text-zinc-400">Local bridge is ready for protective session events.</div>
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-0)] p-3">
+        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-3)]">Session guard</div>
+        <div className="mt-2 text-sm font-semibold text-[var(--text-2)]">No active intervention.</div>
+        <div className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">Local bridge is ready for protective session events.</div>
         {onDemo && (
           <button
             type="button"
             onClick={onDemo}
-            className="mt-3 rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-cyan-100 hover:bg-cyan-500/20"
+            className="mt-3 rounded-lg border border-[var(--info-border)] bg-[var(--info-dim)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--info)] hover:bg-[var(--info-dim)]"
           >
             Demo check-in
           </button>
@@ -64,7 +64,7 @@ export function CoachInterventionCard({ intervention, onAction, onDemo, pauseUnt
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-lg bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-950 hover:bg-white">Pause 60s</button>
+        <button type="button" onClick={() => onAction?.('pause_60_seconds')} className="rounded-lg bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--surface-0)] hover:bg-white">Pause 60s</button>
         <button type="button" onClick={() => onAction?.('end_session')} className="rounded-lg border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/90 hover:bg-white/10">End session</button>
         <button type="button" onClick={() => onAction?.(level === 'hard' ? 'continue_anyway' : 'continue')} className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10">{level === 'hard' ? 'Continue anyway' : 'Continue'}</button>
       </div>

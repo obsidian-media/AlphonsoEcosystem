@@ -452,6 +452,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Settings → Knowledge): confirmed the "ALL" category pill (accent-teal selected state), search input, and empty state all render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 61. `CoachInterventionCard.tsx` re-skin (74 lines, 18 refs) — clean pass, no carve-out
+
+- **What changed:** the 3-tier `tone` map (hard → `--error`, firm → `--warning`, quiet → `--info`), the "no active intervention" empty state, and the "Demo check-in" button — tokenized. The active-intervention card's white/opacity-based text (title, metric labels, action buttons) is deliberately kept as `white/NN` — it needs to read legibly across all 3 dynamically-selected tone backgrounds, not sit on a fixed neutral surface, so it can't be folded into `--text-*` tokens without breaking contrast on the `--error`/`--warning` backgrounds. One button (`Pause 60s`, white background) had its `text-zinc-950` corrected to `--surface-0` for consistency with the identical fix already applied to `CoachHardInterruptOverlay.tsx`'s matching button (#54).
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified, via earlier screenshots from this same session:** both states of this exact component were already captured and visually confirmed correct while working on `CoachWindow.tsx` (#51, the "Session Guard / No active intervention" empty state) and `CoachHardInterruptOverlay.tsx` (#54, the "Local Coach Intervention / HARD" card, reached via the real "Demo check-in" button) — not re-screenshotted a third time for this pass since both states were already proven, but noted here for a clear paper trail rather than silently skipped.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
