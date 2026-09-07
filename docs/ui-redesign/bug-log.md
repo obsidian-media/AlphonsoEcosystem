@@ -666,6 +666,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx:417` (`<Card label="Assignments">`), the same post-execution RESULTS-tab grid as `AgentOutputPanel.tsx` (#81) and `ExecutionTimeline.tsx` (#85) right next to it — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 87. `NovaHistoryChart.tsx` re-skin (88 lines, 6 refs) — clean pass, no carve-out
+
+- **What changed:** the empty state, the sparkline's SVG `stroke`/`fill` (raw hex `#6366f1` → `var(--accent)` passed directly as SVG attribute values, same pattern already proven correct in `ApprovalModal.tsx`'s and `BoardroomView.tsx`'s `ScoreRing` components), the latest-score text, and the footer caption — all tokenized onto `--accent`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `SettingsView.tsx`'s Memory section. A Playwright navigation attempt this pass hit a flake (the Settings section-nav list didn't render after the click, a repeat of the same class of transient issue seen with `ConnectorStatusIndicators.tsx`, #73) rather than a real rendering problem. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-twice-proven SVG-`var()` pattern from `ApprovalModal.tsx` and `BoardroomView.tsx`.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained due to a navigation flake, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
