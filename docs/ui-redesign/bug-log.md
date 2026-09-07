@@ -247,6 +247,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Also found, also out of scope:** the page references `.alphonso-site`, `.alphonso-site__bg`, and `.alphonso-site__panel` CSS classes that don't exist in any stylesheet in the repo — likely dead/unfinished styling hooks, similar in shape to #35's `--card` finding but on a page this pass isn't touching, so left as a noted-not-fixed observation rather than pulled into scope.
 - **Status:** SKIPPED (out of scope, documented).
 
+### 37. `SessionHistoryView.tsx` re-skin (268 lines, 47 refs) — clean pass, no carve-out
+
+- **What changed:** `STATUS_STYLES` (completed/reported_to_jose/failed/dead_letter/queued/executing/recorded), `SessionRow`'s expand/collapse chrome, and the search/filter/export toolbar — tokenized onto `--success`/`--error`/`--info`/`--text-*`/`--surface-*`. Genuine pipeline-status semantics, no per-item identity.
+- **Existing test coverage reused:** `src/test/appSessionHistoryNav.test.js` (2 tests) stayed green. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, via sidebar → Session History): search input, status filter dropdown, and Export/Refresh buttons all correctly tokenized — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
