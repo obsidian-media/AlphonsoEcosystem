@@ -543,6 +543,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Work space → Projects → Agents tab): filled in a project name to unlock the Agents tab, clicked into it, and confirmed the "Agent Profile" card renders Jose's real profile data (purpose/strengths/limitations/professional-skill) correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 72. `agentWorkshop/ProjectIntakePanel.tsx` re-skin (62 lines, 12 refs) — a real missing-text-color bug fixed
+
+- **What changed:** the panel shell, header, preset buttons (indigo, generic action → `--accent`), and all 6 form fields (3 inputs, 1 select, 3 textareas) — tokenized onto `--accent`/`--text-*`/`--surface-*`/`--border`.
+- **Real bug found and fixed:** none of the 6 form fields had an explicit text color class at all (only `bg-zinc-900` + a border, no `text-*`) — the same category of bug the session's opening critical-fix pass was originally chasing (`ProjectBatchPanel.tsx`'s inputs rendering solid white before that fix). Verified live rather than assumed: filled in real text and confirmed it actually rendered correctly (this dev environment happens to inherit a light-enough default text color that it wasn't invisible here, but relying on inherited/default color for form-field text is fragile and worth closing regardless) — added explicit `text-[var(--text-1)]` to all 6 fields.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Work space → Projects → Setup tab): filled in the project-name input and the description textarea with real text, confirmed both render clearly legible or the intended token color. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
