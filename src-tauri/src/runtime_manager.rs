@@ -696,16 +696,20 @@ fn detect_ram_gb() -> u64 {
 /// pairs rather than sysinfo's own types, so no real disk I/O is needed to
 /// test the matching logic itself.
 fn pick_disk_for_path(path: &str, disks: &[(String, u64)]) -> Option<u64> {
+  let target = Path::new(path);
   disks
     .iter()
-    .filter(|(mount, _)| path.starts_with(mount.as_str()))
-    .max_by_key(|(mount, _)| mount.len())
+    // Path::starts_with compares whole path components, so "/home2/app"
+    // does NOT match mount point "/home" (a raw str::starts_with would
+    // match, and would then report free space from the wrong volume).
+    .filter(|(mount, _)| target.starts_with(Path::new(mount)))
+    .max_by_key(|(mount, _)| Path::new(mount).components().count())
     .map(|(_, available)| *available)
 }
 
 /// Free disk space (GB) for the drive containing the app's own install
 /// directory — the drive Setup's downloads will actually land on.
-fn detect_disk_free_gb() -> u64 {
+fn detect_disk_free_gb() -> Option<u64> {
   let disks = sysinfo::Disks::new_with_refreshed_list();
   let disk_list: Vec<(String, u64)> = disks
     .list()
@@ -723,11 +727,17 @@ fn detect_disk_free_gb() -> u64 {
     .and_then(|p| p.parent().map(|p| p.to_string_lossy().to_string()))
     .unwrap_or_default();
 
+  // None (not 0) when nothing resolves — 0 would read as "disk is full"
+  // downstream and block every install on a machine we simply failed to
+  // measure.
   pick_disk_for_path(&exe_dir, &disk_list)
     .or_else(|| disk_list.iter().map(|(_, avail)| *avail).max())
     .map(|bytes| bytes / 1024 / 1024 / 1024)
-    .unwrap_or(0)
 }
+
+/// How long `detect_gpu` will wait for `nvidia-smi` before killing it and
+/// reporting "no GPU" — see that function for why a bound is required.
+const GPU_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Pure parser for `nvidia-smi --query-gpu=name --format=csv,noheader`
 /// output — separated from the actual process spawn so it's testable
@@ -752,16 +762,58 @@ fn parse_nvidia_smi_output(output: &str) -> Option<(String, String)> {
 fn detect_gpu() -> (bool, Option<String>, Option<String>) {
   let mut cmd = Command::new("nvidia-smi");
   cmd.args(["--query-gpu=name", "--format=csv,noheader"]);
+  cmd.stdin(std::process::Stdio::null());
+  cmd.stdout(std::process::Stdio::piped());
+  cmd.stderr(std::process::Stdio::null());
   no_window(&mut cmd);
-  match cmd.output() {
-    Ok(out) if out.status.success() => {
-      let stdout = String::from_utf8_lossy(&out.stdout);
-      match parse_nvidia_smi_output(&stdout) {
-        Some((vendor, model)) => (true, Some(vendor), Some(model)),
-        None => (false, None, None),
+
+  // Bounded wait: nvidia-smi can hang indefinitely against a wedged driver
+  // or a GPU in a bad power state, and Command::output() would block the
+  // whole scan forever with no way out. Spawn + poll + kill on timeout
+  // instead, so a broken driver degrades to "no GPU detected" (the same
+  // outcome as a machine that genuinely has no NVIDIA card) rather than
+  // stalling Setup's first screen.
+  let mut child = match cmd.spawn() {
+    Ok(c) => c,
+    Err(_) => return (false, None, None),
+  };
+
+  let deadline = std::time::Instant::now() + GPU_PROBE_TIMEOUT;
+  loop {
+    match child.try_wait() {
+      Ok(Some(status)) => {
+        if !status.success() {
+          return (false, None, None);
+        }
+        break;
+      }
+      Ok(None) => {
+        if std::time::Instant::now() >= deadline {
+          let _ = child.kill();
+          let _ = child.wait();
+          return (false, None, None);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+      }
+      Err(_) => {
+        let _ = child.kill();
+        let _ = child.wait();
+        return (false, None, None);
       }
     }
-    _ => (false, None, None),
+  }
+
+  let mut stdout = String::new();
+  if let Some(mut pipe) = child.stdout.take() {
+    use std::io::Read;
+    if pipe.read_to_string(&mut stdout).is_err() {
+      return (false, None, None);
+    }
+  }
+
+  match parse_nvidia_smi_output(&stdout) {
+    Some((vendor, model)) => (true, Some(vendor), Some(model)),
+    None => (false, None, None),
   }
 }
 
@@ -1064,7 +1116,10 @@ async fn ensure_venv(app: &AppHandle, tool: &str, py: &str, dir: &Path) -> Resul
 #[serde(rename_all = "camelCase")]
 pub struct HardwareProfile {
   pub ram_gb: u64,
-  pub disk_free_gb: u64,
+  /// None when no disk could be resolved — serialized as JSON null, which
+  /// the frontend treats as "unknown" (does not block installs), distinct
+  /// from 0 meaning "genuinely full".
+  pub disk_free_gb: Option<u64>,
   pub gpu_present: bool,
   pub gpu_vendor: Option<String>,
   pub gpu_model: Option<String>,
@@ -1938,6 +1993,22 @@ mod tests {
   }
 
   #[test]
+  fn pick_disk_for_path_does_not_treat_home2_as_child_of_home() {
+    // Regression: a raw str::starts_with matched "/home2/app" against the
+    // "/home" mount point and reported the wrong volume's free space.
+    let disks = vec![
+      ("/".to_string(), 50_000_000_000u64),
+      ("/home".to_string(), 200_000_000_000u64),
+    ];
+    let picked = pick_disk_for_path("/home2/app", &disks);
+    assert_eq!(
+      picked,
+      Some(50_000_000_000u64),
+      "/home2 must fall back to the root mount, not match /home"
+    );
+  }
+
+  #[test]
   fn parse_nvidia_smi_output_extracts_vendor_and_model() {
     let output = "NVIDIA GeForce RTX 4060\n";
     let (vendor, model) = parse_nvidia_smi_output(output).expect("should parse");
@@ -1976,7 +2047,11 @@ mod tests {
     // Same real-machine sanity bounds as detect_ram_gb_returns_plausible_value —
     // this exercises the full command, not just the RAM function in isolation.
     assert!(profile.ram_gb >= 1);
-    assert!(profile.disk_free_gb < 1_000_000); // sanity upper bound, not a real limit
+    // disk_free_gb is Option: None is a legitimate "couldn't measure" result,
+    // so only bound it when a value was actually produced.
+    if let Some(free) = profile.disk_free_gb {
+      assert!(free < 1_000_000); // sanity upper bound, not a real limit
+    }
   }
 
   #[test]

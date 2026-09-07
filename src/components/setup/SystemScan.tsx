@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { scanHardware, type HardwareProfile } from '../../services/setupFlowService';
+import { scanHardware, withTimeout, type HardwareProfile } from '../../services/setupFlowService';
 import { checkPrerequisites, type PrereqStatus } from '../../services/runtimeManagerService';
 
 export interface SystemScanProps {
@@ -10,24 +10,39 @@ export function SystemScan({ onContinue }: SystemScanProps) {
   const [scanning, setScanning] = useState(true);
   const [profile, setProfile] = useState<HardwareProfile | null>(null);
   const [prereqs, setPrereqs] = useState<PrereqStatus | null>(null);
+  const [hardwareScanFailed, setHardwareScanFailed] = useState(false);
+  const [prereqScanFailed, setPrereqScanFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([scanHardware(), checkPrerequisites()])
-      .then(([hw, prereq]) => {
+    // allSettled, not all: the two probes are independent, and a failure of
+    // one must not discard a good result from the other. (With Promise.all,
+    // a prerequisite-scan failure zeroed diskFreeGb, which RecommendedSetup
+    // then read as "disk full" and used to block every install.)
+    // Each probe is individually timed out inside its own service wrapper,
+    // so a host where Tauri's invoke() never settles (a plain browser —
+    // `npm run dev`, Playwright) degrades to "unknown" instead of hanging
+    // on the scanning screen forever.
+    // withTimeout applied at the call site for BOTH probes rather than relying
+    // on a wrapper inside one of them — this screen's guarantee is "we always
+    // leave the scanning state", and it shouldn't depend on which service
+    // happens to bound itself internally.
+    Promise.allSettled([withTimeout(scanHardware()), withTimeout(checkPrerequisites())])
+      .then(([hwResult, prereqResult]) => {
         if (cancelled) return;
-        setProfile(hw);
-        setPrereqs(prereq);
-        setScanning(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // Scan failure degrades to "continue with unknowns" rather than
-        // blocking Setup entirely — see the design doc's §9 scan-timeout
-        // open item. A full retry/timeout UX is deferred; this is the
-        // minimum viable non-blocking fallback.
-        setProfile({ ramGb: 0, diskFreeGb: 0, gpuPresent: false, gpuVendor: null, gpuModel: null });
-        setPrereqs({ missing: [], installHint: 'Could not fully detect prerequisites.' });
+        setProfile(
+          hwResult.status === 'fulfilled'
+            ? hwResult.value
+            // diskFreeGb null (not 0) = "unknown", which does not block installs.
+            : { ramGb: 0, diskFreeGb: null, gpuPresent: false, gpuVendor: null, gpuModel: null }
+        );
+        setPrereqs(
+          prereqResult.status === 'fulfilled'
+            ? prereqResult.value
+            : { missing: [], installHint: 'Could not fully detect prerequisites.' }
+        );
+        setHardwareScanFailed(hwResult.status === 'rejected');
+        setPrereqScanFailed(prereqResult.status === 'rejected');
         setScanning(false);
       });
     return () => { cancelled = true; };
@@ -47,19 +62,34 @@ export function SystemScan({ onContinue }: SystemScanProps) {
       <div className="flex flex-col gap-2 w-full max-w-md text-sm">
         <div className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
           <span className="text-[var(--text-2)]">RAM</span>
-          <span className="text-[var(--text-1)]">{profile.ramGb}GB RAM</span>
+          <span className="text-[var(--text-1)]">
+            {hardwareScanFailed ? 'Unknown' : `${profile.ramGb}GB RAM`}
+          </span>
         </div>
         <div className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
           <span className="text-[var(--text-2)]">Disk</span>
-          <span className="text-[var(--text-1)]">{profile.diskFreeGb}GB free</span>
+          <span className="text-[var(--text-1)]">
+            {profile.diskFreeGb === null ? 'Unknown' : `${profile.diskFreeGb}GB free`}
+          </span>
         </div>
         <div className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
           <span className="text-[var(--text-2)]">GPU</span>
           <span className="text-[var(--text-1)]">
-            {profile.gpuPresent ? `${profile.gpuVendor} ${profile.gpuModel}` : 'No GPU detected'}
+            {hardwareScanFailed
+              ? 'Unknown'
+              : profile.gpuPresent
+                ? `${profile.gpuVendor} ${profile.gpuModel}`
+                : 'No GPU detected'}
           </span>
         </div>
-        {prereqs.dockerFound === false && (
+        {(hardwareScanFailed || prereqScanFailed) && (
+          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+            Some checks couldn&apos;t complete on this system. You can continue — recommendations
+            will be more conservative, and anything that turns out to be missing can still be
+            installed later from Runtime Hub.
+          </div>
+        )}
+        {!prereqScanFailed && prereqs.dockerFound === false && (
           <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
             Docker not found — needed only if you choose n8n, ChromaDB, or OpenHands later. Not auto-installable; see Runtime Hub for manual setup instructions.
           </div>

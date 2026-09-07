@@ -10,6 +10,7 @@ import {
   checkDiskSpace,
   isSetupComplete,
   markSetupComplete,
+  withTimeout,
 } from '../services/setupFlowService';
 
 beforeEach(() => {
@@ -59,6 +60,23 @@ describe('checkDiskSpace', () => {
     expect(result.ok).toBe(true);
     expect(result.neededGb).toBe(0);
   });
+
+  it('does not block installation when free space is unknown', () => {
+    // null = "we could not measure", which must not be conflated with 0
+    // ("the disk is full") — refusing to install on an unmeasured disk is
+    // worse than letting the real install surface a real error.
+    const selected = [{ id: 'fooocus', sizeGb: 15 }];
+    const result = checkDiskSpace(selected, null);
+    expect(result.ok).toBe(true);
+    expect(result.unknown).toBe(true);
+    expect(result.neededGb).toBe(15);
+  });
+
+  it('still blocks when free space is genuinely zero', () => {
+    const result = checkDiskSpace([{ id: 'fooocus', sizeGb: 15 }], 0);
+    expect(result.ok).toBe(false);
+    expect(result.unknown).toBe(false);
+  });
 });
 
 describe('isSetupComplete / markSetupComplete', () => {
@@ -69,5 +87,39 @@ describe('isSetupComplete / markSetupComplete', () => {
   it('returns true after markSetupComplete is called', () => {
     markSetupComplete();
     expect(isSetupComplete()).toBe(true);
+  });
+
+  it('treats a completed legacy onboarding flag as setup-complete (upgrade path)', () => {
+    // An existing install that finished the old OnboardingWizard must not be
+    // dropped back into first-run Setup just because it upgraded.
+    localStorage.setItem('alphonso_onboarding_complete_v1', JSON.stringify(true));
+    expect(isSetupComplete()).toBe(true);
+  });
+
+  it('migrates the legacy flag forward so the check only happens once', () => {
+    localStorage.setItem('alphonso_onboarding_complete_v1', JSON.stringify(true));
+    isSetupComplete();
+    expect(JSON.parse(localStorage.getItem('alphonso_setup_complete_v1'))).toBe(true);
+  });
+
+  it('does not treat an incomplete legacy flag as setup-complete', () => {
+    localStorage.setItem('alphonso_onboarding_complete_v1', JSON.stringify(false));
+    expect(isSetupComplete()).toBe(false);
+  });
+});
+
+describe('withTimeout', () => {
+  it('resolves with the value when the promise settles in time', async () => {
+    await expect(withTimeout(Promise.resolve('ok'), 1000)).resolves.toBe('ok');
+  });
+
+  it('rejects when the promise never settles — the browser/non-Tauri case', async () => {
+    // invoke() in a plain browser neither resolves nor rejects; without a
+    // timeout this hung Setup on the scanning screen forever.
+    await expect(withTimeout(new Promise(() => {}), 10)).rejects.toThrow(/timed out/);
+  });
+
+  it('propagates a real rejection rather than masking it as a timeout', async () => {
+    await expect(withTimeout(Promise.reject(new Error('boom')), 1000)).rejects.toThrow('boom');
   });
 });

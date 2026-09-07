@@ -1,6 +1,10 @@
 import React from 'react';
 
-export type IntentId = 'chat-only' | 'chat-images' | 'chat-voice' | 'full-power' | 'custom';
+// 'custom' (the agent-grid, pick-components-individually path) is
+// deliberately absent: that flow isn't built yet, and an earlier version
+// shipped a tile promising it that silently completed Setup and installed
+// nothing. Add the tile back in the same change that implements the grid.
+export type IntentId = 'chat-only' | 'chat-images' | 'chat-voice' | 'full-power';
 
 interface IntentTile {
   id: IntentId;
@@ -13,7 +17,6 @@ const INTENT_TILES: IntentTile[] = [
   { id: 'chat-images', label: 'Chat + Images', blurb: 'Adds Fooocus, ~15GB' },
   { id: 'chat-voice', label: 'Chat + Voice', blurb: 'Adds Voice OS, lightweight' },
   { id: 'full-power', label: 'Full Power Mode', blurb: 'Everything recommended for your hardware' },
-  { id: 'custom', label: 'Custom', blurb: 'Pick components individually' },
 ];
 
 export interface IntentSelectionProps {

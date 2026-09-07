@@ -14,9 +14,11 @@ export interface InstallQueueProps {
   components: (SelectableComponent & { label: string })[];
   onStarterReady: () => void;
   onAllComplete: () => void;
+  /** Called instead of onAllComplete when the queue settles with failures. */
+  onFailed: (failedLabels: string[]) => void;
 }
 
-export function InstallQueue({ components, onStarterReady, onAllComplete }: InstallQueueProps) {
+export function InstallQueue({ components, onStarterReady, onAllComplete, onFailed }: InstallQueueProps) {
   const [tasks, setTasks] = useState<Task[]>(
     components.map((c) => ({ ...c, status: 'pending' as TaskStatus }))
   );
@@ -56,12 +58,20 @@ export function InstallQueue({ components, onStarterReady, onAllComplete }: Inst
       starterReadyFired.current = true;
       onStarterReady();
     }
-    const allDone = tasks.every((t) => t.status === 'ready' || t.status === 'error');
-    if (allDone && !allCompleteFired.current) {
-      allCompleteFired.current = true;
+    const settled = tasks.every((t) => t.status === 'ready' || t.status === 'error');
+    if (!settled || allCompleteFired.current) return;
+    allCompleteFired.current = true;
+    // Only a fully-successful queue counts as completion. Treating `error`
+    // as done would play "Alphonso is online." and persist the setup-complete
+    // flag even though a component the user explicitly asked for failed to
+    // install — and because the flag gates Setup, they'd never be offered
+    // the flow again to retry it.
+    if (tasks.some((t) => t.status === 'error')) {
+      onFailed(tasks.filter((t) => t.status === 'error').map((t) => t.label));
+    } else {
       onAllComplete();
     }
-  }, [tasks, onStarterReady, onAllComplete]);
+  }, [tasks, onStarterReady, onAllComplete, onFailed]);
 
   return (
     <div className="flex flex-col gap-3 p-8 w-full max-w-lg">

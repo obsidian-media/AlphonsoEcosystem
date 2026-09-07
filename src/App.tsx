@@ -244,7 +244,7 @@ function AppShell() {
     setMemoryItems, setScreenObserverState, setScreenObserverLogs,
     setMiyaCompanionState, setJoseCompanionState, setHectorCompanionState,
     setSnapshots, setShowWorkflowPanel, setApprovalRequiredNotice, setApprovalPending,
-    setShowSetup, setNativeSelfDevProof, setUpdateCheckState, setBraveSearchConfigured,
+    setShowSetup, setNativeSelfDevProof, setBraveSearchConfigured,
     setLastTaskCompletedAt, requestApproval, createNewChat, deleteChat,
     handleCreateSnapshot, handleRestoreSnapshot, handleBackupMemory,
     handleRequestScreenObserverPermission, handleStartScreenObserver,

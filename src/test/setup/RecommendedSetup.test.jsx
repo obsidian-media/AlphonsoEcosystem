@@ -4,6 +4,10 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 vi.mock('../../services/runtimeManagerService', () => ({
   getAllStatus: vi.fn(),
 }));
+// Real withTimeout preserved — RecommendedSetup wraps getAllStatus in it.
+vi.mock('../../services/setupFlowService', async (importOriginal) => ({
+  ...(await importOriginal()),
+}));
 
 import { getAllStatus } from '../../services/runtimeManagerService';
 import { RecommendedSetup } from '../../components/setup/RecommendedSetup';
@@ -57,5 +61,26 @@ describe('RecommendedSetup', () => {
     render(<RecommendedSetup intent="chat-only" hardware={hardware} onProceed={() => {}} onCustomize={onCustomize} />);
     fireEvent.click(await waitFor(() => screen.getByText('Customize')));
     expect(onCustomize).toHaveBeenCalled();
+  });
+
+  it('warns instead of silently assuming nothing is installed when the status lookup fails', async () => {
+    // Regression: a transient getAllStatus() failure left installedNames
+    // empty, which re-queued components the user already had — a wasted
+    // multi-GB download presented as if it were required.
+    getAllStatus.mockRejectedValue(new Error('status probe failed'));
+    render(<RecommendedSetup intent="chat-images" hardware={hardware} onProceed={() => {}} onCustomize={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/couldn't check what's already installed/i)).toBeInTheDocument()
+    );
+  });
+
+  it('allows installation to proceed when free disk space is unknown', async () => {
+    getAllStatus.mockResolvedValue([]);
+    const onProceed = vi.fn();
+    const unknownDisk = { ...hardware, diskFreeGb: null };
+    render(<RecommendedSetup intent="chat-images" hardware={unknownDisk} onProceed={onProceed} onCustomize={() => {}} />);
+    await waitFor(() => expect(screen.getByText(/couldn't measure free disk space/i)).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Looks Good → Install'));
+    expect(onProceed).toHaveBeenCalled();
   });
 });

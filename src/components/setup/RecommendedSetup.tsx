@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAllStatus } from '../../services/runtimeManagerService';
-import { checkDiskSpace, type SelectableComponent } from '../../services/setupFlowService';
+import { checkDiskSpace, withTimeout, type SelectableComponent } from '../../services/setupFlowService';
 import type { HardwareProfile } from '../../services/setupFlowService';
 import type { IntentId } from './IntentSelection';
 
@@ -29,7 +29,6 @@ const INTENT_RECOMMENDATIONS: Record<IntentId, RecommendedComponent[]> = {
     { id: 'voice-os', label: 'Voice OS', sizeGb: 1 },
     { id: 'chromadb', label: 'ChromaDB (memory)', sizeGb: 1 },
   ],
-  custom: [],
 };
 
 export interface RecommendedSetupProps {
@@ -42,10 +41,11 @@ export interface RecommendedSetupProps {
 export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: RecommendedSetupProps) {
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
+  const [statusUnknown, setStatusUnknown] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    getAllStatus()
+    withTimeout(getAllStatus())
       .then((statuses) => {
         if (cancelled) return;
         const installed = new Set(statuses.filter((s) => s.installed).map((s) => s.name));
@@ -54,6 +54,11 @@ export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: R
       })
       .catch(() => {
         if (cancelled) return;
+        // Distinguish "nothing is installed" from "we couldn't check".
+        // Silently treating a failed status lookup as an empty set would
+        // re-queue components the user already has — wasting a multi-GB
+        // download — so surface it instead of guessing.
+        setStatusUnknown(true);
         setLoaded(true);
       });
     return () => { cancelled = true; };
@@ -90,6 +95,18 @@ export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: R
         {needsImageGen && !hardware.gpuPresent && (
           <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
             No GPU detected — image generation will be slow (CPU-only).
+          </div>
+        )}
+        {statusUnknown && (
+          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+            Couldn&apos;t check what&apos;s already installed — anything you already have may be
+            reinstalled. Runtime Hub shows the real state once you&apos;re in the app.
+          </div>
+        )}
+        {diskCheck.unknown && (
+          <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
+            Couldn&apos;t measure free disk space — install will proceed, but make sure you have
+            at least {diskCheck.neededGb}GB free.
           </div>
         )}
         {!diskCheck.ok && (

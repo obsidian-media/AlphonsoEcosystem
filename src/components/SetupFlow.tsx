@@ -12,7 +12,7 @@ export interface SetupFlowProps {
   onComplete: (chosenModel?: string, chosenProvider?: string) => void;
 }
 
-type SetupStep = 'scan' | 'intent' | 'recommend' | 'queue' | 'activation';
+type SetupStep = 'scan' | 'intent' | 'recommend' | 'queue' | 'activation' | 'failed';
 type LabeledComponent = SelectableComponent & { label: string };
 
 export function SetupFlow({ onComplete }: SetupFlowProps) {
@@ -23,6 +23,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
   const [queueComponents, setQueueComponents] = useState<LabeledComponent[]>([]);
   const [earlyExited, setEarlyExited] = useState(false);
   const [activationVariant, setActivationVariant] = useState<'full' | 'toast'>('full');
+  const [failedLabels, setFailedLabels] = useState<string[]>([]);
 
   const finishSetup = () => {
     markSetupComplete();
@@ -37,14 +38,6 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
 
   const handleIntentSelect = (selected: IntentId) => {
     setIntent(selected);
-    if (selected === 'custom') {
-      // The agent-grid Custom path is out of scope for this plan (see the
-      // design doc §5 step 3/4 — it's the power-user path, not the golden
-      // path this plan covers). Falls through to completing Setup directly
-      // for now rather than presenting a broken/half-built grid screen.
-      finishSetup();
-      return;
-    }
     setStep('recommend');
   };
 
@@ -54,7 +47,12 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
     setStep('queue');
   };
 
-  const handleCustomize = () => {
+  // "Customize" (the agent-grid power-user path) isn't built yet — see the
+  // design doc §5 step 3/4. Rather than silently completing Setup and
+  // installing nothing (which is what an earlier version did), skip
+  // explicitly: the user gets a working app with no optional components,
+  // and Runtime Hub remains the way to add them.
+  const handleSkipToApp = () => {
     finishSetup();
   };
 
@@ -78,18 +76,54 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
     // own lifecycle, since the component unmounts once finishSetup() runs).
   };
 
+  const handleFailed = (labels: string[]) => {
+    setFailedLabels(labels);
+    setStep('failed');
+  };
+
   return (
     <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)]">
       {step === 'scan' && <SystemScan onContinue={handleScanContinue} />}
       {step === 'intent' && <IntentSelection onSelect={handleIntentSelect} />}
-      {step === 'recommend' && hardware && intent && intent !== 'custom' && (
-        <RecommendedSetup intent={intent} hardware={hardware} onProceed={handleProceed} onCustomize={handleCustomize} />
+      {step === 'recommend' && hardware && intent && (
+        <RecommendedSetup intent={intent} hardware={hardware} onProceed={handleProceed} onCustomize={handleSkipToApp} />
       )}
       {step === 'queue' && (
-        <InstallQueue components={queueComponents} onStarterReady={handleStarterReady} onAllComplete={handleAllComplete} />
+        <InstallQueue
+          components={queueComponents}
+          onStarterReady={handleStarterReady}
+          onAllComplete={handleAllComplete}
+          onFailed={handleFailed}
+        />
       )}
       {step === 'activation' && (
         <ActivationSequence variant={activationVariant} onFinish={finishSetup} />
+      )}
+      {step === 'failed' && (
+        <div className="flex flex-col items-center gap-4 p-8 w-full max-w-lg">
+          <h2 className="text-2xl font-semibold text-[var(--text-1)]">Some components didn&apos;t install</h2>
+          <div className="w-full rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-sm">
+            Failed: {failedLabels.join(', ')}
+          </div>
+          <p className="text-sm text-[var(--text-3)] text-center">
+            You can continue into Alphonso and retry these any time from Runtime Hub, or go back
+            and try the install again now.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep('queue')}
+              className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--surface-0)]"
+            >
+              Retry
+            </button>
+            <button
+              onClick={finishSetup}
+              className="rounded border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text-2)]"
+            >
+              Continue Anyway
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
