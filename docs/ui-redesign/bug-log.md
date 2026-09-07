@@ -166,6 +166,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Not independently re-verified with a fresh screenshot:** the other 22 files this touched (only 3 of the 25 got a fresh post-fix screenshot: `ProjectBatchPanel`, `MissionRoom`, and indirectly whatever `ecosystemHub.test.jsx`/other suites render via jsdom). The mechanical fix pattern is uniform and the existing test suites all stayed green, but a full live-browser pass across all 25 was not done this turn — flagged here as the honest remaining gap, not silently claimed as fully re-verified.
 - **Status:** CLOSED (fix applied, systemically verified via grep/tsc/eslint/tests; visual re-verification is partial as noted above).
 
+### 26. `WorkflowOperationsDashboard.tsx` re-skin (488 lines, 87 refs) — a clean, no-carve-out pass; caught my own #25 mistake before it shipped
+
+- **What changed:** `mapRunTone`/`runRowShellClass`/`receiptRowShellClass` (the 3 truth-state→color maps driving workflow run status), `Badge`'s tone lookup, and all structural chrome across the workflow registry, run controls, agent participation, telemetry, timeline, and receipts panels. No per-agent/per-item identity in this file — genuine truth-state semantics throughout, so a fully clean, no-carve-out pass like #17/#23/#24. `setup_required` maps to a new `'accent'` `Badge` tone (extending its type union, which needed a small TypeScript fix — `tone?: 'zinc' | 'green' | 'amber' | 'indigo' | 'accent' | 'red' | 'blue'` — caught immediately by `tsc`, not silently left broken).
+- **Caught my own #25 regression before committing:** my first replacement pass wrote `border-[var(--success)]/30` directly instead of using the new `--success-border` token — reintroducing the exact broken opacity-modifier bug #25 had just fixed everywhere else. Caught by re-running the same broken-pattern grep immediately after this file's edit (now standard practice for every subsequent file), then re-ran the #25 fix script against this file specifically to correct it before any further verification.
+- **Existing test coverage:** no dedicated component test, but `src/test/ecosystemHub.test.jsx` (8 tests) renders this panel via `EcosystemHub.tsx`'s Advanced tab — reused as the regression guard, stayed green throughout. `tsc --noEmit` and `eslint` both clean (after the tone-type fix above).
+- **Live-verified** (Playwright, real dev server, real Ollama connection): Workflow Operations Dashboard section — selected-workflow accent highlight, risk-level badges (amber "HIGH", info-blue "MEDIUM"), and Agent Participation badges (success-green "EXECUTE", warning-amber "APPROVAL STAGE") — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
