@@ -1,33 +1,39 @@
 import React, { useState } from 'react';
+import { SystemScan } from './setup/SystemScan';
 import { IntentSelection, type IntentId } from './setup/IntentSelection';
+import type { HardwareProfile } from '../services/setupFlowService';
+import type { PrereqStatus } from '../services/runtimeManagerService';
 
 export interface SetupFlowProps {
   onComplete: (chosenModel?: string, chosenProvider?: string) => void;
 }
 
-type SetupStep = 'intent';
+type SetupStep = 'scan' | 'intent';
 
 export function SetupFlow({ onComplete }: SetupFlowProps) {
-  const [step, setStep] = useState<SetupStep>('intent');
+  const [step, setStep] = useState<SetupStep>('scan');
+  const [, setHardware] = useState<HardwareProfile | null>(null);
+  const [, setPrereqs] = useState<PrereqStatus | null>(null);
   const [, setIntent] = useState<IntentId | null>(null);
+
+  const handleScanContinue = (hw: HardwareProfile, prereq: PrereqStatus) => {
+    setHardware(hw);
+    setPrereqs(prereq);
+    setStep('intent');
+  };
 
   const handleIntentSelect = (selected: IntentId) => {
     setIntent(selected);
-    // Later tasks (8-11) add the remaining steps (scan, recommend, queue,
-    // activation) and advance `step` through them instead of completing
-    // immediately here. Left as a direct call to onComplete for now so
-    // this task's test suite exercises a real, working path end-to-end
-    // rather than a dead-end screen.
+    // Task 9 (Recommended Setup) and beyond replace this direct completion
+    // with the rest of the flow. Kept as a real, working end-to-end path
+    // for now rather than a dead end.
     onComplete();
   };
 
-  if (step === 'intent') {
-    return (
-      <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)]">
-        <IntentSelection onSelect={handleIntentSelect} />
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)]">
+      {step === 'scan' && <SystemScan onContinue={handleScanContinue} />}
+      {step === 'intent' && <IntentSelection onSelect={handleIntentSelect} />}
+    </div>
+  );
 }
