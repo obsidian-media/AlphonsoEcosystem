@@ -359,6 +359,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Work space → Automation → Dead Letter tab): confirmed the empty state ("No failed tasks", success-green checkmark), the error-red header icon, and the Refresh button all render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 50. `UpdaterNotification.tsx` re-skin (139 lines, 25 refs) — clean pass, no carve-out
+
+- **What changed:** all 4 banner states (idle/downloading/installing-or-relaunching/error) — amber for in-progress states, red for the error state — tokenized onto `--warning`/`--error`. No per-item identity to carve out.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake on the Download/Retry buttons' `/80` hover states and the Later/Dismiss links' `/70` hover states, corrected automatically.
+- **Test coverage:** `src/test/updaterNotification.test.tsx` — 4/4 passing (`--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** this banner only renders when `App.tsx`'s app-update check finds a real newer published version (`version` prop must be truthy) — this dev build is already on the latest version, so the banner cannot render under real conditions without a genuinely newer release existing. Not chased further; relying on the 4-test suite (which exercises all 4 states with mocked version/status props) plus clean `tsc`/`eslint`.
+- **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
