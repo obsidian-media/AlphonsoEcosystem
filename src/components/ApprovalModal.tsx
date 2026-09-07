@@ -5,18 +5,18 @@ type RiskLevel = 'high' | 'medium' | 'low';
 
 const RISK_BADGE: Record<RiskLevel, { classes: string; dot: string; label: string }> = {
   high: {
-    classes: 'border-red-500/40 bg-red-500/10 text-red-300',
-    dot: 'bg-red-400',
+    classes: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
+    dot: 'bg-[var(--error)]',
     label: 'High Risk'
   },
   medium: {
-    classes: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-    dot: 'bg-amber-400',
+    classes: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
+    dot: 'bg-[var(--warning)]',
     label: 'Medium Risk'
   },
   low: {
-    classes: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-    dot: 'bg-emerald-400',
+    classes: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+    dot: 'bg-[var(--success)]',
     label: 'Low Risk'
   }
 };
@@ -93,11 +93,11 @@ function ScoreRing({ score }: { score: number }) {
   const radius = 18;
   const circumference = 2 * Math.PI * radius;
   const filled = circumference - (score / 100) * circumference;
-  const color = score >= 75 ? '#f87171' : score >= 45 ? '#fbbf24' : '#34d399';
+  const color = score >= 75 ? 'var(--error)' : score >= 45 ? 'var(--warning)' : 'var(--success)';
   return (
     <div className="relative w-12 h-12 shrink-0">
       <svg width="48" height="48" viewBox="0 0 48 48" className="-rotate-90">
-        <circle cx="24" cy="24" r={radius} fill="none" stroke="#27272a" strokeWidth="4" />
+        <circle cx="24" cy="24" r={radius} fill="none" stroke="var(--surface-3)" strokeWidth="4" />
         <circle
           cx="24" cy="24" r={radius} fill="none"
           stroke={color} strokeWidth="4"
@@ -160,31 +160,31 @@ export function ApprovalModal({
   }, [onCancel]);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--surface-0)] backdrop-blur-sm">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="approval-modal-title"
-        className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-zinc-900 shadow-2xl p-6 space-y-4"
+        className="w-full max-w-sm rounded-2xl border border-[var(--warning-border)] bg-[var(--surface-1)] shadow-2xl p-6 space-y-4"
       >
         {/* Header */}
         <div className="flex items-start gap-3">
-          <RiskIcon className={`w-5 h-5 shrink-0 mt-0.5 ${resolvedRisk === 'high' ? 'text-red-400' : 'text-amber-400'}`} />
+          <RiskIcon className={`w-5 h-5 shrink-0 mt-0.5 ${resolvedRisk === 'high' ? 'text-[var(--error)]' : 'text-[var(--warning)]'}`} />
           <div className="flex-1 min-w-0">
             <div
               id="approval-modal-title"
-              className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-1"
+              className="text-xs font-bold uppercase tracking-widest text-[var(--warning)] mb-1"
             >
               Approval Required
             </div>
-            <div className="text-sm text-zinc-200 leading-snug break-words">{actionText}</div>
+            <div className="text-sm text-[var(--text-2)] leading-snug break-words">{actionText}</div>
           </div>
         </div>
 
         {/* Meta row: connector + risk badge + score ring */}
         <div className="flex items-center gap-2 flex-wrap">
           {resolvedConnector && (
-            <div className="rounded-lg border border-white/10 bg-zinc-800/60 px-2.5 py-1 text-[10px] font-semibold text-zinc-300">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)]">
               {resolvedConnector}
             </div>
           )}
@@ -197,16 +197,16 @@ export function ApprovalModal({
 
         {/* Destructive warning */}
         {destructive && (
-          <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-red-400" />
-            <div className="text-[11px] text-red-300 leading-relaxed font-semibold">
+          <div className="flex items-start gap-2 rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2.5">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[var(--error)]" />
+            <div className="text-[11px] text-[var(--error)] leading-relaxed font-semibold">
               This action is irreversible. Proceed only if you are certain.
             </div>
           </div>
         )}
 
         {/* Subtitle */}
-        <div className="text-[11px] text-zinc-500">
+        <div className="text-[11px] text-[var(--text-3)]">
           Jose requires explicit approval before this action executes. Denying will block the
           operation and log a rejection receipt.
         </div>
@@ -215,7 +215,7 @@ export function ApprovalModal({
         <div className="flex gap-3 justify-end pt-1">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-zinc-400 bg-zinc-800 border border-white/10 hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-[var(--text-3)] bg-[var(--surface-3)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             aria-label="Deny action"
           >
             Deny
@@ -224,8 +224,8 @@ export function ApprovalModal({
             onClick={onConfirm}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-colors shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
               resolvedRisk === 'high'
-                ? 'bg-red-700 hover:bg-red-600'
-                : 'bg-amber-600 hover:bg-amber-500'
+                ? 'bg-[var(--error)] hover:bg-[var(--error-dim)]'
+                : 'bg-[var(--warning)] hover:bg-[var(--warning-dim)]'
             }`}
             aria-label="Approve action"
           >
