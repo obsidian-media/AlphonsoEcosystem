@@ -642,6 +642,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx`'s RESULTS tab (`<Card label="Risk Register">`), the same post-execution grid as several prior files this pass — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 84. `agentWorkshop/SystemHealthPanel.tsx` re-skin (56 lines, 6 refs) — clean pass, no carve-out
+
+- **What changed:** the panel shell, header, and each `Item` stat tile (label/value) — tokenized onto `--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified via an earlier screenshot from this same session, not re-captured:** this is the exact "SYSTEM HEALTH" grid (Build Status/Verification/Pending Approvals/etc.) already visually confirmed correct in `agentWorkshop/ProjectIntakePanel.tsx`'s (#72) screenshot, visible on the Setup tab below the intake form.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
