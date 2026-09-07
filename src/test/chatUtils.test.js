@@ -1,4 +1,4 @@
-import { CHAT_ASSISTANT_PROMPT, needsHighRiskApproval, nextMsgId, shouldRouteThroughJose } from '../lib/chatUtils';
+import { CHAT_ASSISTANT_PROMPT, needsHighRiskApproval, nextMsgId, shouldRouteThroughJose, shouldRouteThroughCalleMcp } from '../lib/chatUtils';
 
 describe('chatUtils', () => {
   describe('CHAT_ASSISTANT_PROMPT', () => {
@@ -91,6 +91,29 @@ describe('chatUtils', () => {
 
     it('handles empty string', () => {
       expect(needsHighRiskApproval('')).toBe(false);
+    });
+  });
+
+  describe('shouldRouteThroughCalleMcp', () => {
+    it('matches call-like phrasing', () => {
+      expect(shouldRouteThroughCalleMcp('call Joe\'s Pizza and ask about their website')).toBe(true);
+      expect(shouldRouteThroughCalleMcp('phone the dentist to book an appointment')).toBe(true);
+      expect(shouldRouteThroughCalleMcp('dial +15550123456')).toBe(true);
+    });
+
+    it('does not match unrelated text', () => {
+      expect(shouldRouteThroughCalleMcp('what is the weather today')).toBe(false);
+      expect(shouldRouteThroughCalleMcp('')).toBe(false);
+    });
+
+    it('does not forward ordinary chat mentioning "call" as a verb elsewhere in the sentence (CWE-201 regression)', () => {
+      expect(shouldRouteThroughCalleMcp('How do I call a REST API?')).toBe(false);
+      expect(shouldRouteThroughCalleMcp('Can you call the office for me')).toBe(false);
+      expect(shouldRouteThroughCalleMcp('I need to phone my sister later')).toBe(false);
+    });
+
+    it('never matches an explicit /jose command even if it mentions "call"', () => {
+      expect(shouldRouteThroughCalleMcp('/jose call the research pipeline')).toBe(false);
     });
   });
 });

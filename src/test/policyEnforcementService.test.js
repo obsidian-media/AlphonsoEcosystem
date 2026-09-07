@@ -61,6 +61,11 @@ describe('policyEnforcementService', () => {
       expect(classifyConnectorRisk('hermes_agents', 'some_unrelated_action')).toBe('high');
     });
 
+    it('returns high for calle unconditionally (every call is the real-world action)', () => {
+      expect(classifyConnectorRisk('calle')).toBe('high');
+      expect(classifyConnectorRisk('calle', 'anything')).toBe('high');
+    });
+
     it('returns high for publish action', () => {
       expect(classifyConnectorRisk('notion', 'publish_content')).toBe('high');
     });
