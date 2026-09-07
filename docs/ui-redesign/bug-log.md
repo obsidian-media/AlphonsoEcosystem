@@ -560,6 +560,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified via multiple earlier screenshots from this same session, not re-captured:** `ConnectorStatusStrip` is the exact "Connectors · N disabled" badge visible next to the sidebar's Connectors nav item in numerous prior screenshots this session (e.g. #43's `ConnectorHealthPanel.tsx` entry) — its rendering (disabled-count text in the dimmed neutral tone) has already been visually confirmed correct. A fresh attempt to re-screenshot it this pass hit a Playwright space-navigation flake (the sidebar showed a stale/collapsed nav list) rather than a real rendering problem — not chased further given the component was already proven correct earlier in the session.
 - **Status:** CLOSED (code + statics verified; rendering already confirmed via earlier session screenshots, disclosed above).
 
+### 74. `CrashLogView.tsx` re-skin (68 lines, 11 refs) — clean pass, no carve-out
+
+- **What changed:** header, count badge, Clear button, empty state, and each log entry's chrome (timestamp, error message, context) — all tokenized onto `--error`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Settings → Logs): confirmed the "Crash Log" header, count badge, and "No crash logs recorded" empty state all render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
