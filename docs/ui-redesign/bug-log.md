@@ -701,6 +701,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Operator Dashboard): confirmed the "Operator Active" badge (green dot + text, `variant="success" dot`), the "VERIFIED" trust badge, and the color-coded mode pills (Local Runtime/Approval Mode/Safe Mode) all render with distinct, correct colors. Zero console errors.
 - **Status:** CLOSED.
 
+### 91. `projectExecution/ProjectRoadmap.tsx` re-skin (29 lines, 5 refs) — clean pass, no carve-out
+
+- **What changed:** panel shell, header, empty state, and each roadmap-step card (phase/owner) — tokenized onto `--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** this is the same post-execution RESULTS-tab card family as several prior files this pass — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
