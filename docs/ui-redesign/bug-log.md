@@ -568,6 +568,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Settings → Logs): confirmed the "Crash Log" header, count badge, and "No crash logs recorded" empty state all render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 75. `agents/AgentCapabilityMatrix.tsx` re-skin (41 lines, 10 refs) — clean pass, no carve-out
+
+- **What changed:** header, empty state, and each per-agent card (allowed/blocked/approval counts, capability lists, limitations note → `--warning`, "unwired" policy note → `--info`) — tokenized onto `--warning`/`--info`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified via an earlier screenshot from this same session, not re-captured:** this is the exact "CAPABILITY MATRIX" card already visually confirmed correct while working on `agents/AgentProfilePanel.tsx` (#71) — the same screenshot shows Jose's real capability data ("allowed: 13 | blocked: 11 | approval: 11", the limitations note, the "unwired" policy note) rendering side-by-side with the profile card.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
