@@ -21,22 +21,43 @@ function cx(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-function agentTone(accent: string) {
-  // Real bug fix (was: only emerald/amber/fuchsia/sky handled, everything
-  // else — cyan/violet/pink/orange/blue/red, i.e. Alphonso/Hector/Miya/
-  // Marcus/Echo/Sentinel — silently fell through to the cyan default,
-  // making 6 of 11 agents render visually identical). Every real accent
-  // value MISSION_ROOM_AGENTS defines now gets its own distinct tone.
-  if (accent === 'emerald') return 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100 shadow-[0_0_36px_rgba(16,185,129,0.08)]';
-  if (accent === 'amber') return 'border-amber-300/20 bg-amber-500/10 text-amber-100 shadow-[0_0_36px_rgba(245,158,11,0.08)]';
-  if (accent === 'fuchsia') return 'border-fuchsia-300/20 bg-fuchsia-500/10 text-fuchsia-100 shadow-[0_0_36px_rgba(217,70,239,0.08)]';
-  if (accent === 'sky') return 'border-sky-300/20 bg-sky-500/10 text-sky-100 shadow-[0_0_36px_rgba(14,165,233,0.08)]';
-  if (accent === 'violet') return 'border-violet-300/20 bg-violet-500/10 text-violet-100 shadow-[0_0_36px_rgba(139,92,246,0.08)]';
-  if (accent === 'pink') return 'border-pink-300/20 bg-pink-500/10 text-pink-100 shadow-[0_0_36px_rgba(236,72,153,0.08)]';
-  if (accent === 'orange') return 'border-orange-300/20 bg-orange-500/10 text-orange-100 shadow-[0_0_36px_rgba(249,115,22,0.08)]';
-  if (accent === 'blue') return 'border-blue-300/20 bg-blue-500/10 text-blue-100 shadow-[0_0_36px_rgba(59,130,246,0.08)]';
-  if (accent === 'red') return 'border-red-300/20 bg-red-500/10 text-red-100 shadow-[0_0_36px_rgba(239,68,68,0.08)]';
-  return 'border-cyan-300/20 bg-cyan-500/10 text-cyan-100 shadow-[0_0_36px_rgba(34,211,238,0.08)]';
+// Real agent identity colors, keyed by agent key rather than the
+// MISSION_ROOM_AGENTS.accent Tailwind-family field. That field was a
+// second, independently-hand-picked palette that had drifted from the
+// app's real --agent-* identity tokens in tokens.css (e.g. Sentinel is
+// red everywhere else in the app -- security = danger -- and was 'red'
+// here too only by coincidence; Hector is indigo everywhere else but
+// was 'violet' here, Miya is violet everywhere else but was 'pink'
+// here, Maria is teal everywhere else but was 'emerald' here, Nova is
+// lime everywhere else but was 'fuchsia' here). Keying directly off the
+// real token per agent -- matching the established pattern already used
+// by AgentStatusStrip.tsx/AgentActivityLog.tsx/BoardroomView.tsx --
+// removes the second, drifting palette entirely instead of
+// re-approximating it with yet another hand-picked Tailwind family.
+const AGENT_TONE_CLASS: Record<string, string> = {
+  alphonso: 'border-[var(--agent-alphonso-glow)] bg-[var(--agent-alphonso-glow)] text-[var(--agent-alphonso)] shadow-[0_0_36px_var(--agent-alphonso-glow)]',
+  jose: 'border-[var(--agent-jose-glow)] bg-[var(--agent-jose-glow)] text-[var(--agent-jose)] shadow-[0_0_36px_var(--agent-jose-glow)]',
+  hector: 'border-[var(--agent-hector-glow)] bg-[var(--agent-hector-glow)] text-[var(--agent-hector)] shadow-[0_0_36px_var(--agent-hector-glow)]',
+  miya: 'border-[var(--agent-miya-glow)] bg-[var(--agent-miya-glow)] text-[var(--agent-miya)] shadow-[0_0_36px_var(--agent-miya-glow)]',
+  maria: 'border-[var(--agent-maria-glow)] bg-[var(--agent-maria-glow)] text-[var(--agent-maria)] shadow-[0_0_36px_var(--agent-maria-glow)]',
+  marcus: 'border-[var(--agent-marcus-glow)] bg-[var(--agent-marcus-glow)] text-[var(--agent-marcus)] shadow-[0_0_36px_var(--agent-marcus-glow)]',
+  echo: 'border-[var(--agent-echo-glow)] bg-[var(--agent-echo-glow)] text-[var(--agent-echo)] shadow-[0_0_36px_var(--agent-echo-glow)]',
+  sentinel: 'border-[var(--agent-sentinel-glow)] bg-[var(--agent-sentinel-glow)] text-[var(--agent-sentinel)] shadow-[0_0_36px_var(--agent-sentinel-glow)]',
+  nova: 'border-[var(--agent-nova-glow)] bg-[var(--agent-nova-glow)] text-[var(--agent-nova)] shadow-[0_0_36px_var(--agent-nova-glow)]',
+  // Not real agents -- 'user' is the human founder, 'kairo' is a fictional
+  // legacy roster entry (see BOARDROOM_ROLES.md's aspirational 11-seat
+  // design, never actually built -- same entity flagged in bug-log.md
+  // #18). Neither has a --agent-* token to key off of; kept as distinct
+  // hardcoded tones so they're still visually differentiable, matching
+  // this session's established "deliberate, not tokenized" carve-out
+  // pattern (bug-log.md #15/#16/#18) rather than silently reusing a real
+  // agent's color for a non-agent participant.
+  user: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100 shadow-[0_0_36px_rgba(16,185,129,0.08)]',
+  kairo: 'border-sky-300/20 bg-sky-500/10 text-sky-100 shadow-[0_0_36px_rgba(14,165,233,0.08)]',
+};
+
+function agentTone(key: string) {
+  return AGENT_TONE_CLASS[key] || AGENT_TONE_CLASS.alphonso;
 }
 
 function statusTone(status: string) {
@@ -95,7 +116,7 @@ function AgentCard({ agentKey, reservedSlot }: AgentCardProps) {
   const agent = lookupAgent(agentKey);
   const Icon = speakerIcon(agentKey);
   return (
-    <div className={cx('rounded-3xl border p-4', agentTone(agent.accent))}>
+    <div className={cx('rounded-3xl border p-4', agentTone(agent.key))}>
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25">
           <Icon className="h-5 w-5" />
@@ -127,7 +148,7 @@ function MessageBubble({ message }: { message: Message }) {
   const agent = lookupAgent(message.speaker);
   const Icon = speakerIcon(message.speaker);
   return (
-    <div className={cx('rounded-3xl border p-4', agentTone(agent.accent))}>
+    <div className={cx('rounded-3xl border p-4', agentTone(agent.key))}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/25">
