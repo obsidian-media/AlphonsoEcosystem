@@ -7,7 +7,9 @@ completed a real MCP browser login.
 **Build:** `src/services/connectors/calleConnector.ts` (REST, `createCall`/`getCall`/
 `pollCallUntilTerminal`, `Idempotency-Key` on every create) + `src/services/calleOutreachService.ts`
 (`OutreachCallRecord` persistence/recovery) + `src/components/calle/CalleOutreachPanel.tsx`
-(Phase 1 UI, not yet wired into nav — deferred until the pending UI redesign lands) +
+(Phase 1 UI; wired into Settings -> Connectors as its own "CALL-E Outreach"
+section on 2026-09-07 — it was reachable from nowhere in the app before that, which is why it
+had never been live-verified) +
 `src/services/calleMcpAuthService.ts` (brokered OAuth, no loopback server) +
 `src/services/connectors/calleMcpConnector.ts` (MCP JSON-RPC, no SDK) +
 `src/services/calleMcpOutreachService.ts` (clarifying-question state machine, wired into
@@ -46,8 +48,13 @@ from the Connectors panel — restarting the server resolved it; not a code bug.
 **Not yet verified — needs the native Tauri app:** a real MCP login completed through Alphonso's
 own `calleMcpAuthService.ts` (the CLI's login was a separate session), a credential surviving
 reload via the real OS keychain (confirmed Tauri-native-only, no browser fallback, by design),
-and an actual placed call (`run_call`) — deliberately not attempted without a real recipient and
-explicit go-ahead, since it costs money and rings someone. Full narrative:
+and an actual placed call (`run_call`) — not attempted without a real recipient and explicit
+go-ahead, since it rings a real person. **Cost, confirmed 2026-09-07** against
+heycall-e.com/pricing: "All new CALL-E users gain 20 free calls after sign-up," then a flat
+$0.05 per billable call — so the outstanding verification call is free against the trial
+allowance, and the earlier "costs money" framing overstated the barrier. J3 now carries
+explicit 4-point Done-when criteria (nav reachability — done; native MCP login; keychain
+survival across restart; one real terminal-status call with an audit row). Full narrative:
 `docs/TRUTH_FIRST_EXECUTION_PLAN.md`'s J3 entry.
 
 **Previous entry (2026-09-04):** v2.7.0 (PRs #210-#215, #219). The memory
