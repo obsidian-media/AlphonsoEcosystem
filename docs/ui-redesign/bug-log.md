@@ -223,6 +223,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, via Orchestrator → Command tab): "JOSE TASK PIPELINE" card with the "ALL (0)" filter pill in neutral-active styling and the 6 stage pills (Pending/Queued/Running/Approved/Failed/Dead) all correctly rendered — zero console errors.
 - **Status:** CLOSED.
 
+### 34. `AgentPairingView.tsx` re-skin (282 lines, 56 refs) — a 9th carve-out (per-role identity)
+
+- **What changed:** `AgentCard`'s selection state, the step-flow box, form inputs/buttons, and the existing-pairs list — tokenized onto `--accent`/`--error`/`--text-*`/`--surface-*`. Violet was used throughout as the page's single generic "selected" accent (not per-agent identity — any agent gets the same violet highlight once selected), mapped to `--accent`.
+- **Ninth instance of the carve-out:** `ROLE_COLORS` (orchestrator/analyst/researcher/governance/distribution/memory/security/insight/assistant → violet/blue/sky/amber/emerald/teal/red/pink/zinc) stays hardcoded — real, deliberate per-role-category differentiation, distinct from the per-agent-identity carve-outs seen in earlier files (this differentiates by *role*, not by *which specific agent*).
+- **Existing test coverage reused:** `src/test/agentPairingView.test.jsx` (8 tests) stayed green. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, via EcosystemHub's Pairings tab): agent selection grid with Jose's "orchestrator" role label correctly preserved in violet (the one role that matches a `ROLE_COLORS` key exactly), other real-world roles (`operator`/`creator`/`research_agent`/etc., none of which match the predefined keys) correctly falling through to neutral text — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
