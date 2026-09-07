@@ -186,14 +186,14 @@ export function ToolConnectionsPanel() {
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4">
-      <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-        <Plug className="h-4 w-4 text-sky-300" />
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+      <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
+        <Plug className="h-4 w-4 text-[var(--accent)]" />
         Tool Connections: Slack, Discord, Custom Webhooks
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.2fr_1fr]">
-        <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <select
               aria-label="Connection type"
@@ -206,7 +206,7 @@ export function ToolConnectionsPanel() {
                   setConnectionLabel(type.label);
                 }
               }}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
             >
               {types.map((type) => (
                 <option key={type.id} value={type.id}>{type.label}</option>
@@ -215,25 +215,25 @@ export function ToolConnectionsPanel() {
             <input
               value={connectionLabel}
               onChange={(event) => setConnectionLabel(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Connection label"
             />
             <input
               value={webhookUrl}
               onChange={(event) => setWebhookUrl(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 lg:col-span-2"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)] lg:col-span-2"
               placeholder="Webhook URL"
             />
             <input
               value={messagePrefix}
               onChange={(event) => setMessagePrefix(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Message prefix"
             />
             <input
               value={connectionNote}
               onChange={(event) => setConnectionNote(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Operator note"
             />
           </div>
@@ -243,7 +243,7 @@ export function ToolConnectionsPanel() {
               value={payloadTemplate}
               onChange={(event) => setPayloadTemplate(event.target.value)}
               rows={5}
-              className="mt-3 w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 font-mono text-[11px] text-zinc-100"
+              className="mt-3 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 font-mono text-[11px] text-[var(--text-1)]"
               placeholder="Custom JSON payload template"
             />
           )}
@@ -251,17 +251,17 @@ export function ToolConnectionsPanel() {
           <input
             value={notifyOn}
             onChange={(event) => setNotifyOn(event.target.value)}
-            className="mt-3 w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+            className="mt-3 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
             placeholder="Notify on categories: approval, blocked, executed, failed, policy, connector, dead_letter"
           />
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-500/10 p-3 text-[11px] text-amber-100/85">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
             <input
               id="tool-connection-approval"
               type="checkbox"
               checked={explicitApproval}
               onChange={(event) => setExplicitApproval(event.target.checked)}
-              className="h-3.5 w-3.5 accent-amber-300"
+              className="h-3.5 w-3.5 accent-[var(--warning)]"
             />
             <label htmlFor="tool-connection-approval" className="cursor-pointer">
               I explicitly approve this external webhook send or test.
@@ -272,33 +272,33 @@ export function ToolConnectionsPanel() {
             <input
               value={testMessage}
               onChange={(event) => setTestMessage(event.target.value)}
-              className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text-1)]"
               placeholder="Test message"
             />
             <button
               onClick={saveConnection}
-              className="rounded-xl bg-sky-400/20 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-sky-100 hover:bg-sky-400/30"
+              className="rounded-xl bg-[var(--accent-dim)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)]"
             >
               Save Connection
             </button>
             <button
               onClick={() => testConnection(selectedConnection)}
               disabled={busy}
-              className="rounded-xl bg-emerald-400/20 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-100 hover:bg-emerald-400/30 disabled:opacity-50"
+              className="rounded-xl bg-[var(--success-dim)] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--success)] hover:bg-[var(--success-dim)] disabled:opacity-50"
             >
               Send Test
             </button>
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-zinc-900/55 p-3">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
               Saved Connections
             </div>
             <button
               onClick={refresh}
-              className="inline-flex items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Refresh
@@ -306,45 +306,45 @@ export function ToolConnectionsPanel() {
           </div>
           <div className="mt-3 space-y-2 max-h-[22rem] overflow-y-auto pr-1">
             {connections.length === 0 && (
-              <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-3 text-sm text-zinc-500">
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-3)]">
                 No tool connections saved yet.
               </div>
             )}
             {connections.map((connection) => (
               <div
                 key={connection.id}
-                className={`rounded-xl border p-3 ${connection.id === connectionId ? 'border-sky-300/30 bg-sky-500/10' : 'border-white/10 bg-zinc-900/50'}`}
+                className={`rounded-xl border p-3 ${connection.id === connectionId ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]' : 'border-[var(--border)] bg-[var(--surface-2)]'}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-                      <MessageSquare className="h-4 w-4 text-sky-300" />
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-1)]">
+                      <MessageSquare className="h-4 w-4 text-[var(--accent)]" />
                       {connection.label}
                     </div>
-                    <div className="mt-1 text-[11px] text-zinc-500">
+                    <div className="mt-1 text-[11px] text-[var(--text-3)]">
                       {connection.platform} | {hostFromUrl(connection.webhookUrl)}
                     </div>
                   </div>
-                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${connection.active ? 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200' : 'border-zinc-300/20 bg-zinc-500/10 text-zinc-300'}`}>
+                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${connection.active ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-2)]'}`}>
                     {connection.active ? 'active' : 'disabled'}
                   </span>
                 </div>
-                <div className="mt-2 text-[11px] text-zinc-500">
+                <div className="mt-2 text-[11px] text-[var(--text-3)]">
                   Last test: {connection.lastTestAtMs ? new Date(connection.lastTestAtMs).toLocaleString() : 'never'}
                   {' '}| Status: {connection.lastTestStatus || 'unknown'}
                 </div>
-                {connection.note && <div className="mt-2 text-[11px] text-zinc-400">{connection.note}</div>}
+                {connection.note && <div className="mt-2 text-[11px] text-[var(--text-3)]">{connection.note}</div>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     onClick={() => loadConnection(connection)}
-                    className="rounded bg-zinc-800 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+                    className="rounded bg-[var(--surface-3)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
                   >
                     Load
                   </button>
                   <button
                     onClick={() => testConnection(connection)}
                     disabled={busy}
-                    className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-200 hover:bg-emerald-500/30 disabled:opacity-50"
+                    className="rounded bg-[var(--success-dim)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--success)] hover:bg-[var(--success-dim)] disabled:opacity-50"
                   >
                     <Send className="mr-1 inline h-3.5 w-3.5" />
                     Test
@@ -352,19 +352,19 @@ export function ToolConnectionsPanel() {
                   <button
                     onClick={() => liveProofConnection(connection)}
                     disabled={busy}
-                    className="rounded bg-indigo-500/20 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-indigo-200 hover:bg-indigo-500/30 disabled:opacity-50"
+                    className="rounded bg-[var(--accent-dim)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
                   >
                     Live Proof
                   </button>
                   <button
                     onClick={() => toggleActive(connection)}
-                    className="rounded bg-amber-500/15 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-100 hover:bg-amber-500/20"
+                    className="rounded bg-[var(--warning-dim)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)] hover:bg-[var(--warning-dim)]"
                   >
                     {connection.active ? 'Disable' : 'Enable'}
                   </button>
                   <button
                     onClick={() => removeConnection(connection)}
-                    className="rounded bg-red-500/15 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-red-100 hover:bg-red-500/20"
+                    className="rounded bg-[var(--error-dim)] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--error)] hover:bg-[var(--error-dim)]"
                   >
                     <Trash2 className="mr-1 inline h-3.5 w-3.5" />
                     Remove
@@ -377,23 +377,23 @@ export function ToolConnectionsPanel() {
       </div>
 
       {notice && (
-        <div className="mt-3 rounded-xl border border-teal-300/15 bg-teal-500/10 p-3 text-[11px] text-teal-100/85">
+        <div className="mt-3 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
           {notice}
         </div>
       )}
 
-      <div className="mt-3 rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-400">
+      <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
         Saved webhook connections stay local to this workstation. The live send path goes through Tauri and requires explicit approval before external delivery.
       </div>
 
       <div className="mt-3 space-y-2 max-h-32 overflow-y-auto pr-1">
         {audit.length === 0 && (
-          <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-3 text-sm text-zinc-500">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-3)]">
             No tool connection audit entries yet.
           </div>
         )}
         {audit.slice().reverse().slice(0, 6).map((entry) => (
-          <div key={entry.id} className="rounded-xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-400">
+          <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-3)]">
             {entry.action} | {new Date(entry.timestampMs).toLocaleString()}
           </div>
         ))}

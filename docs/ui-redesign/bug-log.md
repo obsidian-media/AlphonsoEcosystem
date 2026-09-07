@@ -188,6 +188,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): Setup tab with the accent-highlighted active tab pill and correctly-disabled "Continue to Execution" button — zero console errors.
 - **Status:** CLOSED.
 
+### 29. `ToolConnectionsPanel.tsx` re-skin (403 lines, 74 refs) — clean pass, no carve-out
+
+- **What changed:** the whole Slack/Discord/Custom-Webhook connection form, saved-connections list, and audit trail — tokenized onto `--accent`/`--success`/`--warning`/`--error`/`--text-*`/`--surface-*`. `sky` was used throughout as this page's single generic accent (not per-connector identity — Slack/Discord/Custom Webhook all share the same sky styling regardless of which is selected), so mapped uniformly to `--accent`, matching the EcosystemHub (#17) precedent rather than treating it as a carve-out.
+- **Existing test coverage:** no dedicated component test, but rendered inside `ConnectorSetupPanel.tsx` (covered by `src/test/ConnectorSetupPanel.test.jsx`) and the connection logic itself is service-tested (`src/test/toolConnectionService.test.js`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, via Settings → Connectors): approval checkbox row in warning-amber, "SAVE CONNECTION" (accent) and "SEND TEST" (success-green) buttons, empty-state and footnote text correctly tokenized — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
