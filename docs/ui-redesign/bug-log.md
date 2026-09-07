@@ -477,6 +477,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx` (`<Card label="Research Brief"><HectorResearchPanel .../></Card>`), inside the RESULTS tab's post-execution grid — the same reachability constraint as `MarcusAuditPanel.tsx` (#40), which sits in the identical grid row. Not chased further this pass for the same reason; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 64. `ToastProvider.tsx` re-skin (119 lines, 16 refs) — clean pass, no carve-out
+
+- **What changed:** `COLORS` and `ICON_COLORS` (success/error/info/warning — an exact 1:1 fit onto the 4 semantic tone tokens, no compression needed) tokenized onto `--success`/`--error`/`--info`/`--warning`.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): dispatched all 4 toast types via the real `alphonso:toast` CustomEvent this app already uses for cross-component notifications (`window.dispatchEvent(new CustomEvent('alphonso:toast', {...}))`, the same mechanism call sites like `BoardroomView.tsx`/`CompanionPairingPanel.tsx` use in production) — confirmed all 4 tones (success-green, error-red, info-blue, warning-amber) render correctly stacked. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
