@@ -609,6 +609,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx`'s RESULTS tab (`<Card label="Final Packet"><FinalExecutionPacket .../></Card>`), the same post-execution grid row as `MarcusAuditPanel.tsx` (#40) and `research/HectorResearchPanel.tsx` (#63) — same reachability constraint, requires a completed real project-execution run. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern from those two prior files.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 80. `WorkspaceExportImportView.tsx` re-skin (67 lines, 9 refs) — clean pass, no carve-out
+
+- **What changed:** header, Export/Import buttons, and the success/error status line — tokenized onto `--success`/`--error`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Settings → Backup): confirmed this component's "WORKSPACE" section (a second, simpler Export/Import control alongside the page's own richer "Export Backup"/"Import Backup" cards) renders correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
