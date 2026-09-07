@@ -958,6 +958,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, light mode, full-page screenshot): heading, filter pills (correctly still bordered — they're `rounded-full`), and top bar all render clean and legible. Zero console errors. Tool list itself was empty in this run (no runtime status loaded yet — a data-timing matter, not a styling one) so the per-tool `TOOL_META` card rendering wasn't visually re-confirmed this pass; the class-level fix was verified by direct code inspection instead.
 - **Status:** CLOSED for `RuntimeManagerView.tsx`.
 
+### 113. `OrchestratorView.tsx` converted to the "no cards" rule too — fifth slice
+
+- **Scope:** fifth page conversion. ~32 `border` occurrences, ~21 white/black bugs (mostly `border-white/[0.0N]` opacity notation on rectangular containers).
+- **What changed:** removed border from ~25 rectangular containers/buttons/inputs across the Command/Approvals/Packets/Monitor tabs (Jose task pipeline, command input, workflow steps, task routing, WhatsApp inbound, dead-letter/queue rows, approve/reject buttons, collapsible sections). Fixed the page's own `text-white` heading ("Jose — Governance & Routing") — same recurring bug class. Kept the header divider and two collapsible-section/row dividers, retokenized from raw `border-white/[0.0N]` to `border-[var(--border)]`. Left the Command/Approvals/Packets/Monitor tab switcher's bordered-pill active state untouched — same flagged tab-style gap as #111, not re-litigated per-file.
+- **Verification:** `fix-broken-var-opacity.mjs` — no change needed. `npx tsc --noEmit` and `npx eslint` clean. `orchestratorViewSmoke.test.jsx` (2 tests) passing (needed `--pool=threads`, the usual pre-existing worker-timeout).
+- **Live-verified** (Playwright, light mode, full-page screenshot): Command tab's task pipeline, command form, workflow steps, task routing, and WhatsApp inbound panels all render as clean washes, fully legible. Zero console errors.
+- **Status:** CLOSED for `OrchestratorView.tsx`.
+
 ---
 
 ## Notes on discovery method

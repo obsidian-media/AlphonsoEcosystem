@@ -618,14 +618,14 @@ export function OrchestratorView({
     <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
 
       {/* Header */}
-      <header className="pb-5 border-b border-white/[0.06]">
+      <header className="pb-5 border-b border-[var(--border)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               <Crown className="h-3.5 w-3.5" />
               Orchestrator
             </div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Jose — Governance &amp; Routing</h1>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Jose — Governance &amp; Routing</h1>
             <p className="mt-1 text-[13px] text-[var(--text-3)]">Supervise agent handoffs, review approvals, route tasks. No automatic execution.</p>
           </div>
           <div className="flex items-center gap-4 shrink-0">
@@ -643,13 +643,13 @@ export function OrchestratorView({
               type="button"
               aria-label="Refresh all"
               onClick={refreshAll}
-              className="rounded-lg border border-white/[0.08] bg-[var(--surface-1)] p-2 text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+              className="rounded-lg bg-[var(--surface-1)] p-2 text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl border border-white/[0.06] bg-gradient-to-r from-white/[0.03] to-white/[0.015] p-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-gradient-to-r from-white/[0.03] to-white/[0.015] p-3 sm:grid-cols-4">
           <Metric label="Packets" value={packets.length} tone="amber" />
           <Metric label="Pending" value={approvalQueue.length} tone={approvalQueue.length > 0 ? 'amber' : 'zinc'} />
           <Metric label="Dead letters" value={deadLetters.length} tone={deadLetters.length > 0 ? 'red' : 'zinc'} />
@@ -702,12 +702,12 @@ export function OrchestratorView({
                   value={joseCommandText}
                   onChange={(e) => setJoseCommandText(e.target.value)}
                   rows={4}
-                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm leading-relaxed text-[var(--text-1)] outline-none focus:border-[var(--warning-border)] placeholder:text-[var(--text-4)]"
+                  className="w-full rounded-xl bg-[var(--surface-1)] px-3 py-2.5 text-sm leading-relaxed text-[var(--text-1)] outline-none focus:ring-1 focus:ring-[var(--warning-border)] placeholder:text-[var(--text-4)]"
                   placeholder="Describe what you want Jose to coordinate…"
                 />
                 <button
                   onClick={distributeUserCommand}
-                  className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors"
+                  className="rounded-xl bg-[var(--warning-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors"
                 >
                   Send to Jose
                 </button>
@@ -737,13 +737,13 @@ export function OrchestratorView({
                 <input
                   value={routeTitle}
                   onChange={(e) => setRouteTitle(e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none focus:border-[var(--warning-border)]"
+                  className="w-full rounded-xl bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none focus:ring-1 focus:ring-[var(--warning-border)]"
                 />
                 <select
                   aria-label="Route target"
                   value={routeTarget}
                   onChange={(e) => setRouteTarget(e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none"
+                  className="w-full rounded-xl bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none"
                 >
                   <option value={AGENTS.ALPHONSO}>Alphonso — execution</option>
                   <option value={AGENTS.MIYA}>Miya — creative</option>
@@ -754,7 +754,7 @@ export function OrchestratorView({
                   <option value={AGENTS.SENTINEL}>Sentinel — security</option>
                   <option value={AGENTS.NOVA}>Nova — opportunity</option>
                 </select>
-                <button onClick={createRoutingPacket} className="w-full rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors">
+                <button onClick={createRoutingPacket} className="w-full rounded-xl bg-[var(--warning-dim)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors">
                   Create Supervised Route
                 </button>
               </div>
@@ -770,7 +770,7 @@ export function OrchestratorView({
                   <button
                     onClick={pollWhatsAppNow}
                     disabled={!whatsappConfigured || whatsappPolling}
-                    className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[var(--surface-1)] px-3 py-1.5 text-[10px] font-semibold text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-1)] px-3 py-1.5 text-[10px] font-semibold text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-40 transition-colors"
                   >
                     <RefreshCw className={`h-3 w-3 ${whatsappPolling ? 'animate-spin' : ''}`} />
                     {whatsappPolling ? 'Polling…' : 'Poll'}
@@ -798,13 +798,13 @@ export function OrchestratorView({
       {orchTab === 'approvals' && (
         <div className="space-y-4">
           {approvalQueue.length === 0 ? (
-            <div className="rounded-2xl border border-white/[0.06] bg-[var(--surface-1)] p-10 text-center">
+            <div className="rounded-2xl bg-[var(--surface-1)] p-10 text-center">
               <p className="text-sm text-[var(--text-3)]">No pending approvals.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {approvalQueue.map((packet) => (
-                <div key={packet.id} className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4">
+                <div key={packet.id} className="rounded-xl bg-[var(--warning-dim)] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-[var(--text-1)]">{packet.title}</div>
@@ -836,13 +836,13 @@ export function OrchestratorView({
           )}
 
           {executionResults.length > 0 && (
-            <div className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] p-4 space-y-2">
+            <div className="rounded-2xl bg-[var(--surface-1)] p-4 space-y-2">
               <div className="flex items-center justify-between mb-1">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-3)]">Execution Results</div>
                 <button onClick={() => setExecutionResults([])} className="text-[10px] text-[var(--text-4)] hover:text-[var(--text-3)]">Clear</button>
               </div>
               {executionResults.map((r) => (
-                <div key={r.id + r.ts} className={`rounded-xl border p-3 ${r.ok ? 'border-[var(--success-border)] bg-[var(--success-dim)]' : 'border-[var(--error-border)] bg-[var(--error-dim)]'}`}>
+                <div key={r.id + r.ts} className={`rounded-xl p-3 ${r.ok ? 'bg-[var(--success-dim)]' : 'bg-[var(--error-dim)]'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className={`text-[11px] font-semibold ${r.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
                       {r.ok ? (r.setupRequired ? 'Queued' : 'Success') : 'Failed'}
@@ -867,7 +867,7 @@ export function OrchestratorView({
                 {packets.filter((p) => ['pending_approval', 'approved', 'queued'].includes(p.status)).length === 0
                   ? <p className="text-[12px] text-[var(--text-4)]">No active handoffs.</p>
                   : packets.filter((p) => ['pending_approval', 'approved', 'queued'].includes(p.status)).slice().reverse().slice(0, 8).map((packet) => (
-                    <div key={packet.id} className="rounded-xl border border-white/[0.07] bg-[var(--surface-1)] p-3">
+                    <div key={packet.id} className="rounded-xl bg-[var(--surface-1)] p-3">
                       <div className="text-[12px] font-medium text-[var(--text-2)]">{packet.title}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-3)]">
                         <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">{packet.status}</span>
@@ -892,7 +892,7 @@ export function OrchestratorView({
               <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                 {joseCommands.length === 0 && <p className="text-[12px] text-[var(--text-4)]">No commands recorded yet.</p>}
                 {joseCommands.slice().reverse().slice(0, 8).map((command) => (
-                  <div key={command.id} className="rounded-xl border border-white/[0.07] bg-[var(--surface-1)] p-3">
+                  <div key={command.id} className="rounded-xl bg-[var(--surface-1)] p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="text-[12px] font-medium text-[var(--text-2)] line-clamp-2">{command.commandText}</div>
                       <TrustBadge state={command.trust} />
@@ -902,7 +902,7 @@ export function OrchestratorView({
                       <NeutralBtn onClick={() => confirmCommand(command.id)}>Confirm &amp; Report</NeutralBtn>
                     </div>
                     {command.userReport && (
-                      <div className="mt-2 rounded-lg border border-[var(--success-border)] bg-[var(--success-dim)] p-2.5 text-[11px] text-[var(--text-2)]">
+                      <div className="mt-2 rounded-lg bg-[var(--success-dim)] p-2.5 text-[11px] text-[var(--text-2)]">
                         {command.userReport.summary}
                       </div>
                     )}
@@ -915,7 +915,7 @@ export function OrchestratorView({
           <OCard label="All Packets (recent)">
             <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
               {packets.slice().reverse().slice(0, 12).map((packet) => (
-                <div key={packet.id} className="rounded-lg border border-white/[0.06] bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
+                <div key={packet.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-[var(--text-2)] truncate">{packet.title}</span>
                     <span className="shrink-0 rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px]">{packet.status}</span>
@@ -960,7 +960,7 @@ export function OrchestratorView({
               </div>
               <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                 {queueTransitions.slice(0, 6).map((row) => (
-                  <div key={row.id} className="rounded-lg border border-white/[0.06] bg-[var(--surface-1)] px-3 py-2">
+                  <div key={row.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] text-[var(--text-2)]">{row.fromStatus} → {row.toStatus}</span>
                       <TrustBadge state={row.verificationState || 'unverified'} />
@@ -968,7 +968,7 @@ export function OrchestratorView({
                     {row.toStatus === 'dead_letter' && (
                       <button
                         onClick={() => { replayPacketFromDeadLetter(row.packetId, 'Manual replay.'); refreshAll(); }}
-                        className="mt-1.5 rounded border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)]"
+                        className="mt-1.5 rounded bg-[var(--warning-dim)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)]"
                       >
                         Replay
                       </button>
@@ -998,10 +998,10 @@ export function OrchestratorView({
                 <RuntimeRow label="Dead Letters" value={workflowObs?.totals?.deadLetters ?? 0} trust={workflowObs?.totals?.deadLetters ? 'failed' : 'verified'} />
               </div>
               <div className="mt-3 flex gap-2">
-                <button onClick={runRetrySweep} className="rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+                <button onClick={runRetrySweep} className="rounded-xl bg-[var(--surface-1)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
                   Retry Sweep
                 </button>
-                <button onClick={recordDecision} className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--warning)] hover:opacity-90 transition-colors">
+                <button onClick={recordDecision} className="rounded-xl bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--warning)] hover:opacity-90 transition-colors">
                   Record Snapshot
                 </button>
               </div>
@@ -1015,7 +1015,7 @@ export function OrchestratorView({
               </div>
               <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
                 {sessionEvents.slice().reverse().slice(0, 6).map((event) => (
-                  <div key={event.id} className="rounded-lg border border-white/[0.05] bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
+                  <div key={event.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">
                     <div className="font-medium text-[var(--text-2)]">{event.title}</div>
                     <div className="mt-0.5 text-[var(--text-4)]">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
                   </div>
@@ -1030,7 +1030,7 @@ export function OrchestratorView({
               : (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {deadLetters.slice().reverse().slice(0, 8).map((item) => (
-                    <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-[11px] text-[var(--text-2)]">
+                    <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl bg-[var(--error-dim)] p-3 text-[11px] text-[var(--text-2)]">
                       <div className="font-medium">{item.agent}: {item.title}</div>
                       <div className="mt-0.5 text-[var(--error)]">{item.commandText}</div>
                       <div className="mt-0.5 text-[var(--text-3)]">Retries: {item.retries || 0}</div>
@@ -1059,7 +1059,7 @@ function OCard({ label, children }: OCardProps): React.ReactElement {
 
 function ApproveBtn({ onClick, children }: ApproveBtnProps): React.ReactElement {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--success)] hover:bg-[var(--success-dim)] transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg bg-[var(--success-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--success)] hover:opacity-80 transition-colors">
       {children}
     </button>
   );
@@ -1067,7 +1067,7 @@ function ApproveBtn({ onClick, children }: ApproveBtnProps): React.ReactElement 
 
 function RejectBtn({ onClick, children }: RejectBtnProps): React.ReactElement {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--error)] hover:bg-[var(--error-dim)] transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg bg-[var(--error-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--error)] hover:opacity-80 transition-colors">
       {children}
     </button>
   );
@@ -1083,7 +1083,7 @@ function NeutralBtn({ onClick, disabled, children }: NeutralBtnProps): React.Rea
 
 function Panel({ icon: Icon, title, children }: PanelProps): React.ReactElement {
   return (
-    <section className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] p-5">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-5">
       <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)]">
         <Icon className="h-3.5 w-3.5 text-[var(--accent)]" />
         {title}
@@ -1096,7 +1096,7 @@ function Panel({ icon: Icon, title, children }: PanelProps): React.ReactElement 
 function CollapsiblePanel({ icon: Icon, title, id, focusMode, openPanels, onToggle, children }: CollapsiblePanelProps): React.ReactElement {
   const open = !focusMode || openPanels.has(id);
   return (
-    <section className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)]">
+    <section className="rounded-2xl bg-[var(--surface-1)]">
       <button
         type="button"
         onClick={() => onToggle?.(id)}
@@ -1108,7 +1108,7 @@ function CollapsiblePanel({ icon: Icon, title, id, focusMode, openPanels, onTogg
         </span>
         {open ? <ChevronDown className="h-3.5 w-3.5 text-[var(--text-4)]" /> : <ChevronRight className="h-3.5 w-3.5 text-[var(--text-4)]" />}
       </button>
-      {open && <div className="border-t border-white/[0.06] px-5 py-4">{children}</div>}
+      {open && <div className="border-t border-[var(--border)] px-5 py-4">{children}</div>}
     </section>
   );
 }
@@ -1134,7 +1134,7 @@ function MiniStat({ label, value }: MiniStatProps): React.ReactElement {
 
 function RuntimeRow({ label, value, trust }: RuntimeRowProps): React.ReactElement {
   return (
-    <div className="flex items-center justify-between gap-3 py-2 border-b border-white/[0.05] last:border-0">
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-[var(--border)] last:border-0">
       <span className="text-[12px] text-[var(--text-3)]">{label}</span>
       <div className="flex min-w-0 items-center gap-2">
         <span className="truncate text-[12px] font-medium text-[var(--text-2)]">{value}</span>
@@ -1157,7 +1157,7 @@ function TrustBadge({ state }: TrustBadgeProps): React.ReactElement {
 
 function GovernanceRow({ label, value, state }: GovernanceRowProps): React.ReactElement {
   return (
-    <div className="flex items-center justify-between gap-3 py-2 border-b border-white/[0.05] last:border-0">
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-[var(--border)] last:border-0">
       <div>
         <div className="text-[12px] font-medium text-[var(--text-2)]">{label}</div>
         <div className="text-[11px] text-[var(--text-4)] mt-0.5">{value}</div>
