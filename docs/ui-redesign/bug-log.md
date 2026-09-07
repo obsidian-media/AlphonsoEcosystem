@@ -399,6 +399,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): traced the real mount site to `App.tsx:807` (separate from `CoachWindow.tsx`'s own `CoachInterventionCard`, a different, non-blocking presentation of the same intervention state — confirmed both exist and are distinct components after the "Demo Check-in" button in the Coach window only updated *that* window's local React state, not this one). Reached the real overlay by dispatching the exact `alphonso:coach-engine-event` CustomEvent `coachInterventionService.ts`'s `pushCoachEngineEvent()` would produce for a `severity: 'critical'` event (the same signal path a real coach-engine detector uses) directly in the main app's browser context. Confirmed the backdrop, header, 3 metric tiles, pause-notice box, and all 3 action buttons render correctly. Zero console errors.
 - **Status:** CLOSED.
 
+### 55. `SentinelAllowlistPanel.tsx` re-skin (236 lines, 22 refs) — an 11th carve-out (per-entry-type identity)
+
+- **What changed:** error message, Add button (success-green), match-test result banner (success/error), and the remove-button hover state — tokenized onto `--success`/`--error`/`--text-*`.
+- **Carve-out kept, not tokenized:** `TYPE_STYLES` (domain=blue/path=violet/ip=amber) — a genuine, small 3-way differentiation between allowlist entry types a user picks from, the same category as `ConnectorSetupPanel`'s per-connector palette (#15) and `AgentPairingView`'s `ROLE_COLORS` (#34), just for a 3-item type enum instead of a larger roster.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed on the first pass, but caught the standing double-alpha mistake on a re-run after a manual fix — corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, visible by default in RightPanel's System tab "ALLOWLIST" section): added a real entry (`example.com`, domain type), ran a real match test against `https://example.com/path`, and confirmed the "Matched" result banner renders in success-green and the entry's "DOMAIN" badge renders in the carve-out's blue tone. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
