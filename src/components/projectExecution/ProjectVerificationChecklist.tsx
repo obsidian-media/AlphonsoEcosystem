@@ -12,12 +12,12 @@ interface Props {
 
 export function ProjectVerificationChecklist({ checklist = [] }: Props): React.JSX.Element {
   return (
-    <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-2">Verification Checklist</div>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-2">Verification Checklist</div>
       <div className="space-y-2">
-        {checklist.length === 0 && <div className="text-sm text-zinc-500">No verification checklist yet.</div>}
+        {checklist.length === 0 && <div className="text-sm text-[var(--text-3)]">No verification checklist yet.</div>}
         {checklist.map((item) => (
-          <div key={item.id} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300">
+          <div key={item.id} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-2)]">
             [{item.owner}] {item.item}
           </div>
         ))}
