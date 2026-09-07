@@ -593,6 +593,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Chat view): seeded a message containing every syntax this parser supports (headings, bold/italic/inline-code, a fenced code block, unordered + ordered lists) directly into the real `alphonso_messages_${chatId}` localStorage key `ChatView.tsx` reads on mount, then reloaded — confirmed every element renders correctly, including the deliberate cyan/green code-color carve-out. Zero rendering-related console errors (pre-existing "Ollama: connecting" banner appeared only because the reload raced Ollama's health check, unrelated to this change).
 - **Status:** CLOSED.
 
+### 78. `BootStatusBanner.tsx` re-skin (89 lines, 10 refs) — clean pass, no carve-out
+
+- **What changed:** `StatusDot`'s 4-tier color map (starting → `--warning`, started/running → `--success`, skipped → neutral `--text-3`, failed → `--error`), the banner shell, header, dismiss button, and per-item text — all tokenized. Left `bg-surface-2` untouched (a real Tailwind theme color, same as `SentinelFindingModal.tsx`'s identical pattern — not a raw literal).
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** this banner only renders in response to a real Tauri `runtime://boot_status` event (`@tauri-apps/api/event`'s `listen()`), which only fires inside the actual Tauri desktop shell, not this browser-only Playwright dev environment. Not chased further; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files using identical `--success`/`--warning`/`--error` conventions.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtainable in this environment, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
