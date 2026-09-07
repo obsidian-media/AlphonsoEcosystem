@@ -576,6 +576,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified via an earlier screenshot from this same session, not re-captured:** this is the exact "CAPABILITY MATRIX" card already visually confirmed correct while working on `agents/AgentProfilePanel.tsx` (#71) — the same screenshot shows Jose's real capability data ("allowed: 13 | blocked: 11 | approval: 11", the limitations note, the "unwired" policy note) rendering side-by-side with the profile card.
 - **Status:** CLOSED.
 
+### 76. `VoiceInputButton.tsx` re-skin (54 lines, 10 refs) — clean pass, no carve-out
+
+- **What changed:** the 5-tier state map (listening → `--error`, requesting → `--info`, blocked → `--warning`, no-transcription → `--warning`/60, idle → neutral `--text-3`) — tokenized. "Listening" mapped to `--error` for consistency with the identical "active mic = attention-red" convention already established in `CoachMissionBadge.tsx` (#70).
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** `src/test/VoiceInputButton.test.jsx` — 6/6 passing (`--pool=forks`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Chat view): confirmed the "VOICE" button renders in its idle neutral tone at the bottom of the composer. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
