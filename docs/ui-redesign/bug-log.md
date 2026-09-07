@@ -417,6 +417,16 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Settings → Agents → "Agent Companions"): confirmed the "Companion server not running" empty state (the only reachable state in this browser-only dev environment, since `companion_get_status` requires a real Tauri backend) renders correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 57. `WhatsAppInboxPanel.tsx` re-skin (106 lines, 21 refs) — a 12th carve-out (per-connector identity)
+
+- **What changed:** `StatusTick`'s delivery-state colors (read → `--info`, failed → `--error`, sending/sent/delivered → `--text-3`), the empty state, message card chrome, and body text — tokenized onto `--info`/`--error`/`--text-*`/`--surface-*`/`--border`.
+- **Carve-out kept, not tokenized:** the emerald WhatsApp brand-green used for the sender name, the reply-input focus ring, the Send button, and the Reply-link hover state — matches `ConnectorSetupPanel.tsx`'s established precedent (#15) of keeping a connector's own brand identity color hardcoded rather than folding it into a semantic token.
+- **Real leftover caught by the sanity grep, not silently missed:** the Reply button's default (non-hover) text color was accidentally left as raw `zinc-400` by the first script pass — caught by the standard leftover-color grep and fixed directly, keeping only its `hover:text-emerald-400` (the deliberate carve-out) untouched.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Orchestrator → Command tab → "WhatsApp Inbound" card): confirmed the "No messages yet" empty state renders correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
