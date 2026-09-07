@@ -18,6 +18,7 @@ import { ProjectIntakePanel } from '../agentWorkshop/ProjectIntakePanel';
 import { AgentAssignmentBoard } from '../agentWorkshop/AgentAssignmentBoard';
 import { AgentOutputPanel } from '../agentWorkshop/AgentOutputPanel';
 import { ExecutionTimeline } from '../agentWorkshop/ExecutionTimeline';
+import { Tabs } from '../ui/Tabs';
 import { ApprovalPanel } from '../ApprovalPanel';
 import { FinalExecutionPacket } from '../agentWorkshop/FinalExecutionPacket';
 import { ProjectRiskRegister } from './ProjectRiskRegister';
@@ -238,18 +239,17 @@ export function ProjectExecutionMode(): React.JSX.Element {
           </div>
         </header>
 
-        <div className="flex gap-1">
-          {PAGE_TABS.map((tab) => {
-            const disabled = tab.id === 'results' && resultsLocked;
-            return (
-              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} disabled={disabled}
-                title={disabled ? 'Resolve pending approval gates on the Approval tab before viewing Results' : undefined}
-                className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === tab.id ? 'bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-border)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)] border border-transparent'}`}>
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          tabs={PAGE_TABS.map((tab) => ({
+            ...tab,
+            disabled: tab.id === 'results' && resultsLocked,
+            title: tab.id === 'results' && resultsLocked
+              ? 'Resolve pending approval gates on the Approval tab before viewing Results'
+              : undefined
+          }))}
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id as TabId)}
+        />
 
         <AnimatePresence mode="wait">
         <motion.div key={activeTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>

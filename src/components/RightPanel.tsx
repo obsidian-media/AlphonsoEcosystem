@@ -9,6 +9,7 @@ import { SentinelFindingModal } from './SentinelFindingModal';
 import { SentinelAllowlistPanel } from './SentinelAllowlistPanel';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
+import { Tabs } from './ui/Tabs';
 import { MemoryGraphViewer } from './MemoryGraphViewer';
 
 type ConnectionState = 'connected' | 'connecting' | 'warning' | 'disconnected' | 'idle' | 'model_missing' | 'no_models';
@@ -239,26 +240,16 @@ export function RightPanel({
     <>
     <aside className="w-72 bg-[var(--surface-1)] border-l border-[var(--border)] flex flex-col shrink-0 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border)]">
-        <div className="flex gap-1">
-          <button
-            onClick={() => setActiveTab('system')}
-            className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${activeTab === 'system' ? 'text-[var(--text-1)] bg-[var(--surface-3)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
-          >
-            System
-          </button>
-          <button
-            onClick={() => setActiveTab('audit')}
-            className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${activeTab === 'audit' ? 'text-[var(--text-1)] bg-[var(--surface-3)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
-          >
-            Audit
-          </button>
-          <button
-            onClick={() => setActiveTab('agents')}
-            className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${activeTab === 'agents' ? 'text-[var(--text-1)] bg-[var(--surface-3)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}
-          >
-            Agents
-          </button>
-        </div>
+        <Tabs
+          compact
+          tabs={[
+            { id: 'system', label: 'System' },
+            { id: 'audit', label: 'Audit' },
+            { id: 'agents', label: 'Agents' }
+          ]}
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id as 'system' | 'audit' | 'agents')}
+        />
         <button
           onClick={() => setPanelCollapsed(true)}
           className="p-1 rounded-lg text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors"

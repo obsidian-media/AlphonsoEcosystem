@@ -5,6 +5,7 @@ import { listWorkflowReceipts } from '../services/workflowReceiptService';
 import { listWorkflowOperations, updateWorkflowOperationStatus } from '../services/workflowOperationsRegistryService';
 import { WorkflowBuilderView } from './WorkflowBuilderView';
 import { DeadLetterQueueView } from './DeadLetterQueueView';
+import { Tabs } from './ui/Tabs';
 import {
   createSchedule,
   listSchedules,
@@ -203,47 +204,17 @@ export function AutomationView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex items-center gap-1 px-6 pt-4 pb-0 border-b border-[var(--border)] shrink-0">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
-            activeTab === 'overview'
-              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
-              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('builder')}
-          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
-            activeTab === 'builder'
-              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
-              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-          }`}
-        >
-          Builder
-        </button>
-        <button
-          onClick={() => setActiveTab('schedules')}
-          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
-            activeTab === 'schedules'
-              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
-              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-          }`}
-        >
-          Schedules
-        </button>
-        <button
-          onClick={() => setActiveTab('deadletter')}
-          className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
-            activeTab === 'deadletter'
-              ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
-              : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-          }`}
-        >
-          Dead Letter
-        </button>
+      <div className="px-6 pt-4 pb-0 shrink-0">
+        <Tabs
+          tabs={[
+            { id: 'overview', label: 'Overview' },
+            { id: 'builder', label: 'Builder' },
+            { id: 'schedules', label: 'Schedules' },
+            { id: 'deadletter', label: 'Dead Letter' }
+          ]}
+          activeId={activeTab}
+          onChange={setActiveTab}
+        />
       </div>
 
       {activeTab === 'builder' ? (

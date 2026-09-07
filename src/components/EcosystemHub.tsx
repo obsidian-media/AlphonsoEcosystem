@@ -48,6 +48,7 @@ import { AgentOutputPanel } from './agentWorkshop/AgentOutputPanel';
 import { ExecutionTimeline } from './agentWorkshop/ExecutionTimeline';
 import { FinalExecutionPacket } from './agentWorkshop/FinalExecutionPacket';
 import { SystemHealthPanel } from './agentWorkshop/SystemHealthPanel';
+import { Tabs } from './ui/Tabs';
 
 const WorkflowOperationsDashboard = lazy(() =>
   import('./WorkflowOperationsDashboard').then((module) => ({
@@ -241,22 +242,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
         <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Agent Ecosystem</h1>
       </header>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-[var(--border)] pb-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setShowAdvancedSections(tab.id)}
-            className={`rounded-lg px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
-              showAdvancedSections === tab.id
-                ? 'bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent-border)]'
-                : 'text-[var(--text-3)] hover:text-[var(--text-2)] border border-transparent'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} activeId={showAdvancedSections} onChange={setShowAdvancedSections} />
 
       <AnimatePresence mode="wait">
         <motion.div

@@ -16,6 +16,7 @@ import { CitationPanel } from '../hector/CitationPanel';
 import { ResearchReportPanel } from '../hector/ResearchReportPanel';
 import { HectorActivityLog } from '../hector/HectorActivityLog';
 import { HectorApprovalHandoff } from '../hector/HectorApprovalHandoff';
+import { Tabs } from '../ui/Tabs';
 
 interface HectorState {
   state: string;
@@ -181,14 +182,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
           </div>
         </header>
 
-        <div className="flex gap-1">
-          {PAGE_TABS.map((tab) => (
-            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-              className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${activeTab === tab.id ? 'bg-[var(--agent-hector-glow)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'}`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <Tabs tabs={PAGE_TABS} activeId={activeTab} onChange={(id) => setActiveTab(id as TabId)} />
 
         <AnimatePresence mode="wait">
         <motion.div key={activeTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>

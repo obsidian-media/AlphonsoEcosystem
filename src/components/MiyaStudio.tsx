@@ -18,6 +18,7 @@ import { generateOllamaResponse } from '../lib/ollama';
 import { generateComfyUiImage, getComfyUiVideoHistory, queueComfyUiVideo } from '../services/connectorRegistryService';
 import { generateRunwayVideo, listPendingRunwayJobs, resumeRunwayTask } from '../services/runwayService';
 import { sendNativeNotification } from '../services/notificationService';
+import { Tabs } from './ui/Tabs';
 
 interface PipelineInput {
   idea: string;
@@ -946,22 +947,11 @@ export function MiyaStudio({
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-1">
-        {studioTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
-              activeTab === tab.id
-                ? 'bg-[var(--agent-miya-glow)] text-[var(--agent-miya)]'
-                : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-            }`}
-          >
-            <tab.icon className="h-3 w-3" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={studioTabs.map((tab) => ({ id: tab.id, label: tab.label, icon: <tab.icon className="h-3 w-3" /> }))}
+        activeId={activeTab}
+        onChange={setActiveTab}
+      />
 
       <AnimatePresence mode="wait">
       <motion.div

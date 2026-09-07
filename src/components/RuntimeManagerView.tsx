@@ -41,6 +41,7 @@ import {
 } from '../services/runtimeManagerService';
 import { listModules, enableModule, disableModule, type ModuleRecord } from '../services/moduleRegistryService';
 import { loadPolicy, getPolicyRules, type PolicyRule } from '../services/policyDslService';
+import { Tabs } from './ui/Tabs';
 
 interface ToolStatus {
   name: string;
@@ -666,25 +667,16 @@ export default function RuntimeManagerView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex items-center gap-1 px-5 pt-4 pb-0 border-b border-[var(--border)] shrink-0">
-        {[
-          { id: 'tools', label: 'Runtimes', icon: Cpu },
-          { id: 'activity', label: 'Activity', icon: Activity },
-          { id: 'modules', label: 'Modules', icon: Layers },
-        ].map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
-              activeTab === id
-                ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
-                : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-            }`}
-          >
-            <Icon className="w-3 h-3" />
-            {label}
-          </button>
-        ))}
+      <div className="px-5 pt-4 pb-0 shrink-0">
+        <Tabs
+          tabs={[
+            { id: 'tools', label: 'Runtimes', icon: <Cpu className="w-3 h-3" /> },
+            { id: 'activity', label: 'Activity', icon: <Activity className="w-3 h-3" /> },
+            { id: 'modules', label: 'Modules', icon: <Layers className="w-3 h-3" /> },
+          ]}
+          activeId={activeTab}
+          onChange={setActiveTab}
+        />
       </div>
 
       {activeTab === 'activity' ? (

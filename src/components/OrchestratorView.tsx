@@ -53,6 +53,7 @@ import { executeApprovedPacket } from '../services/packetExecutionService';
 import { TRUST_STATES } from '../services/trustModel';
 import { isConnectorAuthenticated, listConnectorAudit, pollWhatsAppConnector } from '../services/connectorRegistryService';
 import { getOrchestrationQueueSnapshot, listOrchestrationQueueTransitions, replayPacketFromDeadLetter } from '../services/orchestrationQueueService';
+import { Tabs } from './ui/Tabs';
 import { AgentAvatar } from './AgentAvatar';
 import { JoseTaskQueue } from './JoseTaskQueue';
 import { WhatsAppInboxPanel } from './WhatsAppInboxPanel';
@@ -649,7 +650,7 @@ export function OrchestratorView({
             </button>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-gradient-to-r from-white/[0.03] to-white/[0.015] p-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-[var(--surface-2)] p-3 sm:grid-cols-4">
           <Metric label="Packets" value={packets.length} tone="amber" />
           <Metric label="Pending" value={approvalQueue.length} tone={approvalQueue.length > 0 ? 'amber' : 'zinc'} />
           <Metric label="Dead letters" value={deadLetters.length} tone={deadLetters.length > 0 ? 'red' : 'zinc'} />
@@ -661,23 +662,7 @@ export function OrchestratorView({
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex gap-1">
-        {orchTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setOrchTab(tab.id)}
-            className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
-              orchTab === tab.id
-                ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning-border)]'
-                : 'text-[var(--text-3)] hover:text-[var(--text-2)] border border-transparent'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={orchTabs} activeId={orchTab} onChange={setOrchTab} />
 
       <AnimatePresence mode="wait">
       <motion.div

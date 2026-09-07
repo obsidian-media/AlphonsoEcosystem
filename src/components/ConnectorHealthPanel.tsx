@@ -25,6 +25,7 @@ import {
 import { checkConnectorHealth } from '../services/connectorHealthCheckService';
 import { deriveConnectorStatus } from '../services/connectorStatusService';
 import { getConfiguredOllamaEndpoint } from '../lib/ollama';
+import { Tabs } from './ui/Tabs';
 
 interface Connector {
   id: string;
@@ -461,21 +462,14 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
 
   return (
     <section className="space-y-4">
-      {/* Tab switcher */}
-      <div className="flex gap-1 p-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl w-fit">
-        <button
-          onClick={() => setActiveTab('setup')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'setup' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)]'}`}
-        >
-          ⚙ Setup &amp; Credentials
-        </button>
-        <button
-          onClick={() => setActiveTab('health')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'health' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)]'}`}
-        >
-          ● Health Monitor
-        </button>
-      </div>
+      <Tabs
+        tabs={[
+          { id: 'setup', label: 'Setup & Credentials' },
+          { id: 'health', label: 'Health Monitor' }
+        ]}
+        activeId={activeTab}
+        onChange={(id) => setActiveTab(id as 'setup' | 'health')}
+      />
 
       {/* Setup tab — credential entry for all connectors */}
       {activeTab === 'setup' && (
