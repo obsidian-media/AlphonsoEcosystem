@@ -717,6 +717,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified via an earlier screenshot from this same session, not re-captured:** this is the exact "AGENT DOCK" card grid (Jose/Alphonso/Miya/Hector/Maria/Marcus) already visually confirmed correct in `agents/AgentProfilePanel.tsx`'s (#71) screenshot, where Jose's card renders with the accent-tinted active-selection border.
 - **Status:** CLOSED.
 
+### 93. `CoachSkillGrid.tsx` re-skin (30 lines, 5 refs) — clean pass, no carve-out
+
+- **What changed:** the skill-tile hover state, label text, and purpose text — the cyan tint is Alphonso's real agent-identity color (`--agent-alphonso`), referenced directly rather than left as a raw hue, consistent with the identical fix already applied in `CoachWindow.tsx` (#51).
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified via an earlier screenshot from this same session, not re-captured:** this is the exact OBSERVE/UNBLOCK/FOCUS/HANDOFF/REHEARSE/PROTECT skill-tile grid already visually confirmed correct in `CoachWindow.tsx`'s (#51) full-window screenshot.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
