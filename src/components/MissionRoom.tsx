@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, CheckCircle2, Clipboard, ClipboardList, Crown, Clapperboard, ExternalLink, Hammer, LockKeyhole, MessageSquare, Palette, PenTool, Plus, RadioTower, Send, Server, Shield, Sparkles, User, Zap } from 'lucide-react';
+import { AlertTriangle, Bot, CheckCircle2, Clipboard, ClipboardList, Crown, Clapperboard, ExternalLink, Hammer, LockKeyhole, MessageSquare, Palette, PenTool, Plus, RadioTower, Send, Shield, Sparkles, User, Zap } from 'lucide-react';
 import {
   MISSION_ROOM_AGENTS,
   MISSION_ROOM_SECURITY_MODEL,
@@ -44,16 +44,15 @@ const AGENT_TONE_CLASS: Record<string, string> = {
   echo: 'border-[var(--agent-echo-glow)] bg-[var(--agent-echo-glow)] text-[var(--agent-echo)] shadow-[0_0_36px_var(--agent-echo-glow)]',
   sentinel: 'border-[var(--agent-sentinel-glow)] bg-[var(--agent-sentinel-glow)] text-[var(--agent-sentinel)] shadow-[0_0_36px_var(--agent-sentinel-glow)]',
   nova: 'border-[var(--agent-nova-glow)] bg-[var(--agent-nova-glow)] text-[var(--agent-nova)] shadow-[0_0_36px_var(--agent-nova-glow)]',
-  // Not real agents -- 'user' is the human founder, 'kairo' is a fictional
-  // legacy roster entry (see BOARDROOM_ROLES.md's aspirational 11-seat
-  // design, never actually built -- same entity flagged in bug-log.md
-  // #18). Neither has a --agent-* token to key off of; kept as distinct
-  // hardcoded tones so they're still visually differentiable, matching
-  // this session's established "deliberate, not tokenized" carve-out
-  // pattern (bug-log.md #15/#16/#18) rather than silently reusing a real
-  // agent's color for a non-agent participant.
-  user: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-100 shadow-[0_0_36px_rgba(16,185,129,0.08)]',
-  kairo: 'border-sky-300/20 bg-sky-500/10 text-sky-100 shadow-[0_0_36px_rgba(14,165,233,0.08)]',
+  // 'user' is the human founder, not a real agent -- no --agent-* token to
+  // key off of, kept as a distinct hardcoded border/bg tone matching this
+  // session's established "deliberate, not tokenized" carve-out pattern
+  // (bug-log.md #15/#16/#18). Text uses the real --success token, not a
+  // hardcoded pale Tailwind shade (text-emerald-100 was a real light-mode
+  // bug -- illegible near-white text on a near-white card). 'kairo' (a
+  // fictional legacy roster entry) was here too until it was found and
+  // removed from MISSION_ROOM_AGENTS itself -- see missionRoomService.ts.
+  user: 'border-emerald-300/20 bg-emerald-500/10 text-[var(--success)] shadow-[0_0_36px_rgba(16,185,129,0.08)]',
 };
 
 function agentTone(key: string) {
@@ -85,7 +84,6 @@ function speakerIcon(speaker: string) {
   if (speaker === 'echo') return RadioTower;
   if (speaker === 'sentinel') return LockKeyhole;
   if (speaker === 'nova') return Palette;
-  if (speaker === 'kairo') return Server;
   return Bot;
 }
 
@@ -99,9 +97,9 @@ interface AgentCardProps {
 function AgentCard({ agentKey, reservedSlot }: AgentCardProps) {
   if (reservedSlot) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-[var(--surface-1)] p-4 text-[var(--text-3)]">
+      <div className="rounded-3xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-4 text-[var(--text-3)]">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
             <Plus className="h-5 w-5" />
           </div>
           <div>
@@ -118,11 +116,11 @@ function AgentCard({ agentKey, reservedSlot }: AgentCardProps) {
   return (
     <div className={cx('rounded-3xl border p-4', agentTone(agent.key))}>
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <div className="text-sm font-black text-white">{agent.name}</div>
+          <div className="text-sm font-black text-[var(--text-1)]">{agent.name}</div>
           <div className="text-[10px] font-bold uppercase tracking-[0.18em] opacity-65">{agent.lane}</div>
         </div>
       </div>
@@ -151,11 +149,11 @@ function MessageBubble({ message }: { message: Message }) {
     <div className={cx('rounded-3xl border p-4', agentTone(agent.key))}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/25">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
             <Icon className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-sm font-black text-white">{agent.name}</div>
+            <div className="text-sm font-black text-[var(--text-1)]">{agent.name}</div>
             <div className="text-[10px] uppercase tracking-widest opacity-60">{agent.role}</div>
           </div>
         </div>
@@ -198,10 +196,10 @@ interface Task {
 function TaskCard({ task, onUpdate }: { task: Task; onUpdate: (taskId: string, patch: Partial<Task>) => void }) {
   const owner = lookupAgent(task.owner);
   return (
-    <div className="rounded-3xl border border-white/10 bg-[var(--surface-1)] p-4">
+    <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-black text-white">{task.title}</div>
+          <div className="text-sm font-black text-[var(--text-1)]">{task.title}</div>
           <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{task.priority} · {owner.name}</div>
         </div>
         <select
@@ -338,15 +336,15 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6 alphonso-premium-ui">
-      <section className="relative overflow-hidden rounded-[2.25rem] border border-white/10 bg-[var(--surface-0)] p-6 shadow-[0_0_110px_rgba(0,0,0,0.42)]">
+    <div className="h-full overflow-y-auto mx-auto max-w-7xl px-6 py-6 alphonso-premium-ui">
+      <section className="relative overflow-hidden rounded-[2.25rem] border border-[var(--border)] bg-[var(--surface-0)] p-6 shadow-[0_0_110px_rgba(0,0,0,0.42)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,rgba(34,211,238,0.2),transparent_28%),radial-gradient(circle_at_80%_0%,rgba(245,158,11,0.14),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.05),transparent_42%)]" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[var(--accent)]">
               <RadioTower className="h-3.5 w-3.5" /> Shared command table
             </div>
-            <h1 className="mt-4 text-4xl font-black tracking-[-0.055em] text-white md:text-6xl">Mission Room</h1>
+            <h1 className="mt-4 text-4xl font-black tracking-[-0.055em] text-[var(--text-1)] md:text-6xl">Mission Room</h1>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--text-2)]">
               A local-first meeting board for Shayan, Kite, and Hermes. Use it to capture decisions, assign execution work, paste Hermes outputs, and keep approvals explicit.
             </p>
@@ -368,21 +366,21 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[2rem] border border-white/10 bg-[var(--surface-1)] p-4">
+        <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface-1)] p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Conversation</div>
-              <div className="mt-1 text-sm font-semibold text-white">{room.name}</div>
+              <div className="mt-1 text-sm font-semibold text-[var(--text-1)]">{room.name}</div>
             </div>
-            <button type="button" onClick={clearRoom} className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--error)]">
+            <button type="button" onClick={clearRoom} className="rounded-full border border-[var(--border)] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--error)]">
               Clear local chat
             </button>
           </div>
-          <div ref={scrollRef} className="h-[520px] space-y-3 overflow-y-auto rounded-[1.5rem] border border-white/5 bg-black/20 p-3">
+          <div ref={scrollRef} className="h-[520px] space-y-3 overflow-y-auto rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-2)] p-3">
             {messages.map((message) => <MessageBubble key={message.id} message={message} />)}
           </div>
-          <div className="mt-3 flex flex-col gap-2 rounded-[1.5rem] border border-white/10 bg-[var(--surface-0)] p-3 md:flex-row">
-            <select aria-label="Speaking as" value={speaker} onChange={(event) => setSpeaker(event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm font-bold text-[var(--text-2)] outline-none">
+          <div className="mt-3 flex flex-col gap-2 rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface-0)] p-3 md:flex-row">
+            <select aria-label="Speaking as" value={speaker} onChange={(event) => setSpeaker(event.target.value)} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm font-bold text-[var(--text-2)] outline-none">
               {Object.values(MISSION_ROOM_AGENTS).map((agent) => <option key={agent.key} value={agent.key}>{agent.name}</option>)}
             </select>
             <textarea
@@ -395,7 +393,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
                 }
               }}
               placeholder="Drop meeting notes, Hermes output, blockers, or decisions..."
-              className="min-h-12 flex-1 resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
+              className="min-h-12 flex-1 resize-none rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
             />
             <button type="button" onClick={sendMessage} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-black hover:opacity-90">
               <Send className="h-4 w-4" /> Send
@@ -404,11 +402,11 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-[2rem] border border-white/10 bg-[var(--surface-1)] p-4">
+          <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface-1)] p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Hermes tasking</div>
-                <div className="mt-1 text-sm font-semibold text-white">Create worker assignment</div>
+                <div className="mt-1 text-sm font-semibold text-[var(--text-1)]">Create worker assignment</div>
               </div>
               <Plus className="h-5 w-5 text-[var(--accent)]" />
             </div>
@@ -416,24 +414,24 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
               value={taskTitle}
               onChange={(event) => setTaskTitle(event.target.value)}
               placeholder="Task title, e.g. Audit TapCash publish blockers"
-              className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
+              className="mt-4 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
             />
             <textarea
               value={taskAcceptance}
               onChange={(event) => setTaskAcceptance(event.target.value)}
               placeholder="Acceptance criteria / proof needed"
-              className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
+              className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
             />
             <button type="button" onClick={createTask} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)]">
               <Hammer className="h-4 w-4" /> Assign to Hermes
             </button>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-[var(--surface-1)] p-4">
+          <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface-1)] p-4">
             <div className="flex items-center gap-3">
               <LockKeyhole className="h-5 w-5 text-[var(--warning)]" />
               <div>
-                <div className="text-sm font-black text-white">Approval gate</div>
+                <div className="text-sm font-black text-[var(--text-1)]">Approval gate</div>
                 <div className="text-xs text-[var(--text-3)]">Publish / external / destructive actions require Shayan. Open flags: {approvalRequiredCount}</div>
               </div>
             </div>
@@ -450,7 +448,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--error)]" />
               <div>
-                <div className="text-sm font-black text-white">Security model</div>
+                <div className="text-sm font-black text-[var(--text-1)]">Security model</div>
                 <div className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">Bulletproof means layered and honest: this v1 is a local guardrail, not a tamper-proof security boundary.</div>
               </div>
             </div>
@@ -464,25 +462,25 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-[var(--surface-1)] p-4">
+          <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface-1)] p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Handoff generator</div>
-                <div className="mt-1 text-sm font-semibold text-white">Copy-safe Hermes brief</div>
+                <div className="mt-1 text-sm font-semibold text-[var(--text-1)]">Copy-safe Hermes brief</div>
               </div>
               <Clipboard className="h-5 w-5 text-[var(--text-3)]" />
             </div>
-            <input value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-[var(--text-1)] outline-none" />
-            <textarea value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[var(--text-1)] outline-none" />
+            <input value={handoffProject} onChange={(event) => setHandoffProject(event.target.value)} className="mt-4 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-1)] outline-none" />
+            <textarea value={handoffObjective} onChange={(event) => setHandoffObjective(event.target.value)} className="mt-2 min-h-20 w-full resize-none rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text-1)] outline-none" />
             <button type="button" onClick={generateHandoff} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-black uppercase tracking-widest text-black hover:opacity-90">
               <Sparkles className="h-4 w-4" /> Generate + copy handoff
             </button>
-            {handoffText && <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-2xl border border-white/10 bg-black/40 p-3 text-[11px] leading-relaxed text-[var(--text-2)]">{handoffText}</pre>}
+            {handoffText && <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] leading-relaxed text-[var(--text-2)]">{handoffText}</pre>}
           </div>
         </div>
       </section>
 
-      <section className="mt-4 rounded-[2rem] border border-white/10 bg-[var(--surface-1)] p-4">
+      <section className="mt-4 rounded-[2rem] border border-[var(--border)] bg-[var(--surface-1)] p-4">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Task board</div>
@@ -493,7 +491,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
           </div>
         </div>
         {tasks.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 p-8 text-center text-sm text-[var(--text-3)]">
+          <div className="rounded-3xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-8 text-center text-sm text-[var(--text-3)]">
             No Hermes tasks yet. Create one above when you want a worker lane.
           </div>
         ) : (
@@ -503,7 +501,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
         )}
       </section>
 
-      <section className="mt-4 rounded-[2rem] border border-white/10 bg-[var(--surface-1)] p-4">
+      <section className="mt-4 rounded-[2rem] border border-[var(--border)] bg-[var(--surface-1)] p-4">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Security audit trail</div>
@@ -512,11 +510,11 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
           <Shield className="h-5 w-5 text-[var(--accent)]" />
         </div>
         {securityEvents.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-[var(--text-3)]">No security events yet.</div>
+          <div className="rounded-3xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-6 text-center text-sm text-[var(--text-3)]">No security events yet.</div>
         ) : (
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
             {securityEvents.slice(0, 9).map((event) => (
-              <div key={event.id} className="rounded-2xl border border-white/10 bg-black/25 p-3">
+              <div key={event.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-2)]">{event.type}</span>
                   <span className={cx('rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest', riskTone(event.riskLevel))}>{event.riskLevel}</span>
@@ -532,17 +530,17 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
       <section className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
         <div className="rounded-3xl border border-[var(--success-border)] bg-[var(--success-dim)] p-4 text-[var(--success)]">
           <Crown className="h-5 w-5" />
-          <div className="mt-2 text-sm font-black text-white">Shayan decides</div>
+          <div className="mt-2 text-sm font-black text-[var(--text-1)]">Shayan decides</div>
           <div className="mt-1 text-xs leading-relaxed opacity-75">Final approval before public actions or sensitive access.</div>
         </div>
         <div className="rounded-3xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-4 text-[var(--accent)]">
           <MessageSquare className="h-5 w-5" />
-          <div className="mt-2 text-sm font-black text-white">Kite commands</div>
+          <div className="mt-2 text-sm font-black text-[var(--text-1)]">Kite commands</div>
           <div className="mt-1 text-xs leading-relaxed opacity-75">Planning, QA, handoffs, truth checks, and risk flags.</div>
         </div>
         <div className="rounded-3xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4 text-[var(--warning)]">
           <ExternalLink className="h-5 w-5" />
-          <div className="mt-2 text-sm font-black text-white">Hermes executes</div>
+          <div className="mt-2 text-sm font-black text-[var(--text-1)]">Hermes executes</div>
           <div className="mt-1 text-xs leading-relaxed opacity-75">External work comes back here as evidence, not unchecked claims.</div>
         </div>
       </section>

@@ -23,7 +23,7 @@ describe('mission room service', () => {
   it('creates the default Shayan/Kite/Hermes room', () => {
     const rooms = listMissionRooms();
     expect(rooms).toHaveLength(1);
-    expect(rooms[0].selectedAgents).toEqual(['user', 'alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova', 'kairo']);
+    expect(rooms[0].selectedAgents).toEqual(['user', 'alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova']);
     expect(rooms[0].openParticipantSlots).toHaveLength(0);
     expect(getMissionRoom().name).toContain('Mission Room');
   });

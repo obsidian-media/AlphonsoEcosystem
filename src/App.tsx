@@ -77,6 +77,11 @@ import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { VerificationProvider, useVerification } from './contexts/VerificationContext';
 import { CoachProvider, useCoach } from './contexts/CoachContext';
 
+// Mirrors Sidebar.tsx's SPACES 'system' group item ids exactly -- keep in
+// sync if that group's tabs ever change (see the RightPanel render branch
+// below for why this exists).
+const SYSTEM_SPACE_TAB_IDS = ['orchestrator', 'ecosystem', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'];
+
 const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ default: mod.ChatView })));
 const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
 const CoachHardInterruptOverlay = lazy(() => import('./components/CoachHardInterruptOverlay').then((mod) => ({ default: mod.CoachHardInterruptOverlay })));
@@ -971,9 +976,20 @@ function AppShell() {
           </div>
         </main>
       </div>
-      <Suspense fallback={null}>
-        <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} agentDockCompanions={mergedAgentDockCompanions} />
-      </Suspense>
+      {/* RightPanel folded into the System room only, per
+          draft-a-power-user-direction.md's own "RightPanel decision":
+          "fold RightPanel's always-open panel into the System room (no
+          permanent 3rd panel pinned open at all times)". It was rendered
+          unconditionally on every page until now -- ambient safety
+          awareness (the one thing worth always keeping visible) already
+          lives independently in TopBar's Ollama connection dot, so
+          nothing is lost by no longer pinning the full panel (model list
+          with sizes, security scan, allowlist) open everywhere. */}
+      {SYSTEM_SPACE_TAB_IDS.includes(activeTab) && (
+        <Suspense fallback={null}>
+          <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} agentDockCompanions={mergedAgentDockCompanions} />
+        </Suspense>
+      )}
       <Suspense fallback={null}>
         <BootStatusBanner />
       </Suspense>

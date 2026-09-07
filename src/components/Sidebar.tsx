@@ -26,7 +26,7 @@ import {
   Trash2,
   Activity
 } from 'lucide-react';
-import alphonsoIcon from '../assets/alphonso-icon.svg';
+import alphonsoIcon from '../assets/alphonso-app-icon.png';
 import { ConnectorStatusStrip, ConnectorStatusDot } from './ConnectorStatusIndicators';
 import { AgentStatusStrip } from './AgentStatusStrip';
 import { useTheme } from '../hooks/useTheme';
@@ -177,7 +177,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       <div className="h-14 flex items-center px-4 py-3 border-b border-[var(--border)] shrink-0">
         <div className="flex items-center gap-2.5 w-full">
           <img src={alphonsoIcon} alt="Alphonso" className="w-7 h-7 rounded-lg shrink-0 shadow-glow-sm" />
-          {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-white">ALPHONSO</span>}
+          {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-[var(--text-1)]">ALPHONSO</span>}
           <button
             onClick={onToggle}
             className="ml-auto p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"

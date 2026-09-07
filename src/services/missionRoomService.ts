@@ -12,7 +12,7 @@ interface AgentInfo {
 
 export type MissionTaskStatus = 'todo' | 'doing' | 'review' | 'approved' | 'blocked';
 
-type AgentKey = 'user' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
+type AgentKey = 'user' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova';
 
 interface MissionRoom {
   id: string;
@@ -285,14 +285,13 @@ export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
     role: 'Frontend design, UI/UX, visual systems, layout, scoring, analysis, opportunity prioritization',
     lane: 'design',
     accent: 'fuchsia'
-  },
-  kairo: {
-    key: 'kairo',
-    name: 'Kairo',
-    role: 'Backend engineering — systems, APIs, data, reliability, scaling',
-    lane: 'backend',
-    accent: 'sky'
   }
+  // 'kairo' removed -- a fictional legacy roster entry from an early
+  // 11-seat design that was never actually built (same aspirational
+  // roster BOARDROOM_ROLES.md/BOARDROOM_MODEL_REGISTRY.md already
+  // document and correct elsewhere in this app). It was showing up in
+  // Mission Room's default participant grid as if it were a real 10th
+  // agent, which it never was -- the app only has the real 9.
 };
 
 export const MISSION_TASK_STATUSES: MissionTaskStatus[] = ['todo', 'doing', 'review', 'approved', 'blocked'];

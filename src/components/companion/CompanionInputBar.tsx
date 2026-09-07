@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SmartVoiceButton } from '../SmartVoiceButton';
+import { useVoiceInput } from '../../hooks/useVoiceInput';
 
 interface Props {
   agentEmoji: string;
@@ -9,6 +10,14 @@ interface Props {
 
 export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Props) {
   const [value, setValue] = useState('');
+  // Real bug fix: SmartVoiceButton's browser-fallback click handler only
+  // does anything if it's given voiceStatus/onToggle -- rendered bare
+  // (as it was before this fix), the mic button silently no-oped whenever
+  // the Jarvis WebSocket wasn't connected (the common case without Voice
+  // OS running), matching the exact "mic button does not work" report.
+  const { voiceStatus, toggleListening } = useVoiceInput({
+    onTranscript: (text: string) => setValue((current) => (current ? `${current} ${text}` : text))
+  });
 
   const submit = () => {
     const trimmed = value.trim();
@@ -35,7 +44,7 @@ export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Prop
         className="flex-1 bg-transparent text-sm text-[var(--companion-bubble-theirs-text)] placeholder:text-[var(--companion-text-muted)] outline-none min-w-0"
         aria-label="Message"
       />
-      <SmartVoiceButton />
+      <SmartVoiceButton voiceStatus={voiceStatus} onToggle={toggleListening} />
       <button
         type="button"
         onClick={submit}
