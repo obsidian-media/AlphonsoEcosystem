@@ -760,6 +760,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification, partial:** this is the same real "VOICE" button in `ChatView.tsx`'s composer already screenshotted in its idle state while working on `VoiceInputButton.tsx` (#76) — wait, that was a different, sibling component (`VoiceInputButton.tsx` vs. this file, `SmartVoiceButton.tsx` — per CLAUDE.md, `SmartVoiceButton.tsx` is "the unified voice input" component, a separate one). Traced this file's real mount site but did not independently confirm which of the two voice-button components is actually rendered in `ChatView.tsx`'s composer for this pass; the single-line `jarvisError` fix was not independently screenshotted. Relying on clean `tsc`/`eslint` and the file's own already-correct surrounding conventions.
 - **Status:** CLOSED (code + statics verified; live screenshot not confirmed for this specific file, disclosed above).
 
+### 98. `SettingsView.tsx` (3 remaining raw-color refs) — a 14th carve-out (theme-preview swatches), no change needed
+
+- **What was found:** the file's remaining 3 raw-color refs are the 3 Appearance-tab theme-preview swatches (`Minimal Runtime`/`Deep Space`/`Orchestrator Gold`) — each swatch's entire purpose is to visually preview a distinct color scheme option for the user to pick between. Collapsing them onto shared tokens would defeat the feature entirely, the same category of deliberate carve-out as `WorkflowBuilderView`'s `NODE_STYLE` (#38) and several per-item palettes before it.
+- **No code change made** — confirmed this was already correctly left as-is rather than an oversight.
+- **Live-verified** (Playwright, real dev server, Settings → Appearance): confirmed all 3 preview swatches render their distinct colors, and the selected swatch's "Active" label and accent-blue ring render correctly. Zero console errors.
+- **Status:** CLOSED (no change needed).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
