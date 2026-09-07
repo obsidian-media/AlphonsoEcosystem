@@ -7,6 +7,89 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-09-07] **CALL-E (J3): three live-verification steps deferred to the
+  owner — everything else is done.** The connector's code layer is complete
+  and CI-green (143 tests across the CALL-E suite), and as of PR #234 the
+  Phase 1 `CalleOutreachPanel` is finally reachable in the running app
+  (Settings -> Connectors, "CALL-E Outreach" section, under "Agent
+  Providers") — before that it was imported nowhere, which is the direct
+  reason it had never been live-verified. What remains cannot be done by an
+  agent: it needs the **native Tauri build** (not `npm run dev`, where
+  credentials cannot persist — `connectorAuth.ts` is Tauri-native-only by
+  design) plus a human at the keyboard and a real phone.
+  **The three outstanding steps, in order:**
+  1. **MCP login through our own code.** Settings -> Connectors -> CALL-E ->
+     "Connect via Browser Login". Alphonso's own
+     `calleMcpAuthService.ts` (`startBrokerLogin`/`pollBrokerLogin`) has
+     **never completed a login** — the only successful MCP login to date was
+     performed by the official `calle` CLI in a separate process, so this
+     code path is genuinely unproven. Evidence to capture: a non-null
+     `getCalleMcpToken()` and an authenticated `tools/list` originating from
+     Alphonso itself.
+  2. **Keychain survival.** Fully quit and relaunch the app; Connectors
+     should still read connected with no second login. Evidence: the panel
+     state after a cold restart.
+  3. **One real outbound call** via `run_call` to a consenting recipient
+     (the owner's own number suffices), reaching terminal status through
+     `pollCallUntilTerminal`. Evidence: the terminal `OutreachCallRecord`
+     plus its `appendConnectorAudit` row.
+  **Known gotcha before step 3:** Zero-Cost Mode is on by default and CALL-E
+  is registered as paid + high-risk, so the call **will** be blocked with
+  "Blocked by Zero-Cost Mode" until that is turned off in Settings. This is
+  correct behavior, not a bug — do not "fix" it.
+  **Expected cost:** $0 while the account still has unused free calls,
+  otherwise $0.05 each. heycall-e.com/pricing (confirmed 2026-09-07) grants
+  "20 free calls after sign-up", then a flat $0.05/call; how many of those
+  20 remain has not been checked, so treat $0 as likely-but-unconfirmed
+  rather than guaranteed. Either way the earlier framing of this call as a
+  spend barrier overstated it.
+  **Why deferred:** the owner had to leave the machine; steps 1-3 are
+  hands-on and step 3 rings a real phone, so it is not something to attempt
+  unattended or without explicit go-ahead.
+  **Resume hint:** J3 in `docs/TRUTH_FIRST_EXECUTION_PLAN.md` carries the
+  four Done-when criteria (item 1, nav reachability, is already **done**);
+  record evidence against them rather than re-deriving scope. Do not mark J3
+  closed on code review alone — the whole point of these three steps is that
+  they exercise paths no test covers.
+  — **status: OPEN (owner-blocked, hands-on verification only, no code work
+  believed outstanding)**
+
+- [2026-09-07] **`e2e/voice.spec.js` "voice button renders in toolbar" is
+  racy — latent, not yet fixed.** Failed on PR #234's first CI run, then
+  passed on a re-run of the identical commit. Root cause is in the spec, not
+  the app: `getByRole('button', { name: /voice/i })` matches **two**
+  elements — the sidebar nav item "Voice"
+  (`data-testid="sidebar-nav-voice"`) and the chat toolbar mic button
+  ("VOICE", title "Mic is off.") — so it fails Playwright strict mode
+  whenever both are present. The tell: the very next test in the same file
+  uses the identical locator and *clicks* it (which would also throw on two
+  matches) and passed in the same run. Most likely the mic button renders
+  after an async voice-support check, so the 10s `toBeVisible` wait in
+  test 1 is long enough for the second match to appear while test 2's
+  immediate click is not — i.e. the assertion fails *because* it waits.
+  **Why it matters:** Playwright is a required branch-protection check as of
+  2026-08-22, so this can block unrelated PRs at random.
+  **Why deferred:** unrelated to the CALL-E work it surfaced during;
+  folding an E2E fix into that PR would have mixed concerns.
+  **Resume hint:** scope the locator to the chat toolbar (or use the mic
+  button's own test id) instead of matching any button named /voice/i;
+  `e2e/voice.spec.js:14-25`. Re-running CI is a workaround, not a fix.
+  — **status: OPEN**
+
+- [2026-09-07] **Codacy flagged 1 new issue on PR #234, never triaged.**
+  Codacy reported `1 new issue (0 max.) of at least <blank> severity` and
+  exposes no detail through the GitHub API; the finding was not inspected
+  before merge. It is advisory (not a required branch-protection check, same
+  posture as PR #230), and the entire code diff was three lines in
+  `SettingsView.tsx` (two imports + one JSX section), so the likely
+  candidates are file-length/complexity thresholds rather than a defect —
+  but that is an inference, not a verified conclusion.
+  **Resume hint:** open the Codacy PR page directly
+  (app.codacy.com/gh/obsidian-media/AlphonsoEcosystem/pull-requests/234);
+  the GitHub check output carries no detail. Decide then whether Codacy
+  should stay advisory or gain a triage step.
+  — **status: OPEN (low priority)**
+
 - [2026-08-22] **`useAppEffects` was fully dead code since 2026-06-15 (44+
   commits, 2+ months) — restored.** Found while triaging a live post-install
   bug report against the fresh v2.6.3 build. Commit `3665b15`
