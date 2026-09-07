@@ -55,20 +55,20 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
   } as Record<string, string>)[coachSnapCorner] || 'items-end justify-end';
 
   return (
-    <div data-alphonso-shell-ready="true" className={`h-screen w-screen bg-zinc-950 text-zinc-100 flex p-4 ${coachMiniMode ? cornerClass : 'items-center justify-center'}`}>
-      <div className={`${coachMiniMode ? 'w-[22rem] rounded-2xl border border-cyan-300/20 bg-zinc-900/85 p-3' : 'w-full h-full rounded-2xl border border-white/10 bg-zinc-900/70 p-4'}`}>
+    <div data-alphonso-shell-ready="true" className={`h-screen w-screen bg-[var(--surface-0)] text-[var(--text-1)] flex p-4 ${coachMiniMode ? cornerClass : 'items-center justify-center'}`}>
+      <div className={`${coachMiniMode ? 'w-[22rem] rounded-2xl border border-[var(--agent-alphonso-glow)] bg-[var(--surface-1)] p-3' : 'w-full h-full rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4'}`}>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="text-xs uppercase tracking-[0.18em] text-zinc-500 font-bold">Coach Mode</div>
+          <div className="text-xs uppercase tracking-[0.18em] text-[var(--text-3)] font-bold">Coach Mode</div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCoachMiniMode((current: boolean) => !current)}
-              className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2 py-1 text-2xs font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               {coachMiniMode ? 'Full' : 'Mini'}
             </button>
             <button
               onClick={() => setCoachSnapCorner((current: string) => nextCoachCorner(current))}
-              className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2 py-1 text-2xs font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               Snap: {coachSnapCorner}
             </button>
@@ -78,7 +78,7 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
                 setMessageStyle(next);
                 setCoachMessageStyle(next);
               }}
-              className="rounded-lg border border-white/10 bg-zinc-800 px-2 py-1 text-2xs font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-2 py-1 text-2xs font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               Style: {messageStyle}
             </button>
@@ -96,7 +96,7 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
             <Suspense fallback={<ViewLoadingState activeTab="Skills" />}>
               <CoachSkillGrid skills={coachSkills.slice(0, 4)} compact />
             </Suspense>
-            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-2">
               <Suspense fallback={null}>
                 <MicrophoneStatus voiceStatus={voice.voiceStatus} />
               </Suspense>
@@ -108,9 +108,9 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
               <Suspense fallback={<ViewLoadingState activeTab="Coach interventions" />}>
                 <CoachInterventionCard intervention={coachIntervention} onAction={handleCoachInterventionAction} onDemo={showDemoIntervention} pauseUntilMs={coachPauseUntilMs} />
               </Suspense>
-              <div className="rounded-2xl border border-cyan-300/15 bg-cyan-500/5 p-4">
-                <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">Coach skills</div>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+              <div className="rounded-2xl border border-[var(--agent-alphonso-glow)] bg-[var(--agent-alphonso-glow)] p-4">
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--agent-alphonso)]">Coach skills</div>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--text-2)]">
                   Coach Mode is for guidance, focus, handoffs, rehearsal, and safety checks — not just agent status.
                 </p>
               </div>
@@ -118,8 +118,8 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
                 <CoachSkillGrid skills={coachSkills} />
               </Suspense>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/45 p-3">
-              <div className="mb-2 text-2xs font-bold uppercase tracking-[0.16em] text-zinc-500">Agent status</div>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-0)] p-3">
+              <div className="mb-2 text-2xs font-bold uppercase tracking-[0.16em] text-[var(--text-3)]">Agent status</div>
               <div className="space-y-2">
                 <Suspense fallback={<ViewLoadingState activeTab="Alphonso" />}>
                   <CoachMissionBadge agent="alphonso" state={companionStateFromVoice(voice.voiceStatus)} message={coachMessageFromVoice(voice.voiceStatus)} />
@@ -138,11 +138,11 @@ export function CoachWindow({ coachAgentFromQuery, miyaCompanionState, joseCompa
           </div>
         )}
         {coachMiniMode && (
-          <div className="mt-2 text-2xs text-zinc-500">
+          <div className="mt-2 text-2xs text-[var(--text-3)]">
             Mini mode is always-on-top friendly and corner-snapped for fast glance monitoring.
           </div>
         )}
-        <div className="mt-2 text-2xs text-zinc-600">
+        <div className="mt-2 text-2xs text-[var(--text-4)]">
           Desktop coach card is local-only and supervised.
         </div>
       </div>

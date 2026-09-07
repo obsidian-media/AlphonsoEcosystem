@@ -367,6 +367,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** this banner only renders when `App.tsx`'s app-update check finds a real newer published version (`version` prop must be truthy) — this dev build is already on the latest version, so the banner cannot render under real conditions without a genuinely newer release existing. Not chased further; relying on the 4-test suite (which exercises all 4 states with mocked version/status props) plus clean `tsc`/`eslint`.
 - **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
 
+### 51. `CoachWindow.tsx` re-skin (151 lines, 24 refs) — clean pass, no carve-out
+
+- **What changed:** the full-screen shell, mini/full-mode card border, the 3 header buttons (Mini/Snap/Style), the mic-status wrapper, and the "Agent status" panel — tokenized onto `--surface-*`/`--text-*`/`--border`. The "Coach skills" intro card's cyan tint is genuine Alphonso agent-identity color (`--agent-alphonso`), referenced directly rather than left as a raw hardcoded hue.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): this component is normally opened as a separate Tauri webview window (`coachModeService.ts`), but is gated purely on a URL query param (`IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1'`, `App.tsx:144`) — navigated directly to `http://localhost:5173/?coach=1` in a plain browser tab and got the real full window render. Confirmed the "Coach Skills" card renders in Alphonso's cyan agent-identity tone, all 6 skill cards, and all 4 agent-status mission cards (Alphonso/Hector/Jose/Miya) render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
