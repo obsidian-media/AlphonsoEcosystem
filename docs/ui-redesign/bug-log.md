@@ -485,6 +485,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): dispatched all 4 toast types via the real `alphonso:toast` CustomEvent this app already uses for cross-component notifications (`window.dispatchEvent(new CustomEvent('alphonso:toast', {...}))`, the same mechanism call sites like `BoardroomView.tsx`/`CompanionPairingPanel.tsx` use in production) — confirmed all 4 tones (success-green, error-red, info-blue, warning-amber) render correctly stacked. Zero console errors.
 - **Status:** CLOSED.
 
+### 65. `ViewErrorBoundary.tsx` re-skin (90 lines, 15 refs) — clean pass, no carve-out
+
+- **What changed:** the crash-icon badge, title/message text, Reload/Copy buttons, the "Show/Hide stack trace" toggle, and the stack-trace `<pre>` block — all tokenized onto `--error`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** this is a class-based `componentDidCatch` boundary wrapping individual lazy-loaded views in `App.tsx` — it only renders its fallback UI when a real child-component render throws. Forcing a genuine render crash from outside the page (Playwright has no clean way to inject a thrown error into a specific React subtree without modifying source) was judged not worth doing for a component this structurally simple; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files using identical `--error` conventions.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
