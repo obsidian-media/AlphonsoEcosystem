@@ -117,7 +117,7 @@ function AgentCard({ receipt, onRetry }: AgentCardProps) {
           {isFailed && onRetry && (
             <button
               onClick={() => onRetry(receipt)}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-1)] transition-colors"
               title="Retry this agent"
             >
               <RefreshCw className="w-2.5 h-2.5" />
@@ -451,7 +451,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
               type="button"
               onClick={() => { if (commandText) onRerunCommand?.(commandText); }}
               disabled={!commandText || !onRerunCommand}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:bg-[var(--accent-dim)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:bg-[var(--accent-muted)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
               aria-label="Rerun command"
               data-testid="jose-rerun-command-button"
             >
@@ -461,7 +461,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
           </div>
         </div>
         {commandText && (
-          <div className="mt-2 inline-flex max-w-full items-start rounded-2xl border border-[var(--border)] bg-black/20 px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]">
+          <div className="mt-2 inline-flex max-w-full items-start rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-[12px] leading-relaxed text-[var(--text-2)]">
             <span className="line-clamp-2">{commandText}</span>
           </div>
         )}

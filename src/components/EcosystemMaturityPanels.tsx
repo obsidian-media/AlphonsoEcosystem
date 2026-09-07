@@ -469,7 +469,7 @@ export function WorkflowOperationsPanel() {
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {(workflow.agentSequence || []).map((agentId, index) => (
                 <React.Fragment key={`${workflow.id}-${agentId}-${index}`}>
-                  <div className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-black/20 px-1.5 py-1 text-[10px] text-[var(--text-2)]">
+                  <div className="flex items-center gap-1 rounded-lg bg-[var(--surface-2)] px-1.5 py-1 text-[10px] text-[var(--text-2)]">
                     <AgentAvatar agentId={agentId} name={agentId} sizeClass="h-4 w-4" className="border-[var(--border)]" />
                     <span className="capitalize">{String(agentId).replace(/_/g, ' ')}</span>
                   </div>
@@ -642,16 +642,16 @@ function AgentNode({ agent, title, subtitle, stat, large = false }: { agent: str
       <div className="mb-2 flex justify-center">
         <AgentAvatar agentId={agent} name={title} sizeClass={large ? 'h-12 w-12' : 'h-10 w-10'} className="border-[var(--border-strong)]" />
       </div>
-      <div className="text-lg font-bold text-white">{title}</div>
+      <div className="text-lg font-bold text-[var(--text-1)]">{title}</div>
       <div className="mt-1 text-[10px] uppercase tracking-widest opacity-70">{subtitle}</div>
-      <div className="mt-3 rounded-full border border-[var(--border)] bg-black/20 px-3 py-1 text-[11px]">{stat}</div>
+      <div className="mt-3 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-[11px]">{stat}</div>
     </div>
   );
 }
 
 function MapNode({ icon: Icon, label, value }: { icon: typeof Brain; label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-black/20 p-3">
+    <div className="rounded-xl bg-[var(--surface-2)] p-3">
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">
         <Icon className="h-3.5 w-3.5" />
         {label}
@@ -662,7 +662,7 @@ function MapNode({ icon: Icon, label, value }: { icon: typeof Brain; label: stri
 }
 
 function Relationship({ text }: { text: string }) {
-  return <div className="rounded-xl border border-[var(--border)] bg-black/20 px-3 py-2">{text}</div>;
+  return <div className="rounded-xl bg-[var(--surface-2)] px-3 py-2">{text}</div>;
 }
 
 function ProofTile({ icon: Icon, label, value, trust }: { icon: typeof Brain; label: string; value: React.ReactNode; trust: string }) {
@@ -695,7 +695,7 @@ function PrivacyItem({ icon: Icon, label, value, state }: { icon: typeof Databas
 
 function PreviewBlock({ label, value, placeholder }: { label: string; value: string; placeholder: boolean }) {
   return (
-    <div className={`rounded-lg border p-3 ${placeholder ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]' : 'border-[var(--border)] bg-black/20'}`}>
+    <div className={`rounded-lg p-3 ${placeholder ? 'bg-[var(--accent-dim)]' : 'bg-[var(--surface-2)]'}`}>
       <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{label}</div>
       <pre className="mt-2 whitespace-pre-wrap text-[11px] text-[var(--text-2)]">{value}</pre>
       {placeholder && <div className="mt-2 text-[10px] text-[var(--accent)]">preview not yet wired</div>}

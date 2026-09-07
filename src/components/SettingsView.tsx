@@ -386,7 +386,7 @@ function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
         </button>
       </div>
       {modelName.trim() && (
-        <div className="font-mono text-[11px] bg-black/40 border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--success)] select-all">{cmd}</div>
+        <div className="font-mono text-[11px] bg-[var(--surface-1)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--success)] select-all">{cmd}</div>
       )}
       <p className="text-[11px] text-[var(--text-4)]">Paste this in a terminal. When the download finishes, click <button onClick={onRefresh} className="text-[var(--accent)] hover:text-[var(--accent-hover)] underline">Refresh Models</button> to load it.</p>
     </div>
@@ -836,7 +836,7 @@ export function SettingsView({
         {activeSection === 'general' && (
           <div className="max-w-4xl mx-auto space-y-10">
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-white">System Settings</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--text-1)]">System Settings</h1>
               <p className="text-sm text-[var(--text-3)]">Configure local Ollama inference and native runtime behavior.</p>
             </div>
 
@@ -889,7 +889,7 @@ export function SettingsView({
           <div className="flex flex-wrap gap-3">
             <button
               onClick={onCheckOllama}
-              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-black hover:opacity-90"
+              className="flex items-center gap-2 rounded-xl bg-[var(--text-1)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--surface-0)] hover:opacity-90"
             >
               <Activity className="h-3.5 w-3.5" /> Check Installed Models
             </button>
@@ -911,13 +911,13 @@ export function SettingsView({
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <StatusDot state={ollamaStatus.state} />
-                <span className="text-sm font-semibold text-white">{ollamaStatus.label}</span>
+                <span className="text-sm font-semibold text-[var(--text-1)]">{ollamaStatus.label}</span>
                 <Badge variant={LEGACY_COLOR_TO_VARIANT[statusColors[ollamaStatus.state as keyof typeof statusColors]] || 'default'}>{ollamaStatus.state}</Badge>
               </div>
               <span className="text-[11px] text-[var(--text-3)]">{resolvedNormalizeEndpoint(settings.endpoint || '')}/api/tags</span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-3)]">{ollamaStatus.message}</p>
-            <div className="mt-4 rounded-xl bg-black/30 border border-[var(--border)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)] whitespace-pre-wrap">
+            <div className="mt-4 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)] whitespace-pre-wrap">
               {ollamaTroubleshootingCommand}
             </div>
           </div>
@@ -939,7 +939,7 @@ export function SettingsView({
           <div className="flex items-start gap-3">
             <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${braveSearchConfigured ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`} />
             <div className="flex-1 space-y-1">
-              <div className="text-sm font-semibold text-white">
+              <div className="text-sm font-semibold text-[var(--text-1)]">
                 {braveSearchConfigured ? 'Brave Search API — active' : 'Brave Search API — not configured'}
               </div>
               <div className="text-[11px] text-[var(--text-3)]">
@@ -948,7 +948,7 @@ export function SettingsView({
                   : 'Set BRAVE_SEARCH_API_KEY in your environment to enable Brave Search. Hector falls back to DuckDuckGo HTML scraping when the key is absent.'}
               </div>
               {!braveSearchConfigured && (
-                <div className="mt-2 rounded-xl bg-black/30 border border-[var(--border)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)]">
+                <div className="mt-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)]">
                   {'# Free tier: 2,000 queries/month — signup at search.brave.com/register\nBRAVE_SEARCH_API_KEY=your_key_here'}
                 </div>
               )}
@@ -957,7 +957,7 @@ export function SettingsView({
 
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
             <div>
-              <div className="text-sm font-semibold text-white">Voice OS WebSocket Port</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Voice OS WebSocket Port</div>
               <div className="text-xs text-[var(--text-3)] mt-0.5">WebSocket URL for Voice OS (STT+TTS) pipeline. Default: ws://127.0.0.1:8766/ws</div>
             </div>
             <input
@@ -980,7 +980,7 @@ export function SettingsView({
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Auto Update Checks</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Auto Update Checks</div>
                 <div className="text-[11px] text-[var(--text-3)] mt-0.5">Check update endpoint periodically and notify when a new version is available.</div>
               </div>
               <button
@@ -1041,7 +1041,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Native Desktop Mode</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Native Desktop Mode</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Tauri v2 desktop runtime is the intended target.</div>
               <div className="text-[11px] text-[var(--warning)] mt-1">On Windows, verify:desktop needs WiX 3.14 binaries locally or a permitted wix314-binaries.zip download.</div>
             </div>
@@ -1057,7 +1057,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Local-Only Runtime</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Local-Only Runtime</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show explicit local-only identity and disable cloud assumptions.</div>
             </div>
             <button
@@ -1072,7 +1072,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Zero-Cost Mode (Default)</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Zero-Cost Mode (Default)</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Prefer local/free connectors first. Paid or metered connector routes are held for explicit approval.</div>
             </div>
             <button
@@ -1087,7 +1087,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Approval Mode</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Approval Mode</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Require explicit confirmation for supervised actions.</div>
             </div>
             <button
@@ -1102,7 +1102,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Safe Mode</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Safe Mode</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Conservative runtime behavior with repair-first posture.</div>
             </div>
             <button
@@ -1117,7 +1117,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Privacy Shield Indicator</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Privacy Shield Indicator</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Alphonso in privacy-shield mode for local-only work.</div>
             </div>
             <button
@@ -1132,7 +1132,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Miya Creative Companion</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Miya Creative Companion</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Miya pinned creative assistant widget.</div>
             </div>
             <button
@@ -1147,7 +1147,7 @@ export function SettingsView({
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
             <div>
-              <div className="text-sm font-semibold text-white">Jose Orchestrator Companion</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Jose Orchestrator Companion</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Jose pinned governance and routing assistant widget.</div>
             </div>
             <button
@@ -1183,7 +1183,7 @@ export function SettingsView({
         <SectionHeader icon={Plug} label="External Tools (Composio)" />
         <div className="space-y-4">
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
-            <div className="text-sm font-semibold text-white">Composio API Key</div>
+            <div className="text-sm font-semibold text-[var(--text-1)]">Composio API Key</div>
             <div className="text-xs text-[var(--text-3)]">Connect agents to 1000+ external services (GitHub, Slack, Notion, Jira, etc.). Get your key at <a href="https://app.composio.dev" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">app.composio.dev</a>.</div>
             <div className="flex gap-2">
               <input
@@ -1204,7 +1204,7 @@ export function SettingsView({
           </div>
 
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
-            <div className="text-sm font-semibold text-white">User ID</div>
+            <div className="text-sm font-semibold text-[var(--text-1)]">User ID</div>
             <div className="text-xs text-[var(--text-3)]">Identifies your agent sessions in Composio.</div>
             <input
               type="text"
@@ -1291,7 +1291,7 @@ export function SettingsView({
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Auto-Launch on Startup</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Auto-Launch on Startup</div>
                 <div className="text-xs text-[var(--text-3)] mt-0.5">Start Ollama (and ComfyUI if configured) automatically when Alphonso opens.</div>
               </div>
               <button
@@ -1310,13 +1310,13 @@ export function SettingsView({
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Output Folder</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Output Folder</div>
                 <div className="text-xs text-[var(--text-3)] mt-0.5">Where generated images and files are saved.</div>
               </div>
               <input ref={outputFolderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleOutputFolderPick} className="hidden" />
               <button
                 onClick={handlePickOutputFolder}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-white text-xs font-medium border border-[var(--border)] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium border border-[var(--border)] transition-colors"
               >
                 <Folder className="w-3.5 h-3.5" />
                 Browse
@@ -1334,7 +1334,7 @@ export function SettingsView({
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Ollama</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Ollama</div>
                 <div className="text-xs text-[var(--text-3)] mt-0.5">Local LLM inference server at localhost:11434.</div>
               </div>
               <button
@@ -1357,7 +1357,7 @@ export function SettingsView({
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">ComfyUI</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">ComfyUI</div>
                 <div className="text-xs text-[var(--text-3)] mt-0.5">Local image generation server at localhost:8188.</div>
               </div>
               <button
@@ -1381,7 +1381,7 @@ export function SettingsView({
                 <input ref={comfyuiDirPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleComfyUIDirPick} className="hidden" />
                 <button
                   onClick={handlePickComfyUIDir}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-white text-xs font-medium border border-[var(--border)] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium border border-[var(--border)] transition-colors"
                 >
                   <Folder className="w-3.5 h-3.5" />
                   Browse
@@ -1419,7 +1419,7 @@ export function SettingsView({
         <SectionHeader icon={TrendingUp} label="Nova Insight Threshold" />
         <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
           <div>
-            <div className="text-sm font-semibold text-white">Insight Score Threshold</div>
+            <div className="text-sm font-semibold text-[var(--text-1)]">Insight Score Threshold</div>
             <div className="text-xs text-[var(--text-3)] mt-0.5">Minimum Nova score (0–100) to show an insight card after pipeline completion. Default: 65.</div>
           </div>
           <input
@@ -1532,7 +1532,7 @@ export function SettingsView({
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Export Backup</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Export Backup</div>
                 <div className="text-xs text-[var(--text-3)] mt-0.5">Download all settings, memory, chats, and agent data as a JSON file.</div>
               </div>
               <button
@@ -1549,7 +1549,7 @@ export function SettingsView({
           <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Import Backup</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Import Backup</div>
                 <div className="text-xs text-[var(--text-3)] mt-0.5">Restore from a previously exported backup file. Page will reload after restore.</div>
               </div>
               <div className="flex items-center gap-2">
@@ -1563,7 +1563,7 @@ export function SettingsView({
                 <button
                   onClick={() => backupFileRef.current?.click()}
                   disabled={backupRestoring}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-white text-sm font-medium rounded-xl transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-[var(--text-1)] text-sm font-medium rounded-xl transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   {backupRestoring ? 'Restoring...' : 'Import'}
@@ -1624,7 +1624,7 @@ function PluginMarketplacePanel() {
           placeholder="Search plugins…"
           value={filter}
           onChange={e => setFilter(e.target.value)}
-          className="w-full text-sm bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-white placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="w-full text-sm bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         {filtered.length === 0 ? (
           <div className="p-8 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-center space-y-2">
@@ -1638,7 +1638,7 @@ function PluginMarketplacePanel() {
               <div key={p.id} className="flex items-center gap-4 p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)]">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white truncate">{p.name}</span>
+                    <span className="text-sm font-semibold text-[var(--text-1)] truncate">{p.name}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-3)] border border-[var(--border)] shrink-0">v{p.version}</span>
                     {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success-border)] shrink-0">✓ signed</span>}
                   </div>
@@ -1853,7 +1853,7 @@ function InboxFolderConfig() {
   return (
     <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-4">
       <div className="space-y-1">
-        <div className="text-sm font-semibold text-white">Inbox Folder Path</div>
+        <div className="text-sm font-semibold text-[var(--text-1)]">Inbox Folder Path</div>
         <div className="text-xs text-[var(--text-3)]">Directory to watch for new files. New files are auto-ingested into Echo memory by Jose.</div>
       </div>
       <input
@@ -1861,7 +1861,7 @@ function InboxFolderConfig() {
         value={inboxPath}
         onChange={(e) => setInboxPath(e.target.value)}
         placeholder="C:\Users\You\Documents\Inbox"
-        className="w-full px-3 py-2 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-sm text-white placeholder-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-border)]"
+        className="w-full px-3 py-2 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-border)]"
       />
       <div className="flex items-center gap-3">
         <button
@@ -1918,15 +1918,15 @@ function PerformanceDiagnosticsPanel() {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex flex-col gap-1">
             <span className="text-[var(--text-3)] text-xs uppercase tracking-wide">Boot time</span>
-            <span className="text-white font-mono">{stats.bootMs != null ? `${stats.bootMs}ms` : 'N/A'}</span>
+            <span className="text-[var(--text-1)] font-mono">{stats.bootMs != null ? `${stats.bootMs}ms` : 'N/A'}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[var(--text-3)] text-xs uppercase tracking-wide">localStorage</span>
-            <span className="text-white font-mono">{stats.storageKB} KB / 10,000 KB ({stats.storagePercent}%)</span>
+            <span className="text-[var(--text-1)] font-mono">{stats.storageKB} KB / 10,000 KB ({stats.storagePercent}%)</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[var(--text-3)] text-xs uppercase tracking-wide">Storage items</span>
-            <span className="text-white font-mono">{stats.itemCount}</span>
+            <span className="text-[var(--text-1)] font-mono">{stats.itemCount}</span>
           </div>
         </div>
       ) : (

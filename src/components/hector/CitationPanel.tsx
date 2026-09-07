@@ -25,7 +25,7 @@ export function CitationPanel({ report }: Props): React.JSX.Element {
     <Zone mood="hector">
       <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-hector)]">Citations</div>
       {urls.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
+        <div className="rounded-xl bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
           Citation list is empty because this report has not completed a live run yet.
         </div>
       ) : (
@@ -33,7 +33,7 @@ export function CitationPanel({ report }: Props): React.JSX.Element {
           <p className="mb-2 text-[11px] text-[var(--text-3)]">Numbered bibliography for this report's approval handoff.</p>
           <ol className="space-y-2">
             {urls.map((url, index) => (
-              <li key={url} className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-3 text-[11px] text-[var(--text-2)]">
+              <li key={url} className="rounded-xl bg-[var(--surface-1)] p-3 text-[11px] text-[var(--text-2)]">
                 [{index + 1}]{' '}
                 <button
                   type="button"

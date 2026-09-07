@@ -225,7 +225,7 @@ export function ProjectExecutionMode(): React.JSX.Element {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-6 py-6 space-y-5">
-        <header className="pb-5 border-b border-white/[0.06]">
+        <header className="pb-5 border-b border-[var(--border)]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-3)]">Projects</div>

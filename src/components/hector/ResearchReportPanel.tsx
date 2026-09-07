@@ -37,9 +37,9 @@ function ReportList({ title, rows = [], empty }: ReportListProps): React.JSX.Ele
       <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{title}</div>
       <div className="mt-2 space-y-1">
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">{empty}</div>
+          <div className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-3)]">{empty}</div>
         ) : rows.map((row) => (
-          <div key={row} className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">{row}</div>
+          <div key={row} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">{row}</div>
         ))}
       </div>
     </div>
@@ -51,7 +51,7 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
     <Zone mood="hector">
       <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-hector)]">Research Report</div>
       {!report ? (
-        <div className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
+        <div className="rounded-xl bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
           No Hector report selected.
         </div>
       ) : (
@@ -63,7 +63,7 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
           <Zone mood="cool" className="text-[11px] text-[var(--text-2)]">
             Per-source findings below — Hector doesn't yet combine these into one written report.
           </Zone>
-          <div className="rounded-xl border border-white/10 bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--text-2)]">
+          <div className="rounded-xl bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--text-2)]">
             {report.status === 'source_discovery_failed'
               ? 'Live source discovery failed. Check connectivity and retry.'
               : `${report.status}. Sources and citations are generated from real live discovery/fetch runs.`}
@@ -73,7 +73,7 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
               <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Source Proofs</div>
               <div className="mt-2 space-y-1">
                 {report.sourceProofs.map((proof) => (
-                  <div key={proof.url} className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">
+                  <div key={proof.url} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">
                     <span className={proof.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}>{proof.ok ? 'Verified' : 'Failed'}</span>{' '}
                     <button
                       type="button"
@@ -93,7 +93,7 @@ export function ResearchReportPanel({ report }: Props): React.JSX.Element {
           <ReportList title="Verified Facts" rows={report.verifiedFacts} empty="No verified facts yet." />
           <ReportList title="Inferred Points" rows={report.inferredPoints} empty="No inferred points yet." />
           <ReportList title="Jose Approval Needed" rows={report.joseApprovalNeeded} empty="No approval blockers listed." />
-          <div className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-3 text-[11px] text-[var(--text-2)]">
+          <div className="rounded-xl bg-[var(--surface-1)] p-3 text-[11px] text-[var(--text-2)]">
             Recommended next step: {report.recommendedNextStep ?? 'Not available.'}
           </div>
         </div>

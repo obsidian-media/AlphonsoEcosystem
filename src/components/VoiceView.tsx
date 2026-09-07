@@ -13,7 +13,7 @@ function ReadinessRow({ label, detail, ready }: { label: string; detail: string;
   const Icon = ready === true ? CheckCircle2 : ready === false ? XCircle : RefreshCw;
   const color = ready === true ? 'text-[var(--success)]' : ready === false ? 'text-[var(--warning)]' : 'text-[var(--text-4)]';
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-3">
+    <div className="flex items-start gap-3 rounded-xl bg-[var(--surface-2)] px-3 py-3">
       <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} aria-hidden="true" />
       <div>
         <div className="text-xs font-semibold text-[var(--text-1)]">{label}</div>
@@ -100,10 +100,10 @@ export function VoiceView() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl space-y-5 px-6 py-6">
-        <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-[var(--accent-border)] bg-[var(--surface-1)] px-5 py-5">
+        <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-[var(--surface-1)] px-5 py-5">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent)]">Voice console</div>
-            <h2 className="mt-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+            <h2 className="mt-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-[var(--text-1)]">
               {isRunning ? <Mic className="h-6 w-6 text-[var(--success)]" /> : <MicOff className="h-6 w-6 text-[var(--text-4)]" />}
               Voice OS
             </h2>
@@ -115,13 +115,13 @@ export function VoiceView() {
         </header>
 
         <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+          <section className="rounded-2xl bg-[var(--surface-1)] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-1)]"><Server className="h-4 w-4 text-[var(--accent)]" /> Local speech pipeline</div>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">{localSummary}</p>
               </div>
-              <button type="button" onClick={() => void refreshStatus()} disabled={busy} className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-3)] hover:text-white disabled:opacity-40" aria-label="Refresh voice status">
+              <button type="button" onClick={() => void refreshStatus()} disabled={busy} className="rounded-lg p-2 text-[var(--text-3)] hover:text-[var(--text-1)] disabled:opacity-40" aria-label="Refresh voice status">
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -132,16 +132,16 @@ export function VoiceView() {
               <ReadinessRow label="WebSocket service" ready={status === 'unknown' ? null : isRunning} detail={isRunning ? `Listening at ${wsUrl}` : 'Not listening. Start the local service after the prerequisites are ready.'} />
             </div>
 
-            {error && <p role="alert" className="mt-3 rounded-lg border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2 text-xs text-[var(--error)]">{error}</p>}
+            {error && <p role="alert" className="mt-3 rounded-lg bg-[var(--error-dim)] px-3 py-2 text-xs text-[var(--error)]">{error}</p>}
 
-            <button onClick={isRunning ? handleStop : handleStart} disabled={busy || (!isRunning && !canStart)} className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition disabled:opacity-40 ${isRunning ? 'border border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)] hover:opacity-90' : 'bg-[var(--accent)] text-[var(--surface-0)]'}`}>
+            <button onClick={isRunning ? handleStop : handleStart} disabled={busy || (!isRunning && !canStart)} className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition disabled:opacity-40 ${isRunning ? 'bg-[var(--error-dim)] text-[var(--error)] hover:opacity-90' : 'bg-[var(--accent)] text-[var(--surface-0)]'}`}>
               {isRunning ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               {busy ? 'Updating voice service…' : isRunning ? 'Stop local voice' : 'Start local voice'}
             </button>
           </section>
 
           <aside className="space-y-4">
-            <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+            <section className="rounded-2xl bg-[var(--surface-1)] p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-1)]"><Volume2 className="h-4 w-4 text-[var(--accent)]" /> How speech moves</div>
               <ol className="mt-3 space-y-2 text-xs leading-relaxed text-[var(--text-3)]">
                 <li><span className="mr-2 text-[var(--accent)]">01</span>Speak through the Chat microphone.</li>
@@ -150,10 +150,10 @@ export function VoiceView() {
               </ol>
             </section>
 
-            <section className="rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4">
+            <section className="rounded-2xl bg-[var(--warning-dim)] p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-2)]"><Cloud className="h-4 w-4 text-[var(--warning)]" /> Cloud Voice companion</div>
               <p className="mt-2 text-xs leading-relaxed text-[var(--text-3)]">Cloud Voice is a separate iOS path. It requires a paired, enrolled physical device and a real request/reply audio check. This desktop panel does not present Cloud Voice as ready until that check is recorded.</p>
-              <div className="mt-3 rounded-lg border border-[var(--warning-border)] bg-black/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--warning)]">Physical-device verification pending</div>
+              <div className="mt-3 rounded-lg bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--warning)]">Physical-device verification pending</div>
             </section>
           </aside>
         </div>

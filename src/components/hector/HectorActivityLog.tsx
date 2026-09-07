@@ -17,9 +17,9 @@ export function HectorActivityLog({ rows = [] }: Props): React.JSX.Element {
     <Zone mood="hector">
       <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-hector)]">Hector Activity Log</div>
       <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-        {rows.length === 0 && <div className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">No Hector activity yet.</div>}
+        {rows.length === 0 && <div className="rounded-xl bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">No Hector activity yet.</div>}
         {rows.slice().reverse().map((row) => (
-          <div key={row.id} className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-3">
+          <div key={row.id} className="rounded-xl bg-[var(--surface-1)] p-3">
             <div className="text-xs font-semibold text-[var(--text-1)]">{row.type}</div>
             <div className="mt-1 text-[11px] text-[var(--text-3)]">{new Date(row.timestampMs).toLocaleString()} | {row.confidence}</div>
           </div>

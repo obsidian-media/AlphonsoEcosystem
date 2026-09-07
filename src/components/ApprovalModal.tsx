@@ -106,7 +106,7 @@ function ScoreRing({ score }: { score: number }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white">{score}</span>
+      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-[var(--text-1)]">{score}</span>
     </div>
   );
 }

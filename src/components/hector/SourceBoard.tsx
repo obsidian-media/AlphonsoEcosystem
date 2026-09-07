@@ -29,13 +29,13 @@ export function SourceBoard({ report }: Props): React.JSX.Element {
     <Zone mood="hector">
       <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--agent-hector)]">Discovered Sources</div>
       {sources.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
+        <div className="rounded-xl bg-[var(--surface-1)] p-4 text-sm text-[var(--text-3)]">
           No sources recorded. Hector will not invent citations.
         </div>
       ) : (
         <div className="space-y-2">
           {sources.map((source) => (
-            <div key={source.url} className="rounded-xl border border-white/10 bg-[var(--surface-1)] p-3">
+            <div key={source.url} className="rounded-xl bg-[var(--surface-1)] p-3">
               <button
                 type="button"
                 onClick={() => openExternalUrl(source.url)}

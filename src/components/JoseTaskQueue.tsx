@@ -77,7 +77,7 @@ function PacketCard({ packet, onApprove, onReject, onReplay }: PacketCardProps) 
         <span className={`shrink-0 text-[9px] font-bold uppercase tracking-widest ${stage.color}`}>{stage.label}</span>
       </div>
       {(packet.commandPreview || packet.actionType) && (
-        <div className="rounded-lg bg-black/20 px-2 py-1 text-[10px] font-mono text-[var(--text-3)] truncate">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2 py-1 text-[10px] font-mono text-[var(--text-3)] truncate">
           {packet.commandPreview || packet.actionType}
         </div>
       )}

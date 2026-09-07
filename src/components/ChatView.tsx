@@ -1006,7 +1006,7 @@ export function ChatView({
             />
             <button
               onClick={() => setDirectMode((d) => !d)}
-              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded border transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${directMode ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-white/5 text-[var(--text-4)] hover:text-[var(--text-2)]'}`}
+              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${directMode ? 'bg-[var(--accent-dim)] text-[var(--accent)]' : 'text-[var(--text-4)] hover:text-[var(--text-2)]'}`}
               aria-label={directMode ? `Direct mode on (${directAgent})` : 'Direct mode off'}
               title={directMode ? `Direct to ${directAgent} — bypasses Jose routing` : 'Enable direct agent mode'}
             >
@@ -1601,13 +1601,13 @@ export function ChatView({
       {showShortcutHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutHelp(false)} role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
           <div
-            className="w-full max-w-md bg-[var(--surface-0)] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-md bg-[var(--surface-0)] rounded-2xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-white/5">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <Keyboard className="w-5 h-5 text-[var(--text-2)]" />
-                <div className="text-sm font-semibold text-white">Keyboard Shortcuts</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Keyboard Shortcuts</div>
               </div>
               <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]" aria-label="Close keyboard shortcuts">
                 <X className="w-4 h-4" />
@@ -1621,7 +1621,7 @@ export function ChatView({
                 </div>
               ))}
             </div>
-            <div className="p-3 border-t border-white/5 text-[10px] text-[var(--text-4)] text-center">
+            <div className="p-3 border-t border-[var(--border)] text-[10px] text-[var(--text-4)] text-center">
               Press ? to toggle this help
             </div>
           </div>
