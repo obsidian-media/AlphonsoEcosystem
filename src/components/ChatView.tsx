@@ -35,6 +35,7 @@ import { isHermesAgentConfigured, sendHermesAgentMessage } from '../services/con
 import { getAgentProvider, setAgentProvider } from '../services/modelSelectionService';
 import { listConnectors } from '../services/connectorRegistryService';
 import { MarkdownMessage } from './MarkdownMessage';
+import { AgentAvatar } from './AgentAvatar';
 import { ApprovalPanel } from './ApprovalPanel';
 import { approvePacket, rejectPacket, getPacketById } from '../services/agentBusService';
 import { PipelineResultCard } from './PipelineResultCard';
@@ -667,6 +668,7 @@ export function ChatView({
       setMessages((current) => [...current, {
         id: newMsgId,
         role: 'assistant',
+        agentId: 'jose',
         content: displaySummary + hintLine,
         isNew: true,
         ...(needsRuntimeHub ? { actionType: 'open_runtime_hub' } : {})
@@ -683,6 +685,7 @@ export function ChatView({
           setMessages((current) => [...current, {
             id: nextMsgId(),
             role: 'assistant',
+            agentId: 'jose',
             content: `⏳ **${agentNames || 'Agent'} ${pending.length === 1 ? 'is' : 'are'} waiting for your approval** — review the task${pending.length !== 1 ? 's' : ''} below and approve or deny to continue.`
           }]);
 
@@ -817,7 +820,8 @@ export function ChatView({
     onGenerationChange(true);
 
     const assistantMsgId = nextMsgId();
-    setMessages((current) => [...current, { id: assistantMsgId, role: 'assistant', content: '' }]);
+    const assistantAgentId = directMode ? directAgent : 'alphonso';
+    setMessages((current) => [...current, { id: assistantMsgId, role: 'assistant', agentId: assistantAgentId, content: '' }]);
 
     const chatMessages = [
       { role: 'system', content: CHAT_ASSISTANT_PROMPT },
@@ -1193,9 +1197,17 @@ export function ChatView({
           return (
           <motion.div key={message.id} variants={messageIn} initial="hidden" animate="visible" exit={{ opacity: 0, y: -4 }} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (
-              <div className={`w-8 h-8 rounded-lg ${message.isError ? 'bg-red-500/10 border-red-500/20' : 'bg-[var(--accent-dim)] border-[var(--accent-border)]'} border flex items-center justify-center shrink-0 mt-1 shadow-sm`}>
-                <Bot className={`w-4 h-4 ${message.isError ? 'text-red-400' : 'text-[var(--accent)]'}`} />
-              </div>
+              message.isError ? (
+                <div className="w-8 h-8 rounded-lg bg-red-500/10 border-red-500/20 border flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                  <Bot className="w-4 h-4 text-red-400" />
+                </div>
+              ) : message.agentId ? (
+                <AgentAvatar agentId={message.agentId} name={message.agentId} sizeClass="h-8 w-8" className="shrink-0 mt-1 shadow-sm" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-[var(--accent-dim)] border-[var(--accent-border)] border flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                  <Bot className="w-4 h-4 text-[var(--accent)]" />
+                </div>
+              )
             )}
             <div className={`flex flex-col gap-1.5 ${message.role === 'user' ? 'items-end' : 'items-start'} max-w-[90%]`}>
               {message.role === 'assistant' ? (
@@ -1405,9 +1417,7 @@ export function ChatView({
 
         {isGenerating && (
           <div className="flex gap-3 max-w-3xl mx-auto w-full py-2" aria-live="polite" aria-label="Streaming response">
-            <div className="w-6 h-6 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center shrink-0">
-              <span className="text-[9px] font-bold text-[var(--accent)]">A</span>
-            </div>
+            <AgentAvatar agentId={directMode ? directAgent : 'alphonso'} name={directMode ? directAgent : 'alphonso'} sizeClass="h-6 w-6" roundedClass="rounded-lg" className="shrink-0" />
             <div className="flex items-center gap-1.5 pt-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:0ms]" />
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-3)] animate-bounce [animation-delay:150ms]" />
