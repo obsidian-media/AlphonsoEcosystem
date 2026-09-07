@@ -181,6 +181,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, real Ollama connection): "Codex packet generator for Alphonso" section — `SETUP_REQUIRED` badge in accent cyan, `missing` file entries in warning-amber, "RUN SELF-DEVELOPMENT CYCLE" (accent) and "RUN NATIVE PROOF CYCLE" (success-green) buttons — zero console errors.
 - **Status:** CLOSED.
 
+### 28. `ProjectExecutionMode.tsx` re-skin (466 lines, 76 refs) — clean pass, no carve-out
+
+- **What changed:** `SmallBtn`'s green/amber tones (Sign/Archive contract actions), the 5-tab nav's active-state highlight, Operational Mode/Execution Mode toggle buttons, and all structural chrome across the Setup/Agents/Execution/Approval/Results tabs — tokenized onto `--accent`/`--success`/`--warning`/`--error`/`--text-*`/`--surface-*`. No per-item identity in this file. Ran the #25 fix-script unconditionally as the new standing practice (per this session's self-critique) — caught nothing new here since `-border` tokens were used correctly from the start, confirming the practice works as a safety net rather than a crutch.
+- **Existing test coverage reused:** `src/test/ProjectExecutionMode.test.tsx` (6 tests) stayed green. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): Setup tab with the accent-highlighted active tab pill and correctly-disabled "Continue to Execution" button — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
