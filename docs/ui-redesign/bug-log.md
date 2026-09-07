@@ -427,6 +427,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Orchestrator → Command tab → "WhatsApp Inbound" card): confirmed the "No messages yet" empty state renders correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 58. `SentinelFindingModal.tsx` re-skin (85 lines, 21 refs) — clean pass, one severity-compression judgment call
+
+- **What changed:** `SEVERITY_STYLES` (critical/high/medium/low), header, close button, and the Pattern/Recommendation detail boxes — tokenized onto `--error`/`--warning`/`--text-*`/`--surface-*`/`--border`. Left `bg-surface-2`/`hover:bg-surface-3`/`btn-secondary` untouched — these are already real Tailwind theme colors (`tailwind.config.js`'s `surface: { 0..4: 'var(--surface-N)' }`) and a real custom CSS class (`.btn-secondary` in `index.css`, already resolving to tokens), not raw hardcoded literals — confirmed before assuming they needed fixing.
+- **Judgment call (not a carve-out):** same pattern as `MarcusAuditPanel.tsx` (#40) — 4 severity levels (critical/high/medium/low) compressed onto the 3 available tone tokens, critical+high both → `--error`, medium → `--warning`, low → neutral `--text-3`/`--surface-3`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** `src/test/components/SentinelFindingModal.test.tsx` — 6/6 passing. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `RightPanel.tsx`'s Security section (`selectedFinding` state, set only by clicking a real finding row from a live Sentinel scan). This dev environment's Sentinel scan has consistently reported "Clean, 0 findings" throughout the entire session (confirmed in every prior screenshot's right-panel Security section) — there is no real finding to click. Not chased further (fabricating a fake finding via direct React state injection was judged not worth the added test-double risk for a component this simple); relying on the 6-test suite plus clean `tsc`/`eslint`.
+- **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
