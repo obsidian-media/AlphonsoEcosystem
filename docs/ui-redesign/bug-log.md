@@ -444,6 +444,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Operator Dashboard → "Trust Receipts" section): confirmed the filter dropdowns, Refresh button, success-green status banner, and empty-state table row all render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 60. `FilesView.tsx` re-skin (103 lines, 18 refs) — clean pass, no carve-out
+
+- **What changed:** header, search input, category-filter pills (indigo "selected" state, generic across all categories, not per-item identity → `--accent`), both empty states, and the memory-record list cards — all tokenized onto `--accent`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Settings → Knowledge): confirmed the "ALL" category pill (accent-teal selected state), search input, and empty state all render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
