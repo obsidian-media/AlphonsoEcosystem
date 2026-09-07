@@ -174,6 +174,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, real Ollama connection): Workflow Operations Dashboard section — selected-workflow accent highlight, risk-level badges (amber "HIGH", info-blue "MEDIUM"), and Agent Participation badges (success-green "EXECUTE", warning-amber "APPROVAL STAGE") — zero console errors.
 - **Status:** CLOSED.
 
+### 27. `SelfDevelopmentPanel.tsx` re-skin (565 lines, 87 refs) — a clean, no-carve-out pass
+
+- **What changed:** `STATE_STYLES` (the same confirmed/partial/setup_required/blocked/failed/unknown truth-state map pattern as `ProductionReadinessPanel.tsx` #23 and `WorkflowOperationsDashboard.tsx` #26 — this is the third file this session using this exact convention), plus all structural chrome across the workspace-root box, native-proof summary cards, packet output cards, and patch-suggestion blocks. No per-item identity — genuine truth-state semantics throughout, fully clean pass. Used the new `-border` tokens from the start this time (learned from #26's near-miss), then still ran the #25 fix-script pass as a final safety net regardless — it caught 5 remaining occurrences (mostly double-alpha mistakes like `bg-[var(--accent-dim)]/80` on buttons) that the manual replacement pass had introduced.
+- **Existing test coverage:** no dedicated component test, but this panel is service-tested (`src/test/selfDevelopmentService.test.js`) and rendered via `EcosystemHub.tsx`'s Advanced tab (same `ecosystemHub.test.jsx` regression guard as #23/#26). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, real Ollama connection): "Codex packet generator for Alphonso" section — `SETUP_REQUIRED` badge in accent cyan, `missing` file entries in warning-amber, "RUN SELF-DEVELOPMENT CYCLE" (accent) and "RUN NATIVE PROOF CYCLE" (success-green) buttons — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)

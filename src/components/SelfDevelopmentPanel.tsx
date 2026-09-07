@@ -121,13 +121,13 @@ interface SelfDevelopmentPanelProps {
 }
 
 const STATE_STYLES: Record<string, string> = {
-  confirmed: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
-  ready: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
-  partial: 'border-amber-300/20 bg-amber-500/10 text-amber-200',
-  setup_required: 'border-indigo-300/20 bg-indigo-500/10 text-indigo-200',
-  blocked: 'border-red-300/20 bg-red-500/10 text-red-200',
-  failed: 'border-red-300/20 bg-red-500/10 text-red-200',
-  unknown: 'border-zinc-300/20 bg-zinc-500/10 text-zinc-200'
+  confirmed: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  ready: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  partial: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
+  setup_required: 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]',
+  blocked: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
+  failed: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
+  unknown: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]'
 };
 
 function displayTruthState(state: string): string {
@@ -152,9 +152,9 @@ function StateBadge({ state }: { state: string }) {
 
 function SectionPanel({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4">
-      <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-        <Icon className="h-4 w-4 text-indigo-300" />
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
+      <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
+        <Icon className="h-4 w-4 text-[var(--accent)]" />
         {title}
       </div>
       {children}
@@ -326,18 +326,18 @@ export function SelfDevelopmentPanel({
       <SectionPanel icon={Bot} title="Self-Development Mode">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold text-white">Codex packet generator for Alphonso</h2>
-            <p className="max-w-3xl text-sm leading-relaxed text-zinc-400">
+            <h2 className="text-2xl font-semibold text-[var(--text-1)]">Codex packet generator for Alphonso</h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-3)]">
               Alphonso can scan the local repo, detect truth issues and surfaces that still need setup, group work by priority, and prepare compact implementation packets before Codex spends large context on the repo.
             </p>
-            <div className="rounded-2xl border border-white/10 bg-zinc-900/55 p-3 text-[11px] text-zinc-300">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">
               <div className="flex flex-wrap items-center gap-2">
-                <FolderOpen className="h-3.5 w-3.5 text-indigo-300" />
-                <span className="font-semibold text-zinc-100">Workspace root:</span>
-                <span className="font-mono text-zinc-300">{resolvedWorkspaceRoot}</span>
+                <FolderOpen className="h-3.5 w-3.5 text-[var(--accent)]" />
+                <span className="font-semibold text-[var(--text-1)]">Workspace root:</span>
+                <span className="font-mono text-[var(--text-2)]">{resolvedWorkspaceRoot}</span>
                 <StateBadge state={workspaceValidation?.ok ? 'confirmed' : (workspaceValidation?.status || (workspaceRoot ? 'unknown' : 'setup_required'))} />
               </div>
-              <div className="mt-2 text-zinc-500">
+              <div className="mt-2 text-[var(--text-3)]">
                 {workspaceValidation?.error || 'Validated workspace root is used for repo scans and packet generation.'}
               </div>
               <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -346,8 +346,8 @@ export function SelfDevelopmentPanel({
                     ? { path: entry, exists: false }
                     : entry;
                   return (
-                    <div key={row.path} className="rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 font-mono text-[10px] text-zinc-400">
-                      {row.path} <span className={row.exists ? 'text-emerald-300' : 'text-amber-300'}>{row.exists ? 'present' : 'missing'}</span>
+                    <div key={row.path} className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 font-mono text-[10px] text-[var(--text-3)]">
+                      {row.path} <span className={row.exists ? 'text-[var(--success)]' : 'text-[var(--warning)]'}>{row.exists ? 'present' : 'missing'}</span>
                     </div>
                   );
                 })}
@@ -358,7 +358,7 @@ export function SelfDevelopmentPanel({
             <button
               onClick={setCurrentWorkspace}
               disabled={validating || !setSettings}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] transition hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               <FolderOpen className="h-3.5 w-3.5" />
               Set Current Workspace
@@ -366,14 +366,14 @@ export function SelfDevelopmentPanel({
             <button
               onClick={() => validateWorkspace(resolvedWorkspaceRoot)}
               disabled={validating}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] transition hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${validating ? 'animate-spin' : ''}`} />
               {validating ? 'Validating' : 'Validate Workspace'}
             </button>
             <button
               onClick={refreshPreview}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 transition hover:bg-zinc-800"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] transition hover:bg-[var(--surface-3)]"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Refresh
@@ -381,7 +381,7 @@ export function SelfDevelopmentPanel({
             <button
               onClick={() => runCycle()}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl border border-indigo-300/20 bg-indigo-500/15 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-indigo-100 transition hover:bg-indigo-500/25 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)] transition hover:bg-[var(--accent-dim)] disabled:opacity-50"
             >
               <Workflow className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               {loading ? 'Scanning' : 'Run self-development cycle'}
@@ -389,7 +389,7 @@ export function SelfDevelopmentPanel({
             <button
               onClick={runNativeProofCycle}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/15 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--success-border)] bg-[var(--success-dim)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--success)] transition hover:bg-[var(--success-dim)] disabled:opacity-50"
               title="Invokes run_native_rc0_proof in the Rust engine. React does not own proof authority."
             >
               <Workflow className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -397,9 +397,9 @@ export function SelfDevelopmentPanel({
             </button>
           </div>
         </div>
-        <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-900/55 p-3">
+        <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Supervised native proof checklist</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Supervised native proof checklist</div>
             <button
               type="button"
               onClick={() => {
@@ -407,16 +407,16 @@ export function SelfDevelopmentPanel({
                   void navigator.clipboard.writeText(supervisedProofInstructions);
                 }
               }}
-              className="rounded-lg border border-white/10 bg-zinc-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               Copy instructions
             </button>
           </div>
-          <pre className="mt-2 whitespace-pre-wrap rounded-xl border border-white/10 bg-zinc-950/60 p-3 text-[11px] leading-relaxed text-zinc-300">
+          <pre className="mt-2 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[11px] leading-relaxed text-[var(--text-2)]">
 {supervisedProofInstructions}
           </pre>
         </div>
-        <p className="mt-4 text-[11px] leading-relaxed text-zinc-500">
+        <p className="mt-4 text-[11px] leading-relaxed text-[var(--text-3)]">
           Native proof status below reflects the Rust RC0 engine or on-disk artifacts only. The self-development scan button updates packet preview data and does not set native proof authority.
         </p>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -446,25 +446,25 @@ export function SelfDevelopmentPanel({
           />
         </div>
         {nativeSelfDevProof?.topPackets && nativeSelfDevProof.topPackets.length > 0 && (
-          <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-900/55 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Native proof packets</div>
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Native proof packets</div>
             <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
               {nativeSelfDevProof.topPackets.slice(0, 4).map((packet) => (
-                <div key={packet.id} className="rounded-xl border border-white/10 bg-zinc-950/60 p-3 text-[11px] text-zinc-300">
-                  <div className="font-semibold text-zinc-100">{packet.title}</div>
-                  <div className="mt-1 text-zinc-500">{packet.id} | {packet.priority} | {packet.riskLevel} risk</div>
+                <div key={packet.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[11px] text-[var(--text-2)]">
+                  <div className="font-semibold text-[var(--text-1)]">{packet.title}</div>
+                  <div className="mt-1 text-[var(--text-3)]">{packet.id} | {packet.priority} | {packet.riskLevel} risk</div>
                 </div>
               ))}
             </div>
           </div>
         )}
         {error && (
-          <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
+          <div className="mt-4 rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-sm text-[var(--error)]">
             {error}
           </div>
         )}
         {!workspaceRoot && (
-          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-3 text-sm text-amber-100">
+          <div className="mt-4 rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-sm text-[var(--warning)]">
             Self-development mode needs a configured workspace root.
           </div>
         )}
@@ -485,7 +485,7 @@ export function SelfDevelopmentPanel({
             <SummaryCard label="Truth Issues" value={auditSummary.issueCount || 0} state={(auditSummary.issueCount || 0) > 0 ? 'partial' : 'confirmed'} />
             <SummaryCard label="Needs Setup" value={auditSummary.needsSetupCount || 0} state={(auditSummary.needsSetupCount || 0) > 0 ? 'setup_required' : 'confirmed'} />
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-zinc-500 md:grid-cols-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-[var(--text-3)] md:grid-cols-2">
             <div>Follow-ups: {followUpCount}</div>
             <div>Stored cycles: {cycles.length}</div>
             <div>Last cycle state: {displayTruthState(bundle?.overallState || 'unknown')}</div>
@@ -496,16 +496,16 @@ export function SelfDevelopmentPanel({
         <SectionPanel icon={Bot} title="Implementation Packet Output">
           <div className="space-y-2">
             {packets.length === 0 && (
-              <div className="rounded-2xl border border-white/10 bg-zinc-900/55 p-3 text-sm text-zinc-400">
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-3)]">
                 No Codex packet bundle exists yet. Run the self-development cycle to generate one.
               </div>
             )}
             {packets.slice(0, 5).map((packet) => (
-              <article key={packet.id} className="rounded-2xl border border-white/10 bg-zinc-900/55 p-3">
+              <article key={packet.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-white">{packet.title}</div>
-                    <div className="mt-1 text-[11px] text-zinc-500">
+                    <div className="text-sm font-semibold text-[var(--text-1)]">{packet.title}</div>
+                    <div className="mt-1 text-[11px] text-[var(--text-3)]">
                       {packet.currentIssue} | {packet.riskLevel} risk
                     </div>
                   </div>
@@ -526,10 +526,10 @@ export function SelfDevelopmentPanel({
 
                 <div className="mt-3 space-y-2">
                   {(packet.patchSuggestions || []).slice(0, 3).map((suggestion) => (
-                    <div key={`${packet.id}-${suggestion.file}-${suggestion.lineNumber}`} className="rounded-xl border border-white/10 bg-zinc-950/60 p-2 text-[11px] text-zinc-400">
-                      <div className="font-semibold text-zinc-200">{suggestion.file}:{suggestion.lineNumber}</div>
+                    <div key={`${packet.id}-${suggestion.file}-${suggestion.lineNumber}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-2 text-[11px] text-[var(--text-3)]">
+                      <div className="font-semibold text-[var(--text-2)]">{suggestion.file}:{suggestion.lineNumber}</div>
                       <div className="mt-1">{suggestion.suggestion}</div>
-                      {suggestion.excerpt && <div className="mt-1 text-zinc-500">{suggestion.excerpt}</div>}
+                      {suggestion.excerpt && <div className="mt-1 text-[var(--text-3)]">{suggestion.excerpt}</div>}
                     </div>
                   ))}
                 </div>
@@ -544,22 +544,22 @@ export function SelfDevelopmentPanel({
 
 function SummaryCard({ label, value, state = 'unknown', detail }: { label: string; value: React.ReactNode; state?: string; detail?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-900/55 p-4">
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">{label}</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>
         <StateBadge state={state} />
       </div>
-      <div className="mt-2 text-lg font-semibold text-white">{value}</div>
-      {detail !== undefined && <div className="mt-1 text-[11px] leading-relaxed text-zinc-500">{detail}</div>}
+      <div className="mt-2 text-lg font-semibold text-[var(--text-1)]">{value}</div>
+      {detail !== undefined && <div className="mt-1 text-[11px] leading-relaxed text-[var(--text-3)]">{detail}</div>}
     </div>
   );
 }
 
 function PacketBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-zinc-950/60 p-3">
-      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">{label}</div>
-      <div className="mt-1 text-[11px] leading-relaxed text-zinc-300">{value}</div>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
+      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>
+      <div className="mt-1 text-[11px] leading-relaxed text-[var(--text-2)]">{value}</div>
     </div>
   );
 }
