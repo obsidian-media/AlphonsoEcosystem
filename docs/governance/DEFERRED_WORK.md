@@ -37,9 +37,12 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   is registered as paid + high-risk, so the call **will** be blocked with
   "Blocked by Zero-Cost Mode" until that is turned off in Settings. This is
   correct behavior, not a bug — do not "fix" it.
-  **Cost:** none. heycall-e.com/pricing (confirmed 2026-09-07) grants "20
-  free calls after sign-up", then $0.05/call flat. Earlier notes framing
-  this call as a spend barrier overstated it.
+  **Expected cost:** $0 while the account still has unused free calls,
+  otherwise $0.05 each. heycall-e.com/pricing (confirmed 2026-09-07) grants
+  "20 free calls after sign-up", then a flat $0.05/call; how many of those
+  20 remain has not been checked, so treat $0 as likely-but-unconfirmed
+  rather than guaranteed. Either way the earlier framing of this call as a
+  spend barrier overstated it.
   **Why deferred:** the owner had to leave the machine; steps 1-3 are
   hands-on and step 3 rings a real phone, so it is not something to attempt
   unattended or without explicit go-ahead.
