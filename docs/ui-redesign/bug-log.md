@@ -674,6 +674,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `SettingsView.tsx`'s Memory section. A Playwright navigation attempt this pass hit a flake (the Settings section-nav list didn't render after the click, a repeat of the same class of transient issue seen with `ConnectorStatusIndicators.tsx`, #73) rather than a real rendering problem. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-twice-proven SVG-`var()` pattern from `ApprovalModal.tsx` and `BoardroomView.tsx`.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained due to a navigation flake, disclosed above).
 
+### 88. `CommandRib.tsx` re-skin (60 lines, 6 refs) — a real, previously-invisible bug found and fixed
+
+- **What changed:** the breadcrumb text, theme-toggle button, and the Ollama status pill's dot — tokenized onto `--success`/`--error`/`--text-*`/`--border`. `bg-surface-0`/`bg-surface-2` left untouched (real Tailwind theme colors, same pattern as `SentinelFindingModal.tsx`/`BootStatusBanner.tsx`, not raw literals).
+- **Real bug found and fixed — the connected/offline status dot was rendering with no background color at all:** the dot used `bg-success`/`bg-danger`, but neither `success` nor `danger` is defined anywhere in `tailwind.config.js`'s theme — these are not real Tailwind classes and compiled to nothing. This is `CommandRib.tsx`, the actual breadcrumb bar rendered at the top of every single page this whole session (`App.tsx:869`, shows "Alphonso / Mission" + the "Dark"/"Online" pills visible in dozens of prior screenshots) — its status dot has been invisible the entire time, and it was never caught because the missing color was easy to miss against the dark pill background at low zoom. Fixed to `bg-[var(--success)]`/`bg-[var(--error)]`.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): confirmed the "Online" pill's status dot now renders a visible green fill next to the "Dark" theme toggle, at the exact location visible in every prior screenshot this session. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
