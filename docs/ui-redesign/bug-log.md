@@ -617,6 +617,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Settings → Backup): confirmed this component's "WORKSPACE" section (a second, simpler Export/Import control alongside the page's own richer "Export Backup"/"Import Backup" cards) renders correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 81. `agentWorkshop/AgentOutputPanel.tsx` re-skin (36 lines, 7 refs) — clean pass, no carve-out
+
+- **What changed:** panel shell, header, empty state, and each output card (title/agent-id/summary/status line) — tokenized onto `--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx:418` (`<Card label="Agent Outputs">`), the same RESULTS-tab post-execution grid as `MarcusAuditPanel.tsx` (#40), `research/HectorResearchPanel.tsx` (#63), and `agentWorkshop/FinalExecutionPacket.tsx` (#79) — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern from those files.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
