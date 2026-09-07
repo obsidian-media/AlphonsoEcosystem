@@ -216,6 +216,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, via ChatView's model picker): closed-state model pill renders with correct surface/text tokens — zero console errors. The native `<select>` dropdown's open state isn't independently stylable via CSS, so nothing further to check there.
 - **Status:** CLOSED.
 
+### 33. `JoseTaskQueue.tsx` re-skin (218 lines, 57 refs) — clean pass, no carve-out
+
+- **What changed:** `STAGES` (the pending/queued/executing/approved/failed/dead_letter pipeline-stage color+ring map driving `PacketCard`, the stage-filter pills, and the pipeline flow bar), Approve/Reject/Replay buttons, and all structural chrome — tokenized onto `--warning`/`--info`/`--accent`/`--success`/`--error`/`--text-*`/`--surface-*`. Genuine pipeline-stage semantics, no per-item identity.
+- **Existing test coverage:** no dedicated component test, but rendered via `OrchestratorView.tsx`'s Command tab ("Jose Task Pipeline" card), covered by `src/test/orchestratorViewSmoke.test.jsx` (2 tests, stayed green). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, via Orchestrator → Command tab): "JOSE TASK PIPELINE" card with the "ALL (0)" filter pill in neutral-active styling and the 6 stage pills (Pending/Queued/Running/Approved/Failed/Dead) all correctly rendered — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
