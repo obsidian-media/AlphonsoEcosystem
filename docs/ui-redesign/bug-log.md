@@ -501,6 +501,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** same constraint as `ViewErrorBoundary.tsx` (#65) — this class-based boundary only renders its fallback on a real child-component render crash, which Playwright has no clean way to force from outside the page without modifying source. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern from #65.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 67. `WorkflowPanel.tsx` re-skin (94 lines, 14 refs) — clean pass, plus a real reachability finding
+
+- **What changed:** the modal shell, header, close button, workflow cards (active/inactive state), Run button, agent-chain chips, and status line — all tokenized onto `--text-*`/`--surface-*`/`--border`/`--border-strong`. No carve-out needed.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Real finding, not fixed (out of scope for a token-migration pass):** traced this modal's visibility to `useAppShellState.js`'s `showWorkflowPanel`/`setShowWorkflowPanel` state, rendered conditionally in `App.tsx:964`. Grepped the entire `src/` tree for `setShowWorkflowPanel(true)` and found exactly one call site — `src/test/hooks/useAppShellState.test.js`. **No button, menu item, or keyboard shortcut anywhere in the real app UI ever opens this panel** — it is currently unreachable dead UI, the same category of finding as the 3 orphaned `CompanionWidget` siblings (#44). Not chased further; flagged here rather than silently noticed and dropped.
+- **Live-verification attempt, honestly incomplete:** given the above, this modal cannot be reached through any real UI interaction in this build. Not screenshotted; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained — genuinely unreachable UI, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
