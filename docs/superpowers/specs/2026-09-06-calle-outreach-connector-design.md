@@ -634,13 +634,17 @@ mapping, and assert the policy-gate check runs before every request.
 - No handling of CALL-E's batch/scheduled-calling capabilities, IVR
   navigation details, or the "Goals"/`v1/goals` endpoints (not needed for the
   single-call outreach scenario this spec targets).
-- No live-tested real phone call yet — this spec and the resulting
-  implementation are code-complete-but-live-unverified until a real
-  `CALLE_API_KEY` is used to place an actual call against a real phone number,
-  which should happen before recording the hackathon demo video.
-- **Implementation-plan reminder, not yet decided here**: `recoverInterruptedOutreachCalls()`
-  needs a real boot-time call site. `App.tsx` already has one
-  `recoverInterruptedExecutions()` call in a one-shot boot `useEffect` (see
-  CLAUDE.md's "Crash-recovery checkpoint" row) — the implementation plan
-  should confirm whether this new function is added to that same effect or
-  needs its own, rather than inventing a second boot-recovery mechanism.
+- **Partially resolved (2026-09-07):** a real `CALLE_API_KEY` was obtained and
+  used for a safe, read-only `GET /v1/calls/{bogus-id}` (404 "not found," not
+  401 — confirms the key is valid) which also confirmed this doc's snake_case
+  request/response field mapping (`result_schema`/`structured_result`/
+  `task_completed`/`transcript_turns`) is correct against the real API. Still
+  **not** live-tested: no actual call has been placed against a real phone
+  number yet — deliberately not attempted without a real recipient and
+  explicit go-ahead, since it costs money and rings someone. Should happen
+  before recording the hackathon demo video. See
+  `docs/TRUTH_FIRST_EXECUTION_PLAN.md`'s J3 entry for the full narrative.
+- **Resolved:** `recoverInterruptedOutreachCalls()` is wired into its own
+  one-shot boot `useEffect` in `App.tsx` (separate from
+  `recoverInterruptedExecutions()`'s effect, not merged into it — confirmed
+  in the shipped implementation, not just planned).

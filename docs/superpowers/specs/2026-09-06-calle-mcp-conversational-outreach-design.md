@@ -1,5 +1,20 @@
 # CALL-E MCP Conversational Outreach — Design (Phase 2)
 
+> **RESOLVED (2026-09-07):** This document's `plan_call`/`run_call`/`get_call_run` argument
+> shapes below (search for `conversation_history`, `phone_number`) were written from CALL-E's
+> docs prose alone and explicitly flagged throughout as unverified (see the "Open Questions"
+> section). They have since been live-verified against a real authenticated `tools/list` call
+> plus a real planning-only `plan_call` round trip via the official `calle` CLI, and were
+> **wrong in two ways**: `plan_call` has no `conversation_history` parameter at all — it
+> tracks conversation state itself via an opaque `plan_id`, threaded through with each turn's
+> raw `user_input` — and the response never echoes a `phone_number`, so the cross-chat
+> duplicate-call guard described below (`isPhoneAlreadyInFlight`) was dead code from the
+> moment it shipped. Both are fixed in the real implementation
+> (`src/services/connectors/calleMcpConnector.ts`, `src/services/calleMcpOutreachService.ts`).
+> The code samples below are left as originally written for historical record — do not copy
+> them verbatim; read the real source files or `CLAUDE.md`'s Phase 2 "Do Not Duplicate" row
+> instead. Full verification narrative: `docs/TRUTH_FIRST_EXECUTION_PLAN.md`'s J3 entry.
+
 ## Context
 
 Phase 1 (`docs/superpowers/specs/2026-09-06-calle-outreach-connector-design.md`, shipped on
