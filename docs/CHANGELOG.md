@@ -6,6 +6,55 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-09-07 (CALL-E outreach connector — REST + conversational MCP)
+
+- **Added a CALL-E voice-calling connector**, connector #26, for the CALL-E
+  hackathon (`call-e.devpost.com`, deadline 2026-09-14). Two phases:
+  - **Phase 1 (REST)**: `calleConnector.ts` (`createCall`/`getCall`/
+    `pollCallUntilTerminal`, an `Idempotency-Key` on every create),
+    `calleOutreachService.ts` (draft/approve/recover), and
+    `CalleOutreachPanel.tsx` (basic UI, not yet wired into app navigation —
+    deferred until the in-progress UI redesign lands).
+  - **Phase 2 (conversational MCP)**: `calleMcpAuthService.ts` (brokered
+    OAuth, no loopback server), `calleMcpConnector.ts` (plain-`fetch` MCP
+    JSON-RPC client, no SDK dependency), and `calleMcpOutreachService.ts`
+    (a clarifying-question state machine wired into `ChatView.tsx` — a real
+    button-click approval, not a typed "confirm").
+  - Registered unconditionally high-risk/paid in `policyEnforcementService.ts`.
+- **CodeRabbit review pass found and fixed 18 real issues**, most severe:
+  `calleMcpConnector.ts` returned the raw MCP `CallToolResult` envelope
+  unwrapped, so every field `planCall`/`runCall`/`getCallRun` read was
+  always `undefined`; `calleConnector.ts` gated read-only `getCall()` status
+  polling behind the same approval gate as call creation, blocking all
+  polling/recovery once Approval Mode was on; `chatUtils.js`'s
+  `shouldRouteThroughCalleMcp` matched "call" as a bare substring anywhere
+  in a message (CWE-201 — forwarded ordinary chat like "How do I call a
+  REST API?" to CALL-E before any confirmation UI appeared); `run_call` had
+  no recovery path for an unreconciled submission (that MCP tool has zero
+  idempotency key) — fixed with a durable `submitting` stage that blocks
+  resubmission until manually reconciled.
+- **Live-verified against the real API and a real MCP session** once a real
+  `CALLE_API_KEY` and MCP browser login became available: confirmed REST
+  field mapping is correct via a safe read-only `GET`, and found + fixed two
+  real MCP schema bugs a live `plan_call` round trip surfaced —
+  `plan_call` has no `conversation_history` parameter (it tracks state via
+  an opaque `plan_id` instead), and its response never echoes a phone
+  number (the cross-chat duplicate-call guard built on that field was dead
+  code from day one, removed). A full browser-driven walkthrough then
+  confirmed Phase 2's entire chat-to-connector pipeline fires correctly
+  end-to-end.
+- **Still open, not silently dropped**: no real call has been placed yet
+  (REST or MCP — deliberately not attempted without a real recipient and
+  explicit go-ahead); native-Tauri-only behavior (real MCP login through
+  Alphonso's own code, OS-keychain credential persistence) is unverified
+  outside the browser dev server used for live testing; Codacy flagged 2
+  critical/1 high findings on the PR that were never independently triaged
+  (advisory only, not a required merge gate). See
+  `docs/governance/DEFERRED_WORK.md`'s 2026-09-07 entry and
+  `docs/TRUTH_FIRST_EXECUTION_PLAN.md`'s J3 entry for full detail. PR #230.
+
+---
+
 ## [2.7.1] — 2026-09-05 (auto-updater installer fix)
 
 - **Fixed a real, live-discovered auto-updater bug**: the first ever live
