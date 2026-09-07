@@ -79,17 +79,17 @@ const CONNECTOR_LABELS: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, { dot: string; badge: string; label: string }> = {
   live: {
-    dot: 'bg-emerald-400',
+    dot: 'bg-[var(--success)]',
     badge: 'border-[var(--success-dim)] bg-[var(--success-dim)] text-[var(--success)]',
     label: 'Credentials saved'
   },
   missing_config: {
-    dot: 'bg-amber-400',
+    dot: 'bg-[var(--warning)]',
     badge: 'border-[var(--warning-dim)] bg-[var(--warning-dim)] text-[var(--warning)]',
     label: 'Missing Config'
   },
   foundation_only: {
-    dot: 'bg-slate-400',
+    dot: 'bg-[var(--text-3)]',
     badge: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]',
     label: 'Local Only'
   },
@@ -253,20 +253,20 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
   return (
     <div className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
       status === 'live'
-        ? 'border-emerald-500/20 bg-[var(--success-dim)]'
+        ? 'border-[var(--success-border)] bg-[var(--success-dim)]'
         : status === 'missing_config'
           ? 'border-[var(--warning-dim)] bg-[var(--warning-dim)]'
           : status === 'foundation_only'
-            ? 'border-slate-500/20 bg-slate-500/5'
+            ? 'border-[var(--border)] bg-[var(--surface-2)]'
             : 'border-[var(--border)] bg-[var(--surface-1)]'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <Icon className={`w-4 h-4 shrink-0 ${
-            status === 'live' ? 'text-emerald-400' :
-            status === 'missing_config' ? 'text-amber-400' :
-            status === 'foundation_only' ? 'text-slate-400' :
+            status === 'live' ? 'text-[var(--success)]' :
+            status === 'missing_config' ? 'text-[var(--warning)]' :
+            status === 'foundation_only' ? 'text-[var(--text-3)]' :
             'text-[var(--text-4)]'
           }`} />
           <span className="text-sm font-semibold text-[var(--text-1)] leading-tight">{displayName}</span>
@@ -301,7 +301,7 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             return (
               <div key={key} className="flex items-center justify-between rounded bg-[var(--surface-0)] px-2 py-0.5 font-mono text-[9px]">
                 <span className="text-[var(--text-3)] truncate">{key}</span>
-                <span className={`shrink-0 ml-2 ${present ? 'text-emerald-400' : 'text-[var(--text-4)]'}`}>
+                <span className={`shrink-0 ml-2 ${present ? 'text-[var(--success)]' : 'text-[var(--text-4)]'}`}>
                   {present ? 'present' : 'missing'}
                 </span>
               </div>
@@ -317,7 +317,7 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
       {/* Last test */}
       <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-4)]">
         {status === 'live' ? (
-          <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
+          <CheckCircle className="w-3 h-3 text-[var(--success)] shrink-0" />
         ) : (
           <ShieldOff className="w-3 h-3 shrink-0" />
         )}
@@ -343,11 +343,11 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             title="Test connector connectivity"
             className={`flex-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               testState === 'loading'
-                ? 'border-zinc-600/40 bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
+                ? 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
                 : testState === 'ok'
-                  ? 'border-emerald-500/40 bg-[var(--success-dim)] text-[var(--success)] cursor-default'
+                  ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)] cursor-default'
                   : testState === 'fail'
-                    ? 'border-red-500/40 bg-red-500/10 text-red-400 cursor-default'
+                    ? 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)] cursor-default'
                     : 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
             }`}
           >
@@ -359,11 +359,11 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
             title="Validate credentials via Tauri env check"
             className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
               validateState === 'loading'
-                ? 'border-zinc-600/40 bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
+                ? 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-3)] cursor-wait'
                 : validateResult
                   ? validateResult.ok
-                    ? 'border-emerald-500/40 bg-[var(--success-dim)] text-[var(--success)] cursor-default'
-                    : 'border-red-500/40 bg-red-500/10 text-red-400 cursor-default'
+                    ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)] cursor-default'
+                    : 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)] cursor-default'
                   : 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-2)] hover:bg-[var(--surface-4)] hover:text-[var(--text-1)] cursor-pointer'
             }`}
           >
@@ -372,12 +372,12 @@ function ConnectorCard({ connector, zeroCostMode }: { connector: Connector; zero
           </button>
         </div>
         {testMessage ? (
-          <div className={`text-[9px] text-center truncate ${testState === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>
+          <div className={`text-[9px] text-center truncate ${testState === 'ok' ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
             {testMessage}
           </div>
         ) : null}
         {validateResult ? (
-          <div className={`text-[9px] text-center truncate ${validateResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+          <div className={`text-[9px] text-center truncate ${validateResult.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
             {validateResult.message}
           </div>
         ) : null}
@@ -399,23 +399,23 @@ function StatusSummaryBar({ connectors, zeroCostMode }: { connectors: Connector[
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-2.5 text-[10px] font-semibold">
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
         <span className="text-[var(--success)]">{counts.live || 0} live</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        <span className="text-amber-300">{counts.missing_config || 0} missing config</span>
+        <span className="h-2 w-2 rounded-full bg-[var(--warning)]" />
+        <span className="text-[var(--warning)]">{counts.missing_config || 0} missing config</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-slate-400" />
-        <span className="text-slate-300">{counts.foundation_only || 0} local only</span>
+        <span className="h-2 w-2 rounded-full bg-[var(--text-3)]" />
+        <span className="text-[var(--text-3)]">{counts.foundation_only || 0} local only</span>
       </div>
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-[var(--text-4)]" />
         <span className="text-[var(--text-3)]">{counts.disabled || 0} disabled</span>
       </div>
       {zeroCostMode && (
-        <div className="ml-auto flex items-center gap-1.5 text-amber-400/80">
+        <div className="ml-auto flex items-center gap-1.5 text-[var(--warning)]">
           <ZapOff className="w-3 h-3" />
           Zero-cost mode active
         </div>
@@ -471,7 +471,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
         </button>
         <button
           onClick={() => setActiveTab('health')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'health' ? 'bg-[var(--surface-4)] text-white shadow-sm' : 'text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)]'}`}
+          className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'health' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)]'}`}
         >
           ● Health Monitor
         </button>
@@ -518,7 +518,7 @@ export function ConnectorHealthPanel({ zeroCostMode = false }: { zeroCostMode?: 
         </button>
       </div>
 
-      <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3 text-[11px] leading-relaxed text-sky-300">
+      <div className="rounded-xl border border-[var(--info-border)] bg-[var(--info-dim)] px-4 py-3 text-[11px] leading-relaxed text-[var(--info)]">
         <span className="font-semibold">How connectors work:</span> Connectors store your API credentials locally and are called by Alphonso's agents (Jose, Marcus, Hector…) running on your local Ollama instance. A "Connected" status means your credentials are saved — the agents will use them automatically when you ask them to take action (e.g. "open a GitHub issue", "post to Slack"). You do not call connectors directly.
       </div>
 

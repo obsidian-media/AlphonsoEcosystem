@@ -298,6 +298,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): opened via Sidebar's Ctrl+P search trigger (`data-testid="sidebar-search-trigger"`), typed a query — confirmed the "All" pill (accent-teal), category chips, empty-state text, and footer all render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 43. `ConnectorHealthPanel.tsx` re-skin (565 lines, 34 refs) — clean pass, plus a real inconsistency fixed
+
+- **What changed:** `STATUS_BADGE` dots, `ConnectorCard`'s status-driven border/background/icon coloring, env-key presence indicators, Test/Validate button states, `StatusSummaryBar`'s 4 status dots+labels, and the two callout boxes ("How connectors work" -> `--info`, "Public deploy note" -> `--warning`) — all tokenized onto `--success`/`--warning`/`--error`/`--info`/`--text-*`/`--surface-*`/`--border`. This file was already partially tokenized from an earlier pass (many `var(--...)` references present) — this pass closed the remaining raw-color gaps rather than starting from scratch.
+- **Real bug found and fixed:** the "Health Monitor" tab's active state used `bg-[var(--surface-4)]` while the "Setup & Credentials" tab (in the same tab-switcher, same component) used `bg-[var(--accent)]` — an inconsistent active-tab treatment between two tabs of the identical control, not a deliberate carve-out (nothing differentiates the two tabs' *purpose* enough to justify different active-state colors). Unified both to `--accent`.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** `src/test/ConnectorHealthPanel.test.jsx` — 5/5 passing (`--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, System space → Connectors → Health Monitor tab): confirmed the now-consistent teal active-tab state, the info-toned "How connectors work" callout, the warning-toned "Public deploy note" callout, the summary bar's 4 status dots (green/amber/neutral/gray), and per-card status badges (DISABLED/LOCAL ONLY/PLACEHOLDER) all render correctly. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
