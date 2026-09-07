@@ -391,6 +391,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, System space → Agent Performance): confirmed the empty state and the Dead Letter Queue box (warning-amber border/background, disabled "Retry All" button) render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 54. `CoachHardInterruptOverlay.tsx` re-skin (49 lines, 23 refs) — clean pass, whole-panel error-tone treatment kept
+
+- **What changed:** this is a full-screen critical-severity blocking modal by design (Coach Mode's "HARD" intervention level — a real, deliberately alarming stop-and-confirm gate). Kept the whole-panel red/error-tone treatment throughout (backdrop, card border, header, metric tiles, pause-notice box, and the End Session button) but tokenized every instance onto `--error`/`--error-dim`/`--error-border` instead of raw `red-*` classes, plus neutral chrome (metric-tile borders, Continue-anyway button, footnote) onto `--border`/`--text-*`/`--surface-*`. The high-contrast white "Pause 60s" button (deliberately stark against the red field, the primary recommended action) kept its inverted white-on-dark treatment, now via `--text-1`/`--surface-0` tokens instead of raw `white`/`zinc-950`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): traced the real mount site to `App.tsx:807` (separate from `CoachWindow.tsx`'s own `CoachInterventionCard`, a different, non-blocking presentation of the same intervention state — confirmed both exist and are distinct components after the "Demo Check-in" button in the Coach window only updated *that* window's local React state, not this one). Reached the real overlay by dispatching the exact `alphonso:coach-engine-event` CustomEvent `coachInterventionService.ts`'s `pushCoachEngineEvent()` would produce for a `severity: 'critical'` event (the same signal path a real coach-engine detector uses) directly in the main app's browser context. Confirmed the backdrop, header, 3 metric tiles, pause-notice box, and all 3 action buttons render correctly. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
