@@ -70,98 +70,98 @@ const TOOL_META: Record<string, ToolMetaEntry> = {
     category: 'LLM',
     docsUrl: 'https://ollama.com',
     color: 'text-[var(--agent-alphonso)]',
-    bg: 'bg-[var(--accent-muted)] border-[var(--accent-border)]',
+    bg: 'bg-[var(--accent-muted)]',
   },
   comfyui: {
     icon: Wand2,
     category: 'Image / Video',
     docsUrl: 'https://github.com/comfyanonymous/ComfyUI',
     color: 'text-[var(--agent-echo)]',
-    bg: 'bg-[var(--agent-echo-glow)] border-[var(--border)]',
+    bg: 'bg-[var(--agent-echo-glow)]',
   },
   automatic1111: {
     icon: Image,
     category: 'Image',
     docsUrl: 'https://github.com/AUTOMATIC1111/stable-diffusion-webui',
     color: 'text-[var(--agent-miya)]',
-    bg: 'bg-[var(--agent-miya-glow)] border-[var(--border)]',
+    bg: 'bg-[var(--agent-miya-glow)]',
   },
   fooocus: {
     icon: Sparkles,
     category: 'Image',
     docsUrl: 'https://github.com/lllyasviel/Fooocus',
     color: 'text-[var(--agent-jose)]',
-    bg: 'bg-[var(--agent-jose-glow)] border-[var(--border)]',
+    bg: 'bg-[var(--agent-jose-glow)]',
   },
   invokeai: {
     icon: Layers,
     category: 'Image',
     docsUrl: 'https://github.com/invoke-ai/InvokeAI',
     color: 'text-[var(--agent-hector)]',
-    bg: 'bg-[var(--agent-hector-glow)] border-[var(--border)]',
+    bg: 'bg-[var(--agent-hector-glow)]',
   },
   whisper: {
     icon: Mic,
     category: 'Audio',
     docsUrl: 'https://github.com/openai/whisper',
     color: 'text-[var(--agent-maria)]',
-    bg: 'bg-[var(--agent-maria-glow)] border-[var(--border)]',
+    bg: 'bg-[var(--agent-maria-glow)]',
   },
   audiocraft: {
     icon: Music,
     category: 'Audio',
     docsUrl: 'https://github.com/facebookresearch/audiocraft',
     color: 'text-[var(--agent-marcus)]',
-    bg: 'bg-[var(--agent-marcus-glow)] border-[var(--border)]',
+    bg: 'bg-[var(--agent-marcus-glow)]',
   },
   'voice-os': {
     icon: '🎙️',
     category: 'Voice',
     docsUrl: 'https://github.com/obsidian-media/AlphonsoEcosystem',
     color: 'text-cyan-400',
-    bg: 'bg-cyan-500/10 border-cyan-500/20',
+    bg: 'bg-cyan-500/10',
   },
   openwebui: {
     icon: Bot,
     category: 'LLM',
     docsUrl: 'https://github.com/open-webui/open-webui',
     color: 'text-[var(--agent-nova)]',
-    bg: 'bg-[var(--agent-nova-glow)] border-[var(--border)]',
+    bg: 'bg-[var(--agent-nova-glow)]',
   },
   'mcp-server': {
     icon: Activity,
     category: 'Integration',
     docsUrl: 'https://modelcontextprotocol.io',
     color: 'text-purple-400',
-    bg: 'bg-purple-500/10 border-purple-500/20',
+    bg: 'bg-purple-500/10',
   },
   'alphonso-bridge': {
     icon: Activity,
     category: 'Integration',
     docsUrl: 'https://modelcontextprotocol.io',
     color: 'text-violet-400',
-    bg: 'bg-violet-500/10 border-violet-500/20',
+    bg: 'bg-violet-500/10',
   },
   chromadb: {
     icon: Layers,
     category: 'Memory',
     docsUrl: 'https://docs.trychroma.com',
     color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10 border-emerald-500/20',
+    bg: 'bg-emerald-500/10',
   },
   openHands: {
     icon: Bot,
     category: 'Agent',
     docsUrl: 'https://github.com/All-Hands-AI/OpenHands',
     color: 'text-cyan-400',
-    bg: 'bg-cyan-500/10 border-cyan-500/20',
+    bg: 'bg-cyan-500/10',
   },
   n8n: {
     icon: Zap,
     category: 'Automation',
     docsUrl: 'https://n8n.io',
     color: 'text-orange-400',
-    bg: 'bg-orange-500/10 border-orange-500/20',
+    bg: 'bg-orange-500/10',
   },
 };
 
@@ -227,7 +227,7 @@ function PrereqPanel({ prereqs, onInstall, installing }: PrereqPanelProps) {
   if (!prereqs || prereqs.missing.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4 flex flex-col gap-3">
+    <div className="rounded-xl bg-[var(--warning-dim)] p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <AlertTriangle size={14} className="text-[var(--warning)] shrink-0" />
         <span className="text-[var(--warning)] text-sm font-semibold">Missing Prerequisites</span>
@@ -324,13 +324,13 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
   const handleStop = () => onAction('stop', tool.name);
 
   return (
-    <div className={`rounded-xl border p-4 flex flex-col gap-3 ${meta.bg || 'bg-[var(--surface-1)] border-[var(--border)]'}`}>
+    <div className={`rounded-xl p-4 flex flex-col gap-3 ${meta.bg || 'bg-[var(--surface-1)]'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {(() => { const ToolIcon = meta.icon ?? Cpu; return typeof ToolIcon === 'string' ? <span>{ToolIcon}</span> : <ToolIcon className={`w-5 h-5 ${meta.color || 'text-[var(--text-3)]'}`} />; })()}
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`font-semibold text-sm ${meta.color || 'text-white'}`}>
+              <span className={`font-semibold text-sm ${meta.color || 'text-[var(--text-1)]'}`}>
                 {tool.displayName || tool.name}
               </span>
               <span className="text-[var(--text-4)] text-xs bg-[var(--surface-2)] px-2 py-0.5 rounded">
@@ -397,7 +397,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
                 href={`http://127.0.0.1:${tool.port}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-white transition-colors"
+                className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
               >
                 <ExternalLink size={10} /> Open UI
               </a>
@@ -420,7 +420,7 @@ function ToolCard({ tool, onAction, onAutostartToggle }: ToolCardProps) {
         <span className="text-xs text-[var(--text-3)]">Auto-start with Alphonso</span>
         <button
           onClick={() => onAutostartToggle(tool.name, !tool.autoStart)}
-          className="flex items-center gap-1 text-xs text-[var(--text-3)] hover:text-white transition-colors"
+          className="flex items-center gap-1 text-xs text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
           aria-label={tool.autoStart ? 'Disable autostart' : 'Enable autostart'}
         >
           {tool.autoStart
@@ -476,7 +476,7 @@ function ModulesPanel() {
   return (
     <div className="flex flex-col gap-5 p-5 max-w-4xl mx-auto">
       <div>
-        <h2 className="text-lg font-bold text-white">Modules</h2>
+        <h2 className="text-lg font-bold text-[var(--text-1)]">Modules</h2>
         <p className="text-[var(--text-3)] text-sm mt-0.5">Installed capability modules and active policy rules.</p>
       </div>
 
@@ -485,10 +485,10 @@ function ModulesPanel() {
       ) : (
         <div className="flex flex-col gap-3">
           {modules.map((m) => (
-            <div key={m.manifest.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4 flex items-start justify-between gap-3">
+            <div key={m.manifest.id} className="rounded-xl bg-[var(--surface-1)] p-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-sm text-white">{m.manifest.name}</span>
+                  <span className="font-semibold text-sm text-[var(--text-1)]">{m.manifest.name}</span>
                   <span className="text-[var(--text-4)] text-xs bg-[var(--surface-2)] px-2 py-0.5 rounded">v{m.manifest.version}</span>
                   <span className={`text-xs px-2 py-0.5 rounded font-medium ${m.status === 'enabled' ? 'bg-[var(--success-dim)] text-[var(--success)]' : m.status === 'error' ? 'bg-[var(--error-dim)] text-[var(--error)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'}`}>
                     {m.status}
@@ -521,10 +521,10 @@ function ModulesPanel() {
 
       <div className="mt-2">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-1.5"><Shield size={13} className="text-[var(--accent)]" /> Policy Rules</h3>
+          <h3 className="text-sm font-semibold text-[var(--text-1)] flex items-center gap-1.5"><Shield size={13} className="text-[var(--accent)]" /> Policy Rules</h3>
           <button
             onClick={handleReloadPolicy}
-            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-white transition-colors"
+            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
           >
             <RefreshCw size={10} /> Reload
           </button>
@@ -534,7 +534,7 @@ function ModulesPanel() {
         ) : (
           <div className="flex flex-col gap-1.5">
             {rules.map((r) => (
-              <div key={r.id} className="flex items-start gap-2 text-xs rounded-lg border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2">
+              <div key={r.id} className="flex items-start gap-2 text-xs rounded-lg bg-[var(--surface-1)] px-3 py-2">
                 <span className={`shrink-0 font-mono px-1.5 py-0.5 rounded text-[10px] ${r.effect === 'allow' ? 'bg-[var(--success-dim)] text-[var(--success)]' : r.effect === 'deny' ? 'bg-[var(--error-dim)] text-[var(--error)]' : 'bg-[var(--warning-dim)] text-[var(--warning)]'}`}>
                   {r.effect}
                 </span>
@@ -700,7 +700,7 @@ export default function RuntimeManagerView() {
     <div className="flex flex-col gap-5 p-5 max-w-4xl mx-auto">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold text-white">AI Runtime Manager</h2>
+          <h2 className="text-lg font-bold text-[var(--text-1)]">AI Runtime Manager</h2>
           <p className="text-[var(--text-3)] text-sm mt-0.5">
             All tools auto-start with Alphonso. Install once, run forever.
           </p>
@@ -708,7 +708,7 @@ export default function RuntimeManagerView() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={load}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
           >
             <RefreshCw size={12} /> Refresh
           </button>
@@ -737,17 +737,17 @@ export default function RuntimeManagerView() {
       </div>
 
       {!isTauri && (
-        <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-4 py-3 text-xs text-[var(--warning)]">
+        <div className="rounded-xl bg-[var(--warning-dim)] px-4 py-3 text-xs text-[var(--warning)]">
           <span className="font-semibold">Desktop app required.</span> Runtime installation and control only works in the Alphonso desktop app (Tauri). Download from GitHub Releases.
         </div>
       )}
 
       {actionMsg && (
         <div
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm ${
             actionMsg.isError
-              ? 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'
-              : 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'
+              ? 'bg-[var(--error-dim)] text-[var(--error)]'
+              : 'bg-[var(--success-dim)] text-[var(--success)]'
           }`}
         >
           {actionMsg.isError ? (
@@ -766,8 +766,8 @@ export default function RuntimeManagerView() {
             onClick={() => setFilter(cat)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors ${
               filter === cat
-                ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
-                : 'border-[var(--border)] text-[var(--text-3)] hover:text-white'
+                ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--surface-0)]'
+                : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
             }`}
           >
             {cat}
@@ -782,7 +782,7 @@ export default function RuntimeManagerView() {
       )}
 
       {error && (
-        <div className="flex items-center gap-2 text-[var(--error)] text-sm px-4 py-3 bg-[var(--error-dim)] border border-[var(--error-border)] rounded-xl">
+        <div className="flex items-center gap-2 text-[var(--error)] text-sm px-4 py-3 bg-[var(--error-dim)] rounded-xl">
           <AlertCircle size={14} /> {error}
         </div>
       )}
@@ -809,7 +809,7 @@ export default function RuntimeManagerView() {
       )}
 
       {isTauri && !loading && allTools.find((t) => t.name === 'voice-os' && !t.installed) && (
-        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-300 space-y-1">
+        <div className="rounded-xl bg-cyan-500/5 px-4 py-3 text-xs text-cyan-300 space-y-1">
           <div className="font-semibold text-cyan-200">🎙️ Enable Jarvis voice</div>
           <div className="text-cyan-400/80">Install <strong>Voice OS</strong> above, then use the mic button in Chat to speak to Alphonso.</div>
         </div>

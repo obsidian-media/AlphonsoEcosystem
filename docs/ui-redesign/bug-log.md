@@ -950,6 +950,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, both themes, full-page screenshot of the Overview tab): Operator Modes / Trust-Verification / Approval Center panels all render as clean washes, fully legible in light mode, zero console errors.
 - **Status:** CLOSED for `EcosystemHub.tsx`'s card/border/white-black treatment. The tab-underline-vs-pill gap above is a new, separate, still-open item — not scoped into this entry's "closed."
 
+### 112. `RuntimeManagerView.tsx` converted to the "no cards" rule too — fourth slice
+
+- **Scope:** fourth page conversion continuing the migration. ~32 `border` occurrences, ~12 white/black bugs.
+- **What changed:** stripped the border half out of every `TOOL_META` entry's `bg` string (kept the per-tool color choice itself — a documented carve-out, bug-log #16 — untouched; only the "no cards" border rule applied uniformly on top of it). Removed border from warning/error/info rectangle banners, the per-tool status card, module rows, plugin audit rows, and 3 buttons that also had a `hover:text-white` bug fixed alongside (`hover:text-[var(--text-1)]`). Fixed 5 more `text-white` headings/labels ("Modules", "AI Runtime Manager", "Policy Rules", a module name, a `meta.color` fallback). Left `bg-[var(--success)] ... text-white` on the Enable/Disable toggle button alone — that's white text on a solid saturated status-color button, not on a page/surface background, a different and legitimate pattern from the bug class fixed everywhere else. Kept the tab-bar's structural divider and its `border border-b-0` active-tab treatment untouched, consistent with #111's divider/tab-style notes.
+- **Verification:** `fix-broken-var-opacity.mjs` — no change needed. `npx tsc --noEmit` and `npx eslint` clean. `RuntimeManagerView.test.tsx` (2 tests) passing (needed `--pool=threads`, the usual pre-existing worker-timeout issue).
+- **Live-verified** (Playwright, light mode, full-page screenshot): heading, filter pills (correctly still bordered — they're `rounded-full`), and top bar all render clean and legible. Zero console errors. Tool list itself was empty in this run (no runtime status loaded yet — a data-timing matter, not a styling one) so the per-tool `TOOL_META` card rendering wasn't visually re-confirmed this pass; the class-level fix was verified by direct code inspection instead.
+- **Status:** CLOSED for `RuntimeManagerView.tsx`.
+
 ---
 
 ## Notes on discovery method
