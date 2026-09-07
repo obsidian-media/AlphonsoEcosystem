@@ -408,6 +408,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, visible by default in RightPanel's System tab "ALLOWLIST" section): added a real entry (`example.com`, domain type), ran a real match test against `https://example.com/path`, and confirmed the "Matched" result banner renders in success-green and the entry's "DOMAIN" badge renders in the carve-out's blue tone. Zero console errors.
 - **Status:** CLOSED.
 
+### 56. `CompanionPairingPanel.tsx` re-skin (155 lines, 22 refs) — clean pass, one real technical-constraint exclusion
+
+- **What changed:** the "server not running" empty state, the PIN card (Start Discovery/Generate PIN buttons, PIN display, copy button, IP-address list), the discovery-error banner, and the connected-clients footer — all tokenized onto `--success`/`--error`/`--accent`/`--text-*`/`--surface-*`/`--border`. Generic "Generate PIN" action (indigo) mapped to `--accent`.
+- **Left untouched, correctly:** `QRCodeCanvas`'s `bgColor`/`fgColor` props (`#18181b`/`#34d399`) — these render onto an HTML `<canvas>` via a direct `ctx.fillStyle` assignment inside the `qrcode.react` library, which cannot resolve a CSS custom property string like `var(--success)` the way an SVG or DOM element can; canvas fill colors need an already-resolved literal color value. Documented as a real technical constraint, not a design carve-out.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** `src/test/CompanionPairingPanel.test.jsx` — 8/8 passing (`--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Settings → Agents → "Agent Companions"): confirmed the "Companion server not running" empty state (the only reachable state in this browser-only dev environment, since `companion_get_status` requires a real Tauri backend) renders correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
