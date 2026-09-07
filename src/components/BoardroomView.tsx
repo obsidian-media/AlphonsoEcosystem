@@ -55,10 +55,10 @@ function ScoreRing({ score }: { score: number }) {
   const r = 20;
   const circ = 2 * Math.PI * r;
   const pct = Math.min(Math.max(score, 0), 100) / 100;
-  const color = score > 70 ? '#f59e0b' : score > 40 ? '#6366f1' : '#22c55e';
+  const color = score > 70 ? 'var(--warning)' : score > 40 ? 'var(--info)' : 'var(--success)';
   return (
     <svg width={52} height={52} viewBox="0 0 52 52">
-      <circle cx={26} cy={26} r={r} fill="none" stroke="#27272a" strokeWidth={4} />
+      <circle cx={26} cy={26} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={4} />
       <circle
         cx={26} cy={26} r={r}
         fill="none"
@@ -316,9 +316,9 @@ export function BoardroomView() {
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-[var(--text-1)] truncate">{s.topic}</span>
                   <span className={`ml-2 shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
-                    s.status === 'concluded' ? 'bg-emerald-500/15 text-emerald-400' :
+                    s.status === 'concluded' ? 'bg-[var(--success-dim)] text-[var(--success)]' :
                     s.status === 'active' ? 'bg-[var(--accent-dim)] text-[var(--accent)]' :
-                    'bg-zinc-800 text-zinc-400'
+                    'bg-[var(--surface-3)] text-[var(--text-3)]'
                   }`}>{s.status}</span>
                 </div>
                 <div className="text-[var(--text-3)] mt-0.5">{new Date(s.createdAt).toLocaleString()}</div>
@@ -345,9 +345,9 @@ export function BoardroomView() {
 
             {/* Hector briefing card */}
             {activeSession.messages.filter(m => m.type === 'briefing').map((m, i) => (
-              <div key={i} className="rounded-lg bg-sky-500/10 border border-sky-400/20 p-3">
-                <div className="text-[10px] font-bold text-sky-300 mb-1">Hector Briefing</div>
-                <pre className="text-[11px] text-sky-200 whitespace-pre-wrap">{m.content}</pre>
+              <div key={i} className="rounded-lg bg-[var(--info-dim)] border border-[var(--info-border)] p-3">
+                <div className="text-[10px] font-bold text-[var(--info)] mb-1">Hector Briefing</div>
+                <pre className="text-[11px] text-[var(--info)] whitespace-pre-wrap">{m.content}</pre>
               </div>
             ))}
 
@@ -356,7 +356,7 @@ export function BoardroomView() {
               {activeSession.messages.filter(m => m.type !== 'briefing').map((m, i) => (
                 <div key={i} className={`rounded-lg p-2.5 border text-xs ${
                   m.type === 'conclusion'
-                    ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-200'
+                    ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'
                     : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-2)]'
                 }`}>
                   <span className="font-semibold text-[var(--text-1)]">{m.agentName}: </span>
@@ -371,7 +371,7 @@ export function BoardroomView() {
                 <button
                   onClick={handleConclude}
                   disabled={loading}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 disabled:opacity-40 text-emerald-300 border border-emerald-400/20 text-xs font-semibold transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--success-dim)] hover:bg-[var(--success-dim)] disabled:opacity-40 text-[var(--success)] border border-[var(--success-border)] text-xs font-semibold transition-colors"
                 >
                   <CheckCircle2 className="w-3 h-3" />
                   Conclude Session
@@ -381,14 +381,14 @@ export function BoardroomView() {
               {activeSession.status === 'concluded' && (
                 <>
                   {activeSession.mariaScore !== undefined && activeSession.mariaScore > 70 && !riskConfirmed && (
-                    <div className="w-full rounded-lg bg-amber-500/10 border border-amber-400/20 p-2.5">
-                      <div className="flex items-center gap-1.5 text-amber-300 text-xs font-semibold mb-1.5">
+                    <div className="w-full rounded-lg bg-[var(--warning-dim)] border border-[var(--warning-border)] p-2.5">
+                      <div className="flex items-center gap-1.5 text-[var(--warning)] text-xs font-semibold mb-1.5">
                         <AlertTriangle className="w-3 h-3" />
                         High risk score ({activeSession.mariaScore}) — confirm before distributing
                       </div>
                       <button
                         onClick={() => setRiskConfirmed(true)}
-                        className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 border border-amber-400/20 text-amber-300"
+                        className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--warning-dim)] border border-[var(--warning-border)] text-[var(--warning)]"
                       >
                         I understand the risk
                       </button>
@@ -408,7 +408,7 @@ export function BoardroomView() {
 
                   <button
                     onClick={handleGenerateCreativeBrief}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-400/20 text-xs font-semibold transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--agent-miya-glow)] hover:bg-[var(--agent-miya-glow)] text-[var(--agent-miya)] border border-[var(--agent-miya-glow)] text-xs font-semibold transition-colors"
                   >
                     <Brain className="w-3 h-3" />
                     Generate Creative Brief
@@ -426,7 +426,7 @@ export function BoardroomView() {
           <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl p-5 w-full max-w-md space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-1)]">
-                <FileText className="w-4 h-4 text-violet-400" />
+                <FileText className="w-4 h-4 text-[var(--agent-miya)]" />
                 Creative Brief — Miya
               </div>
               <button onClick={() => setShowCreativeBrief(false)}><X className="w-4 h-4 text-[var(--text-3)]" /></button>
@@ -440,7 +440,7 @@ export function BoardroomView() {
               <button onClick={() => setShowCreativeBrief(false)} className="px-3 py-1.5 text-xs text-[var(--text-3)] border border-[var(--border)] rounded-lg">
                 Close
               </button>
-              <button onClick={handleSaveCreativeBrief} className="px-3 py-1.5 text-xs bg-violet-500/20 text-violet-300 border border-violet-400/20 rounded-lg font-semibold">
+              <button onClick={handleSaveCreativeBrief} className="px-3 py-1.5 text-xs bg-[var(--agent-miya-glow)] text-[var(--agent-miya)] border border-[var(--agent-miya-glow)] rounded-lg font-semibold">
                 Save to Memory
               </button>
             </div>
