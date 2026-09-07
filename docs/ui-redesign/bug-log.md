@@ -625,6 +625,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx:418` (`<Card label="Agent Outputs">`), the same RESULTS-tab post-execution grid as `MarcusAuditPanel.tsx` (#40), `research/HectorResearchPanel.tsx` (#63), and `agentWorkshop/FinalExecutionPacket.tsx` (#79) — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern from those files.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 82. `MicrophoneStatus.tsx` re-skin (39 lines, 7 refs) — clean pass, one test updated to match
+
+- **What changed:** the 3-tier status-dot map (listening → `--error`, blocked → `--warning`, idle → neutral) and the label/message text — tokenized, consistent with the identical `--error`-for-listening convention already established in `CoachMissionBadge.tsx` (#70) and `VoiceInputButton.tsx` (#76).
+- **Test updated to match the migration, not a regression:** `src/test/MicrophoneStatus.test.jsx`'s 2 indicator-color tests asserted directly on literal `.bg-amber-400`/`.bg-red-400` classes — updated to assert on the new `bg-[var(--warning)]`/`bg-[var(--error)]` classes instead, same underlying behavior.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** `src/test/MicrophoneStatus.test.jsx` — 5/5 passing after the update (`--pool=forks`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** this component is used in both `ChatView.tsx` and `CoachWindow.tsx` (mini mode), but is conditionally rendered behind a voice-input-active state not present by default in either view — a quick check of Chat's default view found no instance mounted. Not chased further given the small size and already-proven token pattern; relying on clean `tsc`/`eslint` and the 5-test suite.
+- **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
