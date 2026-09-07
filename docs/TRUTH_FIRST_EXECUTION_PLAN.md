@@ -1406,8 +1406,44 @@ dropped.
     pages fetched so far had no code samples) to size real implementation
     effort; a go/no-go decision from the owner on whether to actually
     attempt this given the timeline.
-  - **Done when:** nothing yet — this entry exists only to record the idea
-    and the fit assessment before any decision to proceed.
+  - **UI placement resolved (2026-09-07):** `CalleOutreachPanel.tsx` (Phase 1,
+    REST) was built but imported nowhere — unreachable in the running app.
+    Now rendered in **Settings -> Connectors**, as its own "CALL-E Outreach"
+    section directly under "Agent Providers" (`SettingsView.tsx`), alongside
+    the Phase 2 `CalleMcpConnectionBlock` that already lives in
+    `ConnectorSetupPanel.tsx` in that same section. The original deferral
+    ("wait for the in-progress UI redesign") is withdrawn: an unreachable
+    panel cannot be verified, and Settings -> Connectors is where every other
+    connector's surface already lives, so this placement survives a redesign
+    regardless.
+  - **Billing, confirmed (2026-09-07):** heycall-e.com/pricing states "All new
+    CALL-E users gain 20 free calls after sign-up" and "CALL-E uses a flat
+    rate of $0.05 per billable call" (self-described as early-stage and not
+    final). The live verification call below therefore costs nothing against
+    the free-trial allowance. This supersedes the "best-effort, not fully
+    confirmed" billing note above for the free-tier half; whether `plan_call`
+    itself is billable is still not officially confirmed, and `plan_call`
+    remains outside the Zero-Cost-Mode gate.
+  - **Done when** all four hold, each with recorded evidence:
+    1. `CalleOutreachPanel` is reachable from the running app's navigation.
+       (**DONE 2026-09-07** — Settings -> Connectors, see above.)
+    2. A real MCP browser login completes through Alphonso's own
+       `calleMcpAuthService.ts` (`startBrokerLogin`/`pollBrokerLogin`) in the
+       **native Tauri build** — not the CLI, not `npm run dev`. Evidence: a
+       non-null `getCalleMcpToken()` and an authenticated `tools/list`
+       originating from Alphonso's process.
+    3. That credential survives an app restart via the real OS keychain
+       (`secureStorageService.ts`), verified by relaunching the app and
+       confirming the Connectors panel still reads connected without a
+       second login.
+    4. One real outbound call is placed end to end via `run_call` to a
+       consenting recipient (the owner's own number is sufficient), reaching
+       a terminal status through `pollCallUntilTerminal`, with the resulting
+       `OutreachCallRecord` and an `appendConnectorAudit` entry both
+       persisted. Evidence: the record's terminal status and the audit row.
+  - **Explicitly out of scope for closing J3:** wiring CALL-E into all 9
+    agents, an inbound-call path, and any Devpost submission work — those are
+    separate tasks, not preconditions for calling this integration verified.
 
 ## Operating procedure for every task
 
