@@ -493,6 +493,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** this is a class-based `componentDidCatch` boundary wrapping individual lazy-loaded views in `App.tsx` — it only renders its fallback UI when a real child-component render throws. Forcing a genuine render crash from outside the page (Playwright has no clean way to inject a thrown error into a specific React subtree without modifying source) was judged not worth doing for a component this structurally simple; relying on clean `tsc`/`eslint` and the token-pattern consistency already proven correct across many prior files using identical `--error` conventions.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 66. `ErrorBoundary.tsx` re-skin (104 lines, 15 refs) — clean pass, no carve-out
+
+- **What changed:** the generic (non-view-specific, `withErrorBoundary` HOC-wrappable) crash card — icon/title/message, Try-again/Copy-error buttons, and the collapsible stack-trace `<details>`/`<pre>` block — all tokenized onto `--error`/`--text-*`/`--surface-*`/`--border`. Same fallback-UI shape as `ViewErrorBoundary.tsx` (#65) but a distinct, separately-used boundary component (per CLAUDE.md's "Class-based error boundaries" row — two intentionally separate boundaries at different granularity).
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** same constraint as `ViewErrorBoundary.tsx` (#65) — this class-based boundary only renders its fallback on a real child-component render crash, which Playwright has no clean way to force from outside the page without modifying source. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern from #65.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
