@@ -281,6 +281,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the one real mount site to `ProjectExecutionMode.tsx:453` (`<Card label="Audit"><MarcusAuditPanel .../></Card>`), inside the RESULTS tab's post-execution grid — which per this repo's own documented behavior (CLAUDE.md's Project Execution Mode entry) only renders after a full Setup→Agents→Execution→Approval run completes real Ollama-backed work and every approval gate resolves. Attempted the direct RESULTS-tab route via Playwright; the tab did not respond (consistent with being gated/disabled pre-run, as documented). Running a full multi-stage project-execution pipeline just to screenshot this one panel was judged out of proportion to the task — relying instead on the token-pattern consistency already proven correct across ~15 prior files using the identical `--warning`/`--error`/`--success` conventions, plus clean `tsc`/`eslint`. Not claimed as visually verified.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 41. `ApprovalPanel.tsx` re-skin (204 lines, 43 refs) — clean pass, no carve-out
+
+- **What changed:** `RISK_STYLES` (high/medium/low — a genuine 3-tier risk map with an exact 1:1 fit onto the 3 semantic tone tokens, unlike MarcusAuditPanel's 4-level `riskColor()`), the outer panel shell, error banner, per-item row states (pending/approved/rejected), Deny/Approve buttons, and the Continue button — all tokenized onto `--error`/`--warning`/`--success`/`--accent`/`--text-*`/`--surface-*`/`--border`.
+- **Deliberate whole-panel warning treatment kept, not a carve-out:** same pattern as `MarcusAuditPanel.tsx` (#40) — the outer shell stays `--warning`-toned throughout (border/background/header icon/header text), a real design choice for an "items awaiting approval" state, not per-item identity differentiation.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake on a couple of `/50`-suffixed dim/border tokens from the manual pass, corrected automatically.
+- **Test coverage:** `src/test/ApprovalPanel.test.jsx` — 14/14 passing (`--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** this component (`items.length === 0` returns `null`) only renders once a real pending-approval item exists. Its two real call sites — `ChatView.tsx:1330` and `ProjectExecutionMode.tsx:389`'s Approval tab — both require a genuine agent action to reach `pending_approval` state (a real Jose-routed command or a real Ollama-backed project-execution run), the same category of live-reachability gap as #40. Not chased further this pass; relying on the 14-test suite (which exercises all three status states — pending/approved/rejected — and both risk-tier extremes with mock data) plus clean `tsc`/`eslint`.
+- **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
