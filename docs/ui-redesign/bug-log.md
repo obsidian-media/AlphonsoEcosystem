@@ -290,6 +290,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** this component (`items.length === 0` returns `null`) only renders once a real pending-approval item exists. Its two real call sites — `ChatView.tsx:1330` and `ProjectExecutionMode.tsx:389`'s Approval tab — both require a genuine agent action to reach `pending_approval` state (a real Jose-routed command or a real Ollama-backed project-execution run), the same category of live-reachability gap as #40. Not chased further this pass; relying on the 14-test suite (which exercises all three status states — pending/approved/rejected — and both risk-tier extremes with mock data) plus clean `tsc`/`eslint`.
 - **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
 
+### 42. `MemorySearch.tsx` re-skin (179 lines, 41 refs) — clean pass, no carve-out
+
+- **What changed:** the Ctrl+P memory-search modal — header input, close button, category/agent filter-chip strips, suggestions, results list, empty states, and footer — all tokenized onto `--accent`/`--text-*`/`--surface-*`/`--border`. Indigo "selected filter" state (generic, applies identically to all categories and all agents) mapped to `--accent`, not a carve-out.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): opened via Sidebar's Ctrl+P search trigger (`data-testid="sidebar-search-trigger"`), typed a query — confirmed the "All" pill (accent-teal), category chips, empty-state text, and footer all render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
