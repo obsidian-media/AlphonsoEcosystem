@@ -883,6 +883,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, System space → All Agents): Overview tab's `OperatorModesPanel` badges show Jose=amber, Alphonso=cyan, Miya=violet — all correct. Advanced tab's `EcosystemMapPanel` agent cards show Miya=violet, Jose=amber, Alphonso=cyan-teal, Hector=indigo, Marcus=orange, Maria=teal, Echo=blue — all correct, all now matching `AgentStatusStrip.tsx`/`AgentActivityLog.tsx`/`MissionRoom.tsx`'s colors for the same agents. Zero console errors both tabs.
 - **Status:** CLOSED. Both real-9-agent-system carve-out instances flagged across this whole session (#104's MissionRoom.tsx, this file) are now reconciled — no known remaining agent-color drift against `tokens.css`'s `--agent-*` tokens.
 
+### 106. `src/components/agents/AgentDock.tsx` re-skin (2 raw-color refs) — the last straggler, found via a full fresh sweep of `src/components`
+
+- **Where found:** in response to a "is Phase 2 done?" status check, re-ran the full hardcoded-Tailwind-color grep across every file in `src/components` (not the original, once-built backlog scan) to get an authoritative answer instead of reasoning from memory. 19 files matched; 18 were already CLOSED entries or documented carve-outs. This file — `src/components/agents/AgentDock.tsx`, 33 lines, distinct from the unrelated `src/components/AgentDock.tsx` (see CLAUDE.md's naming-collision note) — had zero bug-log mentions and had never been touched.
+- **What changed:** `bg-zinc-950/70` → `bg-[var(--surface-0)]`, `text-zinc-500` → `text-[var(--text-3)]`.
+- **Verification:** `fix-broken-var-opacity.mjs` — no change needed. `npx tsc --noEmit` and `npx eslint src/components/agents/AgentDock.tsx` both clean. No dedicated test file exists for this component.
+- **Live-verified** (Playwright, real dev server): traced its one real call site to `projectExecution/ProjectExecutionMode.tsx`'s Projects → Agents sub-tab ("Active Agents" card). Renders correctly on the dark surface token with tokenized label text, zero console errors.
+- **Status:** CLOSED. With this file closed, the full-repo hardcoded-color re-skin sweep (started in #1, re-verified complete at #101, extended past `src/components/` at #102/#103, and re-verified once more here) has no known remaining gaps outside documented carve-outs and out-of-scope files (`MarketingLandingPage.tsx`).
+
 ---
 
 ## Notes on discovery method
