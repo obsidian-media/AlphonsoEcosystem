@@ -20,7 +20,8 @@ function rpcResponse(result: unknown, headers: Record<string, string> = {}) {
 }
 
 // Wraps a tool's structured payload in the real MCP CallToolResult envelope
-// (content + structuredContent) — matches what tools/call actually returns.
+// (content + structuredContent) — matches what tools/call actually returns,
+// verified live against the real MCP server on 2026-09-07.
 function toolResult(structuredContent: unknown) {
   return { content: [{ type: 'text', text: JSON.stringify(structuredContent) }], structuredContent };
 }
@@ -34,7 +35,7 @@ beforeEach(() => {
 describe('planCall / runCall / getCallRun', () => {
   it('throws "not connected" when there is no token', async () => {
     mockGetCalleMcpToken.mockResolvedValueOnce(null);
-    await expect(planCall('call Joe\'s Pizza')).rejects.toThrow('not connected');
+    await expect(planCall({ userInput: 'call Joe\'s Pizza' })).rejects.toThrow('not connected');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -42,9 +43,11 @@ describe('planCall / runCall / getCallRun', () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}, { 'mcp-session-id': 'sess-abc' })) // initialize
       .mockResolvedValueOnce(rpcResponse({})) // notifications/initialized
-      .mockResolvedValueOnce(rpcResponse(toolResult({ ready_to_run: false, clarifying_questions: ['What phone number?'] }))); // tools/call
+      .mockResolvedValueOnce(rpcResponse(toolResult({
+        plan_id: 'p1', ready_to_run: false, next_step: 'ask', clarifying_questions: ['What phone number?'], confirm_summary: ''
+      }))); // tools/call
 
-    await planCall('call Joe\'s Pizza');
+    await planCall({ userInput: 'call Joe\'s Pizza' });
 
     const toolCallArgs = mockFetch.mock.calls[2];
     const headers = toolCallArgs[1].headers;
@@ -52,26 +55,41 @@ describe('planCall / runCall / getCallRun', () => {
     const body = JSON.parse(toolCallArgs[1].body);
     expect(body.method).toBe('tools/call');
     expect(body.params.name).toBe('plan_call');
-    expect(body.params.arguments.goal).toBe('call Joe\'s Pizza');
+    expect(body.params.arguments.user_input).toBe('call Joe\'s Pizza');
   });
 
-  it('planCall omits conversation_history when none is passed, includes it when passed', async () => {
+  it('planCall omits plan_id on a fresh plan, includes it when continuing an existing one', async () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}))
       .mockResolvedValueOnce(rpcResponse({}))
-      .mockResolvedValueOnce(rpcResponse(toolResult({ ready_to_run: false })));
-    await planCall('goal only');
+      .mockResolvedValueOnce(rpcResponse(toolResult({ plan_id: 'p1', ready_to_run: false, next_step: 'ask', confirm_summary: '' })));
+    await planCall({ userInput: 'goal only' });
     let body = JSON.parse(mockFetch.mock.calls[2][1].body);
-    expect(body.params.arguments.conversation_history).toBeUndefined();
+    expect(body.params.arguments.plan_id).toBeUndefined();
+    expect(body.params.arguments.user_input).toBe('goal only');
 
     mockFetch.mockReset();
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}))
       .mockResolvedValueOnce(rpcResponse({}))
-      .mockResolvedValueOnce(rpcResponse(toolResult({ ready_to_run: false })));
-    await planCall('goal', ['turn 1', 'turn 2']);
+      .mockResolvedValueOnce(rpcResponse(toolResult({ plan_id: 'p1', ready_to_run: true, next_step: 'confirm', confirm_summary: 'Ready.' })));
+    await planCall({ planId: 'p1', userInput: '+15550123456' });
     body = JSON.parse(mockFetch.mock.calls[2][1].body);
-    expect(body.params.arguments.conversation_history).toEqual(['turn 1', 'turn 2']);
+    expect(body.params.arguments.plan_id).toBe('p1');
+    expect(body.params.arguments.user_input).toBe('+15550123456');
+  });
+
+  it('planCall only sends to_phones/region/language/goal when explicitly provided -- never guesses them', async () => {
+    mockFetch
+      .mockResolvedValueOnce(rpcResponse({}))
+      .mockResolvedValueOnce(rpcResponse({}))
+      .mockResolvedValueOnce(rpcResponse(toolResult({ plan_id: 'p1', ready_to_run: false, next_step: 'ask', confirm_summary: '' })));
+    await planCall({ userInput: 'call them' });
+    const body = JSON.parse(mockFetch.mock.calls[2][1].body);
+    expect(body.params.arguments.to_phones).toBeUndefined();
+    expect(body.params.arguments.region).toBeUndefined();
+    expect(body.params.arguments.language).toBeUndefined();
+    expect(body.params.arguments.goal).toBeUndefined();
   });
 
   it('runCall sends plan_id and confirm_token', async () => {
@@ -89,16 +107,26 @@ describe('planCall / runCall / getCallRun', () => {
     mockFetch
       .mockResolvedValueOnce(rpcResponse({}))
       .mockResolvedValueOnce(rpcResponse({}))
-      .mockResolvedValueOnce(rpcResponse(toolResult({ status: 'COMPLETED' })));
+      .mockResolvedValueOnce(rpcResponse(toolResult({ run_id: 'r1', status: 'COMPLETED' })));
     const result = await getCallRun('r1');
     expect(result.status).toBe('COMPLETED');
     const body = JSON.parse(mockFetch.mock.calls[2][1].body);
     expect(body.params.arguments).toEqual({ run_id: 'r1' });
   });
 
+  it('getCallRun forwards cursor/limit when provided', async () => {
+    mockFetch
+      .mockResolvedValueOnce(rpcResponse({}))
+      .mockResolvedValueOnce(rpcResponse({}))
+      .mockResolvedValueOnce(rpcResponse(toolResult({ run_id: 'r1', status: 'COMPLETED' })));
+    await getCallRun('r1', { cursor: 'c1', limit: 50 });
+    const body = JSON.parse(mockFetch.mock.calls[2][1].body);
+    expect(body.params.arguments).toEqual({ run_id: 'r1', cursor: 'c1', limit: 50 });
+  });
+
   it('throws on a non-ok HTTP response', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: () => Promise.resolve(''), headers: new Headers() });
-    await expect(planCall('x')).rejects.toThrow('HTTP 500');
+    await expect(planCall({ userInput: 'x' })).rejects.toThrow('HTTP 500');
   });
 
   it('throws on a JSON-RPC error field', async () => {
@@ -107,6 +135,6 @@ describe('planCall / runCall / getCallRun', () => {
       text: () => Promise.resolve(JSON.stringify({ jsonrpc: '2.0', error: { message: 'bad request' } })),
       headers: new Headers()
     });
-    await expect(planCall('x')).rejects.toThrow('bad request');
+    await expect(planCall({ userInput: 'x' })).rejects.toThrow('bad request');
   });
 });

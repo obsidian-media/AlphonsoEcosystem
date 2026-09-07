@@ -65,23 +65,105 @@ async function callTool(toolName: string, toolArguments: Record<string, unknown>
   return unwrapToolResult(response.body?.result);
 }
 
+// Field shapes below are verified against a live `tools/list` call and a
+// real (planning-only, no call placed) `plan_call` round trip on 2026-09-07,
+// not guessed from docs prose. Two real mismatches this caught vs. the
+// original design: (1) plan_call has NO `conversation_history` param -- it
+// takes an opaque `plan_id` (returned by the previous call) plus the raw
+// `user_input` text; the server tracks conversation state itself. (2) the
+// response never echoes back a phone number -- there is no `phone_number`
+// field at all, so a phone-based cross-chat duplicate-call guard cannot be
+// built from this response (see calleMcpOutreachService.ts's removal note).
+
+export interface PlanCallQuestion {
+  key: string;
+  question: string;
+  options?: Array<{ label: string; value: string }> | null;
+}
+
+export interface PlanCallArgs {
+  /** Opaque continuation id from a previous plan_call response. Omit on the first call. */
+  planId?: string;
+  /** E.164 numbers. Only pass when the user gave an unambiguous number -- never guess/reformat. */
+  toPhones?: string[];
+  region?: string;
+  language?: string;
+  goal?: string;
+  scheduledAt?: string;
+  /** The user's latest message, verbatim. Always pass this even when other fields are also set. */
+  userInput?: string;
+  ttlSeconds?: number;
+}
+
 export interface PlanCallResult {
+  plan_id: string;
   ready_to_run: boolean;
-  plan_id?: string;
-  confirm_token?: string;
+  next_step: string;
   clarifying_questions?: string[];
-  summary?: string;
-  phone_number?: string; // best-effort; unverified against a real response
+  display_goal?: string | null;
+  questions?: PlanCallQuestion[] | null;
+  confirm_summary: string;
+  confirm_token?: string | null;
+  confirm_expires_at?: string | null;
+  expires_at?: string | null;
 }
 
-export function planCall(goal: string, conversationHistory?: string[]): Promise<PlanCallResult> {
-  return callTool('plan_call', { goal, ...(conversationHistory?.length ? { conversation_history: conversationHistory } : {}) });
+export function planCall(args: PlanCallArgs): Promise<PlanCallResult> {
+  return callTool('plan_call', {
+    ...(args.planId ? { plan_id: args.planId } : {}),
+    ...(args.toPhones?.length ? { to_phones: args.toPhones } : {}),
+    ...(args.region ? { region: args.region } : {}),
+    ...(args.language ? { language: args.language } : {}),
+    ...(args.goal ? { goal: args.goal } : {}),
+    ...(args.scheduledAt ? { scheduled_at: args.scheduledAt } : {}),
+    ...(args.userInput ? { user_input: args.userInput } : {}),
+    ...(args.ttlSeconds != null ? { ttl_seconds: args.ttlSeconds } : {})
+  });
 }
 
-export function runCall(planId: string, confirmToken: string): Promise<{ run_id: string; status: string }> {
+export interface CallRunOutcome {
+  task_completed: boolean;
+  completion_confidence: { score: number; label: string };
+  evidence?: string[];
+}
+
+export interface CallRunResultPayload {
+  summary?: string | null;
+  post_summary?: string | null;
+  outcome?: CallRunOutcome | null;
+  extracted?: Record<string, unknown>;
+  transcript?: string | null;
+  call_id?: string | null;
+  call_ids?: string[];
+}
+
+export interface CallRunActivityEntry {
+  run_id: string;
+  ts: string;
+  level: 'info' | 'warning' | 'error';
+  kind: string;
+  message: string;
+  data?: Record<string, unknown>;
+}
+
+export interface CallRunResult {
+  run_id: string;
+  status: string;
+  message?: string | null;
+  display_goal?: string | null;
+  result?: CallRunResultPayload;
+  activity?: CallRunActivityEntry[];
+  next_cursor?: string | null;
+}
+
+export function runCall(planId: string, confirmToken: string): Promise<CallRunResult> {
   return callTool('run_call', { plan_id: planId, confirm_token: confirmToken });
 }
 
-export function getCallRun(runId: string): Promise<{ status: string; structuredContent?: unknown; activity?: unknown[] }> {
-  return callTool('get_call_run', { run_id: runId });
+export function getCallRun(runId: string, options: { cursor?: string; limit?: number } = {}): Promise<CallRunResult> {
+  return callTool('get_call_run', {
+    run_id: runId,
+    ...(options.cursor ? { cursor: options.cursor } : {}),
+    ...(options.limit != null ? { limit: options.limit } : {})
+  });
 }
