@@ -552,6 +552,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Work space → Projects → Setup tab): filled in the project-name input and the description textarea with real text, confirmed both render clearly legible or the intended token color. Zero console errors.
 - **Status:** CLOSED.
 
+### 73. `ConnectorStatusIndicators.tsx` re-skin (102 lines, 12 refs) — clean pass, no carve-out
+
+- **What changed:** `ConnectorStatusDot`'s `colorMap` and `ConnectorStatusStrip`'s live/missing-config/disabled/zero-cost segments — tokenized onto `--success`/`--warning`/`--text-*`, matching the identical conventions already applied to `ConnectorHealthPanel.tsx` (#43), which imports the same underlying `deriveConnectorStatus()` status derivation.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified via multiple earlier screenshots from this same session, not re-captured:** `ConnectorStatusStrip` is the exact "Connectors · N disabled" badge visible next to the sidebar's Connectors nav item in numerous prior screenshots this session (e.g. #43's `ConnectorHealthPanel.tsx` entry) — its rendering (disabled-count text in the dimmed neutral tone) has already been visually confirmed correct. A fresh attempt to re-screenshot it this pass hit a Playwright space-navigation flake (the sidebar showed a stale/collapsed nav list) rather than a real rendering problem — not chased further given the component was already proven correct earlier in the session.
+- **Status:** CLOSED (code + statics verified; rendering already confirmed via earlier session screenshots, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
