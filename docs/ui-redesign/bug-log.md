@@ -202,6 +202,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, via Operator Dashboard): "PUSH SAMPLE"/"COPY REPORT" buttons in accent, conflict/approval/blocked count badges in neutral (all zero), panel icon in accent — zero console errors.
 - **Status:** CLOSED.
 
+### 31. `OrchestratorQueueView.tsx` re-skin (223 lines, 58 refs) — clean pass, no carve-out
+
+- **What changed:** `STATE_STYLES` (packet status badges: queued/executing/pending_approval/failed/dead_letter/reported_to_jose/completed) and the stat-tile color set, tokenized onto `--info`/`--warning`/`--error`/`--success`/`--text-*`, plus all structural chrome. Genuine truth-state semantics, no per-item identity.
+- **Existing test coverage:** no dedicated component test, but rendered inside `OrchestratorView.tsx` (`src/test/orchestratorViewSmoke.test.jsx`, 2 tests, stayed green) under its Packets tab's "Queue View" card. `tsc --noEmit` and `eslint` both clean.
+- **Not independently screenshotted this pass:** reaching this specific nested tab (Orchestrator → Packets tab → Queue View card) proved awkward to automate reliably (button-vs-stat-label text collisions); rather than keep spending turns on tab navigation, verification relied on the passing smoke test plus the fact that this file's token patterns (`-dim`/`-border` semantic pairs) are byte-for-byte identical to ones already visually confirmed correct in `EcosystemMaturityPanels.tsx`, `ProductionReadinessPanel.tsx`, `WorkflowOperationsDashboard.tsx`, and `SelfDevelopmentPanel.tsx` earlier this session. Flagged honestly rather than claiming a screenshot that wasn't taken.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
