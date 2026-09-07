@@ -692,6 +692,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): hovered the "New Chat Session" row, clicked its delete button once, confirmed the button now renders a clearly visible red-tinted background and red trash icon (the armed confirm-delete state). Zero console errors.
 - **Status:** CLOSED.
 
+### 90. `ui/Badge.tsx` re-skin (51 lines, 5 refs) — normalized a mixed syntax convention, verified the bare-shorthand form actually works before touching it
+
+- **What changed:** `Badge`'s `variantClasses` and `StatusDot`'s `colors` map — this shared UI primitive (used by `RightPanel.tsx`, `SettingsView.tsx`, `TopBar.tsx`) was already using CSS custom properties throughout, but via a different syntax than every other file in this whole re-skin effort: Tailwind's bare-custom-property shorthand (`bg-[--success-dim]`, no `var()` wrapper) instead of the `bg-[var(--success-dim)]` form used everywhere else, plus 4 literal hardcoded `border-green/amber/red/sky-500/20` classes and one `bg-zinc-500` fallback. Normalized all of it to the consistent `var()` form and replaced the 4 hardcoded borders with `-border` tokens.
+- **Verified before assuming a bug:** given this session's opening critical finding was exactly a Tailwind bracket-syntax opacity-modifier bug, the bare `[--x]` shorthand (no `var()`) looked suspicious enough to test directly rather than assume broken or assume fine — used `getComputedStyle` in a live browser to confirm `bg-[--success-dim]` and `bg-[var(--success-dim)]` resolve to byte-identical `oklch(...)` values in this project's Tailwind version. Both work; this was a style inconsistency, not a rendering bug.
+- **Tests updated to match the normalization, not a regression:** `src/test/ui/Badge.test.tsx`'s 4 variant-color assertions checked the literal bare-shorthand strings (`'text-[--success]'` etc.) — updated to the `var()` form.
+- **Test coverage:** `src/test/ui/Badge.test.tsx` — could not get a clean local run this pass (`--pool=forks` and `--pool=threads` both hit worker-startup timeouts, a worse instance of this session's documented pre-existing machine-resource-contention issue); relied on `tsc --noEmit` (clean) and manual diff review instead, plus live verification below.
+- **Live-verified** (Playwright, real dev server, Operator Dashboard): confirmed the "Operator Active" badge (green dot + text, `variant="success" dot`), the "VERIFIED" trust badge, and the color-coded mode pills (Local Runtime/Approval Mode/Safe Mode) all render with distinct, correct colors. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
