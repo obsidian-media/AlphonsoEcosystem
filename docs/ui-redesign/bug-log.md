@@ -240,6 +240,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Not independently screenshotted this pass:** the specific right-panel "Agents" tab button proved unreliable to click via automation in the time available (several selector attempts landed on the wrong element); given the real fix here was already confirmed by direct code/grep inspection (zero remaining `var(--card)` references) rather than depending on a visual check, and the passing `RightPanel.test.jsx` suite exercises this exact embedded path, further turns weren't spent chasing the screenshot. Flagged honestly rather than claiming one that wasn't taken.
 - **Status:** CLOSED.
 
+### 36. `MarketingLandingPage.tsx` — out of scope, not touched (documented, not a carve-out)
+
+- **Finding:** confirmed via `src/main.jsx` that this component is a genuinely separate surface, not part of the app's internal UI: it's only rendered when `window.location.pathname` is `/website` or `/landing`, mounted completely outside `App.tsx` (no `ToastProvider`, no theme context, no sidebar/navigation), as a standalone alternative root render. It's a marketing/waitlist page bundled in the same repo, not a screen a user reaches by using the app.
+- **Decision:** left untouched rather than force-tokenizing it onto the app's internal design-token system. A standalone marketing page conventionally keeps fixed, deliberate branding (here: amber accent throughout) independent of an in-app theme toggle the page never even loads. This is a scope decision, not the "deliberate per-item palette" carve-out pattern used elsewhere in this log — nothing here differentiates between multiple items, the whole page is just consistently on-brand.
+- **Also found, also out of scope:** the page references `.alphonso-site`, `.alphonso-site__bg`, and `.alphonso-site__panel` CSS classes that don't exist in any stylesheet in the repo — likely dead/unfinished styling hooks, similar in shape to #35's `--card` finding but on a page this pass isn't touching, so left as a noted-not-fixed observation rather than pulled into scope.
+- **Status:** SKIPPED (out of scope, documented).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
