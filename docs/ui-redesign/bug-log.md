@@ -974,6 +974,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, light mode, Operator Mode enabled, full-page screenshot): Core Runtime, Screen Intelligence, Recovery + Verification Logs panels and every nested stat row/button all render as clean washes, fully legible. Zero console errors.
 - **Status:** CLOSED for `OperatorDashboard.tsx`.
 
+### 115. `MiyaStudio.tsx` converted to the "no cards" rule too — seventh slice, plus a real tab-contrast bug distinct from the tab-style question
+
+- **Scope:** seventh page conversion. ~50 `border` occurrences, ~38 white/black bugs — again dominated by a repeated `border border-white/10` substring, confirmed via grep to never co-occur with `rounded-full`, removed globally in one pass. Individually handled Miya-agent-color-bordered cards (production pipeline highlight, generation-result panels), a warning panel, and 3 `bg-black/20` rows (one of which, a job-list row, wasn't even in the original border grep — found by widening the check to plain `bg-black` after the border pass).
+- **A real, distinct bug found in the tab switcher (fixed, mechanism untouched):** unlike #111/#112/#113's bordered-pill or folder-tab active-state variants (already correctly tokenized, just flagged for the separate underline-vs-pill decision), this page's tab switcher used raw `bg-white/10 text-white` for its active state — a genuine light-mode contrast bug (near-white wash + white text), not just a mechanism-choice question. Fixed the color to `bg-[var(--agent-miya-glow)] text-[var(--agent-miya)]` (keeps the exact same wash-plus-colored-text mechanic, doesn't redesign it to underline-style, just makes it actually legible in both themes).
+- **What changed:** header `text-white` heading ("Miya — Creator Agent") fixed, same recurring bug class. Header divider retokenized. Left the small `h-14 w-14` agent-portrait frame's `border-[var(--agent-miya-glow)]` alone (framing a photographic avatar, not a content card — same reasoning as `AgentAvatar.tsx`'s own existing border convention). Left 4 solid-`bg-[var(--agent-miya)]` buttons' `text-white` alone (white text on a solid saturated button, same established exception as #112/#114).
+- **Verification:** `fix-broken-var-opacity.mjs` — no change needed. `npx tsc --noEmit` and `npx eslint` clean. `miyaStudioEmptyInputGuard.test.jsx` + `miyaStudioTabs.test.jsx` (7 tests total) passing.
+- **Live-verified** (Playwright, light mode, full-page screenshot): heading fully legible, active tab correctly shows Miya's violet identity color, Script Studio's pipeline-inputs panel and production-pipeline highlight both render as clean washes, real portrait renders top-right. Zero console errors.
+- **Status:** CLOSED for `MiyaStudio.tsx`.
+
 ---
 
 ## Notes on discovery method
