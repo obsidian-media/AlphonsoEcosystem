@@ -46,18 +46,15 @@ const riskColors: Record<string, string> = {
   critical: 'red'
 };
 
-const agentTone: Record<string, string> = {
-  jose: 'amber',
-  alphonso: 'blue',
-  miya: 'fuchsia',
-  hector: 'teal',
-  maria: 'amber',
-  marcus: 'blue',
-  echo: 'indigo',
-  sentinel: 'teal',
-  nova: 'blue',
-  shared: 'indigo'
-};
+// Real agent identity keys — every consumer below looks these up directly
+// against tokens.css's --agent-* tokens now (see nodeClass/badgeClass),
+// rather than through this map's old Tailwind-color-family indirection
+// (jose=amber was the only one that happened to be correct; alphonso was
+// blue not cyan, miya was fuchsia not violet, hector was teal not indigo,
+// maria was amber not teal, marcus was blue not orange, echo was indigo
+// not blue, sentinel was teal not red, nova was blue not lime). 'shared'
+// was dead/unused (no call site ever passes agent="shared") and dropped.
+const REAL_AGENT_KEYS = ['jose', 'alphonso', 'miya', 'hector', 'maria', 'marcus', 'echo', 'sentinel', 'nova'];
 
 export function TrustLayerPanel({ verificationLogs = [], ollamaStatus }: { verificationLogs?: unknown[]; ollamaStatus?: { label?: string; trust?: string } }) {
   const [filter, setFilter] = useState('all');
@@ -540,7 +537,7 @@ export function OperatorModesPanel({ settings, setSettings }: { settings: Record
           >
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-semibold">{mode.label}</span>
-              <Badge color={agentTone[mode.agent]}>{mode.agent}</Badge>
+              <Badge color={mode.agent}>{mode.agent}</Badge>
             </div>
             <div className="mt-2 text-[11px] text-[var(--text-3)]">Notifications: {mode.intensity}</div>
             <div className="text-[11px] text-[var(--text-3)]">Panels: {mode.panels}</div>
@@ -640,9 +637,8 @@ function MemoryCard({ item }: { item: any }) {
 }
 
 function AgentNode({ agent, title, subtitle, stat, large = false }: { agent: string; title: string; subtitle: string; stat: string; large?: boolean }) {
-  const color = agentTone[agent] || 'zinc';
   return (
-    <div className={`rounded-2xl border p-4 text-center ${large ? 'min-h-36' : 'min-h-28'} ${nodeClass(color)}`}>
+    <div className={`rounded-2xl border p-4 text-center ${large ? 'min-h-36' : 'min-h-28'} ${nodeClass(agent)}`}>
       <div className="mb-2 flex justify-center">
         <AgentAvatar agentId={agent} name={title} sizeClass={large ? 'h-12 w-12' : 'h-10 w-10'} className="border-[var(--border-strong)]" />
       </div>
@@ -785,9 +781,11 @@ function formatContent(content: unknown) {
   return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
 }
 
-// iconClass/badgeClass/metricClass map genuine semantic states (risk, status,
-// trust) onto real tokens. nodeClass + agentTone (below) are the one carve-out
-// in this file — see the agentTone comment for why.
+// iconClass/metricClass map genuine semantic states (risk, status, trust)
+// onto real tokens. badgeClass does too, except for its 9 per-agent entries,
+// and nodeClass is entirely per-agent — both keyed against the real
+// --agent-* identity tokens (see nodeClass's comment below), not a carve-out
+// anymore.
 function iconClass(tone: string) {
   if (tone === 'green') return 'text-[var(--success)]';
   return 'text-[var(--accent)]';
@@ -800,9 +798,22 @@ function badgeClass(color: string) {
     blue: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info-border)]',
     amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
     red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
-    // agent-identity carve-out (OperatorModesPanel's per-agent Badge) — see agentTone
-    indigo: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20',
-    fuchsia: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20'
+    // Real per-agent identity (OperatorModesPanel's per-agent Badge, keyed by
+    // the actual agent name now instead of a hand-picked color family — see
+    // REAL_AGENT_KEYS's comment above for the mismatches this replaced).
+    // Written as literal class strings, not built via template interpolation
+    // -- Tailwind's JIT scanner only picks up classes that appear as literal
+    // text in the source, so a dynamically-assembled `bg-[var(--agent-${key}...`
+    // would silently produce an unstyled class at runtime.
+    jose: 'bg-[var(--agent-jose-glow)] text-[var(--agent-jose)] border-[var(--agent-jose-glow)]',
+    alphonso: 'bg-[var(--agent-alphonso-glow)] text-[var(--agent-alphonso)] border-[var(--agent-alphonso-glow)]',
+    miya: 'bg-[var(--agent-miya-glow)] text-[var(--agent-miya)] border-[var(--agent-miya-glow)]',
+    hector: 'bg-[var(--agent-hector-glow)] text-[var(--agent-hector)] border-[var(--agent-hector-glow)]',
+    maria: 'bg-[var(--agent-maria-glow)] text-[var(--agent-maria)] border-[var(--agent-maria-glow)]',
+    marcus: 'bg-[var(--agent-marcus-glow)] text-[var(--agent-marcus)] border-[var(--agent-marcus-glow)]',
+    echo: 'bg-[var(--agent-echo-glow)] text-[var(--agent-echo)] border-[var(--agent-echo-glow)]',
+    sentinel: 'bg-[var(--agent-sentinel-glow)] text-[var(--agent-sentinel)] border-[var(--agent-sentinel-glow)]',
+    nova: 'bg-[var(--agent-nova-glow)] text-[var(--agent-nova)] border-[var(--agent-nova-glow)]'
   };
   return colors[color] || colors.zinc;
 }
@@ -815,18 +826,22 @@ function metricClass(tone: string) {
   return 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]';
 }
 
-// Per-agent identity carve-out (6th instance this session, after
-// ConnectorSetupPanel/RuntimeManagerView/MissionRoom×2/SettingsView): unlike
-// MissionRoom's legacy 11-seat roster, agentTone's 9 keys ARE the real agent
-// system — but its color assignments don't actually match the real
-// --agent-* tokens (e.g. sentinel is red everywhere else, teal here; maria is
-// teal everywhere else, amber here). Left as-is: reconciling agent-color
-// consistency app-wide is a real, separate product decision, not something
-// to silently change inside a visual re-skin pass.
-function nodeClass(color: string) {
-  if (color === 'amber') return 'border-amber-300/20 bg-amber-500/10 text-amber-100';
-  if (color === 'blue') return 'border-cyan-300/20 bg-cyan-500/10 text-cyan-100';
-  if (color === 'fuchsia') return 'border-fuchsia-300/20 bg-fuchsia-500/10 text-fuchsia-100';
-  if (color === 'teal') return 'border-teal-300/20 bg-teal-500/10 text-teal-100';
+// Reconciled with tokens.css's real --agent-* identity tokens (bug-log.md
+// #104 fixed the same class of bug in MissionRoom.tsx first; this is that
+// fix's sibling instance, applied here too). Written as literal class
+// strings per agent, matching AgentStatusStrip.tsx/AgentActivityLog.tsx/
+// BoardroomView.tsx's established pattern -- not built via template
+// interpolation, since Tailwind's JIT only picks up classes that appear as
+// literal text in the source.
+function nodeClass(agent: string) {
+  if (agent === 'jose') return 'border-[var(--agent-jose-glow)] bg-[var(--agent-jose-glow)] text-[var(--agent-jose)]';
+  if (agent === 'alphonso') return 'border-[var(--agent-alphonso-glow)] bg-[var(--agent-alphonso-glow)] text-[var(--agent-alphonso)]';
+  if (agent === 'miya') return 'border-[var(--agent-miya-glow)] bg-[var(--agent-miya-glow)] text-[var(--agent-miya)]';
+  if (agent === 'hector') return 'border-[var(--agent-hector-glow)] bg-[var(--agent-hector-glow)] text-[var(--agent-hector)]';
+  if (agent === 'maria') return 'border-[var(--agent-maria-glow)] bg-[var(--agent-maria-glow)] text-[var(--agent-maria)]';
+  if (agent === 'marcus') return 'border-[var(--agent-marcus-glow)] bg-[var(--agent-marcus-glow)] text-[var(--agent-marcus)]';
+  if (agent === 'echo') return 'border-[var(--agent-echo-glow)] bg-[var(--agent-echo-glow)] text-[var(--agent-echo)]';
+  if (agent === 'sentinel') return 'border-[var(--agent-sentinel-glow)] bg-[var(--agent-sentinel-glow)] text-[var(--agent-sentinel)]';
+  if (agent === 'nova') return 'border-[var(--agent-nova-glow)] bg-[var(--agent-nova-glow)] text-[var(--agent-nova)]';
   return 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]';
 }
