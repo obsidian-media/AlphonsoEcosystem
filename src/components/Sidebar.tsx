@@ -180,7 +180,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-white">ALPHONSO</span>}
           <button
             onClick={onToggle}
-            className="ml-auto p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+            className="ml-auto p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
             aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? '-rotate-90' : 'rotate-90'}`} />
@@ -193,7 +193,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         <button
           onClick={onToggleSearch}
           data-testid="sidebar-search-trigger"
-          className="flex items-center gap-2 mx-3 mt-3 px-3 py-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] text-xs hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+          className="flex items-center gap-2 mx-3 mt-3 px-3 py-2 rounded-lg bg-[var(--surface-2)] text-[var(--text-3)] text-xs hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
           aria-label="Search"
         >
           <Search className="w-3.5 h-3.5" />
@@ -216,7 +216,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
               data-testid={`space-pill-${space.id}`}
               onClick={() => setActiveSpace(space.id)}
               title={space.label}
-              className={`text-center py-1.5 rounded-lg text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+              className={`text-center py-1.5 rounded-lg text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
                 activeSpace === space.id ? 'bg-[var(--accent-muted)]' : 'hover:bg-[var(--surface-3)]'
               }`}
               aria-label={space.label}
@@ -246,7 +246,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.97 }}
               title={!isOpen ? item.label : undefined}
-              className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+              className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
                 activeTab === item.id
                   ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)]'
                   : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)]'
@@ -279,7 +279,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
           <div className="flex flex-col flex-1 px-2 mt-2 overflow-hidden">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="section-label">Recent Chats</span>
-              <button onClick={onCreateChat} className="p-1 hover:bg-[var(--surface-3)] rounded-lg transition-colors text-[var(--text-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50" aria-label="Create new chat">
+              <button onClick={onCreateChat} className="p-1 hover:bg-[var(--surface-3)] rounded-lg transition-colors text-[var(--text-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]" aria-label="Create new chat">
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -297,7 +297,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
                   <span className="truncate">{chat.title}</span>
                   <button
                     onClick={(e) => handleDeleteClick(chat.id, e)}
-                    className={`p-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:opacity-100 ${
+                    className={`p-0.5 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] focus-visible:opacity-100 ${
                       pendingDeleteId === chat.id
                         ? 'opacity-100 bg-danger/20 text-danger'
                         : 'opacity-0 group-hover:opacity-100 hover:bg-danger/20 hover:text-danger'
@@ -319,7 +319,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         {onOpenCoach && (
           <button
             onClick={onOpenCoach}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded-lg"
             aria-label="Open Coach mode"
           >
             <BrainCircuit className="w-4 h-4" />
@@ -328,7 +328,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         )}
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+          className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
             activeTab === 'settings' ? 'bg-[var(--accent-muted)] text-[var(--text-1)] shadow-[inset_0_0_12px_var(--accent-glow)] rounded-lg' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] rounded-lg'
           }`}
           aria-label="Open settings"
@@ -339,7 +339,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
         </button>
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded-lg"
+          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-2)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded-lg"
           aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         >
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

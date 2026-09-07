@@ -2,10 +2,10 @@ import React from 'react';
 import { getCoachHistory, clearCoachHistory, type CoachHistoryEntry } from '../services/coachHistoryService';
 
 const SEVERITY_STYLES: Record<string, string> = {
-  critical: 'bg-[var(--error-dim)] border-[var(--error)]/20 text-[var(--error)]',
-  warning: 'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]',
-  neutral: 'bg-[var(--info-dim)] border-[var(--info)]/20 text-[var(--info)]',
-  positive: 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]',
+  critical: 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]',
+  warning: 'bg-[var(--warning-dim)] border-[var(--warning-border)] text-[var(--warning)]',
+  neutral: 'bg-[var(--info-dim)] border-[var(--info-border)] text-[var(--info)]',
+  positive: 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]',
 };
 
 export function CoachHistoryPanel() {

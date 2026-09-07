@@ -9,16 +9,16 @@ interface StateStyles {
 }
 
 const STATE_STYLES: StateStyles = {
-  confirmed: 'border-[var(--success)]/20 bg-[var(--success-dim)] text-[var(--success)]',
-  configured: 'border-[var(--success)]/20 bg-[var(--success-dim)] text-[var(--success)]',
-  foundation_only: 'border-[var(--info)]/20 bg-[var(--info-dim)] text-[var(--info)]',
-  not_configured: 'border-[var(--warning)]/20 bg-[var(--warning-dim)] text-[var(--warning)]',
-  invalid: 'border-[var(--warning)]/20 bg-[var(--warning-dim)] text-[var(--warning)]',
-  ready: 'border-[var(--success)]/20 bg-[var(--success-dim)] text-[var(--success)]',
-  partial: 'border-[var(--warning)]/20 bg-[var(--warning-dim)] text-[var(--warning)]',
+  confirmed: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  configured: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  foundation_only: 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]',
+  not_configured: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
+  invalid: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
+  ready: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  partial: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
   setup_required: 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]',
-  blocked: 'border-[var(--error)]/20 bg-[var(--error-dim)] text-[var(--error)]',
-  failed: 'border-[var(--error)]/20 bg-[var(--error-dim)] text-[var(--error)]',
+  blocked: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
+  failed: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
   unknown: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]'
 };
 
@@ -42,22 +42,22 @@ function displayTruthState(state: string | undefined | null, { workspaceOk = tru
 function readinessRowShellClass(state: string | undefined | null, workspaceOk: boolean = true): string {
   const truth = displayTruthState(state, { workspaceOk });
   if (truth === 'configured') {
-    return 'border-[var(--success)]/30 bg-[var(--success-dim)]';
+    return 'border-[var(--success-border)] bg-[var(--success-dim)]';
   }
   if (truth === 'foundation_only') {
-    return 'border-[var(--info)]/30 bg-[var(--info-dim)]';
+    return 'border-[var(--info-border)] bg-[var(--info-dim)]';
   }
   if (truth === 'not_configured' || truth === 'invalid') {
-    return 'border-[var(--warning)]/30 bg-[var(--warning-dim)]';
+    return 'border-[var(--warning-border)] bg-[var(--warning-dim)]';
   }
   if (truth === 'setup_required') {
     return 'border-[var(--accent-border)] bg-[var(--accent-dim)]';
   }
   if (truth === 'blocked' || truth === 'failed') {
-    return 'border-[var(--error)]/35 bg-[var(--error-dim)]';
+    return 'border-[var(--error-border)] bg-[var(--error-dim)]';
   }
   if (truth === 'partial' || truth === 'unknown') {
-    return 'border-[var(--warning)]/30 bg-[var(--warning-dim)]';
+    return 'border-[var(--warning-border)] bg-[var(--warning-dim)]';
   }
   return 'border-[var(--border)] bg-[var(--surface-2)]';
 }
@@ -395,7 +395,7 @@ export function ProductionReadinessPanel({
           </div>
         </div>
         {error && (
-          <div className="mt-4 rounded-2xl border border-[var(--error)]/20 bg-[var(--error-dim)] p-3 text-sm text-[var(--error)]">
+          <div className="mt-4 rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-sm text-[var(--error)]">
             {error}
           </div>
         )}
@@ -415,14 +415,14 @@ export function ProductionReadinessPanel({
             <button
               onClick={setCurrentWorkspace}
               disabled={!setSettings}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]/80 disabled:opacity-50"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               Set Current Workspace
             </button>
             <button
               onClick={validateWorkspace}
               disabled={validatingWorkspace}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]/80 disabled:opacity-50"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               {validatingWorkspace ? 'Validating' : 'Validate Workspace'}
             </button>
@@ -439,7 +439,7 @@ export function ProductionReadinessPanel({
           </div>
         </div>
         {!workspaceRoot && (
-          <div className="mt-4 rounded-2xl border border-[var(--warning)]/20 bg-[var(--warning-dim)] p-3 text-sm text-[var(--warning)]">
+          <div className="mt-4 rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-sm text-[var(--warning)]">
             Workspace root is not configured yet. Production readiness and self-development scans are setup-required until Alphonso knows the repo path.
           </div>
         )}
@@ -476,13 +476,13 @@ export function ProductionReadinessPanel({
           {Array.isArray(report?.liveBlockers) && report.liveBlockers.length > 0 ? (
             <div className="space-y-2">
               {report.liveBlockers.map((blocker: string) => (
-                <div key={blocker} className="rounded-2xl border border-[var(--error)]/20 bg-[var(--error-dim)] px-3 py-2 text-sm text-[var(--error)]">
+                <div key={blocker} className="rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2 text-sm text-[var(--error)]">
                   {blocker}
                 </div>
               ))}
             </div>
           ) : blockersLookClear ? (
-            <div className="rounded-2xl border border-[var(--success)]/20 bg-[var(--success-dim)] px-3 py-2 text-sm text-[var(--success)]">
+            <div className="rounded-2xl border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-2 text-sm text-[var(--success)]">
               No live blockers in the latest audit snapshot (workspace validated).
             </div>
           ) : (

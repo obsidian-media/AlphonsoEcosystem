@@ -227,7 +227,7 @@ function PrereqPanel({ prereqs, onInstall, installing }: PrereqPanelProps) {
   if (!prereqs || prereqs.missing.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] p-4 flex flex-col gap-3">
+    <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <AlertTriangle size={14} className="text-[var(--warning)] shrink-0" />
         <span className="text-[var(--warning)] text-sm font-semibold">Missing Prerequisites</span>
@@ -737,7 +737,7 @@ export default function RuntimeManagerView() {
       </div>
 
       {!isTauri && (
-        <div className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-4 py-3 text-xs text-[var(--warning)]">
+        <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-4 py-3 text-xs text-[var(--warning)]">
           <span className="font-semibold">Desktop app required.</span> Runtime installation and control only works in the Alphonso desktop app (Tauri). Download from GitHub Releases.
         </div>
       )}
@@ -746,8 +746,8 @@ export default function RuntimeManagerView() {
         <div
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border ${
             actionMsg.isError
-              ? 'bg-[var(--error-dim)] border-[var(--error)]/40 text-[var(--error)]'
-              : 'bg-[var(--success-dim)] border-[var(--success)]/40 text-[var(--success)]'
+              ? 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'
+              : 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'
           }`}
         >
           {actionMsg.isError ? (
@@ -782,7 +782,7 @@ export default function RuntimeManagerView() {
       )}
 
       {error && (
-        <div className="flex items-center gap-2 text-[var(--error)] text-sm px-4 py-3 bg-[var(--error-dim)] border border-[var(--error)]/40 rounded-xl">
+        <div className="flex items-center gap-2 text-[var(--error)] text-sm px-4 py-3 bg-[var(--error-dim)] border border-[var(--error-border)] rounded-xl">
           <AlertCircle size={14} /> {error}
         </div>
       )}

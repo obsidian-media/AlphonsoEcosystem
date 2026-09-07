@@ -49,7 +49,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
               i < currentStep
                 ? 'bg-[var(--success)] text-[var(--surface-0)]'
                 : i === currentStep
-                  ? 'bg-[var(--accent)] text-[var(--surface-0)] ring-2 ring-[var(--accent)]/30'
+                  ? 'bg-[var(--accent)] text-[var(--surface-0)] ring-2 ring-[var(--accent-border)]'
                   : 'bg-[var(--surface-3)] text-[var(--text-3)]'
             }`}
           >
@@ -267,11 +267,11 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
 
   const statusConfig: Record<OllamaCheckStatus, { dot: string; text: string; border: string }> = {
     checking:     { dot: 'bg-[var(--text-4)] animate-pulse', text: 'text-[var(--text-3)]',    border: 'border-white/[0.06] bg-[var(--surface-1)/0.4]' },
-    connected:    { dot: 'bg-[var(--success)]',        text: 'text-[var(--success)]', border: 'border-[var(--success)]/30 bg-[var(--success-dim)]' },
-    no_models:    { dot: 'bg-[var(--warning)]',        text: 'text-[var(--warning)]', border: 'border-[var(--warning)]/30 bg-[var(--warning-dim)]' },
-    not_running:  { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error)]/30 bg-[var(--error-dim)]' },
-    not_installed:{ dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error)]/30 bg-[var(--error-dim)]' },
-    error:        { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error)]/30 bg-[var(--error-dim)]' },
+    connected:    { dot: 'bg-[var(--success)]',        text: 'text-[var(--success)]', border: 'border-[var(--success-border)] bg-[var(--success-dim)]' },
+    no_models:    { dot: 'bg-[var(--warning)]',        text: 'text-[var(--warning)]', border: 'border-[var(--warning-border)] bg-[var(--warning-dim)]' },
+    not_running:  { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error-border)] bg-[var(--error-dim)]' },
+    not_installed:{ dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error-border)] bg-[var(--error-dim)]' },
+    error:        { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error-border)] bg-[var(--error-dim)]' },
   };
   const cfg = statusConfig[status] || statusConfig.checking;
 
@@ -432,13 +432,13 @@ function PickModelStep({ onNext }: { onNext: (model: string) => void }) {
       )}
 
       {error && !loading && (
-        <div className="rounded-xl border border-[var(--error)]/30 bg-[var(--error-dim)] px-4 py-3 text-xs text-[var(--error)] mb-4">
+        <div className="rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] px-4 py-3 text-xs text-[var(--error)] mb-4">
           Could not load models: {error}
         </div>
       )}
 
       {!loading && !error && models.length === 0 && (
-        <div className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-4 py-3 mb-4">
+        <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-4 py-3 mb-4">
           <div className="text-xs font-semibold text-[var(--warning)] mb-1">No models installed</div>
           <div className="text-[11px] text-[var(--text-3)] mb-3">
             Download the recommended model or run{' '}
@@ -547,7 +547,7 @@ function ApprovalModeStep({ onNext }: { onNext: () => void }) {
           onClick={() => setApprovalMode(true)}
           className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
             approvalMode
-              ? 'border-[var(--success)]/50 bg-[var(--success-dim)] ring-1 ring-[var(--success)]/20'
+              ? 'border-[var(--success-border)] bg-[var(--success-dim)] ring-1 ring-[var(--success-border)]'
               : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
           }`}
         >
@@ -564,7 +564,7 @@ function ApprovalModeStep({ onNext }: { onNext: () => void }) {
           onClick={() => setApprovalMode(false)}
           className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
             !approvalMode
-              ? 'border-[var(--warning)]/50 bg-[var(--warning-dim)] ring-1 ring-[var(--warning)]/20'
+              ? 'border-[var(--warning-border)] bg-[var(--warning-dim)] ring-1 ring-[var(--warning-border)]'
               : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
           }`}
         >
@@ -808,7 +808,7 @@ function ConnectChannelStep({ onNext }: { onNext: () => void }) {
                 onClick={() => setSelected(id)}
                 className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 text-left transition-all ${
                   isSelected
-                    ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] ring-1 ring-[var(--accent)]/20'
+                    ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
                     : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10 hover:bg-[var(--surface-2)/0.6]'
                 }`}
               >
@@ -969,7 +969,7 @@ function AdvancedServicesStep({ onNext }: { onNext: () => void }) {
 function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinish: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[var(--success-dim)] border border-[var(--success)]/20 flex items-center justify-center mb-6">
+      <div className="w-16 h-16 rounded-2xl bg-[var(--success-dim)] border border-[var(--success-border)] flex items-center justify-center mb-6">
         <Zap className="w-8 h-8 text-[var(--success)]" />
       </div>
       <h2 className="text-xl font-bold text-white mb-3">You're ready</h2>
@@ -986,7 +986,7 @@ function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinis
 
       <button
         onClick={onFinish}
-        className="flex items-center gap-2 px-6 py-3 bg-[var(--success)] hover:bg-[var(--success)]/90 text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
+        className="flex items-center gap-2 px-6 py-3 bg-[var(--success)] hover:bg-[var(--success-dim)] text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
       >
         Start chatting <ArrowRight className="w-4 h-4" />
       </button>
@@ -1008,9 +1008,9 @@ export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: s
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--surface-0)]">
-      <div className="absolute inset-0 bg-[var(--accent)]/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-[var(--accent-dim)] pointer-events-none" />
       <div className="relative w-full max-w-md mx-4">
-        <div className="rounded-2xl border border-white/[0.06] bg-[var(--surface-1)]/90 backdrop-blur-xl shadow-2xl p-8">
+        <div className="rounded-2xl border border-white/[0.06] bg-[var(--surface-1)] backdrop-blur-xl shadow-2xl p-8">
           {/* Brand header */}
           <div className="flex items-center gap-3 mb-6">
             <div className="w-9 h-9 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-[var(--shadow-glow-accent)]">

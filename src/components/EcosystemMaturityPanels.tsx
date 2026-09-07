@@ -266,7 +266,7 @@ export function MemoryConfidencePanel() {
         </select>
         <input value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} placeholder="Filter by project/source text" className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]" />
       </div>
-      <div className="mt-3 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]/90">
+      <div className="mt-3 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
         SQLite durable memory is now the preferred store in the Tauri app. If SQLite is unavailable in browser preview, this panel falls back to localStorage. Semantic/vector memory remains setup_required.
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
@@ -281,7 +281,7 @@ export function MemoryConfidencePanel() {
             <div>Expired: {String(durableStatus?.expiredCount ?? 0)}</div>
             <div>Path: <span className="text-[var(--text-3)]">{String(durableStatus?.path || 'not available')}</span></div>
           </div>
-          {migrationProof && <div className="mt-2 text-[var(--accent)]/90">Last migration: requested {migrationProof.requested}, wrote {migrationProof.written}.</div>}
+          {migrationProof && <div className="mt-2 text-[var(--accent)]">Last migration: requested {migrationProof.requested}, wrote {migrationProof.written}.</div>}
           {migrationError && <div className="mt-2 text-[var(--error)]">{migrationError}</div>}
         </div>
         <div className="flex flex-col gap-2">
@@ -346,7 +346,7 @@ export function EcosystemMapPanel({ ollamaStatus }: { ollamaStatus?: { label?: s
           <Relationship text="Memory connects to all agents through local ledgers." />
         </div>
       </div>
-      <div className="mt-3 rounded-xl border border-[var(--warning)]/15 bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]/90">
+      <div className="mt-3 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--warning)]">
         Visual foundation - live graph routing remains setup_required. Counts come from current local packets, workflow records, memory records, and runtime status.
       </div>
     </Panel>
@@ -397,10 +397,10 @@ export function SessionIntelligencePanel() {
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]/90">
+          <div className="rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] p-3 text-[11px] text-[var(--accent)]">
             Export report remains a local reporting flow until file export is added end-to-end. This panel uses real local session events when available.
           </div>
-          <button onClick={() => setEvents(listSessionEvents())} className="rounded-lg bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)]/80">Refresh Session</button>
+          <button onClick={() => setEvents(listSessionEvents())} className="rounded-lg bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)]">Refresh Session</button>
         </div>
       </div>
     </Panel>
@@ -480,7 +480,7 @@ export function WorkflowOperationsPanel() {
                 </React.Fragment>
               ))}
             </div>
-            <div className="mt-2 rounded-lg border border-[var(--warning)]/15 bg-[var(--warning-dim)] px-2 py-1 text-[10px] text-[var(--warning)]/90">
+            <div className="mt-2 rounded-lg border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2 py-1 text-[10px] text-[var(--warning)]">
               Needs setup: {(workflow.setupRequired || []).join(' ')}
             </div>
             <div className="mt-2 flex gap-2">
@@ -578,8 +578,8 @@ function ActionReceipt({ log }: { log: any }) {
       </div>
       {(stdout || stderr) && (
         <div className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
-          {stdout && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-[var(--success)]/90">{String(stdout).slice(0, 800)}</pre>}
-          {stderr && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-[var(--error)]/90">{String(stderr).slice(0, 800)}</pre>}
+          {stdout && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-[var(--success)]">{String(stdout).slice(0, 800)}</pre>}
+          {stderr && <pre className="max-h-24 overflow-auto rounded-lg bg-black/30 p-2 text-[10px] text-[var(--error)]">{String(stderr).slice(0, 800)}</pre>}
         </div>
       )}
     </div>
@@ -702,7 +702,7 @@ function PreviewBlock({ label, value, placeholder }: { label: string; value: str
     <div className={`rounded-lg border p-3 ${placeholder ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]' : 'border-[var(--border)] bg-black/20'}`}>
       <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{label}</div>
       <pre className="mt-2 whitespace-pre-wrap text-[11px] text-[var(--text-2)]">{value}</pre>
-      {placeholder && <div className="mt-2 text-[10px] text-[var(--accent)]/70">preview not yet wired</div>}
+      {placeholder && <div className="mt-2 text-[10px] text-[var(--accent)]">preview not yet wired</div>}
     </div>
   );
 }
@@ -796,10 +796,10 @@ function iconClass(tone: string) {
 function badgeClass(color: string) {
   const colors: Record<string, string> = {
     zinc: 'bg-[var(--surface-3)] text-[var(--text-3)] border-[var(--border)]',
-    green: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success)]/20',
-    blue: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info)]/20',
-    amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning)]/20',
-    red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error)]/20',
+    green: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
+    blue: 'bg-[var(--info-dim)] text-[var(--info)] border-[var(--info-border)]',
+    amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
+    red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
     // agent-identity carve-out (OperatorModesPanel's per-agent Badge) — see agentTone
     indigo: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20',
     fuchsia: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20'
@@ -808,10 +808,10 @@ function badgeClass(color: string) {
 }
 
 function metricClass(tone: string) {
-  if (tone === 'green') return 'border-[var(--success)]/15 bg-[var(--success-dim)] text-[var(--success)]';
-  if (tone === 'red') return 'border-[var(--error)]/15 bg-[var(--error-dim)] text-[var(--error)]';
-  if (tone === 'amber') return 'border-[var(--warning)]/15 bg-[var(--warning-dim)] text-[var(--warning)]';
-  if (tone === 'blue') return 'border-[var(--info)]/15 bg-[var(--info-dim)] text-[var(--info)]';
+  if (tone === 'green') return 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]';
+  if (tone === 'red') return 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]';
+  if (tone === 'amber') return 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]';
+  if (tone === 'blue') return 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]';
   return 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-1)]';
 }
 

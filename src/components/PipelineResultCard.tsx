@@ -55,13 +55,13 @@ const AGENT_COLORS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
-  executed: { bg: 'bg-[var(--success-dim)]', text: 'text-[var(--success)]', border: 'border-[var(--success)]/20', icon: CheckCircle2 },
-  reported_to_jose: { bg: 'bg-[var(--success-dim)]', text: 'text-[var(--success)]', border: 'border-[var(--success)]/20', icon: CheckCircle2 },
-  pending_approval: { bg: 'bg-[var(--warning-dim)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning)]/20', icon: Clock },
-  approval_required: { bg: 'bg-[var(--warning-dim)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning)]/20', icon: Clock },
-  queued: { bg: 'bg-[var(--info-dim)]', text: 'text-[var(--info)]', border: 'border-[var(--info)]/20', icon: Clock },
-  failed: { bg: 'bg-[var(--error-dim)]', text: 'text-[var(--error)]', border: 'border-[var(--error)]/20', icon: XCircle },
-  dead_letter: { bg: 'bg-[var(--error-dim)]', text: 'text-[var(--error)]', border: 'border-[var(--error)]/20', icon: XCircle }
+  executed: { bg: 'bg-[var(--success-dim)]', text: 'text-[var(--success)]', border: 'border-[var(--success-border)]', icon: CheckCircle2 },
+  reported_to_jose: { bg: 'bg-[var(--success-dim)]', text: 'text-[var(--success)]', border: 'border-[var(--success-border)]', icon: CheckCircle2 },
+  pending_approval: { bg: 'bg-[var(--warning-dim)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning-border)]', icon: Clock },
+  approval_required: { bg: 'bg-[var(--warning-dim)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning-border)]', icon: Clock },
+  queued: { bg: 'bg-[var(--info-dim)]', text: 'text-[var(--info)]', border: 'border-[var(--info-border)]', icon: Clock },
+  failed: { bg: 'bg-[var(--error-dim)]', text: 'text-[var(--error)]', border: 'border-[var(--error-border)]', icon: XCircle },
+  dead_letter: { bg: 'bg-[var(--error-dim)]', text: 'text-[var(--error)]', border: 'border-[var(--error-border)]', icon: XCircle }
 };
 
 interface StatusBadgeProps {
@@ -127,7 +127,7 @@ function AgentCard({ receipt, onRetry }: AgentCardProps) {
         </div>
         <div className="text-[11px] text-[var(--text-3)] mt-1 truncate">{receipt.actionType || receipt.eventType}</div>
         {isFailed && receipt.reason && (
-          <div className="text-[10px] text-[var(--error)]/70 mt-0.5 truncate">Error: {receipt.reason}</div>
+          <div className="text-[10px] text-[var(--error)] mt-0.5 truncate">Error: {receipt.reason}</div>
         )}
       </div>
     </div>
@@ -226,7 +226,7 @@ function GeneratedImageCard({ img, index, outputFolder }: GeneratedImageCardProp
   };
 
   return (
-    <div className={`p-2 rounded-lg border ${img.status === 'generated' ? 'bg-[var(--success-dim)] border-[var(--success)]/20' : 'bg-[var(--error-dim)] border-[var(--error)]/20'}`}>
+    <div className={`p-2 rounded-lg border ${img.status === 'generated' ? 'bg-[var(--success-dim)] border-[var(--success-border)]' : 'bg-[var(--error-dim)] border-[var(--error-border)]'}`}>
       {img.status === 'generated' ? (
         <>
           {img.previewBase64 && (
@@ -245,19 +245,19 @@ function GeneratedImageCard({ img, index, outputFolder }: GeneratedImageCardProp
             <button
               onClick={handleSave}
               disabled={saving || !!savedPath}
-              className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--success)] hover:text-[var(--success)]/80 disabled:opacity-50 transition-colors"
+              className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--success)] hover:text-[var(--success)] disabled:opacity-50 transition-colors"
             >
               <Download className="w-3 h-3" />
               {savedPath ? 'Saved' : saving ? 'Saving…' : 'Save to Folder'}
             </button>
           )}
-          {savedPath && <div className="text-[9px] text-[var(--success)]/70 font-mono mt-0.5 break-all">{savedPath}</div>}
+          {savedPath && <div className="text-[9px] text-[var(--success)] font-mono mt-0.5 break-all">{savedPath}</div>}
         </>
       ) : (
         <div className="text-[11px] text-[var(--error)]">
           <div className="font-medium">Generation failed</div>
           <div className="text-[10px] text-[var(--text-3)] mt-0.5 truncate">{img.prompt}</div>
-          <div className="text-[10px] text-[var(--error)]/70 mt-0.5">{img.error || 'ComfyUI may be offline. Start it from Settings → Local Services, or paste the prompt above into ComfyUI manually.'}</div>
+          <div className="text-[10px] text-[var(--error)] mt-0.5">{img.error || 'ComfyUI may be offline. Start it from Settings → Local Services, or paste the prompt above into ComfyUI manually.'}</div>
         </div>
       )}
     </div>
@@ -440,7 +440,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
             <button
               type="button"
               onClick={copySummary}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-2)] transition-all hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]/80 hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-3)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-2)] transition-all hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
               aria-label="Copy summary"
               data-testid="jose-copy-summary-button"
             >
@@ -451,7 +451,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
               type="button"
               onClick={() => { if (commandText) onRerunCommand?.(commandText); }}
               disabled={!commandText || !onRerunCommand}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:bg-[var(--accent-dim)]/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/40"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-border)] hover:bg-[var(--accent-dim)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
               aria-label="Rerun command"
               data-testid="jose-rerun-command-button"
             >
@@ -471,7 +471,7 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
         <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)]">Summary</div>
         <div className="mt-1.5 text-[12px] leading-relaxed text-[var(--text-2)]">{summary}</div>
         {url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent-dim)]/80 hover:text-[var(--accent-hover)]">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent-dim)] hover:text-[var(--accent-hover)]">
             <ExternalLink className="w-3 h-3" />
             View Result
           </a>
@@ -479,21 +479,21 @@ export function PipelineResultCard({ result, commandText, onRetryAgent, onRerunC
       </div>
 
       <div className="grid grid-cols-1 gap-2 border-b border-[var(--border)] px-4 py-3 sm:grid-cols-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--success)]/15 bg-[var(--success-dim)] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-2">
           <CheckCircle2 className="w-4 h-4 text-[var(--success)] shrink-0" />
           <div className="min-w-0">
             <div className="text-[12px] font-semibold text-[var(--text-1)]">{executedCount}</div>
             <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-3)]">Executed</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--warning)]/15 bg-[var(--warning-dim)] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-2">
           <Clock className="w-4 h-4 text-[var(--warning)] shrink-0" />
           <div className="min-w-0">
             <div className="text-[12px] font-semibold text-[var(--text-1)]">{pendingCount}</div>
             <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-3)]">Pending</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--error)]/15 bg-[var(--error-dim)] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2">
           <XCircle className="w-4 h-4 text-[var(--error)] shrink-0" />
           <div className="min-w-0">
             <div className="text-[12px] font-semibold text-[var(--text-1)]">{failedCount}</div>

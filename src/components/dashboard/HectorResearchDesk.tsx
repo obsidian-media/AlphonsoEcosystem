@@ -199,7 +199,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Research Question</label>
                 <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="What do you want Hector to research?"
-                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none focus:border-[var(--agent-hector)]/40" />
+                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none focus:border-[var(--agent-hector-glow)]" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source Type</label>
@@ -211,7 +211,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-3)] mb-1.5">Source URLs <span className="text-[var(--text-4)] normal-case font-normal">(optional, one per line)</span></label>
                 <textarea value={sourceUrls} onChange={(e) => setSourceUrls(e.target.value)} rows={3} placeholder="Leave blank for Hector to discover sources, or add specific URLs here."
-                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none focus:border-[var(--agent-hector)]/40" />
+                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none focus:border-[var(--agent-hector-glow)]" />
               </div>
               <button onClick={createDraft} disabled={!question.trim()} className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed">Create Research Draft</button>
             </div>
@@ -241,7 +241,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
           <div className="space-y-4">
             {reports.length === 0 ? (
               <div className="card py-12 text-center space-y-4">
-                <BookOpen className="mx-auto h-8 w-8 text-[var(--agent-hector)]/50" />
+                <BookOpen className="mx-auto h-8 w-8 text-[var(--agent-hector)]" />
                 <div>
                   <p className="text-[13px] font-semibold text-[var(--text-2)]">No research reports yet</p>
                   <p className="mt-1 text-[11px] text-[var(--text-3)]">Create a research draft to get started.</p>
@@ -257,7 +257,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                       const rr = report as Record<string, unknown>;
                       return (
                         <button key={rr.id as string} onClick={() => setSelectedId(rr.id as string)}
-                          className={`w-full rounded-xl border p-3 text-left transition-colors ${selectedReport && (selectedReport as { id: string }).id === rr.id ? 'border-[var(--agent-hector)]/30 bg-[var(--agent-hector)]/10' : 'border-white/[0.06] bg-[var(--surface-1)] hover:bg-[var(--surface-2)]'}`}>
+                          className={`w-full rounded-xl border p-3 text-left transition-colors ${selectedReport && (selectedReport as { id: string }).id === rr.id ? 'border-[var(--agent-hector-glow)] bg-[var(--agent-hector)]' : 'border-white/[0.06] bg-[var(--surface-1)] hover:bg-[var(--surface-2)]'}`}>
                           <div className="text-[12px] font-medium text-[var(--text-2)] line-clamp-2">{String(rr.researchQuestion ?? '')}</div>
                           <div className="mt-1 text-[11px] text-[var(--text-4)]">{String(rr.status ?? '')} · {String(rr.confidenceLevel ?? '')}</div>
                         </button>
@@ -274,7 +274,7 @@ export function HectorResearchDesk({ onHectorStateChange }: Props): React.JSX.El
                       <Download className="h-3.5 w-3.5" /> Export
                     </button>
                   </div>
-                  {fetchError && <div className="rounded-xl border border-[var(--error)]/20 bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">{fetchError}</div>}
+                  {fetchError && <div className="rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">{fetchError}</div>}
                   <SourceBoard report={selectedReport as never} />
                   <CitationPanel report={selectedReport as never} />
                   <ResearchReportPanel report={selectedReport as never} />

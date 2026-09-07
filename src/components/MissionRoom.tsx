@@ -40,17 +40,17 @@ function agentTone(accent: string) {
 }
 
 function statusTone(status: string) {
-  if (status === 'approved') return 'border-[var(--success)]/30 bg-[var(--success-dim)] text-[var(--success)]';
+  if (status === 'approved') return 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]';
   if (status === 'review') return 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]';
-  if (status === 'doing') return 'border-[var(--warning)]/30 bg-[var(--warning-dim)] text-[var(--warning)]';
-  if (status === 'blocked') return 'border-[var(--error)]/30 bg-[var(--error-dim)] text-[var(--error)]';
+  if (status === 'doing') return 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]';
+  if (status === 'blocked') return 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]';
   return 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-2)]';
 }
 
 function riskTone(riskLevel: string) {
-  if (riskLevel === 'high') return 'border-[var(--error)]/40 bg-[var(--error-dim)] text-[var(--error)]';
-  if (riskLevel === 'medium') return 'border-[var(--warning)]/40 bg-[var(--warning-dim)] text-[var(--warning)]';
-  return 'border-[var(--success)]/30 bg-[var(--success-dim)] text-[var(--success)]';
+  if (riskLevel === 'high') return 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]';
+  if (riskLevel === 'medium') return 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]';
+  return 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]';
 }
 
 function speakerIcon(speaker: string) {
@@ -142,18 +142,18 @@ function MessageBubble({ message }: { message: Message }) {
           {message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
         </span>
       </div>
-      <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-1)]/90">{message.content}</div>
+      <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-1)]">{message.content}</div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className={cx('rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-widest', riskTone(message.riskLevel || 'low'))}>
           {message.riskLevel || 'low'} risk
         </span>
         {message.approvalRequired && (
-          <span className="rounded-full border border-[var(--error)]/25 bg-[var(--error-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--error)]">
+          <span className="rounded-full border border-[var(--error-border)] bg-[var(--error-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--error)]">
             approval required
           </span>
         )}
         {message.metadata?.secretRedacted && (
-          <span className="rounded-full border border-[var(--warning)]/25 bg-[var(--warning-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--warning)]">
+          <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--warning)]">
             secret redacted
           </span>
         )}
@@ -194,7 +194,7 @@ function TaskCard({ task, onUpdate }: { task: Task; onUpdate: (taskId: string, p
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className={cx('rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-widest', riskTone(task.riskLevel || 'low'))}>{task.riskLevel || 'low'} risk</span>
-        {task.approvalRequired && <span className="rounded-full border border-[var(--error)]/25 bg-[var(--error-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--error)]">approval required</span>}
+        {task.approvalRequired && <span className="rounded-full border border-[var(--error-border)] bg-[var(--error-dim)] px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--error)]">approval required</span>}
       </div>
       {task.acceptance && <div className="mt-3 text-xs leading-relaxed text-[var(--text-3)]"><b className="text-[var(--text-2)]">Acceptance:</b> {task.acceptance}</div>}
       {task.proof && <div className="mt-2 text-xs leading-relaxed text-[var(--text-3)]"><b className="text-[var(--text-2)]">Proof:</b> {task.proof}</div>}
@@ -389,7 +389,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
                 <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Hermes tasking</div>
                 <div className="mt-1 text-sm font-semibold text-white">Create worker assignment</div>
               </div>
-              <Plus className="h-5 w-5 text-[var(--accent)]/70" />
+              <Plus className="h-5 w-5 text-[var(--accent)]" />
             </div>
             <input
               value={taskTitle}
@@ -403,14 +403,14 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
               placeholder="Acceptance criteria / proof needed"
               className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[var(--text-1)] outline-none placeholder:text-[var(--text-4)]"
             />
-            <button type="button" onClick={createTask} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)]/70">
+            <button type="button" onClick={createTask} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--accent)] hover:bg-[var(--accent-dim)]">
               <Hammer className="h-4 w-4" /> Assign to Hermes
             </button>
           </div>
 
           <div className="rounded-[2rem] border border-white/10 bg-[var(--surface-1)] p-4">
             <div className="flex items-center gap-3">
-              <LockKeyhole className="h-5 w-5 text-[var(--warning)]/80" />
+              <LockKeyhole className="h-5 w-5 text-[var(--warning)]" />
               <div>
                 <div className="text-sm font-black text-white">Approval gate</div>
                 <div className="text-xs text-[var(--text-3)]">Publish / external / destructive actions require Shayan. Open flags: {approvalRequiredCount}</div>
@@ -419,15 +419,15 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             <button
               type="button"
               onClick={() => onCreateApprovalRequest?.({ source: 'mission-room', actionType: 'external_worker_action', riskLevel: 'high', summary: 'Mission Room approval placeholder' })}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--warning)]/20 bg-[var(--warning-dim)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--warning)] hover:bg-[var(--warning-dim)]/70"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-4 py-3 text-xs font-black uppercase tracking-widest text-[var(--warning)] hover:bg-[var(--warning-dim)]"
             >
               <Shield className="h-4 w-4" /> Approval placeholder
             </button>
           </div>
 
-          <div className="rounded-[2rem] border border-[var(--error)]/15 bg-[var(--error-dim)]/50 p-4">
+          <div className="rounded-[2rem] border border-[var(--error-border)] bg-[var(--error-dim)] p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--error)]/80" />
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--error)]" />
               <div>
                 <div className="text-sm font-black text-white">Security model</div>
                 <div className="mt-1 text-xs leading-relaxed text-[var(--text-3)]">Bulletproof means layered and honest: this v1 is a local guardrail, not a tamper-proof security boundary.</div>
@@ -435,10 +435,10 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             </div>
             <div className="mt-3 space-y-2">
               {MISSION_ROOM_SECURITY_MODEL.guarantees.map((item) => (
-                <div key={item} className="rounded-2xl border border-[var(--success)]/10 bg-[var(--success-dim)]/50 p-2 text-[11px] leading-relaxed text-[var(--success)]/80">✓ {item}</div>
+                <div key={item} className="rounded-2xl border border-[var(--success-border)] bg-[var(--success-dim)] p-2 text-[11px] leading-relaxed text-[var(--success)]">✓ {item}</div>
               ))}
               {MISSION_ROOM_SECURITY_MODEL.nonGuarantees.slice(0, 2).map((item) => (
-                <div key={item} className="rounded-2xl border border-[var(--warning)]/10 bg-[var(--warning-dim)]/50 p-2 text-[11px] leading-relaxed text-[var(--warning)]/80">! {item}</div>
+                <div key={item} className="rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-2 text-[11px] leading-relaxed text-[var(--warning)]">! {item}</div>
               ))}
             </div>
           </div>
@@ -468,7 +468,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             <div className="mt-1 text-sm text-[var(--text-3)]">Local board for Hermes assignments and Kite review.</div>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-3)]">
-            <CheckCircle2 className="h-4 w-4 text-[var(--success)]/70" /> Evidence first
+            <CheckCircle2 className="h-4 w-4 text-[var(--success)]" /> Evidence first
           </div>
         </div>
         {tasks.length === 0 ? (
@@ -488,7 +488,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-3)]">Security audit trail</div>
             <div className="mt-1 text-sm text-[var(--text-3)]">Local hash-chained events for messages, task changes, redactions, and approval flags.</div>
           </div>
-          <Shield className="h-5 w-5 text-[var(--accent)]/70" />
+          <Shield className="h-5 w-5 text-[var(--accent)]" />
         </div>
         {securityEvents.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-[var(--text-3)]">No security events yet.</div>
@@ -509,7 +509,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="rounded-3xl border border-[var(--success)]/15 bg-[var(--success-dim)] p-4 text-[var(--success)]">
+        <div className="rounded-3xl border border-[var(--success-border)] bg-[var(--success-dim)] p-4 text-[var(--success)]">
           <Crown className="h-5 w-5" />
           <div className="mt-2 text-sm font-black text-white">Shayan decides</div>
           <div className="mt-1 text-xs leading-relaxed opacity-75">Final approval before public actions or sensitive access.</div>
@@ -519,7 +519,7 @@ export function MissionRoom({ onCreateApprovalRequest }: Props) {
           <div className="mt-2 text-sm font-black text-white">Kite commands</div>
           <div className="mt-1 text-xs leading-relaxed opacity-75">Planning, QA, handoffs, truth checks, and risk flags.</div>
         </div>
-        <div className="rounded-3xl border border-[var(--warning)]/15 bg-[var(--warning-dim)] p-4 text-[var(--warning)]">
+        <div className="rounded-3xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4 text-[var(--warning)]">
           <ExternalLink className="h-5 w-5" />
           <div className="mt-2 text-sm font-black text-white">Hermes executes</div>
           <div className="mt-1 text-xs leading-relaxed opacity-75">External work comes back here as evidence, not unchecked claims.</div>

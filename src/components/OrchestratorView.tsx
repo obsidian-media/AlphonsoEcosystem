@@ -670,7 +670,7 @@ export function OrchestratorView({
             onClick={() => setOrchTab(tab.id)}
             className={`rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
               orchTab === tab.id
-                ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning)]/30'
+                ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning-border)]'
                 : 'text-[var(--text-3)] hover:text-[var(--text-2)] border border-transparent'
             }`}
           >
@@ -702,12 +702,12 @@ export function OrchestratorView({
                   value={joseCommandText}
                   onChange={(e) => setJoseCommandText(e.target.value)}
                   rows={4}
-                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm leading-relaxed text-[var(--text-1)] outline-none focus:border-[var(--warning)]/40 placeholder:text-[var(--text-4)]"
+                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm leading-relaxed text-[var(--text-1)] outline-none focus:border-[var(--warning-border)] placeholder:text-[var(--text-4)]"
                   placeholder="Describe what you want Jose to coordinate…"
                 />
                 <button
                   onClick={distributeUserCommand}
-                  className="rounded-xl border border-[var(--warning)]/40 bg-[var(--warning-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors"
+                  className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors"
                 >
                   Send to Jose
                 </button>
@@ -737,7 +737,7 @@ export function OrchestratorView({
                 <input
                   value={routeTitle}
                   onChange={(e) => setRouteTitle(e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none focus:border-[var(--warning)]/40"
+                  className="w-full rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--text-1)] outline-none focus:border-[var(--warning-border)]"
                 />
                 <select
                   aria-label="Route target"
@@ -754,7 +754,7 @@ export function OrchestratorView({
                   <option value={AGENTS.SENTINEL}>Sentinel — security</option>
                   <option value={AGENTS.NOVA}>Nova — opportunity</option>
                 </select>
-                <button onClick={createRoutingPacket} className="w-full rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors">
+                <button onClick={createRoutingPacket} className="w-full rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--warning)] hover:opacity-90 transition-colors">
                   Create Supervised Route
                 </button>
               </div>
@@ -804,7 +804,7 @@ export function OrchestratorView({
           ) : (
             <div className="space-y-2">
               {approvalQueue.map((packet) => (
-                <div key={packet.id} className="rounded-xl border border-[var(--warning)]/25 bg-[var(--warning-dim)] p-4">
+                <div key={packet.id} className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-[var(--text-1)]">{packet.title}</div>
@@ -842,7 +842,7 @@ export function OrchestratorView({
                 <button onClick={() => setExecutionResults([])} className="text-[10px] text-[var(--text-4)] hover:text-[var(--text-3)]">Clear</button>
               </div>
               {executionResults.map((r) => (
-                <div key={r.id + r.ts} className={`rounded-xl border p-3 ${r.ok ? 'border-[var(--success)]/25 bg-[var(--success-dim)]' : 'border-[var(--error)]/25 bg-[var(--error-dim)]'}`}>
+                <div key={r.id + r.ts} className={`rounded-xl border p-3 ${r.ok ? 'border-[var(--success-border)] bg-[var(--success-dim)]' : 'border-[var(--error-border)] bg-[var(--error-dim)]'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className={`text-[11px] font-semibold ${r.ok ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
                       {r.ok ? (r.setupRequired ? 'Queued' : 'Success') : 'Failed'}
@@ -902,7 +902,7 @@ export function OrchestratorView({
                       <NeutralBtn onClick={() => confirmCommand(command.id)}>Confirm &amp; Report</NeutralBtn>
                     </div>
                     {command.userReport && (
-                      <div className="mt-2 rounded-lg border border-[var(--success)]/25 bg-[var(--success-dim)] p-2.5 text-[11px] text-[var(--text-2)]">
+                      <div className="mt-2 rounded-lg border border-[var(--success-border)] bg-[var(--success-dim)] p-2.5 text-[11px] text-[var(--text-2)]">
                         {command.userReport.summary}
                       </div>
                     )}
@@ -968,7 +968,7 @@ export function OrchestratorView({
                     {row.toStatus === 'dead_letter' && (
                       <button
                         onClick={() => { replayPacketFromDeadLetter(row.packetId, 'Manual replay.'); refreshAll(); }}
-                        className="mt-1.5 rounded border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)]"
+                        className="mt-1.5 rounded border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)]"
                       >
                         Replay
                       </button>
@@ -1001,7 +1001,7 @@ export function OrchestratorView({
                 <button onClick={runRetrySweep} className="rounded-xl border border-white/[0.08] bg-[var(--surface-1)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
                   Retry Sweep
                 </button>
-                <button onClick={recordDecision} className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--warning)] hover:opacity-90 transition-colors">
+                <button onClick={recordDecision} className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-2 text-[10px] font-semibold tracking-wider text-[var(--warning)] hover:opacity-90 transition-colors">
                   Record Snapshot
                 </button>
               </div>
@@ -1030,9 +1030,9 @@ export function OrchestratorView({
               : (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {deadLetters.slice().reverse().slice(0, 8).map((item) => (
-                    <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl border border-[var(--error)]/25 bg-[var(--error-dim)] p-3 text-[11px] text-[var(--text-2)]">
+                    <div key={`${item.commandId}-${item.packetId}`} className="rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-[11px] text-[var(--text-2)]">
                       <div className="font-medium">{item.agent}: {item.title}</div>
-                      <div className="mt-0.5 text-[var(--error)]/70">{item.commandText}</div>
+                      <div className="mt-0.5 text-[var(--error)]">{item.commandText}</div>
                       <div className="mt-0.5 text-[var(--text-3)]">Retries: {item.retries || 0}</div>
                     </div>
                   ))}
@@ -1059,7 +1059,7 @@ function OCard({ label, children }: OCardProps): React.ReactElement {
 
 function ApproveBtn({ onClick, children }: ApproveBtnProps): React.ReactElement {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--success)]/25 bg-[var(--success)]/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--success)] hover:bg-[var(--success)]/15 transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--success-border)] bg-[var(--success-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--success)] hover:bg-[var(--success-dim)] transition-colors">
       {children}
     </button>
   );
@@ -1067,7 +1067,7 @@ function ApproveBtn({ onClick, children }: ApproveBtnProps): React.ReactElement 
 
 function RejectBtn({ onClick, children }: RejectBtnProps): React.ReactElement {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--error)]/25 bg-[var(--error)]/10 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--error)] hover:bg-[var(--error)]/15 transition-colors">
+    <button type="button" onClick={onClick} className="rounded-lg border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--error)] hover:bg-[var(--error-dim)] transition-colors">
       {children}
     </button>
   );

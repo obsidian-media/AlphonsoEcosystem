@@ -1006,7 +1006,7 @@ export function ChatView({
             />
             <button
               onClick={() => setDirectMode((d) => !d)}
-              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded border transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${directMode ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-white/5 text-[var(--text-4)] hover:text-[var(--text-2)]'}`}
+              className={`text-2xs flex items-center gap-1 px-2 py-0.5 rounded border transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${directMode ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-white/5 text-[var(--text-4)] hover:text-[var(--text-2)]'}`}
               aria-label={directMode ? `Direct mode on (${directAgent})` : 'Direct mode off'}
               title={directMode ? `Direct to ${directAgent} — bypasses Jose routing` : 'Enable direct agent mode'}
             >
@@ -1021,14 +1021,14 @@ export function ChatView({
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setSearchOpen((o) => !o); setSearchQuery(''); }}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded ${searchOpen ? 'text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--accent)]'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded ${searchOpen ? 'text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--accent)]'}`}
               aria-label={searchOpen ? 'Close search' : 'Open search'}
             >
               <Search className="w-3 h-3" />
             </button>
             <button
               onClick={() => setCompactChat((current) => !current)}
-              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded ${compactChat ? 'text-[var(--success)]' : 'text-[var(--text-3)] hover:text-[var(--success)]'}`}
+              className={`text-2xs flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded ${compactChat ? 'text-[var(--success)]' : 'text-[var(--text-3)] hover:text-[var(--success)]'}`}
               aria-label={compactChat ? 'Expand chat spacing' : 'Compact chat spacing'}
             >
               {compactChat ? <ChevronsUp className="w-3 h-3" /> : <ChevronsDown className="w-3 h-3" />}
@@ -1037,14 +1037,14 @@ export function ChatView({
             <button
               onClick={exportChat}
               disabled={messages.length === 0}
-              className="text-2xs text-[var(--text-3)] hover:text-[var(--accent)] flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded"
+              className="text-2xs text-[var(--text-3)] hover:text-[var(--accent)] flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded"
               aria-label="Export chat as Markdown"
             >
               <Download className="w-3 h-3" /> Export
             </button>
             <button
               onClick={clearChat}
-              className="text-2xs text-[var(--text-3)] hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded"
+              className="text-2xs text-[var(--text-3)] hover:text-red-400 flex items-center gap-1.5 transition-colors uppercase tracking-widest font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded"
               aria-label="Clear chat"
             >
               <Trash2 className="w-3 h-3" /> Clear
@@ -1064,7 +1064,7 @@ export function ChatView({
             {searchQuery && (
               <span className="text-2xs text-[var(--text-3)]">{visibleMessages.length} of {messages.length}</span>
             )}
-            <button onClick={() => setSearchQuery('')} className="text-[var(--text-4)] hover:text-[var(--text-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 rounded" aria-label="Clear search query">
+            <button onClick={() => setSearchQuery('')} className="text-[var(--text-4)] hover:text-[var(--text-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] rounded" aria-label="Clear search query">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1262,7 +1262,7 @@ export function ChatView({
                   <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
-                      className="p-1 rounded text-[var(--text-4)] hover:text-amber-400 hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+                      className="p-1 rounded text-[var(--text-4)] hover:text-amber-400 hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
                       aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
                       title={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin' : 'Pin'}
                     >
@@ -1274,7 +1274,7 @@ export function ChatView({
                         setCopiedMsgId(message.id);
                         setTimeout(() => setCopiedMsgId((id) => id === message.id ? null : id), 1500);
                       }}
-                      className="p-1 rounded text-[var(--text-4)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+                      className="p-1 rounded text-[var(--text-4)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
                       aria-label={copiedMsgId === message.id ? 'Copied' : 'Copy message to clipboard'}
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -1286,7 +1286,7 @@ export function ChatView({
                   <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--surface-0)] shadow-sm ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
                   <button
                     onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
-                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--surface-0)]/60 hover:text-[var(--surface-0)]"
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--surface-0)] hover:text-[var(--surface-0)]"
                     aria-label={pinnedMessages.some((p) => p.id === message.id) ? 'Unpin message' : 'Pin message'}
                   >
                     {pinnedMessages.some((p) => p.id === message.id) ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
@@ -1317,7 +1317,7 @@ export function ChatView({
                   const statusLabel = RECEIPT_STATUS_LABELS[receipt.status as string] ?? (receipt.status as string);
                   return (
                     <div key={receipt.id as string} className="flex items-center gap-2 text-xs">
-                      <span className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase tracking-widest ${receipt.status === 'reported_to_jose' || receipt.status === 'executed' ? 'bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success)]/20' : receipt.status === 'pending_approval' ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning)]/20' : receipt.status === 'dead_letter' || receipt.status === 'failed' ? 'bg-[var(--error-dim)] text-[var(--error)] border border-[var(--error)]/20' : 'bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]'}`}>{statusLabel}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase tracking-widest ${receipt.status === 'reported_to_jose' || receipt.status === 'executed' ? 'bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success-border)]' : receipt.status === 'pending_approval' ? 'bg-[var(--warning-dim)] text-[var(--warning)] border border-[var(--warning-border)]' : receipt.status === 'dead_letter' || receipt.status === 'failed' ? 'bg-[var(--error-dim)] text-[var(--error)] border border-[var(--error-border)]' : 'bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]'}`}>{statusLabel}</span>
                       <span className="text-[var(--text-1)] font-medium">{receipt.agent as string}</span>
                       <span className="text-[var(--text-3)] truncate">{(receipt.actionType || receipt.eventType) as string}</span>
                     </div>
@@ -1389,7 +1389,7 @@ export function ChatView({
                   <div className="flex items-center gap-2">
                     <Lightbulb className="w-4 h-4 text-[var(--accent)] shrink-0" />
                     <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-widest">Nova Insight</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.valueScore as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' : (novaInsight.valueScore as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]' : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'}`}>Score {novaInsight.valueScore as number}/100</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(novaInsight.valueScore as number) >= 80 ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' : (novaInsight.valueScore as number) >= 60 ? 'bg-[var(--warning-dim)] border-[var(--warning-border)] text-[var(--warning)]' : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)]'}`}>Score {novaInsight.valueScore as number}/100</span>
                   </div>
                   <button onClick={() => setNovaInsight(null)} className="text-[var(--text-4)] hover:text-[var(--text-2)] rounded"><X className="w-3.5 h-3.5" /></button>
                 </div>
@@ -1441,7 +1441,7 @@ export function ChatView({
 
       <div className={`${compactChat ? 'p-3' : 'p-5'} shrink-0 max-w-4xl mx-auto w-full`}>
         <div
-          className={`relative bg-[var(--surface-glass)] border rounded-2xl shadow-2xl backdrop-blur-xl group focus-within:border-[var(--accent-border)] focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-[var(--warning)]/30 border-dashed' : 'border-[var(--border)]'}`}
+          className={`relative bg-[var(--surface-glass)] border rounded-2xl shadow-2xl backdrop-blur-xl group focus-within:border-[var(--accent-border)] focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-[var(--warning-border)] border-dashed' : 'border-[var(--border)]'}`}
           onDragEnter={() => setIsDragging(true)}
           onDragLeave={() => setIsDragging(false)}
           onDragOver={(e) => e.preventDefault()}
@@ -1475,7 +1475,7 @@ export function ChatView({
           />
           <div className="px-4 pb-2">
             <div
-              className="flex items-start gap-2 rounded-xl border border-[var(--accent-border)]/30 bg-[var(--accent-dim)]/10 px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]"
+              className="flex items-start gap-2 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]"
               data-testid="jose-routing-explainer"
             >
               <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
@@ -1497,11 +1497,11 @@ export function ChatView({
           <div className="flex items-center gap-2 px-3 pb-3 pt-1">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
                 (attachedFile as { error?: string; name?: string } | null)?.error
-                  ? 'border-[var(--error)]/30 text-[var(--error)]'
+                  ? 'border-[var(--error-border)] text-[var(--error)]'
                   : (attachedFile as { error?: string; name?: string } | null)?.name
-                    ? 'border-[var(--success)]/30 text-[var(--success)]'
+                    ? 'border-[var(--success-border)] text-[var(--success)]'
                     : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
               }`}
               aria-label="Attach a file to your message"
@@ -1522,7 +1522,7 @@ export function ChatView({
             {isGenerating && (
               <button
                 onClick={handleAbortStream}
-                className="h-7 px-3 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest bg-[var(--surface-3)] text-[var(--error)] hover:bg-[var(--error-dim)] border border-[var(--error)]/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--error)]/50"
+                className="h-7 px-3 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest bg-[var(--surface-3)] text-[var(--error)] hover:bg-[var(--error-dim)] border border-[var(--error-border)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--error-border)]"
                 aria-label="Abort and stop"
               >
                 <Square className="w-3 h-3" />
@@ -1532,7 +1532,7 @@ export function ChatView({
             <button
               onClick={() => handleSend()}
               disabled={isGenerating || !inputValue.trim()}
-              className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+              className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
                 isGenerating || !inputValue.trim()
                   ? 'bg-[var(--surface-3)] text-[var(--text-4)] cursor-not-allowed opacity-50'
                   : 'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)] shadow-sm'
@@ -1586,7 +1586,7 @@ export function ChatView({
               </div>
               <button
                 onClick={() => setProactiveSuggestion(null)}
-                className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-4)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50"
+                className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-4)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
                 aria-label="Dismiss suggestion"
               >
                 <X className="w-3.5 h-3.5" />
@@ -1609,7 +1609,7 @@ export function ChatView({
                 <Keyboard className="w-5 h-5 text-[var(--text-2)]" />
                 <div className="text-sm font-semibold text-white">Keyboard Shortcuts</div>
               </div>
-              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50" aria-label="Close keyboard shortcuts">
+              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--text-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]" aria-label="Close keyboard shortcuts">
                 <X className="w-4 h-4" />
               </button>
             </div>

@@ -186,10 +186,10 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
   const live = isConnectorLive(connector);
 
   const statusConfig: Record<DisplayStatus, { label: string; dot: string; text: string; border: string }> = {
-    configured: { label: 'Active', dot: 'bg-[var(--success)]', text: 'text-[var(--success)]', border: 'border-[var(--success)]/30 bg-[var(--success-dim)]' },
+    configured: { label: 'Active', dot: 'bg-[var(--success)]', text: 'text-[var(--success)]', border: 'border-[var(--success-border)] bg-[var(--success-dim)]' },
     local_only: { label: 'Local', dot: 'bg-[var(--accent)]', text: 'text-[var(--accent)]', border: 'border-[var(--accent-border)] bg-[var(--accent-dim)]' },
     not_configured: { label: 'Not set up', dot: 'bg-[var(--text-4)]', text: 'text-[var(--text-3)]', border: 'border-white/10 bg-[var(--surface-1)]' },
-    error: { label: 'Error', dot: 'bg-[var(--warning)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning)]/30 bg-[var(--warning-dim)]' },
+    error: { label: 'Error', dot: 'bg-[var(--warning)]', text: 'text-[var(--warning)]', border: 'border-[var(--warning-border)] bg-[var(--warning-dim)]' },
   };
 
   const cfg = statusConfig[displayStatus] ?? statusConfig.not_configured;
@@ -206,7 +206,7 @@ function ConnectorCard({ connector, onVerifyEnv }: ConnectorCardProps): React.JS
           <span className={`text-[10px] font-medium ${cfg.text}`}>{cfg.label}</span>
         </div>
       </div>
-      {live && <div className="mt-2 text-[10px] text-[var(--success)]/70">Verified & ready</div>}
+      {live && <div className="mt-2 text-[10px] text-[var(--success)]">Verified & ready</div>}
       {displayStatus === 'not_configured' && <div className="mt-2 text-[10px] text-[var(--text-4)]">Enter credentials below to enable</div>}
       <button
         onClick={onVerifyEnv}
@@ -223,7 +223,7 @@ function PlaceholderConnectorBanner({ children }: { children: React.ReactNode })
     <div className="relative">
       {/* Overlay covers the children area and catches pointer events — no pointer-events-none. */}
       <div className="absolute inset-0 z-10 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-1)] backdrop-blur-[1px]" />
-      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-2.5 py-1">
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-2.5 py-1">
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)]" />
         <span className="text-[10px] font-semibold tracking-wide text-[var(--warning)]">Coming Soon</span>
       </div>
@@ -703,8 +703,8 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const outboundAllowed = Boolean(selectedConnector && isConnectorOutboundAllowed(selectedConnector, explicitApproval));
 
   const noticeColors: Record<NoticeType, string> = {
-    success: 'border-[var(--success)]/30 bg-[var(--success-dim)] text-[var(--success)]',
-    error: 'border-[var(--error)]/30 bg-[var(--error-dim)] text-[var(--error)]',
+    success: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+    error: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
     info: 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--text-2)]',
   };
 
@@ -1002,7 +1002,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
               </div>
             )}
 
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--text-2)]">
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-[11px] text-[var(--text-2)]">
               <input id="dev-approval" type="checkbox" checked={explicitApproval} onChange={(e) => setExplicitApproval(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--warning)]" />
               <label htmlFor="dev-approval" className="cursor-pointer">Approve this outbound action (required for sends and uploads)</label>
             </div>

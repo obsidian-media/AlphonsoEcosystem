@@ -39,7 +39,7 @@ export function SourceBoard({ report }: Props): React.JSX.Element {
               <button
                 type="button"
                 onClick={() => openExternalUrl(source.url)}
-                className="block truncate text-xs font-semibold text-[var(--agent-hector)] underline decoration-[var(--agent-hector)]/40 hover:decoration-[var(--agent-hector)] transition-colors text-left"
+                className="block truncate text-xs font-semibold text-[var(--agent-hector)] underline decoration-[var(--agent-hector)] hover:decoration-[var(--agent-hector)] transition-colors text-left"
                 title={source.url}
               >
                 {source.url}

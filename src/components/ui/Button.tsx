@@ -11,8 +11,8 @@ const variantClasses: Record<Variant, string> = {
   primary:   'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)] border-transparent',
   secondary: 'bg-[var(--surface-3)] text-[var(--text-1)] hover:bg-[var(--surface-4)] border-[var(--border)]',
   ghost:     'bg-transparent text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] border-transparent',
-  danger:    'bg-[var(--error-dim)] text-[var(--error)] hover:bg-[var(--error-dim)] border-[var(--error)]/30',
-  success:   'bg-[var(--success-dim)] text-[var(--success)] hover:bg-[var(--success-dim)] border-[var(--success)]/30',
+  danger:    'bg-[var(--error-dim)] text-[var(--error)] hover:bg-[var(--error-dim)] border-[var(--error-border)]',
+  success:   'bg-[var(--success-dim)] text-[var(--success)] hover:bg-[var(--success-dim)] border-[var(--success-border)]',
 };
 const sizeClasses: Record<Size, string> = {
   sm: 'px-2.5 py-1 text-xs gap-1.5',
@@ -24,7 +24,7 @@ export function Button({ variant = 'secondary', size = 'md', loading, icon, chil
     <button
       {...props}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center font-medium border rounded-[var(--radius-md)] transition-all duration-[var(--duration-normal)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 disabled:opacity-40 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center font-medium border rounded-[var(--radius-md)] transition-all duration-[var(--duration-normal)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] disabled:opacity-40 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
     >
       {loading ? <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : icon}
       {children}

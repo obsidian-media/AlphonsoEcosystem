@@ -936,11 +936,11 @@ export function MiyaStudio({
       <header className="pb-5 border-b border-white/[0.06]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--agent-miya)]/70">Creative Studio</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--agent-miya)]">Creative Studio</div>
             <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Miya — Creator Agent</h1>
             <p className="mt-1 text-[13px] text-[var(--text-3)]">{companionMessage || 'Storytelling, prompts, thumbnails, and creative handoffs.'}</p>
           </div>
-          <div className="h-14 w-14 rounded-xl overflow-hidden border border-[var(--agent-miya)]/20 bg-[var(--surface-1)] shrink-0">
+          <div className="h-14 w-14 rounded-xl overflow-hidden border border-[var(--agent-miya-glow)] bg-[var(--surface-1)] shrink-0">
             <img src={miyaMascot} alt="Miya mascot" className="h-full w-full object-cover object-center miya-breathe" />
           </div>
         </div>
@@ -1039,7 +1039,7 @@ export function MiyaStudio({
                 )}
               </div>
               {lastError && (
-                <div className="mt-3 rounded-xl border border-[var(--error)]/20 bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">{lastError}</div>
+                <div className="mt-3 rounded-xl border border-[var(--error-border)] bg-[var(--error-dim)] p-3 text-[11px] text-[var(--error)]">{lastError}</div>
               )}
             </section>
             {creativeOutput && (
@@ -1103,7 +1103,7 @@ function ProductionPipelineMatrix({ activeTab, canGenerate }: ProductionPipeline
           key={`${panel.title}-${index}`}
           className={`rounded-xl border p-3 ${
             activeTab === panel.id
-              ? 'border-[var(--agent-miya)]/30 bg-[var(--agent-miya)]/15'
+              ? 'border-[var(--agent-miya-glow)] bg-[var(--agent-miya)]'
               : 'border-white/10 bg-[var(--surface-1)]'
           }`}
         >
@@ -1111,9 +1111,9 @@ function ProductionPipelineMatrix({ activeTab, canGenerate }: ProductionPipeline
           <div className="mt-1 min-h-10 text-[11px] leading-relaxed text-[var(--text-3)]">{panel.detail}</div>
           <div className={`mt-2 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
             panel.status.includes('not connected')
-              ? 'border-[var(--warning)]/30 bg-[var(--warning-dim)] text-[var(--warning)]'
+              ? 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]'
               : panel.status.includes('wired')
-                ? 'border-[var(--success)]/30 bg-[var(--success-dim)] text-[var(--success)]'
+                ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]'
                 : 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]'
           }`}>
             {panel.status}
@@ -1139,7 +1139,7 @@ function ExportPackageReadiness({ output, canGenerate }: ExportPackageReadinessP
         </p>
       </div>
       <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
-        canGenerate ? 'border-[var(--success)]/30 bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--warning)]/30 bg-[var(--warning-dim)] text-[var(--warning)]'
+        canGenerate ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]'
       }`}>
         {canGenerate ? 'model ready' : 'model not connected'}
       </span>
@@ -1292,10 +1292,10 @@ function LocalGenerationPanel({
         </button>
       </div>
 
-      <div className="rounded-xl border border-[var(--agent-miya)]/20 bg-[var(--agent-miya)]/5 p-4 space-y-3">
+      <div className="rounded-xl border border-[var(--agent-miya-glow)] bg-[var(--agent-miya)] p-4 space-y-3">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           {/* Full pipeline */}
-          <div className="rounded-xl border border-[var(--agent-miya)]/20 bg-[var(--surface-1)] p-3 space-y-2">
+          <div className="rounded-xl border border-[var(--agent-miya-glow)] bg-[var(--surface-1)] p-3 space-y-2">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-widest text-[var(--agent-miya)]">One-Click Pipeline</div>
@@ -1333,7 +1333,7 @@ function LocalGenerationPanel({
           </div>
 
           {Array.isArray(pendingJobs) && pendingJobs.length > 0 && (
-            <div className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-dim)] p-3 space-y-2">
+            <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 space-y-2">
               <div className="text-[11px] font-bold uppercase tracking-widest text-[var(--warning)]">Interrupted Runway Jobs</div>
               {pendingJobs.map((job) => (
                 <div key={job.taskId} className="flex items-center justify-between gap-3 rounded-lg bg-black/20 px-3 py-2">
@@ -1358,7 +1358,7 @@ function LocalGenerationPanel({
               Backend-backed Runway draft generation. Secret stays in the Tauri backend. Output is saved locally when available.
             </p>
           </div>
-          <span className="rounded-full border border-[var(--agent-miya)]/20 bg-[var(--agent-miya)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--agent-miya)]">
+          <span className="rounded-full border border-[var(--agent-miya-glow)] bg-[var(--agent-miya)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--agent-miya)]">
             setup required until RUNWAYML_API_SECRET is set
           </span>
         </div>
@@ -1402,7 +1402,7 @@ function LocalGenerationPanel({
         </button>
 
         {isGeneratingMedia && mediaRuntime.provider === 'runway' && (
-          <div className="rounded-lg border border-[var(--agent-miya)]/20 bg-[var(--surface-1)] p-3 space-y-2">
+          <div className="rounded-lg border border-[var(--agent-miya-glow)] bg-[var(--surface-1)] p-3 space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[var(--agent-miya)] animate-pulse" />
               <span className="text-[11px] font-semibold text-[var(--agent-miya)]">Runway is rendering your video</span>
@@ -1443,7 +1443,7 @@ function LocalGenerationPanel({
         )}
       </div>
 
-      <div className="rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-3 py-2 text-[11px] text-[var(--text-2)]">
+      <div className="rounded-lg border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-2 text-[11px] text-[var(--text-2)]">
         ComfyUI rendering is local only. Miya can generate SD 1.5 images through ComfyUI, queue ComfyUI workflows, and also offers a backend-backed Runway draft path; it does not fake completed renders.
       </div>
 
@@ -1574,7 +1574,7 @@ function YouTubePublishHandoffPanel({ output, publishDraft, setPublishDraft, onC
             Creates a high-risk external publish request packet for Jose. It does not auto-upload.
           </p>
         </div>
-        <span className="rounded-full border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)]">
+        <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)]">
           approval required
         </span>
       </div>
@@ -1626,7 +1626,7 @@ function CapCutExportHandoffPanel({ output, capcutDraft, setCapcutDraft, onCreat
             Creates a CapCut-ready export brief for manual import. It does not claim live CapCut automation.
           </p>
         </div>
-        <span className="rounded-full border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)]">
+        <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--warning)]">
           manual export only
         </span>
       </div>

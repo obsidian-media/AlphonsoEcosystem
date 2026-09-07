@@ -150,7 +150,7 @@ function JoseSchedulerPanel() {
             <div className="flex items-center gap-2 shrink-0 ml-3">
               <button
                 onClick={() => handleRunNow(sched)}
-                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--success)] hover:border-[var(--success)]/30 transition-colors"
+                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--success)] hover:border-[var(--success-border)] transition-colors"
                 title="Run now"
               >
                 <Play className="w-3 h-3" />
@@ -159,7 +159,7 @@ function JoseSchedulerPanel() {
                 onClick={() => handleToggle(sched)}
                 className={`text-[10px] px-2 py-1 rounded-lg border font-semibold transition-colors ${
                   sched.enabled
-                    ? 'border-[var(--success)]/30 text-[var(--success)] hover:bg-[var(--success)]/10'
+                    ? 'border-[var(--success-border)] text-[var(--success)] hover:bg-[var(--success-dim)]'
                     : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--accent-border)]'
                 }`}
               >
@@ -167,7 +167,7 @@ function JoseSchedulerPanel() {
               </button>
               <button
                 onClick={() => handleDelete(sched.id)}
-                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--error)] hover:border-[var(--error)]/30 transition-colors"
+                className="p-1.5 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--error)] hover:border-[var(--error-border)] transition-colors"
                 title="Delete"
               >
                 <Trash2 className="w-3 h-3" />
@@ -332,7 +332,7 @@ export function AutomationView() {
                   }}
                   className={`text-[10px] px-3 py-1 rounded-lg border font-semibold transition-colors ${
                     isActive
-                      ? 'border-[var(--success)]/30 text-[var(--success)] hover:bg-[var(--success)]/10'
+                      ? 'border-[var(--success-border)] text-[var(--success)] hover:bg-[var(--success-dim)]'
                       : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--accent-border)] hover:text-[var(--text-1)]'
                   }`}
                 >
@@ -354,8 +354,8 @@ export function AutomationView() {
                 <div className="text-[10px] text-[var(--text-4)]">{new Date(run.createdAtMs || 0).toLocaleString()}</div>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded border ${
-                run.status === 'completed' ? 'border-[var(--success)]/30 text-[var(--success)]' :
-                run.status === 'failed' ? 'border-[var(--error)]/30 text-[var(--error)]' :
+                run.status === 'completed' ? 'border-[var(--success-border)] text-[var(--success)]' :
+                run.status === 'failed' ? 'border-[var(--error-border)] text-[var(--error)]' :
                 'border-[var(--border)] text-[var(--text-3)]'
               }`}>{run.status}</span>
             </div>

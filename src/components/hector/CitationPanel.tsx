@@ -38,7 +38,7 @@ export function CitationPanel({ report }: Props): React.JSX.Element {
                 <button
                   type="button"
                   onClick={() => openExternalUrl(url)}
-                  className="text-[var(--agent-hector)] underline decoration-[var(--agent-hector)]/40 hover:decoration-[var(--agent-hector)] transition-colors break-all text-left"
+                  className="text-[var(--agent-hector)] underline decoration-[var(--agent-hector)] hover:decoration-[var(--agent-hector)] transition-colors break-all text-left"
                   title={url}
                 >
                   {url}

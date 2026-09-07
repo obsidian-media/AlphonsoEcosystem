@@ -32,10 +32,10 @@ interface BadgeProps {
 function Badge({ children, color = 'zinc' }: BadgeProps) {
   const colors: Record<string, string> = {
     zinc: 'bg-[var(--surface-2)] text-[var(--text-3)] border-[var(--border)]',
-    green: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success)]/30',
+    green: 'bg-[var(--success-dim)] text-[var(--success)] border-[var(--success-border)]',
     blue: 'bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-border)]',
-    amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning)]/30',
-    red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error)]/30',
+    amber: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
+    red: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
     indigo: 'bg-[var(--accent-dim)] text-[var(--accent)] border-[var(--accent-border)]'
   };
   return <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded border ${colors[color]}`}>{children}</span>;
@@ -337,7 +337,7 @@ export function OperatorDashboard({
             </div>
             <button
               onClick={() => setOperatorMode(true)}
-              className="rounded-lg bg-[var(--success-dim)] border border-[var(--success)]/30 text-[var(--success)] px-4 py-2 text-xs font-bold uppercase tracking-widest"
+              className="rounded-lg bg-[var(--success-dim)] border border-[var(--success-border)] text-[var(--success)] px-4 py-2 text-xs font-bold uppercase tracking-widest"
             >
               Enable
             </button>
@@ -963,7 +963,7 @@ function UnifiedWeeklyReportPanel() {
         )}
       </div>
       {error && (
-        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error)]/30 rounded-lg px-3 py-2">
+        <div className="text-[11px] text-[var(--error)] bg-[var(--error-dim)] border border-[var(--error-border)] rounded-lg px-3 py-2">
           {error}
         </div>
       )}

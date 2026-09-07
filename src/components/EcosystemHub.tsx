@@ -292,8 +292,8 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                       <div className="text-xs font-semibold text-[var(--text-2)]">{packet.title}</div>
                       <div className="text-[11px] text-[var(--text-3)]">{packet.fromAgent} {'→'} {packet.toAgent} | {packet.packetType}</div>
                       <div className="flex gap-1.5">
-                        <button onClick={() => runApprove(packet.id)} className="rounded border border-[var(--success)]/30 bg-[var(--success-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--success)] hover:opacity-90 transition-colors">Approve</button>
-                        <button onClick={() => runReject(packet.id)} className="rounded border border-[var(--error)]/30 bg-[var(--error-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--error)] hover:opacity-90 transition-colors">Reject</button>
+                        <button onClick={() => runApprove(packet.id)} className="rounded border border-[var(--success-border)] bg-[var(--success-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--success)] hover:opacity-90 transition-colors">Approve</button>
+                        <button onClick={() => runReject(packet.id)} className="rounded border border-[var(--error-border)] bg-[var(--error-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--error)] hover:opacity-90 transition-colors">Reject</button>
                         <button onClick={() => runExecutePacket(packet.id)} className="rounded border border-white/[0.08] bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors">Execute</button>
                       </div>
                     </div>
@@ -306,8 +306,8 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
               </Panel>
               <Panel icon={ShieldAlert} title="Human Override">
                 <div className="space-y-2 text-[11px] text-[var(--text-3)]">
-                  <div className="rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-3 py-2">Safe mode and approval gates remain active.</div>
-                  <div className="rounded-lg border border-[var(--error)]/30 bg-[var(--error-dim)] px-3 py-2">Emergency stop: reject all pending packets.</div>
+                  <div className="rounded-lg border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-2">Safe mode and approval gates remain active.</div>
+                  <div className="rounded-lg border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2">Emergency stop: reject all pending packets.</div>
                 </div>
                 <div className="mt-3 flex gap-2">
                   <button onClick={() => approvalQueue.forEach((p) => runReject(p.id))} className="rounded bg-[var(--error-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--error)] flex items-center gap-1">
@@ -492,7 +492,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
     <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3.5 space-y-3">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold">
         <Activity className="w-4 h-4 text-[var(--accent)]" /> Snapshot Diff
-        {changedCount > 0 && <span className="rounded-full bg-[var(--warning-dim)] border border-[var(--warning)]/40 px-2 py-0.5 text-[9px] text-[var(--warning)]">{changedCount} changed</span>}
+        {changedCount > 0 && <span className="rounded-full bg-[var(--warning-dim)] border border-[var(--warning-border)] px-2 py-0.5 text-[9px] text-[var(--warning)]">{changedCount} changed</span>}
       </div>
 
       {sorted.length < 2 ? (
@@ -522,7 +522,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
           <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
             {rows.length === 0 && <div className="text-[11px] text-[var(--text-4)]">Both snapshots are empty.</div>}
             {rows.map((row) => (
-              <div key={row.key} className={`rounded-lg px-2 py-1.5 text-[10px] ${row.changed ? 'bg-[var(--warning-dim)] border border-[var(--warning)]/30' : 'bg-[var(--surface-1)] border border-white/[0.04]'}`}>
+              <div key={row.key} className={`rounded-lg px-2 py-1.5 text-[10px] ${row.changed ? 'bg-[var(--warning-dim)] border border-[var(--warning-border)]' : 'bg-[var(--surface-1)] border border-white/[0.04]'}`}>
                 <div className={`font-mono font-bold mb-0.5 ${row.changed ? 'text-[var(--warning)]' : 'text-[var(--text-3)]'}`}>{row.key}</div>
                 {row.changed ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -542,7 +542,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
 }
 
 const TYPE_FILTERS = ['all', 'agent', 'skill_pack', 'connector', 'workflow', 'theme'];
-const STATUS_COLOR: Record<string, string> = { installed: 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success-dim)]', available: 'text-[var(--text-3)] border-[var(--border)] bg-[var(--surface-1)]', installing: 'text-[var(--accent)] border-[var(--accent-border)] bg-[var(--accent-dim)]' };
+const STATUS_COLOR: Record<string, string> = { installed: 'text-[var(--success)] border-[var(--success-border)] bg-[var(--success-dim)]', available: 'text-[var(--text-3)] border-[var(--border)] bg-[var(--surface-1)]', installing: 'text-[var(--accent)] border-[var(--accent-border)] bg-[var(--accent-dim)]' };
 
 function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<string, unknown>[]; onRefresh: () => void }) {
   const [typeFilter, setTypeFilter] = useState('all');

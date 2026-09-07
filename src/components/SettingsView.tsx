@@ -105,9 +105,9 @@ function EchoTimeline() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                  tc.color === 'success' ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' :
-                  tc.color === 'info' ? 'bg-[var(--info-dim)] border-[var(--info)]/20 text-[var(--info)]' :
-                  'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]'
+                  tc.color === 'success' ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' :
+                  tc.color === 'info' ? 'bg-[var(--info-dim)] border-[var(--info-border)] text-[var(--info)]' :
+                  'bg-[var(--warning-dim)] border-[var(--warning-border)] text-[var(--warning)]'
                 }`}>{tc.label}</span>
                 {expiresIn !== null && <span className="text-[10px] text-[var(--text-4)]">expires in {expiresIn}d</span>}
               </div>
@@ -176,7 +176,7 @@ function AgentProvidersSection() {
   return (
     <div className="space-y-3">
       {error && (
-        <div className="p-3 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-xs text-[var(--error)]">{error}</div>
+        <div className="p-3 rounded-lg bg-[var(--error-dim)] border border-[var(--error-border)] text-xs text-[var(--error)]">{error}</div>
       )}
       {agents.map((agent) => {
         const config = configs[agent.id] || { provider: 'ollama' as ModelProviderId };
@@ -315,7 +315,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
         <span className="text-[11px] text-[var(--text-3)]">{models.length} installed model{models.length === 1 ? '' : 's'}</span>
       </div>
       {models.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--warning)]/20 bg-[var(--warning-dim)] p-4 text-sm text-[var(--warning)]">
+        <div className="rounded-2xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-4 text-sm text-[var(--warning)]">
           No installed models were returned by Ollama. Pull a model in Ollama, then run Check Ollama again.
         </div>
       ) : (
@@ -324,7 +324,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
             aria-label="Select model"
             value={models.some((model) => model.name === selectedModel) ? selectedModel : ''}
             onChange={(event) => onSelectModel(event.target.value)}
-            className="w-full appearance-none bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+            className="w-full appearance-none bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
           >
             {selectedModelMissing && <option value="">Model not found: {selectedModel}</option>}
             {models.map((model) => (
@@ -337,7 +337,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
         </div>
       )}
       {selectedModelMissing && (
-        <div className="rounded-xl border border-[var(--warning)]/20 bg-[var(--warning-dim)] p-3 text-xs text-[var(--warning)]">
+        <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] p-3 text-xs text-[var(--warning)]">
           Model not found: <span className="font-mono">{selectedModel}</span>. Suggested installed models: {models.map((model) => model.name).join(', ')}.
         </div>
       )}
@@ -380,7 +380,7 @@ function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
         <button
           onClick={copy}
           disabled={!modelName.trim()}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)]/80"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)]"
         >
           {copied ? <><ClipboardCopy className="w-3.5 h-3.5" /> Copied</> : <><Download className="w-3.5 h-3.5" /> Copy Command</>}
         </button>
@@ -849,7 +849,7 @@ export function SettingsView({
               type="text"
               value={settings.endpoint}
               onChange={(event) => setSettings({ ...settings, endpoint: event.target.value })}
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
@@ -860,7 +860,7 @@ export function SettingsView({
                 type="text"
                 value={settings.workspaceRoot || ''}
                 onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
-                className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+                className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <input ref={folderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleFolderPick} className="hidden" />
               <button
@@ -881,7 +881,7 @@ export function SettingsView({
               type="text"
               value={settings.ocrEnginePath || ''}
               onChange={(event) => setSettings({ ...settings, ocrEnginePath: event.target.value })}
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
             <div className="text-[11px] text-[var(--text-3)]">Leave blank until an OCR engine is actually configured and verified.</div>
           </div>
@@ -968,7 +968,7 @@ export function SettingsView({
                 try { localStorage.setItem('alphonso_voice_ws_url', val || 'ws://127.0.0.1:8766/ws'); } catch { /* ignore */ }
               }}
               placeholder="ws://127.0.0.1:8766/ws"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
         </div>
@@ -999,7 +999,7 @@ export function SettingsView({
                 type="text"
                 value={settings.updaterEndpoint || ''}
                 onChange={(event) => setSettings({ ...settings, updaterEndpoint: event.target.value })}
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-3)]">Enter the hosted updater endpoint only when the release manifest is actually published.</div>
             </div>
@@ -1009,7 +1009,7 @@ export function SettingsView({
                 value={settings.updaterPubkey || ''}
                 onChange={(event) => setSettings({ ...settings, updaterPubkey: event.target.value })}
                 rows={3}
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-3)]">Paste the public key only after the signing setup is complete.</div>
             </div>
@@ -1019,14 +1019,14 @@ export function SettingsView({
                 type="text"
                 value={settings.updaterTarget || ''}
                 onChange={(event) => setSettings({ ...settings, updaterTarget: event.target.value })}
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-3)]">Use the actual target only when the updater release path is configured.</div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={onCheckUpdates}
-                className="rounded-xl bg-[var(--surface-3)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)]/80"
+                className="rounded-xl bg-[var(--surface-3)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)]"
               >
                 {updateCheckState?.checking ? 'Checking...' : 'Check Updates Now'}
               </button>
@@ -1043,7 +1043,7 @@ export function SettingsView({
             <div>
               <div className="text-sm font-semibold text-white">Native Desktop Mode</div>
               <div className="text-[11px] text-[var(--text-3)] mt-0.5">Tauri v2 desktop runtime is the intended target.</div>
-              <div className="text-[11px] text-[var(--warning)]/80 mt-1">On Windows, verify:desktop needs WiX 3.14 binaries locally or a permitted wix314-binaries.zip download.</div>
+              <div className="text-[11px] text-[var(--warning)] mt-1">On Windows, verify:desktop needs WiX 3.14 binaries locally or a permitted wix314-binaries.zip download.</div>
             </div>
             <button
               role="switch"
@@ -1191,7 +1191,7 @@ export function SettingsView({
                 value={composioApiKey}
                 onChange={(e) => setComposioApiKey(e.target.value)}
                 placeholder="Enter Composio API key"
-                className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+                className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <button
                 onClick={handleComposioSave}
@@ -1211,12 +1211,12 @@ export function SettingsView({
               value={composioUserId}
               onChange={(e) => setComposioUserId(e.target.value)}
               placeholder="alphonso-user"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
           {composioHealth && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl border ${composioHealth.status === 'healthy' ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' : 'bg-[var(--error-dim)] border-[var(--error)]/20 text-[var(--error)]'}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-xl border ${composioHealth.status === 'healthy' ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' : 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'}`}>
               {composioHealth.status === 'healthy' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
               <span className="text-xs">{composioHealth.message}</span>
             </div>
@@ -1316,7 +1316,7 @@ export function SettingsView({
               <input ref={outputFolderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleOutputFolderPick} className="hidden" />
               <button
                 onClick={handlePickOutputFolder}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)]/70 text-white text-xs font-medium border border-[var(--border)] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-white text-xs font-medium border border-[var(--border)] transition-colors"
               >
                 <Folder className="w-3.5 h-3.5" />
                 Browse
@@ -1327,7 +1327,7 @@ export function SettingsView({
               value={settings.outputFolder || ''}
               onChange={(e) => setSettings({ ...settings, outputFolder: e.target.value })}
               placeholder="C:\Users\You\Pictures\Alphonso"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
@@ -1347,7 +1347,7 @@ export function SettingsView({
               </button>
             </div>
             {launchStatus?.service === 'ollama' && launchStatus?.state !== 'launching' && (
-              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-[var(--error-dim)] border-[var(--error)]/20 text-[var(--error)]' : 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]'}`}>
+              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]' : 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'}`}>
                 {launchStatus.state === 'error' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
                 {launchStatus.message}
               </div>
@@ -1376,12 +1376,12 @@ export function SettingsView({
                   value={settings.comfyuiDir || ''}
                   onChange={(e) => setSettings({ ...settings, comfyuiDir: e.target.value })}
                   placeholder="C:\ComfyUI"
-                  className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+                  className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
                 />
                 <input ref={comfyuiDirPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleComfyUIDirPick} className="hidden" />
                 <button
                   onClick={handlePickComfyUIDir}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)]/70 text-white text-xs font-medium border border-[var(--border)] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-white text-xs font-medium border border-[var(--border)] transition-colors"
                 >
                   <Folder className="w-3.5 h-3.5" />
                   Browse
@@ -1392,12 +1392,12 @@ export function SettingsView({
                 value={settings.comfyuiPython || ''}
                 onChange={(e) => setSettings({ ...settings, comfyuiPython: e.target.value })}
                 placeholder="python  (or full path to python.exe)"
-                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <div className="text-[11px] text-[var(--text-4)]">Python executable used to run <span className="font-mono">main.py</span>. Leave blank to use <span className="font-mono">python</span>.</div>
             </div>
             {launchStatus?.service === 'comfyui' && launchStatus?.state !== 'launching' && (
-              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-[var(--error-dim)] border-[var(--error)]/20 text-[var(--error)]' : 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]'}`}>
+              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]' : 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'}`}>
                 {launchStatus.state === 'error' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
                 {launchStatus.message}
               </div>
@@ -1431,7 +1431,7 @@ export function SettingsView({
               const val = Math.min(100, Math.max(0, Number(e.target.value) || 65));
               try { localStorage.setItem('alphonso_nova_threshold', String(val)); } catch { /* ignore */ }
             }}
-            className="w-24 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+            className="w-24 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
           />
         </div>
       </section>
@@ -1483,7 +1483,7 @@ export function SettingsView({
               onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
               className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
                 settings.environmentTheme === theme.id
-                  ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] ring-1 ring-[var(--accent)]/20'
+                  ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
                   : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border)]'
               }`}
             >
@@ -1563,7 +1563,7 @@ export function SettingsView({
                 <button
                   onClick={() => backupFileRef.current?.click()}
                   disabled={backupRestoring}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-3)] hover:bg-[var(--surface-3)]/70 disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-white text-sm font-medium rounded-xl transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-white text-sm font-medium rounded-xl transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   {backupRestoring ? 'Restoring...' : 'Import'}
@@ -1573,7 +1573,7 @@ export function SettingsView({
           </div>
 
           {backupResult && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl border ${backupResult.type === 'success' ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' : 'bg-[var(--error-dim)] border-[var(--error)]/20 text-[var(--error)]'}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-xl border ${backupResult.type === 'success' ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' : 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'}`}>
               {backupResult.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
               <span className="text-xs">{backupResult.message}</span>
             </div>
@@ -1640,7 +1640,7 @@ function PluginMarketplacePanel() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-white truncate">{p.name}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-3)] border border-[var(--border)] shrink-0">v{p.version}</span>
-                    {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success)]/20 shrink-0">✓ signed</span>}
+                    {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--success-dim)] text-[var(--success)] border border-[var(--success-border)] shrink-0">✓ signed</span>}
                   </div>
                   <p className="text-xs text-[var(--text-3)] mt-0.5 truncate">{p.description}</p>
                   {p.author && <p className="text-[10px] text-[var(--text-4)] mt-0.5">by {p.author}</p>}
@@ -1676,7 +1676,7 @@ function ChromaDbStatus() {
   if (healthy === null) return null;
 
   return (
-    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${healthy ? 'border-[var(--success)]/30 bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]'}`}>
+    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${healthy ? 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]'}`}>
       <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--surface-3)]'}`} />
       {healthy
         ? 'Vector search active — Echo uses ChromaDB for semantic memory retrieval'
@@ -1726,7 +1726,7 @@ function MeetingTranscriptionPanel() {
   return (
     <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-[var(--border)] space-y-3">
       {whisperInstalled === false && (
-        <div className="flex items-center gap-2 p-3 rounded-xl border border-[var(--warning)]/20 bg-[var(--warning-dim)] text-[var(--warning)] text-xs">
+        <div className="flex items-center gap-2 p-3 rounded-xl border border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)] text-xs">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Whisper not installed. Install it in Runtimes → Whisper to enable transcription.
         </div>
@@ -1861,7 +1861,7 @@ function InboxFolderConfig() {
         value={inboxPath}
         onChange={(e) => setInboxPath(e.target.value)}
         placeholder="C:\Users\You\Documents\Inbox"
-        className="w-full px-3 py-2 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-sm text-white placeholder-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+        className="w-full px-3 py-2 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-sm text-white placeholder-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-border)]"
       />
       <div className="flex items-center gap-3">
         <button
