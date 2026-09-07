@@ -634,6 +634,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** this component is used in both `ChatView.tsx` and `CoachWindow.tsx` (mini mode), but is conditionally rendered behind a voice-input-active state not present by default in either view — a quick check of Chat's default view found no instance mounted. Not chased further given the small size and already-proven token pattern; relying on clean `tsc`/`eslint` and the 5-test suite.
 - **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
 
+### 83. `projectExecution/ProjectRiskRegister.tsx` re-skin (30 lines, 6 refs) — clean pass, no carve-out
+
+- **What changed:** panel shell, header, empty state, and each risk card (title/severity/mitigation) — tokenized onto `--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `ProjectExecutionMode.tsx`'s RESULTS tab (`<Card label="Risk Register">`), the same post-execution grid as several prior files this pass — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
