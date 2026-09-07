@@ -383,6 +383,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified, partially** (Playwright, real dev server, Boardroom space → Boardroom → "Boardroom Sessions" tab): confirmed the thread list, "New Thread" button, thread-topic input, and the message composer (agent-select dropdown + Send button) all render correctly tokenized; created a real thread and confirmed its selected-state accent-teal highlight. The `MessageBubble` escalation/failure tone states specifically were not independently screenshotted — reaching them requires a real multi-agent `@mention` chain to actually escalate or fail, which needs live Ollama generation across multiple agents and wasn't triggered this pass; relying on the 31-test suite (which explicitly covers escalation, failure, gated-content, and acknowledgment states with mocked data) plus clean `tsc`/`eslint`.
 - **Status:** CLOSED (thread/composer chrome live-verified; `MessageBubble` tone states verified via tests only, disclosed above).
 
+### 53. `AgentPerformanceView.tsx` re-skin (138 lines, 24 refs) — clean pass, no carve-out
+
+- **What changed:** the header, Export CSV/JSON buttons, empty state, per-agent success/error/latency rows, and the Dead Letter Queue box (with its Retry All button and retry-confirmation message) — all tokenized onto `--success`/`--error`/`--warning`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** `src/test/components/AgentPerformanceView.test.tsx` — 6/6 passing (`--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, System space → Agent Performance): confirmed the empty state and the Dead Letter Queue box (warning-amber border/background, disabled "Retry All" button) render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
