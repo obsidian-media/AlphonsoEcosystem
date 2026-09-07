@@ -683,6 +683,88 @@ pub fn find_node() -> Option<String> {
   None
 }
 
+/// RAM detection via sysinfo, rounded down to whole GB.
+fn detect_ram_gb() -> u64 {
+  let mut sys = sysinfo::System::new_all();
+  sys.refresh_memory();
+  sys.total_memory() / 1024 / 1024 / 1024
+}
+
+/// Picks the free-space (bytes) of whichever disk's mount point is the
+/// longest matching prefix of `path` — i.e. the most specific match. Pure
+/// and independently testable: takes plain (mount_point, available_bytes)
+/// pairs rather than sysinfo's own types, so no real disk I/O is needed to
+/// test the matching logic itself.
+fn pick_disk_for_path(path: &str, disks: &[(String, u64)]) -> Option<u64> {
+  disks
+    .iter()
+    .filter(|(mount, _)| path.starts_with(mount.as_str()))
+    .max_by_key(|(mount, _)| mount.len())
+    .map(|(_, available)| *available)
+}
+
+/// Free disk space (GB) for the drive containing the app's own install
+/// directory — the drive Setup's downloads will actually land on.
+fn detect_disk_free_gb() -> u64 {
+  let disks = sysinfo::Disks::new_with_refreshed_list();
+  let disk_list: Vec<(String, u64)> = disks
+    .list()
+    .iter()
+    .map(|d| {
+      (
+        d.mount_point().to_string_lossy().to_string(),
+        d.available_space(),
+      )
+    })
+    .collect();
+
+  let exe_dir = std::env::current_exe()
+    .ok()
+    .and_then(|p| p.parent().map(|p| p.to_string_lossy().to_string()))
+    .unwrap_or_default();
+
+  pick_disk_for_path(&exe_dir, &disk_list)
+    .or_else(|| disk_list.iter().map(|(_, avail)| *avail).max())
+    .map(|bytes| bytes / 1024 / 1024 / 1024)
+    .unwrap_or(0)
+}
+
+/// Pure parser for `nvidia-smi --query-gpu=name --format=csv,noheader`
+/// output — separated from the actual process spawn so it's testable
+/// without needing a real GPU. Returns (vendor, model) for the first GPU
+/// line, or None if the output is empty/unparseable.
+fn parse_nvidia_smi_output(output: &str) -> Option<(String, String)> {
+  let first_line = output.lines().find(|l| !l.trim().is_empty())?.trim();
+  if first_line.is_empty() {
+    return None;
+  }
+  if let Some(rest) = first_line.strip_prefix("NVIDIA ") {
+    Some(("NVIDIA".to_string(), rest.to_string()))
+  } else {
+    Some(("Unknown".to_string(), first_line.to_string()))
+  }
+}
+
+/// Detects an NVIDIA GPU via `nvidia-smi`. Returns (present, vendor, model).
+/// A missing binary or failed command is "no GPU detected," never an error
+/// — most machines don't have an NVIDIA GPU and Setup must not hang or
+/// crash because of that.
+fn detect_gpu() -> (bool, Option<String>, Option<String>) {
+  let mut cmd = Command::new("nvidia-smi");
+  cmd.args(["--query-gpu=name", "--format=csv,noheader"]);
+  no_window(&mut cmd);
+  match cmd.output() {
+    Ok(out) if out.status.success() => {
+      let stdout = String::from_utf8_lossy(&out.stdout);
+      match parse_nvidia_smi_output(&stdout) {
+        Some((vendor, model)) => (true, Some(vendor), Some(model)),
+        None => (false, None, None),
+      }
+    }
+    _ => (false, None, None),
+  }
+}
+
 // ─────────────────────────────────────────────────────────
 // Public data types
 // ─────────────────────────────────────────────────────────
@@ -1783,6 +1865,77 @@ mod tests {
     assert_eq!(mgr.spawned_pid("ollama"), Some(1234));
     mgr.remove_pid("ollama");
     assert_eq!(mgr.spawned_pid("ollama"), None);
+  }
+
+  #[test]
+  fn detect_ram_gb_returns_plausible_value() {
+    // Any real machine running this test has at least 1GB and less than
+    // 4TB of RAM. This is a sanity bound, not a mock — sysinfo reads the
+    // real host, so the test environment's own RAM is the input.
+    let ram = detect_ram_gb();
+    assert!(ram >= 1, "expected at least 1GB RAM, got {}", ram);
+    assert!(ram < 4096, "expected less than 4TB RAM, got {}", ram);
+  }
+
+  #[test]
+  fn pick_disk_for_path_matches_longest_mount_point_prefix() {
+    let disks = vec![
+      ("/".to_string(), 50_000_000_000u64),
+      ("/home".to_string(), 200_000_000_000u64),
+    ];
+    // A path under /home should match the /home entry, not the root entry,
+    // because /home is the longer (more specific) matching prefix.
+    let picked = pick_disk_for_path("/home/user/AppData", &disks);
+    assert_eq!(picked, Some(200_000_000_000u64));
+  }
+
+  #[test]
+  fn pick_disk_for_path_falls_back_to_root_when_no_specific_match() {
+    let disks = vec![
+      ("/".to_string(), 50_000_000_000u64),
+      ("/home".to_string(), 200_000_000_000u64),
+    ];
+    let picked = pick_disk_for_path("/var/lib/alphonso", &disks);
+    assert_eq!(picked, Some(50_000_000_000u64));
+  }
+
+  #[test]
+  fn pick_disk_for_path_returns_none_for_empty_list() {
+    let disks: Vec<(String, u64)> = vec![];
+    assert_eq!(pick_disk_for_path("/anything", &disks), None);
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_extracts_vendor_and_model() {
+    let output = "NVIDIA GeForce RTX 4060\n";
+    let (vendor, model) = parse_nvidia_smi_output(output).expect("should parse");
+    assert_eq!(vendor, "NVIDIA");
+    assert_eq!(model, "GeForce RTX 4060");
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_handles_trailing_whitespace_and_crlf() {
+    let output = "NVIDIA GeForce RTX 3080\r\n\r\n";
+    let (vendor, model) = parse_nvidia_smi_output(output).expect("should parse");
+    assert_eq!(vendor, "NVIDIA");
+    assert_eq!(model, "GeForce RTX 3080");
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_returns_none_for_empty_output() {
+    assert_eq!(parse_nvidia_smi_output(""), None);
+    assert_eq!(parse_nvidia_smi_output("\n"), None);
+  }
+
+  #[test]
+  fn parse_nvidia_smi_output_handles_non_nvidia_prefixed_name() {
+    // Defensive: if nvidia-smi ever reports a name that doesn't start with
+    // "NVIDIA" (unlikely, but the parser shouldn't crash on it), treat the
+    // whole string as the model with an "Unknown" vendor rather than
+    // panicking or silently dropping data.
+    let (vendor, model) = parse_nvidia_smi_output("Some GPU Name\n").expect("should parse");
+    assert_eq!(vendor, "Unknown");
+    assert_eq!(model, "Some GPU Name");
   }
 
   #[test]
