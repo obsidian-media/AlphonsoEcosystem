@@ -263,6 +263,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): navigated Sidebar → Work space → Automation → Builder tab, created a test workflow, opened the "Add Step" picker (confirmed all 9 `NODE_STYLE` pills render with distinct colors as intended), added two nodes (Trigger, OCR) and confirmed the pipeline stage cards, connector arrow, and node-detail panel all render correctly tokenized. Zero console errors across all three screenshots.
 - **Status:** CLOSED.
 
+### 39. `OllamaPreflightPanel.tsx` re-skin (209 lines, 44 refs) — clean pass, no carve-out
+
+- **What changed:** header row, 3 stat tiles (Total/Success/Failure), error banner, "Last preflight" result box, and the "Recent preflights" list — all tokenized onto `--accent`/`--success`/`--error`/`--warning`/`--text-*`/`--surface-2`/`--border`. Pure truth-state semantics (connected/model_missing/no_models = success-family, everything else = error-family; `outcomeColor()`'s green/red/amber mapped 1:1 to `--success`/`--error`/`--warning`), no per-item identity to carve out.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed — first file this session where the manual pass introduced zero double-alpha mistakes on the first try.
+- **Test coverage:** `src/test/OllamaPreflightPanel.test.jsx` (5/5 passing, `--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server): this component is not mounted standalone — traced its one real call site to `OperatorDashboard.tsx`'s collapsible "Ollama Preflight Baseline" section (`Panel icon={Activity} title="Ollama Preflight Events"`). Enabled Operator Mode, expanded that section, confirmed the header, 3 stat tiles, "Re-run preflight" button, and empty-state "Recent preflights" copy all render correctly tokenized. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
