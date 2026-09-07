@@ -168,7 +168,7 @@ export function MissionControlHome({
         <div className="mb-6">
           <AgentStatusStrip variant="portraits" useAutoFeed onAgentsChange={setActiveAgents} />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-1)] md:text-5xl">
           {getGreeting()}
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[var(--text-2)]">
@@ -184,7 +184,7 @@ export function MissionControlHome({
           </button>
           <button
             onClick={() => onNavigate?.('orchestrator')}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white/5 px-5 py-2.5 text-sm font-semibold text-[var(--text-1)] hover:bg-white/10 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-5 py-2.5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors"
           >
             <Crown className="h-4 w-4" />
             Orchestrator
@@ -193,7 +193,7 @@ export function MissionControlHome({
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] px-4 py-3.5">
+        <div className="rounded-2xl bg-[var(--surface-1)] px-4 py-3.5">
           <div className="flex items-center gap-1.5 mb-2">
             <span className={`h-1.5 w-1.5 rounded-full ${actionableItems.length ? 'bg-[var(--warning)]' : 'bg-[var(--border-strong)]'}`} />
             <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)]">Approvals</span>
@@ -203,7 +203,7 @@ export function MissionControlHome({
             {oldestActionable ? `oldest waiting ${formatWaitingDuration(oldestActionable.timestamp)}` : 'queue clear'}
           </div>
         </div>
-        <div className="rounded-2xl border border-white/[0.07] bg-[var(--surface-1)] px-4 py-3.5">
+        <div className="rounded-2xl bg-[var(--surface-1)] px-4 py-3.5">
           <div className="flex items-center gap-1.5 mb-2">
             <span className={`h-1.5 w-1.5 rounded-full ${activeAgents.length ? 'bg-[var(--accent)]' : 'bg-[var(--border-strong)]'}`} />
             <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-3)]">Active agents</span>
@@ -236,7 +236,7 @@ export function MissionControlHome({
                 key={`${action.tab}-${action.title}`}
                 type="button"
                 onClick={() => onNavigate?.(action.tab)}
-                className="group flex w-full items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+                className="group flex w-full items-center gap-4 rounded-2xl bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:bg-[var(--surface-2)]"
               >
                 <action.icon className={`h-4 w-4 shrink-0 ${action.accent}`} />
                 <div className="flex-1 min-w-0">
@@ -287,7 +287,7 @@ export function MissionControlHome({
               key={item.tab}
               type="button"
               onClick={() => onNavigate?.(item.tab)}
-              className="group flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+              className="group flex items-center gap-3 rounded-2xl bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:bg-[var(--surface-2)]"
             >
               <item.icon className={`h-4 w-4 shrink-0 ${item.color}`} />
               <div>
