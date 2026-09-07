@@ -375,6 +375,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): this component is normally opened as a separate Tauri webview window (`coachModeService.ts`), but is gated purely on a URL query param (`IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1'`, `App.tsx:144`) — navigated directly to `http://localhost:5173/?coach=1` in a plain browser tab and got the real full window render. Confirmed the "Coach Skills" card renders in Alphonso's cyan agent-identity tone, all 6 skill cards, and all 4 agent-status mission cards (Alphonso/Hector/Jose/Miya) render correctly tokenized. Zero console errors.
 - **Status:** CLOSED.
 
+### 52. `BoardroomChatView.tsx` re-skin (475 lines, 24 refs) — clean pass, no carve-out
+
+- **What changed:** `MessageBubble`'s tone classes (escalation/failure/normal — a genuine 2-tone truth-state map, already partially tokenized for the neutral case) — escalation → `--warning`, failure → `--error` — across the bubble background/border, speaker label, the "approval required" badge, the content-hidden gate box + "Confirm to reveal" button, the message content text itself, the Retry button, and the Acknowledge/Acknowledged state.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` reported no change needed after the manual pass and one direct follow-up `Edit` fix for a line the script's ordered-rule matching missed (a duplicate-looking-but-distinct "Acknowledge" button class string that a first script draft accidentally deduplicated out — caught by the standard leftover-raw-color grep, not silently missed).
+- **Test coverage:** `src/test/boardroomChatView.test.jsx` — 31/31 passing (`--pool=threads`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified, partially** (Playwright, real dev server, Boardroom space → Boardroom → "Boardroom Sessions" tab): confirmed the thread list, "New Thread" button, thread-topic input, and the message composer (agent-select dropdown + Send button) all render correctly tokenized; created a real thread and confirmed its selected-state accent-teal highlight. The `MessageBubble` escalation/failure tone states specifically were not independently screenshotted — reaching them requires a real multi-agent `@mention` chain to actually escalate or fail, which needs live Ollama generation across multiple agents and wasn't triggered this pass; relying on the 31-test suite (which explicitly covers escalation, failure, gated-content, and acknowledgment states with mocked data) plus clean `tsc`/`eslint`.
+- **Status:** CLOSED (thread/composer chrome live-verified; `MessageBubble` tone states verified via tests only, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
