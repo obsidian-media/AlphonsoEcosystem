@@ -195,6 +195,13 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, via Settings → Connectors): approval checkbox row in warning-amber, "SAVE CONNECTION" (accent) and "SEND TEST" (success-green) buttons, empty-state and footnote text correctly tokenized — zero console errors.
 - **Status:** CLOSED.
 
+### 30. `NotionSyncPanel.tsx` re-skin (324 lines, 59 refs) — clean pass, no carve-out
+
+- **What changed:** `statusColor`/`Badge`'s color map (conflict/approval truth states), `MiniButton`'s primary/default styling, and all structural chrome across the stat tiles, error box, recent-records list, and weekly-report toggle — tokenized onto `--accent`/`--success`/`--warning`/`--error`/`--info`/`--text-*`/`--surface-*`. Genuine semantic states throughout (conflict status, approval status), no per-item identity.
+- **Existing test coverage:** no dedicated component test, but rendered via `OperatorDashboard.tsx`'s collapsible "Notion Co-Source Sync" section and the sync logic itself is service-tested (`src/test/notionSyncService.test.js`). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, via Operator Dashboard): "PUSH SAMPLE"/"COPY REPORT" buttons in accent, conflict/approval/blocked count badges in neutral (all zero), panel icon in accent — zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
