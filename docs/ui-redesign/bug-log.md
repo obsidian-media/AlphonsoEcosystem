@@ -326,6 +326,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** traced the real mount site to `App.tsx:811` (rendered when an iOS companion or Jose pipeline action requires explicit approval). Same reachability constraint as `ApprovalPanel.tsx` (#41) and `MarcusAuditPanel.tsx` (#40) — requires a genuine pending-approval trigger, not chased further this pass; relying on the 10-test suite (which exercises risk-level inference, destructive-action detection, and both buttons) plus clean `tsc`/`eslint`.
 - **Status:** CLOSED (code + statics + full test suite verified; live screenshot not obtained, disclosed above).
 
+### 46. `AgentMetricsPanel.tsx` re-skin (155 lines, 32 refs) — clean pass, no carve-out
+
+- **What changed:** empty state, 6 stat cards (Success Rate/Validation Pass/Avg Files/Avg Duration/Avg Confidence/Avg Iterations — threshold-driven success/warning/error coloring), Top Commands, Common Errors, 7-Day Trend bar chart, and By Agent breakdown — all tokenized onto `--success`/`--warning`/`--error`/`--accent`/`--text-*`/`--surface-*`/`--border`. "Avg Files" (indigo, purely decorative/neutral) mapped to `--accent`; "Avg Duration" (zinc, neutral) mapped to `--text-3`; the trend chart's bar fill (indigo/30, decorative data-viz) mapped to `--accent-dim`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists (only `src/test/agentMetricsService.test.js`, a different file — the underlying data service, not this render layer). `tsc --noEmit` and `eslint` both clean.
+- **Live-verified, partially** (Playwright, real dev server, Settings → Agents section → "Agent Performance"): confirmed the empty state ("No execution data yet...") renders correctly tokenized with zero console errors. The populated stat-card/trend-chart/by-agent views were not independently screenshotted — this dev environment has no execution history to populate them with, and generating real execution data solely to verify this one panel's populated-state colors was judged out of proportion; relying on the token-pattern consistency already proven correct across ~20 prior files using identical `--success`/`--warning`/`--error` conventions for the same kind of threshold-driven metric coloring.
+- **Status:** CLOSED (code + statics verified, empty state live-verified; populated-state screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
