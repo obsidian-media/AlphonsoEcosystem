@@ -343,6 +343,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server): navigated Sidebar → Boardroom space → Boardroom nav item → "Boardroom Legacy" sub-tab (alongside "Mission Room" and "Boardroom Sessions" — confirmed all 3 sub-tabs exist as documented). Confirmed the 9 agent-selector pills render in accent-teal, filled in a topic and clicked "Convene Session" — confirmed the resulting session card's "ACTIVE" badge (accent-teal) and "Conclude Session" button (success-green) render correctly. (Unrelated to this change: convening triggered real `fetchRssSources` CORS failures against external RSS feeds in this dev/browser environment — pre-existing, caught by the code's own `.catch(() => [])` fallback, not a regression from this pass.) Zero rendering-related console errors.
 - **Status:** CLOSED.
 
+### 48. `RuntimeNotice.tsx` re-skin (88 lines, 28 refs) — clean pass, no carve-out
+
+- **What changed:** `Badge`'s palette map (zinc/green/red/amber/blue — a clean 5-way truth-state fit, since `statusColors` already maps every Ollama connection state onto exactly these 5 abstract color names), the notice shell, header row, body text, installed-models list, the "System Recovery" degraded-state box, and both action buttons — all tokenized onto `--success`/`--warning`/`--error`/`--info`/`--text-*`/`--surface-*`/`--border`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification attempt, honestly incomplete:** traced the real mount site to `ChatView.tsx`, which only renders this notice when Ollama is disconnected or the selected model is missing (`showNotice = ollamaStatus.state !== 'connected' || selectedModelMissing`) — this dev environment's Ollama is connected throughout this whole session (confirmed in every prior screenshot's right-panel "System" tab), so the notice never renders under normal conditions and forcing a disconnected state solely to screenshot one banner was judged out of proportion. Not chased further; relying on clean `tsc`/`eslint` and the straightforward 1:1 status→tone mapping.
+- **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
