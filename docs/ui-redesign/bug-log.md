@@ -767,6 +767,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Settings → Appearance): confirmed all 3 preview swatches render their distinct colors, and the selected swatch's "Active" label and accent-blue ring render correctly. Zero console errors.
 - **Status:** CLOSED (no change needed).
 
+### 99. `AgentAvatar.tsx` re-skin (40 lines, 3 refs) — clean pass, no carve-out
+
+- **What changed:** the mascot-image border and the fallback avatar's border/background/text/icon (a universal, agent-agnostic fallback shown when an agent's mascot image fails to load — not per-agent identity, so tokenized normally) — onto `--border`/`--surface-2`/`--text-*`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake once, corrected automatically.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification, partial:** this component is used throughout the app and its real-mascot-image path has been visually confirmed correct in numerous prior screenshots this session (`AgentDock.tsx`, `AgentCard.tsx`, the Coach agent-status cards, etc.) — but all of those used real mascot images successfully, so the fallback initials/icon path (the actual code changed here) was not independently triggered or screenshotted this pass.
+- **Status:** CLOSED (code + statics verified; fallback-path rendering not independently screenshotted, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
