@@ -10,10 +10,6 @@ vi.mock('../components/SetupFlow', () => ({
     </div>
   ),
 }));
-vi.mock('../components/OnboardingWizard', () => ({
-  OnboardingWizard: () => <div data-testid="onboarding-wizard">legacy onboarding</div>,
-}));
-
 import App from '../App';
 import { ToastProvider } from '../components/ToastProvider';
 
