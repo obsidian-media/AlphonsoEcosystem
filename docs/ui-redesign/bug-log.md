@@ -584,6 +584,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, real dev server, Chat view): confirmed the "VOICE" button renders in its idle neutral tone at the bottom of the composer. Zero console errors.
 - **Status:** CLOSED.
 
+### 77. `MarkdownMessage.tsx` re-skin (161 lines, 10 refs) — a 13th carve-out (inline-code vs. code-block distinction)
+
+- **What changed:** headings (h1/h2/h3), paragraphs, and list items — all tokenized onto `--text-1`/`--text-2`, plus the code-block and inline-code container chrome (background/border) tokenized onto `--surface-1`/`--surface-3`/`--border`.
+- **Carve-out kept, not tokenized:** inline `` `code` `` (cyan) vs. fenced ` ```code``` ` blocks (green) keep their distinct raw colors — a real, common markdown-rendering convention (visually distinguishing inline code from block code), not a truth-state signal; forcing both onto one token would reduce the visual distinction readers rely on.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Chat view): seeded a message containing every syntax this parser supports (headings, bold/italic/inline-code, a fenced code block, unordered + ordered lists) directly into the real `alphonso_messages_${chatId}` localStorage key `ChatView.tsx` reads on mount, then reloaded — confirmed every element renders correctly, including the deliberate cyan/green code-color carve-out. Zero rendering-related console errors (pre-existing "Ollama: connecting" banner appeared only because the reload raced Ollama's health check, unrelated to this change).
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
