@@ -941,6 +941,15 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verified** (Playwright, both themes, full-page screenshots): all cards now render as clean washes with no borders, the greeting headline is fully legible in light mode, zero console errors.
 - **Status:** CLOSED for `MissionControlHome.tsx`. Given this file and `MissionRoom.tsx` both had `text-white`/`bg-black`/`bg-white`/`border-white`-family bugs the original audit never caught, the remaining un-converted Phase 2 pages should be checked for the same literal-white/black pattern while their cards are being migrated, not treated as a separate future pass.
 
+### 111. `EcosystemHub.tsx` converted to the "no cards" rule too — third slice, plus a real new distinct rule surfaced and deliberately not touched
+
+- **Scope:** third page conversion continuing #109/#110's migration ("All Agents" hub). ~28 `border` occurrences and ~18 hardcoded white/black classes going in.
+- **What changed:** removed `border` from every rectangular container across the Overview/Queue/Skills/Workflows/Pairings tabs — packet cards, approve/reject/execute buttons, handoff textarea, skill-pack rows, workflow rows, security-event rows, a plugin-registry loading state, a connector-registry search input and Fetch button, a connector-item row. Fixed the header's `<h1>Agent Ecosystem</h1>` (`text-white` → `text-[var(--text-1)]`, same recurring bug class) and two structural divider underlines (header/tab-bar, `border-white/[0.06]` → `border-[var(--border)]`) — dividers are their own explicitly-allowed category per the spec (distinct from cards), so these kept their border, just needed a real token instead of a raw hex-adjacent opacity value.
+- **A distinct rule found, explicitly NOT acted on:** the tab switcher (Overview/Queue/Skills/Workflows/Pairings/Workshop/Advanced) uses a bordered-pill active-state (`border border-[var(--accent-border)]` vs. `border border-transparent`) — but `draft-a-power-user-direction.md`'s "What's explicitly rejected" section separately states *"No solid-black pill-tab nav... underline-style active tab used instead."* This is a real, third distinct design-system gap (beyond "no cards" and the white/black bugs), but redesigning a navigational interaction pattern is a bigger, more visible product decision than a border-removal pass — left untouched and flagged here rather than silently redesigned mid-sweep.
+- **Verification:** `fix-broken-var-opacity.mjs` — no change needed. `npx tsc --noEmit` and `npx eslint src/components/EcosystemHub.tsx` both clean. `ecosystemHub.test.jsx` (8 tests) passing.
+- **Live-verified** (Playwright, both themes, full-page screenshot of the Overview tab): Operator Modes / Trust-Verification / Approval Center panels all render as clean washes, fully legible in light mode, zero console errors.
+- **Status:** CLOSED for `EcosystemHub.tsx`'s card/border/white-black treatment. The tab-underline-vs-pill gap above is a new, separate, still-open item — not scoped into this entry's "closed."
+
 ---
 
 ## Notes on discovery method

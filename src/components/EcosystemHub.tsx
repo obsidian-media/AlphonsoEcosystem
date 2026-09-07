@@ -236,13 +236,13 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   return (
     <div className="h-full overflow-y-auto">
     <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
-      <header className="pb-4 border-b border-white/[0.06]">
+      <header className="pb-4 border-b border-[var(--border)]">
         <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-3)]">All Agents</div>
-        <h1 className="mt-1 text-xl font-bold tracking-tight text-white">Agent Ecosystem</h1>
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-1)]">Agent Ecosystem</h1>
       </header>
 
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-white/[0.06] pb-1">
+      <div className="flex gap-1 border-b border-[var(--border)] pb-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -288,26 +288,26 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {approvalQueue.length === 0 && <p className="text-sm text-[var(--text-3)]">No pending approvals.</p>}
                   {approvalQueue.map((packet) => (
-                    <div key={packet.id} className="rounded-lg border border-white/10 bg-[var(--surface-1)] p-3 space-y-2">
+                    <div key={packet.id} className="rounded-lg bg-[var(--surface-1)] p-3 space-y-2">
                       <div className="text-xs font-semibold text-[var(--text-2)]">{packet.title}</div>
                       <div className="text-[11px] text-[var(--text-3)]">{packet.fromAgent} {'→'} {packet.toAgent} | {packet.packetType}</div>
                       <div className="flex gap-1.5">
-                        <button onClick={() => runApprove(packet.id)} className="rounded border border-[var(--success-border)] bg-[var(--success-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--success)] hover:opacity-90 transition-colors">Approve</button>
-                        <button onClick={() => runReject(packet.id)} className="rounded border border-[var(--error-border)] bg-[var(--error-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--error)] hover:opacity-90 transition-colors">Reject</button>
-                        <button onClick={() => runExecutePacket(packet.id)} className="rounded border border-white/[0.08] bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors">Execute</button>
+                        <button onClick={() => runApprove(packet.id)} className="rounded bg-[var(--success-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--success)] hover:opacity-90 transition-colors">Approve</button>
+                        <button onClick={() => runReject(packet.id)} className="rounded bg-[var(--error-dim)] px-2.5 py-1 text-[10px] font-semibold text-[var(--error)] hover:opacity-90 transition-colors">Reject</button>
+                        <button onClick={() => runExecutePacket(packet.id)} className="rounded bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-2)] hover:bg-[var(--surface-3)] transition-colors">Execute</button>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="mt-3">
                   <label className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">Execution Note</label>
-                  <input value={handoffNote} onChange={(e) => setHandoffNote(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-[var(--surface-2)] px-3 py-2 text-[11px]" />
+                  <input value={handoffNote} onChange={(e) => setHandoffNote(e.target.value)} className="mt-1 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[11px]" />
                 </div>
               </Panel>
               <Panel icon={ShieldAlert} title="Human Override">
                 <div className="space-y-2 text-[11px] text-[var(--text-3)]">
-                  <div className="rounded-lg border border-[var(--warning-border)] bg-[var(--warning-dim)] px-3 py-2">Safe mode and approval gates remain active.</div>
-                  <div className="rounded-lg border border-[var(--error-border)] bg-[var(--error-dim)] px-3 py-2">Emergency stop: reject all pending packets.</div>
+                  <div className="rounded-lg bg-[var(--warning-dim)] px-3 py-2">Safe mode and approval gates remain active.</div>
+                  <div className="rounded-lg bg-[var(--error-dim)] px-3 py-2">Emergency stop: reject all pending packets.</div>
                 </div>
                 <div className="mt-3 flex gap-2">
                   <button onClick={() => approvalQueue.forEach((p) => runReject(p.id))} className="rounded bg-[var(--error-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--error)] flex items-center gap-1">
@@ -331,7 +331,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                     <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{groupLabel} <span className="text-[var(--text-4)]">({groupSkills.length})</span></div>
                     <div className="space-y-2">
                       {groupSkills.map((skill) => (
-                        <div key={skill.id} className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-3 py-2 flex items-center justify-between">
+                        <div key={skill.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 flex items-center justify-between">
                           <div>
                             <div className="text-xs font-semibold text-[var(--text-2)]">{skill.name}</div>
                             <div className="text-[11px] text-[var(--text-3)]">{skill.id} | v{skill.version}</div>
@@ -348,7 +348,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
               </div>
               <div className="mt-4">
                 <label className="text-[10px] uppercase tracking-widest text-[var(--text-3)] mb-1 block">Install from manifest JSON</label>
-                <textarea value={manifestInput} onChange={(e) => setManifestInput(e.target.value)} rows={6} className="w-full rounded-lg border border-white/10 bg-[var(--surface-2)] px-3 py-2 font-mono text-[11px] text-[var(--text-2)]" />
+                <textarea value={manifestInput} onChange={(e) => setManifestInput(e.target.value)} rows={6} className="w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 font-mono text-[11px] text-[var(--text-2)]" />
                 <div className="mt-2 flex gap-2">
                   <button onClick={runValidateManifest} className="rounded bg-[var(--surface-2)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)]">Validate</button>
                   <button onClick={runInstallSkillPack} className="rounded bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Install</button>
@@ -362,13 +362,13 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
             <div className="space-y-4">
               <Panel icon={Workflow} title="Workflows">
                 <div className="flex gap-2">
-                  <input value={newWorkflowName} onChange={(e) => setNewWorkflowName(e.target.value)} className="flex-1 rounded-lg border border-white/10 bg-[var(--surface-2)] px-3 py-2 text-sm" />
+                  <input value={newWorkflowName} onChange={(e) => setNewWorkflowName(e.target.value)} className="flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-sm" />
                   <button onClick={runCreateWorkflow} className="rounded bg-[var(--accent-dim)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Create</button>
                 </div>
                 <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
                   {workflows.length === 0 && <p className="text-sm text-[var(--text-3)]">No workflows yet.</p>}
                   {workflows.map((flow) => (
-                    <div key={flow.id} className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">
+                    <div key={flow.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--text-2)]">
                       {flow.name} — {flow.nodes.length} nodes, {flow.edges.length} edges
                     </div>
                   ))}
@@ -379,7 +379,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                   {timeline.length === 0 && <p className="text-sm text-[var(--text-3)]">No events yet.</p>}
                   {timeline.map((event) => (
-                    <div key={event.id} className="rounded-lg border border-white/10 bg-[var(--surface-1)] px-3 py-2">
+                    <div key={event.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2">
                       <div className="text-[11px] text-[var(--text-2)]">{event.title}</div>
                       <div className="text-[10px] text-[var(--text-3)]">{event.category} · {new Date(event.timestampMs).toLocaleTimeString()}</div>
                     </div>
@@ -424,7 +424,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
                 workspaceFoundation={workspaceFoundation}
                 onRefresh={refreshAll}
               />
-              <Suspense fallback={<div className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3 text-sm text-[var(--text-3)]">Loading…</div>}>
+              <Suspense fallback={<div className="rounded-2xl bg-[var(--surface-1)] p-3 text-sm text-[var(--text-3)]">Loading…</div>}>
                 <WorkflowOperationsDashboard settings={settings} />
               </Suspense>
               <ProductionReadinessPanel
@@ -489,7 +489,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
   const changedCount = rows.filter((r) => r.changed).length;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3.5 space-y-3">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-3.5 space-y-3">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold">
         <Activity className="w-4 h-4 text-[var(--accent)]" /> Snapshot Diff
         {changedCount > 0 && <span className="rounded-full bg-[var(--warning-dim)] border border-[var(--warning-border)] px-2 py-0.5 text-[9px] text-[var(--warning)]">{changedCount} changed</span>}
@@ -507,7 +507,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
                   aria-label={`Snapshot ${label}`}
                   value={val}
                   onChange={(e) => setter(e.target.value)}
-                  className="w-full rounded-lg bg-[var(--surface-2)] border border-white/10 px-2 py-1.5 text-[10px] text-[var(--text-2)] outline-none"
+                  className="w-full rounded-lg bg-[var(--surface-2)] px-2 py-1.5 text-[10px] text-[var(--text-2)] outline-none"
                 >
                   {sorted.map((s) => (
                     <option key={s.id as string} value={s.id as string}>
@@ -522,7 +522,7 @@ function SnapshotDiffPanel({ snapshots }: { snapshots: Record<string, unknown>[]
           <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
             {rows.length === 0 && <div className="text-[11px] text-[var(--text-4)]">Both snapshots are empty.</div>}
             {rows.map((row) => (
-              <div key={row.key} className={`rounded-lg px-2 py-1.5 text-[10px] ${row.changed ? 'bg-[var(--warning-dim)] border border-[var(--warning-border)]' : 'bg-[var(--surface-1)] border border-white/[0.04]'}`}>
+              <div key={row.key} className={`rounded-lg px-2 py-1.5 text-[10px] ${row.changed ? 'bg-[var(--warning-dim)]' : 'bg-[var(--surface-1)]'}`}>
                 <div className={`font-mono font-bold mb-0.5 ${row.changed ? 'text-[var(--warning)]' : 'text-[var(--text-3)]'}`}>{row.key}</div>
                 {row.changed ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -577,7 +577,7 @@ function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<stri
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--surface-1)] p-3.5 space-y-3">
+    <section className="rounded-2xl bg-[var(--surface-1)] p-3.5 space-y-3">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold">
         <Layers3 className="w-4 h-4 text-[var(--accent)]" /> Plugin Marketplace
       </div>
@@ -588,12 +588,12 @@ function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<stri
           value={registryUrl}
           onChange={(e) => setRegistryUrl(e.target.value)}
           placeholder="Registry URL (optional)"
-          className="flex-1 rounded-lg bg-[var(--surface-2)] border border-white/10 px-2.5 py-1.5 text-[11px] text-[var(--text-2)] placeholder-[var(--text-4)] outline-none focus:border-[var(--accent-border)]"
+          className="flex-1 rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] text-[var(--text-2)] placeholder-[var(--text-4)] outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
         />
         <button
           onClick={fetchRemote}
           disabled={fetching || !registryUrl.trim()}
-          className="rounded-lg bg-[var(--accent-dim)] border border-[var(--accent-border)] px-3 py-1.5 text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-50"
+          className="rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-[10px] font-bold text-[var(--accent)] hover:bg-[var(--accent-muted)] disabled:opacity-50"
         >
           {fetching ? '…' : 'Fetch'}
         </button>
@@ -616,7 +616,7 @@ function MarketplacePanel({ marketItems, onRefresh }: { marketItems: Record<stri
       {/* Item grid */}
       <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
         {visible.map((item: any) => (
-          <div key={item.id} className="rounded-lg border border-white/[0.06] bg-[var(--surface-1)] px-3 py-2 flex items-center justify-between gap-3">
+          <div key={item.id} className="rounded-lg bg-[var(--surface-1)] px-3 py-2 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[12px] font-semibold text-[var(--text-2)] truncate">{item.name}</div>
               <div className="text-[10px] text-[var(--text-4)]">{item.type} · {item.id}</div>
