@@ -77,7 +77,7 @@ export function SmartVoiceButton({ voiceStatus: browserVoiceStatus, onToggle, on
           : isJarvisAvailable
             ? 'border-[var(--success-border)] text-[var(--success)] hover:bg-[var(--success-muted)]'
             : jarvisError
-              ? 'border-amber-500/30 text-amber-300 hover:bg-amber-500/10'
+              ? 'border-[var(--warning-border)] text-[var(--warning)] hover:bg-[var(--warning-dim)]'
               : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
       }`}
       title={title}

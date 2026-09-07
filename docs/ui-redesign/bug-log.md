@@ -752,6 +752,14 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** per CLAUDE.md's own documentation, this is "a separate, older read-only pending list" in the Agent Workshop subsystem, superseded for gating purposes by the real Approval tab (`ApprovalPanel.tsx`) but left in place — it reads from `approvalService.js`'s own store, which requires a real pending approval from Project Execution Mode to populate, the same reachability constraint as several RESULTS-tab files this pass. Not chased further; relying on clean `tsc`/`eslint`.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 97. `SmartVoiceButton.tsx` re-skin (89 lines, 3 refs) — clean pass, no carve-out
+
+- **What changed:** this file was already fully tokenized except the `jarvisError` state, tokenized onto `--warning`/`--warning-border`/`--warning-dim`, consistent with the file's own existing conventions for the other 3 states (listening/thinking/speaking → `--accent`, Jarvis-available → `--success`, idle → neutral).
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verification, partial:** this is the same real "VOICE" button in `ChatView.tsx`'s composer already screenshotted in its idle state while working on `VoiceInputButton.tsx` (#76) — wait, that was a different, sibling component (`VoiceInputButton.tsx` vs. this file, `SmartVoiceButton.tsx` — per CLAUDE.md, `SmartVoiceButton.tsx` is "the unified voice input" component, a separate one). Traced this file's real mount site but did not independently confirm which of the two voice-button components is actually rendered in `ChatView.tsx`'s composer for this pass; the single-line `jarvisError` fix was not independently screenshotted. Relying on clean `tsc`/`eslint` and the file's own already-correct surrounding conventions.
+- **Status:** CLOSED (code + statics verified; live screenshot not confirmed for this specific file, disclosed above).
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
