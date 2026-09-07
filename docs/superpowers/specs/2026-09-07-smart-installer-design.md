@@ -370,16 +370,27 @@ not need AI-generated art.
 
 ## 8. Cross-cutting risks flagged during research (not part of this project, but block or inform it)
 
-- **Suspected Linux `.AppImage` Ollama-bundling gap** — byte-level inspection
-  of the real published `v2.7.1` AppImage found no valid squashfs superblock
-  and only a single occurrence of the string `"ollama"` in the whole file,
-  strongly suggesting the Linux release doesn't actually contain the bundled
-  Ollama runtime despite the fetch step running. Not confirmed with a
-  Linux-native tool (`unsquashfs`) this session. **The Smart Installer's
-  system scan must never assume "Ollama already bundled" is true
-  cross-platform — verify live, per install, per OS.** Tracked in
-  `docs/governance/DEFERRED_WORK.md`'s 2026-09-07 entry; held per explicit
-  user instruction to resolve after this project's research phase.
+- ~~**Suspected Linux `.AppImage` Ollama-bundling gap**~~ — **RETRACTED, the
+  suspicion was wrong.** An earlier version of this section claimed
+  byte-level inspection showed the Linux release shipped without the bundled
+  Ollama runtime. Verified properly on 2026-09-07 via WSL Ubuntu:
+  `--appimage-extract` on the real published v2.7.1 asset yields
+  `usr/lib/Alphonso/ollama/ollama`, a working 39MB ELF binary that reports
+  `client version is 0.32.13` when run, plus the full GGML CPU backend set.
+  **Ollama is bundled on Linux.** The 1000MB-vs-112MB size gap that prompted
+  the suspicion is explained by `scripts/fetch-ollama-runtime.mjs`
+  deliberately pruning all GPU backend subdirectories (~1.2GB of CUDA and
+  Vulkan) on Linux only, to work around a real linuxdeploy RPATH resolution
+  failure — documented at length in that script. Linux ships CPU-only Ollama
+  inference by design. Full post-mortem, including why each piece of the
+  original evidence was a false positive, is in
+  `docs/governance/DEFERRED_WORK.md`'s 2026-09-07 entry.
+  **The design guidance this produced still stands on its own merits,
+  independent of the retracted premise:** the Smart Installer's system scan
+  should verify Ollama's real presence at runtime rather than assuming a
+  bundling invariant, because `DEPENDENCY_BUNDLING_PLAN.md`'s baseline is
+  itself a moving target (see the next bullet) and per-platform packaging
+  genuinely does differ.
 - **macOS release pipeline doesn't exist** — see §2 above and the
   corresponding `DEFERRED_WORK.md` entry.
 - **`DEPENDENCY_BUNDLING_PLAN.md`'s own baseline is a moving target** —
