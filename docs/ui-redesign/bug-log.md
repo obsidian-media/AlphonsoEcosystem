@@ -835,6 +835,17 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 
 ---
 
+### 101. `ViewLoadingState.tsx` + `EcosystemMaturityPanelsGate.tsx` re-skin (2 raw-color refs each) — 2 genuinely-missed files found by re-verifying the audit sweep before declaring it complete
+
+- **Where found:** after closing #100 and believing the initial full-repo hardcoded-color sweep was complete, re-ran the exact same audit grep across every component file one more time before trusting that conclusion — found these 2 files still carrying raw colors that the original backlog scan (built once, early in the session) had missed. A good reminder that a scan built once and reused for 100 entries can silently drift from the real codebase state; re-verifying it at the finish line caught a real gap.
+- **What changed:** both are `Suspense`-fallback / dynamic-import loading states (`ViewLoadingState.tsx` — the generic `Loading {activeTab}...` fallback used across many of `App.tsx`'s lazy-loaded views; `EcosystemMaturityPanelsGate.tsx`'s own local `LoadingState` — shown while its `import('./EcosystemMaturityPanels')` resolves). Tokenized both onto `--border`/`--surface-0`/`--text-3`.
+- **Safety-net catch:** `fix-broken-var-opacity.mjs` caught the standing double-alpha mistake on both files, corrected automatically.
+- **Test coverage:** no dedicated component tests exist for either file. `tsc --noEmit` and `eslint` both clean on both.
+- **Live-verification attempt, honestly incomplete:** both are inherently transient states (a Suspense fallback shown only for the brief window before a lazy chunk resolves, and a dynamic-import loading state that resolves almost instantly in dev) — not practically screenshotted without artificially throttling module loading, which wasn't attempted this pass. Relying on clean `tsc`/`eslint` and the identical, already-proven token pattern used throughout this session.
+- **Status:** CLOSED (code + statics verified; live screenshots not obtained for either transient state, disclosed above). **This is now the true end of the full-repo hardcoded-color audit sweep** — re-verified zero component files remain with an undocumented raw-color match.
+
+---
+
 ## Notes on discovery method
 
 Bugs logged here were found through direct verification (grep + read the actual code), never assumed from documentation. If CLAUDE.md's Do-Not-Duplicate table describes a feature as working and this document contradicts it, trust this document's direct-verification note, and re-check CLAUDE.md's claim before relying on it further.
