@@ -134,7 +134,7 @@ export function MissionControlHome({
       items.push({ title: 'Start Ollama', detail: 'Local AI is not running — agent reasoning is limited', cta: 'Open Settings', tab: 'settings', icon: Terminal, accent: 'text-[var(--text-3)]' });
     }
     items.push({ title: 'Continue your mission', detail: 'Use Project Execution for structured work packets and proof-first planning', cta: 'Open Project Exec', tab: 'project_execution', icon: Sparkles, accent: 'text-[var(--accent)]' });
-    items.push({ title: 'Talk to Alphonso', detail: 'Direct commands, research, and Jose delegation', cta: 'Open Chat', tab: 'chat', icon: MessageSquare, accent: 'text-cyan-400' });
+    items.push({ title: 'Talk to Alphonso', detail: 'Direct commands, research, and Jose delegation', cta: 'Open Chat', tab: 'chat', icon: MessageSquare, accent: 'text-[var(--agent-alphonso)]' });
     return items.slice(0, 4);
   }, [attentionItems, coachIntervention, ollamaStatus]);
 
@@ -236,7 +236,7 @@ export function MissionControlHome({
                 key={`${action.tab}-${action.title}`}
                 type="button"
                 onClick={() => onNavigate?.(action.tab)}
-                className="group flex w-full items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:border-white/[0.10] hover:bg-[var(--surface-2)]"
+                className="group flex w-full items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
               >
                 <action.icon className={`h-4 w-4 shrink-0 ${action.accent}`} />
                 <div className="flex-1 min-w-0">
@@ -279,7 +279,7 @@ export function MissionControlHome({
         <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-[var(--text-3)]">Quick launch</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {[
-            { title: 'Miya Studio', detail: 'Create images and video locally', tab: 'miya', icon: Clapperboard, color: 'text-fuchsia-400' },
+            { title: 'Miya Studio', detail: 'Create images and video locally', tab: 'miya', icon: Clapperboard, color: 'text-[var(--agent-miya)]' },
             { title: 'Connectors', detail: 'Telegram, Slack, YouTube and more', tab: 'connectors', icon: RadioTower, color: 'text-cyan-400' },
             { title: 'Operator', detail: 'Settings, Coach, and memory', tab: 'operator', icon: Bot, color: 'text-violet-400' },
           ].map((item) => (
@@ -287,7 +287,7 @@ export function MissionControlHome({
               key={item.tab}
               type="button"
               onClick={() => onNavigate?.(item.tab)}
-              className="group flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:border-white/[0.10] hover:bg-[var(--surface-2)]"
+              className="group flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
             >
               <item.icon className={`h-4 w-4 shrink-0 ${item.color}`} />
               <div>

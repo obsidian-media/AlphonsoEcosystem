@@ -733,6 +733,17 @@ Living document. Append findings as they're discovered during Phase 0 discovery 
 - **Live-verification attempt, honestly incomplete:** same post-execution RESULTS-tab card family as several prior files this pass — identical reachability constraint. Not chased further; relying on clean `tsc`/`eslint` and the identical, already-proven token pattern.
 - **Status:** CLOSED (code + statics verified; live screenshot not obtained, disclosed above).
 
+### 95. `MissionControlHome.tsx` re-skin (4 raw-color refs) — 2 real agent-color mismatches fixed, one genuine carve-out kept
+
+- **What changed:** the "Talk to Alphonso" attention-card icon and the "Miya Studio" Quick Launch tile icon.
+- **Real bugs found and fixed:** `"Talk to Alphonso"` sits in an array where every sibling item already used semantic `--` tokens (`--warning`/`--error`/`--text-3`/`--accent`) — its lone raw `text-cyan-400` was a leftover inconsistency, not a carve-out; since cyan happens to be Alphonso's real `--agent-alphonso` token, fixed to reference it directly. `"Miya Studio"`'s Quick Launch icon was hardcoded fuchsia, but her real `--agent-miya` token is violet — the exact same mismatch already found and independently fixed 3 other times this session (`MiyaCompanionWidget.tsx` #44, `BoardroomView.tsx` #47, `AgentActivityLog.tsx` #62), now a 4th confirmed instance of the identical drift pattern.
+- **Carve-out kept, not tokenized:** the "Connectors" (cyan) and "Operator" (violet) Quick Launch tile icons — genuine decorative variety for two destinations that aren't tied to a specific agent (Operator's violet is coincidental overlap with Miya's token, not a mismatch, since Operator ≠ Miya).
+- **Also tokenized:** a stray `hover:border-white/[0.10]` → `--border-strong`.
+- **Safety-net check:** `fix-broken-var-opacity.mjs` reported no change needed.
+- **Test coverage:** no dedicated component test exists for this file. `tsc --noEmit` and `eslint` both clean.
+- **Live-verified** (Playwright, real dev server, Dashboard, scrolled to "Quick launch"): confirmed "Talk to Alphonso" now shows the correct cyan Alphonso-identity icon, "Miya Studio" now shows the correct violet Miya-identity icon, and "Connectors"/"Operator" render their distinct carve-out colors. Zero console errors.
+- **Status:** CLOSED.
+
 ---
 
 ## CLOSED (stale finding, corrected after a later rebase)
