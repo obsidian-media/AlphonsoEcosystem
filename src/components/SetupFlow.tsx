@@ -72,13 +72,20 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
       setActivationVariant('full');
       setStep('activation');
     }
-    // If earlyExited is true, the user already left via handleStarterReady;
-    // a real toast-variant Activation for "last background task finished"
-    // needs the main app shell to still be mounted to show a non-blocking
-    // toast over it — that cross-component wiring is deferred, tracked as
-    // a follow-up, not silently dropped (design doc §5 step 7's second
-    // trigger context is genuinely not reachable from inside SetupFlow's
-    // own lifecycle, since the component unmounts once finishSetup() runs).
+    // If earlyExited is true, this callback itself is genuinely unreachable:
+    // finishSetup() already unmounted SetupFlow (and InstallQueue with it),
+    // so InstallQueue's internal effect that would call onAllComplete for
+    // later-settling background tasks never re-runs post-unmount — a raw
+    // setState on an unmounted component is a no-op, not a scheduled
+    // re-render. That's fine, not a gap: the "did my other components
+    // finish?" concern this comment used to flag as unaddressed is now
+    // covered a different way — InstallQueue dispatches a per-task
+    // alphonso:toast directly from its raw promise .then()/.catch()
+    // handlers (not gated on any React lifecycle, so it fires whether or
+    // not this component tree still exists), for both success and failure.
+    // No design-doc-promised Activation toast variant is missing here; the
+    // toast-variant activationVariant above is for the *starter* model's
+    // own early-exit moment, a separate and already-working case.
   };
 
   const handleFailed = (labels: string[]) => {

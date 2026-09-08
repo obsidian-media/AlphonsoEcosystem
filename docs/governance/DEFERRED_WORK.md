@@ -33,29 +33,30 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   per-OS, treated the same "unknown, don't block" way a failed measurement
   already is elsewhere in this file — not a guess that actively blocks
   installs. Status: partially fixed, remaining gap deferred.
-- [2026-09-08] **Smart Installer: background-install *success* after
-  early-exit is still silent (failure is now fixed).** `SetupFlow.tsx`'s
+- [2026-09-08] **Smart Installer: background-install success after
+  early-exit was silent — resolved.** `SetupFlow.tsx`'s
   `handleStarterReady()` unmounts the whole Setup flow the moment the
   starter model is ready, while other selected components (Fooocus, Voice
   OS, ChromaDB) may still be installing in the background — their promises
   keep running after unmount, but nothing was capturing the outcome.
-  CodeRabbit flagged this on PR #233; the *failure* half was a real,
-  fixable gap and is now fixed same-day (`InstallQueue.tsx` dispatches a
-  global `alphonso:toast` error notification — the same cross-component
-  mechanism `CoachContext.jsx` already uses for "still-mounted parent,
-  unmounted child" — pointing the user at Runtime Hub to retry). The
-  *success* half remains deliberately deferred, as already noted in
-  `SetupFlow.tsx`'s own `handleAllComplete` comment before this pass: a
-  real toast-variant Activation for "your last background install
-  finished" needs the main app shell to still be mounted to show a
-  non-blocking toast over it, which SetupFlow's own lifecycle can't do
-  once it has unmounted itself. Resume hint: this needs the app shell
-  (`App.tsx`) to own a small piece of "is a Setup-originated background
-  install still running" state that survives SetupFlow unmounting, not
-  something SetupFlow itself can solve alone — genuine cross-component
-  wiring, not a quick fix. Status: deferred (failure half closed, success
-  half remains open, now tracked here for the first time rather than only
-  in a code comment).
+  CodeRabbit flagged this on PR #233 as two halves (failure and success);
+  the *failure* half was fixed first (`InstallQueue.tsx` dispatches a
+  global `alphonso:toast` error notification, the same mechanism
+  `CoachContext.jsx` uses for "still-mounted parent, unmounted child"),
+  with the *success* half initially deferred on the assumption it needed
+  new cross-component wiring into `App.tsx` to hold lifecycle state that
+  survives SetupFlow unmounting. That assumption was wrong, caught the
+  same day on a second look: `ToastProvider` is mounted in `main.jsx`
+  *above* `App.tsx`'s SetupFlow/main-shell conditional (`<ToastProvider><App
+  /></ToastProvider>`), so it never unmounts across that swap — the exact
+  same per-task `alphonso:toast` dispatch already built for the failure
+  case works identically for success, with zero new plumbing. Fixed by
+  adding a matching success dispatch in `InstallQueue.tsx`'s `.then()`
+  handler (guarded against the starter model's own success, which is the
+  early-exit trigger itself, not a background completion worth a second
+  toast) and correcting the now-stale `handleAllComplete` comment in
+  `SetupFlow.tsx` that had described this as unreachable-without-new-work.
+  Status: closed.
 - [2026-09-07] **CALL-E (J3): three live-verification steps deferred to the
   owner — everything else is done.** The connector's code layer is complete
   and CI-green (143 tests across the CALL-E suite), and as of PR #234 the

@@ -97,6 +97,49 @@ describe('InstallQueue', () => {
     resolveFooocus?.({ tool: 'fooocus', ok: true, message: 'done' });
   });
 
+  it('surfaces a background success via alphonso:toast after early exit, mirroring the failure toast', async () => {
+    // The success half of the same gap: a background component finishing
+    // (not just failing) after early exit was just as invisible, since the
+    // screen showing its "Ready" status is already gone by then.
+    let resolveFooocus;
+    installComponent.mockImplementation((name) => {
+      if (name === 'starter-model') return Promise.resolve({ tool: name, ok: true, message: 'done' });
+      return new Promise((resolve) => { resolveFooocus = resolve; });
+    });
+    const onStarterReady = vi.fn();
+    const toastListener = vi.fn();
+    window.addEventListener('alphonso:toast', toastListener);
+
+    render(<InstallQueue components={components} onStarterReady={onStarterReady} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(onStarterReady).toHaveBeenCalled());
+    expect(toastListener).not.toHaveBeenCalled(); // no toast yet -- fooocus hasn't finished
+
+    resolveFooocus({ tool: 'fooocus', ok: true, message: 'done' });
+    await waitFor(() => expect(toastListener).toHaveBeenCalledTimes(1));
+    expect(toastListener.mock.calls[0][0].detail).toMatchObject({
+      type: 'success',
+      message: expect.stringContaining('Fooocus'),
+    });
+
+    window.removeEventListener('alphonso:toast', toastListener);
+  });
+
+  it('does not toast the starter model\'s own success -- that moment is the early-exit trigger itself, not a background completion', async () => {
+    // Without the STARTER_MODEL_ID guard, the starter's own .then() would
+    // fire a redundant "Ollama + starter model is ready" toast in the same
+    // tick the user is being taken into chat -- noise, not information.
+    installComponent.mockResolvedValue({ tool: 'starter-model', ok: true, message: 'done' });
+    const onStarterReady = vi.fn();
+    const toastListener = vi.fn();
+    window.addEventListener('alphonso:toast', toastListener);
+
+    render(<InstallQueue components={[components[0]]} onStarterReady={onStarterReady} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(onStarterReady).toHaveBeenCalled());
+    expect(toastListener).not.toHaveBeenCalled();
+
+    window.removeEventListener('alphonso:toast', toastListener);
+  });
+
   it('does not toast a failure that happens before early exit -- the queue screen is still visible for it', async () => {
     // The starter model itself failing, or a component failing before the
     // starter model becomes ready, is already shown on the still-mounted

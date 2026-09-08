@@ -34,6 +34,25 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
       installComponent(component.id)
         .then(() => {
           setTasks((prev) => prev.map((t) => (t.id === component.id ? { ...t, status: 'ready' } : t)));
+          // Mirrors the failure toast below: a background component (not
+          // the starter model itself, whose own readiness IS the early-exit
+          // trigger) finishing after the user already left needs to say so
+          // somewhere, or a successful install is just as invisible as a
+          // failed one was. ToastProvider is mounted in main.jsx above
+          // App.tsx's SetupFlow/main-shell conditional, so it never unmounts
+          // across that swap -- no new cross-component wiring is actually
+          // needed here, despite this being flagged as needing exactly that
+          // when first deferred (see docs/governance/DEFERRED_WORK.md's
+          // 2026-09-08 entry for the full reasoning trail).
+          if (starterReadyFired.current && component.id !== STARTER_MODEL_ID) {
+            window.dispatchEvent(new CustomEvent('alphonso:toast', {
+              detail: {
+                type: 'success',
+                title: 'Install complete',
+                message: `${component.label} is ready.`,
+              },
+            }));
+          }
         })
         .catch((err: unknown) => {
           setTasks((prev) =>
@@ -53,10 +72,7 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
           // actually installed. Reuses the same cross-component
           // `alphonso:toast` mechanism CoachContext already relies on for
           // exactly this "still-mounted parent, unmounted child" case,
-          // rather than inventing a second notification path. Deliberately
-          // scoped to failures only -- a matching *success* toast for
-          // background completion is a different, already-deferred item
-          // (see SetupFlow.tsx's handleAllComplete comment).
+          // rather than inventing a second notification path.
           if (starterReadyFired.current) {
             window.dispatchEvent(new CustomEvent('alphonso:toast', {
               detail: {
