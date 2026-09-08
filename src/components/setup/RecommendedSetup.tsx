@@ -18,6 +18,13 @@ interface RecommendedComponent extends SelectableComponent {
   warning?: string;
 }
 
+// RecommendedSetup has nothing to recommend for 'custom' — there's no intent
+// to combine with the hardware scan — so SetupFlow routes 'custom' straight
+// to AgentGrid instead and never renders this component for it. Excluding it
+// from this type (rather than adding a dead map entry) means the compiler
+// itself enforces that this component can never be asked to handle it.
+type RecommendableIntent = Exclude<IntentId, 'custom'>;
+
 // Sizes per the design doc's §6 verified component table. The starter model's
 // id and ollama tag live in setupFlowService (STARTER_MODEL_ID/TAG) so the
 // queued id, the pulled tag, and the already-installed check can't drift
@@ -29,7 +36,7 @@ const STARTER_MODEL_ENTRY: RecommendedComponent = {
   sizeGb: 2,
 };
 
-const INTENT_RECOMMENDATIONS: Record<IntentId, RecommendedComponent[]> = {
+const INTENT_RECOMMENDATIONS: Record<RecommendableIntent, RecommendedComponent[]> = {
   'chat-only': [STARTER_MODEL_ENTRY],
   'chat-images': [
     STARTER_MODEL_ENTRY,
@@ -48,7 +55,7 @@ const INTENT_RECOMMENDATIONS: Record<IntentId, RecommendedComponent[]> = {
 };
 
 export interface RecommendedSetupProps {
-  intent: IntentId;
+  intent: RecommendableIntent;
   hardware: HardwareProfile;
   prereqs: PrereqStatus;
   onProceed: (selected: RecommendedComponent[]) => void;

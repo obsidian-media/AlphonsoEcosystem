@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SystemScan } from './setup/SystemScan';
 import { IntentSelection, type IntentId } from './setup/IntentSelection';
 import { RecommendedSetup } from './setup/RecommendedSetup';
+import { AgentGrid } from './setup/AgentGrid';
 import { InstallQueue } from './setup/InstallQueue';
 import { ActivationSequence } from './setup/ActivationSequence';
 import { markSetupComplete } from '../services/setupFlowService';
@@ -12,7 +13,7 @@ export interface SetupFlowProps {
   onComplete: (chosenModel?: string, chosenProvider?: string) => void;
 }
 
-type SetupStep = 'scan' | 'intent' | 'recommend' | 'queue' | 'activation' | 'failed';
+type SetupStep = 'scan' | 'intent' | 'recommend' | 'agent-grid' | 'queue' | 'activation' | 'failed';
 type LabeledComponent = SelectableComponent & { label: string };
 
 export function SetupFlow({ onComplete }: SetupFlowProps) {
@@ -38,7 +39,10 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
 
   const handleIntentSelect = (selected: IntentId) => {
     setIntent(selected);
-    setStep('recommend');
+    // 'custom' skips the recommendation screen entirely — there's no intent
+    // to combine with the hardware scan for a recommendation, so it goes
+    // straight to the agent grid (the same screen "Customize" below reaches).
+    setStep(selected === 'custom' ? 'agent-grid' : 'recommend');
   };
 
   const handleProceed = (selected: (SelectableComponent & { label?: string })[]) => {
@@ -47,13 +51,14 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
     setStep('queue');
   };
 
-  // "Customize" (the agent-grid power-user path) isn't built yet — see the
-  // design doc §5 step 3/4. Rather than silently completing Setup and
-  // installing nothing (which is what an earlier version did), skip
-  // explicitly: the user gets a working app with no optional components,
-  // and Runtime Hub remains the way to add them.
-  const handleSkipToApp = () => {
-    finishSetup();
+  const handleCustomize = () => {
+    setStep('agent-grid');
+  };
+
+  const handleAgentGridBack = () => {
+    // Return to wherever makes sense: the recommendation screen if there was
+    // an intent to show one for, otherwise back to picking an intent at all.
+    setStep(intent && intent !== 'custom' ? 'recommend' : 'intent');
   };
 
   const handleStarterReady = () => {
@@ -85,8 +90,11 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
     <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)]">
       {step === 'scan' && <SystemScan onContinue={handleScanContinue} />}
       {step === 'intent' && <IntentSelection onSelect={handleIntentSelect} />}
-      {step === 'recommend' && hardware && prereqs && intent && (
-        <RecommendedSetup intent={intent} hardware={hardware} prereqs={prereqs} onProceed={handleProceed} onCustomize={handleSkipToApp} />
+      {step === 'recommend' && hardware && prereqs && intent && intent !== 'custom' && (
+        <RecommendedSetup intent={intent} hardware={hardware} prereqs={prereqs} onProceed={handleProceed} onCustomize={handleCustomize} />
+      )}
+      {step === 'agent-grid' && hardware && prereqs && (
+        <AgentGrid hardware={hardware} prereqs={prereqs} onProceed={handleProceed} onBack={handleAgentGridBack} />
       )}
       {step === 'queue' && (
         <InstallQueue
