@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Keyboard } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface Shortcut {
   keys: string;
@@ -28,12 +29,19 @@ export function KeyboardShortcutsModal({ onClose }: KeyboardShortcutsModalProps)
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, true);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard shortcuts"
     >
       <div
+        ref={dialogRef}
         className="bg-[var(--surface-1)] border border-[var(--border)] rounded-xl shadow-xl w-full max-w-md mx-4 p-6"
         onClick={e => e.stopPropagation()}
       >

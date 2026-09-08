@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface TourStep {
   target: string;
@@ -70,11 +71,15 @@ export function GuidedTour({ mode, onComplete, onDismiss }: GuidedTourProps) {
 
   const step = steps[currentStep];
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, true);
+
   return (
     <div className="fixed inset-0 z-[1000]" role="dialog" aria-modal="true" aria-label="Guided tour">
       <div className="absolute inset-0 bg-black/60" onClick={handleDismiss} />
-      
+
       <div
+        ref={panelRef}
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-[var(--surface-1)] border border-[var(--border)] rounded-xl shadow-2xl p-6"
         style={{ animation: 'fadeIn 150ms ease-out' }}
       >

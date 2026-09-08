@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { COACH_INTERVENTION_LEVELS } from '../services/coachInterventionService';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface Props {
   intervention: {
@@ -16,10 +17,13 @@ interface Props {
 }
 
 export function CoachHardInterruptOverlay({ intervention, pauseUntilMs, onAction }: Props) {
-  if (intervention?.level !== COACH_INTERVENTION_LEVELS.HARD) return null;
+  const isActive = intervention?.level === COACH_INTERVENTION_LEVELS.HARD;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, isActive);
+  if (!isActive) return null;
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--error-dim)] p-6 backdrop-blur-md" role="alertdialog" aria-modal="true">
-      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--error-border)] bg-[var(--surface-0)] shadow-[0_0_90px_rgba(239,68,68,0.35)]">
+      <div ref={dialogRef} className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--error-border)] bg-[var(--surface-0)] shadow-[0_0_90px_rgba(239,68,68,0.35)]">
         <div className="border-b border-[var(--error-border)] bg-[var(--error-dim)] px-6 py-4">
           <div className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--error)]">Hard Interrupt</div>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--text-1)]">Pause before continuing.</h2>
