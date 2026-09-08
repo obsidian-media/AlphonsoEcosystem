@@ -7,8 +7,8 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
-- [2026-09-08] **Smart Installer: disk-space check still doesn't cover
-  Ollama's own model-storage volume.** Found via CodeRabbit review on PR
+- [2026-09-08] **Smart Installer: disk-space check didn't cover Ollama's own
+  model-storage volume — resolved.** Found via CodeRabbit review on PR
   #233, verified against real code. `detect_disk_free_gb()` in
   `runtime_manager.rs` measured `current_exe()`'s parent directory as a
   proxy for "where installs land" — wrong whenever the app itself is
@@ -16,23 +16,30 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   (`%APPDATA%\Alphonso\runtimes`) lives on, a real and plausible split
   (a user tight enough on space to install the app to a secondary drive is
   exactly the user this check exists for). Fixed same-day: `detect_disk_free_gb()`
-  now measures `runtimes_dir()` directly, which is correct for the 3 of 4
-  Setup components that go through Runtime Hub (fooocus/voice-os/chromadb —
+  now measures `runtimes_dir()` directly, correct for the 3 of 4 Setup
+  components that go through Runtime Hub (fooocus/voice-os/chromadb —
   `tool_dir(name)` is always `runtimes_dir().join(name)`, one fixed target
-  regardless of which tool). **Still not covered:** the starter model
-  itself. Ollama stores pulled models under its own data directory
-  (`%USERPROFILE%\.ollama` by default, or wherever `OLLAMA_MODELS` points),
-  a third location independent of both `runtimes_dir()` and the exe's
-  directory. Resolving that reliably before Ollama is even installed is a
-  separate, harder problem (the env var may be unset, and Ollama may not
-  exist yet to ask) — deliberately not guessed at, since a wrong guess
-  would introduce new *incorrect* blocking behavior, which is worse than
-  the pre-existing "close enough" gap it would replace. Resume hint: if
-  this becomes worth closing, the safest approach is probably reading
-  `OLLAMA_MODELS` when set and falling back to the documented default path
-  per-OS, treated the same "unknown, don't block" way a failed measurement
-  already is elsewhere in this file — not a guess that actively blocks
-  installs. Status: partially fixed, remaining gap deferred.
+  regardless of which tool). The starter model's own volume was initially
+  left uncovered on the reasoning that resolving Ollama's real data
+  directory before Ollama is even installed is unreliable — a wrong guess
+  at a default path would introduce new *incorrect* blocking behavior,
+  worse than not checking at all. On a second pass the same day, found a
+  narrower version of the fix that avoids that exact risk: a new
+  `detect_ollama_models_dir_free_gb()` checks the `OLLAMA_MODELS`
+  environment variable specifically — when it's explicitly set, that's
+  authoritative, not a guess, so the real target directory is checked with
+  certainty; when it's unset (the common case), the function returns
+  `None` and nothing is guessed, preserving the exact "don't check, don't
+  block" behavior that made the original deferral safe in the first place.
+  Wired through a new `HardwareProfile.ollamaModelsDirFreeGb` field into
+  `checkDiskSpace()` (new optional 3rd parameter, purely additive — the
+  existing general check's behavior is unchanged) and surfaced in both
+  `RecommendedSetup.tsx` and `AgentGrid.tsx` as a distinct error message
+  when it fires. 6 new unit tests in `setupFlowService.test.js` cover the
+  "not set → never flagged" case explicitly, alongside the real-shortfall
+  and independent-of-the-general-check cases. `cargo fmt`/`check`/
+  `clippy -D warnings`, `tsc --noEmit`, `eslint` all clean; 62 targeted
+  frontend tests passing. Status: closed.
 - [2026-09-08] **Smart Installer: background-install success after
   early-exit was silent — resolved.** `SetupFlow.tsx`'s
   `handleStarterReady()` unmounts the whole Setup flow the moment the

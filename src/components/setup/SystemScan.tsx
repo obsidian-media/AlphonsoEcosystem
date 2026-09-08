@@ -45,7 +45,7 @@ export function SystemScan({ onContinue }: SystemScanProps) {
           hwOk
             ? hwResult.value
             // diskFreeGb null (not 0) = "unknown", which does not block installs.
-            : { ramGb: 0, diskFreeGb: null, gpuPresent: false, gpuVendor: null, gpuModel: null }
+            : { ramGb: 0, diskFreeGb: null, ollamaModelsDirFreeGb: null, gpuPresent: false, gpuVendor: null, gpuModel: null }
         );
         setPrereqs(
           prereqOk

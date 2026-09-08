@@ -117,7 +117,7 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
   // component was already handled; Python-missing gets an inline fix instead
   // of a dead end, since Python (unlike Docker) has a real auto-install path.
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
-  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb);
+  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb);
   const needsImageGen = recommended.some((c) => c.id === 'fooocus');
 
   const handleInstallPython = async () => {
@@ -196,9 +196,15 @@ export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, on
             at least {diskCheck.requiredGb}GB free.
           </div>
         )}
-        {!diskCheck.ok && (
+        {diskCheck.shortfallGb > 0 && (
           <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
             Need {diskCheck.shortfallGb}GB more free disk space to install everything above.
+          </div>
+        )}
+        {diskCheck.starterModelShortfallGb !== undefined && (
+          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+            Your configured Ollama models directory (OLLAMA_MODELS) is {diskCheck.starterModelShortfallGb}GB
+            short for the starter model.
           </div>
         )}
       </div>

@@ -21,6 +21,17 @@ export interface HardwareProfile {
    * number we never measured). checkDiskSpace() treats them differently.
    */
   diskFreeGb: number | null;
+  /**
+   * Free space (GB) on the volume the starter model is actually pulled onto
+   * by Ollama — resolved only when `OLLAMA_MODELS` is explicitly set on the
+   * machine, since that's the one case the real target directory is known
+   * with certainty rather than guessed at. `null` here means "not checked",
+   * not "unknown but assume it's fine" — the common case (env var unset)
+   * always reports `null`, matching how `diskFreeGb` already distinguishes
+   * "don't know" from a real measurement. checkDiskSpace() only uses this
+   * when it's a real number.
+   */
+  ollamaModelsDirFreeGb: number | null;
   gpuPresent: boolean;
   gpuVendor: string | null;
   gpuModel: string | null;
@@ -139,6 +150,34 @@ export interface DiskSpaceCheck {
   shortfallGb: number;
   /** True when free space is unknown, so `ok` is a pass-through, not a measurement. */
   unknown: boolean;
+  /**
+   * How short the starter model's OWN volume is, in GB — set only when the
+   * starter model is selected AND that volume could be resolved with
+   * certainty (`ollamaModelsDirFreeGb` was a real number, meaning
+   * `OLLAMA_MODELS` was explicitly set) AND it doesn't have room. Absent
+   * (not 0) in every other case, including the common one — starter model
+   * selected but `OLLAMA_MODELS` unset — which is deliberately never
+   * flagged here rather than checked against a guessed default path. See
+   * `HardwareProfile.ollamaModelsDirFreeGb`'s doc comment for why.
+   */
+  starterModelShortfallGb?: number;
+}
+
+/**
+ * How short the starter model's own volume is, in GB, or `undefined` when
+ * there's nothing to flag (not selected, or that volume isn't known with
+ * certainty). Split out from checkDiskSpace so each concern stays a small,
+ * independently-readable pure function rather than one larger one.
+ */
+function computeStarterModelShortfall(
+  selected: SelectableComponent[],
+  ollamaModelsDirFreeGb: number | null | undefined
+): number | undefined {
+  if (ollamaModelsDirFreeGb == null) return undefined;
+  const starter = selected.find((c) => c.id === STARTER_MODEL_ID);
+  if (!starter) return undefined;
+  const shortfall = starter.sizeGb + DISK_SAFETY_BUFFER_GB - ollamaModelsDirFreeGb;
+  return shortfall > 0 ? shortfall : undefined;
 }
 
 /**
@@ -151,15 +190,42 @@ export interface DiskSpaceCheck {
  * NOT block installation: refusing to install because we couldn't measure
  * the disk would be worse than letting the real install surface a real
  * out-of-space error. It's reported via `unknown` so the UI can warn.
+ *
+ * `ollamaModelsDirFreeGb` is optional and purely additive: passing it (or
+ * leaving it undefined/null) never changes the existing `neededGb`/
+ * `requiredGb`/`shortfallGb`/`unknown` behavior for the general
+ * (`runtimes_dir()`-backed) check — it only adds a second, independent
+ * starter-model-specific check that can ALSO block `ok`, surfaced via
+ * `starterModelShortfallGb`.
  */
-export function checkDiskSpace(selected: SelectableComponent[], freeGb: number | null): DiskSpaceCheck {
+export function checkDiskSpace(
+  selected: SelectableComponent[],
+  freeGb: number | null,
+  ollamaModelsDirFreeGb?: number | null
+): DiskSpaceCheck {
   const neededGb = selected.reduce((sum, c) => sum + c.sizeGb, 0);
   const requiredGb = neededGb + DISK_SAFETY_BUFFER_GB;
+  const starterModelShortfallGb = computeStarterModelShortfall(selected, ollamaModelsDirFreeGb);
+
   if (freeGb === null) {
-    return { ok: true, neededGb, requiredGb, shortfallGb: 0, unknown: true };
+    return {
+      ok: starterModelShortfallGb === undefined,
+      neededGb,
+      requiredGb,
+      shortfallGb: 0,
+      unknown: true,
+      starterModelShortfallGb,
+    };
   }
   const shortfallGb = Math.max(0, requiredGb - freeGb);
-  return { ok: shortfallGb === 0, neededGb, requiredGb, shortfallGb, unknown: false };
+  return {
+    ok: shortfallGb === 0 && starterModelShortfallGb === undefined,
+    neededGb,
+    requiredGb,
+    shortfallGb,
+    unknown: false,
+    starterModelShortfallGb,
+  };
 }
 
 /**

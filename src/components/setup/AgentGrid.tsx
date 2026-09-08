@@ -153,7 +153,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
   ).map((a) => a.component!);
   const notInstalled = selectedComponents.filter((c) => !installedNames.has(c.id));
   const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
-  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb);
+  const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb, hardware.ollamaModelsDirFreeGb);
 
   return (
     <div className="flex flex-col items-center gap-4 p-8 w-full max-w-3xl">
@@ -240,9 +240,15 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
             at least {diskCheck.requiredGb}GB free.
           </div>
         )}
-        {!diskCheck.ok && (
+        {diskCheck.shortfallGb > 0 && (
           <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
             Need {diskCheck.shortfallGb}GB more free disk space for your current selection.
+          </div>
+        )}
+        {diskCheck.starterModelShortfallGb !== undefined && (
+          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+            Your configured Ollama models directory (OLLAMA_MODELS) is {diskCheck.starterModelShortfallGb}GB
+            short for the starter model.
           </div>
         )}
       </div>

@@ -753,6 +753,34 @@ fn detect_disk_free_gb() -> Option<u64> {
   pick_disk_for_path(&target_dir, &disk_list).map(|bytes| bytes / 1024 / 1024 / 1024)
 }
 
+/// Free disk space (GB) for the volume the starter model is actually pulled
+/// onto, but ONLY when that volume is known with certainty — i.e. only when
+/// `OLLAMA_MODELS` is explicitly set. Returns None (not a guessed default
+/// path) when it isn't set, which is the common case: Ollama's own default
+/// location varies by OS and install method (service vs. manual) and can
+/// change between Ollama versions, so a guessed default risks being wrong
+/// in a way `runtimes_dir()` (a location this app fully controls) never
+/// could be. A wrong guess here would actively block a valid install on a
+/// disk-space check that measured the wrong drive — worse than the
+/// pre-existing gap of simply not checking this volume at all.
+fn detect_ollama_models_dir_free_gb() -> Option<u64> {
+  let ollama_models_dir = std::env::var("OLLAMA_MODELS").ok()?;
+
+  let disks = sysinfo::Disks::new_with_refreshed_list();
+  let disk_list: Vec<(String, u64)> = disks
+    .list()
+    .iter()
+    .map(|d| {
+      (
+        d.mount_point().to_string_lossy().to_string(),
+        d.available_space(),
+      )
+    })
+    .collect();
+
+  pick_disk_for_path(&ollama_models_dir, &disk_list).map(|bytes| bytes / 1024 / 1024 / 1024)
+}
+
 /// How long `detect_gpu` will wait for `nvidia-smi` before killing it and
 /// reporting "no GPU" — see that function for why a bound is required.
 const GPU_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
@@ -1136,8 +1164,20 @@ pub struct HardwareProfile {
   pub ram_gb: u64,
   /// None when no disk could be resolved — serialized as JSON null, which
   /// the frontend treats as "unknown" (does not block installs), distinct
-  /// from 0 meaning "genuinely full".
+  /// from 0 meaning "genuinely full". Measures `runtimes_dir()`'s volume,
+  /// which governs Runtime Hub tools (fooocus/voice-os/chromadb) but NOT
+  /// the starter model — see `ollama_models_dir_free_gb` below for that.
   pub disk_free_gb: Option<u64>,
+  /// Free space (GB) on the volume the starter model will actually be
+  /// pulled onto by Ollama — resolved ONLY when the `OLLAMA_MODELS`
+  /// environment variable is explicitly set, since that is the one case
+  /// where the real target directory is known with certainty rather than
+  /// guessed. None whenever the env var is unset (the common case): this
+  /// is NOT "unknown, assume default" — it deliberately means "not
+  /// checked", so a wrong default-path guess can never introduce new
+  /// incorrect blocking behavior. See docs/governance/DEFERRED_WORK.md's
+  /// 2026-09-08 entry for the full reasoning trail this followed from.
+  pub ollama_models_dir_free_gb: Option<u64>,
   pub gpu_present: bool,
   pub gpu_vendor: Option<String>,
   pub gpu_model: Option<String>,
@@ -1154,6 +1194,7 @@ pub fn setup_scan_hardware() -> HardwareProfile {
   HardwareProfile {
     ram_gb: detect_ram_gb(),
     disk_free_gb: detect_disk_free_gb(),
+    ollama_models_dir_free_gb: detect_ollama_models_dir_free_gb(),
     gpu_present,
     gpu_vendor,
     gpu_model,

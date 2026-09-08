@@ -22,7 +22,7 @@ beforeEach(() => {
 
 describe('scanHardware', () => {
   it('invokes setup_scan_hardware and returns the result', async () => {
-    const mockProfile = { ramGb: 16, diskFreeGb: 220, gpuPresent: false, gpuVendor: null, gpuModel: null };
+    const mockProfile = { ramGb: 16, diskFreeGb: 220, ollamaModelsDirFreeGb: null, gpuPresent: false, gpuVendor: null, gpuModel: null };
     invoke.mockResolvedValue(mockProfile);
     const result = await scanHardware();
     expect(invoke).toHaveBeenCalledWith('setup_scan_hardware');
@@ -94,6 +94,54 @@ describe('checkDiskSpace', () => {
     const result = checkDiskSpace([{ id: 'fooocus', sizeGb: 15 }], null);
     expect(result.unknown).toBe(true);
     expect(result.requiredGb).toBe(25);
+  });
+
+  describe('starter model volume (OLLAMA_MODELS)', () => {
+    it('does not flag anything when OLLAMA_MODELS was not resolved (the common case)', () => {
+      // null/undefined both mean "not checked, don't guess a default path" --
+      // this must never be conflated with 0 ("checked and it's full").
+      const selected = [{ id: STARTER_MODEL_ID, sizeGb: 2 }];
+      expect(checkDiskSpace(selected, 100, null).starterModelShortfallGb).toBeUndefined();
+      expect(checkDiskSpace(selected, 100, undefined).starterModelShortfallGb).toBeUndefined();
+      expect(checkDiskSpace(selected, 100).starterModelShortfallGb).toBeUndefined();
+    });
+
+    it('does not flag the starter volume when the starter model is not selected', () => {
+      const selected = [{ id: 'fooocus', sizeGb: 15 }];
+      const result = checkDiskSpace(selected, 100, 1); // 1GB on the Ollama volume, plenty free elsewhere
+      expect(result.starterModelShortfallGb).toBeUndefined();
+    });
+
+    it('flags a real shortfall on the starter model volume, with the buffer applied', () => {
+      const selected = [{ id: STARTER_MODEL_ID, sizeGb: 2 }];
+      // 2GB needed + 10GB buffer = 12GB required; only 5GB free on that volume.
+      const result = checkDiskSpace(selected, 100, 5);
+      expect(result.starterModelShortfallGb).toBe(7);
+      expect(result.ok).toBe(false);
+    });
+
+    it('does not flag the starter volume when it has enough room', () => {
+      const selected = [{ id: STARTER_MODEL_ID, sizeGb: 2 }];
+      const result = checkDiskSpace(selected, 100, 12);
+      expect(result.starterModelShortfallGb).toBeUndefined();
+      expect(result.ok).toBe(true);
+    });
+
+    it('is fully independent of the general disk check -- a starter-volume shortfall blocks ok even when the general check passes', () => {
+      const selected = [{ id: STARTER_MODEL_ID, sizeGb: 2 }];
+      const result = checkDiskSpace(selected, 1000, 1); // plenty on the general volume, almost nothing on Ollama's
+      expect(result.shortfallGb).toBe(0);
+      expect(result.starterModelShortfallGb).toBeGreaterThan(0);
+      expect(result.ok).toBe(false);
+    });
+
+    it('still flags a starter-volume shortfall even when the general disk space is unknown', () => {
+      const selected = [{ id: STARTER_MODEL_ID, sizeGb: 2 }];
+      const result = checkDiskSpace(selected, null, 5);
+      expect(result.unknown).toBe(true);
+      expect(result.starterModelShortfallGb).toBe(7);
+      expect(result.ok).toBe(false);
+    });
   });
 });
 
