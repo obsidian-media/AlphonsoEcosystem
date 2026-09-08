@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 describe('mission room service', () => {
-  it('creates the default Shayan/Kite/Hermes room', () => {
+  it('creates the default User/Kite/Hermes room', () => {
     const rooms = listMissionRooms();
     expect(rooms).toHaveLength(1);
     expect(rooms[0].selectedAgents).toEqual(['user', 'alphonso', 'jose', 'hector', 'miya', 'maria', 'marcus', 'echo', 'sentinel', 'nova']);
@@ -55,8 +55,8 @@ describe('mission room service', () => {
     expect(handoff).toContain('Hermes');
     expect(handoff).toContain('TapCash');
     expect(handoff).toContain('Do not publish');
-    expect(handoff).toContain('Final approval: Shayan');
-    expect(handoff).toContain('stop and request Shayan approval');
+    expect(handoff).toContain('Final approval: the project owner');
+    expect(handoff).toContain("stop and request the project owner's approval");
   });
 
   it('redacts secrets, classifies risk, and writes security events', () => {

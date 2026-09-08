@@ -81,7 +81,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
   const [snapshots, setSnapshots] = useState<{ id: string; timestampMs: number; payload?: Record<string, unknown> }[]>(() => listSnapshots());
   const [showAdvancedSections, setShowAdvancedSections] = useState<string>('overview');
   const [manifestInput, setManifestInput] = useState('{\n  "id": "pack.youtube-studio",\n  "name": "YouTube Pack",\n  "version": "1.0.0",\n  "permissions": ["memory.read", "workflows.write"],\n  "category": "creator"\n}');
-  const [newWorkflowName, setNewWorkflowName] = useState('Shayan -> Jose -> Agents -> Jose Confirmation Flow');
+  const [newWorkflowName, setNewWorkflowName] = useState('You -> Jose -> Agents -> Jose Confirmation Flow');
   const [handoffNote, setHandoffNote] = useState('Creative packet validated and queued for supervised execution.');
 
   const approvalQueue = useMemo(() => listApprovalQueue() as { id: string; title: string; fromAgent: string; toAgent: string; packetType: string }[], [packets]);
@@ -193,7 +193,7 @@ export function EcosystemHub({ settings, setSettings, ollamaStatus, verification
 
   const runCreateWorkflow = () => {
     const flow = createWorkflow(newWorkflowName, 'shared');
-    let updated = addWorkflowNode(flow.id, 'trigger', { x: 0, y: 0 }, { label: 'Shayan command received' });
+    let updated = addWorkflowNode(flow.id, 'trigger', { x: 0, y: 0 }, { label: 'User command received' });
     updated = addWorkflowNode(flow.id, 'approval', { x: 220, y: 0 }, { label: 'Jose routes and gates approvals' });
     updated = addWorkflowNode(flow.id, 'action', { x: 440, y: 0 }, { label: 'Agents report back to Jose' });
     if (updated?.nodes?.length >= 3) {

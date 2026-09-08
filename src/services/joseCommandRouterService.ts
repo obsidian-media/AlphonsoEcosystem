@@ -355,7 +355,7 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       actionType: 'external_publish_handoff',
       riskLevel: 'high',
       requiresApproval: true,
-      commandPreview: 'No automatic upload. Requires connector auth + Jose/Shayan approval before any external posting.',
+      commandPreview: 'No automatic upload. Requires connector auth + Jose/user approval before any external posting.',
       fragments: fragments.filter((fragment) => /upload|publish|post|youtube|tiktok|instagram/i.test(fragment))
     });
   }
@@ -448,7 +448,7 @@ export function decomposeJoseCommand(parsed: ParsedJoseCommand, policy: Decompos
       actionType: 'distribution_execution',
       riskLevel: 'high',
       requiresApproval: true,
-      commandPreview: 'Distribution handoff requires Shayan approval before connector execution.',
+      commandPreview: 'Distribution handoff requires user approval before connector execution.',
       fragments: fragments.filter((fragment) => /distribute|schedule|engage|community|publish/i.test(fragment))
     });
   }
@@ -663,7 +663,7 @@ export async function createJoseCommandRoute({ commandText, source = 'user', zer
 
   appendSessionEvent({
     category: 'orchestration',
-    title: 'Jose distributed Shayan command',
+    title: 'Jose distributed user command',
     details: { commandId: command.id, assignmentCount: routed.length, parser: command.parser.intents },
     agent: AGENTS.JOSE,
     confidence: TRUST_STATES.TEMPORARY,
@@ -1000,7 +1000,7 @@ export function createJoseReportToUser(
 
   appendSessionEvent({
     category: 'orchestration',
-    title: 'Jose reported command result to Shayan',
+    title: 'Jose reported command result to user',
     details: { commandId, reportId: userReport.id, resultUrl, trust: userReport.trust },
     agent: AGENTS.JOSE,
     confidence: userReport.trust,

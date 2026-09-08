@@ -364,6 +364,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
   const [qwenApiKey, setQwenApiKey] = useState(() => getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
   const [braveApiKey, setBraveApiKey] = useState(() => getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
   const [tavilyApiKey, setTavilyApiKey] = useState(() => getConnectorCredential('tavily', 'TAVILY_API_KEY') || '');
+  const [perplexityApiKey, setPerplexityApiKey] = useState(() => getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY') || '');
   const [runwayApiKey, setRunwayApiKey] = useState(() => getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
   const [n8nBaseUrl, setN8nBaseUrl] = useState(() => getConnectorCredential('n8n', 'N8N_BASE_URL') || 'http://localhost:5678');
   const [deepseekApiKey, setDeepseekApiKey] = useState(() => getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
@@ -405,6 +406,7 @@ export function ConnectorSetupPanel(): React.JSX.Element {
       setQwenApiKey((prev) => prev || getConnectorCredential('qwen', 'DASHSCOPE_API_KEY'));
       setBraveApiKey((prev) => prev || getConnectorCredential('brave_search', 'BRAVE_SEARCH_API_KEY'));
       setTavilyApiKey((prev) => prev || getConnectorCredential('tavily', 'TAVILY_API_KEY'));
+      setPerplexityApiKey((prev) => prev || getConnectorCredential('perplexity', 'PERPLEXITY_API_KEY'));
       setRunwayApiKey((prev) => prev || getConnectorCredential('runway', 'RUNWAYML_API_SECRET'));
       setDeepseekApiKey((prev) => prev || getConnectorCredential('deepseek', 'DEEPSEEK_API_KEY'));
       setNvidiaApiKey((prev) => prev || getConnectorCredential('nvidia_nim', 'NVIDIA_API_KEY'));
@@ -891,6 +893,12 @@ export function ConnectorSetupPanel(): React.JSX.Element {
             onSave={() => saveConnectorApiKey('tavily', { TAVILY_API_KEY: tavilyApiKey })}
             hint="Free tier: 1,000 searches/month. Sign up at app.tavily.com. Hector uses this when Brave Search is unavailable. Designed for AI agents — returns clean summaries + sources."
             savedLabel="Tavily key saved" />
+
+          <CredentialSection title="Perplexity" icon={Search} borderColor="border-teal-300/20" bgColor="bg-teal-500/8" accentColor="text-teal-400"
+            fields={[{ label: 'API Key', placeholder: 'pplx-...', value: perplexityApiKey, onChange: setPerplexityApiKey, key: 'PERPLEXITY_API_KEY' }]}
+            onSave={() => saveConnectorApiKey('perplexity', { PERPLEXITY_API_KEY: perplexityApiKey })}
+            hint="Get your key at perplexity.ai/settings/api. This saves the key so it stays configured — it is not currently called by Hector's own search fallback chain (Brave → Tavily → DeepSeek); wiring it in is a separate follow-up."
+            savedLabel="Perplexity key saved" />
 
           <CredentialSection title="Runway ML (Video Generation)" icon={Video} borderColor="border-fuchsia-300/20" bgColor="bg-fuchsia-500/8" accentColor="text-fuchsia-400"
             fields={[{ label: 'API Secret', placeholder: 'key_...', value: runwayApiKey, onChange: setRunwayApiKey, key: 'RUNWAYML_API_SECRET' }]}

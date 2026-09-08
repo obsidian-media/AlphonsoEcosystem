@@ -9,6 +9,8 @@ import { CompanionChatBubble, type CompanionMessage } from './companion/Companio
 import { CompanionInputBar } from './companion/CompanionInputBar';
 import { ModeToggle } from './ModeToggle';
 import type { UxMode } from '../hooks/useUxMode';
+import alphonsoIcon from '../assets/alphonso-app-icon.png';
+import { useTheme } from '../hooks/useTheme';
 
 // Text-only companion persona -- same "no fabricated tool/file claims"
 // contract as chatUtils.js's CHAT_ASSISTANT_PROMPT, generalized across all
@@ -41,6 +43,13 @@ interface Props {
 const DEFAULT_COMPANION_AGENT_ID = 'alphonso';
 
 export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
+  // Simple Mode never mounts Sidebar.tsx/TopBar.tsx (the only two places that
+  // otherwise call useTheme()) -- without this, data-theme is never applied
+  // while Simple Mode is the whole experience, and the page silently falls
+  // back to the OS's prefers-color-scheme instead of the user's saved
+  // choice. Same root cause as CoachWindow.tsx (bug-log #119) and
+  // OnboardingWizard.tsx (bug-log #122).
+  useTheme();
   const agents = useMemo(() => listAgentProfiles(), []);
   // Alphonso (general-purpose 💬) is the right default landing agent for a
   // chat-first companion screen, not CORE_AGENT_REGISTRY's array order --
@@ -118,7 +127,10 @@ export function CompanionMode({ uxMode, onModeChange, onOpenSettings }: Props) {
         <button type="button" aria-label="Menu" onClick={() => setMenuOpen((v) => !v)} className="h-9 w-9 flex items-center justify-center rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-sm">
           <Menu className="h-4 w-4 text-[var(--companion-bubble-theirs-text)]" />
         </button>
-        <span className="font-serif text-sm font-semibold text-[var(--companion-bubble-theirs-text)]">Alphonso</span>
+        <span className="flex items-center gap-1.5">
+          <img src={alphonsoIcon} alt="Alphonso" className="h-5 w-5 rounded-md shrink-0" />
+          <span className="font-serif text-sm font-semibold text-[var(--companion-bubble-theirs-text)]">Alphonso</span>
+        </span>
         <button type="button" aria-label="Settings" onClick={onOpenSettings} className="h-9 w-9 flex items-center justify-center rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-sm">
           <SettingsIcon className="h-4 w-4 text-[var(--companion-bubble-theirs-text)]" />
         </button>

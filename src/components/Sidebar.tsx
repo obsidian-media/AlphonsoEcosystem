@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Bot,
   BrainCircuit,
+  Briefcase,
   ChevronDown,
   Cpu,
   Database,
@@ -10,7 +11,9 @@ import {
   Gauge,
   GitBranch,
   History,
+  Home,
   LayoutDashboard,
+  Library,
   MessageSquare,
   Mic,
   Moon,
@@ -24,6 +27,7 @@ import {
   Sparkles,
   Terminal,
   Trash2,
+  Users,
   Activity
 } from 'lucide-react';
 import alphonsoIcon from '../assets/alphonso-app-icon.png';
@@ -43,7 +47,7 @@ type SpaceId = 'home' | 'work' | 'research' | 'boardroom' | 'system';
 
 interface Space {
   id: SpaceId;
-  emoji: string;
+  icon: React.ElementType;
   label: string;
   items: NavItem[];
 }
@@ -85,7 +89,7 @@ interface SidebarProps {
 const SPACES: Space[] = [
   {
     id: 'home',
-    emoji: '\u{1F3E0}',
+    icon: Home,
     label: 'Home',
     items: [
       { id: 'mission', icon: LayoutDashboard, label: 'Dashboard' },
@@ -95,7 +99,7 @@ const SPACES: Space[] = [
   },
   {
     id: 'work',
-    emoji: '\u{1F9F0}',
+    icon: Briefcase,
     label: 'Work',
     items: [
       { id: 'project_execution', icon: Terminal, label: 'Projects' },
@@ -106,7 +110,7 @@ const SPACES: Space[] = [
   },
   {
     id: 'research',
-    emoji: '\u{1F4DA}',
+    icon: Library,
     label: 'Research',
     items: [
       { id: 'hector', icon: Database, label: 'Research Desk' },
@@ -114,7 +118,7 @@ const SPACES: Space[] = [
   },
   {
     id: 'boardroom',
-    emoji: '\u{1F5E3}',
+    icon: Users,
     label: 'Boardroom',
     items: [
       { id: 'mission_room', icon: Sparkles, label: 'Boardroom' },
@@ -122,7 +126,7 @@ const SPACES: Space[] = [
   },
   {
     id: 'system',
-    emoji: '\u{2699}',
+    icon: Settings,
     label: 'System',
     items: [
       { id: 'orchestrator', icon: Shield, label: 'Orchestrator', showApprovalBadge: true },
@@ -176,8 +180,16 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
       {/* Logo */}
       <div className="h-14 flex items-center px-4 py-3 border-b border-[var(--border)] shrink-0">
         <div className="flex items-center gap-2.5 w-full">
-          <img src={alphonsoIcon} alt="Alphonso" className="w-7 h-7 rounded-lg shrink-0 shadow-glow-sm" />
-          {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-[var(--text-1)]">ALPHONSO</span>}
+          <button
+            type="button"
+            onClick={() => { setActiveSpace('home'); setActiveTab('mission'); }}
+            className="flex items-center gap-2.5 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
+            aria-label="Go to Dashboard"
+            title="Go to Dashboard"
+          >
+            <img src={alphonsoIcon} alt="Alphonso" className="w-7 h-7 rounded-lg shrink-0 shadow-glow-sm" />
+            {isOpen && <span className="font-heading font-bold text-sm tracking-wide text-[var(--text-1)]">ALPHONSO</span>}
+          </button>
           <button
             onClick={onToggle}
             className="ml-auto p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[var(--surface-3)] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)]"
@@ -216,13 +228,13 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onToggle, conversatio
               data-testid={`space-pill-${space.id}`}
               onClick={() => setActiveSpace(space.id)}
               title={space.label}
-              className={`text-center py-1.5 rounded-lg text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
-                activeSpace === space.id ? 'bg-[var(--accent-muted)]' : 'hover:bg-[var(--surface-3)]'
+              className={`flex items-center justify-center py-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
+                activeSpace === space.id ? 'bg-[var(--accent-muted)] text-[var(--accent)]' : 'text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]'
               }`}
               aria-label={space.label}
               aria-current={activeSpace === space.id ? 'true' : undefined}
             >
-              {space.emoji}
+              <space.icon className="h-4 w-4" />
             </button>
           ))}
         </div>

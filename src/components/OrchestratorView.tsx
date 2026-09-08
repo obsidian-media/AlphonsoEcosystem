@@ -357,7 +357,7 @@ export function OrchestratorView({
   const [resourceSummary, setResourceSummary] = useState<unknown>(() => summarizeResourceUsage(24));
   const [routeTitle, setRouteTitle] = useState<string>('Review creative packet and prepare execution plan');
   const [routeTarget, setRouteTarget] = useState<string>(AGENTS.ALPHONSO);
-  const [joseCommandText, setJoseCommandText] = useState<string>('Create a YouTube video package: Miya drafts the script, Alphonso verifies the local package/runtime, Hector checks source/publishing requirements, then Jose reports the final result back to Shayan.');
+  const [joseCommandText, setJoseCommandText] = useState<string>('Create a YouTube video package: Miya drafts the script, Alphonso verifies the local package/runtime, Hector checks source/publishing requirements, then Jose reports the final result back to you.');
   const [joseCommands, setJoseCommands] = useState<JoseCommand[]>(() => listJoseCommands() as unknown as JoseCommand[]);
   const [workflowObs, setWorkflowObs] = useState<WorkflowObservability | null>(() => getJoseWorkflowObservability() as WorkflowObservability | null);
   const [deadLetters, setDeadLetters] = useState<DeadLetterItem[]>(() => listJoseDeadLetters() as DeadLetterItem[]);
@@ -540,7 +540,7 @@ export function OrchestratorView({
   };
 
   const reportToJose = (packet: Packet): void => {
-    const resultUrl = window.prompt('Optional verified result URL for Jose to report back to Shayan. Leave blank if no URL is verified yet.', '');
+    const resultUrl = window.prompt('Optional verified result URL for Jose to report back to you. Leave blank if no URL is verified yet.', '');
     createAgentReportToJose({
       packetId: packet.id,
       reportingAgent: packet.toAgent,
@@ -554,7 +554,7 @@ export function OrchestratorView({
 
   const confirmCommand = (commandId: string): void => {
     confirmJoseCommand(commandId, 'confirmed');
-    onJoseStateChange?.('task_complete', 'Jose confirmed and reported back to Shayan.');
+    onJoseStateChange?.('task_complete', 'Jose confirmed and reported back to you.');
     refreshAll();
   };
 
