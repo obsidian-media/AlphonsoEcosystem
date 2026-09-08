@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { getAllStatus } from '../../services/runtimeManagerService';
+import { getAllStatus, installPrerequisite } from '../../services/runtimeManagerService';
+import type { PrereqStatus } from '../../services/runtimeManagerService';
 import {
   checkDiskSpace,
   withTimeout,
   isComponentAlreadyInstalled,
+  getUnmetPrereq,
   STARTER_MODEL_ID,
   STARTER_MODEL_TAG,
   type SelectableComponent,
@@ -48,14 +50,20 @@ const INTENT_RECOMMENDATIONS: Record<IntentId, RecommendedComponent[]> = {
 export interface RecommendedSetupProps {
   intent: IntentId;
   hardware: HardwareProfile;
+  prereqs: PrereqStatus;
   onProceed: (selected: RecommendedComponent[]) => void;
   onCustomize: () => void;
 }
 
-export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: RecommendedSetupProps) {
+export function RecommendedSetup({ intent, hardware, prereqs: initialPrereqs, onProceed, onCustomize }: RecommendedSetupProps) {
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [statusUnknown, setStatusUnknown] = useState(false);
+  // Local, mutable copy: installing Python mid-screen needs to unblock the
+  // components that depend on it without a full re-scan round-trip.
+  const [prereqs, setPrereqs] = useState<PrereqStatus>(initialPrereqs);
+  const [installingPython, setInstallingPython] = useState(false);
+  const [pythonInstallError, setPythonInstallError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,9 +103,30 @@ export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: R
   }
 
   const recommended = INTENT_RECOMMENDATIONS[intent];
-  const toInstall = recommended.filter((c) => !installedNames.has(c.id));
+  const notInstalled = recommended.filter((c) => !installedNames.has(c.id));
+  // Split out anything whose real prerequisite isn't met — queuing it anyway
+  // would fail exactly like the starter-model bug did, just for a different
+  // reason. These never enter the queue at all, matching how a Docker-missing
+  // component was already handled; Python-missing gets an inline fix instead
+  // of a dead end, since Python (unlike Docker) has a real auto-install path.
+  const toInstall = notInstalled.filter((c) => getUnmetPrereq(c.id, prereqs) === null);
   const diskCheck = checkDiskSpace(toInstall, hardware.diskFreeGb);
   const needsImageGen = recommended.some((c) => c.id === 'fooocus');
+
+  const handleInstallPython = async () => {
+    setInstallingPython(true);
+    setPythonInstallError(null);
+    try {
+      await installPrerequisite('python');
+      // Update locally rather than re-running the whole hardware/prereq scan
+      // — the user is mid-decision on this screen, not starting over.
+      setPrereqs((prev) => ({ ...prev, pythonFound: true }));
+    } catch (err) {
+      setPythonInstallError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setInstallingPython(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-4 p-8 w-full max-w-lg">
@@ -105,15 +134,44 @@ export function RecommendedSetup({ intent, hardware, onProceed, onCustomize }: R
       <div className="flex flex-col gap-2 w-full text-sm">
         {recommended.map((c) => {
           const alreadyInstalled = installedNames.has(c.id);
+          const unmetPrereq = alreadyInstalled ? null : getUnmetPrereq(c.id, prereqs);
           return (
-            <div key={c.id} className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
-              <span className="text-[var(--text-1)]">{c.label}</span>
-              <span className="text-[var(--text-3)]">
-                {alreadyInstalled ? 'already installed' : `${c.sizeGb}GB`}
-              </span>
+            <div key={c.id} className="flex flex-col gap-1 rounded bg-[var(--surface-2)] px-3 py-2">
+              <div className="flex justify-between">
+                <span className="text-[var(--text-1)]">{c.label}</span>
+                <span className="text-[var(--text-3)]">
+                  {alreadyInstalled ? 'already installed' : unmetPrereq ? 'skipped' : `${c.sizeGb}GB`}
+                </span>
+              </div>
+              {unmetPrereq === 'python' && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-[var(--warning)]">
+                    Needs Python, which isn&apos;t installed.
+                  </span>
+                  <button
+                    onClick={handleInstallPython}
+                    disabled={installingPython}
+                    className="shrink-0 rounded border border-[var(--warning)] px-2 py-1 text-xs text-[var(--warning)] disabled:opacity-50"
+                  >
+                    {installingPython ? 'Installing…' : 'Install Python'}
+                  </button>
+                </div>
+              )}
+              {unmetPrereq === 'docker' && (
+                <span className="text-xs text-[var(--warning)]">
+                  Needs Docker, which isn&apos;t installed. Docker can&apos;t be installed
+                  automatically — see Runtime Hub after Setup for manual install steps, then add
+                  this component from there.
+                </span>
+              )}
             </div>
           );
         })}
+        {pythonInstallError && (
+          <div className="rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-xs">
+            Couldn&apos;t install Python: {pythonInstallError}
+          </div>
+        )}
         {needsImageGen && !hardware.gpuPresent && (
           <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
             No GPU detected — image generation will be slow (CPU-only).

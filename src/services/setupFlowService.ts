@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getStorage, setStorage } from '../lib/appStorage';
 import { installTool } from './runtimeManagerService';
+import type { PrereqStatus } from './runtimeManagerService';
 import { pullOllamaModel, fetchOllamaModels, getConfiguredOllamaEndpoint } from '../lib/ollama';
 
 const SETUP_COMPLETE_KEY = 'alphonso_setup_complete_v1';
@@ -160,6 +161,39 @@ export function checkDiskSpace(selected: SelectableComponent[], freeGb: number |
  * flow just because they upgraded. The legacy value is migrated forward on
  * read so this only costs one check per install, not forever.
  */
+export type PrereqKind = 'python' | 'docker';
+
+/**
+ * Which prerequisite each Setup component genuinely needs, per
+ * `runtime_manager.rs`'s `TOOLS` array (`exe: "python"` for fooocus/voice-os,
+ * `exe: "docker"` for chromadb) — not guessed from the component name.
+ * Components absent from this map (the starter model, and any future
+ * component that needs neither) are never blocked.
+ */
+const COMPONENT_PREREQ: Partial<Record<string, PrereqKind>> = {
+  fooocus: 'python',
+  'voice-os': 'python',
+  chromadb: 'docker',
+};
+
+/**
+ * The prerequisite blocking a component's install, or `null` if it can
+ * proceed. Pure — takes a `PrereqStatus` rather than re-querying, so
+ * `RecommendedSetup` can recompute this on every render (e.g. right after
+ * the user installs Python) without another Tauri round-trip.
+ *
+ * A `PrereqStatus` that omits a flag entirely (e.g. a degraded scan) is
+ * treated as "missing," never as "present" — silently queuing an install
+ * whose prerequisite we never actually confirmed is exactly the class of bug
+ * `starter-model` was.
+ */
+export function getUnmetPrereq(componentId: string, prereqs: PrereqStatus): PrereqKind | null {
+  const required = COMPONENT_PREREQ[componentId];
+  if (!required) return null;
+  if (required === 'python') return prereqs.pythonFound === true ? null : 'python';
+  return prereqs.dockerFound === true ? null : 'docker';
+}
+
 export function isSetupComplete(): boolean {
   if (getStorage(SETUP_COMPLETE_KEY, false)) return true;
   if (getStorage(LEGACY_ONBOARDING_COMPLETE_KEY, false)) {

@@ -11,6 +11,8 @@ import {
   isSetupComplete,
   markSetupComplete,
   withTimeout,
+  getUnmetPrereq,
+  STARTER_MODEL_ID,
 } from '../services/setupFlowService';
 
 beforeEach(() => {
@@ -105,6 +107,50 @@ describe('isSetupComplete / markSetupComplete', () => {
   it('does not treat an incomplete legacy flag as setup-complete', () => {
     localStorage.setItem('alphonso_onboarding_complete_v1', JSON.stringify(false));
     expect(isSetupComplete()).toBe(false);
+  });
+});
+
+describe('getUnmetPrereq', () => {
+  const pythonMissing = { missing: ['Python 3.10+'], installHint: 'x', pythonFound: false, dockerFound: true };
+  const dockerMissing = { missing: ['Docker'], installHint: 'x', pythonFound: true, dockerFound: false };
+  const allPresent = { missing: [], installHint: 'x', pythonFound: true, dockerFound: true };
+
+  it('flags fooocus as blocked when Python is missing', () => {
+    expect(getUnmetPrereq('fooocus', pythonMissing)).toBe('python');
+  });
+
+  it('flags voice-os as blocked when Python is missing', () => {
+    expect(getUnmetPrereq('voice-os', pythonMissing)).toBe('python');
+  });
+
+  it('flags chromadb as blocked when Docker is missing', () => {
+    // chromadb launches via `docker run` (runtime_manager.rs TOOLS), not
+    // pip/git — confirmed directly against the ToolDef, not assumed.
+    expect(getUnmetPrereq('chromadb', dockerMissing)).toBe('docker');
+  });
+
+  it('does not block a Python-dependent component when Python is present', () => {
+    expect(getUnmetPrereq('fooocus', allPresent)).toBe(null);
+  });
+
+  it('does not block a Docker-dependent component when Docker is present', () => {
+    expect(getUnmetPrereq('chromadb', allPresent)).toBe(null);
+  });
+
+  it('never blocks the starter model — it only needs Ollama, already bundled', () => {
+    expect(getUnmetPrereq(STARTER_MODEL_ID, pythonMissing)).toBe(null);
+    expect(getUnmetPrereq(STARTER_MODEL_ID, dockerMissing)).toBe(null);
+  });
+
+  it('does not block a component with no known prerequisite', () => {
+    expect(getUnmetPrereq('some-future-component', pythonMissing)).toBe(null);
+  });
+
+  it('treats an undefined prereq flag as unmet rather than assuming present', () => {
+    // A PrereqStatus that omits pythonFound entirely (e.g. a degraded scan)
+    // must not be read as "Python is there" — that would queue an install
+    // that's likely to fail exactly like the starter-model bug did.
+    expect(getUnmetPrereq('fooocus', { missing: [], installHint: 'x' })).toBe('python');
   });
 });
 

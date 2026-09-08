@@ -18,7 +18,7 @@ type LabeledComponent = SelectableComponent & { label: string };
 export function SetupFlow({ onComplete }: SetupFlowProps) {
   const [step, setStep] = useState<SetupStep>('scan');
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
-  const [, setPrereqs] = useState<PrereqStatus | null>(null);
+  const [prereqs, setPrereqs] = useState<PrereqStatus | null>(null);
   const [intent, setIntent] = useState<IntentId | null>(null);
   const [queueComponents, setQueueComponents] = useState<LabeledComponent[]>([]);
   const [earlyExited, setEarlyExited] = useState(false);
@@ -85,8 +85,8 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
     <div data-testid="setup-flow-root" className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-1)]">
       {step === 'scan' && <SystemScan onContinue={handleScanContinue} />}
       {step === 'intent' && <IntentSelection onSelect={handleIntentSelect} />}
-      {step === 'recommend' && hardware && intent && (
-        <RecommendedSetup intent={intent} hardware={hardware} onProceed={handleProceed} onCustomize={handleSkipToApp} />
+      {step === 'recommend' && hardware && prereqs && intent && (
+        <RecommendedSetup intent={intent} hardware={hardware} prereqs={prereqs} onProceed={handleProceed} onCustomize={handleSkipToApp} />
       )}
       {step === 'queue' && (
         <InstallQueue
