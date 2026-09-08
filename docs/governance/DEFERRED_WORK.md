@@ -7,32 +7,22 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
-- [2026-09-07, updated same day] **`OnboardingWizard.tsx` — dark-only-by-design
-  question, deliberately left alone, now for a bigger reason than the original
-  theme question.** Found during the ui-redesign worktree's repo-wide raw
-  white/black sweep (`docs/ui-redesign/bug-log.md` #117): every heading and
-  card across all onboarding steps uses `text-white`/`border-white/[0.06]`
-  consistently and exclusively (~35 occurrences). Original reasoning: onboarding
-  is gated in `App.tsx` ahead of the themed main shell and renders before the
-  user has chosen light/dark, and it's a first-run-only, low-frequency screen —
-  a fixed dark "welcome" aesthetic is a legitimate, common pattern, not
-  automatically a bug.
-  **Superseding context (same day):** the user is separately building a "smart
-  installer" and is actively considering retiring `OnboardingWizard.tsx`
-  entirely rather than restyling it — so touching its theme now risks being
-  thrown-away work if the installer replaces this flow shortly after. Explicit
-  instruction: leave it alone, document it here, resolve later once the
-  installer direction is decided. Do NOT start the theme-aware fix without
-  first checking whether `OnboardingWizard.tsx` is still the live first-run
-  path (search for its mount point in `App.tsx` and check whether a new
-  installer-driven flow has superseded it) — a future agent picking this up
-  should verify that before assuming the resume hint below still applies.
-  Resume hint (only if `OnboardingWizard.tsx` is confirmed still live and the
-  decision is "make it theme-aware"): the fix is mechanically identical to
-  #119's `CoachWindow.tsx` fix (call `useTheme()` once at the top of
-  `OnboardingWizard.tsx`, then retokenize the ~35 occurrences the same way
-  `CoachInterventionCard.tsx` was retokenized in the same entry) — not a new
-  investigation. Status: deferred, awaiting the installer-vs-restyle decision.
+- [2026-09-07, resolved same day] **`OnboardingWizard.tsx` theme-awareness —
+  fixed ("better safe than sorry" per explicit user instruction), not left
+  deferred.** Originally found dark-only-by-design during the ui-redesign
+  worktree's repo-wide raw white/black sweep (`docs/ui-redesign/bug-log.md`
+  #117, ~35 occurrences). A same-day follow-up considered leaving it deferred
+  because the user is separately building a "smart installer" and may retire
+  this wizard entirely. The user's final instruction: fix it anyway (a
+  theme-aware onboarding costs nothing if the installer later replaces it, and
+  protects against it staying live longer than expected) — see bug-log #122.
+  `useTheme()` is now called at the top of `OnboardingWizard.tsx`, all ~35 raw
+  white/black occurrences retokenized, mechanically identical to #119's
+  `CoachWindow.tsx` fix. **If a smart-installer flow later supersedes this
+  wizard:** the theme wiring is contained entirely in this one file (a single
+  `useTheme()` call plus token classes) — deleting or replacing the file
+  removes it cleanly, nothing else in the app depends on
+  `OnboardingWizard.tsx` having been made theme-aware. Status: closed.
 
 - [2026-08-22] **`useAppEffects` was fully dead code since 2026-06-15 (44+
   commits, 2+ months) — restored.** Found while triaging a live post-install

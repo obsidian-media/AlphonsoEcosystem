@@ -28,6 +28,8 @@ import { saveConnectorCredential } from '../services/connectors/connectorAuth';
 import { updateConnectorAuthProfile } from '../services/connectorRegistryService';
 import { DEFAULT_MODEL as NVIDIA_DEFAULT_MODEL } from '../services/connectors/nvidiaNimConnector';
 import { DEFAULT_MODEL as GEMINI_DEFAULT_MODEL } from '../services/connectors/geminiConnector';
+import { useTheme } from '../hooks/useTheme';
+import { Tabs } from './ui/Tabs';
 
 function openExternal(url: string) {
   invoke('open_url', { url }).catch(() => { window.open(url, '_blank'); });
@@ -100,20 +102,12 @@ function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider
         Both are genuinely free-tier (rate-limited, not billed), but requests leave your machine and go to{' '}
         {info.label}&apos;s cloud — this is not local like Ollama.
       </p>
-      <div className="flex rounded-lg overflow-hidden border border-white/10 w-fit text-[10px]">
-        {(Object.keys(CLOUD_SKIP_PROVIDERS) as CloudSkipProvider[]).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setProvider(p)}
-            className={`px-3 py-1 uppercase tracking-widest font-bold transition-colors ${
-              provider === p ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface-2)] text-[var(--text-4)] hover:text-[var(--text-2)]'
-            }`}
-          >
-            {CLOUD_SKIP_PROVIDERS[p].label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        compact
+        tabs={(Object.keys(CLOUD_SKIP_PROVIDERS) as CloudSkipProvider[]).map((p) => ({ id: p, label: CLOUD_SKIP_PROVIDERS[p].label }))}
+        activeId={provider}
+        onChange={(id) => setProvider(id as CloudSkipProvider)}
+      />
       <ol className="space-y-1.5 text-xs text-[var(--text-3)] list-none">
         <li className="flex gap-2">
           <span className="text-[var(--accent)] font-bold shrink-0">1.</span>
@@ -138,7 +132,7 @@ function SkipOllamaCloudGuide({ onSkip }: { onSkip: (provider: CloudSkipProvider
             placeholder={info.placeholder}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-white/10 text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
+            className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
           />
           <button
             onClick={handleSaveAndContinue}
@@ -265,13 +259,13 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
 
   const canProceed = status === 'connected' || status === 'no_models';
 
-  const statusConfig: Record<OllamaCheckStatus, { dot: string; text: string; border: string }> = {
-    checking:     { dot: 'bg-[var(--text-4)] animate-pulse', text: 'text-[var(--text-3)]',    border: 'border-white/[0.06] bg-[var(--surface-1)/0.4]' },
-    connected:    { dot: 'bg-[var(--success)]',        text: 'text-[var(--success)]', border: 'border-[var(--success-border)] bg-[var(--success-dim)]' },
-    no_models:    { dot: 'bg-[var(--warning)]',        text: 'text-[var(--warning)]', border: 'border-[var(--warning-border)] bg-[var(--warning-dim)]' },
-    not_running:  { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error-border)] bg-[var(--error-dim)]' },
-    not_installed:{ dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error-border)] bg-[var(--error-dim)]' },
-    error:        { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   border: 'border-[var(--error-border)] bg-[var(--error-dim)]' },
+  const statusConfig: Record<OllamaCheckStatus, { dot: string; text: string; bg: string }> = {
+    checking:     { dot: 'bg-[var(--text-4)] animate-pulse', text: 'text-[var(--text-3)]',    bg: 'bg-[var(--surface-2)]' },
+    connected:    { dot: 'bg-[var(--success)]',        text: 'text-[var(--success)]', bg: 'bg-[var(--success-dim)]' },
+    no_models:    { dot: 'bg-[var(--warning)]',        text: 'text-[var(--warning)]', bg: 'bg-[var(--warning-dim)]' },
+    not_running:  { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   bg: 'bg-[var(--error-dim)]' },
+    not_installed:{ dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   bg: 'bg-[var(--error-dim)]' },
+    error:        { dot: 'bg-[var(--error)]',          text: 'text-[var(--error)]',   bg: 'bg-[var(--error-dim)]' },
   };
   const cfg = statusConfig[status] || statusConfig.checking;
 
@@ -286,13 +280,13 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-lg font-bold text-white mb-1">Check Ollama</h2>
+      <h2 className="font-serif text-lg font-bold text-[var(--text-1)] mb-1">Check Ollama</h2>
       <p className="text-[var(--text-3)] text-sm mb-6">
         Alphonso needs Ollama running locally to power all AI responses.
       </p>
 
       {/* Status card */}
-      <div className={`flex items-start gap-3 rounded-xl border px-4 py-4 mb-4 transition-all ${cfg.border}`}>
+      <div className={`flex items-start gap-3 rounded-xl px-4 py-4 mb-4 transition-all ${cfg.bg}`}>
         <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${cfg.dot}`} />
         <div>
           <div className={`text-sm font-semibold ${cfg.text}`}>{statusLabel}</div>
@@ -303,7 +297,7 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
 
       {/* Not installed — download prompt */}
       {status === 'not_installed' && (
-        <div className="rounded-xl border border-white/[0.06] bg-[var(--surface-1)/0.6] px-4 py-3 mb-4 space-y-3">
+        <div className="rounded-xl bg-[var(--surface-2)] px-4 py-3 mb-4 space-y-3">
           <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-4)]">Install Ollama</div>
           <p className="text-xs text-[var(--text-3)]">
             Download and run the Ollama installer, then come back and click Retry.
@@ -319,7 +313,7 @@ function CheckOllamaStep({ onNext, onSkipToCloud }: { onNext: () => void; onSkip
 
       {/* Not running — auto-start via Runtime Hub */}
       {status === 'not_running' && (
-        <div className="rounded-xl border border-white/[0.06] bg-[var(--surface-1)/0.6] px-4 py-3 mb-4 space-y-3">
+        <div className="rounded-xl bg-[var(--surface-2)] px-4 py-3 mb-4 space-y-3">
           <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-4)]">Start Ollama</div>
           <div className="flex flex-col gap-2">
             <button
@@ -420,7 +414,7 @@ function PickModelStep({ onNext }: { onNext: (model: string) => void }) {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-lg font-bold text-white mb-1">Pick a model</h2>
+      <h2 className="font-serif text-lg font-bold text-[var(--text-1)] mb-1">Pick a model</h2>
       <p className="text-[var(--text-3)] text-sm mb-6">
         Choose which local model Alphonso will use for conversations.
       </p>
@@ -481,8 +475,8 @@ function PickModelStep({ onNext }: { onNext: (model: string) => void }) {
               <button
                 key={model.name}
                 onClick={() => setSelected(model.name)}
-                className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all ${
-                  isSelected ? 'border-[var(--accent-border)] bg-[var(--accent-dim)]' : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10 hover:bg-[var(--surface-2)/0.6]'
+                className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all ${
+                  isSelected ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]' : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
                 }`}
               >
                 <div className="flex flex-col gap-0.5">
@@ -536,7 +530,7 @@ function ApprovalModeStep({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-lg font-bold text-white mb-1">Approval mode</h2>
+      <h2 className="font-serif text-lg font-bold text-[var(--text-1)] mb-1">Approval mode</h2>
       <p className="text-[var(--text-3)] text-sm mb-6">
         Should Alphonso ask for your confirmation before high-risk actions — sending messages,
         publishing content, running system commands? You can change this anytime in Settings → Security.
@@ -545,10 +539,10 @@ function ApprovalModeStep({ onNext }: { onNext: () => void }) {
       <div className="space-y-2 mb-6">
         <button
           onClick={() => setApprovalMode(true)}
-          className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+          className={`w-full flex items-start gap-3 rounded-xl px-4 py-3 text-left transition-all ${
             approvalMode
-              ? 'border-[var(--success-border)] bg-[var(--success-dim)] ring-1 ring-[var(--success-border)]'
-              : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
+              ? 'bg-[var(--success-dim)] ring-1 ring-[var(--success-border)]'
+              : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
           }`}
         >
           <div className="mt-0.5">{approvalMode && <CheckCircle className="w-4 h-4 text-[var(--success)]" />}</div>
@@ -562,10 +556,10 @@ function ApprovalModeStep({ onNext }: { onNext: () => void }) {
         </button>
         <button
           onClick={() => setApprovalMode(false)}
-          className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+          className={`w-full flex items-start gap-3 rounded-xl px-4 py-3 text-left transition-all ${
             !approvalMode
-              ? 'border-[var(--warning-border)] bg-[var(--warning-dim)] ring-1 ring-[var(--warning-border)]'
-              : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10'
+              ? 'bg-[var(--warning-dim)] ring-1 ring-[var(--warning-border)]'
+              : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
           }`}
         >
           <div className="mt-0.5">{!approvalMode && <CheckCircle className="w-4 h-4 text-[var(--warning)]" />}</div>
@@ -629,7 +623,7 @@ const CHANNEL_OPTIONS = [
     Icon: ArrowRight,
     iconColor: 'text-[var(--text-3)]',
     iconBg: 'bg-[var(--surface-2)]',
-    iconBorder: 'border-white/[0.06]',
+    iconBorder: 'border-[var(--border)]',
   },
 ];
 
@@ -645,7 +639,7 @@ function WhatsAppDeployGuide() {
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden">
+    <div className="mt-3 rounded-xl bg-emerald-500/5 overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/5 transition-colors"
@@ -659,9 +653,9 @@ function WhatsAppDeployGuide() {
             <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">1.</span> Create a Meta App at <button onClick={() => openExternal('https://developers.facebook.com')} className="text-emerald-400 underline hover:text-emerald-300 transition-colors">developers.facebook.com</button> → Add WhatsApp product.</li>
             <li className="flex gap-2"><span className="text-emerald-400 font-bold shrink-0">2.</span> Deploy the Alphonso gateway to Railway (one-click from your repo):</li>
           </ol>
-          <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-lg px-3 py-2 font-mono text-emerald-400">
+          <div className="flex items-center gap-2 bg-black/40 border border-[var(--border)] rounded-lg px-3 py-2 font-mono text-emerald-400">
             <span className="flex-1 text-[10px] select-all">gateway/whatsapp-cloud/</span>
-            <button onClick={() => copy('gateway/whatsapp-cloud/', 'dir')} className="text-[var(--text-4)] hover:text-white transition-colors">
+            <button onClick={() => copy('gateway/whatsapp-cloud/', 'dir')} className="text-[var(--text-4)] hover:text-[var(--text-1)] transition-colors">
               {copied === 'dir' ? <CheckCircle size={11} className="text-emerald-400" /> : <Copy size={11} />}
             </button>
           </div>
@@ -692,7 +686,7 @@ function TelegramSetupGuide() {
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-sky-500/20 bg-sky-500/5 overflow-hidden">
+    <div className="mt-3 rounded-xl bg-sky-500/5 overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-sky-300 hover:bg-sky-500/5 transition-colors"
@@ -719,7 +713,7 @@ function TelegramSetupGuide() {
                 placeholder="123456:ABC-DEFGHIJKLMNOPabcdefghijklmnop"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-white/10 text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-sky-500/50"
+                className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-sky-500/50"
               />
               <button
                 onClick={handleSave}
@@ -749,7 +743,7 @@ function ComposioSetupGuide(): React.ReactElement {
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 space-y-3">
+    <div className="mt-3 rounded-xl bg-violet-500/5 px-4 py-3 space-y-3">
       <div className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Composio Setup</div>
       <ol className="space-y-1.5 text-xs text-[var(--text-3)] list-none">
         <li className="flex gap-2"><span className="text-violet-400 font-bold shrink-0">1.</span> Sign up at <button onClick={() => openExternal('https://composio.dev')} className="text-violet-400 underline hover:text-violet-300 transition-colors">composio.dev</button> (free tier available).</li>
@@ -767,7 +761,7 @@ function ComposioSetupGuide(): React.ReactElement {
             placeholder="composio_api_key_…"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-white/10 text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-violet-500/50"
+            className="flex-1 min-w-0 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] text-xs px-3 py-1.5 text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-violet-500/50"
           />
           <button
             onClick={handleSave}
@@ -793,7 +787,7 @@ function ConnectChannelStep({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-lg font-bold text-white mb-1">Connect</h2>
+      <h2 className="font-serif text-lg font-bold text-[var(--text-1)] mb-1">Connect</h2>
       <p className="text-[var(--text-3)] text-sm mb-6">
         None of these are required. Every connector below stays disabled until you add credentials —
         skip freely and add one later in Settings → Connectors whenever you're ready.
@@ -806,10 +800,10 @@ function ConnectChannelStep({ onNext }: { onNext: () => void }) {
             <div key={id}>
               <button
                 onClick={() => setSelected(id)}
-                className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 text-left transition-all ${
+                className={`w-full flex items-center gap-4 rounded-xl px-4 py-3 text-left transition-all ${
                   isSelected
-                    ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
-                    : 'border-white/[0.06] bg-[var(--surface-1)/0.6] hover:border-white/10 hover:bg-[var(--surface-2)/0.6]'
+                    ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
+                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
                 }`}
               >
                 <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconBg} ${iconBorder}`}>
@@ -856,7 +850,7 @@ interface AdvancedServiceRowProps {
 
 function AdvancedServiceRow({ label, description, checking, ok, hint, onCheck }: AdvancedServiceRowProps) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-[var(--surface-1)/0.6] px-4 py-3">
+    <div className="rounded-xl bg-[var(--surface-2)] px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">{label}</div>
@@ -865,7 +859,7 @@ function AdvancedServiceRow({ label, description, checking, ok, hint, onCheck }:
         <button
           onClick={onCheck}
           disabled={checking}
-          className="shrink-0 flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border border-white/10 text-[var(--text-3)] hover:text-[var(--text-1)] hover:border-white/20 transition-colors disabled:opacity-50"
+          className="shrink-0 flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)] hover:border-[var(--border-strong)] transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-3 h-3 ${checking ? 'animate-spin' : ''}`} />
           {checking ? 'Checking…' : 'Check'}
@@ -921,7 +915,7 @@ function AdvancedServicesStep({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-lg font-bold text-white mb-1">Optional services</h2>
+      <h2 className="font-serif text-lg font-bold text-[var(--text-1)] mb-1">Optional services</h2>
       <p className="text-[var(--text-3)] text-sm mb-6">
         These extras aren't required to use Alphonso. They need something running locally first —
         check now so you know what's on, and what still needs a separate install.
@@ -972,13 +966,13 @@ function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinis
       <div className="w-16 h-16 rounded-2xl bg-[var(--success-dim)] border border-[var(--success-border)] flex items-center justify-center mb-6">
         <Zap className="w-8 h-8 text-[var(--success)]" />
       </div>
-      <h2 className="text-xl font-bold text-white mb-3">You're ready</h2>
+      <h2 className="font-serif text-xl font-bold text-[var(--text-1)] mb-3">You're ready</h2>
       <p className="text-[var(--text-3)] text-sm leading-relaxed max-w-sm mb-4">
         Alphonso is configured and ready to go.
       </p>
 
       {selectedModel && (
-        <div className="rounded-xl border border-white/[0.06] bg-[var(--surface-1)/0.6] px-5 py-3 mb-8 w-full max-w-xs">
+        <div className="rounded-xl bg-[var(--surface-2)] px-5 py-3 mb-8 w-full max-w-xs">
           <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-4)] mb-1">Selected model</div>
           <div className="font-mono text-sm text-[var(--accent)] font-semibold">{selectedModel}</div>
         </div>
@@ -986,7 +980,7 @@ function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinis
 
       <button
         onClick={onFinish}
-        className="flex items-center gap-2 px-6 py-3 bg-[var(--success)] hover:bg-[var(--success-dim)] text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
+        className="flex items-center gap-2 px-6 py-3 bg-[var(--success)] hover:bg-[var(--success-dim)] text-white text-sm font-bold rounded-xl transition-colors"
       >
         Start chatting <ArrowRight className="w-4 h-4" />
       </button>
@@ -997,6 +991,11 @@ function ReadyStep({ selectedModel, onFinish }: { selectedModel: string; onFinis
 // ─── Root wizard ──────────────────────────────────────────────────────────────
 
 export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: string, selectedProvider?: string) => void }) {
+  // Onboarding is a first-run screen and previously never applied the user's
+  // real theme choice at all -- kept it theme-aware from here forward rather
+  // than the fixed-dark aesthetic it shipped with, in case a returning user
+  // (or a re-run of onboarding) ever sees it in light mode.
+  useTheme();
   const [step, setStep] = useState(0);
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<'ollama' | CloudSkipProvider>('ollama');
@@ -1010,14 +1009,14 @@ export function OnboardingWizard({ onComplete }: { onComplete: (selectedModel: s
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--surface-0)]">
       <div className="absolute inset-0 bg-[var(--accent-dim)] pointer-events-none" />
       <div className="relative w-full max-w-md mx-4">
-        <div className="rounded-2xl border border-white/[0.06] bg-[var(--surface-1)] backdrop-blur-xl shadow-2xl p-8">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] backdrop-blur-xl shadow-2xl p-8">
           {/* Brand header */}
           <div className="flex items-center gap-3 mb-6">
             <div className="w-9 h-9 rounded-xl bg-[var(--accent)] flex items-center justify-center shadow-[var(--shadow-glow-accent)]">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-sm font-bold text-white">Alphonso</div>
+              <div className="font-serif text-sm font-bold text-[var(--text-1)]">Alphonso</div>
               <div className="text-[10px] text-[var(--text-4)]">Local-first AI assistant</div>
             </div>
           </div>
