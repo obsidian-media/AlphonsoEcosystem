@@ -3,9 +3,9 @@ import { SystemScan } from './setup/SystemScan';
 import { IntentSelection, type IntentId } from './setup/IntentSelection';
 import { RecommendedSetup } from './setup/RecommendedSetup';
 import { AgentGrid } from './setup/AgentGrid';
-import { InstallQueue } from './setup/InstallQueue';
+import { InstallQueue, type FailedComponent } from './setup/InstallQueue';
 import { ActivationSequence } from './setup/ActivationSequence';
-import { markSetupComplete } from '../services/setupFlowService';
+import { markSetupComplete, STARTER_MODEL_ID } from '../services/setupFlowService';
 import type { HardwareProfile, SelectableComponent } from '../services/setupFlowService';
 import type { PrereqStatus } from '../services/runtimeManagerService';
 
@@ -25,6 +25,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
   const [earlyExited, setEarlyExited] = useState(false);
   const [activationVariant, setActivationVariant] = useState<'full' | 'toast'>('full');
   const [failedLabels, setFailedLabels] = useState<string[]>([]);
+  const [starterModelFailed, setStarterModelFailed] = useState(false);
 
   const finishSetup = () => {
     markSetupComplete();
@@ -88,8 +89,9 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
     // own early-exit moment, a separate and already-working case.
   };
 
-  const handleFailed = (labels: string[]) => {
-    setFailedLabels(labels);
+  const handleFailed = (failed: FailedComponent[]) => {
+    setFailedLabels(failed.map((f) => f.label));
+    setStarterModelFailed(failed.some((f) => f.id === STARTER_MODEL_ID));
     setStep('failed');
   };
 
@@ -126,8 +128,17 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
             Failed: {failedLabels.join(', ')}
           </div>
           <p className="text-sm text-[var(--text-3)] text-center">
-            You can continue into Alphonso and retry these any time from Runtime Hub, or go back
-            and try the install again now.
+            {starterModelFailed
+              ? // Continue Anyway is deliberately not offered here: it calls
+                // finishSetup(), which persists setup as complete and hides
+                // Setup from every future launch. Without the starter model,
+                // chat has no working Ollama model to talk to and no
+                // automatic path back into Setup to fix it -- a real, quiet
+                // trap the original unconditional button could put a user
+                // into (CodeRabbit finding on PR #233, verified against
+                // current code before fixing).
+                'The starter model is required for chat and couldn\'t be installed. Retry to continue.'
+              : 'You can continue into Alphonso and retry these any time from Runtime Hub, or go back and try the install again now.'}
           </p>
           <div className="flex gap-3">
             <button
@@ -136,12 +147,14 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
             >
               Retry
             </button>
-            <button
-              onClick={finishSetup}
-              className="rounded border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text-2)]"
-            >
-              Continue Anyway
-            </button>
+            {!starterModelFailed && (
+              <button
+                onClick={finishSetup}
+                className="rounded border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text-2)]"
+              >
+                Continue Anyway
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -9,12 +9,23 @@ interface Task extends SelectableComponent {
   errorMessage?: string;
 }
 
+export interface FailedComponent {
+  id: string;
+  label: string;
+}
+
 export interface InstallQueueProps {
   components: (SelectableComponent & { label: string })[];
   onStarterReady: () => void;
   onAllComplete: () => void;
-  /** Called instead of onAllComplete when the queue settles with failures. */
-  onFailed: (failedLabels: string[]) => void;
+  /**
+   * Called instead of onAllComplete when the queue settles with failures.
+   * Carries `id` alongside `label` so the caller can tell whether the
+   * starter model itself was among the failures (id-matching against
+   * STARTER_MODEL_ID) rather than string-matching a display label, which
+   * SetupFlow needs to decide whether "Continue Anyway" is safe to offer.
+   */
+  onFailed: (failed: FailedComponent[]) => void;
 }
 
 export function InstallQueue({ components, onStarterReady, onAllComplete, onFailed }: InstallQueueProps) {
@@ -108,7 +119,7 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
     // install — and because the flag gates Setup, they'd never be offered
     // the flow again to retry it.
     if (tasks.some((t) => t.status === 'error')) {
-      onFailed(tasks.filter((t) => t.status === 'error').map((t) => t.label));
+      onFailed(tasks.filter((t) => t.status === 'error').map((t) => ({ id: t.id, label: t.label })));
     } else {
       onAllComplete();
     }

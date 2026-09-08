@@ -173,7 +173,7 @@ describe('InstallQueue', () => {
     const onFailed = vi.fn();
     render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={onAllComplete} onFailed={onFailed} />);
     await waitFor(() => expect(onFailed).toHaveBeenCalledTimes(1));
-    expect(onFailed).toHaveBeenCalledWith(['Fooocus (image generation)']);
+    expect(onFailed).toHaveBeenCalledWith([{ id: 'fooocus', label: 'Fooocus (image generation)' }]);
     expect(onAllComplete).not.toHaveBeenCalled();
   });
 });

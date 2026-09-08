@@ -7,6 +7,28 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-09-08] **Smart Installer: general and starter-model disk checks
+  don't merge when they happen to share a volume.** CodeRabbit finding on
+  PR #233, verified as a real but low-severity precision gap, not a
+  correctness bug. When `runtimes_dir()` and `OLLAMA_MODELS` resolve to the
+  same physical volume, `checkDiskSpace()` still runs its general check and
+  its starter-model check as two fully independent comparisons against the
+  same underlying free-space number -- in a genuinely borderline case (free
+  space enough for one requirement but not both combined), both checks
+  could pass individually while the machine doesn't actually have room for
+  everything together, or the user could see two separate warnings that
+  are really describing the same shortfall. Not fixed now: doing this
+  properly needs `HardwareProfile` to carry a same-volume identity (e.g. a
+  resolved volume id/mount point for each target, not just free-space
+  numbers) so `checkDiskSpace()` can decide to aggregate vs. keep separate
+  -- real, bounded scope, but architecture-touching rather than a quick
+  fix, and the current behavior is conservative-safe (worst case: an
+  extra/redundant warning, never a missed real shortfall) rather than
+  actively wrong. Resume hint: add a `runtimesVolumeId`/
+  `ollamaModelsVolumeId` (or similar) to `HardwareProfile`, resolved from
+  `pick_disk_for_path`'s already-existing mount-matching logic in
+  `runtime_manager.rs`, and branch `checkDiskSpace()` on whether they're
+  equal. Status: deferred, low priority.
 - [2026-09-08] **Smart Installer: disk-space check didn't cover Ollama's own
   model-storage volume — resolved.** Found via CodeRabbit review on PR
   #233, verified against real code. `detect_disk_free_gb()` in

@@ -234,7 +234,7 @@ export function AgentGrid({ hardware, prereqs: initialPrereqs, onProceed, onBack
         })}
       </div>
       <div className="flex flex-col gap-2 w-full max-w-md text-sm">
-        {diskCheck.unknown && (
+        {diskCheck.unknown && diskCheck.starterModelShortfallGb === undefined && (
           <div className="rounded bg-[var(--warning-dim)] px-3 py-2 text-[var(--warning)] text-xs">
             Couldn&apos;t measure free disk space — install will proceed, but make sure you have
             at least {diskCheck.requiredGb}GB free.
