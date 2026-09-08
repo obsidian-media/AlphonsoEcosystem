@@ -207,8 +207,8 @@ export function addThreadMessage({
 }): BoardroomThreadMessage | null {
   const originalText = String(content || '').trim();
   if (!originalText) return null;
-  const text = redactMissionRoomSecrets(originalText).trim();
   const risk = classifyMissionRoomRisk(originalText);
+  const text = (risk.secretDetected ? '[REDACTED_SECRET]' : redactMissionRoomSecrets(originalText)).trim();
   const mentionedAgents = parseMentions(originalText, KNOWN_AGENT_IDS);
   const message: BoardroomThreadMessage = {
     id: makeId('boardroom_msg'),
