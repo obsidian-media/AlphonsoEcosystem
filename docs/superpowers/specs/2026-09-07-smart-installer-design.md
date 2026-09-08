@@ -261,10 +261,36 @@ steps added (Recommended Setup, Early Exit), agent roster corrected.
 5. **Install Queue** — per-task agent-colored progress bars, status states
    (Pending → Downloading → Extracting → Configuring → Ready → Error), real
    bytes/ETA. Starter model prioritized first in the queue.
+
+   **Implemented 2026-09-08.** `installComponent()` in `setupFlowService.ts`
+   gained an optional `onProgress` callback that normalizes two real,
+   previously-unwired progress mechanisms into one `{message, pct}` shape:
+   `pullOllamaModel()`'s real byte-based pull progress (`ollama.ts`) and
+   `installTool()`'s real `runtime://progress` Tauri events (`runtime_manager.rs`).
+   `InstallQueue.tsx` renders that message and a percentage-width bar per
+   task, colored by the same per-agent palette `AgentGrid.tsx` uses (exported
+   as `COMPONENT_AGENT_COLORS` so the two never drift apart), with an
+   indeterminate sweep animation when a mechanism hasn't reported a
+   percentage yet (e.g. "starting", "verifying digest"). Honest deviation
+   from this doc's imagined state names: the real stage strings are whatever
+   ollama/Runtime Hub actually emit ("pulling manifest", "cloning",
+   "installing_deps", etc.), not a fixed
+   Pending/Downloading/Extracting/Configuring/Ready/Error enum — showing the
+   real string is more honest than inventing a mapping to fictitious states.
 6. **Early Exit → Chat Now** (new) — the instant the starter model reaches
    Ready, a pulsing "Start Chatting Now" control appears; the user doesn't
    have to wait for Fooocus/Voice OS/Chroma to finish. Those continue
    installing in the background after the main app opens.
+
+   **Implemented 2026-09-08.** Previously `InstallQueue.tsx` auto-fired
+   `onStarterReady()` the instant the starter model's status became `ready`
+   — there was no control, pulsing or otherwise, and no user choice; the
+   flow silently jumped to chat. Fixed: the starter model reaching `ready`
+   now renders a real pulsing `motion.button` ("Start Chatting Now", reusing
+   Framer Motion's opacity-loop pattern) instead, and `onStarterReady()`
+   only fires on click. If the user never clicks it and the whole queue
+   finishes successfully anyway, `onAllComplete()` fires as a fallback so
+   the flow can't get stuck.
 7. **Activation Sequence** — kept from the original draft's structure: (A)
    full-screen pulse in the real Alphonso green (`#8EDB64`, corrected from
    the draft's invented cyan — see step 1's color correction), (B)

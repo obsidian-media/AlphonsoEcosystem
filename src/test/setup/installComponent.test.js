@@ -42,7 +42,7 @@ describe('installComponent — model vs tool routing', () => {
 
     await installComponent('fooocus');
 
-    expect(installTool).toHaveBeenCalledWith('fooocus');
+    expect(installTool).toHaveBeenCalledWith('fooocus', undefined);
     expect(pullOllamaModel).not.toHaveBeenCalled();
   });
 
@@ -54,6 +54,61 @@ describe('installComponent — model vs tool routing', () => {
   it('propagates a tool-install failure', async () => {
     installTool.mockRejectedValue(new Error('Unknown tool: bogus'));
     await expect(installComponent('bogus')).rejects.toThrow('Unknown tool: bogus');
+  });
+});
+
+describe('installComponent — progress reporting', () => {
+  // Both underlying mechanisms already had real progress support --
+  // pullOllamaModel streams real completed/total byte counts, installTool
+  // relays real Runtime Hub `runtime://progress` events with a stage +
+  // percent -- but neither was ever wired to a caller until the Install
+  // Queue's "Pending/Downloading.../Ready" states were replaced with real
+  // data. These tests cover the normalization installComponent does so
+  // InstallQueue.tsx doesn't need to know which mechanism a component uses.
+
+  it('normalizes a real Ollama byte-progress event into a formatted message', async () => {
+    pullOllamaModel.mockImplementation(async ({ onProgress }) => {
+      onProgress({ status: 'pulling manifest', completed: 1_500_000_000, total: 2_000_000_000, percent: 75 });
+      return { ok: true, model: STARTER_MODEL_TAG };
+    });
+    const onProgress = vi.fn();
+
+    await installComponent(STARTER_MODEL_ID, onProgress);
+
+    expect(onProgress).toHaveBeenCalledWith({ message: 'pulling manifest (1.4GB / 1.9GB)', pct: 75 });
+  });
+
+  it('falls back to the bare status when Ollama reports no byte total (e.g. verifying digest)', async () => {
+    pullOllamaModel.mockImplementation(async ({ onProgress }) => {
+      onProgress({ status: 'verifying sha256 digest', completed: null, total: null, percent: null });
+      return { ok: true, model: STARTER_MODEL_TAG };
+    });
+    const onProgress = vi.fn();
+
+    await installComponent(STARTER_MODEL_ID, onProgress);
+
+    expect(onProgress).toHaveBeenCalledWith({ message: 'verifying sha256 digest', pct: null });
+  });
+
+  it('normalizes a real Runtime Hub progress event (stage + percent, no bytes)', async () => {
+    installTool.mockImplementation(async (name, onProgress) => {
+      onProgress({ tool: name, stage: 'cloning', message: 'Cloning https://example.com/fooocus …', pct: 10 });
+      return { tool: name, ok: true, message: 'done' };
+    });
+    const onProgress = vi.fn();
+
+    await installComponent('fooocus', onProgress);
+
+    expect(onProgress).toHaveBeenCalledWith({ message: 'Cloning https://example.com/fooocus …', pct: 10 });
+  });
+
+  it('never calls onProgress when the caller does not pass one', async () => {
+    pullOllamaModel.mockResolvedValue({ ok: true, model: STARTER_MODEL_TAG });
+    await installComponent(STARTER_MODEL_ID);
+    // No assertion needed beyond "doesn't throw" -- pullOllamaModel's mock
+    // above never calls an onProgress that doesn't exist; this documents
+    // the contract explicitly rather than leaving it implicit.
+    expect(pullOllamaModel).toHaveBeenCalledWith(expect.objectContaining({ onProgress: undefined }));
   });
 });
 

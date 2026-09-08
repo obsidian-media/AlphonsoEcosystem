@@ -93,19 +93,66 @@ export const STARTER_MODEL_ID = 'starter-model';
  */
 export const STARTER_MODEL_TAG = 'llama3.2:3b';
 
+export interface ComponentProgress {
+  /** Human-readable status, already including a formatted byte count when
+   * the underlying mechanism reports real bytes (Ollama's model pull does;
+   * Runtime Hub's tool installs generally don't, and just send a stage
+   * description instead — both flow through this one shape). */
+  message: string;
+  /** 0-100, or null when the underlying mechanism can't report a percent
+   * for this event (e.g. Ollama's "verifying sha256 digest" phase has no
+   * byte total to divide by). Distinct from 0 -- a null percent should
+   * leave a progress bar wherever it last was, not snap it back to empty. */
+  pct: number | null;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unitIndex = -1;
+  do {
+    value /= 1024;
+    unitIndex += 1;
+  } while (value >= 1024 && unitIndex < units.length - 1);
+  return `${value.toFixed(1)}${units[unitIndex]}`;
+}
+
 /**
  * Installs one Setup component, routing models and tools to their real,
  * separate install mechanisms rather than assuming everything is a tool.
+ *
+ * Both `pullOllamaModel` (the starter model) and `installTool` (everything
+ * else) already had real progress-reporting support -- Ollama's pull API
+ * streams real completed/total byte counts, and Runtime Hub emits real
+ * `runtime://progress` events with a stage + percent -- but neither was
+ * ever wired to a caller here. `onProgress` normalizes both into one shape
+ * so `InstallQueue.tsx` doesn't need to know which mechanism a given
+ * component uses.
  */
-export async function installComponent(componentId: string): Promise<void> {
+export async function installComponent(
+  componentId: string,
+  onProgress?: (progress: ComponentProgress) => void
+): Promise<void> {
   if (componentId === STARTER_MODEL_ID) {
     await pullOllamaModel({
       endpoint: getConfiguredOllamaEndpoint(),
       model: STARTER_MODEL_TAG,
+      onProgress: onProgress
+        ? (p) => onProgress({
+            message: p.completed != null && p.total != null
+              ? `${p.status} (${formatBytes(p.completed)} / ${formatBytes(p.total)})`
+              : p.status,
+            pct: p.percent,
+          })
+        : undefined,
     });
     return;
   }
-  await installTool(componentId);
+  await installTool(
+    componentId,
+    onProgress ? (p) => onProgress({ message: p.message, pct: p.pct }) : undefined
+  );
 }
 
 /**

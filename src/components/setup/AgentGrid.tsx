@@ -79,6 +79,13 @@ const AGENTS: AgentEntry[] = [
   { agentId: 'nova', name: 'Nova', color: '#76FF03', portrait: novaPortrait },
 ];
 
+// Install Queue's agent-colored progress bars (design doc §5 step 5) reuse
+// this exact mapping rather than re-declaring a second component->color
+// table that could drift from the one users actually see in the grid.
+export const COMPONENT_AGENT_COLORS: Record<string, string> = Object.fromEntries(
+  AGENTS.filter((a) => a.component).map((a) => [a.component!.id, a.color])
+);
+
 export interface AgentGridProps {
   hardware: HardwareProfile;
   prereqs: PrereqStatus;

@@ -7,6 +7,30 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-09-08] **Install Queue and Early Exit shipped a flattened version of
+  the design -- resolved.** Continuing the same "check the whole flow, not
+  just what exists" audit that found the missing Boot Ritual Intro (see the
+  entry immediately below), re-checking design doc §5 steps 5-6 against the
+  shipped `InstallQueue.tsx` found two more real gaps: (1) it only ever
+  showed "Pending"/"Downloading…"/"Ready"/"Error" -- no real bytes, no ETA,
+  no per-agent color -- despite both underlying mechanisms already reporting
+  real progress (`pullOllamaModel()`'s byte counts in `ollama.ts`,
+  `installTool()`'s real `runtime://progress` Tauri events from
+  `runtime_manager.rs`) with nothing ever wired to read them; (2) the
+  "pulsing Start Chatting Now control" the design calls for didn't exist at
+  all -- the instant the starter model hit `ready`, `onStarterReady()` fired
+  automatically and silently jumped the user into chat with zero choice or
+  visual moment. Fixed: `installComponent()` in `setupFlowService.ts` gained
+  an optional `onProgress` callback normalizing both mechanisms into one
+  `{message, pct}` shape; `InstallQueue.tsx` renders that as a real
+  percentage-width progress bar (indeterminate sweep when no percentage is
+  reported yet) colored via a new `COMPONENT_AGENT_COLORS` export from
+  `AgentGrid.tsx` (one source of truth for the id->agent-color mapping,
+  not a second hardcoded copy); and the starter model reaching `ready` now
+  renders an actual pulsing `motion.button` that the user must click before
+  `onStarterReady()` fires, with `onAllComplete()` as a fallback if the
+  queue finishes successfully without a click. 17 new/updated tests across
+  `installComponent.test.js` and `InstallQueue.test.jsx`. Status: closed.
 - [2026-09-08] **Smart Installer shipped only half the "ritual" -- the
   opening beat was silently dropped, resolved.** The design doc's §5 step 1
   ("Boot / Ritual Intro": emblem forms, scanline sweep, skippable, 2-3s,

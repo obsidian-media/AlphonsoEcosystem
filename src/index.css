@@ -343,3 +343,14 @@
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
+
+/* Install Queue progress bars (InstallQueue.tsx): a component whose
+   underlying mechanism hasn't reported a percentage yet (e.g. ollama's
+   "starting"/"verifying digest", Runtime Hub's "starting" stage) still
+   needs to look alive rather than stalled at 0% -- this sweep is the
+   indeterminate fallback for that case. Neutralized globally by the
+   prefers-reduced-motion block above, same as every other animation here. */
+@keyframes indeterminate-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
