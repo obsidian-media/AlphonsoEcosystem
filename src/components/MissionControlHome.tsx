@@ -177,7 +177,7 @@ export function MissionControlHome({
         <div className="mt-7 flex flex-wrap gap-3">
           <button
             onClick={() => onNavigate?.('chat')}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--surface-0)] hover:bg-[var(--accent-hover)] transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] transition-colors"
           >
             <MessageSquare className="h-4 w-4" />
             Open Chat

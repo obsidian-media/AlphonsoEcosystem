@@ -109,7 +109,7 @@ export function TopBar({
           >
             <Inbox className="w-4 h-4" />
             {digestUnreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[var(--accent)] text-[10px] font-bold text-[var(--surface-0)] flex items-center justify-center leading-none">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[var(--accent)] text-[10px] font-bold text-[var(--accent-contrast)] flex items-center justify-center leading-none">
                 {digestUnreadCount > 9 ? '9+' : digestUnreadCount}
               </span>
             )}
@@ -155,7 +155,7 @@ export function TopBar({
           >
             <Bell className="w-4 h-4" />
             {notificationCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[var(--accent)] text-[10px] font-bold text-[var(--surface-0)] flex items-center justify-center leading-none">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[var(--accent)] text-[10px] font-bold text-[var(--accent-contrast)] flex items-center justify-center leading-none">
                 {notificationCount > 9 ? '9+' : notificationCount}
               </span>
             )}

@@ -7,6 +7,44 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
 
 ## Items
 
+- [2026-09-08] **Color-contrast re-verification against a real browser --
+  resolved.** Closes the gap this file's own 2026-09-07 "Accessibility work
+  beyond the Setup-flow pass" entry named explicitly: the ui-redesign
+  session's `--text-3`/`--text-4` contrast bump (fixing an axe-core-found
+  635 violations) was never re-verified against a real browser, since no
+  a11y tooling existed in `package.json` at the time. Added
+  `@axe-core/playwright` (exactly as that entry recommended) and ran a real
+  scan against the running app in both themes. Found real, still-open
+  violations the token bump hadn't actually fixed:
+  - `--text-4` still failed 4.5:1 at the 9-11px sizes it's genuinely used at
+    (agent portrait labels, status text, nav labels, keyboard-shortcut
+    hints) -- 3.11:1 dark, 3.6:1 light. Bumped further (dark 48%->58%,
+    light 60%->44%).
+  - `--text-3` (Sidebar.tsx's theme-toggle button label) at 4.44:1, short by
+    a hair -- caught only by the *permanent* e2e test below, not the
+    manual scan that preceded it, since it happened not to render that
+    exact element/state. Nudged light `--text-3` 48%->46%.
+  - `--success` on `--success-dim` (the "Free" license badge, 11px bold) at
+    3.91:1 in light mode, short of 4.5:1 (bold only gets the 3:1 large-text
+    allowance at 14pt+/18.66px+). Nudged light `--success` 52%->45%.
+  - A genuinely severe, unrelated finding: `text-white`/`text-[var(--surface-0)]`
+    on `bg-[var(--accent)]` at 1.77:1 dark / 2.97:1 light -- ~20 call sites
+    across the app, including `ui/Button.tsx`'s shared "primary" variant,
+    `ModeToggle.tsx`, `ModelSwitcher.tsx`, and most of the app's other
+    primary-CTA buttons. Root cause: `--surface-0` deliberately inverts
+    between themes (near-black dark / near-white light), which is correct
+    for its actual purpose but wrong when reused as "text that must
+    contrast against --accent specifically" -- --accent stays in the
+    52-83% OKLCH lightness range (light-to-bright) in every theme and
+    accent-color variant, so a single theme-invariant near-black
+    `--accent-contrast` token fixes every site at once, matching the
+    pattern `ModelSwitcher.tsx` had already proven correct with a literal
+    `text-black` before this token existed.
+  New permanent CI check: `e2e/a11y.spec.js` (dark + light theme, main
+  shell, `color-contrast` rule only) -- was 16/18 violations before this
+  fix, 0/0 after, confirmed by actually running the test (not just reasoning
+  about the token math). Setup screens deliberately excluded -- already
+  covered by their own dedicated accessibility pass. Status: closed.
 - [2026-09-08] **Smart Installer: general and starter-model disk checks
   don't merge when they happen to share a volume.** CodeRabbit finding on
   PR #233, verified as a real but low-severity precision gap, not a

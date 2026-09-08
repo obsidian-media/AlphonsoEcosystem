@@ -143,7 +143,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
           <div className="flex gap-3">
             <button
               onClick={() => setStep('queue')}
-              className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--surface-0)]"
+              className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)]"
             >
               Retry
             </button>

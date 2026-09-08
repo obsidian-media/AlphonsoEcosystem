@@ -111,7 +111,7 @@ export function SystemScan({ onContinue }: SystemScanProps) {
       </div>
       <button
         onClick={() => onContinue(profile, prereqs)}
-        className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--surface-0)]"
+        className="rounded bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)]"
       >
         Continue
       </button>

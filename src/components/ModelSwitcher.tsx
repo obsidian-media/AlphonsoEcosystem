@@ -26,7 +26,7 @@ export function ModelSwitcher({ currentModel, onSwitch, compact = false }: Model
     <div className={`flex rounded-lg overflow-hidden border border-[var(--border)] ${compact ? 'text-xs' : 'text-sm'}`}>
       {AI_MODELS.map((model) => (
         <button key={model} onClick={() => onSwitch(model)}
-          className={`${compact ? 'px-2 py-0.5' : 'px-3 py-1.5'} transition-colors ${currentModel === model ? 'bg-[var(--accent)] text-black font-bold' : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-3)]'}`}>
+          className={`${compact ? 'px-2 py-0.5' : 'px-3 py-1.5'} transition-colors ${currentModel === model ? 'bg-[var(--accent)] text-[var(--accent-contrast)] font-bold' : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-3)]'}`}>
           {AI_MODEL_LABELS[model]}
         </button>
       ))}
@@ -396,7 +396,7 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
               onClick={() => onProviderChange(id)}
               title={disabled ? `${PROVIDER_LABELS[id]} is not configured — add ${id === 'hermes' ? 'an endpoint' : 'a key'} in Settings → Connectors` : PROVIDER_LABELS[id]}
               className={`px-2 py-0.5 uppercase tracking-widest font-bold transition-colors ${
-                provider === id ? 'bg-[var(--accent)] text-black' : disabled ? 'bg-[var(--surface-2)] text-[var(--text-4)] cursor-not-allowed' : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-3)]'
+                provider === id ? 'bg-[var(--accent)] text-[var(--accent-contrast)]' : disabled ? 'bg-[var(--surface-2)] text-[var(--text-4)] cursor-not-allowed' : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-3)]'
               }`}>
               {PROVIDER_LABELS[id]}
             </button>

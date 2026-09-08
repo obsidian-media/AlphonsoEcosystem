@@ -47,7 +47,7 @@ export function BrandSettings({ brandProfile = DEFAULT_BRAND_PROFILE, onSave }) 
         <button
           type="button"
           onClick={() => onSave?.({ ...draft, content_pillars: normalizePillars(draft.pillarsText) })}
-          className="w-full rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--surface-0)] text-[10px] font-bold uppercase tracking-widest px-4 py-2 transition-colors"
+          className="w-full rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)] text-[10px] font-bold uppercase tracking-widest px-4 py-2 transition-colors"
         >
           Save Brand Profile
         </button>

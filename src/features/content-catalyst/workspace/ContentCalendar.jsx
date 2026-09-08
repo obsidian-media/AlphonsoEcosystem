@@ -78,7 +78,7 @@ export function ContentCalendar({ drafts = [], onAssignDay, onSelectDraft, onPub
                   type="button"
                   onClick={() => setSelectedDate(sel ? '' : ds)}
                   className={`relative rounded-lg p-1.5 text-center text-xs transition-colors ${
-                    isToday(day) ? 'bg-[var(--accent)] text-[var(--surface-0)] font-bold' :
+                    isToday(day) ? 'bg-[var(--accent)] text-[var(--accent-contrast)] font-bold' :
                     sel ? 'bg-[var(--accent-muted)] text-[var(--accent)] font-semibold' :
                     'hover:bg-[var(--surface-3)] text-[var(--text-2)]'
                   }`}
