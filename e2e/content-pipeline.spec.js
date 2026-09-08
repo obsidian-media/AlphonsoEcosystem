@@ -17,6 +17,9 @@ test.describe('Content Studio pipeline E2E', () => {
   });
 
   async function openContentStudio(page) {
+    // Content lives under the "Work" Space since the sidebar redesign --
+    // click the Space pill first before its nav items are reachable.
+    await page.getByTestId('space-pill-work').click();
     await page.getByRole('button', { name: 'Content' }).click();
     await page.getByRole('heading', { name: 'Content Studio' }).waitFor({ timeout: 10000 });
   }

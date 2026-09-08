@@ -23,7 +23,7 @@ describe('Input', () => {
     render(<Input error="This field is required" />);
     expect(screen.getByText('This field is required')).toBeTruthy();
     const input = screen.getByRole('textbox');
-    expect(input.className).toContain('border-red-500');
+    expect(input.className).toContain('border-[--error-border]');
   });
 
   it('does not show hint when error is present', () => {

@@ -14,10 +14,10 @@ interface Props {
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
-  critical: 'bg-red-500/15 text-red-400 border-red-500/20',
-  high: 'bg-orange-500/15 text-orange-400 border-orange-500/20',
-  medium: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
-  low: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20',
+  critical: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
+  high: 'bg-[var(--error-dim)] text-[var(--error)] border-[var(--error-border)]',
+  medium: 'bg-[var(--warning-dim)] text-[var(--warning)] border-[var(--warning-border)]',
+  low: 'bg-[var(--surface-3)] text-[var(--text-3)] border-[var(--border)]',
 };
 
 export function SentinelFindingModal({ finding, onClose }: Props) {
@@ -39,12 +39,12 @@ export function SentinelFindingModal({ finding, onClose }: Props) {
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
-          <h2 className="text-lg font-semibold text-zinc-100 leading-snug">
+          <h2 className="text-lg font-semibold text-[var(--text-1)] leading-snug">
             {finding.type || finding.pattern || 'Security Finding'}
           </h2>
           <button
             onClick={onClose}
-            className="shrink-0 p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-surface-3 transition-colors"
+            className="shrink-0 p-1.5 rounded-lg text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-surface-3 transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -58,16 +58,16 @@ export function SentinelFindingModal({ finding, onClose }: Props) {
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-xl bg-zinc-900/60 border border-white/[0.05] p-3 space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Pattern</p>
-            <p className="text-xs font-mono text-zinc-300 break-all">
+          <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3 space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Pattern</p>
+            <p className="text-xs font-mono text-[var(--text-2)] break-all">
               {finding.pattern || 'N/A'}
             </p>
           </div>
 
-          <div className="rounded-xl bg-zinc-900/60 border border-white/[0.05] p-3 space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Recommendation</p>
-            <p className="text-xs text-zinc-300 leading-relaxed">
+          <div className="rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3 space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Recommendation</p>
+            <p className="text-xs text-[var(--text-2)] leading-relaxed">
               {finding.recommendation || 'Review and remediate'}
             </p>
           </div>

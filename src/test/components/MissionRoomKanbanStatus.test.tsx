@@ -42,8 +42,7 @@ describe('MissionRoom task status change (kanban lane move via click, not drag)'
 
     render(<MissionRoom />);
 
-    const taskCard = screen.getAllByText('Regression-test task')[0].closest('.rounded-3xl');
-    const statusSelect = taskCard?.querySelector('select') as HTMLSelectElement;
+    const statusSelect = screen.getByRole('combobox', { name: 'Status for Regression-test task' }) as HTMLSelectElement;
     expect(statusSelect).toBeTruthy();
     expect(statusSelect.value).toBe('todo');
 

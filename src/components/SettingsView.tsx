@@ -101,14 +101,14 @@ function EchoTimeline() {
         const createdAt = m.timestampMs || m.createdAtMs || 0;
         const expiresIn = expiryMs ? Math.max(0, Math.round((createdAt + expiryMs - Date.now()) / (24 * 3600 * 1000))) : null;
         return (
-          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+          <div key={m.id || i} className="flex items-start gap-3 p-3 rounded-xl bg-[var(--surface-2)]">
             <span className="text-base shrink-0">{tc.icon}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                  tc.color === 'success' ? 'bg-[var(--success-dim)] border-[var(--success)]/20 text-[var(--success)]' :
-                  tc.color === 'info' ? 'bg-[var(--info-dim)] border-[var(--info)]/20 text-[var(--info)]' :
-                  'bg-[var(--warning-dim)] border-[var(--warning)]/20 text-[var(--warning)]'
+                  tc.color === 'success' ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]' :
+                  tc.color === 'info' ? 'bg-[var(--info-dim)] border-[var(--info-border)] text-[var(--info)]' :
+                  'bg-[var(--warning-dim)] border-[var(--warning-border)] text-[var(--warning)]'
                 }`}>{tc.label}</span>
                 {expiresIn !== null && <span className="text-[10px] text-[var(--text-4)]">expires in {expiresIn}d</span>}
               </div>
@@ -177,12 +177,12 @@ function AgentProvidersSection() {
   return (
     <div className="space-y-3">
       {error && (
-        <div className="p-3 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-xs text-[var(--error)]">{error}</div>
+        <div className="p-3 rounded-lg bg-[var(--error-dim)] text-xs text-[var(--error)]">{error}</div>
       )}
       {agents.map((agent) => {
         const config = configs[agent.id] || { provider: 'ollama' as ModelProviderId };
         return (
-          <div key={agent.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+          <div key={agent.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[var(--surface-2)]">
             <div className="text-sm font-semibold text-[var(--text-1)] shrink-0">{agent.name}</div>
             <ModelProviderPicker
               agentId={agent.id}
@@ -209,7 +209,7 @@ function CoachSettingsSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)]">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">Session Coach detection engine</div>
           <div className="text-xs text-[var(--text-4)] mt-0.5">
@@ -224,7 +224,7 @@ function CoachSettingsSection() {
         </button>
       </div>
 
-      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+      <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-2)]">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">Ollama-narrative rewriting</div>
           <div className="text-xs text-[var(--text-4)] mt-0.5">
@@ -240,7 +240,7 @@ function CoachSettingsSection() {
         </button>
       </div>
 
-      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-3">
+      <div className="p-4 rounded-xl bg-[var(--surface-2)] space-y-3">
         <div>
           <div className="text-sm font-semibold text-[var(--text-1)]">Snooze</div>
           <div className="text-xs text-[var(--text-4)] mt-0.5">
@@ -254,7 +254,7 @@ function CoachSettingsSection() {
             </span>
             <button
               onClick={() => { clearCoachSnooze(); setSnoozeUntil(0); }}
-              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-3)]"
+              className="text-xs px-3 py-1.5 rounded-lg hover:bg-[var(--surface-3)]"
             >
               Clear snooze
             </button>
@@ -265,7 +265,7 @@ function CoachSettingsSection() {
               <button
                 key={hours}
                 onClick={() => { setCoachSnoozeHours(hours); setSnoozeUntil(Date.now() + hours * 3600 * 1000); }}
-                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-3)]"
+                className="text-xs px-3 py-1.5 rounded-lg hover:bg-[var(--surface-3)]"
               >
                 {hours}h
               </button>
@@ -274,7 +274,7 @@ function CoachSettingsSection() {
         )}
       </div>
 
-      <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-2">
+      <div className="p-4 rounded-xl bg-[var(--surface-2)] space-y-2">
         <div className="text-sm font-semibold text-[var(--text-1)] mb-2">Per-trigger toggles</div>
         {ALL_COACH_TRIGGER_IDS.map((id) => (
           <div key={id} className="flex items-center justify-between py-1.5">
@@ -316,7 +316,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
         <span className="text-[11px] text-[var(--text-3)]">{models.length} installed model{models.length === 1 ? '' : 's'}</span>
       </div>
       {models.length === 0 ? (
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+        <div className="rounded-2xl bg-[var(--warning-dim)] p-4 text-sm text-[var(--warning)]">
           No installed models were returned by Ollama. Pull a model in Ollama, then run Check Ollama again.
         </div>
       ) : (
@@ -325,7 +325,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
             aria-label="Select model"
             value={models.some((model) => model.name === selectedModel) ? selectedModel : ''}
             onChange={(event) => onSelectModel(event.target.value)}
-            className="w-full appearance-none bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50"
+            className="w-full appearance-none bg-[var(--surface-2)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
           >
             {selectedModelMissing && <option value="">Model not found: {selectedModel}</option>}
             {models.map((model) => (
@@ -338,7 +338,7 @@ function ModelSelector({ models, selectedModel, selectedModelMissing, onSelectMo
         </div>
       )}
       {selectedModelMissing && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+        <div className="rounded-xl bg-[var(--warning-dim)] p-3 text-xs text-[var(--warning)]">
           Model not found: <span className="font-mono">{selectedModel}</span>. Suggested installed models: {models.map((model) => model.name).join(', ')}.
         </div>
       )}
@@ -361,12 +361,12 @@ function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
   };
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-4 space-y-3">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Pull a New Model</div>
+    <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">Pull a New Model</div>
       <div className="flex flex-wrap gap-1.5">
         {SUGGESTED_MODELS.map((m) => (
           <button key={m} onClick={() => setModelName(m)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-colors ${modelName === m ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300' : 'border-white/5 bg-zinc-800 text-zinc-400 hover:text-zinc-200'}`}>
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-colors ${modelName === m ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]' : 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-3)] hover:text-[var(--text-1)]'}`}>
             {m}
           </button>
         ))}
@@ -376,20 +376,20 @@ function ModelPullHelper({ onRefresh }: { onRefresh: () => void }) {
           value={modelName}
           onChange={(e) => setModelName(e.target.value)}
           placeholder="or type a model name..."
-          className="flex-1 bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+          className="flex-1 bg-[var(--surface-3)] rounded-xl px-3 py-2 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         <button
           onClick={copy}
           disabled={!modelName.trim()}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-zinc-800 border-white/10 text-zinc-300 hover:bg-zinc-700"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)]"
         >
           {copied ? <><ClipboardCopy className="w-3.5 h-3.5" /> Copied</> : <><Download className="w-3.5 h-3.5" /> Copy Command</>}
         </button>
       </div>
       {modelName.trim() && (
-        <div className="font-mono text-[11px] bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-emerald-400 select-all">{cmd}</div>
+        <div className="font-mono text-[11px] bg-[var(--surface-1)] rounded-lg px-3 py-2 text-[var(--success)] select-all">{cmd}</div>
       )}
-      <p className="text-[11px] text-zinc-600">Paste this in a terminal. When the download finishes, click <button onClick={onRefresh} className="text-indigo-400 hover:text-indigo-300 underline">Refresh Models</button> to load it.</p>
+      <p className="text-[11px] text-[var(--text-4)]">Paste this in a terminal. When the download finishes, click <button onClick={onRefresh} className="text-[var(--accent)] hover:text-[var(--accent-hover)] underline">Refresh Models</button> to load it.</p>
     </div>
   );
 }
@@ -443,18 +443,18 @@ function AgentAvatarCard({ agentId, label }: AgentAvatarCardProps) {
   }, [agentId]);
 
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-white/[0.06] bg-zinc-900/50 p-3">
+    <div className="flex flex-col items-center gap-2 rounded-xl bg-[var(--surface-2)] p-3">
       <button
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
         title={`Upload custom avatar for ${label}`}
-        className="relative w-16 h-16 rounded-full overflow-hidden border border-white/10 group shrink-0 hover:border-indigo-500/40 transition-colors disabled:opacity-60"
+        className="relative w-16 h-16 rounded-full overflow-hidden border border-[var(--border)] group shrink-0 hover:border-[var(--accent-border)] transition-colors disabled:opacity-60"
       >
         {preview ? (
           <img src={preview} alt={label} className="w-full h-full object-cover object-center" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-            <UserRound className="w-6 h-6 text-zinc-500" />
+          <div className="w-full h-full flex items-center justify-center bg-[var(--surface-3)]">
+            <UserRound className="w-6 h-6 text-[var(--text-3)]" />
           </div>
         )}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -462,18 +462,18 @@ function AgentAvatarCard({ agentId, label }: AgentAvatarCardProps) {
         </div>
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
-      <span className="text-[11px] font-semibold text-zinc-300">{label}</span>
+      <span className="text-[11px] font-semibold text-[var(--text-2)]">{label}</span>
       {hasCustom && (
         <button
           onClick={handleRemove}
-          className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-red-400 transition-colors"
+          className="flex items-center gap-1 text-[10px] text-[var(--text-3)] hover:text-[var(--error)] transition-colors"
         >
           <Trash2 className="w-3 h-3" />
           Reset
         </button>
       )}
-      {!hasCustom && <span className="text-[10px] text-zinc-600">Default</span>}
-      {error && <span className="text-[10px] text-red-400 text-center">{error}</span>}
+      {!hasCustom && <span className="text-[10px] text-[var(--text-4)]">Default</span>}
+      {error && <span className="text-[10px] text-[var(--error)] text-center">{error}</span>}
     </div>
   );
 }
@@ -837,88 +837,88 @@ export function SettingsView({
         {activeSection === 'general' && (
           <div className="max-w-4xl mx-auto space-y-10">
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-white">System Settings</h1>
-              <p className="text-sm text-zinc-500">Configure local Ollama inference and native runtime behavior.</p>
+              <h1 className="font-serif text-2xl font-bold tracking-tight text-[var(--text-1)]">System Settings</h1>
+              <p className="text-sm text-[var(--text-3)]">Configure local Ollama inference and native runtime behavior.</p>
             </div>
 
             <section className="space-y-4">
               <SectionHeader icon={Cpu} label="Ollama Runtime" />
         <div className="grid grid-cols-1 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-300">Ollama API Endpoint</label>
+            <label className="text-xs font-semibold text-[var(--text-2)]">Ollama API Endpoint</label>
             <input
               type="text"
               value={settings.endpoint}
               onChange={(event) => setSettings({ ...settings, endpoint: event.target.value })}
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-300">Workspace Root (for supervised proofs)</label>
+            <label className="text-xs font-semibold text-[var(--text-2)]">Workspace Root (for supervised proofs)</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={settings.workspaceRoot || ''}
                 onChange={(event) => setSettings({ ...settings, workspaceRoot: event.target.value })}
-                className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                className="flex-1 bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <input ref={folderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleFolderPick} className="hidden" />
               <button
                 onClick={handlePickWorkspaceRoot}
-                className="px-3 py-2 rounded-xl border border-white/10 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+                className="px-3 py-2 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"
                 aria-label="Browse for folder"
                 title="Browse for folder"
               >
                 <Folder className="w-4 h-4" />
               </button>
             </div>
-            <div className="text-[11px] text-zinc-500">Set this to the approved Alphonso workspace root before running native proof.</div>
+            <div className="text-[11px] text-[var(--text-3)]">Set this to the approved Alphonso workspace root before running native proof.</div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-300">OCR Engine Path (optional)</label>
+            <label className="text-xs font-semibold text-[var(--text-2)]">OCR Engine Path (optional)</label>
             <input
               type="text"
               value={settings.ocrEnginePath || ''}
               onChange={(event) => setSettings({ ...settings, ocrEnginePath: event.target.value })}
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
-            <div className="text-[11px] text-zinc-500">Leave blank until an OCR engine is actually configured and verified.</div>
+            <div className="text-[11px] text-[var(--text-3)]">Leave blank until an OCR engine is actually configured and verified.</div>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <button
               onClick={onCheckOllama}
-              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-950 hover:bg-indigo-300"
+              className="flex items-center gap-2 rounded-xl bg-[var(--text-1)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--surface-0)] hover:opacity-90"
             >
               <Activity className="h-3.5 w-3.5" /> Check Installed Models
             </button>
             <button
               onClick={onCheckOllama}
-              className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-300 border border-white/10 hover:bg-zinc-800"
+              className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               <RefreshCw className="h-3.5 w-3.5" /> Retry Ollama Connection
             </button>
             <button
               onClick={onCopyTroubleshootingCommand}
-              className="flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-300 border border-white/10 hover:bg-zinc-800"
+              className="flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               <Terminal className="h-3.5 w-3.5" /> {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy Failed' : 'Copy Command'}
             </button>
           </div>
 
-          <div className="rounded-2xl border border-white/5 bg-zinc-900/50 p-4">
+          <div className="rounded-2xl bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <StatusDot state={ollamaStatus.state} />
-                <span className="text-sm font-semibold text-white">{ollamaStatus.label}</span>
+                <span className="text-sm font-semibold text-[var(--text-1)]">{ollamaStatus.label}</span>
                 <Badge variant={LEGACY_COLOR_TO_VARIANT[statusColors[ollamaStatus.state as keyof typeof statusColors]] || 'default'}>{ollamaStatus.state}</Badge>
               </div>
-              <span className="text-[11px] text-zinc-500">{resolvedNormalizeEndpoint(settings.endpoint || '')}/api/tags</span>
+              <span className="text-[11px] text-[var(--text-3)]">{resolvedNormalizeEndpoint(settings.endpoint || '')}/api/tags</span>
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-400">{ollamaStatus.message}</p>
-            <div className="mt-4 rounded-xl bg-black/30 border border-white/5 px-3 py-2 font-mono text-[11px] text-zinc-400 whitespace-pre-wrap">
+            <p className="mt-2 text-xs leading-relaxed text-[var(--text-3)]">{ollamaStatus.message}</p>
+            <div className="mt-4 rounded-xl bg-[var(--surface-1)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)] whitespace-pre-wrap">
               {ollamaTroubleshootingCommand}
             </div>
           </div>
@@ -936,30 +936,30 @@ export function SettingsView({
 
       <section className="space-y-4">
         <SectionHeader icon={Compass} label="Hector Web Search" />
-        <div className="rounded-2xl border border-white/5 bg-zinc-900/50 p-4 space-y-3">
+        <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
           <div className="flex items-start gap-3">
-            <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${braveSearchConfigured ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+            <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${braveSearchConfigured ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`} />
             <div className="flex-1 space-y-1">
-              <div className="text-sm font-semibold text-white">
+              <div className="text-sm font-semibold text-[var(--text-1)]">
                 {braveSearchConfigured ? 'Brave Search API — active' : 'Brave Search API — not configured'}
               </div>
-              <div className="text-[11px] text-zinc-500">
+              <div className="text-[11px] text-[var(--text-3)]">
                 {braveSearchConfigured
                   ? 'BRAVE_SEARCH_API_KEY is set. Hector will use the Brave Search JSON API as the primary search provider.'
                   : 'Set BRAVE_SEARCH_API_KEY in your environment to enable Brave Search. Hector falls back to DuckDuckGo HTML scraping when the key is absent.'}
               </div>
               {!braveSearchConfigured && (
-                <div className="mt-2 rounded-xl bg-black/30 border border-white/5 px-3 py-2 font-mono text-[11px] text-zinc-400">
+                <div className="mt-2 rounded-xl bg-[var(--surface-1)] px-3 py-2 font-mono text-[11px] text-[var(--text-3)]">
                   {'# Free tier: 2,000 queries/month — signup at search.brave.com/register\nBRAVE_SEARCH_API_KEY=your_key_here'}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div>
-              <div className="text-sm font-semibold text-white">Voice OS WebSocket Port</div>
-              <div className="text-xs text-zinc-500 mt-0.5">WebSocket URL for Voice OS (STT+TTS) pipeline. Default: ws://127.0.0.1:8766/ws</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Voice OS WebSocket Port</div>
+              <div className="text-xs text-[var(--text-3)] mt-0.5">WebSocket URL for Voice OS (STT+TTS) pipeline. Default: ws://127.0.0.1:8766/ws</div>
             </div>
             <input
               type="text"
@@ -969,7 +969,7 @@ export function SettingsView({
                 try { localStorage.setItem('alphonso_voice_ws_url', val || 'ws://127.0.0.1:8766/ws'); } catch { /* ignore */ }
               }}
               placeholder="ws://127.0.0.1:8766/ws"
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
         </div>
@@ -978,56 +978,56 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Monitor} label="Desktop & UI" />
         <div className="space-y-4">
-          <div className="rounded-2xl border border-white/5 bg-zinc-900/50 p-4 space-y-3">
+          <div className="rounded-2xl bg-[var(--surface-2)] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Auto Update Checks</div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">Check update endpoint periodically and notify when a new version is available.</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Auto Update Checks</div>
+                <div className="text-[11px] text-[var(--text-3)] mt-0.5">Check update endpoint periodically and notify when a new version is available.</div>
               </div>
               <button
                 role="switch"
                 aria-checked={settings.autoUpdateEnabled}
                 aria-label="Toggle auto update checks"
                 onClick={() => setSettings({ ...settings, autoUpdateEnabled: !settings.autoUpdateEnabled })}
-                className={`w-10 h-5 rounded-full transition-colors relative ${settings.autoUpdateEnabled ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+                className={`w-10 h-5 rounded-full transition-colors relative ${settings.autoUpdateEnabled ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`}
               >
                 <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.autoUpdateEnabled ? 'right-1' : 'left-1'}`} />
               </button>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-300">Updater Endpoint</label>
+              <label className="text-xs font-semibold text-[var(--text-2)]">Updater Endpoint</label>
               <input
                 type="text"
                 value={settings.updaterEndpoint || ''}
                 onChange={(event) => setSettings({ ...settings, updaterEndpoint: event.target.value })}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
-              <div className="text-[11px] text-zinc-500">Enter the hosted updater endpoint only when the release manifest is actually published.</div>
+              <div className="text-[11px] text-[var(--text-3)]">Enter the hosted updater endpoint only when the release manifest is actually published.</div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-300">Updater Public Key</label>
+              <label className="text-xs font-semibold text-[var(--text-2)]">Updater Public Key</label>
               <textarea
                 value={settings.updaterPubkey || ''}
                 onChange={(event) => setSettings({ ...settings, updaterPubkey: event.target.value })}
                 rows={3}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-xs font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
-              <div className="text-[11px] text-zinc-500">Paste the public key only after the signing setup is complete.</div>
+              <div className="text-[11px] text-[var(--text-3)]">Paste the public key only after the signing setup is complete.</div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-300">Custom Target (optional)</label>
+              <label className="text-xs font-semibold text-[var(--text-2)]">Custom Target (optional)</label>
               <input
                 type="text"
                 value={settings.updaterTarget || ''}
                 onChange={(event) => setSettings({ ...settings, updaterTarget: event.target.value })}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
-              <div className="text-[11px] text-zinc-500">Use the actual target only when the updater release path is configured.</div>
+              <div className="text-[11px] text-[var(--text-3)]">Use the actual target only when the updater release path is configured.</div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={onCheckUpdates}
-                className="rounded-xl bg-zinc-800 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-100 hover:bg-zinc-700"
+                className="rounded-xl bg-[var(--surface-3)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--text-1)] hover:bg-[var(--surface-3)]"
               >
                 {updateCheckState?.checking ? 'Checking...' : 'Check Updates Now'}
               </button>
@@ -1035,128 +1035,128 @@ export function SettingsView({
               {updateCheckState?.configured && !updateCheckState?.available && <Badge variant="info">up to date / no update</Badge>}
               {!updateCheckState?.configured && <Badge variant="warning">not configured</Badge>}
             </div>
-            <div className="rounded-xl border border-white/10 bg-zinc-900/45 p-3 text-[11px] text-zinc-300">
+            <div className="rounded-xl bg-[var(--surface-2)] p-3 text-[11px] text-[var(--text-2)]">
               <div>Current: {updateCheckState?.currentVersion || 'n/a'} | Latest: {updateCheckState?.latestVersion || 'none'}</div>
               <div className="mt-1">Status: {updateCheckState?.error ? updateCheckState.error : (updateCheckState?.available ? 'New version detected.' : 'No update available.')}</div>
             </div>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Native Desktop Mode</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Tauri v2 desktop runtime is the intended target.</div>
-              <div className="text-[11px] text-amber-200/80 mt-1">On Windows, verify:desktop needs WiX 3.14 binaries locally or a permitted wix314-binaries.zip download.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Native Desktop Mode</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Tauri v2 desktop runtime is the intended target.</div>
+              <div className="text-[11px] text-[var(--warning)] mt-1">On Windows, verify:desktop needs WiX 3.14 binaries locally or a permitted wix314-binaries.zip download.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.desktopMode}
               aria-label="Toggle native desktop mode"
               onClick={() => setSettings({ ...settings, desktopMode: !settings.desktopMode })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.desktopMode ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.desktopMode ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.desktopMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Local-Only Runtime</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Show explicit local-only identity and disable cloud assumptions.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Local-Only Runtime</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show explicit local-only identity and disable cloud assumptions.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.localOnlyMode}
               aria-label="Toggle local-only runtime"
               onClick={() => setSettings({ ...settings, localOnlyMode: !settings.localOnlyMode })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.localOnlyMode ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.localOnlyMode ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.localOnlyMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Zero-Cost Mode (Default)</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Prefer local/free connectors first. Paid or metered connector routes are held for explicit approval.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Zero-Cost Mode (Default)</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Prefer local/free connectors first. Paid or metered connector routes are held for explicit approval.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.zeroCostMode}
               aria-label="Toggle zero-cost mode"
               onClick={() => setSettings({ ...settings, zeroCostMode: !settings.zeroCostMode })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.zeroCostMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.zeroCostMode ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.zeroCostMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Approval Mode</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Require explicit confirmation for supervised actions.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Approval Mode</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Require explicit confirmation for supervised actions.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.approvalMode}
               aria-label="Toggle approval mode"
               onClick={() => setSettings({ ...settings, approvalMode: !settings.approvalMode })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode ? 'bg-amber-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.approvalMode ? 'bg-[var(--warning)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.approvalMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Safe Mode</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Conservative runtime behavior with repair-first posture.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Safe Mode</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Conservative runtime behavior with repair-first posture.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.safeMode}
               aria-label="Toggle safe mode"
               onClick={() => setSettings({ ...settings, safeMode: !settings.safeMode })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.safeMode ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.safeMode ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.safeMode ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Privacy Shield Indicator</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Show Alphonso in privacy-shield mode for local-only work.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Privacy Shield Indicator</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Alphonso in privacy-shield mode for local-only work.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.privacyShieldActive}
               aria-label="Toggle privacy shield indicator"
               onClick={() => setSettings({ ...settings, privacyShieldActive: !settings.privacyShieldActive })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.privacyShieldActive ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.privacyShieldActive ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.privacyShieldActive ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Miya Creative Companion</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Show Miya pinned creative assistant widget.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Miya Creative Companion</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Miya pinned creative assistant widget.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.miyaCompanionPinned}
               aria-label="Toggle Miya creative companion"
               onClick={() => setSettings({ ...settings, miyaCompanionPinned: !settings.miyaCompanionPinned })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.miyaCompanionPinned ? 'bg-fuchsia-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.miyaCompanionPinned ? 'bg-[var(--agent-miya)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.miyaCompanionPinned ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between p-4 bg-[var(--surface-2)] rounded-2xl">
             <div>
-              <div className="text-sm font-semibold text-white">Jose Orchestrator Companion</div>
-              <div className="text-[11px] text-zinc-500 mt-0.5">Show Jose pinned governance and routing assistant widget.</div>
+              <div className="text-sm font-semibold text-[var(--text-1)]">Jose Orchestrator Companion</div>
+              <div className="text-[11px] text-[var(--text-3)] mt-0.5">Show Jose pinned governance and routing assistant widget.</div>
             </div>
             <button
               role="switch"
               aria-checked={settings.joseCompanionPinned}
               aria-label="Toggle Jose orchestrator companion"
               onClick={() => setSettings({ ...settings, joseCompanionPinned: !settings.joseCompanionPinned })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${settings.joseCompanionPinned ? 'bg-amber-500' : 'bg-zinc-800'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${settings.joseCompanionPinned ? 'bg-[var(--agent-jose)]' : 'bg-[var(--surface-3)]'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.joseCompanionPinned ? 'right-1' : 'left-1'}`} />
             </button>
@@ -1187,41 +1187,41 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Plug} label="External Tools (Composio)" />
         <div className="space-y-4">
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
-            <div className="text-sm font-semibold text-white">Composio API Key</div>
-            <div className="text-xs text-zinc-500">Connect agents to 1000+ external services (GitHub, Slack, Notion, Jira, etc.). Get your key at <a href="https://app.composio.dev" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">app.composio.dev</a>.</div>
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
+            <div className="text-sm font-semibold text-[var(--text-1)]">Composio API Key</div>
+            <div className="text-xs text-[var(--text-3)]">Connect agents to 1000+ external services (GitHub, Slack, Notion, Jira, etc.). Get your key at <a href="https://app.composio.dev" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">app.composio.dev</a>.</div>
             <div className="flex gap-2">
               <input
                 type="password"
                 value={composioApiKey}
                 onChange={(e) => setComposioApiKey(e.target.value)}
                 placeholder="Enter Composio API key"
-                className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                className="flex-1 bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
               <button
                 onClick={handleComposioSave}
                 disabled={composioChecking || !composioApiKey}
-                className="px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-medium rounded-xl transition-colors"
+                className="px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-sm font-medium rounded-xl transition-colors"
               >
                 {composioChecking ? 'Checking...' : 'Save'}
               </button>
             </div>
           </div>
 
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
-            <div className="text-sm font-semibold text-white">User ID</div>
-            <div className="text-xs text-zinc-500">Identifies your agent sessions in Composio.</div>
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
+            <div className="text-sm font-semibold text-[var(--text-1)]">User ID</div>
+            <div className="text-xs text-[var(--text-3)]">Identifies your agent sessions in Composio.</div>
             <input
               type="text"
               value={composioUserId}
               onChange={(e) => setComposioUserId(e.target.value)}
               placeholder="alphonso-user"
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
           {composioHealth && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl border ${composioHealth.status === 'healthy' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-xl ${composioHealth.status === 'healthy' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
               {composioHealth.status === 'healthy' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
               <span className="text-xs">{composioHealth.message}</span>
             </div>
@@ -1230,8 +1230,8 @@ export function SettingsView({
           {isComposioEnabled() && composioToolkits.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold text-zinc-400">Available Toolkits ({composioToolkits.length})</div>
-                <span className="text-[10px] text-zinc-600">{enabledToolkits.size} enabled</span>
+                <div className="text-xs font-semibold text-[var(--text-3)]">Available Toolkits ({composioToolkits.length})</div>
+                <span className="text-[10px] text-[var(--text-4)]">{enabledToolkits.size} enabled</span>
               </div>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                 {composioToolkits.slice(0, 20).map((tk) => {
@@ -1241,14 +1241,14 @@ export function SettingsView({
                     <button
                       key={key}
                       onClick={() => toggleComposioToolkit(key)}
-                      className={`text-left px-3 py-2 rounded-xl border text-[10px] transition-all ${
+                      className={`text-left px-3 py-2 rounded-xl text-[10px] transition-all ${
                         enabled
-                          ? 'bg-indigo-500/10 border-indigo-400/20 text-indigo-300'
-                          : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:border-white/10'
+                          ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]'
+                          : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-4)]'
                       }`}
                     >
                       <div className="font-semibold truncate">{tk.name || key}</div>
-                      {enabled && <div className="text-[9px] text-indigo-400 mt-0.5">Active</div>}
+                      {enabled && <div className="text-[9px] text-[var(--accent)] mt-0.5">Active</div>}
                     </button>
                   );
                 })}
@@ -1256,7 +1256,7 @@ export function SettingsView({
             </div>
           )}
 
-          <div className="text-[11px] text-zinc-500">
+          <div className="text-[11px] text-[var(--text-3)]">
             When enabled, agents can use Composio tools for external task management. Zero-cost mode still requires approval for paid actions.
           </div>
         </div>
@@ -1267,9 +1267,9 @@ export function SettingsView({
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
         <SectionHeader icon={UserRound} label="Agent Avatars" />
-        <p className="text-[11px] text-zinc-500">
+        <p className="text-[11px] text-[var(--text-3)]">
           Click an avatar to upload a custom mascot image (PNG, JPG, WebP). Images are resized to 256 × 256 and stored locally.
-          Click <strong className="text-zinc-400">Reset</strong> to restore the default.
+          Click <strong className="text-[var(--text-3)]">Reset</strong> to restore the default.
         </p>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-9">
           {AVATAR_AGENTS.map((agent) => (
@@ -1293,18 +1293,18 @@ export function SettingsView({
         <SectionHeader icon={Zap} label="Local Services" />
         <div className="space-y-4">
 
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Auto-Launch on Startup</div>
-                <div className="text-xs text-zinc-500 mt-0.5">Start Ollama (and ComfyUI if configured) automatically when Alphonso opens.</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Auto-Launch on Startup</div>
+                <div className="text-xs text-[var(--text-3)] mt-0.5">Start Ollama (and ComfyUI if configured) automatically when Alphonso opens.</div>
               </div>
               <button
                 onClick={() => setSettings({ ...settings, autoLaunchServices: !settings.autoLaunchServices })}
                 className={`relative w-10 h-6 rounded-full border transition-colors ${
                   settings.autoLaunchServices
-                    ? 'bg-indigo-500 border-indigo-400'
-                    : 'bg-zinc-700 border-zinc-600'
+                    ? 'bg-[var(--accent)] border-[var(--accent-border)]'
+                    : 'bg-[var(--surface-3)] border-[var(--border-strong)]'
                 }`}
               >
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${settings.autoLaunchServices ? 'translate-x-4' : 'translate-x-0.5'}`} />
@@ -1312,16 +1312,16 @@ export function SettingsView({
             </div>
           </div>
 
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Output Folder</div>
-                <div className="text-xs text-zinc-500 mt-0.5">Where generated images and files are saved.</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Output Folder</div>
+                <div className="text-xs text-[var(--text-3)] mt-0.5">Where generated images and files are saved.</div>
               </div>
               <input ref={outputFolderPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleOutputFolderPick} className="hidden" />
               <button
                 onClick={handlePickOutputFolder}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-medium border border-white/10 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium transition-colors"
               >
                 <Folder className="w-3.5 h-3.5" />
                 Browse
@@ -1332,43 +1332,43 @@ export function SettingsView({
               value={settings.outputFolder || ''}
               onChange={(e) => setSettings({ ...settings, outputFolder: e.target.value })}
               placeholder="C:\Users\You\Pictures\Alphonso"
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
             />
           </div>
 
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Ollama</div>
-                <div className="text-xs text-zinc-500 mt-0.5">Local LLM inference server at localhost:11434.</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Ollama</div>
+                <div className="text-xs text-[var(--text-3)] mt-0.5">Local LLM inference server at localhost:11434.</div>
               </div>
               <button
                 onClick={handleLaunchOllama}
                 disabled={launchStatus?.service === 'ollama' && launchStatus?.state === 'launching'}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-medium border border-white/10 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium transition-colors"
               >
                 <Zap className="w-3.5 h-3.5" />
                 {launchStatus?.service === 'ollama' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
               </button>
             </div>
             {launchStatus?.service === 'ollama' && launchStatus?.state !== 'launching' && (
-              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'}`}>
+              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]' : 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'}`}>
                 {launchStatus.state === 'error' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
                 {launchStatus.message}
               </div>
             )}
           </div>
 
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">ComfyUI</div>
-                <div className="text-xs text-zinc-500 mt-0.5">Local image generation server at localhost:8188.</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">ComfyUI</div>
+                <div className="text-xs text-[var(--text-3)] mt-0.5">Local image generation server at localhost:8188.</div>
               </div>
               <button
                 onClick={handleLaunchComfyUI}
                 disabled={launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching'}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-medium border border-white/10 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-xs font-medium transition-colors"
               >
                 <Zap className="w-3.5 h-3.5" />
                 {launchStatus?.service === 'comfyui' && launchStatus?.state === 'launching' ? 'Launching…' : 'Launch Now'}
@@ -1381,12 +1381,12 @@ export function SettingsView({
                   value={settings.comfyuiDir || ''}
                   onChange={(e) => setSettings({ ...settings, comfyuiDir: e.target.value })}
                   placeholder="C:\ComfyUI"
-                  className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                  className="flex-1 bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
                 />
                 <input ref={comfyuiDirPickerRef} type="file" {...{ webkitdirectory: '' } as any} onChange={handleComfyUIDirPick} className="hidden" />
                 <button
                   onClick={handlePickComfyUIDir}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-medium border border-white/10 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--surface-3)] hover:bg-[var(--surface-3)] text-[var(--text-1)] text-xs font-medium transition-colors"
                 >
                   <Folder className="w-3.5 h-3.5" />
                   Browse
@@ -1397,12 +1397,12 @@ export function SettingsView({
                 value={settings.comfyuiPython || ''}
                 onChange={(e) => setSettings({ ...settings, comfyuiPython: e.target.value })}
                 placeholder="python  (or full path to python.exe)"
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                className="w-full bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
               />
-              <div className="text-[11px] text-zinc-600">Python executable used to run <span className="font-mono">main.py</span>. Leave blank to use <span className="font-mono">python</span>.</div>
+              <div className="text-[11px] text-[var(--text-4)]">Python executable used to run <span className="font-mono">main.py</span>. Leave blank to use <span className="font-mono">python</span>.</div>
             </div>
             {launchStatus?.service === 'comfyui' && launchStatus?.state !== 'launching' && (
-              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'}`}>
+              <div className={`flex items-center gap-2 text-xs rounded-xl px-3 py-2 border ${launchStatus.state === 'error' ? 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]' : 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'}`}>
                 {launchStatus.state === 'error' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
                 {launchStatus.message}
               </div>
@@ -1422,10 +1422,10 @@ export function SettingsView({
       </section>
       <section className="space-y-4">
         <SectionHeader icon={TrendingUp} label="Nova Insight Threshold" />
-        <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+        <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
           <div>
-            <div className="text-sm font-semibold text-white">Insight Score Threshold</div>
-            <div className="text-xs text-zinc-500 mt-0.5">Minimum Nova score (0–100) to show an insight card after pipeline completion. Default: 65.</div>
+            <div className="text-sm font-semibold text-[var(--text-1)]">Insight Score Threshold</div>
+            <div className="text-xs text-[var(--text-3)] mt-0.5">Minimum Nova score (0–100) to show an insight card after pipeline completion. Default: 65.</div>
           </div>
           <input
             type="number"
@@ -1436,7 +1436,7 @@ export function SettingsView({
               const val = Math.min(100, Math.max(0, Number(e.target.value) || 65));
               try { localStorage.setItem('alphonso_nova_threshold', String(val)); } catch { /* ignore */ }
             }}
-            className="w-24 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+            className="w-24 bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-border)]"
           />
         </div>
       </section>
@@ -1486,16 +1486,16 @@ export function SettingsView({
             <button
               key={theme.id}
               onClick={() => setSettings({ ...settings, environmentTheme: theme.id })}
-              className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
                 settings.environmentTheme === theme.id
-                  ? 'border-indigo-500/50 bg-indigo-500/10 ring-1 ring-indigo-500/20'
-                  : 'border-white/5 bg-zinc-900/50 hover:border-white/10'
+                  ? 'bg-[var(--accent-dim)] ring-1 ring-[var(--accent-border)]'
+                  : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
               }`}
             >
-              <div className={`w-full h-10 rounded-lg ${theme.preview} border border-white/10`} />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{theme.label}</span>
+              <div className={`w-full h-10 rounded-lg ${theme.preview}`} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-3)]">{theme.label}</span>
               {settings.environmentTheme === theme.id && (
-                <span className="text-[9px] text-indigo-400 font-bold">Active</span>
+                <span className="text-[9px] text-[var(--accent)] font-bold">Active</span>
               )}
             </button>
           ))}
@@ -1534,16 +1534,16 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Database} label="Backup & Restore" />
         <div className="space-y-4">
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Export Backup</div>
-                <div className="text-xs text-zinc-500 mt-0.5">Download all settings, memory, chats, and agent data as a JSON file.</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Export Backup</div>
+                <div className="text-xs text-[var(--text-3)] mt-0.5">Download all settings, memory, chats, and agent data as a JSON file.</div>
               </div>
               <button
                 onClick={handleCreateBackup}
                 disabled={backupCreating}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-medium rounded-xl transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-3)] text-white text-sm font-medium rounded-xl transition-colors"
               >
                 <Download className="w-4 h-4" />
                 {backupCreating ? 'Creating...' : `Export (${backupSize.kb} KB)`}
@@ -1551,11 +1551,11 @@ export function SettingsView({
             </div>
           </div>
 
-          <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-3">
+          <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Import Backup</div>
-                <div className="text-xs text-zinc-500 mt-0.5">Restore from a previously exported backup file. Page will reload after restore.</div>
+                <div className="text-sm font-semibold text-[var(--text-1)]">Import Backup</div>
+                <div className="text-xs text-[var(--text-3)] mt-0.5">Restore from a previously exported backup file. Page will reload after restore.</div>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -1568,7 +1568,7 @@ export function SettingsView({
                 <button
                   onClick={() => backupFileRef.current?.click()}
                   disabled={backupRestoring}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm font-medium rounded-xl transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-4)] text-[var(--text-1)] text-sm font-medium rounded-xl transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   {backupRestoring ? 'Restoring...' : 'Import'}
@@ -1578,19 +1578,19 @@ export function SettingsView({
           </div>
 
           {backupResult && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl border ${backupResult.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-xl ${backupResult.type === 'success' ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--error-dim)] text-[var(--error)]'}`}>
               {backupResult.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
               <span className="text-xs">{backupResult.message}</span>
             </div>
           )}
 
-          <div className="text-[11px] text-zinc-500">
+          <div className="text-[11px] text-[var(--text-3)]">
             Backup includes: memory items, chat history, agent patterns, Composio config, settings, project goals/batches, and SQLite records.
           </div>
         </div>
       </section>
 
-      <div className="border-t border-white/5 pt-4">
+      <div className="border-t border-[var(--border)] pt-4">
         <WorkspaceExportImportView />
       </div>
 
@@ -1623,36 +1623,36 @@ function PluginMarketplacePanel() {
     <div className="max-w-4xl mx-auto space-y-10">
       <section className="space-y-4">
         <SectionHeader icon={Package} label="Plugin Marketplace" />
-        <p className="text-xs text-zinc-400">Install and manage signed plugins. Plugins extend Alphonso with new panels, tools, and workflow steps.</p>
+        <p className="text-xs text-[var(--text-3)]">Install and manage signed plugins. Plugins extend Alphonso with new panels, tools, and workflow steps.</p>
         <input
           type="text"
           placeholder="Search plugins…"
           value={filter}
           onChange={e => setFilter(e.target.value)}
-          className="w-full text-sm bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500/50"
+          className="w-full text-sm bg-[var(--surface-2)] rounded-xl px-4 py-2.5 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         {filtered.length === 0 ? (
-          <div className="p-8 rounded-2xl border border-white/5 bg-zinc-900/40 text-center space-y-2">
-            <Package className="w-8 h-8 text-zinc-600 mx-auto" />
-            <p className="text-sm text-zinc-400">{filter ? 'No plugins match your search.' : 'No plugins installed yet.'}</p>
-            <p className="text-xs text-zinc-600">Drop a signed plugin manifest (.json) into Settings → Backup → Import, or install via the Alphonso CLI.</p>
+          <div className="p-8 rounded-2xl bg-[var(--surface-2)] text-center space-y-2">
+            <Package className="w-8 h-8 text-[var(--text-4)] mx-auto" />
+            <p className="text-sm text-[var(--text-3)]">{filter ? 'No plugins match your search.' : 'No plugins installed yet.'}</p>
+            <p className="text-xs text-[var(--text-4)]">Drop a signed plugin manifest (.json) into Settings → Backup → Import, or install via the Alphonso CLI.</p>
           </div>
         ) : (
           <div className="space-y-3">
             {filtered.map(p => (
-              <div key={p.id} className="flex items-center gap-4 p-4 bg-zinc-900/50 rounded-2xl border border-white/5">
+              <div key={p.id} className="flex items-center gap-4 p-4 bg-[var(--surface-2)] rounded-2xl">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white truncate">{p.name}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-white/5 shrink-0">v{p.version}</span>
-                    {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">✓ signed</span>}
+                    <span className="text-sm font-semibold text-[var(--text-1)] truncate">{p.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-3)] shrink-0">v{p.version}</span>
+                    {p.trust === 'verified' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--success-dim)] text-[var(--success)] shrink-0">✓ signed</span>}
                   </div>
-                  <p className="text-xs text-zinc-500 mt-0.5 truncate">{p.description}</p>
-                  {p.author && <p className="text-[10px] text-zinc-600 mt-0.5">by {p.author}</p>}
+                  <p className="text-xs text-[var(--text-3)] mt-0.5 truncate">{p.description}</p>
+                  {p.author && <p className="text-[10px] text-[var(--text-4)] mt-0.5">by {p.author}</p>}
                 </div>
                 <button
                   onClick={() => handleToggle(p.id)}
-                  className={`shrink-0 transition-colors ${p.enabled ? 'text-indigo-400 hover:text-indigo-300' : 'text-zinc-600 hover:text-zinc-400'}`}
+                  className={`shrink-0 transition-colors ${p.enabled ? 'text-[var(--accent)] hover:text-[var(--accent-hover)]' : 'text-[var(--text-4)] hover:text-[var(--text-3)]'}`}
                   title={p.enabled ? 'Disable plugin' : 'Enable plugin'}
                 >
                   {p.enabled ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
@@ -1661,8 +1661,8 @@ function PluginMarketplacePanel() {
             ))}
           </div>
         )}
-        <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10 text-xs text-zinc-400">
-          <span className="text-indigo-400 font-medium">How to install:</span> Obtain a signed plugin manifest from a trusted source, then use <span className="font-mono text-zinc-300">verifyAndAddPlugin(manifest)</span> from <span className="font-mono text-zinc-300">pluginSigningService</span>. Only ECDSA-signed plugins from trusted keys are accepted.
+        <div className="p-3 rounded-xl bg-[var(--accent-dim)] text-xs text-[var(--text-3)]">
+          <span className="text-[var(--accent)] font-medium">How to install:</span> Obtain a signed plugin manifest from a trusted source, then use <span className="font-mono text-[var(--text-2)]">verifyAndAddPlugin(manifest)</span> from <span className="font-mono text-[var(--text-2)]">pluginSigningService</span>. Only ECDSA-signed plugins from trusted keys are accepted.
         </div>
       </section>
     </div>
@@ -1681,8 +1681,8 @@ function ChromaDbStatus() {
   if (healthy === null) return null;
 
   return (
-    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${healthy ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}>
-      <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}`} />
+    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${healthy ? 'bg-[var(--success-dim)] text-[var(--success)]' : 'bg-[var(--surface-2)] text-[var(--text-3)]'}`}>
+      <span className={`w-2 h-2 rounded-full ${healthy ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--surface-3)]'}`} />
       {healthy
         ? 'Vector search active — Echo uses ChromaDB for semantic memory retrieval'
         : 'Vector search offline — start ChromaDB in Runtime Hub for smarter memory search'}
@@ -1729,9 +1729,9 @@ function MeetingTranscriptionPanel() {
   const label = busy ? `${status}…` : 'Choose Audio File';
 
   return (
-    <div className="p-4 bg-[var(--surface-2)] rounded-2xl border border-white/5 space-y-3">
+    <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-3">
       {whisperInstalled === false && (
-        <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-200 text-xs">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--warning-dim)] text-[var(--warning)] text-xs">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Whisper not installed. Install it in Runtimes → Whisper to enable transcription.
         </div>
@@ -1743,18 +1743,18 @@ function MeetingTranscriptionPanel() {
       <button
         onClick={pickAndTranscribe}
         disabled={busy}
-        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white text-xs rounded-xl transition-colors"
+        className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-3)] text-white text-xs rounded-xl transition-colors"
       >
         {label}
       </button>
       {result && (
         <div className="space-y-1">
-          <p className="text-xs text-emerald-400">✓ {result.filename} saved to Echo memory</p>
+          <p className="text-xs text-[var(--success)]">✓ {result.filename} saved to Echo memory</p>
           <p className="text-xs text-[var(--text-3)] line-clamp-3">{result.summary}</p>
         </div>
       )}
       {error && (
-        <p className="text-xs text-red-400">✗ {error}</p>
+        <p className="text-xs text-[var(--error)]">✗ {error}</p>
       )}
     </div>
   );
@@ -1762,25 +1762,25 @@ function MeetingTranscriptionPanel() {
 
 function McpServerInfo() {
   return (
-    <section className="mt-6 border-t border-white/5 pt-6">
+    <section className="mt-6 border-t border-[var(--border)] pt-6">
       <div className="flex items-center gap-2 mb-3">
-        <Activity className="w-4 h-4 text-purple-400" />
+        <Activity className="w-4 h-4 text-[var(--accent)]" />
         <span className="text-sm font-semibold text-[var(--text-1)]">MCP Server — Connect AI Tools</span>
       </div>
       <p className="text-xs text-[var(--text-3)] mb-3">
         Expose Alphonso's 9 agents as tools in Claude Desktop, Cursor, Windsurf, and any MCP-compatible AI editor.
       </p>
-      <div className="bg-zinc-900/60 rounded-xl border border-purple-500/20 p-4 space-y-2 font-mono text-xs">
-        <p className="text-purple-300">1. Start "Alphonso Bridge" + "MCP Server" in Runtime Hub</p>
-        <p className="text-purple-300">2. Add to your AI editor's MCP config:</p>
-        <pre className="text-zinc-400 bg-zinc-950 rounded p-2 overflow-x-auto">{`{
+      <div className="bg-[var(--surface-2)] rounded-xl p-4 space-y-2 font-mono text-xs">
+        <p className="text-[var(--accent)]">1. Start "Alphonso Bridge" + "MCP Server" in Runtime Hub</p>
+        <p className="text-[var(--accent)]">2. Add to your AI editor's MCP config:</p>
+        <pre className="text-[var(--text-3)] bg-[var(--surface-0)] rounded p-2 overflow-x-auto">{`{
   "mcpServers": {
     "alphonso": {
       "url": "http://localhost:3333"
     }
   }
 }`}</pre>
-        <p className="text-zinc-500">Tools available: run_pipeline · search_memory · research · get_status · get_receipts</p>
+        <p className="text-[var(--text-3)]">Tools available: run_pipeline · search_memory · research · get_status · get_receipts</p>
       </div>
     </section>
   );
@@ -1797,7 +1797,7 @@ function AccBridgeSettings() {
   };
 
   return (
-    <section className="mt-6 border-t border-white/5 pt-6">
+    <section className="mt-6 border-t border-[var(--border)] pt-6">
       <div className="flex items-center gap-2 mb-3">
         <Plug className="w-4 h-4 text-[var(--accent)]" />
         <span className="text-sm font-semibold text-[var(--text-1)]">ACC Bridge</span>
@@ -1809,18 +1809,18 @@ function AccBridgeSettings() {
           value={cfg.baseUrl}
           onChange={e => setCfg(c => ({ ...c, baseUrl: e.target.value }))}
           placeholder="http://localhost:PORT  (ACC bridge base URL)"
-          className="w-full text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="w-full text-xs bg-[var(--surface-2)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         <input
           type="password"
           value={cfg.token}
           onChange={e => setCfg(c => ({ ...c, token: e.target.value }))}
           placeholder="Auth token (optional)"
-          className="w-full text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
+          className="w-full text-xs bg-[var(--surface-2)] rounded px-3 py-2 text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent-border)]"
         />
         <button
           onClick={save}
-          className="px-3 py-1.5 text-xs rounded bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors"
+          className="px-3 py-1.5 text-xs rounded bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--text-1)] transition-colors"
         >
           {saved ? 'Saved ✓' : 'Save Bridge Config'}
         </button>
@@ -1856,30 +1856,30 @@ function InboxFolderConfig() {
   }
 
   return (
-    <div className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 space-y-4">
+    <div className="p-4 bg-[var(--surface-2)] rounded-2xl space-y-4">
       <div className="space-y-1">
-        <div className="text-sm font-semibold text-white">Inbox Folder Path</div>
-        <div className="text-xs text-zinc-500">Directory to watch for new files. New files are auto-ingested into Echo memory by Jose.</div>
+        <div className="text-sm font-semibold text-[var(--text-1)]">Inbox Folder Path</div>
+        <div className="text-xs text-[var(--text-3)]">Directory to watch for new files. New files are auto-ingested into Echo memory by Jose.</div>
       </div>
       <input
         type="text"
         value={inboxPath}
         onChange={(e) => setInboxPath(e.target.value)}
         placeholder="C:\Users\You\Documents\Inbox"
-        className="w-full px-3 py-2 bg-zinc-800/60 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+        className="w-full px-3 py-2 bg-[var(--surface-3)] rounded-lg text-sm text-[var(--text-1)] placeholder-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-border)]"
       />
       <div className="flex items-center gap-3">
         <button
           onClick={() => setEnabled(!enabled)}
-          className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
             enabled
-              ? 'bg-teal-500/20 border-teal-400/30 text-teal-300'
-              : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
+              ? 'bg-[var(--accent-dim)] text-[var(--accent)] ring-1 ring-[var(--accent-border)]'
+              : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-4)]'
           }`}
         >
           {enabled ? 'Enabled' : 'Disabled'}
         </button>
-        <span className="text-xs text-zinc-500">Poll every {pollSec}s</span>
+        <span className="text-xs text-[var(--text-3)]">Poll every {pollSec}s</span>
         <input
           type="range"
           min={10}
@@ -1887,12 +1887,12 @@ function InboxFolderConfig() {
           step={5}
           value={pollSec}
           onChange={(e) => setPollSec(Number(e.target.value))}
-          className="w-24 accent-teal-500"
+          className="w-24 accent-[var(--accent)]"
         />
       </div>
       <button
         onClick={handleSave}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-xl transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-medium rounded-xl transition-colors"
       >
         <Save className="w-4 h-4" />
         {saved ? 'Saved' : 'Save Config'}
@@ -1918,26 +1918,26 @@ function PerformanceDiagnosticsPanel() {
   React.useEffect(() => { run(); }, []);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+    <div className="bg-[var(--surface-2)] rounded-lg p-4 space-y-3">
       {stats ? (
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex flex-col gap-1">
-            <span className="text-zinc-500 text-xs uppercase tracking-wide">Boot time</span>
-            <span className="text-white font-mono">{stats.bootMs != null ? `${stats.bootMs}ms` : 'N/A'}</span>
+            <span className="text-[var(--text-3)] text-xs uppercase tracking-wide">Boot time</span>
+            <span className="text-[var(--text-1)] font-mono">{stats.bootMs != null ? `${stats.bootMs}ms` : 'N/A'}</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-zinc-500 text-xs uppercase tracking-wide">localStorage</span>
-            <span className="text-white font-mono">{stats.storageKB} KB / 10,000 KB ({stats.storagePercent}%)</span>
+            <span className="text-[var(--text-3)] text-xs uppercase tracking-wide">localStorage</span>
+            <span className="text-[var(--text-1)] font-mono">{stats.storageKB} KB / 10,000 KB ({stats.storagePercent}%)</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-zinc-500 text-xs uppercase tracking-wide">Storage items</span>
-            <span className="text-white font-mono">{stats.itemCount}</span>
+            <span className="text-[var(--text-3)] text-xs uppercase tracking-wide">Storage items</span>
+            <span className="text-[var(--text-1)] font-mono">{stats.itemCount}</span>
           </div>
         </div>
       ) : (
-        <p className="text-zinc-500 text-sm">Loading diagnostics…</p>
+        <p className="text-[var(--text-3)] text-sm">Loading diagnostics…</p>
       )}
-      <button onClick={run} className="text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded transition-colors">
+      <button onClick={run} className="text-xs text-[var(--text-3)] hover:text-[var(--text-1)] hover:border-[var(--border-strong)] px-3 py-1.5 rounded transition-colors">
         Run diagnostics
       </button>
     </div>

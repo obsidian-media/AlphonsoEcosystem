@@ -23,10 +23,10 @@ interface ModelSwitcherProps {
 
 export function ModelSwitcher({ currentModel, onSwitch, compact = false }: ModelSwitcherProps): React.JSX.Element {
   return (
-    <div className={`flex rounded-lg overflow-hidden border border-zinc-700 ${compact ? 'text-xs' : 'text-sm'}`}>
+    <div className={`flex rounded-lg overflow-hidden border border-[var(--border)] ${compact ? 'text-xs' : 'text-sm'}`}>
       {AI_MODELS.map((model) => (
         <button key={model} onClick={() => onSwitch(model)}
-          className={`${compact ? 'px-2 py-0.5' : 'px-3 py-1.5'} transition-colors ${currentModel === model ? 'bg-amber-500 text-black font-bold' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>
+          className={`${compact ? 'px-2 py-0.5' : 'px-3 py-1.5'} transition-colors ${currentModel === model ? 'bg-[var(--accent)] text-black font-bold' : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-3)]'}`}>
           {AI_MODEL_LABELS[model]}
         </button>
       ))}
@@ -151,7 +151,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
 
   if (ollamaOnline === null) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/5 rounded-lg text-[10px] text-zinc-500 font-medium uppercase tracking-widest">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[10px] text-[var(--text-3)] font-medium uppercase tracking-widest">
         <Cpu className="w-3 h-3 shrink-0" /><span>Loading…</span>
       </div>
     );
@@ -159,7 +159,7 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
 
   if (!ollamaOnline) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-amber-500/20 rounded-lg text-[10px] text-amber-400 font-medium uppercase tracking-widest"
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--warning-border)] rounded-lg text-[10px] text-[var(--warning)] font-medium uppercase tracking-widest"
         title="Ollama is not running — start it to switch models">
         <Cpu className="w-3 h-3 shrink-0" /><span>Ollama offline</span>
       </div>
@@ -168,28 +168,28 @@ export function OllamaModelPicker({ onModelChange, initialModel }: OllamaModelPi
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
-        <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
+      <div className="relative flex items-center gap-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 hover:border-[var(--accent-border)] transition-colors">
+        <Cpu className="w-3 h-3 text-[var(--text-3)] shrink-0 pointer-events-none" />
         <select aria-label={selected || 'Select Ollama model'} value={selected} onChange={handleChange}
-          className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[140px] truncate"
+          className="appearance-none bg-transparent text-[10px] text-[var(--text-2)] font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[140px] truncate"
           title={selected || 'Select Ollama model'}>
-          {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
+          {models.map((name) => <option key={name} value={name} className="bg-[var(--surface-2)] text-[var(--text-2)] normal-case tracking-normal">{name}</option>)}
         </select>
-        <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-2 pointer-events-none" />
+        <ChevronDown className="w-3 h-3 text-[var(--text-3)] absolute right-2 pointer-events-none" />
       </div>
       {ollamaOnline && (
         <div className="flex items-center gap-1">
           <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="model name to pull"
-            className="flex-1 min-w-0 bg-zinc-900 border border-white/5 rounded px-2 py-1 text-[9px] text-zinc-400 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/30" />
+            className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-1 text-[9px] text-[var(--text-3)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--accent-border)]" />
           {showPullButton && (
             <button onClick={handlePullModel} disabled={!!pullingModel}
-              className={`shrink-0 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest transition-colors ${pullingModel ? 'bg-amber-500/20 text-amber-400 cursor-wait' : 'bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30'}`}>
+              className={`shrink-0 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest transition-colors ${pullingModel ? 'bg-[var(--warning-dim)] text-[var(--warning)] cursor-wait' : 'bg-[var(--accent-dim)] text-[var(--accent)] hover:bg-[var(--accent-dim)]'}`}>
               {pullingModel ? 'Pulling…' : 'Pull'}
             </button>
           )}
         </div>
       )}
-      {pullProgress && <div className="text-[9px] text-amber-400 font-mono truncate" title={pullProgress}>{pullProgress}</div>}
+      {pullProgress && <div className="text-[9px] text-[var(--warning)] font-mono truncate" title={pullProgress}>{pullProgress}</div>}
     </div>
   );
 }
@@ -242,7 +242,7 @@ export function CloudModelPicker({ provider, selectedModel, onModelChange }: Clo
 
   if (loading) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/5 rounded-lg text-[10px] text-zinc-500 font-medium uppercase tracking-widest">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[10px] text-[var(--text-3)] font-medium uppercase tracking-widest">
         <Cpu className="w-3 h-3 shrink-0" /><span>Loading models…</span>
       </div>
     );
@@ -250,21 +250,21 @@ export function CloudModelPicker({ provider, selectedModel, onModelChange }: Clo
 
   if (models.length === 0) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-amber-500/20 rounded-lg text-[10px] text-amber-400 font-medium uppercase tracking-widest">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--warning-border)] rounded-lg text-[10px] text-[var(--warning)] font-medium uppercase tracking-widest">
         <Cpu className="w-3 h-3 shrink-0" /><span>No models available</span>
       </div>
     );
   }
 
   return (
-    <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
-      <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
+    <div className="relative flex items-center gap-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 hover:border-[var(--accent-border)] transition-colors">
+      <Cpu className="w-3 h-3 text-[var(--text-3)] shrink-0 pointer-events-none" />
       <select aria-label={selectedModel || 'Select a model'} value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
-        className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
+        className="appearance-none bg-transparent text-[10px] text-[var(--text-2)] font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
         title={selectedModel || 'Select a model'}>
-        {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
+        {models.map((name) => <option key={name} value={name} className="bg-[var(--surface-2)] text-[var(--text-2)] normal-case tracking-normal">{name}</option>)}
       </select>
-      <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-2 pointer-events-none" />
+      <ChevronDown className="w-3 h-3 text-[var(--text-3)] absolute right-2 pointer-events-none" />
     </div>
   );
 }
@@ -309,7 +309,7 @@ export function HermesModelPicker({ agentId, selectedModel, onModelChange }: Her
 
   if (loading) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-white/5 rounded-lg text-[10px] text-zinc-500 font-medium uppercase tracking-widest">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[10px] text-[var(--text-3)] font-medium uppercase tracking-widest">
         <Cpu className="w-3 h-3 shrink-0" /><span>Loading models…</span>
       </div>
     );
@@ -317,21 +317,21 @@ export function HermesModelPicker({ agentId, selectedModel, onModelChange }: Her
 
   if (models.length === 0) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-amber-500/20 rounded-lg text-[10px] text-amber-400 font-medium uppercase tracking-widest" title={error || undefined}>
+      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--surface-2)] border border-[var(--warning-border)] rounded-lg text-[10px] text-[var(--warning)] font-medium uppercase tracking-widest" title={error || undefined}>
         <Cpu className="w-3 h-3 shrink-0" /><span>{error ? 'Profile unreachable' : 'No models available'}</span>
       </div>
     );
   }
 
   return (
-    <div className="relative flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-lg px-2 py-1 hover:border-indigo-500/30 transition-colors">
-      <Cpu className="w-3 h-3 text-zinc-500 shrink-0 pointer-events-none" />
+    <div className="relative flex items-center gap-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 hover:border-[var(--accent-border)] transition-colors">
+      <Cpu className="w-3 h-3 text-[var(--text-3)] shrink-0 pointer-events-none" />
       <select aria-label={selectedModel || 'Select a model'} value={selectedModel} onChange={(e) => onModelChange(e.target.value)}
-        className="appearance-none bg-transparent text-[10px] text-zinc-300 font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
+        className="appearance-none bg-transparent text-[10px] text-[var(--text-2)] font-medium uppercase tracking-widest pr-4 focus:outline-none cursor-pointer max-w-[180px] truncate"
         title={selectedModel || 'Select a model'}>
-        {models.map((name) => <option key={name} value={name} className="bg-zinc-900 text-zinc-200 normal-case tracking-normal">{name}</option>)}
+        {models.map((name) => <option key={name} value={name} className="bg-[var(--surface-2)] text-[var(--text-2)] normal-case tracking-normal">{name}</option>)}
       </select>
-      <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-2 pointer-events-none" />
+      <ChevronDown className="w-3 h-3 text-[var(--text-3)] absolute right-2 pointer-events-none" />
     </div>
   );
 }
@@ -388,7 +388,7 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex rounded-lg overflow-hidden border border-zinc-700 text-[9px]">
+      <div className="flex rounded-lg overflow-hidden border border-[var(--border)] text-[9px]">
         {visibleProviders.map((id) => {
           const disabled = !isConfigured(id);
           return (
@@ -396,7 +396,7 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
               onClick={() => onProviderChange(id)}
               title={disabled ? `${PROVIDER_LABELS[id]} is not configured — add ${id === 'hermes' ? 'an endpoint' : 'a key'} in Settings → Connectors` : PROVIDER_LABELS[id]}
               className={`px-2 py-0.5 uppercase tracking-widest font-bold transition-colors ${
-                provider === id ? 'bg-amber-500 text-black' : disabled ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                provider === id ? 'bg-[var(--accent)] text-black' : disabled ? 'bg-[var(--surface-2)] text-[var(--text-4)] cursor-not-allowed' : 'bg-[var(--surface-3)] text-[var(--text-3)] hover:bg-[var(--surface-3)]'
               }`}>
               {PROVIDER_LABELS[id]}
             </button>

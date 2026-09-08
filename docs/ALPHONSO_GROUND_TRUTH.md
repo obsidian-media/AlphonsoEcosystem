@@ -2196,5 +2196,9 @@ User requested a full line-by-line bug audit of the entire repo, then a coordina
 
 **Still open after this pass (tracked in TRUTH_FIRST_EXECUTION_PLAN.md):** F2 (CORS config in voice backend), F3 (Supabase service-role-key exposure), G-T11–G-T20 production-readiness backlog, D1/D2 (blocked on owner/hardware), voice Python auto-install, iOS CI test step, function-level coverage gap.
 
+## 11.25 UI-redesign branch pointer (2026-09-08) — not a `main` update, cross-reference only
+
+This file tracks `main`'s shipped/verified state and, per this file's own earlier trust-caveat note, is already known to be behind `CLAUDE.md`'s more current narrative log — reconciling that full gap is out of scope here. This entry exists only so a reader of this file knows a separate, active workstream exists: an isolated UI/UX redesign on branch/worktree `ui-redesign/phase0-discovery` (never merged to `main` without explicit request). Its full, continuously-updated record lives in `docs/ui-redesign/bug-log.md` (numbered findings, currently through #128); its most recent session summary — including a `main`→branch merge bringing in the CALL-E connector and Hector research-synthesis work — is in that worktree's own `CLAUDE.md`, dated 2026-09-08. Nothing in this redesign work has shipped; do not treat it as describing the released app.
+
 
 

@@ -10,12 +10,14 @@ import { logApprovalEvent } from './services/agentAuditService';
 import { needsHighRiskApproval } from './lib/chatUtils';
 import { UpdaterNotification } from './components/UpdaterNotification';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { MemorySearch } from './components/MemorySearch';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { AgentPerformanceView } from './components/AgentPerformanceView';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { Tabs } from './components/ui/Tabs';
 import { useUxMode } from './hooks/useUxMode';
 import { GuidedTour } from './components/GuidedTour';
 import { DigestPanel, DigestItem } from './components/DigestPanel';
@@ -76,6 +78,11 @@ import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { VerificationProvider, useVerification } from './contexts/VerificationContext';
 import { CoachProvider, useCoach } from './contexts/CoachContext';
 
+// Mirrors Sidebar.tsx's SPACES 'system' group item ids exactly -- keep in
+// sync if that group's tabs ever change (see the RightPanel render branch
+// below for why this exists).
+const SYSTEM_SPACE_TAB_IDS = ['orchestrator', 'ecosystem', 'agent_performance', 'runtimes', 'voice', 'connectors', 'operator'];
+
 const ChatView = lazy(() => import('./components/ChatView').then((mod) => ({ default: mod.ChatView })));
 const WorkflowPanel = lazy(() => import('./components/WorkflowPanel').then((mod) => ({ default: mod.WorkflowPanel })));
 const CoachHardInterruptOverlay = lazy(() => import('./components/CoachHardInterruptOverlay').then((mod) => ({ default: mod.CoachHardInterruptOverlay })));
@@ -86,6 +93,7 @@ const RuntimeManagerView = lazy(() => import('./components/RuntimeManagerView'))
 const VoiceView = lazy(() => import('./components/VoiceView').then((mod) => ({ default: mod.VoiceView })));
 const BootStatusBanner = lazy(() => import('./components/BootStatusBanner').then((mod) => ({ default: mod.BootStatusBanner })));
 const MissionControlHome = lazy(() => import('./components/MissionControlHome').then((mod) => ({ default: mod.MissionControlHome })));
+const CompanionMode = lazy(() => import('./components/CompanionMode').then((mod) => ({ default: mod.CompanionMode })));
 const MissionRoom = lazy(() => import('./components/MissionRoom').then((mod) => ({ default: mod.MissionRoom })));
 const BoardroomView = lazy(() => import('./components/BoardroomChatView').then((mod) => ({ default: mod.BoardroomChatView })));
 const BoardroomLegacyView = lazy(() => import('./components/BoardroomView').then((mod) => ({ default: mod.BoardroomView })));
@@ -95,20 +103,16 @@ function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprova
   const approval = useRequestApprovalBridge();
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex items-center gap-1 px-5 pt-3 pb-0 border-b border-[var(--border)] shrink-0">
-        {(['mission', 'boardroom', 'boardroom_legacy'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setSubTab(t)}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
-              subTab === t
-                ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
-                : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-            }`}
-          >
-            {t === 'mission' ? 'Mission Room' : t === 'boardroom' ? 'Boardroom Sessions' : 'Boardroom Legacy'}
-          </button>
-        ))}
+      <div className="px-5 pt-3 pb-0 shrink-0">
+        <Tabs
+          tabs={[
+            { id: 'mission', label: 'Mission Room' },
+            { id: 'boardroom', label: 'Boardroom Sessions' },
+            { id: 'boardroom_legacy', label: 'Boardroom Legacy' }
+          ]}
+          activeId={subTab}
+          onChange={(id) => setSubTab(id as 'mission' | 'boardroom' | 'boardroom_legacy')}
+        />
       </div>
       <div className="flex-1 overflow-hidden">
         {subTab === 'mission' ? (
@@ -136,6 +140,8 @@ const AgentDock = lazy(() => import('./components/AgentDock').then((mod) => ({ d
 const SettingsView = lazy(() => import('./components/SettingsView').then((mod) => ({ default: mod.SettingsView })));
 const RightPanel = lazy(() => import('./components/RightPanel').then((mod) => ({ default: mod.RightPanel })));
 const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then((mod) => ({ default: mod.AgentActivityLog })));
+const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceView').then((mod) => ({ default: mod.AgentPerformanceView })));
+const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -190,6 +196,7 @@ function AppShell() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [pendingApprovalCount, setPendingApprovalCount] = useState<number>(0);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showMemorySearch, setShowMemorySearch] = useState(false);
 
   const addNotification = useCallback((n: Omit<AppNotification, 'id' | 'timestamp'>) => {
     setNotifications((prev) => [
@@ -276,6 +283,7 @@ function AppShell() {
   });
 
   useAppKeyboardShortcuts({ approvalPending, setApprovalPending, setApprovalRequiredNotice, approvalResolveRef, switchTab, setShowKeyboardShortcuts });
+  useKeyboardShortcuts({ toggle_search: () => setShowMemorySearch((prev) => !prev) });
   useIdleLock({ idleTimeoutMinutes: settings.idleTimeoutMinutes, setIsLocked, idleTimerRef });
 
   // Restored 2026-08-22 — this whole block (7 hooks) was silently dead since
@@ -795,7 +803,7 @@ function AppShell() {
 
   if (showSetup && !isCoachWindow) {
     return (
-      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-500 text-sm">Loading...</div>}>
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-[var(--surface-0)] text-[var(--text-3)] text-sm">Loading...</div>}>
         <SetupFlow
           onComplete={(chosenModel?: string, chosenProvider?: string) => {
             setSettings((current: any) => ({
@@ -810,8 +818,23 @@ function AppShell() {
     );
   }
 
+  // activeTab !== 'settings': Companion Mode's Settings icon calls
+  // switchTab('settings') rather than rendering its own settings screen
+  // (see 24-phase3-companion-mode-implementation-plan.md's Non-goals) --
+  // an unconditional uxMode === 'simple' branch here would make that
+  // unreachable, since the real SettingsView only renders inside the full
+  // shell below. Falling through to the full shell while on the settings
+  // tab keeps that real, not a dead button.
+  if (uxMode === 'simple' && activeTab !== 'settings') {
+    return (
+      <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-[var(--companion-surface)] text-[var(--text-3)] text-sm">Loading...</div>}>
+        <CompanionMode uxMode={uxMode} onModeChange={setUxMode} onOpenSettings={() => switchTab('settings')} />
+      </Suspense>
+    );
+  }
+
   return (
-    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-cyan-500/30 ${settings.colorScheme === 'light' ? 'light bg-zinc-50 text-zinc-900' : 'bg-[var(--surface-0)] text-[var(--text-1)]'} ${themeClassFromSettings(settings)}`}>
+    <div data-alphonso-shell-ready="true" className={`flex h-screen w-full font-sans overflow-hidden selection:bg-[var(--accent-dim)] bg-[var(--surface-0)] text-[var(--text-1)] ${settings.colorScheme === 'light' ? 'light' : ''} ${themeClassFromSettings(settings)}`}>
       <UpdaterNotification
         version={updaterVersion}
         onDismiss={() => setUpdaterVersion(null)}
@@ -864,6 +887,8 @@ function AppShell() {
         pendingApprovalCount={pendingApprovalCount}
         onOpenCoach={handleToggleCoachMode}
         mode={uxMode}
+        onToggleSearch={() => setShowMemorySearch((prev) => !prev)}
+        ollamaConnected={ollamaStatus?.state === 'connected'}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar
@@ -892,7 +917,7 @@ function AppShell() {
           onOpenRuntimes={() => switchTab('runtimes')}
         />
         <main className="flex-1 overflow-hidden relative bg-[var(--surface-0)]">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-cyan-500/4 blur-[120px] rounded-full pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-[var(--accent-glow)] blur-[120px] rounded-full pointer-events-none" />
           {/* AgentDock moved to RightPanel → Agents tab */}
           <div className="h-full relative z-10">
             <ErrorBoundary label="main-shell">
@@ -937,18 +962,18 @@ function AppShell() {
                 )}
                 {activeTab === 'connectors' && (
                   <div className="h-full overflow-y-auto p-6">
-                    <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading...</div>}>
+                    <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading...</div>}>
                       <ConnectorHealthPanel zeroCostMode={settings.zeroCostMode} />
                     </React.Suspense>
                   </div>
                 )}
                 {activeTab === 'runtimes' && (
-                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading runtimes…</div>}>
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading runtimes…</div>}>
                     <RuntimeManagerView />
                   </React.Suspense>
                 )}
                 {activeTab === 'voice' && (
-                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading voice…</div>}>
+                  <React.Suspense fallback={<div className="flex items-center justify-center h-full text-[var(--text-3)] text-sm">Loading voice…</div>}>
                     <VoiceView />
                   </React.Suspense>
                 )}
@@ -957,15 +982,36 @@ function AppShell() {
                     <AgentActivityLog />
                   </Suspense>
                 )}
+                {activeTab === 'agent_performance' && (
+                  <Suspense fallback={null}>
+                    <AgentPerformanceView />
+                  </Suspense>
+                )}
+                {activeTab === 'session_history' && (
+                  <Suspense fallback={null}>
+                    <SessionHistoryView />
+                  </Suspense>
+                )}
               </Suspense>
             </ViewErrorBoundary>
             </ErrorBoundary>
           </div>
         </main>
       </div>
-      <Suspense fallback={null}>
-        <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} agentDockCompanions={mergedAgentDockCompanions} />
-      </Suspense>
+      {/* RightPanel folded into the System room only, per
+          draft-a-power-user-direction.md's own "RightPanel decision":
+          "fold RightPanel's always-open panel into the System room (no
+          permanent 3rd panel pinned open at all times)". It was rendered
+          unconditionally on every page until now -- ambient safety
+          awareness (the one thing worth always keeping visible) already
+          lives independently in TopBar's Ollama connection dot, so
+          nothing is lost by no longer pinning the full panel (model list
+          with sizes, security scan, allowlist) open everywhere. */}
+      {SYSTEM_SPACE_TAB_IDS.includes(activeTab) && (
+        <Suspense fallback={null}>
+          <RightPanel settings={settings} ollamaStatus={ollamaStatus} installedModels={installedModels} desktopBridge={desktopBridge} voiceStatus={voice.voiceStatus} selectedModelMissing={selectedModelMissing} lastCheckedAt={lastCheckedAt} onCheckOllama={runOllamaCheck} onCopyTroubleshootingCommand={copyTroubleshootingCommand} copyState={copyState} onMinimizeToCoach={minimizeToCoach} operatorMode={operatorMode} approvalRequiredNotice={approvalRequiredNotice} miyaCompanionState={miyaCompanionState} joseCompanionState={joseCompanionState} hectorCompanionState={hectorCompanionState} screenObserverState={screenObserverState} updateCheckState={updateCheckState} onCheckUpdates={checkAppUpdate} agentDockCompanions={mergedAgentDockCompanions} />
+        </Suspense>
+      )}
       <Suspense fallback={null}>
         <BootStatusBanner />
       </Suspense>
@@ -976,6 +1022,9 @@ function AppShell() {
       )}
       {showKeyboardShortcuts && (
         <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
+      )}
+      {showMemorySearch && (
+        <MemorySearch onClose={() => setShowMemorySearch(false)} onSelect={() => setShowMemorySearch(false)} />
       )}
       {showGuidedTour && (
         <GuidedTour

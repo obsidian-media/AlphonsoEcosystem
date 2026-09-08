@@ -9,17 +9,17 @@ interface StateStyles {
 }
 
 const STATE_STYLES: StateStyles = {
-  confirmed: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
-  configured: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
-  foundation_only: 'border-slate-300/20 bg-slate-500/10 text-slate-200',
-  not_configured: 'border-indigo-300/20 bg-indigo-500/10 text-indigo-200',
-  invalid: 'border-amber-300/20 bg-amber-500/10 text-amber-200',
-  ready: 'border-emerald-300/20 bg-emerald-500/10 text-emerald-200',
-  partial: 'border-amber-300/20 bg-amber-500/10 text-amber-200',
-  setup_required: 'border-indigo-300/20 bg-indigo-500/10 text-indigo-200',
-  blocked: 'border-red-300/20 bg-red-500/10 text-red-200',
-  failed: 'border-red-300/20 bg-red-500/10 text-red-200',
-  unknown: 'border-zinc-300/20 bg-zinc-500/10 text-zinc-200'
+  confirmed: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  configured: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  foundation_only: 'border-[var(--info-border)] bg-[var(--info-dim)] text-[var(--info)]',
+  not_configured: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
+  invalid: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
+  ready: 'border-[var(--success-border)] bg-[var(--success-dim)] text-[var(--success)]',
+  partial: 'border-[var(--warning-border)] bg-[var(--warning-dim)] text-[var(--warning)]',
+  setup_required: 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]',
+  blocked: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
+  failed: 'border-[var(--error-border)] bg-[var(--error-dim)] text-[var(--error)]',
+  unknown: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]'
 };
 
 const TRUTH_LABELS = new Set(['confirmed', 'configured', 'foundation_only', 'partial', 'setup_required', 'blocked', 'failed', 'unknown', 'invalid', 'not_configured']);
@@ -42,24 +42,24 @@ function displayTruthState(state: string | undefined | null, { workspaceOk = tru
 function readinessRowShellClass(state: string | undefined | null, workspaceOk: boolean = true): string {
   const truth = displayTruthState(state, { workspaceOk });
   if (truth === 'configured') {
-    return 'border-emerald-400/30 bg-emerald-500/5';
+    return 'border-[var(--success-border)] bg-[var(--success-dim)]';
   }
   if (truth === 'foundation_only') {
-    return 'border-slate-400/30 bg-slate-500/10';
+    return 'border-[var(--info-border)] bg-[var(--info-dim)]';
   }
   if (truth === 'not_configured' || truth === 'invalid') {
-    return 'border-amber-400/30 bg-amber-500/5';
+    return 'border-[var(--warning-border)] bg-[var(--warning-dim)]';
   }
   if (truth === 'setup_required') {
-    return 'border-indigo-400/35 bg-indigo-500/10';
+    return 'border-[var(--accent-border)] bg-[var(--accent-dim)]';
   }
   if (truth === 'blocked' || truth === 'failed') {
-    return 'border-red-400/35 bg-red-500/10';
+    return 'border-[var(--error-border)] bg-[var(--error-dim)]';
   }
   if (truth === 'partial' || truth === 'unknown') {
-    return 'border-amber-400/30 bg-amber-500/5';
+    return 'border-[var(--warning-border)] bg-[var(--warning-dim)]';
   }
-  return 'border-white/10 bg-zinc-900/55';
+  return 'border-[var(--border)] bg-[var(--surface-2)]';
 }
 
 interface StateBadgeProps {
@@ -86,13 +86,13 @@ interface StatCardProps {
 
 function StatCard({ label, value, state, detail, workspaceOk = true }: StatCardProps) {
   return (
-    <div className={`rounded-2xl border p-4 ${readinessRowShellClass(state, workspaceOk)}`}>
+    <div className={`rounded-2xl p-4 ${readinessRowShellClass(state, workspaceOk)}`}>
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">{label}</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">{label}</div>
         <StateBadge state={state} workspaceOk={workspaceOk} />
       </div>
-      <div className="mt-2 text-lg font-semibold text-white">{value}</div>
-      {detail && <div className="mt-1 text-[11px] leading-relaxed text-zinc-500">{detail}</div>}
+      <div className="mt-2 text-lg font-semibold text-[var(--text-1)]">{value}</div>
+      {detail && <div className="mt-1 text-[11px] leading-relaxed text-[var(--text-3)]">{detail}</div>}
     </div>
   );
 }
@@ -105,9 +105,9 @@ interface SectionPanelProps {
 
 function SectionPanel({ icon: Icon, title, children }: SectionPanelProps) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4">
-      <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-        <Icon className="h-4 w-4 text-indigo-300" />
+    <section className="rounded-2xl bg-[var(--surface-1)] p-4">
+      <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">
+        <Icon className="h-4 w-4 text-[var(--accent)]" />
         {title}
       </div>
       {children}
@@ -370,15 +370,15 @@ export function ProductionReadinessPanel({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-950 to-indigo-950/35 p-5">
+      <section className="rounded-3xl bg-[var(--surface-1)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-              <Shield className="h-4 w-4 text-emerald-300" />
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-3)]">
+              <Shield className="h-4 w-4 text-[var(--success)]" />
               Production Readiness
             </div>
-            <h2 className="text-2xl font-semibold text-white">Supervised production readiness truth panel</h2>
-            <p className="max-w-3xl text-sm leading-relaxed text-zinc-400">
+            <h2 className="text-2xl font-semibold text-[var(--text-1)]">Supervised production readiness truth panel</h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-3)]">
               This view surfaces what is confirmed, what is partial, what still needs setup, and which surfaces are live blockers before Alphonso can be treated as production-ready.
             </p>
           </div>
@@ -386,7 +386,7 @@ export function ProductionReadinessPanel({
             <button
               onClick={refresh}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] transition hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               {loading ? 'Refreshing' : 'Refresh audit'}
@@ -395,34 +395,34 @@ export function ProductionReadinessPanel({
           </div>
         </div>
         {error && (
-          <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
+          <div className="mt-4 rounded-2xl bg-[var(--error-dim)] p-3 text-sm text-[var(--error)]">
             {error}
           </div>
         )}
-        <div className="mt-4 rounded-2xl border border-white/10 bg-zinc-900/55 p-3 text-sm text-zinc-300">
+        <div className="mt-4 rounded-2xl bg-[var(--surface-2)] p-3 text-sm text-[var(--text-2)]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <FolderOpen className="h-4 w-4 text-indigo-300" />
-              <span className="font-semibold text-white">Workspace root</span>
+              <FolderOpen className="h-4 w-4 text-[var(--accent)]" />
+              <span className="font-semibold text-[var(--text-1)]">Workspace root</span>
             </div>
             <StateBadge state={workspaceValidation?.status || (workspaceRoot ? 'unknown' : 'setup_required')} workspaceOk={workspaceOk} />
           </div>
-          <div className="mt-2 font-mono text-[11px] text-zinc-400">{resolvedWorkspaceRoot}</div>
-          <div className="mt-1 text-[11px] text-zinc-500">
+          <div className="mt-2 font-mono text-[11px] text-[var(--text-3)]">{resolvedWorkspaceRoot}</div>
+          <div className="mt-1 text-[11px] text-[var(--text-3)]">
             {workspaceValidation?.error || 'Workspace validation runs locally before production readiness or self-development scans proceed.'}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               onClick={setCurrentWorkspace}
               disabled={!setSettings}
-              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               Set Current Workspace
             </button>
             <button
               onClick={validateWorkspace}
               disabled={validatingWorkspace}
-              className="rounded-xl border border-white/10 bg-zinc-800 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
+              className="rounded-xl bg-[var(--surface-3)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-2)] hover:bg-[var(--surface-3)] disabled:opacity-50"
             >
               {validatingWorkspace ? 'Validating' : 'Validate Workspace'}
             </button>
@@ -431,15 +431,15 @@ export function ProductionReadinessPanel({
             {(workspaceValidation?.requiredEntries || ['package.json', 'src', 'src-tauri', 'docs']).map((entry: WorkspaceEntry | string) => {
               const row: RequiredEntryRow = typeof entry === 'string' ? { path: entry, exists: false } : entry;
               return (
-                <div key={row.path} className="rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-[10px] font-mono text-zinc-400">
-                  {row.path} <span className={row.exists ? 'text-emerald-300' : 'text-amber-300'}>{row.exists ? 'present' : 'missing'}</span>
+                <div key={row.path} className="rounded-xl bg-[var(--surface-1)] px-3 py-2 text-[10px] font-mono text-[var(--text-3)]">
+                  {row.path} <span className={row.exists ? 'text-[var(--success)]' : 'text-[var(--warning)]'}>{row.exists ? 'present' : 'missing'}</span>
                 </div>
               );
             })}
           </div>
         </div>
         {!workspaceRoot && (
-          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-3 text-sm text-amber-100">
+          <div className="mt-4 rounded-2xl bg-[var(--warning-dim)] p-3 text-sm text-[var(--warning)]">
             Workspace root is not configured yet. Production readiness and self-development scans are setup-required until Alphonso knows the repo path.
           </div>
         )}
@@ -476,17 +476,17 @@ export function ProductionReadinessPanel({
           {Array.isArray(report?.liveBlockers) && report.liveBlockers.length > 0 ? (
             <div className="space-y-2">
               {report.liveBlockers.map((blocker: string) => (
-                <div key={blocker} className="rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+                <div key={blocker} className="rounded-2xl bg-[var(--error-dim)] px-3 py-2 text-sm text-[var(--error)]">
                   {blocker}
                 </div>
               ))}
             </div>
           ) : blockersLookClear ? (
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+            <div className="rounded-2xl bg-[var(--success-dim)] px-3 py-2 text-sm text-[var(--success)]">
               No live blockers in the latest audit snapshot (workspace validated).
             </div>
           ) : (
-            <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-100">
+            <div className="rounded-2xl bg-[var(--accent-dim)] px-3 py-2 text-sm text-[var(--accent)]">
               Blocker list is empty but overall readiness is not confirmed. Validate workspace, native proof artifacts, and updater evidence before treating this as clear.
             </div>
           )}
@@ -499,31 +499,31 @@ export function ProductionReadinessPanel({
             <StatCard workspaceOk={workspaceOk} label="latest.json" value={report?.releaseProof?.latestJsonFound ? 'present' : 'setup_required'} state={report?.releaseProof?.manifestValid ? 'confirmed' : 'setup_required'} detail={report?.releaseProof?.latestJsonPath || 'Hosted manifest proof not collected.'} />
             <StatCard workspaceOk={workspaceOk} label="Updater Config" value={report?.updateCheckState?.configured ? 'configured' : 'setup_required'} state={report?.updateCheckState?.configured && report?.releaseProof?.manifestValid ? 'partial' : 'setup_required'} detail={report?.updateCheckState?.available ? `Feed reachable (${report.updateCheckState.latestVersion || 'version unknown'}). Signing proof still required.` : 'Endpoint and pubkey must both be set.'} />
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-zinc-400 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-zinc-900/55 p-3">
-              <div className="font-semibold text-zinc-200">Signing env</div>
+          <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-[var(--text-3)] md:grid-cols-2">
+            <div className="rounded-2xl bg-[var(--surface-2)] p-3">
+              <div className="font-semibold text-[var(--text-2)]">Signing env</div>
               <div className="mt-1">TAURI_SIGNING_PRIVATE_KEY: {boolLabel(report?.signingEnv?.TAURI_SIGNING_PRIVATE_KEY)}</div>
               <div>TAURI_SIGNING_PRIVATE_KEY_PASSWORD: {boolLabel(report?.signingEnv?.TAURI_SIGNING_PRIVATE_KEY_PASSWORD)}</div>
               <div>ALPHONSO_UPDATE_BASE_URL: {boolLabel(report?.signingEnv?.ALPHONSO_UPDATE_BASE_URL)}</div>
               <div>GITHUB_REPOSITORY: {boolLabel(report?.signingEnv?.GITHUB_REPOSITORY)}</div>
               <div>GITHUB_TOKEN: {boolLabel(report?.signingEnv?.GITHUB_TOKEN)}</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-900/55 p-3">
-              <div className="font-semibold text-zinc-200">Updater evidence</div>
-              <div className="mt-1 text-zinc-400">{report?.releaseState?.evidence || 'No release scan evidence yet.'}</div>
+            <div className="rounded-2xl bg-[var(--surface-2)] p-3">
+              <div className="font-semibold text-[var(--text-2)]">Updater evidence</div>
+              <div className="mt-1 text-[var(--text-3)]">{report?.releaseState?.evidence || 'No release scan evidence yet.'}</div>
               {Array.isArray(missingUpdaterEnv?.updater) && missingUpdaterEnv.updater.length > 0 && (
-                <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-amber-300">
+                <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-[var(--warning)]">
                   Missing: {missingUpdaterEnv.updater.join(', ')}
                 </div>
               )}
               {Array.isArray(missingUpdaterEnv?.signing) && missingUpdaterEnv.signing.length > 0 && (
-                <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-amber-300">
+                <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-[var(--warning)]">
                   Signing missing: {missingUpdaterEnv.signing.join(', ')}
                 </div>
               )}
-              <div className="mt-3 rounded-xl border border-white/10 bg-zinc-950/60 p-3 text-zinc-200">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Setup command</div>
-                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-[11px] text-zinc-300">
+              <div className="mt-3 rounded-xl bg-[var(--surface-1)] p-3 text-[var(--text-2)]">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-3)]">Setup command</div>
+                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-[11px] text-[var(--text-2)]">
 {`$env:TAURI_SIGNING_PRIVATE_KEY="..."
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD="..."
 $env:ALPHONSO_UPDATE_BASE_URL="..."
@@ -536,44 +536,44 @@ npm.cmd run release:updater`}
       </div>
 
       <SectionPanel icon={CheckCircle2} title="Readiness Matrix">
-        <p className="mb-3 text-[11px] leading-relaxed text-zinc-500">
+        <p className="mb-3 text-[11px] leading-relaxed text-[var(--text-3)]">
           Truth labels: confirmed, partial, setup_required, blocked, failed. setup_required is never shown as ready.
         </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {matrixRows.map((row: ReadinessRow) => (
-            <div key={row.id} className={`rounded-2xl border p-3 ${readinessRowShellClass(row.state, workspaceOk)}`}>
+            <div key={row.id} className={`rounded-2xl p-3 ${readinessRowShellClass(row.state, workspaceOk)}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-sm font-semibold text-white">{row.label}</div>
-                  <div className="mt-1 text-[11px] text-zinc-500">{row.evidence}</div>
+                  <div className="text-sm font-semibold text-[var(--text-1)]">{row.label}</div>
+                  <div className="mt-1 text-[11px] text-[var(--text-3)]">{row.evidence}</div>
                 </div>
                 <StateBadge state={row.state} workspaceOk={workspaceOk} />
               </div>
-              {row.detail && <div className="mt-2 text-[11px] text-zinc-400">{row.detail}</div>}
+              {row.detail && <div className="mt-2 text-[11px] text-[var(--text-3)]">{row.detail}</div>}
             </div>
           ))}
         </div>
       </SectionPanel>
 
       <SectionPanel icon={Sparkles} title="Connector Readiness Matrix">
-        <p className="mb-3 text-[11px] leading-relaxed text-zinc-500">
+        <p className="mb-3 text-[11px] leading-relaxed text-[var(--text-3)]">
           Connectors are fail-closed: configured / not_configured / invalid / unknown / setup_required. External live requires configured env plus a verified health check - not just a registry flag.
         </p>
         <div className="space-y-2">
           {connectorRows.map((row: ReadinessRow) => {
             const connectorTruth: string = displayConnectorRowState(row as any);
             return (
-            <div key={row.id} className={`rounded-2xl border p-3 ${readinessRowShellClass(connectorTruth, workspaceOk)}`}>
+            <div key={row.id} className={`rounded-2xl p-3 ${readinessRowShellClass(connectorTruth, workspaceOk)}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-white">{row.name}</div>
-                  <div className="mt-1 text-[11px] text-zinc-500">
+                  <div className="text-sm font-semibold text-[var(--text-1)]">{row.name}</div>
+                  <div className="mt-1 text-[11px] text-[var(--text-3)]">
                     {row.kind === 'tool_connection' ? 'Tool connection' : 'Connector'} | auth {row.authEnabled ? 'enabled' : 'disabled'} | allowlist {row.allowlistCount}
                   </div>
                 </div>
                 <StateBadge state={connectorTruth} workspaceOk={workspaceOk} />
               </div>
-              <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] text-zinc-400 md:grid-cols-2">
+              <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] text-[var(--text-3)] md:grid-cols-2">
                 <div>Configured: {row.configured || 'unknown'}</div>
                 <div>External live: {connectorTruth === 'configured' ? 'yes (artifact-backed)' : 'no'}</div>
                 <div>Env state: {row.envStatus}</div>
@@ -592,13 +592,13 @@ npm.cmd run release:updater`}
                   </>
                 )}
               </div>
-              {row.lastTestAtMs && <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">Last checked: {new Date(row.lastTestAtMs).toLocaleString()}</div>}
+              {row.lastTestAtMs && <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-[var(--text-3)]">Last checked: {new Date(row.lastTestAtMs).toLocaleString()}</div>}
               {row.missingEnv?.length && row.missingEnv.length > 0 && (
-                <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-amber-300">
+                <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-[var(--warning)]">
                   Missing env: {row.missingEnv.join(', ')}
                 </div>
               )}
-              {row.failureReason && <div className="mt-1 text-[11px] text-red-200">{row.failureReason}</div>}
+              {row.failureReason && <div className="mt-1 text-[11px] text-[var(--error)]">{row.failureReason}</div>}
             </div>
             );
           })}

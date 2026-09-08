@@ -86,6 +86,22 @@ Rule 12 / Rule 11. This register survives the session. Future agents resume from
   toast) and correcting the now-stale `handleAllComplete` comment in
   `SetupFlow.tsx` that had described this as unreachable-without-new-work.
   Status: closed.
+- [2026-09-07, resolved same day] **`OnboardingWizard.tsx` theme-awareness —
+  fixed ("better safe than sorry" per explicit user instruction), not left
+  deferred.** Originally found dark-only-by-design during the ui-redesign
+  worktree's repo-wide raw white/black sweep (`docs/ui-redesign/bug-log.md`
+  #117, ~35 occurrences). A same-day follow-up considered leaving it deferred
+  because the user is separately building a "smart installer" and may retire
+  this wizard entirely. The user's final instruction: fix it anyway (a
+  theme-aware onboarding costs nothing if the installer later replaces it, and
+  protects against it staying live longer than expected) — see bug-log #122.
+  `useTheme()` is now called at the top of `OnboardingWizard.tsx`, all ~35 raw
+  white/black occurrences retokenized, mechanically identical to #119's
+  `CoachWindow.tsx` fix. **If a smart-installer flow later supersedes this
+  wizard:** the theme wiring is contained entirely in this one file (a single
+  `useTheme()` call plus token classes) — deleting or replacing the file
+  removes it cleanly, nothing else in the app depends on
+  `OnboardingWizard.tsx` having been made theme-aware. Status: closed.
 - [2026-09-07] **CALL-E (J3): three live-verification steps deferred to the
   owner — everything else is done.** The connector's code layer is complete
   and CI-green (143 tests across the CALL-E suite), and as of PR #234 the

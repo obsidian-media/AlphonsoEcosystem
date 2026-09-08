@@ -45,25 +45,25 @@ export class ViewErrorBoundary extends Component<Props, State> {
       const { label = 'View' } = this.props;
       return (
         <div className="h-full flex flex-col items-center justify-center gap-4 px-8 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-            <AlertCircle className="w-6 h-6 text-red-400" />
+          <div className="w-12 h-12 rounded-2xl bg-[var(--error-dim)] border border-[var(--error-border)] flex items-center justify-center">
+            <AlertCircle className="w-6 h-6 text-[var(--error)]" />
           </div>
           <div className="space-y-1">
-            <div className="text-sm font-semibold text-zinc-200">{label} crashed</div>
-            <div className="text-xs text-zinc-500 max-w-xs leading-relaxed font-mono">
+            <div className="text-sm font-semibold text-[var(--text-2)]">{label} crashed</div>
+            <div className="text-xs text-[var(--text-3)] max-w-xs leading-relaxed font-mono">
               {String(this.state.error?.message || this.state.error)}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={this.handleReset}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-xl text-xs font-bold text-zinc-300 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--text-2)] transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Reload view
             </button>
             <button
               onClick={this.handleCopyError}
-              className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-xl text-xs text-zinc-500 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-3)] hover:bg-[var(--surface-3)] border border-[var(--border)] rounded-xl text-xs text-[var(--text-3)] transition-colors"
               aria-label="Copy error details"
               title="Copy error details"
             >
@@ -72,13 +72,13 @@ export class ViewErrorBoundary extends Component<Props, State> {
           </div>
           <button
             onClick={() => this.setState((s) => ({ showDetails: !s.showDetails }))}
-            className="flex items-center gap-1 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="flex items-center gap-1 text-[10px] text-[var(--text-4)] hover:text-[var(--text-3)] transition-colors"
           >
             <ChevronDown className={`w-3 h-3 transition-transform ${this.state.showDetails ? 'rotate-180' : ''}`} />
             {this.state.showDetails ? 'Hide' : 'Show'} stack trace
           </button>
           {this.state.showDetails && this.state.error && (
-            <pre className="mt-2 p-3 bg-zinc-900 border border-white/5 rounded-lg text-[10px] text-zinc-400 font-mono overflow-auto max-h-40 w-full max-w-lg whitespace-pre-wrap">
+            <pre className="mt-2 p-3 bg-[var(--surface-1)] border border-[var(--border)] rounded-lg text-[10px] text-[var(--text-3)] font-mono overflow-auto max-h-40 w-full max-w-lg whitespace-pre-wrap">
               {this.state.error.stack || this.state.error.message}
             </pre>
           )}

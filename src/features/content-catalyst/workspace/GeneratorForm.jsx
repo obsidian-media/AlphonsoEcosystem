@@ -9,15 +9,15 @@ export function GeneratorForm({ form, setForm, brandProfile, injectedIdea, onIde
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-200">Creative brief</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--accent)]">Creative brief</span>
           <p className="mt-1 text-xs text-[var(--text-3)]">Describe the outcome. Choose what you want produced.</p>
         </div>
       </div>
 
       {injectedIdea && (
-        <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 flex items-start justify-between gap-2">
+        <div className="rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-dim)] px-3 py-2 text-xs text-[var(--text-2)] flex items-start justify-between gap-2">
           <span className="line-clamp-2">{injectedIdea}</span>
-          <button type="button" onClick={onIdeaUsed} className="shrink-0 text-[9px] font-bold uppercase tracking-widest border border-amber-300/30 rounded px-2 py-0.5 hover:bg-amber-400/10">Use</button>
+          <button type="button" onClick={onIdeaUsed} className="shrink-0 text-[9px] font-bold uppercase tracking-widest border border-[var(--warning)]/40 rounded px-2 py-0.5 hover:bg-[var(--warning-dim)]">Use</button>
         </div>
       )}
 
@@ -72,7 +72,7 @@ export function GeneratorForm({ form, setForm, brandProfile, injectedIdea, onIde
             onClick={() => setForm((c) => ({ ...c, needs: { ...c.needs, [key]: !c.needs[key] } }))}
             className={`rounded-md border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
               form.needs[key]
-                ? 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200'
+                ? 'border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)]'
                 : 'border-[var(--border)] text-[var(--text-4)] hover:text-[var(--text-2)]'
             }`}
           >
@@ -87,7 +87,7 @@ export function GeneratorForm({ form, setForm, brandProfile, injectedIdea, onIde
         type="button"
         disabled={isLoading || !form.idea.trim()}
         onClick={onGenerate}
-        className="w-full flex items-center justify-center gap-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-950 text-xs font-bold uppercase tracking-widest px-4 py-2.5 transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--surface-0)] text-xs font-bold uppercase tracking-widest px-4 py-2.5 transition-colors"
       >
         <Sparkles className="h-3.5 w-3.5" />
         {isLoading ? 'Generating…' : 'Create Content Job'}
