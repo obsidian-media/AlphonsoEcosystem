@@ -222,7 +222,7 @@ export function ApprovalModal({
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-colors shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
               resolvedRisk === 'high'
                 ? 'bg-[var(--error)] hover:bg-[var(--error-dim)]'
                 : 'bg-[var(--warning)] hover:bg-[var(--warning-dim)]'

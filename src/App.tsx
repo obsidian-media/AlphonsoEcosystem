@@ -17,6 +17,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useToast } from './components/ToastProvider';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { Tabs } from './components/ui/Tabs';
 import { useUxMode } from './hooks/useUxMode';
 import { GuidedTour } from './components/GuidedTour';
 import { DigestPanel, DigestItem } from './components/DigestPanel';
@@ -102,20 +103,16 @@ function MissionRoomBoardroomTabs({ onCreateApprovalRequest }: { onCreateApprova
   const approval = useRequestApprovalBridge();
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex items-center gap-1 px-5 pt-3 pb-0 border-b border-[var(--border)] shrink-0">
-        {(['mission', 'boardroom', 'boardroom_legacy'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setSubTab(t)}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
-              subTab === t
-                ? 'bg-[var(--surface-1)] border border-b-0 border-[var(--border)] text-[var(--text-1)]'
-                : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
-            }`}
-          >
-            {t === 'mission' ? 'Mission Room' : t === 'boardroom' ? 'Boardroom Sessions' : 'Boardroom Legacy'}
-          </button>
-        ))}
+      <div className="px-5 pt-3 pb-0 shrink-0">
+        <Tabs
+          tabs={[
+            { id: 'mission', label: 'Mission Room' },
+            { id: 'boardroom', label: 'Boardroom Sessions' },
+            { id: 'boardroom_legacy', label: 'Boardroom Legacy' }
+          ]}
+          activeId={subTab}
+          onChange={(id) => setSubTab(id as 'mission' | 'boardroom' | 'boardroom_legacy')}
+        />
       </div>
       <div className="flex-1 overflow-hidden">
         {subTab === 'mission' ? (

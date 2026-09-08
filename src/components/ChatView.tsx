@@ -1198,13 +1198,13 @@ export function ChatView({
           <motion.div key={message.id} variants={messageIn} initial="hidden" animate="visible" exit={{ opacity: 0, y: -4 }} className={`flex ${compactChat ? 'gap-2 max-w-4xl' : 'gap-4 max-w-3xl'} mx-auto w-full ${message.role === 'user' ? 'justify-end' : ''}`}>
             {message.role === 'assistant' && !compactChat && (
               message.isError ? (
-                <div className="w-8 h-8 rounded-lg bg-red-500/10 border-red-500/20 border flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-red-500/10 border-red-500/20 border flex items-center justify-center shrink-0 mt-1">
                   <Bot className="w-4 h-4 text-red-400" />
                 </div>
               ) : message.agentId ? (
-                <AgentAvatar agentId={message.agentId} name={message.agentId} sizeClass="h-8 w-8" className="shrink-0 mt-1 shadow-sm" />
+                <AgentAvatar agentId={message.agentId} name={message.agentId} sizeClass="h-8 w-8" className="shrink-0 mt-1" />
               ) : (
-                <div className="w-8 h-8 rounded-lg bg-[var(--accent-dim)] border-[var(--accent-border)] border flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-[var(--accent-dim)] border-[var(--accent-border)] border flex items-center justify-center shrink-0 mt-1">
                   <Bot className="w-4 h-4 text-[var(--accent)]" />
                 </div>
               )
@@ -1229,7 +1229,7 @@ export function ChatView({
                       )}
                     </div>
                   ) : (
-                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border shadow-sm bg-[var(--surface-1)] border-[var(--border)] rounded-tl-sm ${message.isNew ? 'border-l-2 border-[var(--success)] animate-border-fade' : ''} text-[var(--text-1)]`}>
+                    <div className={`${compactChat ? 'px-3 py-2 text-[12px]' : 'px-4 py-3'} rounded-2xl border bg-[var(--surface-1)] border-[var(--border)] rounded-tl-sm ${message.isNew ? 'border-l-2 border-[var(--success)] animate-border-fade' : ''} text-[var(--text-1)]`}>
                       <MarkdownMessage content={message.content} />
                     </div>
                   )}
@@ -1295,7 +1295,7 @@ export function ChatView({
                 </div>
               ) : (
                 <div className="relative group">
-                  <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--surface-0)] shadow-sm ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
+                  <div className={`px-3 py-2 text-xs rounded-2xl rounded-tr-sm bg-[var(--accent)] text-[var(--surface-0)] ${compactChat ? '' : 'px-4 py-3'}`}>{message.content as string}</div>
                   <button
                     onClick={() => pinnedMessages.some((p) => p.id === message.id) ? unpinMessage(message.id) : pinMessage(message)}
                     className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[var(--surface-0)] hover:text-[var(--surface-0)]"
@@ -1451,7 +1451,7 @@ export function ChatView({
 
       <div className={`${compactChat ? 'p-3' : 'p-5'} shrink-0 max-w-4xl mx-auto w-full`}>
         <div
-          className={`relative bg-[var(--surface-glass)] border rounded-2xl shadow-2xl backdrop-blur-xl group focus-within:border-[var(--accent-border)] focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-[var(--warning-border)] border-dashed' : 'border-[var(--border)]'}`}
+          className={`relative bg-[var(--surface-glass)] border rounded-2xl backdrop-blur-xl group focus-within:border-[var(--accent-border)] focus-within:shadow-[0_0_20px_var(--accent-glow)] transition-all ${isDragging ? 'border-[var(--warning-border)] border-dashed' : 'border-[var(--border)]'}`}
           onDragEnter={() => setIsDragging(true)}
           onDragLeave={() => setIsDragging(false)}
           onDragOver={(e) => e.preventDefault()}
@@ -1545,7 +1545,7 @@ export function ChatView({
               className={`h-7 px-4 rounded-lg flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
                 isGenerating || !inputValue.trim()
                   ? 'bg-[var(--surface-3)] text-[var(--text-4)] cursor-not-allowed opacity-50'
-                  : 'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)] shadow-sm'
+                  : 'bg-[var(--accent)] text-[var(--surface-0)] hover:bg-[var(--accent-hover)]'
               }`}
               aria-label="Send message"
               data-testid="chat-send-button"

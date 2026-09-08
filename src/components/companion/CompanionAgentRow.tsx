@@ -30,8 +30,8 @@ export function CompanionAgentRow({ agents, activeAgentId, onSelectAgent }: Prop
             className={`flex flex-col items-center gap-1 shrink-0 transition-opacity ${isActive ? 'opacity-100' : 'opacity-45 hover:opacity-75'}`}
           >
             <div className={`relative rounded-full transition-transform ${isActive ? 'scale-105 ring-2 ring-offset-2 ring-offset-[var(--companion-surface)] ring-[var(--accent)]' : ''}`}>
-              <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-14 w-14" className="border-2 border-white/60" />
-              <span className="absolute -bottom-1 -right-1 text-sm leading-none bg-white rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
+              <AgentAvatar agentId={agent.id} name={agent.name} sizeClass="h-14 w-14" />
+              <span className="absolute -bottom-1 -right-1 text-sm leading-none bg-[var(--surface-1)] border border-[var(--border)] rounded-full h-5 w-5 flex items-center justify-center">
                 {emoji}
               </span>
             </div>

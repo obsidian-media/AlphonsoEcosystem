@@ -27,7 +27,7 @@ export function CompanionInputBar({ agentEmoji, onSend, disabled = false }: Prop
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-md px-3 py-2 shadow-sm">
+    <div className="flex items-center gap-2 rounded-full bg-[var(--companion-bubble-theirs)] backdrop-blur-md px-3 py-2">
       <span className="text-lg leading-none select-none" aria-hidden="true">{agentEmoji}</span>
       <input
         type="text"
