@@ -72,13 +72,13 @@ export function SmartVoiceButton({ voiceStatus: browserVoiceStatus, onToggle, on
       onClick={handleClick}
       data-testid="smart-voice-button"
       disabled={isRequesting || browserVoiceStatus?.state === VOICE_STATES.UNSUPPORTED}
-      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-t-lg text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 ${
+      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-t-lg text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
         isListening || jarvisThinking || jarvisSpeaking
           ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-muted)]'
           : isJarvisAvailable
-            ? 'border-[var(--success)]/40 text-[var(--success)] hover:bg-[var(--success-muted)]'
+            ? 'border-[var(--success-border)] text-[var(--success)] hover:bg-[var(--success-muted)]'
             : jarvisError
-              ? 'border-amber-500/30 text-amber-300 hover:bg-amber-500/10'
+              ? 'border-[var(--warning-border)] text-[var(--warning)] hover:bg-[var(--warning-dim)]'
               : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-1)]'
       }`}
       title={title}

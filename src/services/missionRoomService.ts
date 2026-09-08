@@ -12,7 +12,7 @@ interface AgentInfo {
 
 export type MissionTaskStatus = 'todo' | 'doing' | 'review' | 'approved' | 'blocked';
 
-type AgentKey = 'user' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova' | 'kairo';
+type AgentKey = 'user' | 'alphonso' | 'jose' | 'hector' | 'miya' | 'maria' | 'marcus' | 'echo' | 'sentinel' | 'nova';
 
 interface MissionRoom {
   id: string;
@@ -218,7 +218,7 @@ const MEDIUM_RISK_PATTERNS: RegExp[] = [
 export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
   user: {
     key: 'user',
-    name: 'Shayan',
+    name: 'You',
     role: 'Founder / final approval',
     lane: 'human',
     accent: 'emerald'
@@ -285,14 +285,13 @@ export const MISSION_ROOM_AGENTS: Record<string, AgentInfo> = {
     role: 'Frontend design, UI/UX, visual systems, layout, scoring, analysis, opportunity prioritization',
     lane: 'design',
     accent: 'fuchsia'
-  },
-  kairo: {
-    key: 'kairo',
-    name: 'Kairo',
-    role: 'Backend engineering — systems, APIs, data, reliability, scaling',
-    lane: 'backend',
-    accent: 'sky'
   }
+  // 'kairo' removed -- a fictional legacy roster entry from an early
+  // 11-seat design that was never actually built (same aspirational
+  // roster BOARDROOM_ROLES.md/BOARDROOM_MODEL_REGISTRY.md already
+  // document and correct elsewhere in this app). It was showing up in
+  // Mission Room's default participant grid as if it were a real 10th
+  // agent, which it never was -- the app only has the real 9.
 };
 
 export const MISSION_TASK_STATUSES: MissionTaskStatus[] = ['todo', 'doing', 'review', 'approved', 'blocked'];
@@ -379,8 +378,8 @@ export function createDefaultMissionRoom(): MissionRoom {
   return {
     id: 'mission_room_main',
     name: 'ALPHONSO Mission Room',
-    description: 'Shared command table for Shayan and the ALPHONSO agent board.',
-    context: 'Coordinate projects, assign execution lanes, review evidence, and keep publish/external actions behind Shayan approval.',
+    description: 'Shared command table for you and the ALPHONSO agent board.',
+    context: 'Coordinate projects, assign execution lanes, review evidence, and keep publish/external actions behind your approval.',
     selectedAgents: Object.keys(MISSION_ROOM_AGENTS),
     openParticipantSlots: [],
     mode: 'mission-control',
@@ -565,13 +564,13 @@ export function createHermesHandoff({ objective = '', project = '', constraints 
     'Role: Hermes, external executor worker.',
     `Project: ${redactMissionRoomSecrets(project || 'UNSPECIFIED')}`,
     `Objective: ${redactMissionRoomSecrets(objective || 'Audit and execute the assigned task.')}`,
-    'Commander: Kite. Final approval: Shayan.',
+    'Commander: Kite. Final approval: the project owner.',
     'Requirements:',
     '- Inspect before editing.',
     '- Separate proved facts from assumptions.',
-    '- Do not publish, push, delete, spend money, or use secrets without Shayan approval.',
+    '- Do not publish, push, delete, spend money, or use secrets without the project owner\'s approval.',
     '- Report changed files, verification commands, results, blockers, and risks.',
-    '- If any task requires external action, secrets, production access, or destructive changes: stop and request Shayan approval in the Mission Room.',
+    '- If any task requires external action, secrets, production access, or destructive changes: stop and request the project owner\'s approval in the Mission Room.',
     constraints ? `Constraints: ${redactMissionRoomSecrets(constraints)}` : 'Constraints: local/reversible work only unless approved.',
     acceptance ? `Acceptance criteria: ${redactMissionRoomSecrets(acceptance)}` : 'Acceptance criteria: clear status, evidence, and next action.'
   ].join('\n');

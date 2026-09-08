@@ -13,7 +13,7 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
 
     if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
       return (
-        <code key={key} className="bg-zinc-800 px-1 rounded text-xs font-mono text-cyan-300">
+        <code key={key} className="bg-[var(--surface-3)] px-1 rounded text-xs font-mono text-cyan-300">
           {part.slice(1, -1)}
         </code>
       );
@@ -57,7 +57,7 @@ function parseMarkdown(text: string): React.ReactNode[] | null {
       elements.push(
         <pre
           key={blockKey++}
-          className="bg-zinc-900 border border-white/[0.06] rounded-lg p-3 overflow-x-auto my-2"
+          className="bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-3 overflow-x-auto my-2"
         >
           <code className="text-xs font-mono text-green-300">
             {codeLines.join('\n')}
@@ -73,7 +73,7 @@ function parseMarkdown(text: string): React.ReactNode[] | null {
 
     if (h3Match) {
       elements.push(
-        <h3 key={blockKey++} className="text-[13px] font-semibold text-zinc-100 mt-3 mb-1">
+        <h3 key={blockKey++} className="text-[13px] font-semibold text-[var(--text-1)] mt-3 mb-1">
           {renderInline(h3Match[1], String(blockKey))}
         </h3>
       );
@@ -82,7 +82,7 @@ function parseMarkdown(text: string): React.ReactNode[] | null {
     }
     if (h2Match) {
       elements.push(
-        <h2 key={blockKey++} className="text-sm font-semibold text-zinc-100 mt-3 mb-1">
+        <h2 key={blockKey++} className="text-sm font-semibold text-[var(--text-1)] mt-3 mb-1">
           {renderInline(h2Match[1], String(blockKey))}
         </h2>
       );
@@ -91,7 +91,7 @@ function parseMarkdown(text: string): React.ReactNode[] | null {
     }
     if (h1Match) {
       elements.push(
-        <h1 key={blockKey++} className="text-sm font-bold text-zinc-100 mt-4 mb-1">
+        <h1 key={blockKey++} className="text-sm font-bold text-[var(--text-1)] mt-4 mb-1">
           {renderInline(h1Match[1], String(blockKey))}
         </h1>
       );
@@ -108,7 +108,7 @@ function parseMarkdown(text: string): React.ReactNode[] | null {
       elements.push(
         <ul key={blockKey++} className="ml-4 space-y-0.5 list-disc list-outside">
           {items.map((item, idx) => (
-            <li key={idx} className="text-[13px] leading-relaxed text-zinc-200">
+            <li key={idx} className="text-[13px] leading-relaxed text-[var(--text-2)]">
               {renderInline(item, `${blockKey}-li${idx}`)}
             </li>
           ))}
@@ -126,7 +126,7 @@ function parseMarkdown(text: string): React.ReactNode[] | null {
       elements.push(
         <ol key={blockKey++} className="ml-4 space-y-0.5 list-decimal list-outside">
           {items.map((item, idx) => (
-            <li key={idx} className="text-[13px] leading-relaxed text-zinc-200">
+            <li key={idx} className="text-[13px] leading-relaxed text-[var(--text-2)]">
               {renderInline(item, `${blockKey}-oli${idx}`)}
             </li>
           ))}
@@ -146,7 +146,7 @@ function parseMarkdown(text: string): React.ReactNode[] | null {
     }
 
     elements.push(
-      <p key={blockKey++} className="text-[13px] leading-relaxed text-zinc-200">
+      <p key={blockKey++} className="text-[13px] leading-relaxed text-[var(--text-2)]">
         {renderInline(line, String(blockKey))}
       </p>
     );

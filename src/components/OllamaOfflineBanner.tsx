@@ -43,14 +43,14 @@ export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }: O
   };
 
   return (
-    <div className="w-full px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-3 flex-wrap">
-      <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+    <div className="w-full px-4 py-2 bg-[var(--warning-dim)] border-b border-[var(--warning-border)] flex items-center gap-3 flex-wrap">
+      <AlertTriangle size={14} className="text-[var(--warning)] shrink-0" />
 
-      <span className="text-amber-200/90 text-xs flex-1 min-w-0">
+      <span className="text-[var(--warning)] text-xs flex-1 min-w-0">
         {isNoModels
           ? 'Ollama is running but no models are installed — open Runtime Hub to pull a model.'
           : 'Ollama is offline — AI responses are unavailable.'}
-        {startMsg && <span className="ml-2 text-amber-300/70">{startMsg}</span>}
+        {startMsg && <span className="ml-2 text-[var(--warning)]">{startMsg}</span>}
       </span>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -58,7 +58,7 @@ export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }: O
           <button
             onClick={handleStart}
             disabled={starting}
-            className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-[var(--warning)] hover:bg-[var(--warning-dim)] text-white transition-colors disabled:opacity-50"
           >
             {starting ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
             Start Ollama
@@ -66,13 +66,13 @@ export function OllamaOfflineBanner({ ollamaStatus, onRetry, onOpenRuntimes }: O
         )}
         <button
           onClick={onRetry}
-          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 transition-colors"
+          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-[var(--warning)] hover:bg-[var(--warning-dim)] transition-colors"
         >
           <RefreshCw size={10} /> Retry
         </button>
         <button
           onClick={onOpenRuntimes}
-          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 transition-colors"
+          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-[var(--warning)] hover:bg-[var(--warning-dim)] transition-colors"
         >
           <ExternalLink size={10} /> Runtime Hub
         </button>

@@ -67,34 +67,34 @@ function MessageBubble({
   const isFailure = message.kind === 'failure';
   const isGated = message.approvalRequired && !message.confirmed;
   const toneClass = isEscalation
-    ? 'border-amber-400/40 bg-amber-500/10'
+    ? 'bg-[var(--warning-dim)]'
     : isFailure
-      ? 'border-rose-400/40 bg-rose-500/10'
-      : 'border-[var(--border)] bg-[var(--surface-2)]';
+      ? 'bg-[var(--error-dim)]'
+      : 'bg-[var(--surface-2)]';
   return (
-    <div data-message-kind={message.kind} className={`rounded-lg border p-2.5 text-xs ${toneClass}`}>
+    <div data-message-kind={message.kind} className={`rounded-lg p-2.5 text-xs ${toneClass}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className={`font-semibold ${isEscalation ? 'text-amber-300' : isFailure ? 'text-rose-300' : 'text-[var(--text-1)]'}`}>
+        <span className={`font-semibold ${isEscalation ? 'text-[var(--warning)]' : isFailure ? 'text-[var(--error)]' : 'text-[var(--text-1)]'}`}>
           {isEscalation ? 'Needs your decision' : isFailure ? `${agentLabel(message.speaker)} — failed` : agentLabel(message.speaker)}
         </span>
         {message.approvalRequired && (
-          <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">
+          <span className="rounded-full border border-[var(--warning-border)] bg-[var(--warning-dim)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--warning)]">
             {message.confirmed ? 'confirmed' : 'approval required'}
           </span>
         )}
       </div>
       {isGated ? (
-        <div className="mt-1.5 rounded-md border border-amber-400/30 bg-amber-500/5 p-2">
-          <p className="text-amber-300">This message proposes a high-risk action — content hidden until confirmed.</p>
+        <div className="mt-1.5 rounded-md bg-[var(--warning-dim)] p-2">
+          <p className="text-[var(--warning)]">This message proposes a high-risk action — content hidden until confirmed.</p>
           <button
             onClick={() => onConfirm(message)}
-            className="mt-1.5 rounded-md border border-amber-400/40 px-2 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/10"
+            className="mt-1.5 rounded-md border border-[var(--warning-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)] hover:bg-[var(--warning-dim)]"
           >
             Confirm to reveal
           </button>
         </div>
       ) : (
-        <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-amber-200' : isFailure ? 'text-rose-200' : 'text-[var(--text-2)]'}`}>{message.content}</div>
+        <div className={`mt-1 whitespace-pre-wrap ${isEscalation ? 'text-[var(--warning)]' : isFailure ? 'text-[var(--error)]' : 'text-[var(--text-2)]'}`}>{message.content}</div>
       )}
       {!isEscalation && !isFailure && message.model && (
         <div className="mt-1 text-[9px] text-[var(--text-3)]">
@@ -104,18 +104,18 @@ function MessageBubble({
       {isFailure && message.retryContext && (
         <button
           onClick={() => onRetry(message)}
-          className="mt-1.5 rounded-md border border-rose-400/30 px-2 py-0.5 text-[10px] font-semibold text-rose-300 hover:bg-rose-500/10"
+          className="mt-1.5 rounded-md border border-[var(--error-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--error)] hover:bg-[var(--error-dim)]"
         >
           Retry
         </button>
       )}
       {isEscalation && (
         message.acknowledged ? (
-          <span className="mt-1.5 inline-block text-[10px] font-semibold text-amber-400/70">✓ Acknowledged</span>
+          <span className="mt-1.5 inline-block text-[10px] font-semibold text-[var(--warning)]">✓ Acknowledged</span>
         ) : (
           <button
             onClick={() => onAcknowledge(message)}
-            className="mt-1.5 rounded-md border border-amber-400/30 px-2 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/10"
+            className="mt-1.5 rounded-md border border-[var(--warning-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)] hover:bg-[var(--warning-dim)]"
           >
             Acknowledge
           </button>

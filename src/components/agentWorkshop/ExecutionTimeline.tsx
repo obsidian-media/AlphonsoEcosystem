@@ -14,14 +14,14 @@ interface Props {
 
 export function ExecutionTimeline({ timeline = [] }: Props) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-3">Execution Timeline</div>
+    <div className="rounded-2xl bg-[var(--surface-0)] p-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-3">Execution Timeline</div>
       <div className="space-y-2">
-        {timeline.length === 0 && <div className="text-sm text-zinc-500">No timeline available.</div>}
+        {timeline.length === 0 && <div className="text-sm text-[var(--text-3)]">No timeline available.</div>}
         {timeline.map((step) => (
-          <div key={step.id} className="rounded-lg border border-white/10 bg-zinc-900/40 p-3 text-xs">
-            <div className="text-zinc-200 font-semibold">Phase {step.id || step.step}: {step.phase || step.action}</div>
-            <div className="text-zinc-500 mt-1">owner: {step.owner}</div>
+          <div key={step.id} className="rounded-lg bg-[var(--surface-2)] p-3 text-xs">
+            <div className="text-[var(--text-2)] font-semibold">Phase {step.id || step.step}: {step.phase || step.action}</div>
+            <div className="text-[var(--text-3)] mt-1">owner: {step.owner}</div>
           </div>
         ))}
       </div>

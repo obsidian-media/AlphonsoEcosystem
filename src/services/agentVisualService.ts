@@ -1,9 +1,12 @@
-import alphonsoMascot from '../assets/alphonso-mascot.webp';
-import joseMascot from '../assets/jose-mascot.webp';
-import miyaMascot from '../assets/miya-mascot-main.webp';
-import hectorMascot from '../assets/hector-mascot.webp';
-import mariaMascot from '../assets/agents/maria/maria-mascot-main.webp';
-import marcusMascot from '../assets/agents/marcus/marcus-mascot-main.webp';
+import alphonsoMascot from '../assets/agents/alphonso/portrait.jpg';
+import joseMascot from '../assets/agents/jose/portrait.jpg';
+import miyaMascot from '../assets/agents/miya/portrait.jpg';
+import hectorMascot from '../assets/agents/hector/portrait.jpg';
+import mariaMascot from '../assets/agents/maria/portrait.jpg';
+import marcusMascot from '../assets/agents/marcus/portrait.jpg';
+import echoMascot from '../assets/agents/echo/portrait.jpg';
+import sentinelMascot from '../assets/agents/sentinel/portrait.jpg';
+import novaMascot from '../assets/agents/nova/portrait.jpg';
 import { getCustomAvatarDataUrl } from './agentAvatarService';
 
 const AGENT_MASCOT_MAP: Record<string, string> = {
@@ -12,7 +15,10 @@ const AGENT_MASCOT_MAP: Record<string, string> = {
   miya: miyaMascot,
   hector: hectorMascot,
   maria: mariaMascot,
-  marcus: marcusMascot
+  marcus: marcusMascot,
+  echo: echoMascot,
+  sentinel: sentinelMascot,
+  nova: novaMascot
 };
 
 export function getAgentMascotPath(agentId: string): string | null {

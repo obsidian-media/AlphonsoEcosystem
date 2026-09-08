@@ -70,7 +70,7 @@ export const MARCUS_PROFILE = {
     'Notify team channels about deployment status and known issues.'
   ],
   hierarchyRank: 6,
-  mascotPath: 'src/assets/agents/marcus/marcus-mascot-main.webp',
+  mascotPath: 'src/assets/agents/marcus/portrait.jpg',
   identity: 'Execution specialist for approved campaigns and distribution workflows under Jose governance.',
   color: 'emerald',
   memoryCategories: ['task_memory', 'orchestration_memory', 'timeline_memory'],

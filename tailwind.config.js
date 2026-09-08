@@ -10,6 +10,13 @@ export default {
         sans: ['Inter Variable', 'Plus Jakarta Sans Variable', 'system-ui', 'sans-serif'],
         heading: ['Plus Jakarta Sans Variable', 'Inter Variable', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        // Fraunces was never actually installed/imported anywhere in this
+        // whole redesign effort until now -- every prior font-serif use
+        // (MissionControlHome's headline, CompanionMode's agent name,
+        // Hector Research Desk's serif headers) was silently falling back
+        // to Tailwind's generic system serif stack instead of the real,
+        // agreed display typeface.
+        serif: ['Fraunces Variable', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
       },
       colors: {
         surface: {

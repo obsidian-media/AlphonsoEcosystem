@@ -132,7 +132,7 @@ export function SentinelAllowlistPanel() {
     <div className="flex flex-col gap-2">
       {/* Add form */}
       <form onSubmit={handleAdd} className="space-y-1.5">
-        {error && <p className="text-[10px] text-red-400">{error}</p>}
+        {error && <p className="text-[10px] text-[var(--error)]">{error}</p>}
         <div className="flex gap-1">
           <input
             type="text"
@@ -154,7 +154,7 @@ export function SentinelAllowlistPanel() {
           <button
             type="submit"
             aria-label="Add allowlist entry"
-            className="px-2 py-1 text-[11px] rounded bg-emerald-600/20 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
+            className="px-2 py-1 text-[11px] rounded bg-[var(--success-dim)] border border-[var(--success-border)] text-[var(--success)] hover:bg-[var(--success-dim)] transition-colors"
           >
             <Plus className="w-3 h-3" />
           </button>
@@ -188,8 +188,8 @@ export function SentinelAllowlistPanel() {
       {testResult && (
         <div className={`flex items-center gap-1.5 rounded px-2 py-1 text-[10px] border ${
           testResult.matched
-            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-            : 'bg-red-500/10 border-red-500/20 text-red-400'
+            ? 'bg-[var(--success-dim)] border-[var(--success-border)] text-[var(--success)]'
+            : 'bg-[var(--error-dim)] border-[var(--error-border)] text-[var(--error)]'
         }`}>
           {testResult.matched
             ? <CheckCircle className="w-3 h-3 shrink-0" />
@@ -220,7 +220,7 @@ export function SentinelAllowlistPanel() {
               </div>
               <button
                 onClick={() => handleRemove(entry.id)}
-                className="shrink-0 p-1 rounded text-[var(--text-4)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                className="shrink-0 p-1 rounded text-[var(--text-4)] hover:text-[var(--error)] hover:bg-[var(--error-dim)] transition-colors"
                 aria-label="Remove"
               >
                 <Trash2 className="w-3 h-3" />

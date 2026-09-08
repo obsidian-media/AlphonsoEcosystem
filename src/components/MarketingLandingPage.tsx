@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, PlayCircle, Shield, Sparkles, Zap } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatar';
-import alphonsoMascot from '../assets/alphonso-mascot.webp';
-import joseMascot from '../assets/jose-mascot.webp';
-import miyaMascot from '../assets/miya-mascot-main.webp';
+import alphonsoMascot from '../assets/agents/alphonso/portrait.jpg';
+import joseMascot from '../assets/agents/jose/portrait.jpg';
+import miyaMascot from '../assets/agents/miya/portrait.jpg';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },

@@ -8,9 +8,9 @@ interface ItemProps {
 
 function Item({ label, value }: ItemProps) {
   return (
-    <div className="rounded-lg border border-white/10 bg-zinc-900/40 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-widest text-zinc-500">{label}</div>
-      <div className="text-sm font-semibold text-zinc-100 mt-1">{value}</div>
+    <div className="rounded-lg bg-[var(--surface-2)] px-3 py-2">
+      <div className="text-[10px] uppercase tracking-widest text-[var(--text-3)]">{label}</div>
+      <div className="text-sm font-semibold text-[var(--text-1)] mt-1">{value}</div>
     </div>
   );
 }
@@ -38,8 +38,8 @@ export function SystemHealthPanel() {
   }, []);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-      <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-bold mb-3">System Health</div>
+    <div className="rounded-2xl bg-[var(--surface-0)] p-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-3)] font-bold mb-3">System Health</div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Item label="Build Status" value={health.buildStatus?.status || 'unknown'} />
         <Item label="Verification" value={health.verificationStatus} />
@@ -50,7 +50,7 @@ export function SystemHealthPanel() {
         <Item label="Orchestration Queue" value={health.orchestrationQueue} />
         <Item label="Agent Activity" value={health.agentActivity} />
       </div>
-      <div className="mt-2 text-[11px] text-zinc-500">Open proposals: {health.openProposals}</div>
+      <div className="mt-2 text-[11px] text-[var(--text-3)]">Open proposals: {health.openProposals}</div>
     </div>
   );
 }
