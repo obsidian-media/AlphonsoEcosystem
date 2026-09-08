@@ -4,7 +4,7 @@
 
 # Alphonso
 
-> **v2.7.1** — Local-first AI desktop companion with 9 agents, 25 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
+> **v2.7.1** — Local-first AI desktop companion with 9 agents, 26 connectors, iOS companion app, Agent OS module system, Boardroom multi-agent sessions, and daily scheduler presets — powered by Ollama
 
 [![Version](https://img.shields.io/badge/version-2.7.1-blue)](https://github.com/obsidian-media/AlphonsoEcosystem/releases)
 [![Tests](https://img.shields.io/badge/tests-3758%20passing-brightgreen)](https://github.com/obsidian-media/AlphonsoEcosystem)
@@ -122,7 +122,7 @@ full detail in `docs/ALPHONSO_GROUND_TRUTH.md` §11.15:
 ## What's New in v2.4.4
 
 - **iOS Companion App** — Native Swift app for iPhone/iPad. Pairs to the Alphonso desktop via mDNS discovery + ed25519-signed WebSocket. Sends voice commands, approves pending tasks, and receives agent reply notifications — all on-device, no cloud relay. Includes Xcode project, TestFlight upload workflow, and Windows-native signing scripts.
-- **138 Rust unit tests across 38 modules** — 117 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
+- **140 Rust unit tests across 38 modules** — 117 Tauri commands across the modularised `src-tauri/src/` (up from 18 modules / 82 commands).
 
 ## What's New in v2.4.2
 
@@ -401,8 +401,8 @@ See [docs/PRICING.md](docs/PRICING.md) for full tier breakdown and FAQ.
 ```bash
 npm run dev            # Vite dev server (port 5173)
 npm run lint           # ESLint on src/
-npm run test           # 4,199 tests across 291 files
-npm run test:coverage  # Coverage report (~38%+; threshold 35%)
+npm run test           # 5,239 tests across 359 files
+npm run test:coverage  # Coverage report (actual 2026-09-05: 57.81% lines / 45.62% branches / 50.32% functions / 55.65% statements; enforced floors: 48% lines / 38% branches / 30% functions / 48% statements)
 npm run build          # Production build (OXC compiler)
 npm run verify:app     # lint + typecheck + test + build in one command
 npm run test:e2e       # Playwright smoke tests (needs dev server + Ollama)
@@ -482,7 +482,7 @@ blocker.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, code style, and PR guidelines.
 
-Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 190 services already exist.
+Before writing any new service, component, or feature, check `CLAUDE.md` for the "Do Not Duplicate" table — 196 services already exist.
 
 ## Security
 

@@ -14,22 +14,19 @@ describe('ResearchReportPanel', () => {
     expect(screen.getByText('No Hector report selected.')).toBeTruthy();
   });
 
-  it('shows the synthesis-gap honesty notice whenever a report is selected', () => {
+  it('shows the source-discovery status and disabled export buttons when a report has no synthesis yet', () => {
     render(<ResearchReportPanel report={{ researchQuestion: 'Q', status: 'draft' }} />);
-    expect(screen.getByText(/doesn't yet combine these into one written report/i)).toBeTruthy();
+    expect(screen.getByText(/draft\. Sources and citations are generated from real live discovery\/fetch runs\./i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Markdown' })).toBeDisabled();
   });
 
-  it('renders verified facts, inferred points, and approval-needed lists', () => {
+  it('renders approval-needed and recommended-next-step, once verifiedFacts/inferredPoints were superseded by real synthesis', () => {
     render(<ResearchReportPanel report={{
       researchQuestion: 'Q',
       status: 'complete',
-      verifiedFacts: ['Fact A'],
-      inferredPoints: ['Inference A'],
       joseApprovalNeeded: ['Approval A'],
       recommendedNextStep: 'Send to Jose',
     }} />);
-    expect(screen.getByText('Fact A')).toBeTruthy();
-    expect(screen.getByText('Inference A')).toBeTruthy();
     expect(screen.getByText('Approval A')).toBeTruthy();
     expect(screen.getByText(/Send to Jose/)).toBeTruthy();
   });

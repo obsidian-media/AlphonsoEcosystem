@@ -38,9 +38,15 @@ const TRUTH_PATTERNS = [
 // static analysis (dynamic test generation, describe.each, etc. make grep-based
 // counting inaccurate) — same reasoning getAllCounts() already applies to test
 // file counts. This must be updated by hand when the suite's test count changes
-// materially; verified against the actual `npm test` output as of 2026-08-19
-// (265 files / 3,831 tests, full local run, exit 0).
-const CURRENT_TOTAL_TESTS = '4,199';
+// materially. Last reconciled 2026-09-06 against CI's `Test & Build` job output
+// on this PR (5,222 tests reported pre-fix) plus the tests added in the same
+// pass (17) -- local `npm test`/`npx vitest run` cannot complete a full run on
+// this dev machine (documented, pre-existing worker-pool resource constraint,
+// see CLAUDE.md), so CI's clean-runner output is the authoritative source,
+// not a local count. Earlier comments/commits referenced 3,831 and 5,147 --
+// both stale as of this reconciliation; this is the one number to trust going
+// forward until the next materially-different `npm test` run.
+const CURRENT_TOTAL_TESTS = '5,239';
 
 // Each entry defines a claim to verify:
 //   file        — relative path from project root

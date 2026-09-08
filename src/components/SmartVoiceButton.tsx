@@ -70,6 +70,7 @@ export function SmartVoiceButton({ voiceStatus: browserVoiceStatus, onToggle, on
   return (
     <button
       onClick={handleClick}
+      data-testid="smart-voice-button"
       disabled={isRequesting || browserVoiceStatus?.state === VOICE_STATES.UNSUPPORTED}
       className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-t-lg text-2xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-border)] ${
         isListening || jarvisThinking || jarvisSpeaking

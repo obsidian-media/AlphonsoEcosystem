@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare } from 'lucide-react';
+import { Activity, AlertTriangle, ChevronDown, ClipboardCopy, Compass, Download, Folder, FolderOpen, Monitor, Palette, RefreshCw, Terminal, Cpu, UserRound, Trash2, Plug, Key, CheckCircle2, XCircle, Database, Upload, Save, BarChart3, Zap, TrendingUp, ScrollText, Settings2, Bot, Package, ToggleLeft, ToggleRight, Mic, MessageSquare, PhoneCall } from 'lucide-react';
 import { Badge, SectionHeader, StatusDot, statusColors } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import { MemoryGraphViewer } from './MemoryGraphViewer';
@@ -27,6 +27,7 @@ import { NovaHistoryChart } from './NovaHistoryChart';
 import { CrashLogView } from './CrashLogView';
 import { CompanionPairingPanel } from './CompanionPairingPanel';
 import { ConnectorSetupPanel } from './ConnectorSetupPanel';
+import { CalleOutreachPanel } from './calle/CalleOutreachPanel';
 import { SessionHistoryView } from './SessionHistoryView';
 import { FilesView } from './FilesView';
 import { getWatcherConfig, saveWatcherConfig } from '../services/echoFileWatcherService';
@@ -1178,6 +1179,10 @@ export function SettingsView({
       <section className="space-y-4">
         <SectionHeader icon={Bot} label="Agent Providers" />
         <AgentProvidersSection />
+      </section>
+      <section className="space-y-4">
+        <SectionHeader icon={PhoneCall} label="CALL-E Outreach" />
+        <CalleOutreachPanel />
       </section>
       <section className="space-y-4">
         <SectionHeader icon={Plug} label="External Tools (Composio)" />

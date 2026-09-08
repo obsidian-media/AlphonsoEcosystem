@@ -26,7 +26,18 @@ vi.mock('../lib/appStorage', () => ({
 vi.mock('../lib/chatUtils', () => ({
   nextMsgId: vi.fn().mockReturnValue('msg-1'),
   CHAT_ASSISTANT_PROMPT: 'You are a helpful assistant.',
-  shouldRouteThroughJose: vi.fn().mockReturnValue(false)
+  shouldRouteThroughJose: vi.fn().mockReturnValue(false),
+  shouldRouteThroughCalleMcp: vi.fn().mockReturnValue(false)
+}));
+
+// ── CALL-E MCP outreach service mock ─────────────────────────────────────────
+vi.mock('../services/calleMcpOutreachService', () => ({
+  getMcpOutreachRecord: vi.fn().mockResolvedValue(null),
+  isAwaitingMcpOutreachInput: vi.fn().mockReturnValue(false),
+  handleMcpOutreachMessage: vi.fn().mockResolvedValue(''),
+  confirmMcpOutreachCall: vi.fn().mockResolvedValue(''),
+  cancelMcpOutreachCall: vi.fn().mockResolvedValue(''),
+  markMcpOutreachDelivered: vi.fn().mockResolvedValue(undefined)
 }));
 
 // ── Policy enforcement service mock ──────────────────────────────────────────
@@ -155,8 +166,9 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { sendNvidiaMessage } from '../services/connectors/nvidiaNimConnector';
 import { isGeminiConfigured } from '../services/connectors/geminiConnector';
 import { isHermesAgentConfigured, sendHermesAgentMessage } from '../services/connectors/hermesAgentConnector';
-import { nextMsgId } from '../lib/chatUtils';
+import { nextMsgId, shouldRouteThroughCalleMcp } from '../lib/chatUtils';
 import { invoke } from '@tauri-apps/api/core';
+import { getMcpOutreachRecord, isAwaitingMcpOutreachInput, handleMcpOutreachMessage } from '../services/calleMcpOutreachService';
 
 // ── Shared props factory ──────────────────────────────────────────────────────
 function makeProps(overrides = {}) {
@@ -508,5 +520,64 @@ describe('ChatView', () => {
     expect(rejectPacket).toHaveBeenCalledWith('pkt-1', 'Rejected from chat inline approval');
 
     expect(props.getItemDetail('pkt-1')).toEqual({ agent: 'marcus', actionType: 'external_publish', riskLevel: 'high' });
+  });
+
+  describe('CALL-E MCP conversational routing', () => {
+    beforeEach(() => {
+      getMcpOutreachRecord.mockResolvedValue(null);
+      isAwaitingMcpOutreachInput.mockReturnValue(false);
+      shouldRouteThroughCalleMcp.mockReturnValue(false);
+      handleMcpOutreachMessage.mockResolvedValue('What phone number should I call?');
+    });
+
+    it('routes a call-like message to handleMcpOutreachMessage instead of the normal Ollama path', async () => {
+      shouldRouteThroughCalleMcp.mockReturnValue(true);
+      render(<ChatView {...makeProps()} />);
+      await screen.findByText('What can I help you build?');
+
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: "call Joe's Pizza and ask about their website" } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await waitFor(() => {
+        expect(handleMcpOutreachMessage).toHaveBeenCalledWith('test-chat-id', "call Joe's Pizza and ask about their website");
+      });
+      await screen.findByText('What phone number should I call?');
+      expect(generateOllamaChatStream).not.toHaveBeenCalled();
+    });
+
+    it('routes the next message through handleMcpOutreachMessage while a record is awaiting input, even if the text itself would not match shouldRouteThroughCalleMcp', async () => {
+      getMcpOutreachRecord.mockResolvedValue({ chatId: 'test-chat-id', stage: 'clarifying' });
+      isAwaitingMcpOutreachInput.mockReturnValue(true);
+      shouldRouteThroughCalleMcp.mockReturnValue(false);
+      handleMcpOutreachMessage.mockResolvedValue('Got it, checking availability.');
+
+      render(<ChatView {...makeProps()} />);
+      await screen.findByText('What can I help you build?');
+
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: '+15550123456' } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await waitFor(() => {
+        expect(handleMcpOutreachMessage).toHaveBeenCalledWith('test-chat-id', '+15550123456');
+      });
+      expect(generateOllamaChatStream).not.toHaveBeenCalled();
+    });
+
+    it('does not intercept an unrelated message once the record has moved to in_progress', async () => {
+      getMcpOutreachRecord.mockResolvedValue({ chatId: 'test-chat-id', stage: 'in_progress' });
+      isAwaitingMcpOutreachInput.mockReturnValue(false);
+      shouldRouteThroughCalleMcp.mockReturnValue(false);
+
+      render(<ChatView {...makeProps()} />);
+      await screen.findByText('What can I help you build?');
+
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: "what's the weather" } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+      await waitFor(() => {
+        expect(generateOllamaChatStream).toHaveBeenCalled();
+      });
+      expect(handleMcpOutreachMessage).not.toHaveBeenCalled();
+    });
   });
 });

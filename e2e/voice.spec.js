@@ -11,17 +11,29 @@ test.describe('Alphonso E2E - Voice Flow', () => {
     await page.waitForSelector('[data-alphonso-shell-ready="true"]', { timeout: 30000 });
   });
 
+  // Target the toolbar voice button by test id, never by accessible name.
+  // getByRole('button', { name: /voice/i }) matched TWO elements - the
+  // sidebar nav item "Voice" and this button - so it failed Playwright
+  // strict mode whenever both were present. It was also state-dependent:
+  // SmartVoiceButton's label cycles through VOICE / VOICE (WS) / STOP /
+  // REQUESTING..., so a name match silently stops matching the moment
+  // voice state changes.
   test('voice button renders in toolbar', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
-    const voiceBtn = page.getByRole('button', { name: /voice/i });
+    const voiceBtn = page.getByTestId('smart-voice-button');
     await expect(voiceBtn).toBeVisible({ timeout: 10000 });
   });
 
   test('voice button click shows state change', async ({ page }) => {
     await page.getByRole('button', { name: /^Chat$/ }).click();
-    const voiceBtn = page.getByRole('button', { name: /voice/i });
+    const voiceBtn = page.getByTestId('smart-voice-button');
+    // SmartVoiceButton is lazy-loaded (ChatView.tsx), so wait for the chunk
+    // before clicking. Previously this test clicked without waiting, which
+    // meant the old name-based locator resolved to the sidebar nav item and
+    // the test passed without ever touching the voice button.
+    await expect(voiceBtn).toBeVisible({ timeout: 10000 });
     await voiceBtn.click();
-    await expect(page.locator('body')).toBeVisible();
+    await expect(voiceBtn).toBeVisible();
   });
 });
 

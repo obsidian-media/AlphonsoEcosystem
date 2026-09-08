@@ -1,6 +1,7 @@
 node_modules/
 dist/
 voice/backend/venv/
+voice/cloud-backend/.venv/
 __pycache__/
 .pytest_cache/
 coverage/
