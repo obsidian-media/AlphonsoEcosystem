@@ -71,6 +71,23 @@ describe('SystemScan', () => {
     expect(screen.queryByText(/0 ?GB free/i)).not.toBeInTheDocument();
   });
 
+  it('treats a resolved-but-null result as failed, not as valid data', async () => {
+    // Regression: found via manual smoke test against a real `npm run dev`
+    // browser session, not a unit test. index.html's browser-dev Tauri mock
+    // (`window.__TAURI_INTERNALS__.invoke = () => Promise.resolve(null)`)
+    // makes invoke() FULFILL with null rather than reject or hang — a case
+    // the original `hwResult.status === 'fulfilled' ? hwResult.value : ...`
+    // check didn't account for. Storing that null as `profile` left `!profile`
+    // permanently true, wedging real dev-mode users on "Scanning your
+    // system…" forever with no error and no way to proceed.
+    scanHardware.mockResolvedValue(null);
+    checkPrerequisites.mockResolvedValue(null);
+
+    render(<SystemScan onContinue={() => {}} />);
+    await waitFor(() => expect(screen.getByText('Continue')).toBeInTheDocument());
+    expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0);
+  });
+
   it('still reaches a usable state when both probes hang (non-Tauri host)', async () => {
     // The real browser case: Tauri's invoke() never settles, so without the
     // per-probe timeout this sat on "Scanning your system…" forever — which

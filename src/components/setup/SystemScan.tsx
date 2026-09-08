@@ -30,19 +30,30 @@ export function SystemScan({ onContinue }: SystemScanProps) {
     Promise.allSettled([withTimeout(scanHardware()), withTimeout(checkPrerequisites())])
       .then(([hwResult, prereqResult]) => {
         if (cancelled) return;
+        // A resolved-but-falsy value counts as failed too, not just an outright
+        // rejection. This matters in a plain-browser dev host: index.html's
+        // Tauri mock (`window.__TAURI_INTERNALS__.invoke = () => Promise.resolve(null)`)
+        // makes every invoke() call FULFILL with null rather than reject or
+        // hang — so `hwResult.status === 'fulfilled'` with `hwResult.value ===
+        // null` was a real, live case this screen never accounted for. Storing
+        // that null as `profile` left `!profile` permanently true below,
+        // wedging real `npm run dev` users on "Scanning your system…" forever
+        // with no error and no way to proceed — found via manual smoke test.
+        const hwOk = hwResult.status === 'fulfilled' && !!hwResult.value;
+        const prereqOk = prereqResult.status === 'fulfilled' && !!prereqResult.value;
         setProfile(
-          hwResult.status === 'fulfilled'
+          hwOk
             ? hwResult.value
             // diskFreeGb null (not 0) = "unknown", which does not block installs.
             : { ramGb: 0, diskFreeGb: null, gpuPresent: false, gpuVendor: null, gpuModel: null }
         );
         setPrereqs(
-          prereqResult.status === 'fulfilled'
+          prereqOk
             ? prereqResult.value
             : { missing: [], installHint: 'Could not fully detect prerequisites.' }
         );
-        setHardwareScanFailed(hwResult.status === 'rejected');
-        setPrereqScanFailed(prereqResult.status === 'rejected');
+        setHardwareScanFailed(!hwOk);
+        setPrereqScanFailed(!prereqOk);
         setScanning(false);
       });
     return () => { cancelled = true; };
