@@ -85,3 +85,23 @@ describe('SystemScan', () => {
     );
   }, 20000);
 });
+
+describe('SystemScan — accessibility', () => {
+  it('announces scan results politely once the scan resolves', async () => {
+    // The screen swaps from "Scanning…" to results with no focus change,
+    // which is silent to a screen reader without a live region.
+    scanHardware.mockResolvedValue({ ramGb: 16, diskFreeGb: 220, gpuPresent: false, gpuVendor: null, gpuModel: null });
+    checkPrerequisites.mockResolvedValue({ missing: [], installHint: 'ok', dockerFound: true });
+
+    render(<SystemScan onContinue={() => {}} />);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/16 ?GB RAM/i));
+  });
+
+  it('announces the scanning state itself, not only the result', () => {
+    scanHardware.mockImplementation(() => new Promise(() => {}));
+    checkPrerequisites.mockImplementation(() => new Promise(() => {}));
+
+    render(<SystemScan onContinue={() => {}} />);
+    expect(screen.getByRole('status')).toHaveTextContent(/scanning/i);
+  });
+});

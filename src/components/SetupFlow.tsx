@@ -102,7 +102,12 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
       {step === 'failed' && (
         <div className="flex flex-col items-center gap-4 p-8 w-full max-w-lg">
           <h2 className="text-2xl font-semibold text-[var(--text-1)]">Some components didn&apos;t install</h2>
-          <div className="w-full rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-sm">
+          {/* role="alert" (assertive): this interrupts deliberately, because
+              the user has to decide between retrying and continuing. */}
+          <div
+            role="alert"
+            className="w-full rounded bg-[var(--error-dim)] px-3 py-2 text-[var(--error)] text-sm"
+          >
             Failed: {failedLabels.join(', ')}
           </div>
           <p className="text-sm text-[var(--text-3)] text-center">

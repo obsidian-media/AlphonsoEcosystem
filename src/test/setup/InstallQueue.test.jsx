@@ -59,7 +59,11 @@ describe('InstallQueue', () => {
       return Promise.resolve({ tool: name, ok: true, message: 'done' });
     });
     render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
-    await waitFor(() => expect(screen.getByText(/error/i)).toBeInTheDocument());
+    // Status text is split across an sr-only span and an aria-hidden visual
+    // span, so match on the row's combined text rather than a single node.
+    await waitFor(() =>
+      expect(screen.getAllByRole('listitem').some((li) => /error/i.test(li.textContent))).toBe(true)
+    );
   });
 
   it('calls onFailed, NOT onAllComplete, when any component fails', async () => {
@@ -76,5 +80,37 @@ describe('InstallQueue', () => {
     await waitFor(() => expect(onFailed).toHaveBeenCalledTimes(1));
     expect(onFailed).toHaveBeenCalledWith(['Fooocus (image generation)']);
     expect(onAllComplete).not.toHaveBeenCalled();
+  });
+});
+
+describe('InstallQueue — accessibility', () => {
+  it('announces per-task status changes politely', async () => {
+    // Status text changes in place with no focus change; without a live
+    // region a screen-reader user has no idea the install progressed.
+    installComponent.mockResolvedValue({ tool: 'x', ok: true, message: 'done' });
+    render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => {
+      const live = screen.getAllByRole('status');
+      expect(live.some((el) => /ready/i.test(el.textContent))).toBe(true);
+    });
+  });
+
+  it('marks a failed task as an assertive alert, not a polite status', async () => {
+    // A failure needs to interrupt: it changes what the user must do next.
+    installComponent.mockRejectedValue(new Error('network error'));
+    render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0));
+  });
+
+  it('marks the queue busy while installs are in flight', async () => {
+    installComponent.mockImplementation(() => new Promise(() => {}));
+    render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(screen.getByRole('list')).toHaveAttribute('aria-busy', 'true'));
+  });
+
+  it('clears aria-busy once every task settles', async () => {
+    installComponent.mockResolvedValue({ tool: 'x', ok: true, message: 'done' });
+    render(<InstallQueue components={components} onStarterReady={() => {}} onAllComplete={() => {}} onFailed={() => {}} />);
+    await waitFor(() => expect(screen.getByRole('list')).toHaveAttribute('aria-busy', 'false'));
   });
 });

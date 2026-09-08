@@ -75,22 +75,46 @@ export function InstallQueue({ components, onStarterReady, onAllComplete, onFail
     }
   }, [tasks, onStarterReady, onAllComplete, onFailed]);
 
+  const anyInFlight = tasks.some((t) => t.status === 'pending' || t.status === 'installing');
+
   return (
     <div className="flex flex-col gap-3 p-8 w-full max-w-lg">
       <h2 className="text-2xl font-semibold text-[var(--text-1)]">Installing…</h2>
-      {tasks.map((task) => (
-        <div key={task.id} className="rounded bg-[var(--surface-2)] px-3 py-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-[var(--text-1)]">{task.label}</span>
-            <span className="text-[var(--text-3)]">
-              {task.status === 'pending' && 'Pending'}
-              {task.status === 'installing' && 'Downloading…'}
-              {task.status === 'ready' && 'Ready'}
-              {task.status === 'error' && `Error: ${task.errorMessage}`}
-            </span>
-          </div>
-        </div>
-      ))}
+      {/* aria-busy tells assistive tech the list is still changing, so it can
+          hold off on summarising a set of rows that are about to move. */}
+      <ul role="list" aria-busy={anyInFlight} aria-label="Installation progress" className="contents">
+        {tasks.map((task) => (
+          <li key={task.id} className="rounded bg-[var(--surface-2)] px-3 py-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-[var(--text-1)]">{task.label}</span>
+              {/* Failures use role="alert" (assertive) because they change
+                  what the user has to do next; ordinary progress uses
+                  role="status" (polite) so it never interrupts.
+                  The visible text stays short, while the sr-only span repeats
+                  the component name — a screen reader announcing a live region
+                  reads it in isolation, so a bare "Ready" would not say which
+                  of several components became ready. */}
+              <span
+                role={task.status === 'error' ? 'alert' : 'status'}
+                className="text-[var(--text-3)]"
+              >
+                <span className="sr-only">
+                  {task.status === 'pending' && `${task.label}: pending`}
+                  {task.status === 'installing' && `${task.label}: downloading`}
+                  {task.status === 'ready' && `${task.label}: ready`}
+                  {task.status === 'error' && `${task.label} failed: ${task.errorMessage}`}
+                </span>
+                <span aria-hidden="true">
+                  {task.status === 'pending' && 'Pending'}
+                  {task.status === 'installing' && 'Downloading…'}
+                  {task.status === 'ready' && 'Ready'}
+                  {task.status === 'error' && `Error: ${task.errorMessage}`}
+                </span>
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

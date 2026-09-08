@@ -51,7 +51,10 @@ export function SystemScan({ onContinue }: SystemScanProps) {
   if (scanning || !profile || !prereqs) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <p className="text-sm text-[var(--text-2)]">Scanning your system…</p>
+        {/* role="status" so the scanning state, and then its replacement by
+            the results below, are both announced — this screen changes
+            content without ever moving focus. */}
+        <p role="status" className="text-sm text-[var(--text-2)]">Scanning your system…</p>
       </div>
     );
   }
@@ -59,7 +62,7 @@ export function SystemScan({ onContinue }: SystemScanProps) {
   return (
     <div className="flex flex-col items-center gap-6 p-8">
       <h2 className="text-2xl font-semibold text-[var(--text-1)]">System Scan Results</h2>
-      <div className="flex flex-col gap-2 w-full max-w-md text-sm">
+      <div role="status" className="flex flex-col gap-2 w-full max-w-md text-sm">
         <div className="flex justify-between rounded bg-[var(--surface-2)] px-3 py-2">
           <span className="text-[var(--text-2)]">RAM</span>
           <span className="text-[var(--text-1)]">

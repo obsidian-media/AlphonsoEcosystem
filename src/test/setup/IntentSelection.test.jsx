@@ -24,4 +24,22 @@ describe('IntentSelection', () => {
     fireEvent.click(screen.getByText('Chat + Images'));
     expect(onSelect).toHaveBeenCalledWith('chat-images');
   });
+
+  it('gives each tile an accessible name carrying both the choice and its cost', () => {
+    // Without an explicit label a screen reader reads the two child spans as
+    // one run-on string ("Chat + Images Adds Fooocus, ~15GB").
+    render(<IntentSelection onSelect={() => {}} />);
+    const tile = screen.getByRole('button', { name: /chat \+ images.*fooocus/i });
+    expect(tile).toBeInTheDocument();
+  });
+
+  it('exposes every tile as a button, so all four are keyboard reachable', () => {
+    render(<IntentSelection onSelect={() => {}} />);
+    expect(screen.getAllByRole('button')).toHaveLength(4);
+  });
+
+  it('labels the tile group so its purpose is announced', () => {
+    render(<IntentSelection onSelect={() => {}} />);
+    expect(screen.getByRole('group', { name: /what do you want alphonso to do/i })).toBeInTheDocument();
+  });
 });

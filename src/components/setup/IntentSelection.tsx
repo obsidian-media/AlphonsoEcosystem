@@ -30,11 +30,20 @@ export function IntentSelection({ onSelect }: IntentSelectionProps) {
         <h2 className="text-2xl font-semibold text-[var(--text-1)]">What do you want Alphonso to do?</h2>
         <p className="text-sm text-[var(--text-3)] mt-1">You can change this any time later.</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
+      {/* Grouped and labelled so a screen reader announces what this set of
+          buttons is for, not just four unrelated buttons in sequence. */}
+      <div
+        role="group"
+        aria-label="What do you want Alphonso to do?"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl"
+      >
         {INTENT_TILES.map((tile) => (
           <button
             key={tile.id}
             onClick={() => onSelect(tile.id)}
+            // Explicit label: without it the two spans below are read as one
+            // run-on string ("Chat + Images Adds Fooocus, ~15GB").
+            aria-label={`${tile.label}. ${tile.blurb}.`}
             className="flex flex-col items-start gap-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-left transition-colors hover:border-[var(--accent-border)] hover:bg-[var(--accent-dim)]"
           >
             <span className="font-semibold text-[var(--text-1)]">{tile.label}</span>
